@@ -23,7 +23,9 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -39,9 +41,11 @@ public abstract class JdkSslContext extends SslContext {
     static final String PROTOCOL = "TLS";
     static final String[] PROTOCOLS;
     static final List<String> DEFAULT_CIPHERS;
+    static final Set<String> SUPPORTED_CIPHERS;
 
     static {
         SSLContext context;
+        int i;
         try {
             context = SSLContext.getInstance(PROTOCOL);
             context.init(null, null, null);
@@ -52,10 +56,14 @@ public abstract class JdkSslContext extends SslContext {
         SSLEngine engine = context.createSSLEngine();
 
         // Choose the sensible default list of protocols.
-        String[] supportedProtocols = engine.getSupportedProtocols();
+        final String[] supportedProtocols = engine.getSupportedProtocols();
+        Set<String> supportedProtocolsSet = new HashSet<String>(supportedProtocols.length);
+        for (i = 0; i < supportedProtocols.length; ++i) {
+            supportedProtocolsSet.add(supportedProtocols[i]);
+        }
         List<String> protocols = new ArrayList<String>();
         addIfSupported(
-                supportedProtocols, protocols,
+                supportedProtocolsSet, protocols,
                 "TLSv1.2", "TLSv1.1", "TLSv1", "SSLv3");
 
         if (!protocols.isEmpty()) {
@@ -65,10 +73,14 @@ public abstract class JdkSslContext extends SslContext {
         }
 
         // Choose the sensible default list of cipher suites.
-        String[] supportedCiphers = engine.getSupportedCipherSuites();
+        final String[] supportedCiphers = engine.getSupportedCipherSuites();
+        SUPPORTED_CIPHERS = new HashSet<String>(supportedCiphers.length);
+        for (i = 0; i < supportedCiphers.length; ++i) {
+            SUPPORTED_CIPHERS.add(supportedCiphers[i]);
+        }
         List<String> ciphers = new ArrayList<String>();
         addIfSupported(
-                supportedCiphers, ciphers,
+                SUPPORTED_CIPHERS, ciphers,
                 // XXX: Make sure to sync this list with OpenSslEngineFactory.
                 // GCM (Galois/Counter Mode) requires JDK 8.
                 "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
@@ -98,13 +110,11 @@ public abstract class JdkSslContext extends SslContext {
         }
     }
 
-    private static void addIfSupported(String[] supported, List<String> enabled, String... names) {
-        for (String n: names) {
-            for (String s: supported) {
-                if (n.equals(s)) {
-                    enabled.add(s);
-                    break;
-                }
+    private static void addIfSupported(Set<String> supported, List<String> enabled, String... names) {
+        for (int i = 0; i < names.length; ++i) {
+            String n = names[i];
+            if (supported.contains(n)) {
+                enabled.add(n);
             }
         }
     }
@@ -113,11 +123,14 @@ public abstract class JdkSslContext extends SslContext {
     private final List<String> unmodifiableCipherSuites;
     private final SslEngineWrapperFactory wrapperFactory;
 
-    JdkSslContext(Iterable<String> ciphers, SslEngineWrapperFactory wrapperFactory) {
+    JdkSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter, SslEngineWrapperFactory wrapperFactory) {
         if (wrapperFactory == null) {
             throw new NullPointerException("wrapperFactory");
         }
-        cipherSuites = toCipherSuiteArray(ciphers);
+        if (cipherFilter == null) {
+            throw new NullPointerException("cipherFilter");
+        }
+        cipherSuites = cipherFilter.filterCipherSuites(ciphers, DEFAULT_CIPHERS, SUPPORTED_CIPHERS);
         unmodifiableCipherSuites = Collections.unmodifiableList(Arrays.asList(cipherSuites));
         this.wrapperFactory = wrapperFactory;
     }
@@ -173,20 +186,5 @@ public abstract class JdkSslContext extends SslContext {
 
     private SSLEngine wrapEngine(SSLEngine engine) {
         return wrapperFactory.wrapSslEngine(engine, nextProtocols(), isServer());
-    }
-
-    private static String[] toCipherSuiteArray(Iterable<String> ciphers) {
-        if (ciphers == null) {
-            return DEFAULT_CIPHERS.toArray(new String[DEFAULT_CIPHERS.size()]);
-        } else {
-            List<String> newCiphers = new ArrayList<String>();
-            for (String c: ciphers) {
-                if (c == null) {
-                    break;
-                }
-                newCiphers.add(c);
-            }
-            return newCiphers.toArray(new String[newCiphers.size()]);
-        }
     }
 }

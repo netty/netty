@@ -74,7 +74,8 @@ public final class JdkSslServerContext extends JdkSslContext {
      *                    {@code null} if it's not password-protected.
      */
     public JdkSslServerContext(File certChainFile, File keyFile, String keyPassword) throws SSLException {
-        this(certChainFile, keyFile, keyPassword, null, null, DefaultSslWrapperFactory.instance(), 0, 0);
+        this(certChainFile, keyFile, keyPassword, null, IdentityCipherSuiteFilter.INSTANCE,
+                null, DefaultSslWrapperFactory.INSTANCE, 0, 0);
     }
 
     /**
@@ -86,6 +87,7 @@ public final class JdkSslServerContext extends JdkSslContext {
      *                    {@code null} if it's not password-protected.
      * @param ciphers the cipher suites to enable, in the order of preference.
      *                {@code null} to use the default cipher suites.
+     * @param cipherFilter a filter to apply over the supplied list of ciphers
      * @param nextProtocols the application layer protocols to accept, in the order of preference.
      *                      {@code null} to disable TLS NPN/ALPN extension.
      * @param wrapperFactory a factory used to wrap the underlying {@link SSLEngine}.
@@ -97,11 +99,11 @@ public final class JdkSslServerContext extends JdkSslContext {
      */
     public JdkSslServerContext(
             File certChainFile, File keyFile, String keyPassword,
-            Iterable<String> ciphers, Iterable<String> nextProtocols,
-            SslEngineWrapperFactory wrapperFactory,
+            Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
+            Iterable<String> nextProtocols, SslEngineWrapperFactory wrapperFactory,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
 
-        super(ciphers, wrapperFactory);
+        super(ciphers, cipherFilter, wrapperFactory);
 
         this.nextProtocols = translateProtocols(nextProtocols);
 

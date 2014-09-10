@@ -79,7 +79,8 @@ public final class JdkSslClientContext extends JdkSslContext {
      *                            {@code null} to use the default.
      */
     public JdkSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory) throws SSLException {
-        this(certChainFile, trustManagerFactory, null, null, DefaultSslWrapperFactory.instance(), 0, 0);
+        this(certChainFile, trustManagerFactory, null, IdentityCipherSuiteFilter.INSTANCE,
+                null, DefaultSslWrapperFactory.INSTANCE, 0, 0);
     }
 
     /**
@@ -92,6 +93,7 @@ public final class JdkSslClientContext extends JdkSslContext {
      *                            {@code null} to use the default.
      * @param ciphers the cipher suites to enable, in the order of preference.
      *                {@code null} to use the default cipher suites.
+     * @param cipherFilter a filter to apply over the supplied list of ciphers
      * @param nextProtocols the application layer protocols to accept, in the order of preference.
      *                      {@code null} to disable TLS NPN/ALPN extension.
      * @param wrapperFactory a factory used to wrap the underlying {@link SSLEngine}.
@@ -103,11 +105,11 @@ public final class JdkSslClientContext extends JdkSslContext {
      */
     public JdkSslClientContext(
             File certChainFile, TrustManagerFactory trustManagerFactory,
-            Iterable<String> ciphers, Iterable<String> nextProtocols,
-            SslEngineWrapperFactory wrapperFactory,
+            Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
+            Iterable<String> nextProtocols, SslEngineWrapperFactory wrapperFactory,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
 
-        super(ciphers, wrapperFactory);
+        super(ciphers, cipherFilter, wrapperFactory);
 
         this.nextProtocols = translateProtocols(nextProtocols);
 
