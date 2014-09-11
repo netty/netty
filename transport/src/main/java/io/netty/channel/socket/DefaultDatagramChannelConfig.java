@@ -25,6 +25,7 @@ import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import io.netty.util.internal.SystemPropertyUtil;
 
 import java.io.IOException;
 import java.net.DatagramSocket;
@@ -42,8 +43,9 @@ import static io.netty.channel.ChannelOption.*;
 public class DefaultDatagramChannelConfig extends DefaultChannelConfig implements DatagramChannelConfig {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultDatagramChannelConfig.class);
-
-    private static final RecvByteBufAllocator DEFAULT_RCVBUF_ALLOCATOR = new FixedRecvByteBufAllocator(2048);
+    private static final int DEFAULT_RCVBUF_SIZE = SystemPropertyUtil.getInt("io.netty.datagram.rcvbuf.size", 2048);
+    private static final RecvByteBufAllocator DEFAULT_RCVBUF_ALLOCATOR =
+        new FixedRecvByteBufAllocator(DEFAULT_RCVBUF_SIZE);
 
     private final DatagramSocket javaSocket;
     private volatile boolean activeOnOpen;
