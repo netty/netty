@@ -13,6 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+#define _GNU_SOURCE
 #include <jni.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,19 +31,20 @@
 #include <sys/utsname.h>
 #include "io_netty_channel_epoll_Native.h"
 
-
 // optional
 extern int accept4(int sockFd, struct sockaddr *addr, socklen_t *addrlen, int flags) __attribute__((weak));
 extern int epoll_create1(int flags) __attribute__((weak));
+
+#ifdef IO_NETTY_SENDMMSG_NOT_FOUND
 extern int sendmmsg(int sockfd, struct mmsghdr *msgvec, unsigned int vlen, unsigned int flags) __attribute__((weak));
 
-// Just define it here and NOT use #define _GNU_SOURCE as we also want to be able to build on systems that not support
-// sendmmsg yet. The problem is if we use _GNU_SOURCE we will not be able to declare sendmmsg as extern
+#ifndef __USE_GNU
 struct mmsghdr {
     struct msghdr msg_hdr;  /* Message header */
     unsigned int  msg_len;  /* Number of bytes transmitted */
 };
-
+#endif
+#endif
 
 // Those are initialized in the init(...) method and cached for performance reasons
 jmethodID updatePosId = NULL;
@@ -123,7 +125,7 @@ jint epollCtl(JNIEnv * env, jint efd, int op, jint fd, jint flags, jint id) {
     return epoll_ctl(efd, op, fd, &ev);
 }
 
-jint getOption(JNIEnv *env, jint fd, int level, int optname, const void *optval, socklen_t optlen) {
+jint getOption(JNIEnv *env, jint fd, int level, int optname, void *optval, socklen_t optlen) {
     int code;
     code = getsockopt(fd, level, optname, optval, &optlen);
     if (code == 0) {
@@ -987,7 +989,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_socketStream(JNIEnv * 
 JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_bind(JNIEnv * env, jclass clazz, jint fd, jbyteArray address, jint scopeId, jint port) {
     struct sockaddr_storage addr;
     if (init_sockaddr(env, address, scopeId, port, &addr) == -1) {
-        return -1;
+        return;
     }
 
     if(bind(fd, (struct sockaddr *) &addr, sizeof(addr)) == -1){
