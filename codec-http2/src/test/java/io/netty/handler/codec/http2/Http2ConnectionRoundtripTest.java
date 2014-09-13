@@ -15,6 +15,8 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2TestUtil.as;
+import static io.netty.handler.codec.http2.Http2TestUtil.randomString;
 import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -133,8 +135,7 @@ public class Http2ConnectionRoundtripTest {
 
     @Test
     public void flowControlProperlyChunksLargeMessage() throws Exception {
-        final Http2Headers headers = new DefaultHttp2Headers.Builder().method("GET").scheme("https")
-                .authority("example.org").path("/some/path/resource2").build();
+        final Http2Headers headers = dummyHeaders();
 
         // Create a large message to send.
         final int length = 10485760; // 10MB
@@ -179,8 +180,7 @@ public class Http2ConnectionRoundtripTest {
 
     @Test
     public void stressTest() throws Exception {
-        final Http2Headers headers = new DefaultHttp2Headers.Builder().method("GET").scheme("https")
-                .authority("example.org").path("/some/path/resource2").build();
+        final Http2Headers headers = dummyHeaders();
         final String text = "hello world";
         final String pingMsg = "12345678";
         final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
@@ -256,5 +256,10 @@ public class Http2ConnectionRoundtripTest {
                 capturedData.get(i).release();
             }
         }
+    }
+
+    private Http2Headers dummyHeaders() {
+        return new DefaultHttp2Headers().method(as("GET")).scheme(as("https"))
+        .authority(as("example.org")).path(as("/some/path/resource2")).add(randomString(), randomString());
     }
 }

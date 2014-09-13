@@ -25,7 +25,7 @@ public interface Http2HeadersDecoder {
     /**
      * Decodes the given headers block and returns the headers.
      */
-    Http2Headers.Builder decodeHeaders(ByteBuf headerBlock) throws Http2Exception;
+    Http2Headers decodeHeaders(ByteBuf headerBlock) throws Http2Exception;
 
     /**
      * Sets the new max header table size for this decoder.

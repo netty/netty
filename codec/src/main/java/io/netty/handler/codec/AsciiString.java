@@ -21,6 +21,7 @@ import io.netty.util.internal.EmptyArrays;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -34,6 +35,78 @@ import java.util.regex.PatternSyntaxException;
 public final class AsciiString implements CharSequence, Comparable<CharSequence> {
 
     public static final AsciiString EMPTY_STRING = new AsciiString("");
+    public static final Comparator<AsciiString> CASE_INSENSITIVE_ORDER = new Comparator<AsciiString>() {
+        @Override
+        public int compare(AsciiString o1, AsciiString o2) {
+            return CHARSEQUENCE_CASE_INSENSITIVE_ORDER.compare(o1, o2);
+        }
+    };
+
+    public static final Comparator<CharSequence> CHARSEQUENCE_CASE_INSENSITIVE_ORDER =
+            new Comparator<CharSequence>() {
+                @Override
+                public int compare(CharSequence o1, CharSequence o2) {
+                    if (o1 == o2) {
+                        return 0;
+                    }
+
+                    AsciiString a1 = o1 instanceof AsciiString ? (AsciiString) o1 : null;
+                    AsciiString a2 = o2 instanceof AsciiString ? (AsciiString) o2 : null;
+
+                    int result;
+                    int length1 = o1.length();
+                    int length2 = o2.length();
+                    int minLength = Math.min(length1, length2);
+                    if (a1 != null && a2 != null) {
+                        byte[] thisValue = a1.value;
+                        byte[] thatValue = a2.value;
+                        for (int i = 0; i < minLength; i++) {
+                            byte v1 = thisValue[i];
+                            byte v2 = thatValue[i];
+                            if (v1 == v2) {
+                                continue;
+                            }
+                            int c1 = toLowerCase(v1) & 0xFF;
+                            int c2 = toLowerCase(v2) & 0xFF;
+                            result = c1 - c2;
+                            if (result != 0) {
+                                return result;
+                            }
+                        }
+                    } else if (a1 != null) {
+                        byte[] thisValue = a1.value;
+                        for (int i = 0; i < minLength; i++) {
+                            int c1 = toLowerCase(thisValue[i]) & 0xFF;
+                            int c2 = toLowerCase(o2.charAt(i));
+                            result = c1 - c2;
+                            if (result != 0) {
+                                return result;
+                            }
+                        }
+                    } else if (a2 != null) {
+                        byte[] thatValue = a2.value;
+                        for (int i = 0; i < minLength; i++) {
+                            int c1 = toLowerCase(o1.charAt(i));
+                            int c2 = toLowerCase(thatValue[i]) & 0xFF;
+                            result = c1 - c2;
+                            if (result != 0) {
+                                return result;
+                            }
+                        }
+                    } else {
+                        for (int i = 0; i < minLength; i++) {
+                            int c1 = toLowerCase(o1.charAt(i));
+                            int c2 = toLowerCase(o2.charAt(i));
+                            result = c1 - c2;
+                            if (result != 0) {
+                                return result;
+                            }
+                        }
+                    }
+
+                    return length1 - length2;
+                }
+            };
 
     /**
      * Returns the case-insensitive hash code of the specified string.  Note that this method uses the same hashing
@@ -103,6 +176,14 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         }
 
         return a.equals(b);
+    }
+
+    /**
+     * Returns an {@link AsciiString} containing the given character sequence. If the given string
+     * is already a {@link AsciiString}, just returns the same instance.
+     */
+    public static AsciiString of(CharSequence string) {
+        return string instanceof AsciiString ? (AsciiString) string : new AsciiString(string);
     }
 
     private final byte[] value;
@@ -429,43 +510,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      *             if {@code string} is {@code null}.
      */
     public int compareToIgnoreCase(CharSequence string) {
-        if (this == string) {
-            return 0;
-        }
-
-        int result;
-        int length1 = length();
-        int length2 = string.length();
-        int minLength = Math.min(length1, length2);
-        byte[] thisValue = value;
-        if (string instanceof AsciiString) {
-            AsciiString that = (AsciiString) string;
-            byte[] thatValue = that.value;
-            for (int i = 0; i < minLength; i ++) {
-                byte v1 = thisValue[i];
-                byte v2 = thatValue[i];
-                if (v1 == v2) {
-                    continue;
-                }
-                int c1 = toLowerCase(v1) & 0xFF;
-                int c2 = toLowerCase(v2) & 0xFF;
-                result = c1 - c2;
-                if (result != 0) {
-                    return result;
-                }
-            }
-        } else {
-            for (int i = 0; i < minLength; i ++) {
-                int c1 = toLowerCase(thisValue[i]) & 0xFF;
-                int c2 = toLowerCase(string.charAt(i));
-                result = c1 - c2;
-                if (result != 0) {
-                    return result;
-                }
-            }
-        }
-
-        return length1 - length2;
+        return CHARSEQUENCE_CASE_INSENSITIVE_ORDER.compare(this,  string);
     }
 
     /**

@@ -15,6 +15,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.TextHeaderProcessor;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
@@ -30,6 +31,12 @@ import io.netty.util.collection.IntObjectMap;
  * the header/data message flow is more likely.
  */
 public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpAdapter {
+    private static final AsciiString OUT_OF_MESSAGE_SEQUENCE_METHOD = new AsciiString(
+            HttpUtil.OUT_OF_MESSAGE_SEQUENCE_METHOD.toString());
+    private static final AsciiString OUT_OF_MESSAGE_SEQUENCE_PATH = new AsciiString(
+            HttpUtil.OUT_OF_MESSAGE_SEQUENCE_PATH);
+    private static final AsciiString OUT_OF_MESSAGE_SEQUENCE_RETURN_CODE = new AsciiString(
+            HttpUtil.OUT_OF_MESSAGE_SEQUENCE_RETURN_CODE.toString());
     private final IntObjectMap<HttpHeaders> outOfMessageFlowHeaders;
 
     /**
@@ -150,33 +157,32 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
      * @param headers The headers to remove the priority tree elements from
      */
     private void removePriorityRelatedHeaders(HttpHeaders headers) {
-        headers.remove(HttpUtil.ExtensionHeaders.Names.STREAM_DEPENDENCY_ID);
-        headers.remove(HttpUtil.ExtensionHeaders.Names.STREAM_WEIGHT);
+        headers.remove(HttpUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text());
+        headers.remove(HttpUtil.ExtensionHeaderNames.STREAM_WEIGHT.text());
     }
 
     /**
      * Initializes the pseudo header fields for out of message flow HTTP/2 headers
-     * @param builder The builder to set the pseudo header values
+     * @param headers The headers to be initialized with pseudo header values
      */
-    private void initializePseudoHeaders(DefaultHttp2Headers.Builder builder) {
+    private void initializePseudoHeaders(Http2Headers headers) {
         if (connection.isServer()) {
-            builder.method(HttpUtil.OUT_OF_MESSAGE_SEQUENCE_METHOD.toString())
-                   .path(HttpUtil.OUT_OF_MESSAGE_SEQUENCE_PATH);
+            headers.method(OUT_OF_MESSAGE_SEQUENCE_METHOD).path(OUT_OF_MESSAGE_SEQUENCE_PATH);
         } else {
-            builder.status(HttpUtil.OUT_OF_MESSAGE_SEQUENCE_RETURN_CODE.toString());
+            headers.status(OUT_OF_MESSAGE_SEQUENCE_RETURN_CODE);
         }
     }
 
     /**
-     * Add all the HTTP headers into the HTTP/2 headers {@code builder} object
-     * @param headers The HTTP headers to translate to HTTP/2
-     * @param builder The container for the HTTP/2 headers
+     * Add all the HTTP headers into the HTTP/2 headers object
+     * @param httpHeaders The HTTP headers to translate to HTTP/2
+     * @param http2Headers The target HTTP/2 headers
      */
-    private void addHttpHeadersToHttp2Headers(HttpHeaders headers, final DefaultHttp2Headers.Builder builder) {
-        headers.forEachEntry(new TextHeaderProcessor() {
+    private void addHttpHeadersToHttp2Headers(HttpHeaders httpHeaders, final Http2Headers http2Headers) {
+        httpHeaders.forEachEntry(new TextHeaderProcessor() {
             @Override
             public boolean process(CharSequence name, CharSequence value) throws Exception {
-                builder.add(name, value);
+                http2Headers.add(new AsciiString(name), new AsciiString(value));
                 return true;
             }
         });
@@ -209,7 +215,7 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
             // and the HTTP message flow exists in OPEN.
             if (parent != null && !parent.equals(connection.connectionStream())) {
                 HttpHeaders headers = new DefaultHttpHeaders();
-                headers.set(HttpUtil.ExtensionHeaders.Names.STREAM_DEPENDENCY_ID, parent.id());
+                headers.set(HttpUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(), parent.id());
                 importOutOfMessageFlowHeaders(stream.id(), headers);
             }
         } else {
@@ -218,7 +224,7 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
                 removePriorityRelatedHeaders(msg.trailingHeaders());
             } else if (!parent.equals(connection.connectionStream())) {
                 HttpHeaders headers = getActiveHeaders(msg);
-                headers.set(HttpUtil.ExtensionHeaders.Names.STREAM_DEPENDENCY_ID, parent.id());
+                headers.set(HttpUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(), parent.id());
             }
         }
     }
@@ -236,7 +242,7 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
         } else {
             headers = getActiveHeaders(msg);
         }
-        headers.set(HttpUtil.ExtensionHeaders.Names.STREAM_WEIGHT, stream.weight());
+        headers.set(HttpUtil.ExtensionHeaderNames.STREAM_WEIGHT.text(), stream.weight());
     }
 
     @Override
@@ -244,15 +250,15 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
                     boolean exclusive) throws Http2Exception {
         FullHttpMessage msg = messageMap.get(streamId);
         if (msg == null) {
-            HttpHeaders headers = outOfMessageFlowHeaders.remove(streamId);
-            if (headers == null) {
+            HttpHeaders httpHeaders = outOfMessageFlowHeaders.remove(streamId);
+            if (httpHeaders == null) {
                 throw Http2Exception.protocolError("Priority Frame recieved for unknown stream id %d", streamId);
             }
 
-            DefaultHttp2Headers.Builder builder = DefaultHttp2Headers.newBuilder();
-            initializePseudoHeaders(builder);
-            addHttpHeadersToHttp2Headers(headers, builder);
-            msg = newMessage(streamId, builder.build(), validateHttpHeaders);
+            Http2Headers http2Headers = new DefaultHttp2Headers();
+            initializePseudoHeaders(http2Headers);
+            addHttpHeadersToHttp2Headers(httpHeaders, http2Headers);
+            msg = newMessage(streamId, http2Headers, validateHttpHeaders);
             fireChannelRead(ctx, msg, streamId);
         }
     }

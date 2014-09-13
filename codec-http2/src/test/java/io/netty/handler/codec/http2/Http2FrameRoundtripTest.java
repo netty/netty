@@ -15,16 +15,18 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2TestUtil.as;
+import static io.netty.handler.codec.http2.Http2TestUtil.randomString;
 import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -153,9 +155,7 @@ public class Http2FrameRoundtripTest {
 
     @Test
     public void headersFrameWithoutPriorityShouldMatch() throws Exception {
-        final Http2Headers headers =
-                new DefaultHttp2Headers.Builder().method("GET").scheme("https")
-                        .authority("example.org").path("/some/path/resource2").build();
+        final Http2Headers headers = headers();
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() {
@@ -170,9 +170,7 @@ public class Http2FrameRoundtripTest {
 
     @Test
     public void headersFrameWithPriorityShouldMatch() throws Exception {
-        final Http2Headers headers =
-                new DefaultHttp2Headers.Builder().method("GET").scheme("https")
-                        .authority("example.org").path("/some/path/resource2").build();
+        final Http2Headers headers = headers();
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() {
@@ -244,9 +242,7 @@ public class Http2FrameRoundtripTest {
 
     @Test
     public void pushPromiseFrameShouldMatch() throws Exception {
-        final Http2Headers headers =
-                new DefaultHttp2Headers.Builder().method("GET").scheme("https")
-                        .authority("example.org").path("/some/path/resource2").build();
+        final Http2Headers headers = headers();
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() {
@@ -306,9 +302,7 @@ public class Http2FrameRoundtripTest {
 
     @Test
     public void stressTest() throws Exception {
-        final Http2Headers headers =
-                new DefaultHttp2Headers.Builder().method("GET").scheme("https")
-                        .authority("example.org").path("/some/path/resource2").build();
+        final Http2Headers headers = headers();
         final String text = "hello world";
         final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
         try {
@@ -358,5 +352,10 @@ public class Http2FrameRoundtripTest {
 
     private ChannelPromise newPromise() {
         return ctx().newPromise();
+    }
+
+    private Http2Headers headers() {
+        return new DefaultHttp2Headers().method(as("GET")).scheme(as("https"))
+                .authority(as("example.org")).path(as("/some/path/resource2")).add(randomString(), randomString());
     }
 }

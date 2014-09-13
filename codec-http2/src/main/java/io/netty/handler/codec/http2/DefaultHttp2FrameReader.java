@@ -372,16 +372,16 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
         listener.onDataRead(ctx, streamId, data, padding, endOfStream);
     }
 
-    protected void notifyListenerOnHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers.Builder builder,
+    protected void notifyListenerOnHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
             int streamDependency, short weight, boolean exclusive, int padding,
             boolean endOfStream, Http2FrameListener listener) throws Http2Exception {
-        listener.onHeadersRead(ctx, streamId, builder.build(), streamDependency,
+        listener.onHeadersRead(ctx, streamId, headers, streamDependency,
                 weight, exclusive, padding, endOfStream);
     }
 
-    protected void notifyListenerOnHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers.Builder builder,
+    protected void notifyListenerOnHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
             int padding, boolean endOfStream, Http2FrameListener listener) throws Http2Exception {
-        listener.onHeadersRead(ctx, streamId, builder.build(), padding, endOfStream);
+        listener.onHeadersRead(ctx, streamId, headers, padding, endOfStream);
     }
 
     private void readDataFrame(ChannelHandlerContext ctx, ByteBuf payload,
@@ -428,7 +428,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
                     final HeadersBlockBuilder hdrBlockBuilder = headersBlockBuilder();
                     hdrBlockBuilder.addFragment(fragment, ctx.alloc(), endOfHeaders);
                     if (endOfHeaders) {
-                        notifyListenerOnHeadersRead(ctx, headersStreamId, hdrBlockBuilder.builder(),
+                        notifyListenerOnHeadersRead(ctx, headersStreamId, hdrBlockBuilder.headers(),
                                 streamDependency, weight, exclusive, padding, headersFlags.endOfStream(), listener);
                         close();
                     }
@@ -454,7 +454,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
                 final HeadersBlockBuilder hdrBlockBuilder = headersBlockBuilder();
                 hdrBlockBuilder.addFragment(fragment, ctx.alloc(), endOfHeaders);
                 if (endOfHeaders) {
-                    notifyListenerOnHeadersRead(ctx, headersStreamId, hdrBlockBuilder.builder(), padding,
+                    notifyListenerOnHeadersRead(ctx, headersStreamId, hdrBlockBuilder.headers(), padding,
                             headersFlags.endOfStream(), listener);
                     close();
                 }
@@ -525,7 +525,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
                     Http2FrameListener listener) throws Http2Exception {
                 headersBlockBuilder().addFragment(fragment, ctx.alloc(), endOfHeaders);
                 if (endOfHeaders) {
-                    Http2Headers headers = headersBlockBuilder().builder().build();
+                    Http2Headers headers = headersBlockBuilder().headers();
                     listener.onPushPromiseRead(ctx, pushPromiseStreamId, promisedStreamId, headers,
                             padding);
                     close();
@@ -676,7 +676,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
          * Builds the headers from the completed headers block. After this is called, this builder
          * should not be called again.
          */
-        Http2Headers.Builder builder() throws Http2Exception {
+        Http2Headers headers() throws Http2Exception {
             try {
                 return headersDecoder.decodeHeaders(headerBlock);
             } finally {

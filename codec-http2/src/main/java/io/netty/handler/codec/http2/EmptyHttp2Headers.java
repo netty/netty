@@ -12,125 +12,107 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
+
 package io.netty.handler.codec.http2;
 
 import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.BinaryHeaders;
-import io.netty.handler.codec.DefaultBinaryHeaders;
+import io.netty.handler.codec.EmptyBinaryHeaders;
 
-public class DefaultHttp2Headers extends DefaultBinaryHeaders implements Http2Headers {
+public final class EmptyHttp2Headers extends EmptyBinaryHeaders implements Http2Headers {
+    public static final EmptyHttp2Headers INSTANCE = new EmptyHttp2Headers();
 
-    public DefaultHttp2Headers() {
+    private EmptyHttp2Headers() {
     }
 
     @Override
-    public Http2Headers add(AsciiString name, AsciiString value) {
+    public EmptyHttp2Headers add(AsciiString name, AsciiString value) {
         super.add(name, value);
         return this;
     }
 
     @Override
-    public Http2Headers add(AsciiString name, Iterable<AsciiString> values) {
+    public EmptyHttp2Headers add(AsciiString name, Iterable<AsciiString> values) {
         super.add(name, values);
         return this;
     }
 
     @Override
-    public Http2Headers add(AsciiString name, AsciiString... values) {
+    public EmptyHttp2Headers add(AsciiString name, AsciiString... values) {
         super.add(name, values);
         return this;
     }
 
     @Override
-    public Http2Headers add(BinaryHeaders headers) {
+    public EmptyHttp2Headers add(BinaryHeaders headers) {
         super.add(headers);
         return this;
     }
 
     @Override
-    public Http2Headers set(AsciiString name, AsciiString value) {
+    public EmptyHttp2Headers set(AsciiString name, AsciiString value) {
         super.set(name, value);
         return this;
     }
 
     @Override
-    public Http2Headers set(AsciiString name, Iterable<AsciiString> values) {
+    public EmptyHttp2Headers set(AsciiString name, Iterable<AsciiString> values) {
         super.set(name, values);
         return this;
     }
 
     @Override
-    public Http2Headers set(AsciiString name, AsciiString... values) {
+    public EmptyHttp2Headers set(AsciiString name, AsciiString... values) {
         super.set(name, values);
         return this;
     }
 
     @Override
-    public Http2Headers set(BinaryHeaders headers) {
+    public EmptyHttp2Headers set(BinaryHeaders headers) {
         super.set(headers);
         return this;
     }
 
     @Override
-    public Http2Headers setAll(BinaryHeaders headers) {
+    public EmptyHttp2Headers setAll(BinaryHeaders headers) {
         super.setAll(headers);
         return this;
     }
 
     @Override
-    public Http2Headers clear() {
-        super.clear();
+    public EmptyHttp2Headers clear() {
         return this;
     }
 
     @Override
-    public Http2Headers forEachEntry(final BinaryHeaders.BinaryHeaderVisitor visitor) {
+    public EmptyHttp2Headers forEachEntry(BinaryHeaderVisitor visitor) {
         super.forEachEntry(visitor);
         return this;
     }
 
     @Override
-    public int hashCode() {
-        return super.hashCode();
+    public EmptyHttp2Headers method(AsciiString method) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (!(o instanceof Http2Headers)) {
-            return false;
-        }
-
-        return super.equals((BinaryHeaders) o);
+    public EmptyHttp2Headers scheme(AsciiString status) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public Http2Headers method(AsciiString value) {
-        set(PseudoHeaderName.METHOD.value(), value);
-        return this;
+    public EmptyHttp2Headers authority(AsciiString authority) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public Http2Headers scheme(AsciiString value) {
-        set(PseudoHeaderName.SCHEME.value(), value);
-        return this;
+    public EmptyHttp2Headers path(AsciiString path) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public Http2Headers authority(AsciiString value) {
-        set(PseudoHeaderName.AUTHORITY.value(), value);
-        return this;
-    }
-
-    @Override
-    public Http2Headers path(AsciiString value) {
-        set(PseudoHeaderName.PATH.value(), value);
-        return this;
-    }
-
-    @Override
-    public Http2Headers status(AsciiString value) {
-        set(PseudoHeaderName.STATUS.value(), value);
-        return this;
+    public EmptyHttp2Headers status(AsciiString status) {
+        throw new UnsupportedOperationException();
     }
 
     @Override

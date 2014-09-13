@@ -17,25 +17,13 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderUtil;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http2.Http2Headers.HeaderVisitor;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
-
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
 
 /**
  * This adapter provides just header/data events from the HTTP message flow defined
@@ -47,27 +35,6 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
     protected final boolean validateHttpHeaders;
     private final ImmediateSendDetector sendDetector;
     protected final IntObjectMap<FullHttpMessage> messageMap;
-
-    private static final Set<String> HEADERS_TO_EXCLUDE;
-    private static final Map<String, String> HEADER_NAME_TRANSLATIONS_REQUEST;
-    private static final Map<String, String> HEADER_NAME_TRANSLATIONS_RESPONSE;
-
-    static {
-        HEADERS_TO_EXCLUDE = new HashSet<String>();
-        HEADER_NAME_TRANSLATIONS_REQUEST = new HashMap<String, String>();
-        HEADER_NAME_TRANSLATIONS_RESPONSE = new HashMap<String, String>();
-        for (Http2Headers.PseudoHeaderName http2HeaderName : Http2Headers.PseudoHeaderName.values()) {
-            HEADERS_TO_EXCLUDE.add(http2HeaderName.value());
-        }
-
-        HEADER_NAME_TRANSLATIONS_RESPONSE.put(Http2Headers.PseudoHeaderName.AUTHORITY.value(),
-                        HttpUtil.ExtensionHeaders.Names.AUTHORITY.toString());
-        HEADER_NAME_TRANSLATIONS_RESPONSE.put(Http2Headers.PseudoHeaderName.SCHEME.value(),
-                        HttpUtil.ExtensionHeaders.Names.SCHEME.toString());
-        HEADER_NAME_TRANSLATIONS_REQUEST.putAll(HEADER_NAME_TRANSLATIONS_RESPONSE);
-        HEADER_NAME_TRANSLATIONS_RESPONSE.put(Http2Headers.PseudoHeaderName.PATH.value(),
-                        HttpUtil.ExtensionHeaders.Names.PATH.toString());
-    }
 
     /**
      * Creates a new instance
@@ -189,8 +156,8 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
      */
     protected FullHttpMessage newMessage(int streamId, Http2Headers headers, boolean validateHttpHeaders)
             throws Http2Exception {
-        return connection.isServer() ? newHttpRequest(streamId, headers, validateHttpHeaders) :
-                                       newHttpResponse(streamId, headers, validateHttpHeaders);
+        return connection.isServer() ? HttpUtil.toHttpRequest(streamId, headers,
+                validateHttpHeaders) : HttpUtil.toHttpResponse(streamId, headers, validateHttpHeaders);
     }
 
     /**
@@ -224,7 +191,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
             msg = newMessage(streamId, headers, validateHttpHeaders);
         } else if (allowAppend) {
             try {
-                addHttp2ToHttpHeaders(streamId, headers, msg, appendToTrailer);
+                HttpUtil.addHttp2ToHttpHeaders(streamId, headers, msg, appendToTrailer);
             } catch (Http2Exception e) {
                 removeMessage(streamId);
                 throw e;
@@ -316,7 +283,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
                             promisedStreamId);
         }
 
-        msg.headers().set(HttpUtil.ExtensionHeaders.Names.STREAM_PROMISE_ID, streamId);
+        msg.headers().set(HttpUtil.ExtensionHeaderNames.STREAM_PROMISE_ID.text(), streamId);
 
         processHeadersEnd(ctx, promisedStreamId, msg, false);
     }
@@ -382,152 +349,6 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
                 return copy;
             }
             return null;
-        }
-    }
-
-    /**
-     * Create a new object to contain the response data
-     *
-     * @param streamId The stream associated with the response
-     * @param http2Headers The initial set of HTTP/2 headers to create the response with
-     * @param validateHttpHeaders
-     * <ul>
-     * <li>{@code true} to validate HTTP headers in the http-codec</li>
-     * <li>{@code false} not to validate HTTP headers in the http-codec</li>
-     * </ul>
-     * @return A new response object which represents headers/data
-     * @throws Http2Exception see {@link #addHttp2ToHttpHeaders(int, Http2Headers, FullHttpMessage, Map)}
-     */
-    private static FullHttpMessage newHttpResponse(int streamId, Http2Headers http2Headers, boolean validateHttpHeaders)
-                    throws Http2Exception {
-        HttpResponseStatus status = HttpUtil.parseStatus(http2Headers.status());
-        // HTTP/2 does not define a way to carry the version or reason phrase that is included in an HTTP/1.1
-        // status line.
-        FullHttpMessage msg = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, validateHttpHeaders);
-        addHttp2ToHttpHeaders(streamId, http2Headers, msg, false, HEADER_NAME_TRANSLATIONS_RESPONSE);
-        return msg;
-    }
-
-    /**
-     * Create a new object to contain the request data
-     *
-     * @param streamId The stream associated with the request
-     * @param http2Headers The initial set of HTTP/2 headers to create the request with
-     * @param validateHttpHeaders
-     * <ul>
-     * <li>{@code true} to validate HTTP headers in the http-codec</li>
-     * <li>{@code false} not to validate HTTP headers in the http-codec</li>
-     * </ul>
-     * @return A new request object which represents headers/data
-     * @throws Http2Exception see {@link #addHttp2ToHttpHeaders(int, Http2Headers, FullHttpMessage, Map)}
-     */
-    private static FullHttpMessage newHttpRequest(int streamId, Http2Headers http2Headers, boolean validateHttpHeaders)
-                    throws Http2Exception {
-        // HTTP/2 does not define a way to carry the version identifier that is
-        // included in the HTTP/1.1 request line.
-        FullHttpMessage msg = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
-                        HttpMethod.valueOf(http2Headers.method()), http2Headers.path(), validateHttpHeaders);
-        addHttp2ToHttpHeaders(streamId, http2Headers, msg, false, HEADER_NAME_TRANSLATIONS_REQUEST);
-        return msg;
-    }
-
-    /**
-     * Translate and add HTTP/2 headers to HTTP/1.x headers
-     *
-     * @param streamId The stream associated with {@code sourceHeaders}
-     * @param sourceHeaders The HTTP/2 headers to convert
-     * @param destinationMessage The object which will contain the resulting HTTP/1.x headers
-     * @param addToTrailer {@code true} to add to trailing headers. {@code false} to add to initial headers.
-     * @throws Http2Exception see {@link #addHttp2ToHttpHeaders(int, Http2Headers, FullHttpMessage, Map)}
-     */
-    private static void addHttp2ToHttpHeaders(int streamId, Http2Headers sourceHeaders,
-                    FullHttpMessage destinationMessage, boolean addToTrailer) throws Http2Exception {
-        addHttp2ToHttpHeaders(streamId, sourceHeaders, destinationMessage, addToTrailer,
-                        (destinationMessage instanceof FullHttpRequest) ? HEADER_NAME_TRANSLATIONS_REQUEST
-                                        : HEADER_NAME_TRANSLATIONS_RESPONSE);
-    }
-
-    /**
-     * Translate and add HTTP/2 headers to HTTP/1.x headers
-     *
-     * @param streamId The stream associated with {@code sourceHeaders}
-     * @param sourceHeaders The HTTP/2 headers to convert
-     * @param destinationMessage The object which will contain the resulting HTTP/1.x headers
-     * @param addToTrailer {@code true} to add to trailing headers. {@code false} to add to initial headers.
-     * @param translations A map used to help translate HTTP/2 headers to HTTP/1.x headers
-     * @throws Http2Exception If not all HTTP/2 headers can be translated to HTTP/1.x
-     */
-    private static void addHttp2ToHttpHeaders(int streamId, Http2Headers sourceHeaders,
-                    FullHttpMessage destinationMessage, boolean addToTrailer, Map<String, String> translations)
-                            throws Http2Exception {
-        HttpHeaders headers = addToTrailer ? destinationMessage.trailingHeaders() : destinationMessage.headers();
-        HttpAdapterVisitor visitor = new HttpAdapterVisitor(headers, translations);
-        sourceHeaders.forEach(visitor);
-        if (visitor.exception() != null) {
-            throw visitor.exception();
-        }
-
-        headers.remove(HttpHeaders.Names.TRANSFER_ENCODING);
-        headers.remove(HttpHeaders.Names.TRAILER);
-        if (!addToTrailer) {
-            headers.set(HttpUtil.ExtensionHeaders.Names.STREAM_ID, streamId);
-            HttpHeaderUtil.setKeepAlive(destinationMessage, true);
-        }
-    }
-
-    /**
-     * A visitor which translates HTTP/2 headers to HTTP/1 headers
-     */
-    private static final class HttpAdapterVisitor implements HeaderVisitor {
-        private Map<String, String> translations;
-        private HttpHeaders headers;
-        private Http2Exception e;
-
-        /**
-         * Create a new instance
-         *
-         * @param headers The HTTP/1.x headers object to store the results of the translation
-         * @param translations A map used to help translate HTTP/2 headers to HTTP/1.x headers
-         */
-        public HttpAdapterVisitor(HttpHeaders headers, Map<String, String> translations) {
-            this.translations = translations;
-            this.headers = headers;
-            this.e = null;
-        }
-
-        @Override
-        public boolean visit(Entry<String, String> entry) {
-            String translatedName = translations.get(entry.getKey());
-            if (translatedName != null || !HEADERS_TO_EXCLUDE.contains(entry.getKey())) {
-                if (translatedName == null) {
-                    translatedName = entry.getKey();
-                }
-
-                // http://tools.ietf.org/html/draft-ietf-httpbis-http2-14#section-8.1.2.3
-                // All headers that start with ':' are only valid in HTTP/2 context
-                if (translatedName.isEmpty() || translatedName.charAt(0) == ':') {
-                    e = Http2Exception
-                            .protocolError("Unknown HTTP/2 header '%s' encountered in translation to HTTP/1.x",
-                                            translatedName);
-                    return false;
-                } else {
-                    headers.add(translatedName, entry.getValue());
-                }
-            }
-            return true;
-        }
-
-        /**
-         * Get any exceptions encountered while translating HTTP/2 headers to HTTP/1.x headers
-         *
-         * @return
-         * <ul>
-         * <li>{@code null} if no exceptions where encountered</li>
-         * <li>Otherwise an exception describing what went wrong</li>
-         * </ul>
-         */
-        public Http2Exception exception() {
-            return e;
         }
     }
 }

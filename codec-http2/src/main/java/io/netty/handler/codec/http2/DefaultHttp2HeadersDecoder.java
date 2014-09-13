@@ -19,11 +19,12 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_TABLE_S
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_HEADER_SIZE;
 import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.protocolError;
-import static io.netty.util.CharsetUtil.UTF_8;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
+import io.netty.handler.codec.AsciiString;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 import com.twitter.hpack.Decoder;
 import com.twitter.hpack.HeaderListener;
@@ -65,37 +66,43 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder {
     }
 
     @Override
-    public Http2Headers.Builder decodeHeaders(ByteBuf headerBlock) throws Http2Exception {
+    public Http2Headers decodeHeaders(ByteBuf headerBlock) throws Http2Exception {
+        InputStream in = new ByteBufInputStream(headerBlock);
         try {
-            final DefaultHttp2Headers.Builder headersBuilder = new DefaultHttp2Headers.Builder();
+            final Http2Headers headers = new DefaultHttp2Headers();
             HeaderListener listener = new HeaderListener() {
                 @Override
                 public void addHeader(byte[] key, byte[] value, boolean sensitive) {
-                    String keyString = new String(key, UTF_8);
-                    String valueString = new String(value, UTF_8);
-                    headersBuilder.add(keyString, valueString);
+                    headers.add(new AsciiString(key, false), new AsciiString(value, false));
                 }
             };
 
-            decoder.decode(new ByteBufInputStream(headerBlock), listener);
+            decoder.decode(in, listener);
             boolean truncated = decoder.endHeaderBlock();
             if (truncated) {
                 // TODO: what's the right thing to do here?
             }
 
-            if (headersBuilder.size() > maxHeaderListSize) {
+            if (headers.size() > maxHeaderListSize) {
                 throw protocolError("Number of headers (%d) exceeds maxHeaderListSize (%d)",
-                        headersBuilder.size(), maxHeaderListSize);
+                        headers.size(), maxHeaderListSize);
             }
 
-            return headersBuilder;
+            return headers;
         } catch (IOException e) {
             throw new Http2Exception(COMPRESSION_ERROR, e.getMessage());
         } catch (Throwable e) {
-            // Default handler for any other types of errors that may have occurred.  For example,
-            // the the Header builder throws IllegalArgumentException if the key or value was invalid
+            // Default handler for any other types of errors that may have occurred. For example,
+            // the the Header builder throws IllegalArgumentException if the key or value was
+            // invalid
             // for any reason (e.g. the key was an invalid pseudo-header).
             throw new Http2Exception(Http2Error.PROTOCOL_ERROR, e.getMessage(), e);
+        } finally {
+            try {
+                in.close();
+            } catch (IOException e) {
+                throw new Http2Exception(Http2Error.INTERNAL_ERROR, e.getMessage(), e);
+            }
         }
     }
 }

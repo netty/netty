@@ -14,6 +14,13 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_ENCODING;
+import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_LENGTH;
+import static io.netty.handler.codec.http.HttpHeaders.Values.DEFLATE;
+import static io.netty.handler.codec.http.HttpHeaders.Values.GZIP;
+import static io.netty.handler.codec.http.HttpHeaders.Values.IDENTITY;
+import static io.netty.handler.codec.http.HttpHeaders.Values.XDEFLATE;
+import static io.netty.handler.codec.http.HttpHeaders.Values.XGZIP;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -29,8 +36,8 @@ import io.netty.handler.codec.http.HttpHeaders;
  * to the {@code content-encoding} header for each stream.
  */
 public class DecompressorHttp2FrameReader extends DefaultHttp2FrameReader {
-    private static final AsciiString CONTENT_ENCODING_LOWER_CASE = HttpHeaders.Names.CONTENT_ENCODING.toLowerCase();
-    private static final AsciiString CONTENT_LENGTH_LOWER_CASE = HttpHeaders.Names.CONTENT_LENGTH.toLowerCase();
+    private static final AsciiString CONTENT_ENCODING_LOWER_CASE = CONTENT_ENCODING.toLowerCase();
+    private static final AsciiString CONTENT_LENGTH_LOWER_CASE = CONTENT_LENGTH.toLowerCase();
     private static final Http2ConnectionAdapter CLEAN_UP_LISTENER = new Http2ConnectionAdapter() {
         @Override
         public void streamRemoved(Http2Stream stream) {
@@ -78,12 +85,12 @@ public class DecompressorHttp2FrameReader extends DefaultHttp2FrameReader {
      * @throws Http2Exception If the specified encoding is not not supported and warrants an exception
      */
     protected EmbeddedChannel newContentDecoder(CharSequence contentEncoding) throws Http2Exception {
-        if (HttpHeaders.Values.GZIP.equalsIgnoreCase(contentEncoding) ||
-            HttpHeaders.Values.XGZIP.equalsIgnoreCase(contentEncoding)) {
+        if (GZIP.equalsIgnoreCase(contentEncoding) ||
+            XGZIP.equalsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP));
         }
-        if (HttpHeaders.Values.DEFLATE.equalsIgnoreCase(contentEncoding) ||
-            HttpHeaders.Values.XDEFLATE.equalsIgnoreCase(contentEncoding)) {
+        if (DEFLATE.equalsIgnoreCase(contentEncoding) ||
+            XDEFLATE.equalsIgnoreCase(contentEncoding)) {
             final ZlibWrapper wrapper = strict ? ZlibWrapper.ZLIB : ZlibWrapper.ZLIB_OR_NONE;
             // To be strict, 'deflate' means ZLIB, but some servers were not implemented correctly.
             return new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(wrapper));
@@ -101,7 +108,7 @@ public class DecompressorHttp2FrameReader extends DefaultHttp2FrameReader {
      * @return the expected content encoding of the new content.
      * @throws Http2Exception if the {@code contentEncoding} is not supported and warrants an exception
      */
-    protected CharSequence getTargetContentEncoding(
+    protected AsciiString getTargetContentEncoding(
             @SuppressWarnings("UnusedParameters") CharSequence contentEncoding) throws Http2Exception {
         return HttpHeaders.Values.IDENTITY;
     }
@@ -114,28 +121,29 @@ public class DecompressorHttp2FrameReader extends DefaultHttp2FrameReader {
      * @param endOfStream Indicates if the stream has ended
      * @throws Http2Exception If the {@code content-encoding} is not supported
      */
-    private void initDecoder(int streamId, Http2Headers.Builder builder, boolean endOfStream)
+    private void initDecoder(int streamId, Http2Headers headers, boolean endOfStream)
             throws Http2Exception {
+        // Convert the names into a case-insensitive map.
         final Http2Stream stream = connection.stream(streamId);
         if (stream != null) {
             EmbeddedChannel decoder = stream.decompressor();
             if (decoder == null) {
                 if (!endOfStream) {
                     // Determine the content encoding.
-                    CharSequence contentEncoding = builder.get(CONTENT_ENCODING_LOWER_CASE);
+                    AsciiString contentEncoding = headers.get(CONTENT_ENCODING_LOWER_CASE);
                     if (contentEncoding == null) {
-                        contentEncoding = HttpHeaders.Values.IDENTITY;
+                        contentEncoding = IDENTITY;
                     }
                     decoder = newContentDecoder(contentEncoding);
                     if (decoder != null) {
                         stream.decompressor(decoder);
                         // Decode the content and remove or replace the existing headers
                         // so that the message looks like a decoded message.
-                        CharSequence targetContentEncoding = getTargetContentEncoding(contentEncoding);
-                        if (HttpHeaders.Values.IDENTITY.equalsIgnoreCase(targetContentEncoding)) {
-                            builder.remove(CONTENT_ENCODING_LOWER_CASE);
+                        AsciiString targetContentEncoding = getTargetContentEncoding(contentEncoding);
+                        if (IDENTITY.equalsIgnoreCase(targetContentEncoding)) {
+                            headers.remove(CONTENT_ENCODING_LOWER_CASE);
                         } else {
-                            builder.set(CONTENT_ENCODING_LOWER_CASE, targetContentEncoding);
+                            headers.set(CONTENT_ENCODING_LOWER_CASE, targetContentEncoding);
                         }
                     }
                 }
@@ -146,7 +154,7 @@ public class DecompressorHttp2FrameReader extends DefaultHttp2FrameReader {
                 // The content length will be for the compressed data.  Since we will decompress the data
                 // this content-length will not be correct.  Instead of queuing messages or delaying sending
                 // header frames...just remove the content-length header
-                builder.remove(CONTENT_LENGTH_LOWER_CASE);
+                headers.remove(CONTENT_LENGTH_LOWER_CASE);
             }
         }
     }
@@ -226,18 +234,18 @@ public class DecompressorHttp2FrameReader extends DefaultHttp2FrameReader {
     }
 
     @Override
-    protected void notifyListenerOnHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers.Builder builder,
+    protected void notifyListenerOnHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
             int streamDependency, short weight, boolean exclusive, int padding, boolean endOfStream,
             Http2FrameListener listener) throws Http2Exception {
-        initDecoder(streamId, builder, endOfStream);
-        super.notifyListenerOnHeadersRead(ctx, streamId, builder, streamDependency, weight,
+        initDecoder(streamId, headers, endOfStream);
+        super.notifyListenerOnHeadersRead(ctx, streamId, headers, streamDependency, weight,
                 exclusive, padding, endOfStream, listener);
     }
 
     @Override
-    protected void notifyListenerOnHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers.Builder builder,
+    protected void notifyListenerOnHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
             int padding, boolean endOfStream, Http2FrameListener listener) throws Http2Exception {
-        initDecoder(streamId, builder, endOfStream);
-        super.notifyListenerOnHeadersRead(ctx, streamId, builder, padding, endOfStream, listener);
+        initDecoder(streamId, headers, endOfStream);
+        super.notifyListenerOnHeadersRead(ctx, streamId, headers, padding, endOfStream, listener);
     }
 }
