@@ -26,7 +26,6 @@ import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.protocolError;
-import static io.netty.handler.codec.http2.Http2Headers.EMPTY_HEADERS;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
@@ -277,7 +276,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
     @Test
     public void headersReadAfterGoAwayShouldBeIgnored() throws Exception {
         when(remote.isGoAwayReceived()).thenReturn(true);
-        decode().onHeadersRead(ctx, STREAM_ID, EMPTY_HEADERS, 0, false);
+        decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
         verify(remote, never()).createStream(eq(STREAM_ID), eq(false));
 
         // Verify that the event was absorbed and not propagated to the oberver.
@@ -288,53 +287,54 @@ public class DelegatingHttp2ConnectionHandlerTest {
     @Test
     public void headersReadForUnknownStreamShouldCreateStream() throws Exception {
         when(remote.createStream(eq(5), eq(false))).thenReturn(stream);
-        decode().onHeadersRead(ctx, 5, EMPTY_HEADERS, 0, false);
+        decode().onHeadersRead(ctx, 5, EmptyHttp2Headers.INSTANCE, 0, false);
         verify(remote).createStream(eq(5), eq(false));
-        verify(listener).onHeadersRead(eq(ctx), eq(5), eq(EMPTY_HEADERS), eq(0), eq(DEFAULT_PRIORITY_WEIGHT),
-                eq(false), eq(0), eq(false));
+        verify(listener).onHeadersRead(eq(ctx), eq(5), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false));
     }
 
     @Test
     public void headersReadForUnknownStreamShouldCreateHalfClosedStream() throws Exception {
         when(remote.createStream(eq(5), eq(true))).thenReturn(stream);
-        decode().onHeadersRead(ctx, 5, EMPTY_HEADERS, 0, true);
+        decode().onHeadersRead(ctx, 5, EmptyHttp2Headers.INSTANCE, 0, true);
         verify(remote).createStream(eq(5), eq(true));
-        verify(listener).onHeadersRead(eq(ctx), eq(5), eq(EMPTY_HEADERS), eq(0), eq(DEFAULT_PRIORITY_WEIGHT),
-                eq(false), eq(0), eq(true));
+        verify(listener).onHeadersRead(eq(ctx), eq(5), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true));
     }
 
     @Test
     public void headersReadForPromisedStreamShouldHalfOpenStream() throws Exception {
         when(stream.state()).thenReturn(RESERVED_REMOTE);
-        decode().onHeadersRead(ctx, STREAM_ID, EMPTY_HEADERS, 0, false);
+        decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
         verify(stream).openForPush();
-        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(EMPTY_HEADERS), eq(0), eq(DEFAULT_PRIORITY_WEIGHT),
-                eq(false), eq(0), eq(false));
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false));
     }
 
     @Test
     public void headersReadForPromisedStreamShouldCloseStream() throws Exception {
         when(stream.state()).thenReturn(RESERVED_REMOTE);
-        decode().onHeadersRead(ctx, STREAM_ID, EMPTY_HEADERS, 0, true);
+        decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true);
         verify(stream).openForPush();
         verify(stream).close();
-        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(EMPTY_HEADERS), eq(0), eq(DEFAULT_PRIORITY_WEIGHT),
-                eq(false), eq(0), eq(true));
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true));
     }
 
     @Test
     public void pushPromiseReadAfterGoAwayShouldBeIgnored() throws Exception {
         when(remote.isGoAwayReceived()).thenReturn(true);
-        decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EMPTY_HEADERS, 0);
+        decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
         verify(remote, never()).reservePushStream(anyInt(), any(Http2Stream.class));
         verify(listener, never()).onPushPromiseRead(eq(ctx), anyInt(), anyInt(), any(Http2Headers.class), anyInt());
     }
 
     @Test
     public void pushPromiseReadShouldSucceed() throws Exception {
-        decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EMPTY_HEADERS, 0);
+        decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
         verify(remote).reservePushStream(eq(PUSH_STREAM_ID), eq(stream));
-        verify(listener).onPushPromiseRead(eq(ctx), eq(STREAM_ID), eq(PUSH_STREAM_ID), eq(EMPTY_HEADERS), eq(0));
+        verify(listener).onPushPromiseRead(eq(ctx), eq(STREAM_ID), eq(PUSH_STREAM_ID),
+                eq(EmptyHttp2Headers.INSTANCE), eq(0));
     }
 
     @Test
@@ -528,7 +528,8 @@ public class DelegatingHttp2ConnectionHandlerTest {
     @Test
     public void headersWriteAfterGoAwayShouldFail() throws Exception {
         when(connection.isGoAway()).thenReturn(true);
-        ChannelFuture future = handler.writeHeaders(ctx, 5, EMPTY_HEADERS, 0, (short) 255, false, 0, false, promise);
+        ChannelFuture future = handler.writeHeaders(
+                ctx, 5, EmptyHttp2Headers.INSTANCE, 0, (short) 255, false, 0, false, promise);
         verify(local, never()).createStream(anyInt(), anyBoolean());
         verify(writer, never()).writeHeaders(eq(ctx), anyInt(), any(Http2Headers.class), anyInt(), anyBoolean(),
                 eq(promise));
@@ -538,54 +539,56 @@ public class DelegatingHttp2ConnectionHandlerTest {
     @Test
     public void headersWriteForUnknownStreamShouldCreateStream() throws Exception {
         when(local.createStream(eq(5), eq(false))).thenReturn(stream);
-        handler.writeHeaders(ctx, 5, EMPTY_HEADERS, 0, false, promise);
+        handler.writeHeaders(ctx, 5, EmptyHttp2Headers.INSTANCE, 0, false, promise);
         verify(local).createStream(eq(5), eq(false));
-        verify(writer).writeHeaders(eq(ctx), eq(5), eq(EMPTY_HEADERS), eq(0), eq(DEFAULT_PRIORITY_WEIGHT), eq(false),
-                eq(0), eq(false), eq(promise));
+        verify(writer).writeHeaders(eq(ctx), eq(5), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false), eq(promise));
     }
 
     @Test
     public void headersWriteShouldCreateHalfClosedStream() throws Exception {
         when(local.createStream(eq(5), eq(true))).thenReturn(stream);
-        handler.writeHeaders(ctx, 5, EMPTY_HEADERS, 0, true, promise);
+        handler.writeHeaders(ctx, 5, EmptyHttp2Headers.INSTANCE, 0, true, promise);
         verify(local).createStream(eq(5), eq(true));
-        verify(writer).writeHeaders(eq(ctx), eq(5), eq(EMPTY_HEADERS), eq(0), eq(DEFAULT_PRIORITY_WEIGHT), eq(false),
-                eq(0), eq(true), eq(promise));
+        verify(writer).writeHeaders(eq(ctx), eq(5), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true), eq(promise));
     }
 
     @Test
     public void headersWriteShouldOpenStreamForPush() throws Exception {
         when(stream.state()).thenReturn(RESERVED_LOCAL);
-        handler.writeHeaders(ctx, STREAM_ID, EMPTY_HEADERS, 0, false, promise);
+        handler.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false, promise);
         verify(stream).openForPush();
         verify(stream, never()).closeLocalSide();
-        verify(writer).writeHeaders(eq(ctx), eq(STREAM_ID), eq(EMPTY_HEADERS), eq(0), eq(DEFAULT_PRIORITY_WEIGHT),
-                eq(false), eq(0), eq(false), eq(promise));
+        verify(writer).writeHeaders(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false), eq(promise));
     }
 
     @Test
     public void headersWriteShouldClosePushStream() throws Exception {
         when(stream.state()).thenReturn(RESERVED_LOCAL).thenReturn(HALF_CLOSED_LOCAL);
-        handler.writeHeaders(ctx, STREAM_ID, EMPTY_HEADERS, 0, true, promise);
+        handler.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true, promise);
         verify(stream).openForPush();
         verify(stream).closeLocalSide();
-        verify(writer).writeHeaders(eq(ctx), eq(STREAM_ID), eq(EMPTY_HEADERS), eq(0), eq(DEFAULT_PRIORITY_WEIGHT),
-                eq(false), eq(0), eq(true), eq(promise));
+        verify(writer).writeHeaders(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true), eq(promise));
     }
 
     @Test
     public void pushPromiseWriteAfterGoAwayShouldFail() throws Exception {
         when(connection.isGoAway()).thenReturn(true);
-        ChannelFuture future = handler.writePushPromise(ctx, STREAM_ID, PUSH_STREAM_ID, EMPTY_HEADERS, 0, promise);
+        ChannelFuture future =
+                handler.writePushPromise(ctx, STREAM_ID, PUSH_STREAM_ID,
+                        EmptyHttp2Headers.INSTANCE, 0, promise);
         assertTrue(future.awaitUninterruptibly().cause() instanceof Http2Exception);
     }
 
     @Test
     public void pushPromiseWriteShouldReserveStream() throws Exception {
-        handler.writePushPromise(ctx, STREAM_ID, PUSH_STREAM_ID, EMPTY_HEADERS, 0, promise);
+        handler.writePushPromise(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, promise);
         verify(local).reservePushStream(eq(PUSH_STREAM_ID), eq(stream));
-        verify(writer).writePushPromise(eq(ctx), eq(STREAM_ID), eq(PUSH_STREAM_ID), eq(EMPTY_HEADERS), eq(0),
-                eq(promise));
+        verify(writer).writePushPromise(eq(ctx), eq(STREAM_ID), eq(PUSH_STREAM_ID),
+                eq(EmptyHttp2Headers.INSTANCE), eq(0), eq(promise));
     }
 
     @Test

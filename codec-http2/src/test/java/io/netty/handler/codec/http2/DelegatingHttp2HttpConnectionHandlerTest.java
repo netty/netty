@@ -18,6 +18,7 @@ import static io.netty.handler.codec.http.HttpMethod.GET;
 import static io.netty.handler.codec.http.HttpMethod.POST;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static io.netty.handler.codec.http2.Http2CodecUtil.ignoreSettingsHandler;
+import static io.netty.handler.codec.http2.Http2TestUtil.as;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
@@ -144,16 +145,19 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
         final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/example");
         try {
             final HttpHeaders httpHeaders = request.headers();
-            httpHeaders.set(HttpUtil.ExtensionHeaders.Names.STREAM_ID, 5);
-            httpHeaders.set(HttpHeaders.Names.HOST, "http://my-user_name@www.example.org:5555/example");
-            httpHeaders.set(HttpUtil.ExtensionHeaders.Names.AUTHORITY, "www.example.org:5555");
-            httpHeaders.set(HttpUtil.ExtensionHeaders.Names.SCHEME, "http");
+            httpHeaders.set(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+            httpHeaders.set(HttpHeaders.Names.HOST,
+                    "http://my-user_name@www.example.org:5555/example");
+            httpHeaders.set(HttpUtil.ExtensionHeaderNames.AUTHORITY.text(), "www.example.org:5555");
+            httpHeaders.set(HttpUtil.ExtensionHeaderNames.SCHEME.text(), "http");
             httpHeaders.add("foo", "goo");
             httpHeaders.add("foo", "goo2");
             httpHeaders.add("foo2", "goo2");
-            final Http2Headers http2Headers = new DefaultHttp2Headers.Builder().method("GET").path("/example")
-                    .authority("www.example.org:5555").scheme("http").add("foo", "goo").add("foo", "goo2")
-                    .add("foo2", "goo2").build();
+            final Http2Headers http2Headers =
+                    new DefaultHttp2Headers().method(as("GET")).path(as("/example"))
+                            .authority(as("www.example.org:5555")).scheme(as("http"))
+                            .add(as("foo"), as("goo")).add(as("foo"), as("goo2"))
+                            .add(as("foo2"), as("goo2"));
             ChannelPromise writePromise = newPromise();
             ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
 
@@ -162,11 +166,10 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
             writeFuture.awaitUninterruptibly(2, SECONDS);
             assertTrue(writeFuture.isSuccess());
             awaitRequests();
-            final ArgumentCaptor<ByteBuf> dataCaptor = ArgumentCaptor.forClass(ByteBuf.class);
-            verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(5), eq(http2Headers), eq(0),
-                    anyShort(), anyBoolean(), eq(0), eq(true));
+            verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(5),
+                    eq(http2Headers), eq(0), anyShort(), anyBoolean(), eq(0), eq(true));
             verify(serverListener, never()).onDataRead(any(ChannelHandlerContext.class), anyInt(),
-                    dataCaptor.capture(), anyInt(), anyBoolean());
+                    any(ByteBuf.class), anyInt(), anyBoolean());
         } finally {
             request.release();
         }
@@ -184,9 +187,11 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
             httpHeaders.add("foo", "goo");
             httpHeaders.add("foo", "goo2");
             httpHeaders.add("foo2", "goo2");
-            final Http2Headers http2Headers = new DefaultHttp2Headers.Builder().method("POST").path("/example")
-                    .authority("www.example.org:5555").scheme("http").add("foo", "goo").add("foo", "goo2")
-                    .add("foo2", "goo2").build();
+            final Http2Headers http2Headers =
+                    new DefaultHttp2Headers().method(as("POST")).path(as("/example"))
+                            .authority(as("www.example.org:5555")).scheme(as("http"))
+                            .add(as("foo"), as("goo")).add(as("foo"), as("goo2"))
+                            .add(as("foo2"), as("goo2"));
             ChannelPromise writePromise = newPromise();
             ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
 

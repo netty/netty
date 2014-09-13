@@ -17,9 +17,11 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 
 /**
@@ -49,7 +51,38 @@ final class Http2TestUtil {
         });
     }
 
-    private Http2TestUtil() { }
+    /**
+     * Converts a {@link String} into an {@link AsciiString}.
+     */
+    public static AsciiString as(String value) {
+        return new AsciiString(value);
+    }
+
+    /**
+     * Converts a byte array into an {@link AsciiString}.
+     */
+    public static AsciiString as(byte[] value) {
+        return new AsciiString(value);
+    }
+
+    /**
+     * Returns a byte array filled with random data.
+     */
+    public static byte[] randomBytes() {
+        byte[] data = new byte[100];
+        new Random().nextBytes(data);
+        return data;
+    }
+
+    /**
+     * Returns an {@link AsciiString} that wraps a randomly-filled byte array.
+     */
+    public static AsciiString randomString() {
+        return as(randomBytes());
+    }
+
+    private Http2TestUtil() {
+    }
 
     static class FrameAdapter extends ByteToMessageDecoder {
         private final boolean copyBufs;

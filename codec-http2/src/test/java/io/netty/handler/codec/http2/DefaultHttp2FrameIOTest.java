@@ -16,6 +16,8 @@
 package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_UNSIGNED_INT;
+import static io.netty.handler.codec.http2.Http2TestUtil.as;
+import static io.netty.handler.codec.http2.Http2TestUtil.randomString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -257,7 +259,7 @@ public class DefaultHttp2FrameIOTest {
 
     @Test
     public void emptyHeadersShouldRoundtrip() throws Exception {
-        Http2Headers headers = Http2Headers.EMPTY_HEADERS;
+        Http2Headers headers = EmptyHttp2Headers.INSTANCE;
         writer.writeHeaders(ctx, 1, headers, 0, true, promise);
 
         ByteBuf frame = captureWrite();
@@ -271,13 +273,26 @@ public class DefaultHttp2FrameIOTest {
 
     @Test
     public void emptyHeadersWithPaddingShouldRoundtrip() throws Exception {
-        Http2Headers headers = Http2Headers.EMPTY_HEADERS;
+        Http2Headers headers = EmptyHttp2Headers.INSTANCE;
         writer.writeHeaders(ctx, 1, headers, 0xFF, true, promise);
 
         ByteBuf frame = captureWrite();
         try {
             reader.readFrame(ctx, frame, listener);
             verify(listener).onHeadersRead(eq(ctx), eq(1), eq(headers), eq(0xFF), eq(true));
+        } finally {
+            frame.release();
+        }
+    }
+
+    @Test
+    public void binaryHeadersWithoutPriorityShouldRoundtrip() throws Exception {
+        Http2Headers headers = dummyBinaryHeaders();
+        writer.writeHeaders(ctx, 1, headers, 0, true, promise);
+        ByteBuf frame = captureWrite();
+        try {
+            reader.readFrame(ctx, frame, listener);
+            verify(listener).onHeadersRead(eq(ctx), eq(1), eq(headers), eq(0), eq(true));
         } finally {
             frame.release();
         }
@@ -373,7 +388,7 @@ public class DefaultHttp2FrameIOTest {
 
     @Test
     public void emptypushPromiseShouldRoundtrip() throws Exception {
-        Http2Headers headers = Http2Headers.EMPTY_HEADERS;
+        Http2Headers headers = EmptyHttp2Headers.INSTANCE;
         writer.writePushPromise(ctx, 1, 2, headers, 0, promise);
 
         ByteBuf frame = captureWrite();
@@ -447,18 +462,27 @@ public class DefaultHttp2FrameIOTest {
         return alloc.buffer().writeBytes("abcdefgh".getBytes(CharsetUtil.UTF_8));
     }
 
+    private static Http2Headers dummyBinaryHeaders() {
+        DefaultHttp2Headers headers = new DefaultHttp2Headers();
+        for (int ix = 0; ix < 10; ++ix) {
+            headers.add(randomString(), randomString());
+        }
+        return headers;
+    }
+
     private static Http2Headers dummyHeaders() {
-        return DefaultHttp2Headers.newBuilder().method("GET").scheme("https").authority("example.org")
-                .path("/some/path").add("accept", "*/*").build();
+        return new DefaultHttp2Headers().method(as("GET")).scheme(as("https"))
+                .authority(as("example.org")).path(as("/some/path"))
+                .add(as("accept"), as("*/*"));
     }
 
     private static Http2Headers largeHeaders() {
-        DefaultHttp2Headers.Builder builder = DefaultHttp2Headers.newBuilder();
+        DefaultHttp2Headers headers = new DefaultHttp2Headers();
         for (int i = 0; i < 100; ++i) {
             String key = "this-is-a-test-header-key-" + i;
             String value = "this-is-a-test-header-value-" + i;
-            builder.add(key, value);
+            headers.add(as(key), as(value));
         }
-        return builder.build();
+        return headers;
     }
 }

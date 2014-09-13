@@ -15,6 +15,8 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2TestUtil.as;
+import static io.netty.handler.codec.http2.Http2TestUtil.randomBytes;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.Assert.assertEquals;
 import io.netty.buffer.ByteBuf;
@@ -41,34 +43,28 @@ public class DefaultHttp2HeadersDecoderTest {
 
     @Test
     public void decodeShouldSucceed() throws Exception {
-        final ByteBuf buf = encode(":method", "GET", "akey", "avalue");
+        ByteBuf buf = encode(b(":method"), b("GET"), b("akey"), b("avalue"), randomBytes(), randomBytes());
         try {
-            Http2Headers headers = decoder.decodeHeaders(buf).build();
-            assertEquals(2, headers.size());
-            assertEquals("GET", headers.method());
-            assertEquals("avalue", headers.get("akey"));
+            Http2Headers headers = decoder.decodeHeaders(buf);
+            assertEquals(3, headers.size());
+            assertEquals("GET", headers.method().toString());
+            assertEquals("avalue", headers.get(as("akey")).toString());
         } finally {
             buf.release();
         }
     }
 
-    @Test(expected = Http2Exception.class)
-    public void decodeWithInvalidPseudoHeaderShouldFail() throws Exception {
-        final ByteBuf buf = encode(":invalid", "GET", "akey", "avalue");
-        try {
-            decoder.decodeHeaders(buf);
-        } finally {
-            buf.release();
-        }
+    private byte[] b(String string) {
+        return string.getBytes(UTF_8);
     }
 
-    private ByteBuf encode(String... entries) throws Exception {
-        final Encoder encoder = new Encoder();
-        final ByteArrayOutputStream stream = new ByteArrayOutputStream();
+    private ByteBuf encode(byte[]... entries) throws Exception {
+        Encoder encoder = new Encoder();
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
         for (int ix = 0; ix < entries.length;) {
-            String key = entries[ix++];
-            String value = entries[ix++];
-            encoder.encodeHeader(stream, key.getBytes(UTF_8), value.getBytes(UTF_8), false);
+            byte[] key = entries[ix++];
+            byte[] value = entries[ix++];
+            encoder.encodeHeader(stream, key, value, false);
         }
         return Unpooled.wrappedBuffer(stream.toByteArray());
     }

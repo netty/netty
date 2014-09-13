@@ -21,6 +21,7 @@ import static io.netty.example.http2.Http2ExampleUtil.UPGRADE_RESPONSE_HEADER;
 import static io.netty.util.internal.logging.InternalLogLevel.INFO;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty.handler.codec.http2.AbstractHttp2ConnectionHandler;
 import io.netty.handler.codec.http2.DefaultHttp2Connection;
@@ -68,8 +69,8 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
         if (evt instanceof HttpServerUpgradeHandler.UpgradeEvent) {
             // Write an HTTP/2 response to the upgrade request
             Http2Headers headers =
-                    DefaultHttp2Headers.newBuilder().status("200")
-                    .set(UPGRADE_RESPONSE_HEADER, "true").build();
+                    new DefaultHttp2Headers().status(new AsciiString("200"))
+                    .set(new AsciiString(UPGRADE_RESPONSE_HEADER), new AsciiString("true"));
             writeHeaders(ctx, 1, headers, 0, true, ctx.newPromise());
         }
         super.userEventTriggered(ctx, evt);
@@ -109,7 +110,7 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
      */
     private void sendResponse(ChannelHandlerContext ctx, int streamId, ByteBuf payload) {
         // Send a frame for the response status
-        Http2Headers headers = DefaultHttp2Headers.newBuilder().status("200").build();
+        Http2Headers headers = new DefaultHttp2Headers().status(new AsciiString("200"));
         writeHeaders(ctx(), streamId, headers, 0, false, ctx().newPromise());
 
         writeData(ctx(), streamId, payload, 0, true, ctx().newPromise());
