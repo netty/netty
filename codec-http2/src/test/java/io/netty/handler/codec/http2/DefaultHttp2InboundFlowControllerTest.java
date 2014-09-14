@@ -153,19 +153,21 @@ public class DefaultHttp2InboundFlowControllerTest {
     }
 
     private void applyFlowControl(int dataSize, int padding, boolean endOfStream) throws Http2Exception {
-        ByteBuf buf = dummyData(dataSize);
-        controller.onDataRead(ctx, STREAM_ID, buf, padding, endOfStream);
-        buf.release();
+        final ByteBuf buf = dummyData(dataSize);
+        try {
+            controller.onDataRead(ctx, STREAM_ID, buf, padding, endOfStream);
+        } finally {
+            buf.release();
+        }
     }
 
     private static ByteBuf dummyData(int size) {
-        ByteBuf buffer = Unpooled.buffer(size);
+        final ByteBuf buffer = Unpooled.buffer(size);
         buffer.writerIndex(size);
         return buffer;
     }
 
-    private void verifyWindowUpdateSent(int streamId, int windowSizeIncrement)
-            throws Http2Exception {
+    private void verifyWindowUpdateSent(int streamId, int windowSizeIncrement) throws Http2Exception {
         verify(frameWriter).writeWindowUpdate(eq(ctx), eq(streamId), eq(windowSizeIncrement), eq(promise));
     }
 
@@ -174,7 +176,7 @@ public class DefaultHttp2InboundFlowControllerTest {
     }
 
     private void verifyWindowUpdateNotSent() throws Http2Exception {
-        verify(frameWriter, never()).writeWindowUpdate(any(ChannelHandlerContext.class), anyInt(),
-                anyInt(), any(ChannelPromise.class));
+        verify(frameWriter, never()).writeWindowUpdate(any(ChannelHandlerContext.class), anyInt(), anyInt(),
+                any(ChannelPromise.class));
     }
 }

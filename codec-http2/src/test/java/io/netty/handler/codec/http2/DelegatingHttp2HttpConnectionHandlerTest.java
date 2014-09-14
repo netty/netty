@@ -20,6 +20,7 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static io.netty.handler.codec.http2.Http2CodecUtil.ignoreSettingsHandler;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
@@ -48,11 +49,13 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.NetUtil;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -60,6 +63,10 @@ import org.mockito.MockitoAnnotations;
  * Testing the {@link DelegatingHttp2HttpConnectionHandler} for {@link FullHttpRequest} objects into HTTP/2 frames
  */
 public class DelegatingHttp2HttpConnectionHandlerTest {
+    private static final int CONNECTION_SETUP_READ_COUNT = 2;
+
+    private List<ByteBuf> capturedData;
+
     @Mock
     private Http2FrameListener clientListener;
 
@@ -71,13 +78,13 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
     private Channel serverChannel;
     private Channel clientChannel;
     private CountDownLatch requestLatch;
-    private static final int CONNECTION_SETUP_READ_COUNT = 2;
+    private Http2TestUtil.FrameCountDown serverFrameCountDown;
 
     @Before
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
 
-        requestLatch = new CountDownLatch(CONNECTION_SETUP_READ_COUNT + 1);
+        requestLatch(new CountDownLatch(CONNECTION_SETUP_READ_COUNT + 1));
 
         sb = new ServerBootstrap();
         cb = new Bootstrap();
@@ -88,7 +95,8 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                p.addLast(new DelegatingHttp2ConnectionHandler(true, new FrameCountDown()));
+                serverFrameCountDown = new Http2TestUtil.FrameCountDown(serverListener, requestLatch);
+                p.addLast(new DelegatingHttp2ConnectionHandler(true, serverFrameCountDown));
                 p.addLast(ignoreSettingsHandler());
             }
         });
@@ -114,6 +122,12 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
 
     @After
     public void teardown() throws Exception {
+        if (capturedData != null) {
+            for (int i = 0; i < capturedData.size(); ++i) {
+                capturedData.get(i).release();
+            }
+            capturedData = null;
+        }
         serverChannel.close().sync();
         sb.group().shutdownGracefully();
         sb.childGroup().shutdownGracefully();
@@ -122,58 +136,77 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
 
     @Test
     public void testJustHeadersRequest() throws Exception {
-        final HttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/example");
-        final HttpHeaders httpHeaders = request.headers();
-        httpHeaders.set(HttpUtil.ExtensionHeaders.Names.STREAM_ID, 5);
-        httpHeaders.set(HttpHeaders.Names.HOST, "http://my-user_name@www.example.org:5555/example");
-        httpHeaders.set(HttpUtil.ExtensionHeaders.Names.AUTHORITY, "www.example.org:5555");
-        httpHeaders.set(HttpUtil.ExtensionHeaders.Names.SCHEME, "http");
-        httpHeaders.add("foo", "goo");
-        httpHeaders.add("foo", "goo2");
-        httpHeaders.add("foo2", "goo2");
-        final Http2Headers http2Headers = new DefaultHttp2Headers.Builder()
-            .method("GET").path("/example").authority("www.example.org:5555").scheme("http")
-            .add("foo", "goo").add("foo", "goo2").add("foo2", "goo2").build();
-        ChannelPromise writePromise = newPromise();
-        ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
+        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/example");
+        try {
+            final HttpHeaders httpHeaders = request.headers();
+            httpHeaders.set(HttpUtil.ExtensionHeaders.Names.STREAM_ID, 5);
+            httpHeaders.set(HttpHeaders.Names.HOST, "http://my-user_name@www.example.org:5555/example");
+            httpHeaders.set(HttpUtil.ExtensionHeaders.Names.AUTHORITY, "www.example.org:5555");
+            httpHeaders.set(HttpUtil.ExtensionHeaders.Names.SCHEME, "http");
+            httpHeaders.add("foo", "goo");
+            httpHeaders.add("foo", "goo2");
+            httpHeaders.add("foo2", "goo2");
+            final Http2Headers http2Headers = new DefaultHttp2Headers.Builder().method("GET").path("/example")
+                    .authority("www.example.org:5555").scheme("http").add("foo", "goo").add("foo", "goo2")
+                    .add("foo2", "goo2").build();
+            ChannelPromise writePromise = newPromise();
+            ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
 
-        writePromise.awaitUninterruptibly(2, SECONDS);
-        assertTrue(writePromise.isSuccess());
-        writeFuture.awaitUninterruptibly(2, SECONDS);
-        assertTrue(writeFuture.isSuccess());
-        awaitRequests();
-        verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(5), eq(http2Headers), eq(0),
-            anyShort(), anyBoolean(), eq(0), eq(true));
-        verify(serverListener, never()).onDataRead(any(ChannelHandlerContext.class),
-            anyInt(), any(ByteBuf.class), anyInt(), anyBoolean());
+            writePromise.awaitUninterruptibly(2, SECONDS);
+            assertTrue(writePromise.isSuccess());
+            writeFuture.awaitUninterruptibly(2, SECONDS);
+            assertTrue(writeFuture.isSuccess());
+            awaitRequests();
+            final ArgumentCaptor<ByteBuf> dataCaptor = ArgumentCaptor.forClass(ByteBuf.class);
+            verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(5), eq(http2Headers), eq(0),
+                    anyShort(), anyBoolean(), eq(0), eq(true));
+            verify(serverListener, never()).onDataRead(any(ChannelHandlerContext.class), anyInt(),
+                    dataCaptor.capture(), anyInt(), anyBoolean());
+        } finally {
+            request.release();
+        }
     }
 
     @Test
     public void testRequestWithBody() throws Exception {
-        requestLatch = new CountDownLatch(CONNECTION_SETUP_READ_COUNT + 2);
+        requestLatch(new CountDownLatch(CONNECTION_SETUP_READ_COUNT + 2));
         final String text = "foooooogoooo";
-        final HttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, "/example",
-            Unpooled.copiedBuffer(text, UTF_8));
-        final HttpHeaders httpHeaders = request.headers();
-        httpHeaders.set(HttpHeaders.Names.HOST, "http://your_user-name123@www.example.org:5555/example");
-        httpHeaders.add("foo", "goo");
-        httpHeaders.add("foo", "goo2");
-        httpHeaders.add("foo2", "goo2");
-        final Http2Headers http2Headers = new DefaultHttp2Headers.Builder()
-            .method("POST").path("/example").authority("www.example.org:5555").scheme("http")
-            .add("foo", "goo").add("foo", "goo2").add("foo2", "goo2").build();
-        ChannelPromise writePromise = newPromise();
-        ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
+        final ByteBuf data = Unpooled.copiedBuffer(text, UTF_8);
+        try {
+            final HttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, "/example", data.retain());
+            final HttpHeaders httpHeaders = request.headers();
+            httpHeaders.set(HttpHeaders.Names.HOST, "http://your_user-name123@www.example.org:5555/example");
+            httpHeaders.add("foo", "goo");
+            httpHeaders.add("foo", "goo2");
+            httpHeaders.add("foo2", "goo2");
+            final Http2Headers http2Headers = new DefaultHttp2Headers.Builder().method("POST").path("/example")
+                    .authority("www.example.org:5555").scheme("http").add("foo", "goo").add("foo", "goo2")
+                    .add("foo2", "goo2").build();
+            ChannelPromise writePromise = newPromise();
+            ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
 
-        writePromise.awaitUninterruptibly(2, SECONDS);
-        assertTrue(writePromise.isSuccess());
-        writeFuture.awaitUninterruptibly(2, SECONDS);
-        assertTrue(writeFuture.isSuccess());
-        awaitRequests();
-        verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(http2Headers), eq(0),
-            anyShort(), anyBoolean(), eq(0), eq(false));
-        verify(serverListener).onDataRead(any(ChannelHandlerContext.class),
-            eq(3), eq(Unpooled.copiedBuffer(text.getBytes())), eq(0), eq(true));
+            writePromise.awaitUninterruptibly(2, SECONDS);
+            assertTrue(writePromise.isSuccess());
+            writeFuture.awaitUninterruptibly(2, SECONDS);
+            assertTrue(writeFuture.isSuccess());
+            awaitRequests();
+            final ArgumentCaptor<ByteBuf> dataCaptor = ArgumentCaptor.forClass(ByteBuf.class);
+            verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(http2Headers), eq(0),
+                    anyShort(), anyBoolean(), eq(0), eq(false));
+            verify(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3), dataCaptor.capture(), eq(0),
+                    eq(true));
+            capturedData = dataCaptor.getAllValues();
+            assertEquals(data, capturedData.get(0));
+        } finally {
+            data.release();
+        }
+    }
+
+    private void requestLatch(CountDownLatch latch) {
+        requestLatch = latch;
+        if (serverFrameCountDown != null) {
+            serverFrameCountDown.messageLatch(latch);
+        }
     }
 
     private void awaitRequests() throws Exception {
@@ -186,106 +219,5 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
 
     private ChannelPromise newPromise() {
         return ctx().newPromise();
-    }
-
-     /**
-     * A decorator around the serverObserver that counts down the latch so that we can await the
-     * completion of the request.
-     */
-    private final class FrameCountDown implements Http2FrameListener {
-
-        @Override
-        public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
-                               boolean endOfStream)
-                throws Http2Exception {
-            serverListener.onDataRead(ctx, streamId, copy(data), padding, endOfStream);
-            requestLatch.countDown();
-        }
-
-        @Override
-        public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-                                  int padding, boolean endStream) throws Http2Exception {
-            serverListener.onHeadersRead(ctx, streamId, headers, padding, endStream);
-            requestLatch.countDown();
-        }
-
-        @Override
-        public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-                                  int streamDependency, short weight, boolean exclusive, int padding,
-                                  boolean endStream) throws Http2Exception {
-            serverListener.onHeadersRead(ctx, streamId, headers, streamDependency, weight,
-                    exclusive, padding, endStream);
-            requestLatch.countDown();
-        }
-
-        @Override
-        public void onPriorityRead(ChannelHandlerContext ctx, int streamId, int streamDependency,
-                                   short weight, boolean exclusive) throws Http2Exception {
-            serverListener.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);
-            requestLatch.countDown();
-        }
-
-        @Override
-        public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode)
-                throws Http2Exception {
-            serverListener.onRstStreamRead(ctx, streamId, errorCode);
-            requestLatch.countDown();
-        }
-
-        @Override
-        public void onSettingsAckRead(ChannelHandlerContext ctx) throws Http2Exception {
-            serverListener.onSettingsAckRead(ctx);
-            requestLatch.countDown();
-        }
-
-        @Override
-        public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) throws Http2Exception {
-            serverListener.onSettingsRead(ctx, settings);
-            requestLatch.countDown();
-        }
-
-        @Override
-        public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
-            serverListener.onPingRead(ctx, copy(data));
-            requestLatch.countDown();
-        }
-
-        @Override
-        public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
-            serverListener.onPingAckRead(ctx, copy(data));
-            requestLatch.countDown();
-        }
-
-        @Override
-        public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId,
-                                      int promisedStreamId, Http2Headers headers, int padding) throws Http2Exception {
-            serverListener.onPushPromiseRead(ctx, streamId, promisedStreamId, headers, padding);
-            requestLatch.countDown();
-        }
-
-        @Override
-        public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
-                throws Http2Exception {
-            serverListener.onGoAwayRead(ctx, lastStreamId, errorCode, copy(debugData));
-            requestLatch.countDown();
-        }
-
-        @Override
-        public void onWindowUpdateRead(ChannelHandlerContext ctx, int streamId,
-                                       int windowSizeIncrement) throws Http2Exception {
-            serverListener.onWindowUpdateRead(ctx, streamId, windowSizeIncrement);
-            requestLatch.countDown();
-        }
-
-        @Override
-        public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
-                Http2Flags flags, ByteBuf payload) {
-            serverListener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
-            requestLatch.countDown();
-        }
-
-        ByteBuf copy(ByteBuf buffer) {
-            return Unpooled.copiedBuffer(buffer);
-        }
     }
 }

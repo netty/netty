@@ -27,7 +27,6 @@ import org.junit.Test;
 
 import com.twitter.hpack.Encoder;
 
-
 /**
  * Tests for {@link DefaultHttp2HeadersDecoder}.
  */
@@ -42,22 +41,30 @@ public class DefaultHttp2HeadersDecoderTest {
 
     @Test
     public void decodeShouldSucceed() throws Exception {
-        ByteBuf buf = encode(":method", "GET", "akey", "avalue");
-        Http2Headers headers = decoder.decodeHeaders(buf).build();
-        assertEquals(2, headers.size());
-        assertEquals("GET", headers.method());
-        assertEquals("avalue", headers.get("akey"));
+        final ByteBuf buf = encode(":method", "GET", "akey", "avalue");
+        try {
+            Http2Headers headers = decoder.decodeHeaders(buf).build();
+            assertEquals(2, headers.size());
+            assertEquals("GET", headers.method());
+            assertEquals("avalue", headers.get("akey"));
+        } finally {
+            buf.release();
+        }
     }
 
     @Test(expected = Http2Exception.class)
     public void decodeWithInvalidPseudoHeaderShouldFail() throws Exception {
-        ByteBuf buf = encode(":invalid", "GET", "akey", "avalue");
-        decoder.decodeHeaders(buf);
+        final ByteBuf buf = encode(":invalid", "GET", "akey", "avalue");
+        try {
+            decoder.decodeHeaders(buf);
+        } finally {
+            buf.release();
+        }
     }
 
     private ByteBuf encode(String... entries) throws Exception {
-        Encoder encoder = new Encoder();
-        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        final Encoder encoder = new Encoder();
+        final ByteArrayOutputStream stream = new ByteArrayOutputStream();
         for (int ix = 0; ix < entries.length;) {
             String key = entries[ix++];
             String value = entries[ix++];
