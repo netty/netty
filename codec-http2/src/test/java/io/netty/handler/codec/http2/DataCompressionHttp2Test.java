@@ -182,7 +182,7 @@ public class DataCompressionHttp2Test {
                 }
             });
             awaitServer();
-            data.readerIndex(0);
+            data.resetReaderIndex();
             ArgumentCaptor<ByteBuf> dataCaptor = ArgumentCaptor.forClass(ByteBuf.class);
             verify(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3), dataCaptor.capture(), eq(0),
                             eq(true));
@@ -216,7 +216,7 @@ public class DataCompressionHttp2Test {
                 }
             });
             awaitServer();
-            data.readerIndex(0);
+            data.resetReaderIndex();
             ArgumentCaptor<ByteBuf> dataCaptor = ArgumentCaptor.forClass(ByteBuf.class);
             verify(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3), dataCaptor.capture(), eq(0),
                             eq(true));
@@ -254,8 +254,8 @@ public class DataCompressionHttp2Test {
                 }
             });
             awaitServer();
-            data1.readerIndex(0);
-            data2.readerIndex(0);
+            data1.resetReaderIndex();
+            data2.resetReaderIndex();
             ArgumentCaptor<ByteBuf> dataCaptor = ArgumentCaptor.forClass(ByteBuf.class);
             ArgumentCaptor<Boolean> endStreamCaptor = ArgumentCaptor.forClass(Boolean.class);
             verify(serverListener, times(2)).onDataRead(any(ChannelHandlerContext.class), eq(3), dataCaptor.capture(),
@@ -297,7 +297,7 @@ public class DataCompressionHttp2Test {
                 }
             });
             awaitServer();
-            data.readerIndex(0);
+            data.resetReaderIndex();
             ArgumentCaptor<ByteBuf> dataCaptor = ArgumentCaptor.forClass(ByteBuf.class);
             verify(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3), dataCaptor.capture(), eq(0),
                             eq(true));

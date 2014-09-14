@@ -15,7 +15,6 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -50,8 +49,7 @@ final class Http2TestUtil {
         });
     }
 
-    private Http2TestUtil() {
-    }
+    private Http2TestUtil() { }
 
     static class FrameAdapter extends ByteToMessageDecoder {
         private final boolean copyBufs;
@@ -118,7 +116,7 @@ final class Http2TestUtil {
                 public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
                         boolean endOfStream) throws Http2Exception {
                     Http2Stream stream = getOrCreateStream(streamId, endOfStream);
-                    listener.onDataRead(ctx, streamId, copyBufs ? copy(data) : data, padding, endOfStream);
+                    listener.onDataRead(ctx, streamId, copyBufs ? data.copy() : data, padding, endOfStream);
                     if (endOfStream) {
                         closeStream(stream, true);
                     }
@@ -186,13 +184,13 @@ final class Http2TestUtil {
 
                 @Override
                 public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
-                    listener.onPingRead(ctx, copyBufs ? copy(data) : data);
+                    listener.onPingRead(ctx, copyBufs ? data.copy() : data);
                     latch.countDown();
                 }
 
                 @Override
                 public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
-                    listener.onPingAckRead(ctx, copyBufs ? copy(data) : data);
+                    listener.onPingAckRead(ctx, copyBufs ? data.copy() : data);
                     latch.countDown();
                 }
 
@@ -207,7 +205,7 @@ final class Http2TestUtil {
                 @Override
                 public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
                         throws Http2Exception {
-                    listener.onGoAwayRead(ctx, lastStreamId, errorCode, copyBufs ? copy(debugData) : debugData);
+                    listener.onGoAwayRead(ctx, lastStreamId, errorCode, copyBufs ? debugData.copy() : debugData);
                     latch.countDown();
                 }
 
@@ -227,9 +225,124 @@ final class Http2TestUtil {
                 }
             });
         }
+    }
 
-        ByteBuf copy(ByteBuf buffer) {
-            return Unpooled.copiedBuffer(buffer);
+    /**
+     * A decorator around a {@link Http2FrameListener} that counts down the latch so that we can await the completion of
+     * the request.
+     */
+    static class FrameCountDown implements Http2FrameListener {
+        private final Http2FrameListener listener;
+        private CountDownLatch messageLatch;
+        private CountDownLatch dataLatch;
+
+        public FrameCountDown(Http2FrameListener listener, CountDownLatch messageLatch) {
+            this(listener, messageLatch, null);
+        }
+
+        public FrameCountDown(Http2FrameListener listener, CountDownLatch messageLatch, CountDownLatch dataLatch) {
+            this.listener = listener;
+            this.messageLatch = messageLatch;
+            this.dataLatch = dataLatch;
+        }
+
+        public void messageLatch(CountDownLatch latch) {
+            messageLatch = latch;
+        }
+
+        public void dataLatch(CountDownLatch latch) {
+            dataLatch = latch;
+        }
+
+        @Override
+        public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
+                throws Http2Exception {
+            listener.onDataRead(ctx, streamId, data.copy(), padding, endOfStream);
+            messageLatch.countDown();
+            if (dataLatch != null) {
+                for (int i = 0; i < data.readableBytes(); ++i) {
+                    dataLatch.countDown();
+                }
+            }
+        }
+
+        @Override
+        public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
+                boolean endStream) throws Http2Exception {
+            listener.onHeadersRead(ctx, streamId, headers, padding, endStream);
+            messageLatch.countDown();
+        }
+
+        @Override
+        public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int streamDependency,
+                short weight, boolean exclusive, int padding, boolean endStream) throws Http2Exception {
+            listener.onHeadersRead(ctx, streamId, headers, streamDependency, weight, exclusive, padding, endStream);
+            messageLatch.countDown();
+        }
+
+        @Override
+        public void onPriorityRead(ChannelHandlerContext ctx, int streamId, int streamDependency, short weight,
+                boolean exclusive) throws Http2Exception {
+            listener.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);
+            messageLatch.countDown();
+        }
+
+        @Override
+        public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
+            listener.onRstStreamRead(ctx, streamId, errorCode);
+            messageLatch.countDown();
+        }
+
+        @Override
+        public void onSettingsAckRead(ChannelHandlerContext ctx) throws Http2Exception {
+            listener.onSettingsAckRead(ctx);
+            messageLatch.countDown();
+        }
+
+        @Override
+        public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) throws Http2Exception {
+            listener.onSettingsRead(ctx, settings);
+            messageLatch.countDown();
+        }
+
+        @Override
+        public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
+            listener.onPingRead(ctx, data.copy());
+            messageLatch.countDown();
+        }
+
+        @Override
+        public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
+            listener.onPingAckRead(ctx, data.copy());
+            messageLatch.countDown();
+        }
+
+        @Override
+        public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
+                Http2Headers headers, int padding) throws Http2Exception {
+            listener.onPushPromiseRead(ctx, streamId, promisedStreamId, headers, padding);
+            messageLatch.countDown();
+        }
+
+        @Override
+        public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
+                throws Http2Exception {
+            listener.onGoAwayRead(ctx, lastStreamId, errorCode, debugData.copy());
+            messageLatch.countDown();
+        }
+
+        @Override
+        public void onWindowUpdateRead(ChannelHandlerContext ctx, int streamId, int windowSizeIncrement)
+                throws Http2Exception {
+            listener.onWindowUpdateRead(ctx, streamId, windowSizeIncrement);
+            messageLatch.countDown();
+        }
+
+        @Override
+        public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
+                ByteBuf payload) {
+            listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
+            messageLatch.countDown();
         }
     }
 }
