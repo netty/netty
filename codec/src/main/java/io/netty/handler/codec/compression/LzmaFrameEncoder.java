@@ -144,7 +144,7 @@ public class LzmaFrameEncoder extends MessageToByteEncoder<ByteBuf> {
         if (pb < 0 || pb > 4) {
             throw new IllegalArgumentException("pb: " + pb + " (expected: 0-4)");
         }
-        if (lc + pb > 4) {
+        if (lc + lp > 4) {
             if (!warningLogged) {
                 logger.warn("The latest versions of LZMA libraries (for example, XZ Utils) " +
                         "has an additional requirement: lc + lp <= 4. Data which don't follow " +
