@@ -19,6 +19,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeNoException;
+import static org.mockito.Mockito.verify;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -35,6 +36,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.Future;
 
 import java.net.InetSocketAddress;
 import java.security.cert.CertificateException;
@@ -51,7 +53,6 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import static org.mockito.Mockito.verify;
 
 public class JettySslEngineTest {
     private static final String APPLICATION_LEVEL_PROTOCOL = "my-protocol";
@@ -102,9 +103,12 @@ public class JettySslEngineTest {
     public void tearDown() throws InterruptedException {
         if (serverChannel != null) {
             serverChannel.close().sync();
-            sb.group().shutdownGracefully();
-            sb.childGroup().shutdownGracefully();
-            cb.group().shutdownGracefully();
+            Future<?> serverGroup = sb.group().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+            Future<?> serverChildGroup = sb.childGroup().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+            Future<?> clientGroup = cb.group().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+            serverGroup.sync();
+            serverChildGroup.sync();
+            clientGroup.sync();
         }
         clientChannel = null;
         serverChannel = null;
@@ -206,7 +210,7 @@ public class JettySslEngineTest {
     }
 
     private static void writeAndVerifyReceived(ByteBuf message, Channel sendChannel, CountDownLatch receiverLatch,
-            MessageReciever receiver) throws Exception {
+                    MessageReciever receiver) throws Exception {
         List<ByteBuf> dataCapture = null;
         try {
             sendChannel.writeAndFlush(message);

@@ -41,6 +41,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.Future;
 
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -122,9 +123,12 @@ public class Http2ConnectionRoundtripTest {
     @After
     public void teardown() throws Exception {
         serverChannel.close().sync();
-        sb.group().shutdownGracefully();
-        sb.childGroup().shutdownGracefully();
-        cb.group().shutdownGracefully();
+        Future<?> serverGroup = sb.group().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+        Future<?> serverChildGroup = sb.childGroup().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+        Future<?> clientGroup = cb.group().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+        serverGroup.sync();
+        serverChildGroup.sync();
+        clientGroup.sync();
     }
 
     @Test
