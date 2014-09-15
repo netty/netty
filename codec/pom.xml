@@ -59,6 +59,11 @@
       <artifactId>lz4</artifactId>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>com.github.jponge</groupId>
+      <artifactId>lzma-java</artifactId>
+      <optional>true</optional>
+    </dependency>
 
     <!-- Test dependencies for jboss marshalling encoder/decoder -->
     <dependency>
