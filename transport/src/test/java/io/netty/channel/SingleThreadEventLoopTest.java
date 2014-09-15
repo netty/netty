@@ -158,7 +158,10 @@ public class SingleThreadEventLoopTest {
                 endTime.set(System.nanoTime());
             }
         }, 500, TimeUnit.MILLISECONDS).get();
-        assertTrue(endTime.get() - startTime >= TimeUnit.MILLISECONDS.toNanos(500));
+
+        long delta = endTime.get() - startTime;
+        String message = String.format("delta: %d, minDelta: %d", delta, TimeUnit.MILLISECONDS.toNanos(500));
+        assertTrue(message, delta >= TimeUnit.MILLISECONDS.toNanos(500));
     }
 
     @Test
@@ -231,11 +234,13 @@ public class SingleThreadEventLoopTest {
                 continue;
             }
 
-            long diff = t.longValue() - previousTimestamp.longValue();
+            long delta = t.longValue() - previousTimestamp.longValue();
             if (i == 0) {
-                assertTrue(diff >= TimeUnit.MILLISECONDS.toNanos(400));
+                String message = String.format("delta: %d, minDelta: %d", delta, TimeUnit.MILLISECONDS.toNanos(400));
+                assertTrue(message, delta >= TimeUnit.MILLISECONDS.toNanos(400));
             } else {
-                assertTrue(diff <= TimeUnit.MILLISECONDS.toNanos(10));
+                String message = String.format("delta: %d, maxDelta: %d", delta, TimeUnit.MILLISECONDS.toNanos(10));
+                assertTrue(message, delta <= TimeUnit.MILLISECONDS.toNanos(10));
             }
             previousTimestamp = t;
             i ++;
@@ -402,7 +407,9 @@ public class SingleThreadEventLoopTest {
             loopA.awaitTermination(Integer.MAX_VALUE, TimeUnit.SECONDS);
         }
 
-        assertTrue(System.nanoTime() - startTime >= TimeUnit.SECONDS.toNanos(1));
+        long delta = System.nanoTime() - startTime;
+        String message = String.format("delta: %d, minDelta: %d", delta, TimeUnit.MILLISECONDS.toNanos(1));
+        assertTrue(message, delta >= TimeUnit.SECONDS.toNanos(1));
     }
 
     @Test(timeout = 5000)
@@ -460,7 +467,8 @@ public class SingleThreadEventLoopTest {
         assertTrue(channel.deregister().sync().isSuccess());
 
         for (Queue<Long> timestamps : timestampsPerTask) {
-            assertTrue(timestamps.size() >= 10);
+            String message = String.format("size: %d, minSize: 10", timestamps.size());
+            assertTrue(message, timestamps.size() >= 10);
             verifyTimestampDeltas(timestamps, TimeUnit.MICROSECONDS.toNanos(90));
             timestamps.clear();
         }
@@ -468,7 +476,8 @@ public class SingleThreadEventLoopTest {
         // Because the Channel is deregistered no task must have executed since then.
         Thread.sleep(200);
         for (Queue<Long> timestamps : timestampsPerTask) {
-            assertTrue(timestamps.isEmpty());
+            String message = String.format("size: %d, expected 0", timestamps.size());
+            assertTrue(message, timestamps.isEmpty());
         }
 
         registerPromise = channel.newPromise();
@@ -485,7 +494,8 @@ public class SingleThreadEventLoopTest {
         }
 
         for (Queue<Long> timestamps : timestampsPerTask) {
-            assertTrue(timestamps.size() >= 10);
+            String message = String.format("size: %d, minSize: 10", timestamps.size());
+            assertTrue(message, timestamps.size() >= 10);
             verifyTimestampDeltas(timestamps, TimeUnit.MICROSECONDS.toNanos(90));
         }
     }
@@ -542,7 +552,8 @@ public class SingleThreadEventLoopTest {
 
             assertTrue(channel.deregister().sync().isSuccess());
 
-            assertTrue("was " + timestamps.size(), timestamps.size() >= 2);
+            String message = String.format("size: %d, minSize: 2", timestamps.size());
+            assertTrue(message, timestamps.size() >= 2);
             verifyTimestampDeltas(timestamps, TimeUnit.MILLISECONDS.toNanos(90));
             timestamps.clear();
         }
@@ -550,7 +561,8 @@ public class SingleThreadEventLoopTest {
         // cancel while the channel is deregistered
         assertFalse(channel.isRegistered());
         assertTrue(f.cancel(true));
-        assertTrue(timestamps.isEmpty());
+        String message = String.format("size: %d, expected 0", timestamps.size());
+        assertTrue(message, timestamps.isEmpty());
 
         // register again and check that it's not executed again.
         ChannelPromise registerPromise = channel.newPromise();
@@ -559,7 +571,8 @@ public class SingleThreadEventLoopTest {
 
         Thread.sleep(200);
 
-        assertTrue(timestamps.isEmpty());
+        message = String.format("size: %d, expected 0", timestamps.size());
+        assertTrue(message, timestamps.isEmpty());
     }
 
     @Test(timeout = 10000)
@@ -616,7 +629,8 @@ public class SingleThreadEventLoopTest {
         Thread.sleep(1000);
 
         // no scheduled tasks must be executed after deregistration.
-        assertTrue("size: " + timestamps.size(), timestamps.isEmpty());
+        String message = String.format("size: %d, expected 0", timestamps.size());
+        assertTrue(message, timestamps.isEmpty());
 
         assertFalse(((PausableEventExecutor) channel.eventLoop()).isAcceptingNewTasks());
         registerPromise = channel.newPromise();
@@ -631,7 +645,8 @@ public class SingleThreadEventLoopTest {
         Thread.sleep(1150);
         assertTrue(scheduleFuture.cancel(true));
 
-        assertTrue("was " + timestamps.size(), timestamps.size() >= 5);
+        message = String.format("size: %d, minSize: 5", timestamps.size());
+        assertTrue(message, timestamps.size() >= 5);
         verifyTimestampDeltas(timestamps, TimeUnit.MILLISECONDS.toNanos(190));
     }
 
