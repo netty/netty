@@ -43,10 +43,12 @@ import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.Future;
 
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.After;
 import org.junit.Before;
@@ -134,9 +136,12 @@ public class DataCompressionHttp2Test {
             dataCapture = null;
         }
         serverChannel.close().sync();
-        sb.group().shutdownGracefully();
-        sb.childGroup().shutdownGracefully();
-        cb.group().shutdownGracefully();
+        Future<?> serverGroup = sb.group().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+        Future<?> serverChildGroup = sb.childGroup().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+        Future<?> clientGroup = cb.group().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+        serverGroup.sync();
+        serverChildGroup.sync();
+        clientGroup.sync();
         serverAdapter = null;
         clientAdapter = null;
         serverConnection = null;
