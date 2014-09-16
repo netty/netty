@@ -86,7 +86,17 @@ public final class HttpClientCodec extends ChannelHandlerAppender {
         this.failOnMissingResponse = failOnMissingResponse;
     }
 
-    private Decoder decoder() {
+    /**
+     * Returns the encoder of this codec.
+     */
+    public HttpRequestEncoder encoder() {
+        return handlerAt(1);
+    }
+
+    /**
+     * Returns the decoder of this codec.
+     */
+    public HttpResponseDecoder decoder() {
         return handlerAt(0);
     }
 
