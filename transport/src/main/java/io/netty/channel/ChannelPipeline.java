@@ -220,13 +220,13 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
     /**
      * Inserts a {@link ChannelHandler} at the first position of this pipeline.
      *
-     * @param name     the name of the handler to insert first
+     * @param name     the name of the handler to insert first. {@code null} to let the name auto-generated.
      * @param handler  the handler to insert first
      *
      * @throws IllegalArgumentException
      *         if there's an entry with the same name already in the pipeline
      * @throws NullPointerException
-     *         if the specified name or handler is {@code null}
+     *         if the specified handler is {@code null}
      */
     ChannelPipeline addFirst(String name, ChannelHandler handler);
 
@@ -235,13 +235,13 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
      *
      * @param group    the {@link EventExecutorGroup} which will be used to execute the {@link ChannelHandler}
      *                 methods
-     * @param name     the name of the handler to insert first
+     * @param name     the name of the handler to insert first. {@code null} to let the name auto-generated.
      * @param handler  the handler to insert first
      *
      * @throws IllegalArgumentException
      *         if there's an entry with the same name already in the pipeline
      * @throws NullPointerException
-     *         if the specified name or handler is {@code null}
+     *         if the specified handler is {@code null}
      */
     ChannelPipeline addFirst(EventExecutorGroup group, String name, ChannelHandler handler);
 
@@ -249,26 +249,26 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
      * Inserts a {@link ChannelHandler} at the first position of this pipeline.
      *
      * @param invoker  the {@link ChannelHandlerInvoker} which invokes the {@code handler}s event handler methods
-     * @param name     the name of the handler to insert first
+     * @param name     the name of the handler to insert first. {@code null} to let the name auto-generated.
      * @param handler  the handler to insert first
      *
      * @throws IllegalArgumentException
      *         if there's an entry with the same name already in the pipeline
      * @throws NullPointerException
-     *         if the specified name or handler is {@code null}
+     *         if the specified handler is {@code null}
      */
     ChannelPipeline addFirst(ChannelHandlerInvoker invoker, String name, ChannelHandler handler);
 
     /**
      * Appends a {@link ChannelHandler} at the last position of this pipeline.
      *
-     * @param name     the name of the handler to append
+     * @param name     the name of the handler to append. {@code null} to let the name auto-generated.
      * @param handler  the handler to append
      *
      * @throws IllegalArgumentException
      *         if there's an entry with the same name already in the pipeline
      * @throws NullPointerException
-     *         if the specified name or handler is {@code null}
+     *         if the specified handler is {@code null}
      */
     ChannelPipeline addLast(String name, ChannelHandler handler);
 
@@ -277,13 +277,13 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
      *
      * @param group    the {@link EventExecutorGroup} which will be used to execute the {@link ChannelHandler}
      *                 methods
-     * @param name     the name of the handler to append
+     * @param name     the name of the handler to append. {@code null} to let the name auto-generated.
      * @param handler  the handler to append
      *
      * @throws IllegalArgumentException
      *         if there's an entry with the same name already in the pipeline
      * @throws NullPointerException
-     *         if the specified name or handler is {@code null}
+     *         if the specified handler is {@code null}
      */
     ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler);
 
@@ -291,13 +291,13 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
      * Appends a {@link ChannelHandler} at the last position of this pipeline.
      *
      * @param invoker  the {@link ChannelHandlerInvoker} which invokes the {@code handler}s event handler methods
-     * @param name     the name of the handler to append
+     * @param name     the name of the handler to append. {@code null} to let the name auto-generated.
      * @param handler  the handler to append
      *
      * @throws IllegalArgumentException
      *         if there's an entry with the same name already in the pipeline
      * @throws NullPointerException
-     *         if the specified name or handler is {@code null}
+     *         if the specified handler is {@code null}
      */
     ChannelPipeline addLast(ChannelHandlerInvoker invoker, String name, ChannelHandler handler);
 
@@ -306,7 +306,7 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
      * pipeline.
      *
      * @param baseName  the name of the existing handler
-     * @param name      the name of the handler to insert before
+     * @param name      the name of the handler to insert before. {@code null} to let the name auto-generated.
      * @param handler   the handler to insert before
      *
      * @throws NoSuchElementException
@@ -314,7 +314,7 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
      * @throws IllegalArgumentException
      *         if there's an entry with the same name already in the pipeline
      * @throws NullPointerException
-     *         if the specified baseName, name, or handler is {@code null}
+     *         if the specified baseName or handler is {@code null}
      */
     ChannelPipeline addBefore(String baseName, String name, ChannelHandler handler);
 
@@ -325,7 +325,7 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
      * @param group     the {@link EventExecutorGroup} which will be used to execute the {@link ChannelHandler}
      *                  methods
      * @param baseName  the name of the existing handler
-     * @param name      the name of the handler to insert before
+     * @param name      the name of the handler to insert before. {@code null} to let the name auto-generated.
      * @param handler   the handler to insert before
      *
      * @throws NoSuchElementException
@@ -333,7 +333,7 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
      * @throws IllegalArgumentException
      *         if there's an entry with the same name already in the pipeline
      * @throws NullPointerException
-     *         if the specified baseName, name, or handler is {@code null}
+     *         if the specified baseName or handler is {@code null}
      */
     ChannelPipeline addBefore(EventExecutorGroup group, String baseName, String name, ChannelHandler handler);
 
@@ -343,7 +343,7 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
      *
      * @param invoker   the {@link ChannelHandlerInvoker} which invokes the {@code handler}s event handler methods
      * @param baseName  the name of the existing handler
-     * @param name      the name of the handler to insert before
+     * @param name      the name of the handler to insert before. {@code null} to let the name auto-generated.
      * @param handler   the handler to insert before
      *
      * @throws NoSuchElementException
@@ -351,7 +351,7 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
      * @throws IllegalArgumentException
      *         if there's an entry with the same name already in the pipeline
      * @throws NullPointerException
-     *         if the specified baseName, name, or handler is {@code null}
+     *         if the specified baseName or handler is {@code null}
      */
     ChannelPipeline addBefore(ChannelHandlerInvoker invoker, String baseName, String name, ChannelHandler handler);
 
@@ -360,7 +360,7 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
      * pipeline.
      *
      * @param baseName  the name of the existing handler
-     * @param name      the name of the handler to insert after
+     * @param name      the name of the handler to insert after. {@code null} to let the name auto-generated.
      * @param handler   the handler to insert after
      *
      * @throws NoSuchElementException
@@ -368,7 +368,7 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
      * @throws IllegalArgumentException
      *         if there's an entry with the same name already in the pipeline
      * @throws NullPointerException
-     *         if the specified baseName, name, or handler is {@code null}
+     *         if the specified baseName or handler is {@code null}
      */
     ChannelPipeline addAfter(String baseName, String name, ChannelHandler handler);
 
@@ -379,7 +379,7 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
      * @param group     the {@link EventExecutorGroup} which will be used to execute the {@link ChannelHandler}
      *                  methods
      * @param baseName  the name of the existing handler
-     * @param name      the name of the handler to insert after
+     * @param name      the name of the handler to insert after. {@code null} to let the name auto-generated.
      * @param handler   the handler to insert after
      *
      * @throws NoSuchElementException
@@ -387,7 +387,7 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
      * @throws IllegalArgumentException
      *         if there's an entry with the same name already in the pipeline
      * @throws NullPointerException
-     *         if the specified baseName, name, or handler is {@code null}
+     *         if the specified baseName or handler is {@code null}
      */
     ChannelPipeline addAfter(EventExecutorGroup group, String baseName, String name, ChannelHandler handler);
 
@@ -397,7 +397,7 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
      *
      * @param invoker   the {@link ChannelHandlerInvoker} which invokes the {@code handler}s event handler methods
      * @param baseName  the name of the existing handler
-     * @param name      the name of the handler to insert after
+     * @param name      the name of the handler to insert after. {@code null} to let the name auto-generated.
      * @param handler   the handler to insert after
      *
      * @throws NoSuchElementException
@@ -405,7 +405,7 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
      * @throws IllegalArgumentException
      *         if there's an entry with the same name already in the pipeline
      * @throws NullPointerException
-     *         if the specified baseName, name, or handler is {@code null}
+     *         if the specified baseName or handler is {@code null}
      */
     ChannelPipeline addAfter(ChannelHandlerInvoker invoker, String baseName, String name, ChannelHandler handler);
 
@@ -528,7 +528,8 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
      * Replaces the specified {@link ChannelHandler} with a new handler in this pipeline.
      *
      * @param  oldHandler    the {@link ChannelHandler} to be replaced
-     * @param  newName       the name under which the replacement should be added
+     * @param  newName       the name under which the replacement should be added.
+     *                       {@code null} to use the same name with the handler being replaced.
      * @param  newHandler    the {@link ChannelHandler} which is used as replacement
      *
      * @return itself
@@ -539,8 +540,7 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
      *         if a handler with the specified new name already exists in this
      *         pipeline, except for the handler to be replaced
      * @throws NullPointerException
-     *         if the specified old handler, new name, or new handler is
-     *         {@code null}
+     *         if the specified old handler or new handler is {@code null}
      */
     ChannelPipeline replace(ChannelHandler oldHandler, String newName, ChannelHandler newHandler);
 
@@ -548,7 +548,8 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
      * Replaces the {@link ChannelHandler} of the specified name with a new handler in this pipeline.
      *
      * @param  oldName       the name of the {@link ChannelHandler} to be replaced
-     * @param  newName       the name under which the replacement should be added
+     * @param  newName       the name under which the replacement should be added.
+     *                       {@code null} to use the same name with the handler being replaced.
      * @param  newHandler    the {@link ChannelHandler} which is used as replacement
      *
      * @return the removed handler
@@ -559,8 +560,7 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
      *         if a handler with the specified new name already exists in this
      *         pipeline, except for the handler to be replaced
      * @throws NullPointerException
-     *         if the specified old handler, new name, or new handler is
-     *         {@code null}
+     *         if the specified old handler or new handler is {@code null}
      */
     ChannelHandler replace(String oldName, String newName, ChannelHandler newHandler);
 
@@ -568,7 +568,8 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
      * Replaces the {@link ChannelHandler} of the specified type with a new handler in this pipeline.
      *
      * @param  oldHandlerType   the type of the handler to be removed
-     * @param  newName          the name under which the replacement should be added
+     * @param  newName          the name under which the replacement should be added.
+     *                          {@code null} to use the same name with the handler being replaced.
      * @param  newHandler       the {@link ChannelHandler} which is used as replacement
      *
      * @return the removed handler
@@ -580,8 +581,7 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
      *         if a handler with the specified new name already exists in this
      *         pipeline, except for the handler to be replaced
      * @throws NullPointerException
-     *         if the specified old handler, new name, or new handler is
-     *         {@code null}
+     *         if the specified old handler or new handler is {@code null}
      */
     <T extends ChannelHandler> T replace(Class<T> oldHandlerType, String newName,
                                          ChannelHandler newHandler);
