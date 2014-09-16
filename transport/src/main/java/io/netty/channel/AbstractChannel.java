@@ -25,8 +25,11 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.net.NoRouteToHostException;
 import java.net.SocketAddress;
+import java.net.SocketException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
 import java.util.concurrent.RejectedExecutionException;
@@ -809,6 +812,27 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             } catch (RejectedExecutionException e) {
                 logger.warn("Can't invoke task later as EventLoop rejected it", e);
             }
+        }
+
+        /**
+         * Appends the remote address to the message of the exceptions caused by connection attempt failure.
+         */
+        protected final Throwable annotateConnectException(Throwable cause, SocketAddress remoteAddress) {
+            if (cause instanceof ConnectException) {
+                Throwable newT = new ConnectException(cause.getMessage() + ": " + remoteAddress);
+                newT.setStackTrace(cause.getStackTrace());
+                cause = newT;
+            } else if (cause instanceof NoRouteToHostException) {
+                Throwable newT = new NoRouteToHostException(cause.getMessage() + ": " + remoteAddress);
+                newT.setStackTrace(cause.getStackTrace());
+                cause = newT;
+            } else if (cause instanceof SocketException) {
+                Throwable newT = new SocketException(cause.getMessage() + ": " + remoteAddress);
+                newT.setStackTrace(cause.getStackTrace());
+                cause = newT;
+            }
+
+            return cause;
         }
     }
 
