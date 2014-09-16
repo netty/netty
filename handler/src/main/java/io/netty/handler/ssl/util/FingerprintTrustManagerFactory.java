@@ -190,6 +190,7 @@ public final class FingerprintTrustManagerFactory extends SimpleTrustManagerFact
                 int strIdx = i << 1;
                 farr[i] = (byte) Integer.parseInt(f.substring(strIdx, strIdx + 2), 16);
             }
+            list.add(farr);
         }
 
         return list.toArray(new byte[list.size()][]);
