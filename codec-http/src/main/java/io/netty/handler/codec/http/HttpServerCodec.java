@@ -49,4 +49,18 @@ public final class HttpServerCodec extends ChannelHandlerAppender {
         super(new HttpRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders),
                 new HttpResponseEncoder());
     }
+
+    /**
+     * Returns the encoder of this codec.
+     */
+    public HttpResponseEncoder encoder() {
+        return handlerAt(1);
+    }
+
+    /**
+     * Returns the decoder of this codec.
+     */
+    public HttpRequestDecoder decoder() {
+        return handlerAt(0);
+    }
 }
