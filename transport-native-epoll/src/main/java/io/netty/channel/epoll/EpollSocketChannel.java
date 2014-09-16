@@ -37,7 +37,6 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
-import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -549,13 +548,8 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                     });
                 }
             } catch (Throwable t) {
-                if (t instanceof ConnectException) {
-                    Throwable newT = new ConnectException(t.getMessage() + ": " + remoteAddress);
-                    newT.setStackTrace(t.getStackTrace());
-                    t = newT;
-                }
                 closeIfClosed();
-                promise.tryFailure(t);
+                promise.tryFailure(annotateConnectException(t, remoteAddress));
             }
         }
 
@@ -607,13 +601,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                 }
                 fulfillConnectPromise(connectPromise, wasActive);
             } catch (Throwable t) {
-                if (t instanceof ConnectException) {
-                    Throwable newT = new ConnectException(t.getMessage() + ": " + requestedRemoteAddress);
-                    newT.setStackTrace(t.getStackTrace());
-                    t = newT;
-                }
-
-                fulfillConnectPromise(connectPromise, t);
+                fulfillConnectPromise(connectPromise, annotateConnectException(t, requestedRemoteAddress));
             } finally {
                 if (!connectStillInProgress) {
                     // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
