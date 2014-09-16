@@ -75,7 +75,18 @@ public class Socks5CmdRequestDecoder extends ReplayingDecoder<State> {
                         break;
                     }
                     case IPv6: {
-                        host = Socks5CommonUtils.ipv6toStr(byteBuf.readBytes(16).array());
+                        if (actualReadableBytes() < 16) {
+                            // Let it replay.
+                            byteBuf.readBytes(16);
+
+                            // Should never reach here.
+                            throw new Error();
+                        }
+
+                        byte[] byteArray = new byte[16];
+                        byteBuf.readBytes(byteArray);
+
+                        host = Socks5CommonUtils.ipv6toStr(byteArray);
                         port = byteBuf.readUnsignedShort();
                         msg = new Socks5CmdRequest(cmdType, addressType, host, port);
                         break;
