@@ -238,6 +238,11 @@ public final class NetUtil {
                 ipAddressString = ipAddressString.substring(1, ipAddressString.length() - 1);
             }
 
+            int percentPos = ipAddressString.indexOf('%');
+            if (percentPos >= 0) {
+                ipAddressString = ipAddressString.substring(0, percentPos);
+            }
+
             StringTokenizer tokenizer = new StringTokenizer(ipAddressString, ":.", true);
             ArrayList<String> hexStrings = new ArrayList<String>();
             ArrayList<String> decStrings = new ArrayList<String>();
