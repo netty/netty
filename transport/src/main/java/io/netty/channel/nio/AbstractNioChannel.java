@@ -34,7 +34,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
-import java.net.ConnectException;
 import java.net.SocketAddress;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectableChannel;
@@ -233,12 +232,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     });
                 }
             } catch (Throwable t) {
-                if (t instanceof ConnectException) {
-                    Throwable newT = new ConnectException(t.getMessage() + ": " + remoteAddress);
-                    newT.setStackTrace(t.getStackTrace());
-                    t = newT;
-                }
-                promise.tryFailure(t);
+                promise.tryFailure(annotateConnectException(t, remoteAddress));
                 closeIfClosed();
             }
         }
@@ -287,13 +281,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                 doFinishConnect();
                 fulfillConnectPromise(connectPromise, wasActive);
             } catch (Throwable t) {
-                if (t instanceof ConnectException) {
-                    Throwable newT = new ConnectException(t.getMessage() + ": " + requestedRemoteAddress);
-                    newT.setStackTrace(t.getStackTrace());
-                    t = newT;
-                }
-
-                fulfillConnectPromise(connectPromise, t);
+                fulfillConnectPromise(connectPromise, annotateConnectException(t, requestedRemoteAddress));
             } finally {
                 // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
                 // See https://github.com/netty/netty/issues/1770
