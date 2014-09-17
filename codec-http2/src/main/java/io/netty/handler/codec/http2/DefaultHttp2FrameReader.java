@@ -367,23 +367,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
         }
     }
 
-    protected void notifyListenerOnDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data,
-            int padding, boolean endOfStream, Http2FrameListener listener) throws Http2Exception {
-        listener.onDataRead(ctx, streamId, data, padding, endOfStream);
-    }
-
-    protected void notifyListenerOnHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-            int streamDependency, short weight, boolean exclusive, int padding,
-            boolean endOfStream, Http2FrameListener listener) throws Http2Exception {
-        listener.onHeadersRead(ctx, streamId, headers, streamDependency,
-                weight, exclusive, padding, endOfStream);
-    }
-
-    protected void notifyListenerOnHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-            int padding, boolean endOfStream, Http2FrameListener listener) throws Http2Exception {
-        listener.onHeadersRead(ctx, streamId, headers, padding, endOfStream);
-    }
-
     private void readDataFrame(ChannelHandlerContext ctx, ByteBuf payload,
             Http2FrameListener listener) throws Http2Exception {
         short padding = readPadding(payload);
@@ -396,7 +379,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
         }
 
         ByteBuf data = payload.readSlice(dataLength);
-        notifyListenerOnDataRead(ctx, streamId, data, padding, flags.endOfStream(), listener);
+        listener.onDataRead(ctx, streamId, data, padding, flags.endOfStream());
         payload.skipBytes(payload.readableBytes());
     }
 
@@ -428,8 +411,8 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
                     final HeadersBlockBuilder hdrBlockBuilder = headersBlockBuilder();
                     hdrBlockBuilder.addFragment(fragment, ctx.alloc(), endOfHeaders);
                     if (endOfHeaders) {
-                        notifyListenerOnHeadersRead(ctx, headersStreamId, hdrBlockBuilder.headers(),
-                                streamDependency, weight, exclusive, padding, headersFlags.endOfStream(), listener);
+                        listener.onHeadersRead(ctx, headersStreamId, hdrBlockBuilder.headers(),
+                                        streamDependency, weight, exclusive, padding, headersFlags.endOfStream());
                         close();
                     }
                 }
@@ -454,8 +437,8 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
                 final HeadersBlockBuilder hdrBlockBuilder = headersBlockBuilder();
                 hdrBlockBuilder.addFragment(fragment, ctx.alloc(), endOfHeaders);
                 if (endOfHeaders) {
-                    notifyListenerOnHeadersRead(ctx, headersStreamId, hdrBlockBuilder.headers(), padding,
-                            headersFlags.endOfStream(), listener);
+                    listener.onHeadersRead(ctx, headersStreamId, hdrBlockBuilder.headers(), padding,
+                                    headersFlags.endOfStream());
                     close();
                 }
             }
