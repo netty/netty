@@ -887,7 +887,8 @@
             <exclude>**/TestUtil*</exclude>
           </excludes>
           <runOrder>random</runOrder>
-          <argLine>${argLine.common} ${argLine.bootcp} ${argLine.leak} ${argLine.coverage}</argLine>
+          <!-- See GitHub issue https://github.com/netty/netty/pull/2877 -->
+          <argLine>${argLine.common} -Dio.netty.eventLoopThreads=2 ${argLine.bootcp} ${argLine.leak} ${argLine.coverage}</argLine>
         </configuration>
       </plugin>
       <!-- always produce osgi bundles -->
