@@ -41,7 +41,7 @@ import java.net.URI;
 public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketClientHandshaker13.class);
-    private static final CharSequence WEBSOCKET = HttpHeaders.newEntity(Values.WEBSOCKET.toLowerCase());
+    private static final CharSequence WEBSOCKET = Values.WEBSOCKET.toLowerCase();
 
     public static final String MAGIC_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
@@ -218,17 +218,17 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
             throw new WebSocketHandshakeException("Invalid handshake response getStatus: " + response.status());
         }
 
-        String upgrade = headers.get(Names.UPGRADE);
+        CharSequence upgrade = headers.get(Names.UPGRADE);
         if (!AsciiString.equalsIgnoreCase(Values.WEBSOCKET, upgrade)) {
             throw new WebSocketHandshakeException("Invalid handshake response upgrade: " + upgrade);
         }
 
-        String connection = headers.get(Names.CONNECTION);
+        CharSequence connection = headers.get(Names.CONNECTION);
         if (!AsciiString.equalsIgnoreCase(Values.UPGRADE, connection)) {
             throw new WebSocketHandshakeException("Invalid handshake response connection: " + connection);
         }
 
-        String accept = headers.get(Names.SEC_WEBSOCKET_ACCEPT);
+        CharSequence accept = headers.get(Names.SEC_WEBSOCKET_ACCEPT);
         if (accept == null || !accept.equals(expectedChallengeResponseString)) {
             throw new WebSocketHandshakeException(String.format(
                     "Invalid challenge. Actual: %s. Expected: %s", accept, expectedChallengeResponseString));

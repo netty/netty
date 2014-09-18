@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -695,10 +696,10 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                         currentFieldAttributes.put(attribute.getName(), attribute);
                     }
                 }
-            } else if (contents[0].equalsIgnoreCase(HttpHeaders.Names.CONTENT_TRANSFER_ENCODING)) {
+            } else if (AsciiString.equalsIgnoreCase(contents[0], HttpHeaders.Names.CONTENT_TRANSFER_ENCODING)) {
                 Attribute attribute;
                 try {
-                    attribute = factory.createAttribute(request, HttpHeaders.Names.CONTENT_TRANSFER_ENCODING,
+                    attribute = factory.createAttribute(request, HttpHeaders.Names.CONTENT_TRANSFER_ENCODING.toString(),
                             cleanString(contents[1]));
                 } catch (NullPointerException e) {
                     throw new ErrorDataDecoderException(e);
@@ -706,10 +707,10 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                     throw new ErrorDataDecoderException(e);
                 }
                 currentFieldAttributes.put(HttpHeaders.Names.CONTENT_TRANSFER_ENCODING, attribute);
-            } else if (contents[0].equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH)) {
+            } else if (AsciiString.equalsIgnoreCase(contents[0], HttpHeaders.Names.CONTENT_LENGTH)) {
                 Attribute attribute;
                 try {
-                    attribute = factory.createAttribute(request, HttpHeaders.Names.CONTENT_LENGTH,
+                    attribute = factory.createAttribute(request, HttpHeaders.Names.CONTENT_LENGTH.toString(),
                             cleanString(contents[1]));
                 } catch (NullPointerException e) {
                     throw new ErrorDataDecoderException(e);
@@ -717,7 +718,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                     throw new ErrorDataDecoderException(e);
                 }
                 currentFieldAttributes.put(HttpHeaders.Names.CONTENT_LENGTH, attribute);
-            } else if (contents[0].equalsIgnoreCase(HttpHeaders.Names.CONTENT_TYPE)) {
+            } else if (AsciiString.equalsIgnoreCase(contents[0], HttpHeaders.Names.CONTENT_TYPE)) {
                 // Take care of possible "multipart/mixed"
                 if (contents[1].equalsIgnoreCase(HttpPostBodyUtil.MULTIPART_MIXED)) {
                     if (currentStatus == MultiPartStatus.DISPOSITION) {

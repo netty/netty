@@ -86,7 +86,7 @@ final class HttpProxyServer extends ProxyServer {
 
         boolean authzSuccess = false;
         if (username != null) {
-            String authz = req.headers().get(Names.AUTHORIZATION);
+            CharSequence authz = req.headers().get(Names.AUTHORIZATION);
             if (authz != null) {
                 ByteBuf authzBuf64 = Unpooled.copiedBuffer(authz, CharsetUtil.US_ASCII);
                 ByteBuf authzBuf = Base64.decode(authzBuf64);

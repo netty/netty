@@ -41,7 +41,8 @@ public class HttpResponseEncoderTest {
 
         ByteBuf buffer = channel.readOutbound();
 
-        assertEquals("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n", buffer.toString(CharsetUtil.US_ASCII));
+        assertEquals("HTTP/1.1 200 OK\r\n" + HttpHeaders.Names.TRANSFER_ENCODING + ": " +
+                HttpHeaders.Values.CHUNKED + "\r\n\r\n", buffer.toString(CharsetUtil.US_ASCII));
         buffer.release();
         assertTrue(channel.writeOutbound(FILE_REGION));
         buffer = channel.readOutbound();

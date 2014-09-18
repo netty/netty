@@ -15,6 +15,10 @@
  */
 package io.netty.handler.codec.http;
 
+import static io.netty.handler.codec.http.HttpConstants.COLON;
+import static io.netty.handler.codec.http.HttpConstants.CR;
+import static io.netty.handler.codec.http.HttpConstants.LF;
+import static io.netty.handler.codec.http.HttpConstants.SP;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.AsciiString;
 
@@ -28,8 +32,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import static io.netty.handler.codec.http.HttpConstants.*;
-
 /**
  * Provides the constants for the standard HTTP header names and values and
  * commonly used utility methods that accesses an {@link HttpMessage}.
@@ -38,20 +40,20 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
 
     private static final byte[] HEADER_SEPERATOR = { COLON, SP };
     private static final byte[] CRLF = { CR, LF };
-    private static final CharSequence CONTENT_LENGTH_ENTITY = newEntity(Names.CONTENT_LENGTH);
-    private static final CharSequence CONNECTION_ENTITY = newEntity(Names.CONNECTION);
-    private static final CharSequence CLOSE_ENTITY = newEntity(Values.CLOSE);
-    private static final CharSequence KEEP_ALIVE_ENTITY = newEntity(Values.KEEP_ALIVE);
-    private static final CharSequence HOST_ENTITY = newEntity(Names.HOST);
-    private static final CharSequence DATE_ENTITY = newEntity(Names.DATE);
-    private static final CharSequence EXPECT_ENTITY = newEntity(Names.EXPECT);
-    private static final CharSequence CONTINUE_ENTITY = newEntity(Values.CONTINUE);
-    private static final CharSequence TRANSFER_ENCODING_ENTITY = newEntity(Names.TRANSFER_ENCODING);
-    private static final CharSequence CHUNKED_ENTITY = newEntity(Values.CHUNKED);
-    private static final CharSequence SEC_WEBSOCKET_KEY1_ENTITY = newEntity(Names.SEC_WEBSOCKET_KEY1);
-    private static final CharSequence SEC_WEBSOCKET_KEY2_ENTITY = newEntity(Names.SEC_WEBSOCKET_KEY2);
-    private static final CharSequence SEC_WEBSOCKET_ORIGIN_ENTITY = newEntity(Names.SEC_WEBSOCKET_ORIGIN);
-    private static final CharSequence SEC_WEBSOCKET_LOCATION_ENTITY = newEntity(Names.SEC_WEBSOCKET_LOCATION);
+    private static final CharSequence CONTENT_LENGTH_ENTITY = Names.CONTENT_LENGTH;
+    private static final CharSequence CONNECTION_ENTITY = Names.CONNECTION;
+    private static final CharSequence CLOSE_ENTITY = Values.CLOSE;
+    private static final CharSequence KEEP_ALIVE_ENTITY = Values.KEEP_ALIVE;
+    private static final CharSequence HOST_ENTITY = Names.HOST;
+    private static final CharSequence DATE_ENTITY = Names.DATE;
+    private static final CharSequence EXPECT_ENTITY = Names.EXPECT;
+    private static final CharSequence CONTINUE_ENTITY = Values.CONTINUE;
+    private static final CharSequence TRANSFER_ENCODING_ENTITY = Names.TRANSFER_ENCODING;
+    private static final CharSequence CHUNKED_ENTITY = Values.CHUNKED;
+    private static final CharSequence SEC_WEBSOCKET_KEY1_ENTITY = Names.SEC_WEBSOCKET_KEY1;
+    private static final CharSequence SEC_WEBSOCKET_KEY2_ENTITY = Names.SEC_WEBSOCKET_KEY2;
+    private static final CharSequence SEC_WEBSOCKET_ORIGIN_ENTITY = Names.SEC_WEBSOCKET_ORIGIN;
+    private static final CharSequence SEC_WEBSOCKET_LOCATION_ENTITY = Names.SEC_WEBSOCKET_LOCATION;
 
     public static final HttpHeaders EMPTY_HEADERS = new HttpHeaders() {
         @Override
@@ -122,300 +124,330 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
 
     /**
      * Standard HTTP header names.
+     * <p>
+     * These are all defined as lowercase to support HTTP/2 requirements while also not
+     * violating HTTP/1.x requirements.  New header names should always be lowercase.
      */
     public static final class Names {
         /**
-         * {@code "Accept"}
+         * {@code "accept"}
          */
-        public static final String ACCEPT = "Accept";
+        public static final AsciiString ACCEPT = new AsciiString("accept");
         /**
-         * {@code "Accept-Charset"}
+         * {@code "accept-charset"}
          */
-        public static final String ACCEPT_CHARSET = "Accept-Charset";
+        public static final AsciiString ACCEPT_CHARSET = new AsciiString("accept-charset");
         /**
-         * {@code "Accept-Encoding"}
+         * {@code "accept-encoding"}
          */
-        public static final String ACCEPT_ENCODING = "Accept-Encoding";
+        public static final AsciiString ACCEPT_ENCODING = new AsciiString("accept-encoding");
         /**
-         * {@code "Accept-Language"}
+         * {@code "accept-language"}
          */
-        public static final String ACCEPT_LANGUAGE = "Accept-Language";
+        public static final AsciiString ACCEPT_LANGUAGE = new AsciiString("accept-language");
         /**
-         * {@code "Accept-Ranges"}
+         * {@code "accept-ranges"}
          */
-        public static final String ACCEPT_RANGES = "Accept-Ranges";
+        public static final AsciiString ACCEPT_RANGES = new AsciiString("accept-ranges");
         /**
-         * {@code "Accept-Patch"}
+         * {@code "accept-patch"}
          */
-        public static final String ACCEPT_PATCH = "Accept-Patch";
+        public static final AsciiString ACCEPT_PATCH = new AsciiString("accept-patch");
         /**
-         * {@code "Access-Control-Allow-Credentials"}
+         * {@code "access-control-allow-credentials"}
          */
-        public static final String ACCESS_CONTROL_ALLOW_CREDENTIALS = "Access-Control-Allow-Credentials";
+        public static final AsciiString ACCESS_CONTROL_ALLOW_CREDENTIALS =
+                new AsciiString("access-control-allow-credentials");
         /**
-         * {@code "Access-Control-Allow-Headers"}
+         * {@code "access-control-allow-headers"}
          */
-        public static final String ACCESS_CONTROL_ALLOW_HEADERS = "Access-Control-Allow-Headers";
+        public static final AsciiString ACCESS_CONTROL_ALLOW_HEADERS =
+                new AsciiString("access-control-allow-headers");
         /**
-         * {@code "Access-Control-Allow-Methods"}
+         * {@code "access-control-allow-methods"}
          */
-        public static final String ACCESS_CONTROL_ALLOW_METHODS = "Access-Control-Allow-Methods";
+        public static final AsciiString ACCESS_CONTROL_ALLOW_METHODS =
+                new AsciiString("access-control-allow-methods");
         /**
-         * {@code "Access-Control-Allow-Origin"}
+         * {@code "access-control-allow-origin"}
          */
-        public static final String ACCESS_CONTROL_ALLOW_ORIGIN = "Access-Control-Allow-Origin";
+        public static final AsciiString ACCESS_CONTROL_ALLOW_ORIGIN =
+                new AsciiString("access-control-allow-origin");
         /**
-         * {@code "Access-Control-Expose-Headers"}
+         * {@code "access-control-expose-headers"}
          */
-        public static final String ACCESS_CONTROL_EXPOSE_HEADERS = "Access-Control-Expose-Headers";
+        public static final AsciiString ACCESS_CONTROL_EXPOSE_HEADERS =
+                new AsciiString("access-control-expose-headers");
         /**
-         * {@code "Access-Control-Max-Age"}
+         * {@code "access-control-max-age"}
          */
-        public static final String ACCESS_CONTROL_MAX_AGE = "Access-Control-Max-Age";
+        public static final AsciiString ACCESS_CONTROL_MAX_AGE = new AsciiString("access-control-max-age");
         /**
-         * {@code "Access-Control-Request-Headers"}
+         * {@code "access-control-request-headers"}
          */
-        public static final String ACCESS_CONTROL_REQUEST_HEADERS = "Access-Control-Request-Headers";
+        public static final AsciiString ACCESS_CONTROL_REQUEST_HEADERS =
+                new AsciiString("access-control-request-headers");
         /**
-         * {@code "Access-Control-Request-Method"}
+         * {@code "access-control-request-method"}
          */
-        public static final String ACCESS_CONTROL_REQUEST_METHOD = "Access-Control-Request-Method";
+        public static final AsciiString ACCESS_CONTROL_REQUEST_METHOD =
+                new AsciiString("access-control-request-method");
         /**
-         * {@code "Age"}
+         * {@code "age"}
          */
-        public static final String AGE = "Age";
+        public static final AsciiString AGE = new AsciiString("age");
         /**
-         * {@code "Allow"}
+         * {@code "allow"}
          */
-        public static final String ALLOW = "Allow";
+        public static final AsciiString ALLOW = new AsciiString("allow");
         /**
-         * {@code "Authorization"}
+         * {@code "authorization"}
          */
-        public static final String AUTHORIZATION = "Authorization";
+        public static final AsciiString AUTHORIZATION = new AsciiString("authorization");
         /**
-         * {@code "Cache-Control"}
+         * {@code "cache-control"}
          */
-        public static final String CACHE_CONTROL = "Cache-Control";
+        public static final AsciiString CACHE_CONTROL = new AsciiString("cache-control");
         /**
-         * {@code "Connection"}
+         * {@code "connection"}
          */
-        public static final String CONNECTION = "Connection";
+        public static final AsciiString CONNECTION = new AsciiString("connection");
         /**
-         * {@code "Content-Base"}
+         * {@code "content-base"}
          */
-        public static final String CONTENT_BASE = "Content-Base";
+        public static final AsciiString CONTENT_BASE = new AsciiString("content-base");
         /**
-         * {@code "Content-Encoding"}
+         * {@code "content-encoding"}
          */
-        public static final String CONTENT_ENCODING = "Content-Encoding";
+        public static final AsciiString CONTENT_ENCODING = new AsciiString("content-encoding");
         /**
-         * {@code "Content-Language"}
+         * {@code "content-language"}
          */
-        public static final String CONTENT_LANGUAGE = "Content-Language";
+        public static final AsciiString CONTENT_LANGUAGE = new AsciiString("content-language");
         /**
-         * {@code "Content-Length"}
+         * {@code "content-length"}
          */
-        public static final String CONTENT_LENGTH = "Content-Length";
+        public static final AsciiString CONTENT_LENGTH = new AsciiString("content-length");
         /**
-         * {@code "Content-Location"}
+         * {@code "content-location"}
          */
-        public static final String CONTENT_LOCATION = "Content-Location";
+        public static final AsciiString CONTENT_LOCATION = new AsciiString("content-location");
         /**
-         * {@code "Content-Transfer-Encoding"}
+         * {@code "content-transfer-encoding"}
          */
-        public static final String CONTENT_TRANSFER_ENCODING = "Content-Transfer-Encoding";
+        public static final AsciiString CONTENT_TRANSFER_ENCODING = new AsciiString("content-transfer-encoding");
         /**
-         * {@code "Content-MD5"}
+         * {@code "content-disposition"}
          */
-        public static final String CONTENT_MD5 = "Content-MD5";
+        public static final AsciiString CONTENT_DISPOSITION = new AsciiString("content-disposition");
         /**
-         * {@code "Content-Range"}
+         * {@code "content-md5"}
          */
-        public static final String CONTENT_RANGE = "Content-Range";
+        public static final AsciiString CONTENT_MD5 = new AsciiString("content-md5");
         /**
-         * {@code "Content-Type"}
+         * {@code "content-range"}
          */
-        public static final String CONTENT_TYPE = "Content-Type";
+        public static final AsciiString CONTENT_RANGE = new AsciiString("content-range");
         /**
-         * {@code "Cookie"}
+         * {@code "content-type"}
          */
-        public static final String COOKIE = "Cookie";
+        public static final AsciiString CONTENT_TYPE = new AsciiString("content-type");
         /**
-         * {@code "Date"}
+         * {@code "cookie"}
          */
-        public static final String DATE = "Date";
+        public static final AsciiString COOKIE = new AsciiString("cookie");
         /**
-         * {@code "ETag"}
+         * {@code "date"}
          */
-        public static final String ETAG = "ETag";
+        public static final AsciiString DATE = new AsciiString("date");
         /**
-         * {@code "Expect"}
+         * {@code "etag"}
          */
-        public static final String EXPECT = "Expect";
+        public static final AsciiString ETAG = new AsciiString("etag");
         /**
-         * {@code "Expires"}
+         * {@code "expect"}
          */
-        public static final String EXPIRES = "Expires";
+        public static final AsciiString EXPECT = new AsciiString("expect");
         /**
-         * {@code "From"}
+         * {@code "expires"}
          */
-        public static final String FROM = "From";
+        public static final AsciiString EXPIRES = new AsciiString("expires");
         /**
-         * {@code "Host"}
+         * {@code "from"}
          */
-        public static final String HOST = "Host";
+        public static final AsciiString FROM = new AsciiString("from");
         /**
-         * {@code "If-Match"}
+         * {@code "host"}
          */
-        public static final String IF_MATCH = "If-Match";
+        public static final AsciiString HOST = new AsciiString("host");
         /**
-         * {@code "If-Modified-Since"}
+         * {@code "if-match"}
          */
-        public static final String IF_MODIFIED_SINCE = "If-Modified-Since";
+        public static final AsciiString IF_MATCH = new AsciiString("if-match");
         /**
-         * {@code "If-None-Match"}
+         * {@code "if-modified-since"}
          */
-        public static final String IF_NONE_MATCH = "If-None-Match";
+        public static final AsciiString IF_MODIFIED_SINCE = new AsciiString("if-modified-since");
         /**
-         * {@code "If-Range"}
+         * {@code "if-none-match"}
          */
-        public static final String IF_RANGE = "If-Range";
+        public static final AsciiString IF_NONE_MATCH = new AsciiString("if-none-match");
         /**
-         * {@code "If-Unmodified-Since"}
+         * {@code "if-range"}
          */
-        public static final String IF_UNMODIFIED_SINCE = "If-Unmodified-Since";
+        public static final AsciiString IF_RANGE = new AsciiString("if-range");
         /**
-         * {@code "Last-Modified"}
+         * {@code "if-unmodified-since"}
          */
-        public static final String LAST_MODIFIED = "Last-Modified";
+        public static final AsciiString IF_UNMODIFIED_SINCE = new AsciiString("if-unmodified-since");
         /**
-         * {@code "Location"}
+         * {@code "last-modified"}
          */
-        public static final String LOCATION = "Location";
+        public static final AsciiString LAST_MODIFIED = new AsciiString("last-modified");
         /**
-         * {@code "Max-Forwards"}
+         * {@code "location"}
          */
-        public static final String MAX_FORWARDS = "Max-Forwards";
+        public static final AsciiString LOCATION = new AsciiString("location");
         /**
-         * {@code "Origin"}
+         * {@code "max-forwards"}
          */
-        public static final String ORIGIN = "Origin";
+        public static final AsciiString MAX_FORWARDS = new AsciiString("max-forwards");
         /**
-         * {@code "Pragma"}
+         * {@code "origin"}
          */
-        public static final String PRAGMA = "Pragma";
+        public static final AsciiString ORIGIN = new AsciiString("origin");
         /**
-         * {@code "Proxy-Authenticate"}
+         * {@code "pragma"}
          */
-        public static final String PROXY_AUTHENTICATE = "Proxy-Authenticate";
+        public static final AsciiString PRAGMA = new AsciiString("pragma");
         /**
-         * {@code "Proxy-Authorization"}
+         * {@code "proxy-authenticate"}
          */
-        public static final String PROXY_AUTHORIZATION = "Proxy-Authorization";
+        public static final AsciiString PROXY_AUTHENTICATE = new AsciiString("proxy-authenticate");
         /**
-         * {@code "Range"}
+         * {@code "proxy-authorization"}
          */
-        public static final String RANGE = "Range";
+        public static final AsciiString PROXY_AUTHORIZATION = new AsciiString("proxy-authorization");
         /**
-         * {@code "Referer"}
+         * {@code "range"}
          */
-        public static final String REFERER = "Referer";
+        public static final AsciiString RANGE = new AsciiString("range");
         /**
-         * {@code "Retry-After"}
+         * {@code "referer"}
          */
-        public static final String RETRY_AFTER = "Retry-After";
+        public static final AsciiString REFERER = new AsciiString("referer");
         /**
-         * {@code "Sec-WebSocket-Key1"}
+         * {@code "retry-after"}
          */
-        public static final String SEC_WEBSOCKET_KEY1 = "Sec-WebSocket-Key1";
+        public static final AsciiString RETRY_AFTER = new AsciiString("retry-after");
         /**
-         * {@code "Sec-WebSocket-Key2"}
+         * {@code "sec-websocket-key1"}
          */
-        public static final String SEC_WEBSOCKET_KEY2 = "Sec-WebSocket-Key2";
+        public static final AsciiString SEC_WEBSOCKET_KEY1 = new AsciiString("sec-websocket-key1");
         /**
-         * {@code "Sec-WebSocket-Location"}
+         * {@code "sec-websocket-key2"}
          */
-        public static final String SEC_WEBSOCKET_LOCATION = "Sec-WebSocket-Location";
+        public static final AsciiString SEC_WEBSOCKET_KEY2 = new AsciiString("sec-websocket-key2");
         /**
-         * {@code "Sec-WebSocket-Origin"}
+         * {@code "sec-websocket-location"}
          */
-        public static final String SEC_WEBSOCKET_ORIGIN = "Sec-WebSocket-Origin";
+        public static final AsciiString SEC_WEBSOCKET_LOCATION = new AsciiString("sec-websocket-location");
         /**
-         * {@code "Sec-WebSocket-Protocol"}
+         * {@code "sec-websocket-origin"}
          */
-        public static final String SEC_WEBSOCKET_PROTOCOL = "Sec-WebSocket-Protocol";
+        public static final AsciiString SEC_WEBSOCKET_ORIGIN = new AsciiString("sec-websocket-origin");
         /**
-         * {@code "Sec-WebSocket-Version"}
+         * {@code "sec-websocket-protocol"}
          */
-        public static final String SEC_WEBSOCKET_VERSION = "Sec-WebSocket-Version";
+        public static final AsciiString SEC_WEBSOCKET_PROTOCOL = new AsciiString("sec-websocket-protocol");
         /**
-         * {@code "Sec-WebSocket-Key"}
+         * {@code "sec-websocket-version"}
          */
-        public static final String SEC_WEBSOCKET_KEY = "Sec-WebSocket-Key";
+        public static final AsciiString SEC_WEBSOCKET_VERSION = new AsciiString("sec-websocket-version");
         /**
-         * {@code "Sec-WebSocket-Accept"}
+         * {@code "sec-websocket-key"}
          */
-        public static final String SEC_WEBSOCKET_ACCEPT = "Sec-WebSocket-Accept";
+        public static final AsciiString SEC_WEBSOCKET_KEY = new AsciiString("sec-websocket-key");
         /**
-         * {@code "Server"}
+         * {@code "sec-websocket-accept"}
          */
-        public static final String SERVER = "Server";
+        public static final AsciiString SEC_WEBSOCKET_ACCEPT = new AsciiString("sec-websocket-accept");
         /**
-         * {@code "Set-Cookie"}
+         * {@code "sec-websocket-protocol"}
          */
-        public static final String SET_COOKIE = "Set-Cookie";
+        public static final AsciiString SEC_WEBSOCKET_EXTENSIONS = new AsciiString("sec-websocket-extensions");
         /**
-         * {@code "Set-Cookie2"}
+         * {@code "server"}
          */
-        public static final String SET_COOKIE2 = "Set-Cookie2";
+        public static final AsciiString SERVER = new AsciiString("server");
         /**
-         * {@code "TE"}
+         * {@code "set-cookie"}
          */
-        public static final String TE = "TE";
+        public static final AsciiString SET_COOKIE = new AsciiString("set-cookie");
         /**
-         * {@code "Trailer"}
+         * {@code "set-cookie2"}
          */
-        public static final String TRAILER = "Trailer";
+        public static final AsciiString SET_COOKIE2 = new AsciiString("set-cookie2");
         /**
-         * {@code "Transfer-Encoding"}
+         * {@code "te"}
          */
-        public static final String TRANSFER_ENCODING = "Transfer-Encoding";
+        public static final AsciiString TE = new AsciiString("te");
         /**
-         * {@code "Upgrade"}
+         * {@code "trailer"}
          */
-        public static final String UPGRADE = "Upgrade";
+        public static final AsciiString TRAILER = new AsciiString("trailer");
         /**
-         * {@code "User-Agent"}
+         * {@code "transfer-encoding"}
          */
-        public static final String USER_AGENT = "User-Agent";
+        public static final AsciiString TRANSFER_ENCODING = new AsciiString("transfer-encoding");
         /**
-         * {@code "Vary"}
+         * {@code "upgrade"}
          */
-        public static final String VARY = "Vary";
+        public static final AsciiString UPGRADE = new AsciiString("upgrade");
         /**
-         * {@code "Via"}
+         * {@code "user-agent"}
          */
-        public static final String VIA = "Via";
+        public static final AsciiString USER_AGENT = new AsciiString("user-agent");
         /**
-         * {@code "Warning"}
+         * {@code "vary"}
          */
-        public static final String WARNING = "Warning";
+        public static final AsciiString VARY = new AsciiString("vary");
         /**
-         * {@code "WebSocket-Location"}
+         * {@code "via"}
          */
-        public static final String WEBSOCKET_LOCATION = "WebSocket-Location";
+        public static final AsciiString VIA = new AsciiString("via");
         /**
-         * {@code "WebSocket-Origin"}
+         * {@code "warning"}
          */
-        public static final String WEBSOCKET_ORIGIN = "WebSocket-Origin";
+        public static final AsciiString WARNING = new AsciiString("warning");
         /**
-         * {@code "WebSocket-Protocol"}
+         * {@code "websocket-location"}
          */
-        public static final String WEBSOCKET_PROTOCOL = "WebSocket-Protocol";
+        public static final AsciiString WEBSOCKET_LOCATION = new AsciiString("websocket-location");
         /**
-         * {@code "WWW-Authenticate"}
+         * {@code "websocket-origin"}
          */
-        public static final String WWW_AUTHENTICATE = "WWW-Authenticate";
+        public static final AsciiString WEBSOCKET_ORIGIN = new AsciiString("websocket-origin");
+        /**
+         * {@code "websocket-protocol"}
+         */
+        public static final AsciiString WEBSOCKET_PROTOCOL = new AsciiString("websocket-protocol");
+        /**
+         * {@code "www-authenticate"}
+         */
+        public static final AsciiString WWW_AUTHENTICATE = new AsciiString("www-authenticate");
+        /**
+         * {@code "keep-alive"}
+         * @deprecated use {@link #CONNECTION}
+         */
+        @Deprecated
+        public static final AsciiString KEEP_ALIVE = new AsciiString("keep-alive");
+        /**
+         * {@code "proxy-connection"}
+         * @deprecated use {@link #CONNECTION}
+         */
+        @Deprecated
+        public static final AsciiString PROXY_CONNECTION = new AsciiString("proxy-connection");
 
         private Names() {
         }
@@ -428,8 +460,16 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         /**
          * {@code "application/x-www-form-urlencoded"}
          */
-         public static final String APPLICATION_X_WWW_FORM_URLENCODED =
-             "application/x-www-form-urlencoded";
+        public static final AsciiString APPLICATION_X_WWW_FORM_URLENCODED =
+                new AsciiString("application/x-www-form-urlencoded");
+        /**
+         * {@code "application/octet-stream"}
+         */
+        public static final AsciiString APPLICATION_OCTET_STREAM = new AsciiString("application/octet-stream");
+        /**
+         * {@code "text/plain"}
+         */
+        public static final AsciiString TEXT_PLAIN = new AsciiString("text/plain");
         /**
          * {@code "base64"}
          */
@@ -499,6 +539,10 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
          */
         public static final String MULTIPART_FORM_DATA = "multipart/form-data";
         /**
+         * {@code "multipart/mixed"}
+         */
+        public static final AsciiString MULTIPART_MIXED = new AsciiString("multipart/mixed");
+        /**
          * {@code "must-revalidate"}
          */
         public static final String MUST_REVALIDATE = "must-revalidate";
@@ -553,7 +597,32 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         /**
          * {@code "WebSocket"}
          */
-        public static final String WEBSOCKET = "WebSocket";
+        public static final AsciiString WEBSOCKET = new AsciiString("WebSocket");
+        /**
+         * {@code "name"}
+         * See {@link Names#CONTENT_DISPOSITION}
+         */
+        public static final AsciiString NAME = new AsciiString("name");
+        /**
+         * {@code "filename"}
+         * See {@link Names#CONTENT_DISPOSITION}
+         */
+        public static final AsciiString FILENAME = new AsciiString("filename");
+        /**
+         * {@code "form-data"}
+         * See {@link Names#CONTENT_DISPOSITION}
+         */
+        public static final AsciiString FORM_DATA = new AsciiString("form-data");
+        /**
+         * {@code "attachment"}
+         * See {@link Names#CONTENT_DISPOSITION}
+         */
+        public static final AsciiString ATTACHMENT = new AsciiString("attachment");
+        /**
+         * {@code "file"}
+         * See {@link Names#CONTENT_DISPOSITION}
+         */
+        public static final AsciiString FILE = new AsciiString("file");
 
         private Values() {
         }
@@ -1193,7 +1262,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         return AsciiString.equalsIgnoreCase(name1, name2);
     }
 
-    static void encode(HttpHeaders headers, ByteBuf buf) {
+    static void encode(HttpHeaders headers, ByteBuf buf) throws Exception {
         if (headers instanceof DefaultHttpHeaders) {
             ((DefaultHttpHeaders) headers).encode(buf);
         } else {

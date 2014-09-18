@@ -198,13 +198,13 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 
         HttpHeaders headers = response.headers();
 
-        String upgrade = headers.get(Names.UPGRADE);
+        CharSequence upgrade = headers.get(Names.UPGRADE);
         if (!AsciiString.equalsIgnoreCase(Values.WEBSOCKET, upgrade)) {
             throw new WebSocketHandshakeException("Invalid handshake response upgrade: "
                     + upgrade);
         }
 
-        String connection = headers.get(Names.CONNECTION);
+        CharSequence connection = headers.get(Names.CONNECTION);
         if (!AsciiString.equalsIgnoreCase(Values.UPGRADE, connection)) {
             throw new WebSocketHandshakeException("Invalid handshake response connection: "
                     + connection);

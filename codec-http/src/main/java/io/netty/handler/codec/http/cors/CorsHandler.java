@@ -88,7 +88,7 @@ public class CorsHandler extends ChannelDuplexHandler {
     }
 
     private boolean setOrigin(final HttpResponse response) {
-        final String origin = request.headers().get(ORIGIN);
+        final CharSequence origin = request.headers().get(ORIGIN);
         if (origin != null) {
             if ("null".equals(origin) && config.isNullOriginAllowed()) {
                 setAnyOrigin(response);
@@ -118,7 +118,7 @@ public class CorsHandler extends ChannelDuplexHandler {
             return true;
         }
 
-        final String origin = request.headers().get(ORIGIN);
+        final CharSequence origin = request.headers().get(ORIGIN);
         if (origin == null) {
             // Not a CORS request so we cannot validate it. It may be a non CORS request.
             return true;
@@ -143,7 +143,7 @@ public class CorsHandler extends ChannelDuplexHandler {
         setOrigin(response, "*");
     }
 
-    private static void setOrigin(final HttpResponse response, final String origin) {
+    private static void setOrigin(final HttpResponse response, final CharSequence origin) {
         response.headers().set(ACCESS_CONTROL_ALLOW_ORIGIN, origin);
     }
 
