@@ -183,7 +183,7 @@ public final class HttpUploadClient {
         );
 
         // send request
-        List<Entry<String, String>> entries = headers.entries();
+        List<Entry<String, String>> entries = headers.entriesConverted();
         channel.writeAndFlush(request);
 
         // Wait for the server to close the connection.

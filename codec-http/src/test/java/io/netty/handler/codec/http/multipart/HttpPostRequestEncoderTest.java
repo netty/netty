@@ -18,11 +18,13 @@ package io.netty.handler.codec.http.multipart;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder.EncoderMode;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.StringUtil;
+
 import org.junit.Test;
 
 import java.io.File;
@@ -47,15 +49,15 @@ public class HttpPostRequestEncoderTest {
         String content = getRequestBody(encoder);
 
         String expected = "--" + multipartDataBoundary + "\r\n" +
-                "Content-Disposition: form-data; name=\"foo\"" + "\r\n" +
-                "Content-Type: text/plain; charset=UTF-8" + "\r\n" +
+                CONTENT_DISPOSITION + ": form-data; name=\"foo\"" + "\r\n" +
+                CONTENT_TYPE + ": text/plain; charset=UTF-8" + "\r\n" +
                 "\r\n" +
                 "bar" +
                 "\r\n" +
                 "--" + multipartDataBoundary + "\r\n" +
-                "Content-Disposition: form-data; name=\"quux\"; filename=\"file-01.txt\"" + "\r\n" +
-                "Content-Type: text/plain" + "\r\n" +
-                "Content-Transfer-Encoding: binary" + "\r\n" +
+                CONTENT_DISPOSITION + ": form-data; name=\"quux\"; filename=\"file-01.txt\"" + "\r\n" +
+                CONTENT_TYPE + ": text/plain" + "\r\n" +
+                CONTENT_TRANSFER_ENCODING + ": binary" + "\r\n" +
                 "\r\n" +
                 "File 01" + StringUtil.NEWLINE +
                 "\r\n" +
@@ -83,25 +85,25 @@ public class HttpPostRequestEncoderTest {
         String content = getRequestBody(encoder);
 
         String expected = "--" + multipartDataBoundary + "\r\n" +
-                "Content-Disposition: form-data; name=\"foo\"" + "\r\n" +
-                "Content-Type: text/plain; charset=UTF-8" + "\r\n" +
+                CONTENT_DISPOSITION + ": form-data; name=\"foo\"" + "\r\n" +
+                CONTENT_TYPE + ": text/plain; charset=UTF-8" + "\r\n" +
                 "\r\n" +
                 "bar" + "\r\n" +
                 "--" + multipartDataBoundary + "\r\n" +
-                "Content-Disposition: form-data; name=\"quux\"" + "\r\n" +
-                "Content-Type: multipart/mixed; boundary=" + multipartMixedBoundary + "\r\n" +
+                CONTENT_DISPOSITION + ": form-data; name=\"quux\"" + "\r\n" +
+                CONTENT_TYPE + ": multipart/mixed; boundary=" + multipartMixedBoundary + "\r\n" +
                 "\r\n" +
                 "--" + multipartMixedBoundary + "\r\n" +
-                "Content-Disposition: attachment; filename=\"file-02.txt\"" + "\r\n" +
-                "Content-Type: text/plain" + "\r\n" +
-                "Content-Transfer-Encoding: binary" + "\r\n" +
+                CONTENT_DISPOSITION + ": attachment; filename=\"file-02.txt\"" + "\r\n" +
+                CONTENT_TYPE + ": text/plain" + "\r\n" +
+                CONTENT_TRANSFER_ENCODING + ": binary" + "\r\n" +
                 "\r\n" +
                 "File 01" + StringUtil.NEWLINE +
                 "\r\n" +
                 "--" + multipartMixedBoundary + "\r\n" +
-                "Content-Disposition: attachment; filename=\"file-02.txt\"" + "\r\n" +
-                "Content-Type: text/plain" + "\r\n" +
-                "Content-Transfer-Encoding: binary" + "\r\n" +
+                CONTENT_DISPOSITION + ": attachment; filename=\"file-02.txt\"" + "\r\n" +
+                CONTENT_TYPE + ": text/plain" + "\r\n" +
+                CONTENT_TRANSFER_ENCODING + ": binary" + "\r\n" +
                 "\r\n" +
                 "File 02" + StringUtil.NEWLINE +
                 "\r\n" +
@@ -130,20 +132,20 @@ public class HttpPostRequestEncoderTest {
         String content = getRequestBody(encoder);
 
         String expected = "--" + multipartDataBoundary + "\r\n" +
-                "Content-Disposition: form-data; name=\"foo\"" + "\r\n" +
-                "Content-Type: text/plain; charset=UTF-8" + "\r\n" +
+                CONTENT_DISPOSITION + ": form-data; name=\"foo\"" + "\r\n" +
+                CONTENT_TYPE + ": text/plain; charset=UTF-8" + "\r\n" +
                 "\r\n" +
                 "bar" + "\r\n" +
                 "--" + multipartDataBoundary + "\r\n" +
-                "Content-Disposition: form-data; name=\"quux\"; filename=\"file-01.txt\"" + "\r\n" +
-                "Content-Type: text/plain" + "\r\n" +
-                "Content-Transfer-Encoding: binary" + "\r\n" +
+                CONTENT_DISPOSITION + ": form-data; name=\"quux\"; filename=\"file-01.txt\"" + "\r\n" +
+                CONTENT_TYPE + ": text/plain" + "\r\n" +
+                CONTENT_TRANSFER_ENCODING + ": binary" + "\r\n" +
                 "\r\n" +
                 "File 01" + StringUtil.NEWLINE + "\r\n" +
                 "--" + multipartDataBoundary + "\r\n" +
-                "Content-Disposition: form-data; name=\"quux\"; filename=\"file-02.txt\"" + "\r\n" +
-                "Content-Type: text/plain" + "\r\n" +
-                "Content-Transfer-Encoding: binary" + "\r\n" +
+                CONTENT_DISPOSITION + ": form-data; name=\"quux\"; filename=\"file-02.txt\"" + "\r\n" +
+                CONTENT_TYPE + ": text/plain" + "\r\n" +
+                CONTENT_TRANSFER_ENCODING + ": binary" + "\r\n" +
                 "\r\n" +
                 "File 02" + StringUtil.NEWLINE +
                 "\r\n" +
@@ -169,15 +171,15 @@ public class HttpPostRequestEncoderTest {
         String content = getRequestBody(encoder);
 
         String expected = "--" + multipartDataBoundary + "\r\n" +
-                "Content-Disposition: form-data; name=\"foo\"" + "\r\n" +
-                "Content-Type: text/plain; charset=UTF-8" + "\r\n" +
+                CONTENT_DISPOSITION + ": form-data; name=\"foo\"" + "\r\n" +
+                CONTENT_TYPE + ": text/plain; charset=UTF-8" + "\r\n" +
                 "\r\n" +
                 "bar" +
                 "\r\n" +
                 "--" + multipartDataBoundary + "\r\n" +
-                "Content-Disposition: form-data; name=\"quux\"; filename=\"file-01.txt\"" + "\r\n" +
-                "Content-Type: text/plain" + "\r\n" +
-                "Content-Transfer-Encoding: binary" + "\r\n" +
+                CONTENT_DISPOSITION + ": form-data; name=\"quux\"; filename=\"file-01.txt\"" + "\r\n" +
+                CONTENT_TYPE + ": text/plain" + "\r\n" +
+                CONTENT_TRANSFER_ENCODING + ": binary" + "\r\n" +
                 "\r\n" +
                 "File 01" + StringUtil.NEWLINE +
                 "\r\n" +
