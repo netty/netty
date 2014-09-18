@@ -163,7 +163,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 
         // Set Content-Length to workaround some known defect.
         // See also: http://www.ietf.org/mail-archive/web/hybi/current/msg02149.html
-        headers.set(Names.CONTENT_LENGTH, key3.length);
+        headers.setInt(Names.CONTENT_LENGTH, key3.length);
         request.content().writeBytes(key3);
         return request;
     }
@@ -198,13 +198,13 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 
         HttpHeaders headers = response.headers();
 
-        String upgrade = headers.get(Names.UPGRADE);
+        CharSequence upgrade = headers.get(Names.UPGRADE);
         if (!AsciiString.equalsIgnoreCase(Values.WEBSOCKET, upgrade)) {
             throw new WebSocketHandshakeException("Invalid handshake response upgrade: "
                     + upgrade);
         }
 
-        String connection = headers.get(Names.CONNECTION);
+        CharSequence connection = headers.get(Names.CONNECTION);
         if (!AsciiString.equalsIgnoreCase(Values.UPGRADE, connection)) {
             throw new WebSocketHandshakeException("Invalid handshake response connection: "
                     + connection);

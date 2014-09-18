@@ -33,7 +33,7 @@ public final class HttpHeaderUtil {
      * {@link HttpVersion#isKeepAliveDefault()}.
      */
     public static boolean isKeepAlive(HttpMessage message) {
-        String connection = message.headers().get(Names.CONNECTION);
+        CharSequence connection = message.headers().get(Names.CONNECTION);
         if (connection != null && AsciiString.equalsIgnoreCase(Values.CLOSE, connection)) {
             return false;
         }
@@ -94,9 +94,9 @@ public final class HttpHeaderUtil {
      *         or its value is not a number
      */
     public static long getContentLength(HttpMessage message) {
-        String value = message.headers().get(Names.CONTENT_LENGTH);
+        Long value = message.headers().getLong(Names.CONTENT_LENGTH);
         if (value != null) {
-            return Long.parseLong(value);
+            return value;
         }
 
         // We know the content length if it's a Web Socket message even if
@@ -121,13 +121,9 @@ public final class HttpHeaderUtil {
      *         a number
      */
     public static long getContentLength(HttpMessage message, long defaultValue) {
-        String contentLength = message.headers().get(Names.CONTENT_LENGTH);
-        if (contentLength != null) {
-            try {
-                return Long.parseLong(contentLength);
-            } catch (NumberFormatException ignored) {
-                return defaultValue;
-            }
+        Long value = message.headers().getLong(Names.CONTENT_LENGTH);
+        if (value != null) {
+            return value;
         }
 
         // We know the content length if it's a Web Socket message even if
@@ -172,7 +168,7 @@ public final class HttpHeaderUtil {
      * Sets the {@code "Content-Length"} header.
      */
     public static void setContentLength(HttpMessage message, long length) {
-        message.headers().set(Names.CONTENT_LENGTH, length);
+        message.headers().setLong(Names.CONTENT_LENGTH, length);
     }
 
     public static boolean isContentLengthSet(HttpMessage m) {
@@ -195,7 +191,7 @@ public final class HttpHeaderUtil {
         }
 
         // In most cases, there will be one or zero 'Expect' header.
-        String value = message.headers().get(Names.EXPECT);
+        CharSequence value = message.headers().get(Names.EXPECT);
         if (value == null) {
             return false;
         }
@@ -237,7 +233,7 @@ public final class HttpHeaderUtil {
             m.headers().add(Names.TRANSFER_ENCODING, Values.CHUNKED);
             m.headers().remove(Names.CONTENT_LENGTH);
         } else {
-            List<CharSequence> values = m.headers().getAllUnconverted(Names.TRANSFER_ENCODING);
+            List<CharSequence> values = m.headers().getAll(Names.TRANSFER_ENCODING);
             if (values.isEmpty()) {
                 return;
             }

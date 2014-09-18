@@ -69,8 +69,7 @@ public class StompSubframeAggregator
 
     @Override
     protected long contentLength(StompHeadersSubframe start) throws Exception {
-        String value = start.headers().get(StompHeaders.CONTENT_LENGTH);
-        return Long.parseLong(value);
+        return start.headers().getLong(StompHeaders.CONTENT_LENGTH, 0);
     }
 
     @Override

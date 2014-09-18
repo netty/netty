@@ -51,23 +51,10 @@ public class Http2ToHttpConnectionHandler extends Http2ConnectionHandler {
      *
      * @param httpHeaders The HTTP/1.x headers object to look for the stream id
      * @return The stream id to use with this {@link HttpHeaders} object
-     * @throws Http2Exception If the {@code httpHeaders} object specifies an invalid stream id
+     * @throws Exception If the {@code httpHeaders} object specifies an invalid stream id
      */
-    private int getStreamId(HttpHeaders httpHeaders) throws Http2Exception {
-        int streamId = 0;
-        String value = httpHeaders.get(HttpUtil.ExtensionHeaderNames.STREAM_ID.text());
-        if (value == null) {
-            streamId = connection().local().nextStreamId();
-        } else {
-            try {
-                streamId = Integer.parseInt(value);
-            } catch (NumberFormatException e) {
-                throw Http2Exception.format(Http2Error.INTERNAL_ERROR, "Invalid user-specified stream id value '%s'",
-                        value);
-            }
-        }
-
-        return streamId;
+    private int getStreamId(HttpHeaders httpHeaders) throws Exception {
+        return httpHeaders.getInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), connection().local().nextStreamId());
     }
 
     /**
@@ -83,7 +70,7 @@ public class Http2ToHttpConnectionHandler extends Http2ConnectionHandler {
             int streamId = 0;
             try {
                 streamId = getStreamId(httpMsg.headers());
-            } catch (Http2Exception e) {
+            } catch (Exception e) {
                 httpMsg.release();
                 promise.setFailure(e);
                 return;
@@ -91,16 +78,17 @@ public class Http2ToHttpConnectionHandler extends Http2ConnectionHandler {
 
             // Convert and write the headers.
             Http2Headers http2Headers = HttpUtil.toHttp2Headers(httpMsg);
+            Http2ConnectionEncoder encoder = encoder();
 
             if (hasData) {
                 ChannelPromiseAggregator promiseAggregator = new ChannelPromiseAggregator(promise);
                 ChannelPromise headerPromise = ctx.newPromise();
                 ChannelPromise dataPromise = ctx.newPromise();
                 promiseAggregator.add(headerPromise, dataPromise);
-                encoder().writeHeaders(ctx, streamId, http2Headers, 0, false, headerPromise);
-                encoder().writeData(ctx, streamId, httpMsg.content(), 0, true, dataPromise);
+                encoder.writeHeaders(ctx, streamId, http2Headers, 0, false, headerPromise);
+                encoder.writeData(ctx, streamId, httpMsg.content(), 0, true, dataPromise);
             } else {
-                encoder().writeHeaders(ctx, streamId, http2Headers, 0, true, promise);
+                encoder.writeHeaders(ctx, streamId, http2Headers, 0, true, promise);
             }
         } else {
             ctx.write(msg, promise);

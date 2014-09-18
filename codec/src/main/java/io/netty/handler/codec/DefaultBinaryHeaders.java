@@ -14,329 +14,334 @@
  */
 package io.netty.handler.codec;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.handler.codec.AsciiString.CASE_INSENSITIVE_ORDER;
 import io.netty.util.internal.PlatformDependent;
 
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeSet;
+import java.text.ParseException;
 
-public class DefaultBinaryHeaders implements BinaryHeaders {
-    private final HeaderMap.ValueUnmarshaller<AsciiString> VALUE_UNMARSHALLER =
-            new HeaderMap.ValueUnmarshaller<AsciiString>() {
-                @Override
-                public AsciiString unmarshal(CharSequence value) {
-                    return (AsciiString) value;
-                }
-            };
-
-    private final BinaryHeaderVisitor addAll = new BinaryHeaderVisitor() {
+public class DefaultBinaryHeaders extends DefaultHeaders<AsciiString> implements BinaryHeaders {
+    private static final HashCodeGenerator<AsciiString> ASCII_HASH_CODE_GENERATOR =
+            new HashCodeGenerator<AsciiString>() {
         @Override
-        public boolean visit(AsciiString name, AsciiString value) throws Exception {
-            add(name, value);
-            return true;
-        }
-    };
-    private final BinaryHeaderVisitor setAll = new BinaryHeaderVisitor() {
-        @Override
-        public boolean visit(AsciiString name, AsciiString value) throws Exception {
-            set(name, value);
-            return true;
+        public int generateHashCode(AsciiString name) {
+            return AsciiString.caseInsensitiveHashCode(name);
         }
     };
 
-    private final HeaderMap headers;
+    private static final ValueConverter<AsciiString> OBJECT_TO_ASCII = new ValueConverter<AsciiString>() {
+        @Override
+        public AsciiString convert(Object value) {
+            if (value instanceof AsciiString) {
+                return (AsciiString) value;
+            } else if (value instanceof CharSequence) {
+                return new AsciiString((CharSequence) value);
+            }
+            return new AsciiString(value.toString());
+        }
+
+        @Override
+        public AsciiString convert(int value) {
+            return new AsciiString(String.valueOf(value));
+        }
+
+        @Override
+        public AsciiString convert(long value) {
+            return new AsciiString(String.valueOf(value));
+        }
+
+        @Override
+        public AsciiString convert(double value) {
+            return new AsciiString(String.valueOf(value));
+        }
+
+        @Override
+        public AsciiString convert(char value) {
+            return new AsciiString(String.valueOf(value));
+        }
+
+        @Override
+        public AsciiString convert(boolean value) {
+            return new AsciiString(String.valueOf(value));
+        }
+
+        @Override
+        public AsciiString convert(float value) {
+            return new AsciiString(String.valueOf(value));
+        }
+
+        @Override
+        public int convertToInt(AsciiString value) {
+            return value.parseInt();
+        }
+
+        @Override
+        public long convertToLong(AsciiString value) {
+            return value.parseLong();
+        }
+
+        @Override
+        public long convertToTimeMillis(AsciiString value) {
+            try {
+                return HeaderDateFormat.get().parse(value.toString());
+            } catch (ParseException e) {
+                PlatformDependent.throwException(e);
+            }
+            return 0;
+        }
+
+        @Override
+        public double convertToDouble(AsciiString value) {
+            return value.parseDouble();
+        }
+
+        @Override
+        public char convertToChar(AsciiString value) {
+            return value.charAt(0);
+        }
+
+        @Override
+        public boolean convertToBoolean(AsciiString value) {
+            return value.byteAt(0) != 0;
+        }
+
+        @Override
+        public float convertToFloat(AsciiString value) {
+            return value.parseFloat();
+        }
+
+        @Override
+        public AsciiString convert(short value) {
+            return new AsciiString(String.valueOf(value));
+        }
+
+        @Override
+        public short convertToShort(AsciiString value) {
+            return value.parseShort();
+        }
+
+        @Override
+        public AsciiString convert(byte value) {
+            return new AsciiString(String.valueOf(value));
+        }
+
+        @Override
+        public byte convertToByte(AsciiString value) {
+            return value.byteAt(0);
+        }
+    };
+
+    private static final NameConverter<AsciiString> ASCII_TO_LOWER_CONVERTER = new NameConverter<AsciiString>() {
+        @Override
+        public AsciiString convertName(AsciiString name) {
+            return name.toLowerCase();
+        }
+    };
+
+    private static final NameConverter<AsciiString> ASCII_IDENTITY_CONVERTER = new NameConverter<AsciiString>() {
+        @Override
+        public AsciiString convertName(AsciiString name) {
+            return name;
+        }
+    };
 
     public DefaultBinaryHeaders() {
-        // Binary headers are case-sensitive. It's up the HTTP/1 translation layer to convert headers to
-        // lowercase.
-        headers = new HeaderMap(false);
+        this(false);
+    }
+
+    public DefaultBinaryHeaders(boolean forceKeyToLower) {
+        super(CASE_INSENSITIVE_ORDER, CASE_INSENSITIVE_ORDER, ASCII_HASH_CODE_GENERATOR, OBJECT_TO_ASCII,
+                forceKeyToLower ? ASCII_TO_LOWER_CONVERTER : ASCII_IDENTITY_CONVERTER);
     }
 
     @Override
     public BinaryHeaders add(AsciiString name, AsciiString value) {
-        headers.add(name, value);
+        super.add(name, value);
         return this;
     }
 
     @Override
-    public BinaryHeaders add(AsciiString name, Iterable<AsciiString> values) {
-        headers.add(name, values);
+    public BinaryHeaders add(AsciiString name, Iterable<? extends AsciiString> values) {
+        super.add(name, values);
         return this;
     }
 
     @Override
     public BinaryHeaders add(AsciiString name, AsciiString... values) {
-        headers.add(name, values);
+        super.add(name, values);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders addObject(AsciiString name, Object value) {
+        super.addObject(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders addObject(AsciiString name, Iterable<?> values) {
+        super.addObject(name, values);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders addObject(AsciiString name, Object... values) {
+        super.addObject(name, values);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders addBoolean(AsciiString name, boolean value) {
+        super.addBoolean(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders addChar(AsciiString name, char value) {
+        super.addChar(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders addByte(AsciiString name, byte value) {
+        super.addByte(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders addShort(AsciiString name, short value) {
+        super.addShort(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders addInt(AsciiString name, int value) {
+        super.addInt(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders addLong(AsciiString name, long value) {
+        super.addLong(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders addFloat(AsciiString name, float value) {
+        super.addFloat(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders addDouble(AsciiString name, double value) {
+        super.addDouble(name, value);
         return this;
     }
 
     @Override
     public BinaryHeaders add(BinaryHeaders headers) {
-        checkNotNull(headers, "headers");
-
-        add0(headers);
+        super.add(headers);
         return this;
-    }
-
-    private void add0(BinaryHeaders headers) {
-        if (headers.isEmpty()) {
-            return;
-        }
-
-        if (headers instanceof DefaultBinaryHeaders) {
-            this.headers.add(((DefaultBinaryHeaders) headers).headers);
-        } else {
-            forEachEntry(addAll);
-        }
-    }
-
-    @Override
-    public boolean remove(AsciiString name) {
-        return headers.remove(name);
     }
 
     @Override
     public BinaryHeaders set(AsciiString name, AsciiString value) {
-        headers.set(name, value);
+        super.set(name, value);
         return this;
     }
 
     @Override
-    public BinaryHeaders set(AsciiString name, Iterable<AsciiString> values) {
-        headers.set(name, values);
+    public BinaryHeaders set(AsciiString name, Iterable<? extends AsciiString> values) {
+        super.set(name, values);
         return this;
     }
 
     @Override
     public BinaryHeaders set(AsciiString name, AsciiString... values) {
-        headers.set(name, values);
+        super.set(name, values);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders setObject(AsciiString name, Object value) {
+        super.setObject(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders setObject(AsciiString name, Iterable<?> values) {
+        super.setObject(name, values);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders setObject(AsciiString name, Object... values) {
+        super.setObject(name, values);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders setBoolean(AsciiString name, boolean value) {
+        super.setBoolean(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders setChar(AsciiString name, char value) {
+        super.setChar(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders setByte(AsciiString name, byte value) {
+        super.setByte(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders setShort(AsciiString name, short value) {
+        super.setShort(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders setInt(AsciiString name, int value) {
+        super.setInt(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders setLong(AsciiString name, long value) {
+        super.setLong(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders setFloat(AsciiString name, float value) {
+        super.setFloat(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders setDouble(AsciiString name, double value) {
+        super.setDouble(name, value);
         return this;
     }
 
     @Override
     public BinaryHeaders set(BinaryHeaders headers) {
-        checkNotNull(headers, "headers");
-        clear();
-        add0(headers);
+        super.set(headers);
         return this;
     }
 
     @Override
     public BinaryHeaders setAll(BinaryHeaders headers) {
-        checkNotNull(headers, "headers");
-
-        if (headers instanceof DefaultBinaryHeaders) {
-            this.headers.setAll(((DefaultBinaryHeaders) headers).headers);
-        } else {
-            forEachEntry(setAll);
-        }
-
+        super.setAll(headers);
         return this;
     }
 
     @Override
     public BinaryHeaders clear() {
-        headers.clear();
+        super.clear();
         return this;
-    }
-
-    @Override
-    public AsciiString get(AsciiString name) {
-        return (AsciiString) headers.get(name);
-    }
-
-    @Override
-    public AsciiString get(AsciiString name, AsciiString defaultValue) {
-        AsciiString v = get(name);
-        if (v == null) {
-            return defaultValue;
-        }
-        return v;
-    }
-
-    @Override
-    public AsciiString getAndRemove(AsciiString name) {
-        return (AsciiString) headers.getAndRemove(name);
-    }
-
-    @Override
-    public AsciiString getAndRemove(AsciiString name, AsciiString defaultValue) {
-        AsciiString v = getAndRemove(name);
-        if (v == null) {
-            return defaultValue;
-        }
-        return v;
-    }
-
-    @Override
-    public List<AsciiString> getAll(AsciiString name) {
-        return headers.getAll(name, VALUE_UNMARSHALLER);
-    }
-
-    @Override
-    public List<AsciiString> getAllAndRemove(AsciiString name) {
-        return headers.getAllAndRemove(name, VALUE_UNMARSHALLER);
-    }
-
-    @Override
-    public List<Map.Entry<AsciiString, AsciiString>> entries() {
-        int size = size();
-        @SuppressWarnings("unchecked")
-        final Map.Entry<AsciiString, AsciiString>[] all = new Map.Entry[size];
-
-        headers.forEachEntry(new HeaderMap.EntryVisitor() {
-            int cnt;
-            @Override
-            public boolean visit(Entry<CharSequence, CharSequence> entry) {
-                all[cnt++] = new AsciiStringHeaderEntry(entry);
-                return true;
-            }
-        });
-
-        return Arrays.asList(all);
-    }
-
-    @Override
-    public Iterator<Entry<AsciiString, AsciiString>> iterator() {
-        return new AsciiStringHeaderIterator();
-    }
-
-    @Override
-    public boolean contains(AsciiString name) {
-        return get(name) != null;
-    }
-
-    @Override
-    public int size() {
-        return headers.size();
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return headers.isEmpty();
-    }
-
-    @Override
-    public boolean contains(AsciiString name, AsciiString value) {
-        return contains(name, value, false);
-    }
-
-    public boolean contains(AsciiString name, AsciiString value, boolean ignoreCase) {
-        return headers.contains(name, value);
-    }
-
-    @Override
-    public Set<AsciiString> names() {
-        return names(headers.isIgnoreCase());
-    }
-
-    /**
-     * Get the set of names for all text headers
-     * @param caseInsensitive {@code true} if names should be added in a case insensitive
-     * @return The set of names for all text headers
-     */
-    public Set<AsciiString> names(boolean caseInsensitive) {
-        final Set<AsciiString> names = caseInsensitive ? new TreeSet<AsciiString>(AsciiString.CASE_INSENSITIVE_ORDER)
-                                            : new LinkedHashSet<AsciiString>(size());
-        headers.forEachName(new HeaderMap.NameVisitor() {
-            @Override
-            public boolean visit(CharSequence name) {
-                names.add((AsciiString) name);
-                return true;
-            }
-        });
-        return names;
-    }
-
-    @Override
-    public BinaryHeaders forEachEntry(final BinaryHeaders.BinaryHeaderVisitor visitor) {
-        headers.forEachEntry(new HeaderMap.EntryVisitor() {
-            @Override
-            public boolean visit(Entry<CharSequence, CharSequence> entry) {
-                try {
-                    return visitor.visit((AsciiString) entry.getKey(),
-                            (AsciiString) entry.getValue());
-                } catch (Exception e) {
-                    PlatformDependent.throwException(e);
-                    return false;
-                }
-            }
-        });
-        return this;
-    }
-
-    @Override
-    public int hashCode() {
-        return Utils.hashCode(this);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (!(o instanceof BinaryHeaders)) {
-            return false;
-        }
-
-        return Utils.equals(this, (BinaryHeaders) o);
-    }
-
-    @Override
-    public String toString() {
-        return Utils.toStringUtf8(this);
-    }
-
-    private static final class AsciiStringHeaderEntry implements Map.Entry<AsciiString, AsciiString> {
-        private final Entry<CharSequence, CharSequence> entry;
-
-        AsciiStringHeaderEntry(Entry<CharSequence, CharSequence> entry) {
-            this.entry = entry;
-        }
-
-        @Override
-        public AsciiString getKey() {
-            return (AsciiString) entry.getKey();
-        }
-
-        @Override
-        public AsciiString getValue() {
-            return (AsciiString) entry.getValue();
-        }
-
-        @Override
-        public AsciiString setValue(AsciiString value) {
-            checkNotNull(value, "value");
-            return (AsciiString) entry.setValue(value);
-        }
-
-        @Override
-        public String toString() {
-            return entry.toString();
-        }
-    }
-
-    private final class AsciiStringHeaderIterator implements Iterator<Map.Entry<AsciiString, AsciiString>> {
-
-        private Iterator<Entry<CharSequence, CharSequence>> iter = headers.iterator();
-
-        @Override
-        public boolean hasNext() {
-            return iter.hasNext();
-        }
-
-        @Override
-        public Entry<AsciiString, AsciiString> next() {
-            Entry<CharSequence, CharSequence> entry = iter.next();
-            return new AsciiStringHeaderEntry(entry);
-        }
-
-        @Override
-        public void remove() {
-            throw new UnsupportedOperationException();
-        }
     }
 }

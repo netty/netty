@@ -181,7 +181,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         this.factory = factory;
         // Fill default values
 
-        setMultipart(this.request.headers().get(HttpHeaders.Names.CONTENT_TYPE));
+        setMultipart(this.request.headers().getAndConvert(HttpHeaders.Names.CONTENT_TYPE));
         if (request instanceof HttpContent) {
             // Offer automatically if the given request is als type of HttpContent
             // See #1089

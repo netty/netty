@@ -18,9 +18,11 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.AsciiString;
-import io.netty.handler.codec.TextHeaderProcessor;
+import io.netty.handler.codec.TextHeaders.EntryVisitor;
 
-final class HttpHeadersEncoder implements TextHeaderProcessor {
+import java.util.Map.Entry;
+
+final class HttpHeadersEncoder implements EntryVisitor {
 
     private final ByteBuf buf;
 
@@ -29,7 +31,9 @@ final class HttpHeadersEncoder implements TextHeaderProcessor {
     }
 
     @Override
-    public boolean process(CharSequence name, CharSequence value) throws Exception {
+    public boolean visit(Entry<CharSequence, CharSequence> entry) throws Exception {
+        final CharSequence name = entry.getKey();
+        final CharSequence value = entry.getValue();
         final ByteBuf buf = this.buf;
         final int nameLen = name.length();
         final int valueLen = value.length();

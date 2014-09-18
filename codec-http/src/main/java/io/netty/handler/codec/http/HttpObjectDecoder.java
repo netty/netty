@@ -550,11 +550,15 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<State> {
             do {
                 char firstChar = line.charAt(0);
                 if (lastHeader != null && (firstChar == ' ' || firstChar == '\t')) {
-                    List<String> current = trailer.trailingHeaders().getAll(lastHeader);
+                    List<CharSequence> current = trailer.trailingHeaders().getAll(lastHeader);
                     if (!current.isEmpty()) {
                         int lastPos = current.size() - 1;
-                        String newString = current.get(lastPos) + line.toString().trim();
-                        current.set(lastPos, newString);
+                        String lineTrimmed = line.toString().trim();
+                        CharSequence currentLastPos = current.get(lastPos);
+                        StringBuilder b = new StringBuilder(currentLastPos.length() + lineTrimmed.length());
+                        b.append(currentLastPos);
+                        b.append(lineTrimmed);
+                        current.set(lastPos, b.toString());
                     } else {
                         // Content-Length, Transfer-Encoding, or Trailer
                     }

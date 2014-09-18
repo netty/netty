@@ -25,6 +25,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -86,8 +87,7 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
         try {
             // Decode the HTTP2-Settings header and set the settings on the handler to make
             // sure everything is fine with the request.
-            String settingsHeader = upgradeRequest.headers().get(HTTP_UPGRADE_SETTINGS_HEADER);
-            settings = decodeSettingsHeader(ctx, settingsHeader);
+            settings = decodeSettingsHeader(ctx, upgradeRequest.headers().get(HTTP_UPGRADE_SETTINGS_HEADER));
             connectionHandler.onHttpServerUpgrade(settings);
             // Everything looks good, no need to modify the response.
         } catch (Throwable e) {
@@ -108,9 +108,9 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
     /**
      * Decodes the settings header and returns a {@link Http2Settings} object.
      */
-    private Http2Settings decodeSettingsHeader(ChannelHandlerContext ctx, String settingsHeader)
+    private Http2Settings decodeSettingsHeader(ChannelHandlerContext ctx, CharSequence settingsHeader)
             throws Http2Exception {
-        ByteBuf header = Unpooled.wrappedBuffer(settingsHeader.getBytes(CharsetUtil.UTF_8));
+        ByteBuf header = Unpooled.wrappedBuffer(AsciiString.getBytes(settingsHeader, CharsetUtil.UTF_8));
         try {
             // Decode the SETTINGS payload.
             ByteBuf payload = Base64.decode(header, URL_SAFE);

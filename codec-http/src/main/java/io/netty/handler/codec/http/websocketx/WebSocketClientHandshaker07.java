@@ -173,17 +173,17 @@ public class WebSocketClientHandshaker07 extends WebSocketClientHandshaker {
             throw new WebSocketHandshakeException("Invalid handshake response getStatus: " + response.status());
         }
 
-        String upgrade = headers.get(Names.UPGRADE);
+        CharSequence upgrade = headers.get(Names.UPGRADE);
         if (!AsciiString.equalsIgnoreCase(Values.WEBSOCKET, upgrade)) {
             throw new WebSocketHandshakeException("Invalid handshake response upgrade: " + upgrade);
         }
 
-        String connection = headers.get(Names.CONNECTION);
+        CharSequence connection = headers.get(Names.CONNECTION);
         if (!AsciiString.equalsIgnoreCase(Values.UPGRADE, connection)) {
             throw new WebSocketHandshakeException("Invalid handshake response connection: " + connection);
         }
 
-        String accept = headers.get(Names.SEC_WEBSOCKET_ACCEPT);
+        CharSequence accept = headers.get(Names.SEC_WEBSOCKET_ACCEPT);
         if (accept == null || !accept.equals(expectedChallengeResponseString)) {
             throw new WebSocketHandshakeException(String.format(
                     "Invalid challenge. Actual: %s. Expected: %s", accept, expectedChallengeResponseString));

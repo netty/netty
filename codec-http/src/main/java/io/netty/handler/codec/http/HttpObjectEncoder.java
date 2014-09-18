@@ -20,6 +20,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.util.List;
@@ -137,7 +138,12 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             } else {
                 ByteBuf buf = ctx.alloc().buffer();
                 buf.writeBytes(ZERO_CRLF);
-                headers.forEachEntry(new HttpHeadersEncoder(buf));
+                try {
+                    headers.forEachEntry(new HttpHeadersEncoder(buf));
+                } catch (Exception ex) {
+                    buf.release();
+                    PlatformDependent.throwException(ex);
+                }
                 buf.writeBytes(CRLF);
                 out.add(buf);
             }

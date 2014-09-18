@@ -711,8 +711,8 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         }
 
         HttpHeaders headers = request.headers();
-        List<String> contentTypes = headers.getAll(HttpHeaders.Names.CONTENT_TYPE);
-        List<String> transferEncoding = headers.getAll(HttpHeaders.Names.TRANSFER_ENCODING);
+        List<String> contentTypes = headers.getAllAndConvert(HttpHeaders.Names.CONTENT_TYPE);
+        List<CharSequence> transferEncoding = headers.getAll(HttpHeaders.Names.TRANSFER_ENCODING);
         if (contentTypes != null) {
             headers.remove(HttpHeaders.Names.CONTENT_TYPE);
             for (String contentType : contentTypes) {
@@ -747,7 +747,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
             isChunked = true;
             if (transferEncoding != null) {
                 headers.remove(HttpHeaders.Names.TRANSFER_ENCODING);
-                for (String v : transferEncoding) {
+                for (CharSequence v : transferEncoding) {
                     if (AsciiString.equalsIgnoreCase(v, HttpHeaders.Values.CHUNKED)) {
                         // ignore
                     } else {

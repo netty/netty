@@ -44,7 +44,7 @@ public class SpdyHttpResponseStreamIdHandler extends
     protected void encode(ChannelHandlerContext ctx, HttpMessage msg, List<Object> out) throws Exception {
         Integer id = ids.poll();
         if (id != null && id.intValue() != NO_ID && !msg.headers().contains(SpdyHttpHeaders.Names.STREAM_ID)) {
-            msg.headers().set(Names.STREAM_ID, id);
+            msg.headers().setInt(Names.STREAM_ID, id);
         }
 
         out.add(ReferenceCountUtil.retain(msg));

@@ -14,9 +14,15 @@
  */
 package io.netty.handler.codec.http;
 
+import static io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
+import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_LENGTH;
+import static io.netty.handler.codec.http.HttpHeaders.Names.UPGRADE;
+import static io.netty.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 
@@ -28,11 +34,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-
-import static io.netty.handler.codec.http.HttpHeaders.Names.*;
-import static io.netty.handler.codec.http.HttpResponseStatus.*;
-import static io.netty.handler.codec.http.HttpVersion.*;
-import static java.lang.String.*;
 
 /**
  * A server-side handler that receives HTTP requests and optionally performs a protocol switch if
@@ -249,7 +250,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
      */
     private boolean upgrade(final ChannelHandlerContext ctx, final FullHttpRequest request) {
         // Select the best protocol based on those requested in the UPGRADE header.
-        String upgradeHeader = request.headers().get(UPGRADE);
+        CharSequence upgradeHeader = request.headers().get(UPGRADE);
         final UpgradeCodec upgradeCodec = selectUpgradeCodec(upgradeHeader);
         if (upgradeCodec == null) {
             // None of the requested protocols are supported, don't upgrade.
@@ -257,15 +258,15 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
         }
 
         // Make sure the CONNECTION header is present.
-        String connectionHeader = request.headers().get(CONNECTION);
+        CharSequence connectionHeader = request.headers().get(CONNECTION);
         if (connectionHeader == null) {
             return false;
         }
 
         // Make sure the CONNECTION header contains UPGRADE as well as all protocol-specific headers.
         Collection<String> requiredHeaders = upgradeCodec.requiredUpgradeHeaders();
-        Set<String> values = splitHeader(connectionHeader);
-        if (!values.contains(UPGRADE.toString()) || !values.containsAll(requiredHeaders)) {
+        Set<CharSequence> values = splitHeader(connectionHeader);
+        if (!values.contains(UPGRADE) || !values.containsAll(requiredHeaders)) {
             return false;
         }
 
@@ -314,8 +315,8 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
      * Looks up the most desirable supported upgrade codec from the list of choices in the UPGRADE
      * header. If no suitable codec was found, returns {@code null}.
      */
-    private UpgradeCodec selectUpgradeCodec(String upgradeHeader) {
-        Set<String> requestedProtocols = splitHeader(upgradeHeader);
+    private UpgradeCodec selectUpgradeCodec(CharSequence upgradeHeader) {
+        Set<CharSequence> requestedProtocols = splitHeader(upgradeHeader);
 
         // Retain only the protocols that are in the protocol map. Maintain the original insertion
         // order into the protocolMap, so that the first one in the remaining set is the most
@@ -345,9 +346,9 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
      * Splits a comma-separated header value. The returned set is case-insensitive and contains each
      * part with whitespace removed.
      */
-    private static Set<String> splitHeader(String header) {
+    private static Set<CharSequence> splitHeader(CharSequence header) {
         StringBuilder builder = new StringBuilder(header.length());
-        Set<String> protocols = new TreeSet<String>(CASE_INSENSITIVE_ORDER);
+        Set<CharSequence> protocols = new TreeSet<CharSequence>(AsciiString.CHARSEQUENCE_CASE_INSENSITIVE_ORDER);
         for (int i = 0; i < header.length(); ++i) {
             char c = header.charAt(i);
             if (Character.isWhitespace(c)) {

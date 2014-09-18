@@ -106,7 +106,7 @@ public class DefaultHttp2ToHttpConnectionHandlerTest {
         final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/example");
         try {
             final HttpHeaders httpHeaders = request.headers();
-            httpHeaders.set(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+            httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
             httpHeaders.set(HttpHeaders.Names.HOST,
                     "http://my-user_name@www.example.org:5555/example");
             httpHeaders.set(HttpUtil.ExtensionHeaderNames.AUTHORITY.text(), "www.example.org:5555");

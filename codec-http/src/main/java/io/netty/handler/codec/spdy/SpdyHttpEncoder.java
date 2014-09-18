@@ -185,7 +185,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
                 } else {
                     // Create SPDY HEADERS frame out of trailers
                     SpdyHeadersFrame spdyHeadersFrame = new DefaultSpdyHeadersFrame(currentStreamId);
-                    for (Map.Entry<String, String> entry: trailers) {
+                    for (Map.Entry<CharSequence, CharSequence> entry: trailers) {
                         spdyHeadersFrame.headers().add(entry.getKey(), entry.getValue());
                     }
 
@@ -212,8 +212,8 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
         int streamID = httpHeaders.getInt(Names.STREAM_ID);
         int associatedToStreamId = httpHeaders.getInt(Names.ASSOCIATED_TO_STREAM_ID, 0);
         byte priority = (byte) httpHeaders.getInt(Names.PRIORITY, 0);
-        String URL = httpHeaders.get(Names.URL);
-        String scheme = httpHeaders.get(Names.SCHEME);
+        CharSequence URL = httpHeaders.get(Names.URL);
+        CharSequence scheme = httpHeaders.get(Names.SCHEME);
         httpHeaders.remove(Names.STREAM_ID);
         httpHeaders.remove(Names.ASSOCIATED_TO_STREAM_ID);
         httpHeaders.remove(Names.PRIORITY);
@@ -234,21 +234,21 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
         SpdyHeaders frameHeaders = spdySynStreamFrame.headers();
         if (httpMessage instanceof FullHttpRequest) {
             HttpRequest httpRequest = (HttpRequest) httpMessage;
-            frameHeaders.set(METHOD, httpRequest.method());
+            frameHeaders.setObject(METHOD, httpRequest.method());
             frameHeaders.set(PATH, httpRequest.uri());
-            frameHeaders.set(VERSION, httpMessage.protocolVersion());
+            frameHeaders.setObject(VERSION, httpMessage.protocolVersion());
         }
         if (httpMessage instanceof HttpResponse) {
             HttpResponse httpResponse = (HttpResponse) httpMessage;
-            frameHeaders.set(STATUS, httpResponse.status());
+            frameHeaders.setInt(STATUS, httpResponse.status().code());
             frameHeaders.set(PATH, URL);
-            frameHeaders.set(VERSION, httpMessage.protocolVersion());
+            frameHeaders.setObject(VERSION, httpMessage.protocolVersion());
             spdySynStreamFrame.setUnidirectional(true);
         }
 
         // Replace the HTTP host header with the SPDY host header
         if (spdyVersion >= 3) {
-            CharSequence host = httpHeaders.getUnconverted(HttpHeaders.Names.HOST);
+            CharSequence host = httpHeaders.get(HttpHeaders.Names.HOST);
             httpHeaders.remove(HttpHeaders.Names.HOST);
             frameHeaders.set(HOST, host);
         }
@@ -260,7 +260,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
         frameHeaders.set(SCHEME, scheme);
 
         // Transfer the remaining HTTP headers
-        for (Map.Entry<String, String> entry: httpHeaders) {
+        for (Map.Entry<CharSequence, CharSequence> entry: httpHeaders) {
             frameHeaders.add(entry.getKey(), entry.getValue());
         }
         currentStreamId = spdySynStreamFrame.streamId();
@@ -286,11 +286,11 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
         SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamID);
         SpdyHeaders frameHeaders = spdySynReplyFrame.headers();
         // Unfold the first line of the response into name/value pairs
-        frameHeaders.set(STATUS, httpResponse.status());
-        frameHeaders.set(VERSION, httpResponse.protocolVersion());
+        frameHeaders.setInt(STATUS, httpResponse.status().code());
+        frameHeaders.setObject(VERSION, httpResponse.protocolVersion());
 
         // Transfer the remaining HTTP headers
-        for (Map.Entry<String, String> entry: httpHeaders) {
+        for (Map.Entry<CharSequence, CharSequence> entry: httpHeaders) {
             spdySynReplyFrame.headers().add(entry.getKey(), entry.getValue());
         }
 

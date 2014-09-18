@@ -43,7 +43,7 @@ public class HttpHeaderUtilTest {
 
         assertEquals("1", headers.get("Foo"));
 
-        List<String> values = headers.getAll("Foo");
+        List<CharSequence> values = headers.getAll("Foo");
         assertEquals(2, values.size());
         assertEquals("1", values.get(0));
         assertEquals("2", values.get(1));

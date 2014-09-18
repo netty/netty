@@ -84,10 +84,43 @@ public interface Http2Headers extends BinaryHeaders {
     Http2Headers add(AsciiString name, AsciiString value);
 
     @Override
-    Http2Headers add(AsciiString name, Iterable<AsciiString> values);
+    Http2Headers add(AsciiString name, Iterable<? extends AsciiString> values);
 
     @Override
     Http2Headers add(AsciiString name, AsciiString... values);
+
+    @Override
+    Http2Headers addObject(AsciiString name, Object value);
+
+    @Override
+    Http2Headers addObject(AsciiString name, Iterable<?> values);
+
+    @Override
+    Http2Headers addObject(AsciiString name, Object... values);
+
+    @Override
+    Http2Headers addBoolean(AsciiString name, boolean value);
+
+    @Override
+    Http2Headers addByte(AsciiString name, byte value);
+
+    @Override
+    Http2Headers addChar(AsciiString name, char value);
+
+    @Override
+    Http2Headers addShort(AsciiString name, short value);
+
+    @Override
+    Http2Headers addInt(AsciiString name, int value);
+
+    @Override
+    Http2Headers addLong(AsciiString name, long value);
+
+    @Override
+    Http2Headers addFloat(AsciiString name, float value);
+
+    @Override
+    Http2Headers addDouble(AsciiString name, double value);
 
     @Override
     Http2Headers add(BinaryHeaders headers);
@@ -96,10 +129,43 @@ public interface Http2Headers extends BinaryHeaders {
     Http2Headers set(AsciiString name, AsciiString value);
 
     @Override
-    Http2Headers set(AsciiString name, Iterable<AsciiString> values);
+    Http2Headers set(AsciiString name, Iterable<? extends AsciiString> values);
 
     @Override
     Http2Headers set(AsciiString name, AsciiString... values);
+
+    @Override
+    Http2Headers setObject(AsciiString name, Object value);
+
+    @Override
+    Http2Headers setObject(AsciiString name, Iterable<?> values);
+
+    @Override
+    Http2Headers setObject(AsciiString name, Object... values);
+
+    @Override
+    Http2Headers setBoolean(AsciiString name, boolean value);
+
+    @Override
+    Http2Headers setByte(AsciiString name, byte value);
+
+    @Override
+    Http2Headers setChar(AsciiString name, char value);
+
+    @Override
+    Http2Headers setShort(AsciiString name, short value);
+
+    @Override
+    Http2Headers setInt(AsciiString name, int value);
+
+    @Override
+    Http2Headers setLong(AsciiString name, long value);
+
+    @Override
+    Http2Headers setFloat(AsciiString name, float value);
+
+    @Override
+    Http2Headers setDouble(AsciiString name, double value);
 
     @Override
     Http2Headers set(BinaryHeaders headers);
@@ -109,9 +175,6 @@ public interface Http2Headers extends BinaryHeaders {
 
     @Override
     Http2Headers clear();
-
-    @Override
-    Http2Headers forEachEntry(BinaryHeaderVisitor visitor);
 
     /**
      * Sets the {@link PseudoHeaderName#METHOD} header or {@code null} if there is no such header

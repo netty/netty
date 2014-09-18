@@ -209,9 +209,9 @@ public final class CorsConfig {
         for (Entry<CharSequence, Callable<?>> entry : this.preflightHeaders.entrySet()) {
             final Object value = getValue(entry.getValue());
             if (value instanceof Iterable) {
-                preflightHeaders.add(entry.getKey(), (Iterable<?>) value);
+                preflightHeaders.addObject(entry.getKey(), (Iterable<?>) value);
             } else {
-                preflightHeaders.add(entry.getKey(), value);
+                preflightHeaders.addObject(entry.getKey(), value);
             }
         }
         return preflightHeaders;

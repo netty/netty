@@ -197,7 +197,7 @@ public class HttpContentCompressorTest {
         FullHttpResponse res = new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
                 Unpooled.copiedBuffer("Hello, World", CharsetUtil.US_ASCII));
-        res.headers().set(Names.CONTENT_LENGTH, res.content().readableBytes());
+        res.headers().setInt(Names.CONTENT_LENGTH, res.content().readableBytes());
         ch.writeOutbound(res);
 
         assertEncodedResponse(ch);
@@ -309,8 +309,8 @@ public class HttpContentCompressorTest {
 
         HttpResponse res = (HttpResponse) o;
         assertThat(res, is(not(instanceOf(HttpContent.class))));
-        assertThat(res.headers().get(Names.TRANSFER_ENCODING), is("chunked"));
+        assertThat(res.headers().getAndConvert(Names.TRANSFER_ENCODING), is("chunked"));
         assertThat(res.headers().get(Names.CONTENT_LENGTH), is(nullValue()));
-        assertThat(res.headers().get(Names.CONTENT_ENCODING), is("gzip"));
+        assertThat(res.headers().getAndConvert(Names.CONTENT_ENCODING), is("gzip"));
     }
 }

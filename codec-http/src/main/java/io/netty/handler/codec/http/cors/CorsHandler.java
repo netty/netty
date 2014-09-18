@@ -86,7 +86,7 @@ public class CorsHandler extends ChannelHandlerAdapter {
     }
 
     private boolean setOrigin(final HttpResponse response) {
-        final String origin = request.headers().get(ORIGIN);
+        final CharSequence origin = request.headers().get(ORIGIN);
         if (origin != null) {
             if ("null".equals(origin) && config.isNullOriginAllowed()) {
                 setAnyOrigin(response);
@@ -116,7 +116,7 @@ public class CorsHandler extends ChannelHandlerAdapter {
             return true;
         }
 
-        final String origin = request.headers().get(ORIGIN);
+        final CharSequence origin = request.headers().get(ORIGIN);
         if (origin == null) {
             // Not a CORS request so we cannot validate it. It may be a non CORS request.
             return true;
@@ -141,7 +141,7 @@ public class CorsHandler extends ChannelHandlerAdapter {
         setOrigin(response, "*");
     }
 
-    private static void setOrigin(final HttpResponse response, final String origin) {
+    private static void setOrigin(final HttpResponse response, final CharSequence origin) {
         response.headers().set(ACCESS_CONTROL_ALLOW_ORIGIN, origin);
     }
 
@@ -165,7 +165,7 @@ public class CorsHandler extends ChannelHandlerAdapter {
     }
 
     private void setAllowMethods(final HttpResponse response) {
-        response.headers().set(ACCESS_CONTROL_ALLOW_METHODS, config.allowedRequestMethods());
+        response.headers().setObject(ACCESS_CONTROL_ALLOW_METHODS, config.allowedRequestMethods());
     }
 
     private void setAllowHeaders(final HttpResponse response) {
@@ -173,7 +173,7 @@ public class CorsHandler extends ChannelHandlerAdapter {
     }
 
     private void setMaxAge(final HttpResponse response) {
-        response.headers().set(ACCESS_CONTROL_MAX_AGE, config.maxAge());
+        response.headers().setLong(ACCESS_CONTROL_MAX_AGE, config.maxAge());
     }
 
     @Override

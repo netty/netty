@@ -184,7 +184,7 @@ public class HttpResponseDecoderTest {
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
         assertThat(res.status(), is(HttpResponseStatus.OK));
-        assertThat(res.headers().get(Names.TRANSFER_ENCODING), is("chunked"));
+        assertThat(res.headers().getAndConvert(Names.TRANSFER_ENCODING), is("chunked"));
         assertThat(ch.readInbound(), is(nullValue()));
 
         // Close the connection without sending anything.
@@ -205,7 +205,7 @@ public class HttpResponseDecoderTest {
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
         assertThat(res.status(), is(HttpResponseStatus.OK));
-        assertThat(res.headers().get(Names.TRANSFER_ENCODING), is("chunked"));
+        assertThat(res.headers().getAndConvert(Names.TRANSFER_ENCODING), is("chunked"));
 
         // Read the partial content.
         HttpContent content = ch.readInbound();
@@ -275,7 +275,7 @@ public class HttpResponseDecoderTest {
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
         assertThat(res.status(), is(HttpResponseStatus.OK));
-        assertThat(res.headers().get("X-Header"), is("h2=h2v2; Expires=Wed, 09-Jun-2021 10:18:14 GMT"));
+        assertThat(res.headers().getAndConvert("X-Header"), is("h2=h2v2; Expires=Wed, 09-Jun-2021 10:18:14 GMT"));
         assertThat(ch.readInbound(), is(nullValue()));
 
         ch.writeInbound(Unpooled.wrappedBuffer(new byte[1024]));
@@ -313,7 +313,7 @@ public class HttpResponseDecoderTest {
         assertThat(lastContent.content().isReadable(), is(false));
         HttpHeaders headers = lastContent.trailingHeaders();
         assertEquals(1, headers.names().size());
-        List<String> values = headers.getAll("Set-Cookie");
+        List<CharSequence> values = headers.getAll("Set-Cookie");
         assertEquals(2, values.size());
         assertTrue(values.contains("t1=t1v1"));
         assertTrue(values.contains("t2=t2v2; Expires=Wed, 09-Jun-2021 10:18:14 GMT"));
@@ -363,7 +363,7 @@ public class HttpResponseDecoderTest {
         assertThat(lastContent.content().isReadable(), is(false));
         HttpHeaders headers = lastContent.trailingHeaders();
         assertEquals(1, headers.names().size());
-        List<String> values = headers.getAll("Set-Cookie");
+        List<CharSequence> values = headers.getAll("Set-Cookie");
         assertEquals(2, values.size());
         assertTrue(values.contains("t1=t1v1"));
         assertTrue(values.contains("t2=t2v2; Expires=Wed, 09-Jun-2021 10:18:14 GMT"));
