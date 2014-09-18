@@ -20,12 +20,13 @@ import static io.netty.handler.codec.http2.Http2Exception.protocolError;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.handler.codec.AsciiString;
-import io.netty.handler.codec.BinaryHeaders;
+import io.netty.handler.codec.BinaryHeaders.EntryVisitor;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Collections;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -71,18 +72,21 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
                     encodeHeader(name, value, stream);
                 }
             }
-            headers.forEachEntry(new BinaryHeaders.BinaryHeaderVisitor() {
+
+            headers.forEachEntry(new EntryVisitor() {
                 @Override
-                public boolean visit(AsciiString name, AsciiString value) throws Exception {
+                public boolean visit(Entry<AsciiString, AsciiString> entry) throws Exception {
+                    final AsciiString name = entry.getKey();
+                    final AsciiString value = entry.getValue();
                     if (!Http2Headers.PseudoHeaderName.isPseudoHeader(name)) {
                         encodeHeader(name, value, stream);
                     }
                     return true;
                 }
             });
-        } catch (IOException e) {
-            throw Http2Exception.format(Http2Error.COMPRESSION_ERROR,
-                    "Failed encoding headers block: %s", e.getMessage());
+        } catch (Exception e) {
+            throw Http2Exception.format(Http2Error.COMPRESSION_ERROR, "Failed encoding headers block: %s",
+                            e.getMessage());
         } finally {
             try {
                 stream.close();

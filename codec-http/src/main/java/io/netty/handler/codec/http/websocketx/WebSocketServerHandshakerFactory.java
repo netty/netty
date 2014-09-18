@@ -86,7 +86,7 @@ public class WebSocketServerHandshakerFactory {
      */
     public WebSocketServerHandshaker newHandshaker(HttpRequest req) {
 
-        String version = req.headers().get(Names.SEC_WEBSOCKET_VERSION);
+        CharSequence version = req.headers().get(Names.SEC_WEBSOCKET_VERSION);
         if (version != null) {
             if (version.equals(WebSocketVersion.V13.toHttpHeaderValue())) {
                 // Version 13 of the wire protocol - RFC 6455 (version 17 of the draft hybi specification).

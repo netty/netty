@@ -16,238 +16,209 @@
 
 package io.netty.handler.codec;
 
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.Set;
-
-public class EmptyTextHeaders implements TextHeaders {
-
-    protected EmptyTextHeaders() { }
-
-    @Override
-    public String get(CharSequence name) {
-        return null;
+public class EmptyTextHeaders extends EmptyConvertibleHeaders<CharSequence, String> implements TextHeaders {
+    protected EmptyTextHeaders() {
     }
 
     @Override
-    public String get(CharSequence name, String defaultValue) {
-        return defaultValue;
-    }
-
-    @Override
-    public Integer getInt(CharSequence name) {
-        return null;
-    }
-
-    @Override
-    public int getInt(CharSequence name, int defaultValue) {
-        return defaultValue;
-    }
-
-    @Override
-    public Long getLong(CharSequence name) {
-        return null;
-    }
-
-    @Override
-    public long getLong(CharSequence name, long defaultValue) {
-        return defaultValue;
-    }
-
-    @Override
-    public Long getTimeMillis(CharSequence name) {
-        return null;
-    }
-
-    @Override
-    public long getTimeMillis(CharSequence name, long defaultValue) {
-        return defaultValue;
-    }
-
-    @Override
-    public String getAndRemove(CharSequence name) {
-        return null;
-    }
-
-    @Override
-    public String getAndRemove(CharSequence name, String defaultValue) {
-        return defaultValue;
-    }
-
-    @Override
-    public Integer getIntAndRemove(CharSequence name) {
-        return null;
-    }
-
-    @Override
-    public int getIntAndRemove(CharSequence name, int defaultValue) {
-        return defaultValue;
-    }
-
-    @Override
-    public Long getLongAndRemove(CharSequence name) {
-        return null;
-    }
-
-    @Override
-    public long getLongAndRemove(CharSequence name, long defaultValue) {
-        return defaultValue;
-    }
-
-    @Override
-    public Long getTimeMillisAndRemove(CharSequence name) {
-        return null;
-    }
-
-    @Override
-    public long getTimeMillisAndRemove(CharSequence name, long defaultValue) {
-        return defaultValue;
-    }
-
-    @Override
-    public CharSequence getUnconverted(CharSequence name) {
-        return null;
-    }
-
-    @Override
-    public CharSequence getUnconvertedAndRemove(CharSequence name) {
-        return null;
-    }
-
-    @Override
-    public List<String> getAll(CharSequence name) {
-        return Collections.emptyList();
-    }
-
-    @Override
-    public List<CharSequence> getAllUnconverted(CharSequence name) {
-        return Collections.emptyList();
-    }
-
-    @Override
-    public List<String> getAllAndRemove(CharSequence name) {
-        return Collections.emptyList();
-    }
-
-    @Override
-    public List<CharSequence> getAllUnconvertedAndRemove(CharSequence name) {
-        return Collections.emptyList();
-    }
-
-    @Override
-    public List<Entry<String, String>> entries() {
-        return Collections.emptyList();
-    }
-
-    @Override
-    public List<Entry<CharSequence, CharSequence>> unconvertedEntries() {
-        return Collections.emptyList();
-    }
-
-    @Override
-    public boolean contains(CharSequence name) {
+    public boolean contains(CharSequence name, CharSequence value, boolean ignoreCase) {
         return false;
     }
 
     @Override
-    public int size() {
-        return 0;
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return true;
-    }
-
-    @Override
-    public Set<String> names() {
-        return Collections.emptySet();
-    }
-
-    @Override
-    public Set<CharSequence> unconvertedNames() {
-        return Collections.emptySet();
-    }
-
-    @Override
-    public TextHeaders add(CharSequence name, Object value) {
-        throw new UnsupportedOperationException("read only");
-    }
-
-    @Override
-    public TextHeaders add(CharSequence name, Iterable<?> values) {
-        throw new UnsupportedOperationException("read only");
-    }
-
-    @Override
-    public TextHeaders add(CharSequence name, Object... values) {
-        throw new UnsupportedOperationException("read only");
-    }
-
-    @Override
-    public TextHeaders add(TextHeaders headers) {
-        throw new UnsupportedOperationException("read only");
-    }
-
-    @Override
-    public TextHeaders set(CharSequence name, Object value) {
-        throw new UnsupportedOperationException("read only");
-    }
-
-    @Override
-    public TextHeaders set(CharSequence name, Iterable<?> values) {
-        throw new UnsupportedOperationException("read only");
-    }
-
-    @Override
-    public TextHeaders set(CharSequence name, Object... values) {
-        throw new UnsupportedOperationException("read only");
-    }
-
-    @Override
-    public TextHeaders set(TextHeaders headers) {
-        throw new UnsupportedOperationException("read only");
-    }
-
-    @Override
-    public TextHeaders setAll(TextHeaders rhs) {
-        throw new UnsupportedOperationException("read only");
-    }
-
-    @Override
-    public boolean remove(CharSequence name) {
+    public boolean containsObject(CharSequence name, Object value, boolean ignoreCase) {
         return false;
     }
 
     @Override
-    public TextHeaders clear() {
+    public TextHeaders add(CharSequence name, CharSequence value) {
+        super.add(name, value);
         return this;
     }
 
     @Override
-    public boolean contains(CharSequence name, Object value) {
-        return false;
+    public TextHeaders add(CharSequence name, Iterable<? extends CharSequence> values) {
+        super.add(name, values);
+        return this;
     }
 
     @Override
-    public boolean contains(CharSequence name, Object value, boolean ignoreCase) {
-        return false;
+    public TextHeaders add(CharSequence name, CharSequence... values) {
+        super.add(name, values);
+        return this;
     }
 
     @Override
-    public Iterator<Entry<String, String>> iterator() {
-        return entries().iterator();
+    public TextHeaders addObject(CharSequence name, Object value) {
+        super.addObject(name, value);
+        return this;
     }
 
     @Override
-    public Iterator<Entry<CharSequence, CharSequence>> unconvertedIterator() {
-        return unconvertedEntries().iterator();
+    public TextHeaders addObject(CharSequence name, Iterable<?> values) {
+        super.addObject(name, values);
+        return this;
     }
 
     @Override
-    public TextHeaders forEachEntry(TextHeaderProcessor processor) {
+    public TextHeaders addObject(CharSequence name, Object... values) {
+        super.addObject(name, values);
+        return this;
+    }
+
+    @Override
+    public TextHeaders addBoolean(CharSequence name, boolean value) {
+        super.addBoolean(name, value);
+        return this;
+    }
+
+    @Override
+    public TextHeaders addChar(CharSequence name, char value) {
+        super.addChar(name, value);
+        return this;
+    }
+
+    @Override
+    public TextHeaders addByte(CharSequence name, byte value) {
+        super.addByte(name, value);
+        return this;
+    }
+
+    @Override
+    public TextHeaders addShort(CharSequence name, short value) {
+        super.addShort(name, value);
+        return this;
+    }
+
+    @Override
+    public TextHeaders addInt(CharSequence name, int value) {
+        super.addInt(name, value);
+        return this;
+    }
+
+    @Override
+    public TextHeaders addLong(CharSequence name, long value) {
+        super.addLong(name, value);
+        return this;
+    }
+
+    @Override
+    public TextHeaders addFloat(CharSequence name, float value) {
+        super.addFloat(name, value);
+        return this;
+    }
+
+    @Override
+    public TextHeaders addDouble(CharSequence name, double value) {
+        super.addDouble(name, value);
+        return this;
+    }
+
+    @Override
+    public TextHeaders add(TextHeaders headers) {
+        super.add(headers);
+        return this;
+    }
+
+    @Override
+    public TextHeaders set(CharSequence name, CharSequence value) {
+        super.set(name, value);
+        return this;
+    }
+
+    @Override
+    public TextHeaders set(CharSequence name, Iterable<? extends CharSequence> values) {
+        super.set(name, values);
+        return this;
+    }
+
+    @Override
+    public TextHeaders set(CharSequence name, CharSequence... values) {
+        super.set(name, values);
+        return this;
+    }
+
+    @Override
+    public TextHeaders setObject(CharSequence name, Object value) {
+        super.setObject(name, value);
+        return this;
+    }
+
+    @Override
+    public TextHeaders setObject(CharSequence name, Iterable<?> values) {
+        super.setObject(name, values);
+        return this;
+    }
+
+    @Override
+    public TextHeaders setObject(CharSequence name, Object... values) {
+        super.setObject(name, values);
+        return this;
+    }
+
+    @Override
+    public TextHeaders setBoolean(CharSequence name, boolean value) {
+        super.setBoolean(name, value);
+        return this;
+    }
+
+    @Override
+    public TextHeaders setChar(CharSequence name, char value) {
+        super.setChar(name, value);
+        return this;
+    }
+
+    @Override
+    public TextHeaders setByte(CharSequence name, byte value) {
+        super.setByte(name, value);
+        return this;
+    }
+
+    @Override
+    public TextHeaders setShort(CharSequence name, short value) {
+        super.setShort(name, value);
+        return this;
+    }
+
+    @Override
+    public TextHeaders setInt(CharSequence name, int value) {
+        super.setInt(name, value);
+        return this;
+    }
+
+    @Override
+    public TextHeaders setLong(CharSequence name, long value) {
+        super.setLong(name, value);
+        return this;
+    }
+
+    @Override
+    public TextHeaders setFloat(CharSequence name, float value) {
+        super.setFloat(name, value);
+        return this;
+    }
+
+    @Override
+    public TextHeaders setDouble(CharSequence name, double value) {
+        super.setDouble(name, value);
+        return this;
+    }
+
+    @Override
+    public TextHeaders set(TextHeaders headers) {
+        super.set(headers);
+        return this;
+    }
+
+    @Override
+    public TextHeaders setAll(TextHeaders headers) {
+        super.setAll(headers);
+        return this;
+    }
+
+    @Override
+    public TextHeaders clear() {
+        super.clear();
         return this;
     }
 }

@@ -38,7 +38,7 @@ public class SpdyClientStreamIdHandler extends ChannelHandlerAdapter {
         if (acceptOutboundMessage(msg)) {
             HttpMessage httpMsg = (HttpMessage) msg;
             if (!httpMsg.headers().contains(SpdyHttpHeaders.Names.STREAM_ID)) {
-                httpMsg.headers().set(Names.STREAM_ID, currentStreamId);
+                httpMsg.headers().setInt(Names.STREAM_ID, currentStreamId);
                 // Client stream IDs are always odd
                 currentStreamId += 2;
             }

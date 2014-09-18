@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.util.CharsetUtil;
 
 import java.nio.charset.Charset;
@@ -29,31 +30,31 @@ final class HttpPostBodyUtil {
     /**
      * HTTP content disposition header name.
      */
-    public static final String CONTENT_DISPOSITION = "Content-Disposition";
+    public static final String CONTENT_DISPOSITION = HttpHeaders.Names.CONTENT_DISPOSITION.toString();
 
-    public static final String NAME = "name";
+    public static final String NAME = HttpHeaders.Values.NAME.toString();
 
-    public static final String FILENAME = "filename";
+    public static final String FILENAME = HttpHeaders.Values.FILENAME.toString();
 
     /**
      * Content-disposition value for form data.
      */
-    public static final String FORM_DATA = "form-data";
+    public static final String FORM_DATA = HttpHeaders.Values.FORM_DATA.toString();
 
     /**
      * Content-disposition value for file attachment.
      */
-    public static final String ATTACHMENT = "attachment";
+    public static final String ATTACHMENT = HttpHeaders.Values.ATTACHMENT.toString();
 
     /**
      * Content-disposition value for file attachment.
      */
-    public static final String FILE = "file";
+    public static final String FILE = HttpHeaders.Values.FILE.toString();
 
     /**
      * HTTP content type body attribute for multiple uploads.
      */
-    public static final String MULTIPART_MIXED = "multipart/mixed";
+    public static final String MULTIPART_MIXED = HttpHeaders.Values.MULTIPART_MIXED.toString();
 
     /**
      * Charset for 8BIT
@@ -68,12 +69,12 @@ final class HttpPostBodyUtil {
     /**
      * Default Content-Type in binary form
      */
-    public static final String DEFAULT_BINARY_CONTENT_TYPE = "application/octet-stream";
+    public static final String DEFAULT_BINARY_CONTENT_TYPE = HttpHeaders.Values.APPLICATION_OCTET_STREAM.toString();
 
     /**
      * Default Content-Type in Text form
      */
-    public static final String DEFAULT_TEXT_CONTENT_TYPE = "text/plain";
+    public static final String DEFAULT_TEXT_CONTENT_TYPE = HttpHeaders.Values.TEXT_PLAIN.toString();
 
     /**
      * Allowed mechanism for multipart

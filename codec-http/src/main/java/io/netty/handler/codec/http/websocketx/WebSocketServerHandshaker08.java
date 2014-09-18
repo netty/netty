@@ -104,7 +104,7 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
             res.headers().add(headers);
         }
 
-        String key = req.headers().get(Names.SEC_WEBSOCKET_KEY);
+        CharSequence key = req.headers().get(Names.SEC_WEBSOCKET_KEY);
         if (key == null) {
             throw new WebSocketHandshakeException("not a WebSocket request: missing key");
         }
@@ -119,7 +119,7 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
         res.headers().add(Names.UPGRADE, WEBSOCKET);
         res.headers().add(Names.CONNECTION, Names.UPGRADE);
         res.headers().add(Names.SEC_WEBSOCKET_ACCEPT, accept);
-        String subprotocols = req.headers().get(Names.SEC_WEBSOCKET_PROTOCOL);
+        String subprotocols = req.headers().getAndConvert(Names.SEC_WEBSOCKET_PROTOCOL);
         if (subprotocols != null) {
             String selectedSubprotocol = selectSubprotocol(subprotocols);
             if (selectedSubprotocol == null) {

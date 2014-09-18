@@ -133,7 +133,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             // New handshake getMethod with a challenge:
             res.headers().add(SEC_WEBSOCKET_ORIGIN, req.headers().get(ORIGIN));
             res.headers().add(SEC_WEBSOCKET_LOCATION, uri());
-            String subprotocols = req.headers().get(SEC_WEBSOCKET_PROTOCOL);
+            String subprotocols = req.headers().getAndConvert(SEC_WEBSOCKET_PROTOCOL);
             if (subprotocols != null) {
                 String selectedSubprotocol = selectSubprotocol(subprotocols);
                 if (selectedSubprotocol == null) {
@@ -146,8 +146,8 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             }
 
             // Calculate the answer of the challenge.
-            String key1 = req.headers().get(SEC_WEBSOCKET_KEY1);
-            String key2 = req.headers().get(SEC_WEBSOCKET_KEY2);
+            String key1 = req.headers().getAndConvert(SEC_WEBSOCKET_KEY1);
+            String key2 = req.headers().getAndConvert(SEC_WEBSOCKET_KEY2);
             int a = (int) (Long.parseLong(BEGINNING_DIGIT.matcher(key1).replaceAll("")) /
                            BEGINNING_SPACE.matcher(key1).replaceAll("").length());
             int b = (int) (Long.parseLong(BEGINNING_DIGIT.matcher(key2).replaceAll("")) /
@@ -162,7 +162,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             // Old Hixie 75 handshake getMethod with no challenge:
             res.headers().add(WEBSOCKET_ORIGIN, req.headers().get(ORIGIN));
             res.headers().add(WEBSOCKET_LOCATION, uri());
-            String protocol = req.headers().get(WEBSOCKET_PROTOCOL);
+            String protocol = req.headers().getAndConvert(WEBSOCKET_PROTOCOL);
             if (protocol != null) {
                 res.headers().add(WEBSOCKET_PROTOCOL, selectSubprotocol(protocol));
             }

@@ -16,154 +16,199 @@
 
 package io.netty.handler.codec;
 
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.Set;
-
-public class EmptyBinaryHeaders implements BinaryHeaders {
-
-    @Override
-    public AsciiString get(AsciiString name) {
-        return null;
-    }
-
-    @Override
-    public AsciiString get(AsciiString name, AsciiString defaultValue) {
-        return defaultValue;
-    }
-
-    @Override
-    public AsciiString getAndRemove(AsciiString name) {
-        return null;
-    }
-
-    @Override
-    public AsciiString getAndRemove(AsciiString name, AsciiString defaultValue) {
-        return defaultValue;
-    }
-
-    @Override
-    public List<AsciiString> getAll(AsciiString name) {
-        return Collections.emptyList();
-    }
-
-    @Override
-    public List<AsciiString> getAllAndRemove(AsciiString name) {
-        return Collections.emptyList();
-    }
-
-    @Override
-    public List<Entry<AsciiString, AsciiString>> entries() {
-        return Collections.emptyList();
-    }
-
-    @Override
-    public boolean contains(AsciiString name) {
-        return false;
-    }
-
-    @Override
-    public int size() {
-        return 0;
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return true;
-    }
-
-    @Override
-    public Set<AsciiString> names() {
-        return Collections.emptySet();
+public class EmptyBinaryHeaders extends EmptyHeaders<AsciiString> implements BinaryHeaders {
+    protected EmptyBinaryHeaders() {
     }
 
     @Override
     public BinaryHeaders add(AsciiString name, AsciiString value) {
-        throw new UnsupportedOperationException("read only");
+        super.add(name, value);
+        return this;
     }
 
     @Override
-    public BinaryHeaders add(AsciiString name, Iterable<AsciiString> values) {
-        throw new UnsupportedOperationException("read only");
+    public BinaryHeaders add(AsciiString name, Iterable<? extends AsciiString> values) {
+        super.add(name, values);
+        return this;
     }
 
     @Override
     public BinaryHeaders add(AsciiString name, AsciiString... values) {
-        throw new UnsupportedOperationException("read only");
+        super.add(name, values);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders addObject(AsciiString name, Object value) {
+        super.addObject(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders addObject(AsciiString name, Iterable<?> values) {
+        super.addObject(name, values);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders addObject(AsciiString name, Object... values) {
+        super.addObject(name, values);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders addBoolean(AsciiString name, boolean value) {
+        super.addBoolean(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders addChar(AsciiString name, char value) {
+        super.addChar(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders addByte(AsciiString name, byte value) {
+        super.addByte(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders addShort(AsciiString name, short value) {
+        super.addShort(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders addInt(AsciiString name, int value) {
+        super.addInt(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders addLong(AsciiString name, long value) {
+        super.addLong(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders addFloat(AsciiString name, float value) {
+        super.addFloat(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders addDouble(AsciiString name, double value) {
+        super.addDouble(name, value);
+        return this;
     }
 
     @Override
     public BinaryHeaders add(BinaryHeaders headers) {
-        throw new UnsupportedOperationException("read only");
+        super.add(headers);
+        return this;
     }
 
     @Override
     public BinaryHeaders set(AsciiString name, AsciiString value) {
-        throw new UnsupportedOperationException("read only");
+        super.set(name, value);
+        return this;
     }
 
     @Override
-    public BinaryHeaders set(AsciiString name, Iterable<AsciiString> values) {
-        throw new UnsupportedOperationException("read only");
+    public BinaryHeaders set(AsciiString name, Iterable<? extends AsciiString> values) {
+        super.set(name, values);
+        return this;
     }
 
     @Override
     public BinaryHeaders set(AsciiString name, AsciiString... values) {
-        throw new UnsupportedOperationException("read only");
+        super.set(name, values);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders setObject(AsciiString name, Object value) {
+        super.setObject(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders setObject(AsciiString name, Iterable<?> values) {
+        super.setObject(name, values);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders setObject(AsciiString name, Object... values) {
+        super.setObject(name, values);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders setBoolean(AsciiString name, boolean value) {
+        super.setBoolean(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders setChar(AsciiString name, char value) {
+        super.setChar(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders setByte(AsciiString name, byte value) {
+        super.setByte(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders setShort(AsciiString name, short value) {
+        super.setShort(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders setInt(AsciiString name, int value) {
+        super.setInt(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders setLong(AsciiString name, long value) {
+        super.setLong(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders setFloat(AsciiString name, float value) {
+        super.setFloat(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders setDouble(AsciiString name, double value) {
+        super.setDouble(name, value);
+        return this;
     }
 
     @Override
     public BinaryHeaders set(BinaryHeaders headers) {
-        throw new UnsupportedOperationException("read only");
+        super.set(headers);
+        return this;
     }
 
     @Override
     public BinaryHeaders setAll(BinaryHeaders headers) {
-        throw new UnsupportedOperationException("read only");
-    }
-
-    @Override
-    public boolean remove(AsciiString name) {
-        return false;
+        super.setAll(headers);
+        return this;
     }
 
     @Override
     public BinaryHeaders clear() {
+        super.clear();
         return this;
-    }
-
-    @Override
-    public boolean contains(AsciiString name, AsciiString value) {
-        return false;
-    }
-
-    @Override
-    public Iterator<Entry<AsciiString, AsciiString>> iterator() {
-        return entries().iterator();
-    }
-
-    @Override
-    public BinaryHeaders forEachEntry(BinaryHeaderVisitor processor) {
-        return this;
-    }
-
-    @Override
-    public int hashCode() {
-        return BinaryHeaders.Utils.hashCode(this);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (!(obj instanceof BinaryHeaders)) {
-            return false;
-        }
-        return ((BinaryHeaders) obj).isEmpty();
-    }
-
-    @Override
-    public String toString() {
-        return BinaryHeaders.Utils.toStringUtf8(this);
     }
 }

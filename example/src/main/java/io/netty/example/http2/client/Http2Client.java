@@ -97,7 +97,7 @@ public final class Http2Client {
             if (URL != null) {
                 // Create a simple GET request.
                 FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, URL);
-                request.headers().add(HttpHeaders.Names.HOST, hostName);
+                request.headers().addObject(HttpHeaders.Names.HOST, hostName);
                 request.headers().add(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
                 request.headers().add(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.DEFLATE);
                 channel.writeAndFlush(request);
@@ -108,7 +108,7 @@ public final class Http2Client {
                 // Create a simple POST request with a body.
                 FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, URL2,
                                 Unpooled.copiedBuffer(URL2DATA.getBytes(CharsetUtil.UTF_8)));
-                request.headers().add(HttpHeaders.Names.HOST, hostName);
+                request.headers().addObject(HttpHeaders.Names.HOST, hostName);
                 request.headers().add(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
                 request.headers().add(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.DEFLATE);
                 channel.writeAndFlush(request);

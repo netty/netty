@@ -87,7 +87,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                 this.message = null;
 
                 // Determine the content encoding.
-                String contentEncoding = headers.get(HttpHeaders.Names.CONTENT_ENCODING);
+                String contentEncoding = headers.getAndConvert(HttpHeaders.Names.CONTENT_ENCODING);
                 if (contentEncoding != null) {
                     contentEncoding = contentEncoding.trim();
                 } else {

@@ -35,8 +35,6 @@ import io.netty.handler.codec.compression.ZlibWrapper;
  * stream.
  */
 public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecorator {
-    private static final AsciiString CONTENT_ENCODING_LOWER_CASE = CONTENT_ENCODING.toLowerCase();
-    private static final AsciiString CONTENT_LENGTH_LOWER_CASE = CONTENT_LENGTH.toLowerCase();
     private static final Http2ConnectionAdapter CLEAN_UP_LISTENER = new Http2ConnectionAdapter() {
         @Override
         public void streamRemoved(Http2Stream stream) {
@@ -171,7 +169,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         if (decompressor == null) {
             if (!endOfStream) {
                 // Determine the content encoding.
-                AsciiString contentEncoding = headers.get(CONTENT_ENCODING_LOWER_CASE);
+                AsciiString contentEncoding = headers.get(CONTENT_ENCODING);
                 if (contentEncoding == null) {
                     contentEncoding = IDENTITY;
                 }
@@ -182,9 +180,9 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
                     // so that the message looks like a decoded message.
                     AsciiString targetContentEncoding = getTargetContentEncoding(contentEncoding);
                     if (IDENTITY.equalsIgnoreCase(targetContentEncoding)) {
-                        headers.remove(CONTENT_ENCODING_LOWER_CASE);
+                        headers.remove(CONTENT_ENCODING);
                     } else {
-                        headers.set(CONTENT_ENCODING_LOWER_CASE, targetContentEncoding);
+                        headers.set(CONTENT_ENCODING, targetContentEncoding);
                     }
                 }
             }
@@ -195,7 +193,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
             // The content length will be for the compressed data. Since we will decompress the data
             // this content-length will not be correct. Instead of queuing messages or delaying sending
             // header frames...just remove the content-length header
-            headers.remove(CONTENT_LENGTH_LOWER_CASE);
+            headers.remove(CONTENT_LENGTH);
         }
     }
 

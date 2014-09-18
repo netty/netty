@@ -14,15 +14,18 @@
  */
 package io.netty.handler.codec.http2;
 
+import java.util.Map.Entry;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.AsciiString;
-import io.netty.handler.codec.TextHeaderProcessor;
+import io.netty.handler.codec.TextHeaders.EntryVisitor;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+import io.netty.util.internal.PlatformDependent;
 
 /**
  * Translate header/data/priority HTTP/2 frame events into HTTP events.  Just as {@link InboundHttp2ToHttpAdapter}
@@ -179,13 +182,17 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
      * @param http2Headers The target HTTP/2 headers
      */
     private void addHttpHeadersToHttp2Headers(HttpHeaders httpHeaders, final Http2Headers http2Headers) {
-        httpHeaders.forEachEntry(new TextHeaderProcessor() {
-            @Override
-            public boolean process(CharSequence name, CharSequence value) throws Exception {
-                http2Headers.add(new AsciiString(name), new AsciiString(value));
-                return true;
-            }
-        });
+        try {
+            httpHeaders.forEachEntry(new EntryVisitor() {
+                @Override
+                public boolean visit(Entry<CharSequence, CharSequence> entry) throws Exception {
+                    http2Headers.add(AsciiString.of(entry.getKey()), AsciiString.of(entry.getValue()));
+                    return true;
+                }
+            });
+        } catch (Exception ex) {
+            PlatformDependent.throwException(ex);
+        }
     }
 
     @Override
@@ -215,7 +222,7 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
             // and the HTTP message flow exists in OPEN.
             if (parent != null && !parent.equals(connection.connectionStream())) {
                 HttpHeaders headers = new DefaultHttpHeaders();
-                headers.set(HttpUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(), parent.id());
+                headers.setInt(HttpUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(), parent.id());
                 importOutOfMessageFlowHeaders(stream.id(), headers);
             }
         } else {
@@ -224,7 +231,7 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
                 removePriorityRelatedHeaders(msg.trailingHeaders());
             } else if (!parent.equals(connection.connectionStream())) {
                 HttpHeaders headers = getActiveHeaders(msg);
-                headers.set(HttpUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(), parent.id());
+                headers.setInt(HttpUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(), parent.id());
             }
         }
     }
@@ -242,7 +249,7 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
         } else {
             headers = getActiveHeaders(msg);
         }
-        headers.set(HttpUtil.ExtensionHeaderNames.STREAM_WEIGHT.text(), stream.weight());
+        headers.setShort(HttpUtil.ExtensionHeaderNames.STREAM_WEIGHT.text(), stream.weight());
     }
 
     @Override
