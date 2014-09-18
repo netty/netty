@@ -81,9 +81,9 @@ public class SpdySessionHandlerTest {
         SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
         assertEquals(streamId, spdyHeadersFrame.streamId());
         assertEquals(last, spdyHeadersFrame.isLast());
-        for (String name: headers.names()) {
-            List<String> expectedValues = headers.getAll(name);
-            List<String> receivedValues = spdyHeadersFrame.headers().getAll(name);
+        for (CharSequence name: headers.names()) {
+            List<CharSequence> expectedValues = headers.getAll(name);
+            List<CharSequence> receivedValues = spdyHeadersFrame.headers().getAll(name);
             assertTrue(receivedValues.containsAll(expectedValues));
             receivedValues.removeAll(expectedValues);
             assertTrue(receivedValues.isEmpty());
@@ -357,7 +357,7 @@ public class SpdySessionHandlerTest {
                     int streamId = spdySynStreamFrame.streamId();
                     SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamId);
                     spdySynReplyFrame.setLast(spdySynStreamFrame.isLast());
-                    for (Map.Entry<String, String> entry: spdySynStreamFrame.headers()) {
+                    for (Map.Entry<CharSequence, CharSequence> entry: spdySynStreamFrame.headers()) {
                         spdySynReplyFrame.headers().add(entry.getKey(), entry.getValue());
                     }
 

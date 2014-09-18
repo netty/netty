@@ -17,7 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.util.internal.StringUtil;
 
-import java.util.Map;
+import java.util.Map.Entry;
 
 /**
  * The default {@link HttpMessage} implementation.
@@ -88,7 +88,11 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
     }
 
     void appendHeaders(StringBuilder buf) {
-        for (Map.Entry<String, String> e: headers()) {
+        appendHeaders(buf, headers());
+    }
+
+    void appendHeaders(StringBuilder buf, HttpHeaders headers) {
+        for (Entry<String, String> e: headers) {
             buf.append(e.getKey());
             buf.append(": ");
             buf.append(e.getValue());

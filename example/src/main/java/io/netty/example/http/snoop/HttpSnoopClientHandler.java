@@ -36,8 +36,8 @@ public class HttpSnoopClientHandler extends SimpleChannelInboundHandler<HttpObje
             System.err.println();
 
             if (!response.headers().isEmpty()) {
-                for (String name: response.headers().names()) {
-                    for (String value: response.headers().getAll(name)) {
+                for (CharSequence name: response.headers().names()) {
+                    for (CharSequence value: response.headers().getAll(name)) {
                         System.err.println("HEADER: " + name + " = " + value);
                     }
                 }

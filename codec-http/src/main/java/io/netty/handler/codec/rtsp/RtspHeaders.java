@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.rtsp;
 
+import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.http.HttpHeaders;
 
 
@@ -30,179 +31,179 @@ public final class RtspHeaders {
         /**
          * {@code "Accept"}
          */
-        public static final String ACCEPT = HttpHeaders.Names.ACCEPT;
+        public static final AsciiString ACCEPT = HttpHeaders.Names.ACCEPT;
         /**
          * {@code "Accept-Encoding"}
          */
-        public static final String ACCEPT_ENCODING = HttpHeaders.Names.ACCEPT_ENCODING;
+        public static final AsciiString ACCEPT_ENCODING = HttpHeaders.Names.ACCEPT_ENCODING;
         /**
          * {@code "Accept-Lanugage"}
          */
-        public static final String ACCEPT_LANGUAGE = HttpHeaders.Names.ACCEPT_LANGUAGE;
+        public static final AsciiString ACCEPT_LANGUAGE = HttpHeaders.Names.ACCEPT_LANGUAGE;
         /**
          * {@code "Allow"}
          */
-        public static final String ALLOW = "Allow";
+        public static final AsciiString ALLOW = new AsciiString("Allow");
         /**
          * {@code "Authorization"}
          */
-        public static final String AUTHORIZATION = HttpHeaders.Names.AUTHORIZATION;
+        public static final AsciiString AUTHORIZATION = HttpHeaders.Names.AUTHORIZATION;
         /**
          * {@code "Bandwidth"}
          */
-        public static final String BANDWIDTH = "Bandwidth";
+        public static final AsciiString BANDWIDTH = new AsciiString("Bandwidth");
         /**
          * {@code "Blocksize"}
          */
-        public static final String BLOCKSIZE = "Blocksize";
+        public static final AsciiString BLOCKSIZE = new AsciiString("Blocksize");
         /**
          * {@code "Cache-Control"}
          */
-        public static final String CACHE_CONTROL = HttpHeaders.Names.CACHE_CONTROL;
+        public static final AsciiString CACHE_CONTROL = HttpHeaders.Names.CACHE_CONTROL;
         /**
          * {@code "Conference"}
          */
-        public static final String CONFERENCE = "Conference";
+        public static final AsciiString CONFERENCE = new AsciiString("Conference");
         /**
          * {@code "Connection"}
          */
-        public static final String CONNECTION = HttpHeaders.Names.CONNECTION;
+        public static final AsciiString CONNECTION = HttpHeaders.Names.CONNECTION;
         /**
          * {@code "Content-Base"}
          */
-        public static final String CONTENT_BASE = HttpHeaders.Names.CONTENT_BASE;
+        public static final AsciiString CONTENT_BASE = HttpHeaders.Names.CONTENT_BASE;
         /**
          * {@code "Content-Encoding"}
          */
-        public static final String CONTENT_ENCODING = HttpHeaders.Names.CONTENT_ENCODING;
+        public static final AsciiString CONTENT_ENCODING = HttpHeaders.Names.CONTENT_ENCODING;
         /**
          * {@code "Content-Language"}
          */
-        public static final String CONTENT_LANGUAGE = HttpHeaders.Names.CONTENT_LANGUAGE;
+        public static final AsciiString CONTENT_LANGUAGE = HttpHeaders.Names.CONTENT_LANGUAGE;
         /**
          * {@code "Content-Length"}
          */
-        public static final String CONTENT_LENGTH = HttpHeaders.Names.CONTENT_LENGTH;
+        public static final AsciiString CONTENT_LENGTH = HttpHeaders.Names.CONTENT_LENGTH;
         /**
          * {@code "Content-Location"}
          */
-        public static final String CONTENT_LOCATION = HttpHeaders.Names.CONTENT_LOCATION;
+        public static final AsciiString CONTENT_LOCATION = HttpHeaders.Names.CONTENT_LOCATION;
         /**
          * {@code "Content-Type"}
          */
-        public static final String CONTENT_TYPE = HttpHeaders.Names.CONTENT_TYPE;
+        public static final AsciiString CONTENT_TYPE = HttpHeaders.Names.CONTENT_TYPE;
         /**
          * {@code "CSeq"}
          */
-        public static final String CSEQ = "CSeq";
+        public static final AsciiString CSEQ = new AsciiString("CSeq");
         /**
          * {@code "Date"}
          */
-        public static final String DATE = HttpHeaders.Names.DATE;
+        public static final AsciiString DATE = HttpHeaders.Names.DATE;
         /**
          * {@code "Expires"}
          */
-        public static final String EXPIRES = HttpHeaders.Names.EXPIRES;
+        public static final AsciiString EXPIRES = HttpHeaders.Names.EXPIRES;
         /**
          * {@code "From"}
          */
-        public static final String FROM = HttpHeaders.Names.FROM;
+        public static final AsciiString FROM = HttpHeaders.Names.FROM;
         /**
          * {@code "Host"}
          */
-        public static final String HOST = HttpHeaders.Names.HOST;
+        public static final AsciiString HOST = HttpHeaders.Names.HOST;
         /**
          * {@code "If-Match"}
          */
-        public static final String IF_MATCH = HttpHeaders.Names.IF_MATCH;
+        public static final AsciiString IF_MATCH = HttpHeaders.Names.IF_MATCH;
         /**
          * {@code "If-Modified-Since"}
          */
-        public static final String IF_MODIFIED_SINCE = HttpHeaders.Names.IF_MODIFIED_SINCE;
+        public static final AsciiString IF_MODIFIED_SINCE = HttpHeaders.Names.IF_MODIFIED_SINCE;
         /**
          * {@code "KeyMgmt"}
          */
-        public static final String KEYMGMT = "KeyMgmt";
+        public static final AsciiString KEYMGMT = new AsciiString("KeyMgmt");
         /**
          * {@code "Last-Modified"}
          */
-        public static final String LAST_MODIFIED = HttpHeaders.Names.LAST_MODIFIED;
+        public static final AsciiString LAST_MODIFIED = HttpHeaders.Names.LAST_MODIFIED;
         /**
          * {@code "Proxy-Authenticate"}
          */
-        public static final String PROXY_AUTHENTICATE = HttpHeaders.Names.PROXY_AUTHENTICATE;
+        public static final AsciiString PROXY_AUTHENTICATE = HttpHeaders.Names.PROXY_AUTHENTICATE;
         /**
          * {@code "Proxy-Require"}
          */
-        public static final String PROXY_REQUIRE = "Proxy-Require";
+        public static final AsciiString PROXY_REQUIRE = new AsciiString("Proxy-Require");
         /**
          * {@code "Public"}
          */
-        public static final String PUBLIC = "Public";
+        public static final AsciiString PUBLIC = new AsciiString("Public");
         /**
          * {@code "Range"}
          */
-        public static final String RANGE = HttpHeaders.Names.RANGE;
+        public static final AsciiString RANGE = HttpHeaders.Names.RANGE;
         /**
          * {@code "Referer"}
          */
-        public static final String REFERER = HttpHeaders.Names.REFERER;
+        public static final AsciiString REFERER = HttpHeaders.Names.REFERER;
         /**
          * {@code "Require"}
          */
-        public static final String REQUIRE = "Require";
+        public static final AsciiString REQUIRE = new AsciiString("Require");
         /**
          * {@code "Retry-After"}
          */
-        public static final String RETRT_AFTER = HttpHeaders.Names.RETRY_AFTER;
+        public static final AsciiString RETRT_AFTER = HttpHeaders.Names.RETRY_AFTER;
         /**
          * {@code "RTP-Info"}
          */
-        public static final String RTP_INFO = "RTP-Info";
+        public static final AsciiString RTP_INFO = new AsciiString("RTP-Info");
         /**
          * {@code "Scale"}
          */
-        public static final String SCALE = "Scale";
+        public static final AsciiString SCALE = new AsciiString("Scale");
         /**
          * {@code "Session"}
          */
-        public static final String SESSION = "Session";
+        public static final AsciiString SESSION = new AsciiString("Session");
         /**
          * {@code "Server"}
          */
-        public static final String SERVER = HttpHeaders.Names.SERVER;
+        public static final AsciiString SERVER = HttpHeaders.Names.SERVER;
         /**
          * {@code "Speed"}
          */
-        public static final String SPEED = "Speed";
+        public static final AsciiString SPEED = new AsciiString("Speed");
         /**
          * {@code "Timestamp"}
          */
-        public static final String TIMESTAMP = "Timestamp";
+        public static final AsciiString TIMESTAMP = new AsciiString("Timestamp");
         /**
          * {@code "Transport"}
          */
-        public static final String TRANSPORT = "Transport";
+        public static final AsciiString TRANSPORT = new AsciiString("Transport");
         /**
          * {@code "Unsupported"}
          */
-        public static final String UNSUPPORTED = "Unsupported";
+        public static final AsciiString UNSUPPORTED = new AsciiString("Unsupported");
         /**
          * {@code "User-Agent"}
          */
-        public static final String USER_AGENT = HttpHeaders.Names.USER_AGENT;
+        public static final AsciiString USER_AGENT = HttpHeaders.Names.USER_AGENT;
         /**
          * {@code "Vary"}
          */
-        public static final String VARY = HttpHeaders.Names.VARY;
+        public static final AsciiString VARY = HttpHeaders.Names.VARY;
         /**
          * {@code "Via"}
          */
-        public static final String VIA = HttpHeaders.Names.VIA;
+        public static final AsciiString VIA = HttpHeaders.Names.VIA;
         /**
          * {@code "WWW-Authenticate"}
          */
-        public static final String WWW_AUTHENTICATE = HttpHeaders.Names.WWW_AUTHENTICATE;
+        public static final AsciiString WWW_AUTHENTICATE = HttpHeaders.Names.WWW_AUTHENTICATE;
 
         private Names() {
         }
