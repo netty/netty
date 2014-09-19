@@ -166,6 +166,13 @@ public class QueryStringDecoder {
     }
 
     /**
+     * Returns the uri used to initialize this {@link QueryStringDecoder}.
+     */
+    public String uri() {
+        return uri;
+    }
+
+    /**
      * Returns the decoded path string of the URI.
      */
     public String path() {
