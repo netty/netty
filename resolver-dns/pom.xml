@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright 2012 The Netty Project
+  ~ Copyright 2014 The Netty Project
   ~
   ~ The Netty Project licenses this file to you under the Apache License,
   ~ version 2.0 (the "License"); you may not use this file except in compliance
@@ -23,20 +23,25 @@
     <version>4.1.0.Beta4-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-transport</artifactId>
+  <artifactId>netty-resolver-dns</artifactId>
   <packaging>jar</packaging>
 
-  <name>Netty/Transport</name>
+  <name>Netty/Resolver/DNS</name>
 
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-buffer</artifactId>
+      <artifactId>netty-resolver</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-resolver</artifactId>
+      <artifactId>netty-codec-dns</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-transport</artifactId>
       <version>${project.version}</version>
     </dependency>
   </dependencies>
