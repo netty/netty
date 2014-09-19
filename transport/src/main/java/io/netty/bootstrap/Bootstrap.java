@@ -21,7 +21,16 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelPromise;
+import io.netty.channel.ThreadPerChannelEventLoopGroup;
+import io.netty.resolver.JdkDomainNameResolver;
+import io.netty.resolver.NameResolver;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -42,6 +51,15 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Bootstrap.class);
 
+    /**
+     * The default resolver.
+     *
+     * Note that the {@link GlobalEventExecutor} is only used for the notification of name resolution failures,
+     * because we replace the executor after successful resolution in {@link LazyConnectPromise#setChannel(Channel)}.
+     */
+    private static final NameResolver DEFAULT_RESOLVER = new JdkDomainNameResolver(GlobalEventExecutor.INSTANCE);
+
+    private volatile NameResolver resolver = DEFAULT_RESOLVER;
     private volatile SocketAddress remoteAddress;
 
     public Bootstrap() { }
@@ -49,6 +67,17 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     private Bootstrap(Bootstrap bootstrap) {
         super(bootstrap);
         remoteAddress = bootstrap.remoteAddress;
+    }
+
+    /**
+     * Sets the {@link NameResolver} which will resolve the address of the unresolved named address.
+     */
+    public Bootstrap resolver(NameResolver resolver) {
+        if (resolver == null) {
+            throw new NullPointerException("resolver");
+        }
+        this.resolver = resolver;
+        return this;
     }
 
     /**
@@ -64,7 +93,7 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
      * @see {@link #remoteAddress(SocketAddress)}
      */
     public Bootstrap remoteAddress(String inetHost, int inetPort) {
-        remoteAddress = new InetSocketAddress(inetHost, inetPort);
+        remoteAddress = InetSocketAddress.createUnresolved(inetHost, inetPort);
         return this;
     }
 
@@ -86,14 +115,14 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
             throw new IllegalStateException("remoteAddress not set");
         }
 
-        return doConnect(remoteAddress, localAddress());
+        return doResolveAndConnect(remoteAddress, localAddress());
     }
 
     /**
      * Connect a {@link Channel} to the remote peer.
      */
     public ChannelFuture connect(String inetHost, int inetPort) {
-        return connect(new InetSocketAddress(inetHost, inetPort));
+        return connect(InetSocketAddress.createUnresolved(inetHost, inetPort));
     }
 
     /**
@@ -112,7 +141,7 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         }
 
         validate();
-        return doConnect(remoteAddress, localAddress());
+        return doResolveAndConnect(remoteAddress, localAddress());
     }
 
     /**
@@ -123,32 +152,84 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
             throw new NullPointerException("remoteAddress");
         }
         validate();
-        return doConnect(remoteAddress, localAddress);
+        return doResolveAndConnect(remoteAddress, localAddress);
     }
 
     /**
      * @see {@link #connect()}
      */
-    private ChannelFuture doConnect(final SocketAddress remoteAddress, final SocketAddress localAddress) {
+    private ChannelFuture doResolveAndConnect(SocketAddress remoteAddress, final SocketAddress localAddress) {
+        final NameResolver resolver = this.resolver;
+
+        if (!resolver.isSupported(remoteAddress) || resolver.isResolved(remoteAddress)) {
+            // Resolver has no idea about what to do with the specified remote address or it's resolved already.
+            return doConnect(remoteAddress, localAddress, null);
+        }
+
+        final Future<SocketAddress> resolveFuture = resolver.resolve(remoteAddress);
+
+        if (resolveFuture.cause() != null) {
+            // Failed to resolve immediately
+            return new LazyConnectPromise().setFailure(resolveFuture.cause());
+        }
+
+        if (resolveFuture.isDone()) {
+            // Succeeded to resolve immediately; cached? (or did a blocking lookup)
+            return doConnect(resolveFuture.getNow(), localAddress, null);
+        }
+
+        // Wait until the name resolution is finished.
+        final LazyConnectPromise connectPromise = new LazyConnectPromise();
+        resolveFuture.addListener(new FutureListener<SocketAddress>() {
+            @Override
+            public void operationComplete(Future<SocketAddress> future) throws Exception {
+                if (future.cause() != null) {
+                    connectPromise.setFailure(future.cause());
+                } else {
+                    doConnect(future.getNow(), localAddress, connectPromise);
+                }
+            }
+        });
+
+        return connectPromise;
+    }
+
+    private ChannelFuture doConnect(
+            final SocketAddress remoteAddress, final SocketAddress localAddress,
+            LazyConnectPromise lazyConnectPromise) {
+
         final ChannelFuture regFuture = initAndRegister();
         final Channel channel = regFuture.channel();
         if (regFuture.cause() != null) {
-            return regFuture;
+            if (lazyConnectPromise != null) {
+                lazyConnectPromise.setChannel(channel);
+                lazyConnectPromise.setFailure(regFuture.cause());
+                return lazyConnectPromise;
+            } else {
+                return regFuture;
+            }
         }
 
-        final ChannelPromise promise = channel.newPromise();
+        final ChannelPromise connectPromise;
+        if (lazyConnectPromise != null) {
+            lazyConnectPromise.setChannel(channel);
+            connectPromise = lazyConnectPromise;
+        } else {
+            connectPromise = channel.newPromise();
+        }
+
         if (regFuture.isDone()) {
-            doConnect0(regFuture, channel, remoteAddress, localAddress, promise);
+            doConnect0(regFuture, channel, remoteAddress, localAddress, connectPromise);
         } else {
             regFuture.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
-                    doConnect0(regFuture, channel, remoteAddress, localAddress, promise);
+                    doConnect0(regFuture, channel, remoteAddress, localAddress, connectPromise);
                 }
             });
         }
 
-        return promise;
+        return connectPromise;
     }
 
     private static void doConnect0(
@@ -229,5 +310,63 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         buf.append(')');
 
         return buf.toString();
+    }
+
+    private final class LazyConnectPromise extends DefaultChannelPromise {
+
+        private volatile Channel channel;
+        private volatile EventExecutor executor;
+
+        LazyConnectPromise() {
+            super(null);
+
+            EventExecutorGroup group = group();
+            if (group instanceof ThreadPerChannelEventLoopGroup) {
+                /**
+                 * Avoid the cost of instantiating an {@link UnsupportedOperationException} for known implementations.
+                 */
+                executor = GlobalEventExecutor.INSTANCE;
+            } else {
+                /**
+                 * Most executor implementations implement the next() operation.
+                 * However, when unsupported, we have no choice but using {@link GlobalEventExecutor}.
+                 * {@link #temporaryExecutor()}
+                 */
+                try {
+                    executor = group.next();
+                } catch (UnsupportedOperationException ignore) {
+                    executor = GlobalEventExecutor.INSTANCE;
+                }
+            }
+        }
+
+        @Override
+        public Channel channel() {
+            final Channel channel = this.channel;
+            if (channel == null) {
+                String msg = isDone()?
+                        "channel not instantiated due to name resolution failure: " + cause() :
+                        "channel not available until name resolution is in progress";
+
+                throw new IllegalStateException(msg);
+            }
+
+            return channel;
+        }
+
+        @Override
+        protected EventExecutor executor() {
+            return executor;
+        }
+
+        void setChannel(Channel channel) {
+            if (isDone()) {
+                // Should never reach here
+                throw new Error();
+            }
+
+            this.channel = channel;
+            executor = channel.eventLoop();
+        }
     }
 }
