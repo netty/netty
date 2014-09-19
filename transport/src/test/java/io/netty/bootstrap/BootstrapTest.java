@@ -16,125 +16,123 @@
 
 package io.netty.bootstrap;
 
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
+import io.netty.resolver.NameResolver;
+import io.netty.resolver.NameResolverGroup;
+import io.netty.resolver.SimpleNameResolver;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
-import org.junit.Assert;
+import io.netty.util.concurrent.Promise;
+import org.junit.AfterClass;
 import org.junit.Test;
 
 import java.net.SocketAddress;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.*;
+
 public class BootstrapTest {
+
+    private static final EventLoopGroup groupA = new DefaultEventLoopGroup(1);
+    private static final EventLoopGroup groupB = new DefaultEventLoopGroup(1);
+    private static final ChannelHandler dummyHandler = new DummyHandler();
+
+    @AfterClass
+    public static void destroy() {
+        groupA.shutdownGracefully();
+        groupB.shutdownGracefully();
+        groupA.terminationFuture().syncUninterruptibly();
+        groupB.terminationFuture().syncUninterruptibly();
+    }
 
     @Test(timeout = 10000)
     public void testBindDeadLock() throws Exception {
-        EventLoopGroup groupA = new DefaultEventLoopGroup(1);
-        EventLoopGroup groupB = new DefaultEventLoopGroup(1);
+        final Bootstrap bootstrapA = new Bootstrap();
+        bootstrapA.group(groupA);
+        bootstrapA.channel(LocalChannel.class);
+        bootstrapA.handler(dummyHandler);
 
-        try {
-            ChannelHandler dummyHandler = new DummyHandler();
+        final Bootstrap bootstrapB = new Bootstrap();
+        bootstrapB.group(groupB);
+        bootstrapB.channel(LocalChannel.class);
+        bootstrapB.handler(dummyHandler);
 
-            final Bootstrap bootstrapA = new Bootstrap();
-            bootstrapA.group(groupA);
-            bootstrapA.channel(LocalChannel.class);
-            bootstrapA.handler(dummyHandler);
+        List<Future<?>> bindFutures = new ArrayList<Future<?>>();
 
-            final Bootstrap bootstrapB = new Bootstrap();
-            bootstrapB.group(groupB);
-            bootstrapB.channel(LocalChannel.class);
-            bootstrapB.handler(dummyHandler);
+        // Try to bind from each other.
+        for (int i = 0; i < 1024; i ++) {
+            bindFutures.add(groupA.next().submit(new Runnable() {
+                @Override
+                public void run() {
+                    bootstrapB.bind(LocalAddress.ANY);
+                }
+            }));
 
-            List<Future<?>> bindFutures = new ArrayList<Future<?>>();
+            bindFutures.add(groupB.next().submit(new Runnable() {
+                @Override
+                public void run() {
+                    bootstrapA.bind(LocalAddress.ANY);
+                }
+            }));
+        }
 
-            // Try to bind from each other.
-            for (int i = 0; i < 1024; i ++) {
-                bindFutures.add(groupA.next().submit(new Runnable() {
-                    @Override
-                    public void run() {
-                        bootstrapB.bind(LocalAddress.ANY);
-                    }
-                }));
-
-                bindFutures.add(groupB.next().submit(new Runnable() {
-                    @Override
-                    public void run() {
-                        bootstrapA.bind(LocalAddress.ANY);
-                    }
-                }));
-            }
-
-            for (Future<?> f: bindFutures) {
-                f.sync();
-            }
-        } finally {
-            groupA.shutdownGracefully();
-            groupB.shutdownGracefully();
-            groupA.terminationFuture().sync();
-            groupB.terminationFuture().sync();
+        for (Future<?> f: bindFutures) {
+            f.sync();
         }
     }
 
     @Test(timeout = 10000)
     public void testConnectDeadLock() throws Exception {
-        EventLoopGroup groupA = new DefaultEventLoopGroup(1);
-        EventLoopGroup groupB = new DefaultEventLoopGroup(1);
+        final Bootstrap bootstrapA = new Bootstrap();
+        bootstrapA.group(groupA);
+        bootstrapA.channel(LocalChannel.class);
+        bootstrapA.handler(dummyHandler);
 
-        try {
-            ChannelHandler dummyHandler = new DummyHandler();
+        final Bootstrap bootstrapB = new Bootstrap();
+        bootstrapB.group(groupB);
+        bootstrapB.channel(LocalChannel.class);
+        bootstrapB.handler(dummyHandler);
 
-            final Bootstrap bootstrapA = new Bootstrap();
-            bootstrapA.group(groupA);
-            bootstrapA.channel(LocalChannel.class);
-            bootstrapA.handler(dummyHandler);
+        List<Future<?>> bindFutures = new ArrayList<Future<?>>();
 
-            final Bootstrap bootstrapB = new Bootstrap();
-            bootstrapB.group(groupB);
-            bootstrapB.channel(LocalChannel.class);
-            bootstrapB.handler(dummyHandler);
+        // Try to connect from each other.
+        for (int i = 0; i < 1024; i ++) {
+            bindFutures.add(groupA.next().submit(new Runnable() {
+                @Override
+                public void run() {
+                    bootstrapB.connect(LocalAddress.ANY);
+                }
+            }));
 
-            List<Future<?>> bindFutures = new ArrayList<Future<?>>();
+            bindFutures.add(groupB.next().submit(new Runnable() {
+                @Override
+                public void run() {
+                    bootstrapA.connect(LocalAddress.ANY);
+                }
+            }));
+        }
 
-            // Try to connect from each other.
-            for (int i = 0; i < 1024; i ++) {
-                bindFutures.add(groupA.next().submit(new Runnable() {
-                    @Override
-                    public void run() {
-                        bootstrapB.connect(LocalAddress.ANY);
-                    }
-                }));
-
-                bindFutures.add(groupB.next().submit(new Runnable() {
-                    @Override
-                    public void run() {
-                        bootstrapA.connect(LocalAddress.ANY);
-                    }
-                }));
-            }
-
-            for (Future<?> f: bindFutures) {
-                f.sync();
-            }
-        } finally {
-            groupA.shutdownGracefully();
-            groupB.shutdownGracefully();
-            groupA.terminationFuture().sync();
-            groupB.terminationFuture().sync();
+        for (Future<?> f: bindFutures) {
+            f.sync();
         }
     }
 
@@ -148,7 +146,7 @@ public class BootstrapTest {
             bootstrap.childHandler(new DummyHandler());
             bootstrap.localAddress(new LocalAddress("1"));
             ChannelFuture future = bootstrap.bind();
-            Assert.assertFalse(future.isDone());
+            assertFalse(future.isDone());
             group.promise.setSuccess();
             final BlockingQueue<Boolean> queue = new LinkedBlockingQueue<Boolean>();
             future.addListener(new ChannelFutureListener() {
@@ -158,8 +156,8 @@ public class BootstrapTest {
                     queue.add(future.isSuccess());
                 }
             });
-            Assert.assertTrue(queue.take());
-            Assert.assertTrue(queue.take());
+            assertTrue(queue.take());
+            assertTrue(queue.take());
         } finally {
             group.shutdownGracefully();
             group.terminationFuture().sync();
@@ -197,7 +195,7 @@ public class BootstrapTest {
             bootstrap.childHandler(new DummyHandler());
             bootstrap.localAddress(new LocalAddress("1"));
             ChannelFuture future = bootstrap.bind();
-            Assert.assertFalse(future.isDone());
+            assertFalse(future.isDone());
             group.promise.setSuccess();
             final BlockingQueue<Boolean> queue = new LinkedBlockingQueue<Boolean>();
             future.addListener(new ChannelFutureListener() {
@@ -207,16 +205,61 @@ public class BootstrapTest {
                     queue.add(future.isSuccess());
                 }
             });
-            Assert.assertTrue(queue.take());
-            Assert.assertFalse(queue.take());
+            assertTrue(queue.take());
+            assertFalse(queue.take());
         } finally {
             group.shutdownGracefully();
             group.terminationFuture().sync();
         }
     }
 
+    @Test
+    public void testAsyncResolutionSuccess() throws Exception {
+
+        final Bootstrap bootstrapA = new Bootstrap();
+        bootstrapA.group(groupA);
+        bootstrapA.channel(LocalChannel.class);
+        bootstrapA.resolver(new TestNameResolverGroup(true));
+        bootstrapA.handler(dummyHandler);
+
+        final ServerBootstrap bootstrapB = new ServerBootstrap();
+        bootstrapB.group(groupB);
+        bootstrapB.channel(LocalServerChannel.class);
+        bootstrapB.childHandler(dummyHandler);
+        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).sync().channel().localAddress();
+
+        // Connect to the server using the asynchronous resolver.
+        bootstrapA.connect(localAddress).sync();
+    }
+
+    @Test
+    public void testAsyncResolutionFailure() throws Exception {
+
+        final Bootstrap bootstrapA = new Bootstrap();
+        bootstrapA.group(groupA);
+        bootstrapA.channel(LocalChannel.class);
+        bootstrapA.resolver(new TestNameResolverGroup(false));
+        bootstrapA.handler(dummyHandler);
+
+        final ServerBootstrap bootstrapB = new ServerBootstrap();
+        bootstrapB.group(groupB);
+        bootstrapB.channel(LocalServerChannel.class);
+        bootstrapB.childHandler(dummyHandler);
+        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).sync().channel().localAddress();
+
+        // Connect to the server using the asynchronous resolver.
+        ChannelFuture connectFuture = bootstrapA.connect(localAddress);
+
+        // Should fail with the UnknownHostException.
+        assertThat(connectFuture.await(10000), is(true));
+        assertThat(connectFuture.cause(), is(instanceOf(UnknownHostException.class)));
+        assertThat(connectFuture.channel().isOpen(), is(false));
+    }
+
     private static final class TestEventLoopGroup extends DefaultEventLoopGroup {
+
         ChannelPromise promise;
+
         TestEventLoopGroup() {
             super(1);
         }
@@ -236,4 +279,39 @@ public class BootstrapTest {
 
     @Sharable
     private static final class DummyHandler extends ChannelHandlerAdapter { }
+
+    private static final class TestNameResolverGroup extends NameResolverGroup<SocketAddress> {
+
+        private final boolean success;
+
+        TestNameResolverGroup(boolean success) {
+            this.success = success;
+        }
+
+        @Override
+        protected NameResolver<SocketAddress> newResolver(EventExecutor executor) throws Exception {
+            return new SimpleNameResolver<SocketAddress>(executor) {
+
+                @Override
+                protected boolean doIsResolved(SocketAddress address) {
+                    return false;
+                }
+
+                @Override
+                protected void doResolve(
+                        final SocketAddress unresolvedAddress, final Promise<SocketAddress> promise) {
+                    executor().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (success) {
+                                promise.setSuccess(unresolvedAddress);
+                            } else {
+                                promise.setFailure(new UnknownHostException());
+                            }
+                        }
+                    });
+                }
+            };
+        }
+    }
 }

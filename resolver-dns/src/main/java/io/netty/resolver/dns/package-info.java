@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,17 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.bootstrap;
-
-import io.netty.channel.Channel;
 
 /**
- * @deprecated Use {@link io.netty.channel.ChannelFactory} instead.
+ * An alternative to Java's built-in domain name lookup mechanism that resolves a domain name asynchronously,
+ * which supports the queries of an arbitrary DNS record type as well.
  */
-@Deprecated
-public interface ChannelFactory<T extends Channel> {
-    /**
-     * Creates a new channel.
-     */
-    T newChannel();
-}
+package io.netty.resolver.dns;
