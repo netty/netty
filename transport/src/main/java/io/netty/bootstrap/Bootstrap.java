@@ -21,7 +21,13 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
+import io.netty.resolver.DefaultNameResolverGroup;
+import io.netty.resolver.NameResolver;
+import io.netty.resolver.NameResolverGroup;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -42,6 +48,10 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Bootstrap.class);
 
+    private static final NameResolverGroup<?> DEFAULT_RESOLVER = DefaultNameResolverGroup.INSTANCE;
+
+    @SuppressWarnings("unchecked")
+    private volatile NameResolverGroup<SocketAddress> resolver = (NameResolverGroup<SocketAddress>) DEFAULT_RESOLVER;
     private volatile SocketAddress remoteAddress;
 
     public Bootstrap() { }
@@ -49,6 +59,18 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     private Bootstrap(Bootstrap bootstrap) {
         super(bootstrap);
         remoteAddress = bootstrap.remoteAddress;
+    }
+
+    /**
+     * Sets the {@link NameResolver} which will resolve the address of the unresolved named address.
+     */
+    @SuppressWarnings("unchecked")
+    public Bootstrap resolver(NameResolverGroup<?> resolver) {
+        if (resolver == null) {
+            throw new NullPointerException("resolver");
+        }
+        this.resolver = (NameResolverGroup<SocketAddress>) resolver;
+        return this;
     }
 
     /**
@@ -64,7 +86,7 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
      * @see {@link #remoteAddress(SocketAddress)}
      */
     public Bootstrap remoteAddress(String inetHost, int inetPort) {
-        remoteAddress = new InetSocketAddress(inetHost, inetPort);
+        remoteAddress = InetSocketAddress.createUnresolved(inetHost, inetPort);
         return this;
     }
 
@@ -86,14 +108,14 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
             throw new IllegalStateException("remoteAddress not set");
         }
 
-        return doConnect(remoteAddress, localAddress());
+        return doResolveAndConnect(remoteAddress, localAddress());
     }
 
     /**
      * Connect a {@link Channel} to the remote peer.
      */
     public ChannelFuture connect(String inetHost, int inetPort) {
-        return connect(new InetSocketAddress(inetHost, inetPort));
+        return connect(InetSocketAddress.createUnresolved(inetHost, inetPort));
     }
 
     /**
@@ -112,7 +134,7 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         }
 
         validate();
-        return doConnect(remoteAddress, localAddress());
+        return doResolveAndConnect(remoteAddress, localAddress());
     }
 
     /**
@@ -123,52 +145,94 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
             throw new NullPointerException("remoteAddress");
         }
         validate();
-        return doConnect(remoteAddress, localAddress);
+        return doResolveAndConnect(remoteAddress, localAddress);
     }
 
     /**
      * @see {@link #connect()}
      */
-    private ChannelFuture doConnect(final SocketAddress remoteAddress, final SocketAddress localAddress) {
+    private ChannelFuture doResolveAndConnect(SocketAddress remoteAddress, final SocketAddress localAddress) {
         final ChannelFuture regFuture = initAndRegister();
-        final Channel channel = regFuture.channel();
         if (regFuture.cause() != null) {
             return regFuture;
         }
 
-        final ChannelPromise promise = channel.newPromise();
+        final Channel channel = regFuture.channel();
+        final EventLoop eventLoop = channel.eventLoop();
+        final NameResolver<SocketAddress> resolver = this.resolver.getResolver(eventLoop);
+
+        if (!resolver.isSupported(remoteAddress) || resolver.isResolved(remoteAddress)) {
+            // Resolver has no idea about what to do with the specified remote address or it's resolved already.
+            return doConnect(remoteAddress, localAddress, regFuture, channel.newPromise());
+        }
+
+        final Future<SocketAddress> resolveFuture = resolver.resolve(remoteAddress);
+        final Throwable resolveFailureCause = resolveFuture.cause();
+
+        if (resolveFailureCause != null) {
+            // Failed to resolve immediately
+            channel.close();
+            return channel.newFailedFuture(resolveFailureCause);
+        }
+
+        if (resolveFuture.isDone()) {
+            // Succeeded to resolve immediately; cached? (or did a blocking lookup)
+            return doConnect(resolveFuture.getNow(), localAddress, regFuture, channel.newPromise());
+        }
+
+        // Wait until the name resolution is finished.
+        final ChannelPromise connectPromise = channel.newPromise();
+        resolveFuture.addListener(new FutureListener<SocketAddress>() {
+            @Override
+            public void operationComplete(Future<SocketAddress> future) throws Exception {
+                if (future.cause() != null) {
+                    channel.close();
+                    connectPromise.setFailure(future.cause());
+                } else {
+                    doConnect(future.getNow(), localAddress, regFuture, connectPromise);
+                }
+            }
+        });
+
+        return connectPromise;
+    }
+
+    private static ChannelFuture doConnect(
+            final SocketAddress remoteAddress, final SocketAddress localAddress,
+            final ChannelFuture regFuture, final ChannelPromise connectPromise) {
         if (regFuture.isDone()) {
-            doConnect0(regFuture, channel, remoteAddress, localAddress, promise);
+            doConnect0(remoteAddress, localAddress, regFuture, connectPromise);
         } else {
             regFuture.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
-                    doConnect0(regFuture, channel, remoteAddress, localAddress, promise);
+                    doConnect0(remoteAddress, localAddress, regFuture, connectPromise);
                 }
             });
         }
 
-        return promise;
+        return connectPromise;
     }
 
     private static void doConnect0(
-            final ChannelFuture regFuture, final Channel channel,
-            final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
+            final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelFuture regFuture,
+            final ChannelPromise connectPromise) {
 
         // This method is invoked before channelRegistered() is triggered.  Give user handlers a chance to set up
         // the pipeline in its channelRegistered() implementation.
+        final Channel channel = connectPromise.channel();
         channel.eventLoop().execute(new Runnable() {
             @Override
             public void run() {
                 if (regFuture.isSuccess()) {
                     if (localAddress == null) {
-                        channel.connect(remoteAddress, promise);
+                        channel.connect(remoteAddress, connectPromise);
                     } else {
-                        channel.connect(remoteAddress, localAddress, promise);
+                        channel.connect(remoteAddress, localAddress, connectPromise);
                     }
-                    promise.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+                    connectPromise.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
                 } else {
-                    promise.setFailure(regFuture.cause());
+                    connectPromise.setFailure(regFuture.cause());
                 }
             }
         });

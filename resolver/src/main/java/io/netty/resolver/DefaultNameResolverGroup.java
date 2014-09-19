@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,17 +13,24 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.bootstrap;
 
-import io.netty.channel.Channel;
+package io.netty.resolver;
+
+import io.netty.util.concurrent.EventExecutor;
+
+import java.net.InetSocketAddress;
 
 /**
- * @deprecated Use {@link io.netty.channel.ChannelFactory} instead.
+ * A {@link NameResolverGroup} of {@link DefaultNameResolver}s.
  */
-@Deprecated
-public interface ChannelFactory<T extends Channel> {
-    /**
-     * Creates a new channel.
-     */
-    T newChannel();
+public final class DefaultNameResolverGroup extends NameResolverGroup<InetSocketAddress> {
+
+    public static final DefaultNameResolverGroup INSTANCE = new DefaultNameResolverGroup();
+
+    private DefaultNameResolverGroup() { }
+
+    @Override
+    protected NameResolver<InetSocketAddress> newResolver(EventExecutor executor) throws Exception {
+        return new DefaultNameResolver(executor);
+    }
 }
