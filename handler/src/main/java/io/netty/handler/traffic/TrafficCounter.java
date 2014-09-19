@@ -233,9 +233,9 @@ public class TrafficCounter {
         }
         lastReadBytes = currentReadBytes.getAndSet(0);
         lastWrittenBytes = currentWrittenBytes.getAndSet(0);
-        lastReadThroughput = lastReadBytes / interval * 1000;
+        lastReadThroughput = lastReadBytes * 1000 / interval;
         // nb byte / checkInterval in ms * 1000 (1s)
-        lastWriteThroughput = lastWrittenBytes / interval * 1000;
+        lastWriteThroughput = lastWrittenBytes * 1000 / interval;
         // nb byte / checkInterval in ms * 1000 (1s)
         if (lastWrittenBytes > 0) {
             lastNonNullWrittenBytes = lastWrittenBytes;
