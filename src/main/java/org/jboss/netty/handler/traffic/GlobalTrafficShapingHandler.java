@@ -208,6 +208,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         Integer key = ctx.getChannel().getId();
         List<ToSend> messagesQueue = new LinkedList<ToSend>();
         messagesQueues.put(key, messagesQueue);
+        super.channelConnected(ctx, e);
     }
 
     @Override
