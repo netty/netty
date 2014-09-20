@@ -608,7 +608,7 @@ public abstract class AbstractTrafficShapingHandler extends
     @Override
     public String toString() {
         return "TrafficShaping with Write Limit: " + writeLimit +
-                " Read Limit: " + readLimit + " and Counter: " +
+                " Read Limit: " + readLimit + " every: " + checkInterval + " and Counter: " +
                 (trafficCounter != null? trafficCounter.toString() : "none");
     }
 }
