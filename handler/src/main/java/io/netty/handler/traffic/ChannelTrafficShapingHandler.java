@@ -117,6 +117,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
                 ctx.channel().hashCode(), checkInterval);
         setTrafficCounter(trafficCounter);
         trafficCounter.start();
+        super.handlerAdded(ctx);
     }
 
     @Override
@@ -130,6 +131,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
             }
         }
         messagesQueue.clear();
+        super.handlerRemoved(ctx);
     }
 
     private static final class ToSend {
