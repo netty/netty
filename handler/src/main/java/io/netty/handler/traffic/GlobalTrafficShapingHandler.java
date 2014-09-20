@@ -172,6 +172,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         Integer key = ctx.channel().hashCode();
         List<ToSend> mq = new LinkedList<ToSend>();
         messagesQueues.put(key, mq);
+        super.handlerAdded(ctx);
     }
 
     @Override
@@ -186,6 +187,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
             }
             mq.clear();
         }
+        super.handlerRemoved(ctx);
     }
 
     private static final class ToSend {
