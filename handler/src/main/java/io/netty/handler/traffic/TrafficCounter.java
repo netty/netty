@@ -74,6 +74,16 @@ public class TrafficCounter {
     private long lastReadThroughput;
 
     /**
+     * Real written bytes
+     */
+    private final AtomicLong realWrittenBytes = new AtomicLong();
+
+    /**
+     * Real writing bandwidth
+     */
+    private long realWriteThroughput;
+
+    /**
      * Last Time Check taken
      */
     private final AtomicLong lastTime = new AtomicLong();
@@ -94,12 +104,12 @@ public class TrafficCounter {
     private long lastNonNullWrittenBytes;
 
     /**
-     * Last time written bytes with non 0 written bytes
+     * Last time written bytes with non 0 written bytes during last check interval
      */
     private long lastNonNullWrittenTime;
 
     /**
-     * Last time read bytes with non 0 written bytes
+     * Last time read bytes with non 0 written bytes during last check interval
      */
     private long lastNonNullReadTime;
 
@@ -107,6 +117,11 @@ public class TrafficCounter {
      * Last non 0 read bytes number during last check interval
      */
     private long lastNonNullReadBytes;
+
+    /**
+     * Last computed delay time a write operation shall occur
+     */
+    private long lastWrittenTime;
 
     /**
      * Delay between two captures
@@ -237,6 +252,7 @@ public class TrafficCounter {
         // nb byte / checkInterval in ms * 1000 (1s)
         lastWriteThroughput = lastWrittenBytes / interval * 1000;
         // nb byte / checkInterval in ms * 1000 (1s)
+        realWriteThroughput = realWrittenBytes.getAndSet(0) / interval * 1000;
         if (lastWrittenBytes > 0) {
             lastNonNullWrittenBytes = lastWrittenBytes;
             lastNonNullWrittenTime = newLastTime;
@@ -310,6 +326,16 @@ public class TrafficCounter {
     void bytesWriteFlowControl(long write) {
         currentWrittenBytes.addAndGet(write);
         cumulativeWrittenBytes.addAndGet(write);
+    }
+
+    /**
+     * Computes counters for Real Write.
+     *
+     * @param write
+     *            the size in bytes to write
+     */
+    void bytesRealWriteFlowControl(long write) {
+        realWrittenBytes.addAndGet(write);
     }
 
     /**
@@ -399,6 +425,20 @@ public class TrafficCounter {
     }
 
     /**
+	 * @return the realWrittenBytes
+	 */
+	public AtomicLong getRealWrittenBytes() {
+		return realWrittenBytes;
+	}
+
+	/**
+	 * @return the realWriteThroughput
+	 */
+	public long getRealWriteThroughput() {
+		return realWriteThroughput;
+	}
+
+	/**
      * Reset both read and written cumulative bytes counters and the associated time.
      */
     public void resetCumulativeTime() {
@@ -497,7 +537,13 @@ public class TrafficCounter {
                 if (logger.isDebugEnabled()) {
                     logger.debug("Time: " + time + ":" + sum + ":" + interval);
                 }
-                return time > maxTime ? maxTime : time;
+                if (time > maxTime) {
+                    if (now + time - lastWrittenTime > maxTime ) {
+                        time = maxTime;
+                    }
+                }
+                lastWrittenTime = now + time;
+                return time;
             }
             return 0;
         }
@@ -509,7 +555,13 @@ public class TrafficCounter {
                 if (logger.isDebugEnabled()) {
                     logger.debug("Time: " + time + ":" + lastsum + ":" + lastinterval);
                 }
-                return time > maxTime ? maxTime : time;
+                if (time > maxTime) {
+                    if (now + time - lastWrittenTime > maxTime ) {
+                        time = maxTime;
+                    }
+                }
+                lastWrittenTime = now + time;
+                return time;
             }
         } else {
             sum += lastWrittenBytes;
@@ -519,7 +571,13 @@ public class TrafficCounter {
                 if (logger.isDebugEnabled()) {
                     logger.debug("Time: " + time + ":" + sum + ":" + lastinterval);
                 }
-                return time > maxTime ? maxTime : time;
+                if (time > maxTime) {
+                    if (now + time - lastWrittenTime > maxTime ) {
+                        time = maxTime;
+                    }
+                }
+                lastWrittenTime = now + time;
+                return time;
             }
         }
         return 0;
@@ -530,8 +588,11 @@ public class TrafficCounter {
      */
     @Override
     public String toString() {
-        return "Monitor " + name + " Current Speed Read: " + (lastReadThroughput >> 10) + " KB/s, Write: "
-                + (lastWriteThroughput >> 10) + " KB/s Current Read: " + (currentReadBytes.get() >> 10)
-                + " KB Current Write: " + (currentWrittenBytes.get() >> 10) + " KB";
+        return "Monitor " + name + " Current Speed Read: " + (lastReadThroughput >> 10) + " KB/s, " +
+                "Asked Write: " + (lastWriteThroughput >> 10) + " KB/s, " +
+                "Real Write: " + (realWriteThroughput >> 10) + " KB/s, " +
+                "Current Read: " + (currentReadBytes.get() >> 10)
+                + " KB, Current asked Write: " + (currentWrittenBytes.get() >> 10) + " KB, " +
+                "Current real Write: " + (realWrittenBytes.get() >> 10) + " KB";
     }
 }

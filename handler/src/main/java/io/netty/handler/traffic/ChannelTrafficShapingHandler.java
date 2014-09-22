@@ -167,6 +167,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
         while (!messagesQueue.isEmpty()) {
             ToSend newToSend = messagesQueue.remove(0);
             if (newToSend.date <= System.currentTimeMillis()) {
+                trafficCounter.bytesRealWriteFlowControl(calculateSize(newToSend.toSend));
                 ctx.write(newToSend.toSend, newToSend.promise);
             } else {
                 messagesQueue.add(0, newToSend);
