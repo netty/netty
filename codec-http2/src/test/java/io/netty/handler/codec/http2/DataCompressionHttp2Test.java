@@ -108,7 +108,7 @@ public class DataCompressionHttp2Test {
                 ChannelPipeline p = ch.pipeline();
                 serverAdapter = new Http2TestUtil.FrameAdapter(serverConnection,
                                 new DelegatingDecompressorFrameListener(serverConnection, serverListener),
-                                serverLatch, false);
+                                serverLatch);
                 p.addLast("reader", serverAdapter);
                 p.addLast(Http2CodecUtil.ignoreSettingsHandler());
                 serverConnectedChannel = ch;
@@ -121,7 +121,7 @@ public class DataCompressionHttp2Test {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                clientAdapter = new Http2TestUtil.FrameAdapter(clientListener, clientLatch, false);
+                clientAdapter = new Http2TestUtil.FrameAdapter(clientListener, clientLatch);
                 p.addLast("reader", clientAdapter);
                 p.addLast(Http2CodecUtil.ignoreSettingsHandler());
             }

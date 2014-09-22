@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import io.netty.bootstrap.Bootstrap;
@@ -45,6 +46,7 @@ import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -52,9 +54,10 @@ import java.util.concurrent.TimeUnit;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 /**
  * Tests encoding/decoding each HTTP2 frame type.
@@ -64,7 +67,6 @@ public class Http2FrameRoundtripTest {
     @Mock
     private Http2FrameListener serverListener;
 
-    private ArgumentCaptor<ByteBuf> dataCaptor;
     private Http2FrameWriter frameWriter;
     private ServerBootstrap sb;
     private Bootstrap cb;
@@ -79,7 +81,6 @@ public class Http2FrameRoundtripTest {
 
         serverLatch(new CountDownLatch(1));
         frameWriter = new DefaultHttp2FrameWriter();
-        dataCaptor = ArgumentCaptor.forClass(ByteBuf.class);
 
         sb = new ServerBootstrap();
         cb = new Bootstrap();
@@ -90,7 +91,7 @@ public class Http2FrameRoundtripTest {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                serverAdapter = new Http2TestUtil.FrameAdapter(serverListener, requestLatch, true);
+                serverAdapter = new Http2TestUtil.FrameAdapter(serverListener, requestLatch);
                 p.addLast("reader", serverAdapter);
                 p.addLast(Http2CodecUtil.ignoreSettingsHandler());
             }
@@ -102,7 +103,7 @@ public class Http2FrameRoundtripTest {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                p.addLast("reader", new Http2TestUtil.FrameAdapter(null, null, true));
+                p.addLast("reader", new Http2TestUtil.FrameAdapter(null, null));
                 p.addLast(Http2CodecUtil.ignoreSettingsHandler());
             }
         });
@@ -117,10 +118,6 @@ public class Http2FrameRoundtripTest {
 
     @After
     public void teardown() throws Exception {
-        List<ByteBuf> capturedData = dataCaptor.getAllValues();
-        for (int i = 0; i < capturedData.size(); ++i) {
-            capturedData.get(i).release();
-        }
         serverChannel.close().sync();
         Future<?> serverGroup = sb.group().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
         Future<?> serverChildGroup = sb.childGroup().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
@@ -134,20 +131,29 @@ public class Http2FrameRoundtripTest {
     @Test
     public void dataFrameShouldMatch() throws Exception {
         final String text = "hello world";
-        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
+        final ByteBuf data = Unpooled.copiedBuffer(text, UTF_8);
+        final List<String> receivedBuffers = new ArrayList<String>();
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock in) throws Throwable {
+                receivedBuffers.add(((ByteBuf) in.getArguments()[2]).toString(UTF_8));
+                return null;
+            }
+        }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
+                any(ByteBuf.class), eq(100), eq(true));
         try {
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() {
-                    frameWriter.writeData(ctx(), 0x7FFFFFFF, data.retain(), 100, true, newPromise());
+                    frameWriter.writeData(ctx(), 0x7FFFFFFF, data.slice().retain(), 100, true, newPromise());
                     ctx().flush();
                 }
             });
             awaitRequests();
             verify(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
-                    dataCaptor.capture(), eq(100), eq(true));
-            List<ByteBuf> capturedData = dataCaptor.getAllValues();
-            assertEquals(data, capturedData.get(0));
+                    any(ByteBuf.class), eq(100), eq(true));
+            assertEquals(1, receivedBuffers.size());
+            assertEquals(text, receivedBuffers.get(0));
         } finally {
             data.release();
         }
@@ -188,6 +194,15 @@ public class Http2FrameRoundtripTest {
     public void goAwayFrameShouldMatch() throws Exception {
         final String text = "test";
         final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
+        final List<String> receivedBuffers = new ArrayList<String>();
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock in) throws Throwable {
+                receivedBuffers.add(((ByteBuf) in.getArguments()[3]).toString(UTF_8));
+                return null;
+            }
+        }).when(serverListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
+                eq(0xFFFFFFFFL), eq(data));
         try {
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
@@ -198,9 +213,9 @@ public class Http2FrameRoundtripTest {
             });
             awaitRequests();
             verify(serverListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
-                    eq(0xFFFFFFFFL), dataCaptor.capture());
-            List<ByteBuf> capturedData = dataCaptor.getAllValues();
-            assertEquals(data, capturedData.get(0));
+                    eq(0xFFFFFFFFL), any(ByteBuf.class));
+            assertEquals(1, receivedBuffers.size());
+            assertEquals(text, receivedBuffers.get(0));
         } finally {
             data.release();
         }
@@ -208,7 +223,16 @@ public class Http2FrameRoundtripTest {
 
     @Test
     public void pingFrameShouldMatch() throws Exception {
-        final ByteBuf data = Unpooled.copiedBuffer("01234567", UTF_8);
+        String text = "01234567";
+        final ByteBuf data = Unpooled.copiedBuffer(text, UTF_8);
+        final List<String> receivedBuffers = new ArrayList<String>();
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock in) throws Throwable {
+                receivedBuffers.add(((ByteBuf) in.getArguments()[1]).toString(UTF_8));
+                return null;
+            }
+        }).when(serverListener).onPingAckRead(any(ChannelHandlerContext.class), eq(data));
         try {
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
@@ -218,9 +242,11 @@ public class Http2FrameRoundtripTest {
                 }
             });
             awaitRequests();
-            verify(serverListener).onPingAckRead(any(ChannelHandlerContext.class), dataCaptor.capture());
-            List<ByteBuf> capturedData = dataCaptor.getAllValues();
-            assertEquals(data, capturedData.get(0));
+            verify(serverListener).onPingAckRead(any(ChannelHandlerContext.class), any(ByteBuf.class));
+            assertEquals(1, receivedBuffers.size());
+            for (String receivedData : receivedBuffers) {
+                assertEquals(text, receivedData);
+            }
         } finally {
             data.release();
         }
@@ -305,8 +331,16 @@ public class Http2FrameRoundtripTest {
         final Http2Headers headers = headers();
         final String text = "hello world";
         final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
+        final int numStreams = 10000;
+        final List<String> receivedBuffers = new ArrayList<String>(numStreams);
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock in) throws Throwable {
+                receivedBuffers.add(((ByteBuf) in.getArguments()[2]).toString(UTF_8));
+                return null;
+            }
+        }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), anyInt(), eq(data), eq(0), eq(true));
         try {
-            final int numStreams = 10000;
             final int expectedFrames = numStreams * 2;
             serverLatch(new CountDownLatch(expectedFrames));
             runInChannel(clientChannel, new Http2Runnable() {
@@ -321,10 +355,10 @@ public class Http2FrameRoundtripTest {
             });
             awaitRequests(30);
             verify(serverListener, times(numStreams)).onDataRead(any(ChannelHandlerContext.class), anyInt(),
-                    dataCaptor.capture(), eq(0), eq(true));
-            List<ByteBuf> capturedData = dataCaptor.getAllValues();
-            for (int i = 0; i < capturedData.size(); ++i) {
-                assertEquals(data, capturedData.get(i));
+                    any(ByteBuf.class), eq(0), eq(true));
+            assertEquals(numStreams, receivedBuffers.size());
+            for (String receivedData : receivedBuffers) {
+                assertEquals(text, receivedData);
             }
         } finally {
             data.release();

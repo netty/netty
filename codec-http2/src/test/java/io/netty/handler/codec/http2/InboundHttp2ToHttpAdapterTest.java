@@ -720,7 +720,7 @@ public class InboundHttp2ToHttpAdapterTest {
 
     private final class HttpAdapterFrameAdapter extends Http2TestUtil.FrameAdapter {
         HttpAdapterFrameAdapter(Http2Connection connection, Http2FrameListener listener, CountDownLatch latch) {
-            super(connection, listener, latch, false);
+            super(connection, listener, latch);
         }
 
         @Override

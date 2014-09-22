@@ -28,6 +28,7 @@ import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyShort;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import io.netty.bootstrap.Bootstrap;
@@ -51,6 +52,7 @@ import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -58,17 +60,16 @@ import java.util.concurrent.TimeUnit;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 /**
  * Testing the {@link DelegatingHttp2HttpConnectionHandler} for {@link FullHttpRequest} objects into HTTP/2 frames
  */
 public class DelegatingHttp2HttpConnectionHandlerTest {
     private static final int CONNECTION_SETUP_READ_COUNT = 2;
-
-    private List<ByteBuf> capturedData;
 
     @Mock
     private Http2FrameListener clientListener;
@@ -125,12 +126,6 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
 
     @After
     public void teardown() throws Exception {
-        if (capturedData != null) {
-            for (int i = 0; i < capturedData.size(); ++i) {
-                capturedData.get(i).release();
-            }
-            capturedData = null;
-        }
         serverChannel.close().sync();
         Future<?> serverGroup = sb.group().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
         Future<?> serverChildGroup = sb.childGroup().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
@@ -180,6 +175,15 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
         requestLatch(new CountDownLatch(CONNECTION_SETUP_READ_COUNT + 2));
         final String text = "foooooogoooo";
         final ByteBuf data = Unpooled.copiedBuffer(text, UTF_8);
+        final List<String> receivedBuffers = new ArrayList<String>();
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock in) throws Throwable {
+                receivedBuffers.add(((ByteBuf) in.getArguments()[2]).toString(UTF_8));
+                return null;
+            }
+        }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3),
+                any(ByteBuf.class), eq(0), eq(true));
         try {
             final HttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, "/example", data.retain());
             final HttpHeaders httpHeaders = request.headers();
@@ -200,13 +204,12 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
             writeFuture.awaitUninterruptibly(2, SECONDS);
             assertTrue(writeFuture.isSuccess());
             awaitRequests();
-            final ArgumentCaptor<ByteBuf> dataCaptor = ArgumentCaptor.forClass(ByteBuf.class);
             verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(http2Headers), eq(0),
                     anyShort(), anyBoolean(), eq(0), eq(false));
-            verify(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3), dataCaptor.capture(), eq(0),
+            verify(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3), any(ByteBuf.class), eq(0),
                     eq(true));
-            capturedData = dataCaptor.getAllValues();
-            assertEquals(data, capturedData.get(0));
+            assertEquals(1, receivedBuffers.size());
+            assertEquals(text, receivedBuffers.get(0));
         } finally {
             data.release();
         }
