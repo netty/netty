@@ -343,6 +343,8 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
         }
         jobject directBuffer = (*env)->NewDirectByteBuffer(env, mem, 1);
         if (directBuffer == NULL) {
+            free(mem);
+
             throwOutOfMemoryError(env, "Error allocating native buffer");
             return JNI_ERR;
         }
@@ -353,6 +355,8 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
         // it is not possible to obtain the position and limit using the fields directly.
         posId = (*env)->GetMethodID(env, cls, "position", "()I");
         if (posId == NULL) {
+            free(mem);
+
             // position method was not found.. something is wrong so bail out
             throwRuntimeException(env, "Unable to find method ByteBuffer.position()");
             return JNI_ERR;
@@ -360,12 +364,16 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
 
         limitId = (*env)->GetMethodID(env, cls, "limit", "()I");
         if (limitId == NULL) {
+            free(mem);
+
             // limit method was not found.. something is wrong so bail out
             throwRuntimeException(env, "Unable to find method ByteBuffer.limit()");
             return JNI_ERR;
         }
         updatePosId = (*env)->GetMethodID(env, cls, "position", "(I)Ljava/nio/Buffer;");
         if (updatePosId == NULL) {
+            free(mem);
+
             // position method was not found.. something is wrong so bail out
             throwRuntimeException(env, "Unable to find method ByteBuffer.position(int)");
             return JNI_ERR;
@@ -383,6 +391,9 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
             // this is ok as we can still use the method so just clear the exception
             (*env)->ExceptionClear(env);
         }
+
+        free(mem);
+
         jclass fileRegionCls = (*env)->FindClass(env, "io/netty/channel/DefaultFileRegion");
         if (fileRegionCls == NULL) {
             // pending exception...
