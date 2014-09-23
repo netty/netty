@@ -66,9 +66,9 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 /**
- * Testing the {@link DelegatingHttp2HttpConnectionHandler} for {@link FullHttpRequest} objects into HTTP/2 frames
+ * Testing the {@link Http2ToHttpConnectionHandler} for {@link FullHttpRequest} objects into HTTP/2 frames
  */
-public class DelegatingHttp2HttpConnectionHandlerTest {
+public class DefaultHttp2ToHttpConnectionHandlerTest {
     private static final int CONNECTION_SETUP_READ_COUNT = 2;
 
     @Mock
@@ -100,7 +100,7 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
                 serverFrameCountDown = new Http2TestUtil.FrameCountDown(serverListener, requestLatch);
-                p.addLast(new DelegatingHttp2ConnectionHandler(true, serverFrameCountDown));
+                p.addLast(new Http2ToHttpConnectionHandler(true, serverFrameCountDown));
                 p.addLast(ignoreSettingsHandler());
             }
         });
@@ -111,7 +111,7 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                p.addLast(new DelegatingHttp2HttpConnectionHandler(false, clientListener));
+                p.addLast(new Http2ToHttpConnectionHandler(false, clientListener));
                 p.addLast(ignoreSettingsHandler());
             }
         });

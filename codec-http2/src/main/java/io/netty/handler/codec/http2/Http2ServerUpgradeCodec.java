@@ -43,7 +43,7 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
             Collections.singletonList(HTTP_UPGRADE_SETTINGS_HEADER);
 
     private final String handlerName;
-    private final AbstractHttp2ConnectionHandler connectionHandler;
+    private final Http2InboundConnectionHandler connectionHandler;
     private final Http2FrameReader frameReader;
     private Http2Settings settings;
 
@@ -53,7 +53,7 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
      *
      * @param connectionHandler the HTTP/2 connection handler.
      */
-    public Http2ServerUpgradeCodec(AbstractHttp2ConnectionHandler connectionHandler) {
+    public Http2ServerUpgradeCodec(Http2InboundConnectionHandler connectionHandler) {
         this("http2ConnectionHandler", connectionHandler);
     }
 
@@ -64,7 +64,7 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
      * @param connectionHandler the HTTP/2 connection handler.
      */
     public Http2ServerUpgradeCodec(String handlerName,
-            AbstractHttp2ConnectionHandler connectionHandler) {
+            Http2InboundConnectionHandler connectionHandler) {
         if (handlerName == null) {
             throw new NullPointerException("handlerName");
         }

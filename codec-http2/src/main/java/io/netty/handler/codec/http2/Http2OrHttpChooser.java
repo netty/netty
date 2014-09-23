@@ -150,7 +150,7 @@ public abstract class Http2OrHttpChooser extends ByteToMessageDecoder {
     /**
      * Create the {@link io.netty.channel.ChannelHandler} that is responsible for handling the http
      * responses when the when the {@link SelectedProtocol} was {@link SelectedProtocol#HTTP_2}. The
-     * returned class should be a subclass of {@link AbstractHttp2ConnectionHandler}.
+     * returned class should be a subclass of {@link Http2ConnectionHandler}.
      */
     protected abstract ChannelHandler createHttp2RequestHandler();
 }

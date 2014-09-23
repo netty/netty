@@ -39,7 +39,7 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
     private static final List<String> UPGRADE_HEADERS = Collections.singletonList(HTTP_UPGRADE_SETTINGS_HEADER);
 
     private final String handlerName;
-    private final AbstractHttp2ConnectionHandler connectionHandler;
+    private final Http2InboundConnectionHandler connectionHandler;
 
     /**
      * Creates the codec using a default name for the connection handler when adding to the
@@ -47,7 +47,7 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
      *
      * @param connectionHandler the HTTP/2 connection handler.
      */
-    public Http2ClientUpgradeCodec(AbstractHttp2ConnectionHandler connectionHandler) {
+    public Http2ClientUpgradeCodec(Http2InboundConnectionHandler connectionHandler) {
         this("http2ConnectionHandler", connectionHandler);
     }
 
@@ -58,7 +58,7 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
      * @param connectionHandler the HTTP/2 connection handler.
      */
     public Http2ClientUpgradeCodec(String handlerName,
-            AbstractHttp2ConnectionHandler connectionHandler) {
+            Http2InboundConnectionHandler connectionHandler) {
         if (handlerName == null) {
             throw new NullPointerException("handlerName");
         }

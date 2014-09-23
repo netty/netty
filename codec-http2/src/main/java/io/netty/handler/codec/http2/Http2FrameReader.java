@@ -25,6 +25,20 @@ import java.io.Closeable;
  * {@link Http2FrameListener} when frames are complete.
  */
 public interface Http2FrameReader extends Closeable {
+    /**
+     * Configuration specific to {@link Http2FrameReader}
+     */
+    public interface Configuration {
+        /**
+         * Get the {@link Http2HeaderTable} for this {@link Http2FrameReader}
+         */
+        Http2HeaderTable headerTable();
+
+        /**
+         * Get the {@link Http2FrameSizePolicy} for this {@link Http2FrameReader}
+         */
+        Http2FrameSizePolicy frameSizePolicy();
+    }
 
     /**
      * Attempts to read the next frame from the input buffer. If enough data is available to fully
@@ -34,34 +48,9 @@ public interface Http2FrameReader extends Closeable {
             throws Http2Exception;
 
     /**
-     * Sets the maximum size of the HPACK header table used for decoding HTTP/2 headers.
+     * Get the configuration related elements for this {@link Http2FrameReader}
      */
-    void maxHeaderTableSize(long max);
-
-    /**
-     * Gets the maximum size of the HPACK header table used for decoding HTTP/2 headers.
-     */
-    long maxHeaderTableSize();
-
-    /**
-     * Sets the maximum allowed frame size. Attempts to read frames longer than this maximum will fail.
-     */
-    void maxFrameSize(int max);
-
-    /**
-     * Gets the maximum allowed frame size.
-     */
-    int maxFrameSize();
-
-    /**
-     * Sets the maximum allowed header elements.
-     */
-    void maxHeaderListSize(int max);
-
-    /**
-     * Gets the maximum allowed header elements.
-     */
-    int maxHeaderListSize();
+    Configuration configuration();
 
     /**
      * Closes this reader and frees any allocated resources.

@@ -20,10 +20,9 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 
 /**
- * Interface that defines an object capable of writing HTTP/2 data frames.
+ * Interface that defines an object capable of producing HTTP/2 data frames.
  */
 public interface Http2DataWriter {
-
     /**
      * Writes a {@code DATA} frame to the remote endpoint.
      *

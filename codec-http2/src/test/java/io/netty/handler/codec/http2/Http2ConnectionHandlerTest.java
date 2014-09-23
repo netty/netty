@@ -39,6 +39,7 @@ import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyShort;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
@@ -64,15 +65,17 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 /**
- * Tests for {@link DelegatingHttp2ConnectionHandlerTest} and its base class {@link AbstractHttp2ConnectionHandler}.
+ * Tests for {@link Http2ConnectionHandler}
  */
-public class DelegatingHttp2ConnectionHandlerTest {
+public class Http2ConnectionHandlerTest {
     private static final int STREAM_ID = 1;
     private static final int PUSH_STREAM_ID = 2;
 
-    private DelegatingHttp2ConnectionHandler handler;
+    private Http2ConnectionHandler handler;
 
     @Mock
     private Http2Connection connection;
@@ -115,6 +118,24 @@ public class DelegatingHttp2ConnectionHandlerTest {
     @Mock
     private Http2FrameWriter writer;
 
+    @Mock
+    private Http2HeaderTable readerTable;
+
+    @Mock
+    private Http2HeaderTable writerTable;
+
+    @Mock
+    private Http2FrameSizePolicy readerFrameSizePolicy;
+
+    @Mock
+    private Http2FrameSizePolicy writerFrameSizePolicy;
+
+    @Mock
+    private Http2FrameReader.Configuration readerConfiguration;
+
+    @Mock
+    private Http2FrameWriter.Configuration writerConfiguration;
+
     @Before
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
@@ -130,6 +151,27 @@ public class DelegatingHttp2ConnectionHandlerTest {
         when(connection.requireStream(STREAM_ID)).thenReturn(stream);
         when(connection.local()).thenReturn(local);
         when(connection.remote()).thenReturn(remote);
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocation) throws Throwable {
+                ((Http2Stream) invocation.getArguments()[0]).close();
+                return null;
+            }
+        }).when(connection).close(any(Http2Stream.class), any(ChannelFuture.class), any(ChannelFutureListener.class));
+        doAnswer(new Answer<Http2Stream>() {
+            @Override
+            public Http2Stream answer(InvocationOnMock invocation) throws Throwable {
+                Object[] args = invocation.getArguments();
+                return local.createStream((Integer) args[0], (Boolean) args[1]);
+            }
+        }).when(connection).createLocalStream(anyInt(), anyBoolean());
+        doAnswer(new Answer<Http2Stream>() {
+            @Override
+            public Http2Stream answer(InvocationOnMock invocation) throws Throwable {
+                Object[] args = invocation.getArguments();
+                return remote.createStream((Integer) args[0], (Boolean) args[1]);
+            }
+        }).when(connection).createRemoteStream(anyInt(), anyBoolean());
         when(local.createStream(eq(STREAM_ID), anyBoolean())).thenReturn(stream);
         when(local.reservePushStream(eq(PUSH_STREAM_ID), eq(stream))).thenReturn(pushStream);
         when(remote.createStream(eq(STREAM_ID), anyBoolean())).thenReturn(stream);
@@ -140,7 +182,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
                 .thenReturn(future);
         mockContext();
 
-        handler = new DelegatingHttp2ConnectionHandler(connection, reader, writer, inboundFlow, outboundFlow, listener);
+        handler = newConnectionHandler();
 
         // Simulate activation of the handler to force writing the initial settings.
         Http2Settings settings = new Http2Settings();
@@ -153,11 +195,17 @@ public class DelegatingHttp2ConnectionHandlerTest {
         when(inboundFlow.initialInboundWindowSize()).thenReturn(10);
         when(local.allowPushTo()).thenReturn(true);
         when(remote.maxStreams()).thenReturn(100);
-        when(reader.maxHeaderTableSize()).thenReturn(200L);
-        when(reader.maxFrameSize()).thenReturn(DEFAULT_MAX_FRAME_SIZE);
-        when(writer.maxFrameSize()).thenReturn(DEFAULT_MAX_FRAME_SIZE);
-        when(reader.maxHeaderListSize()).thenReturn(Integer.MAX_VALUE);
-        when(writer.maxHeaderListSize()).thenReturn(Integer.MAX_VALUE);
+        when(reader.configuration()).thenReturn(readerConfiguration);
+        when(writer.configuration()).thenReturn(writerConfiguration);
+        when(readerConfiguration.frameSizePolicy()).thenReturn(readerFrameSizePolicy);
+        when(writerConfiguration.frameSizePolicy()).thenReturn(writerFrameSizePolicy);
+        when(readerFrameSizePolicy.maxFrameSize()).thenReturn(DEFAULT_MAX_FRAME_SIZE);
+        when(writerFrameSizePolicy.maxFrameSize()).thenReturn(DEFAULT_MAX_FRAME_SIZE);
+        when(readerConfiguration.headerTable()).thenReturn(readerTable);
+        when(writerConfiguration.headerTable()).thenReturn(writerTable);
+        when(readerTable.maxHeaderTableSize()).thenReturn(200);
+        when(readerTable.maxHeaderListSize()).thenReturn(Integer.MAX_VALUE);
+        when(writerTable.maxHeaderListSize()).thenReturn(Integer.MAX_VALUE);
         handler.handlerAdded(ctx);
         verify(writer).writeSettings(eq(ctx), eq(settings), eq(promise));
 
@@ -174,6 +222,11 @@ public class DelegatingHttp2ConnectionHandlerTest {
         handler.handlerAdded(ctx);
     }
 
+    private Http2ConnectionHandler newConnectionHandler() {
+        return new Http2ConnectionHandler(connection, listener, reader, inboundFlow,
+                new Http2OutboundConnectionAdapter(connection, writer, outboundFlow));
+    }
+
     @After
     public void tearDown() throws Exception {
         handler.handlerRemoved(ctx);
@@ -182,7 +235,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
     @Test
     public void clientShouldSendClientPrefaceStringWhenActive() throws Exception {
         when(connection.isServer()).thenReturn(false);
-        handler = new DelegatingHttp2ConnectionHandler(connection, reader, writer, inboundFlow, outboundFlow, listener);
+        handler = newConnectionHandler();
         handler.channelActive(ctx);
         verify(ctx).write(eq(connectionPrefaceBuf()));
     }
@@ -190,7 +243,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
     @Test
     public void serverShouldNotSendClientPrefaceStringWhenActive() throws Exception {
         when(connection.isServer()).thenReturn(true);
-        handler = new DelegatingHttp2ConnectionHandler(connection, reader, writer, inboundFlow, outboundFlow, listener);
+        handler = newConnectionHandler();
         handler.channelActive(ctx);
         verify(ctx, never()).write(eq(connectionPrefaceBuf()));
     }
@@ -198,7 +251,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
     @Test
     public void serverReceivingInvalidClientPrefaceStringShouldCloseConnection() throws Exception {
         when(connection.isServer()).thenReturn(true);
-        handler = new DelegatingHttp2ConnectionHandler(connection, reader, writer, inboundFlow, outboundFlow, listener);
+        handler = newConnectionHandler();
         handler.channelRead(ctx, copiedBuffer("BAD_PREFACE", UTF_8));
         verify(ctx).close();
     }
@@ -207,7 +260,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
     public void serverReceivingValidClientPrefaceStringShouldContinueReadingFrames() throws Exception {
         reset(listener);
         when(connection.isServer()).thenReturn(true);
-        handler = new DelegatingHttp2ConnectionHandler(connection, reader, writer, inboundFlow, outboundFlow, listener);
+        handler = newConnectionHandler();
         handler.channelRead(ctx, connectionPrefaceBuf());
         verify(ctx, never()).close();
         decode().onSettingsRead(ctx, new Http2Settings());
@@ -434,7 +487,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
         verify(remote).allowPushTo(true);
         verify(outboundFlow).initialOutboundWindowSize(123);
         verify(local).maxStreams(456);
-        verify(writer).maxHeaderTableSize(789L);
+        verify(writerTable).maxHeaderTableSize(789);
         // Take into account the time this was called during setup().
         verify(writer, times(2)).writeSettingsAck(eq(ctx), eq(promise));
         verify(listener).onSettingsRead(eq(ctx), eq(settings));
@@ -621,13 +674,13 @@ public class DelegatingHttp2ConnectionHandlerTest {
     @Test
     public void pingWriteAfterGoAwayShouldFail() throws Exception {
         when(connection.isGoAway()).thenReturn(true);
-        ChannelFuture future = handler.writePing(ctx, emptyPingBuf(), promise);
+        ChannelFuture future = handler.writePing(ctx, false, emptyPingBuf(), promise);
         assertTrue(future.awaitUninterruptibly().cause() instanceof Http2Exception);
     }
 
     @Test
     public void pingWriteShouldSucceed() throws Exception {
-        handler.writePing(ctx, emptyPingBuf(), promise);
+        handler.writePing(ctx, false, emptyPingBuf(), promise);
         verify(writer).writePing(eq(ctx), eq(false), eq(emptyPingBuf()), eq(promise));
     }
 
@@ -651,13 +704,13 @@ public class DelegatingHttp2ConnectionHandlerTest {
         verify(inboundFlow, never()).initialInboundWindowSize(eq(100));
         verify(local, never()).allowPushTo(eq(false));
         verify(remote, never()).maxStreams(eq(1000));
-        verify(reader, never()).maxHeaderTableSize(eq(2000L));
+        verify(readerTable, never()).maxHeaderTableSize(eq(2000));
         // Verify that settings values are applied on the reception of SETTINGS ACK
         decode().onSettingsAckRead(ctx);
         verify(inboundFlow).initialInboundWindowSize(eq(100));
         verify(local).allowPushTo(eq(false));
         verify(remote).maxStreams(eq(1000));
-        verify(reader).maxHeaderTableSize(eq(2000L));
+        verify(readerTable).maxHeaderTableSize(eq(2000));
     }
 
     private static ByteBuf dummyData() {

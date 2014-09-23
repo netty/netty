@@ -12,32 +12,16 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package io.netty.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-
-/**
- * Decodes HPACK-encoded headers blocks into {@link Http2Headers}.
- */
-public interface Http2HeadersDecoder {
+public interface Http2FrameSizePolicy {
     /**
-     * Configuration related elements for the {@link Http2HeadersDecoder} interface
+     * Sets the maximum allowed frame size. Attempts to write frames longer than this maximum will fail.
      */
-    public interface Configuration {
-        /**
-         * Access the Http2HeaderTable for this {@link Http2HeadersDecoder}
-         */
-        Http2HeaderTable headerTable();
-    }
+    void maxFrameSize(int max) throws Http2Exception;
 
     /**
-     * Decodes the given headers block and returns the headers.
+     * Gets the maximum allowed frame size.
      */
-    Http2Headers decodeHeaders(ByteBuf headerBlock) throws Http2Exception;
-
-    /**
-     * Get the {@link Configuration} for this {@link Http2HeadersDecoder}
-     */
-    Configuration configuration();
+    int maxFrameSize();
 }
