@@ -77,7 +77,7 @@ public class Http2ConnectionRoundtripTest {
     @Mock
     private Http2FrameListener serverListener;
 
-    private DelegatingHttp2ConnectionHandler http2Client;
+    private Http2ConnectionHandler http2Client;
     private ServerBootstrap sb;
     private Bootstrap cb;
     private Channel serverChannel;
@@ -102,7 +102,7 @@ public class Http2ConnectionRoundtripTest {
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
                 serverFrameCountDown = new Http2TestUtil.FrameCountDown(serverListener, requestLatch, dataLatch);
-                p.addLast(new DelegatingHttp2ConnectionHandler(true, serverFrameCountDown));
+                p.addLast(new Http2ConnectionHandler(true, serverFrameCountDown));
                 p.addLast(Http2CodecUtil.ignoreSettingsHandler());
             }
         });
@@ -113,7 +113,7 @@ public class Http2ConnectionRoundtripTest {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                p.addLast(new DelegatingHttp2ConnectionHandler(false, clientListener));
+                p.addLast(new Http2ConnectionHandler(false, clientListener));
                 p.addLast(Http2CodecUtil.ignoreSettingsHandler());
             }
         });
@@ -124,7 +124,7 @@ public class Http2ConnectionRoundtripTest {
         ChannelFuture ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
         clientChannel = ccf.channel();
-        http2Client = clientChannel.pipeline().get(DelegatingHttp2ConnectionHandler.class);
+        http2Client = clientChannel.pipeline().get(Http2ConnectionHandler.class);
     }
 
     @After
@@ -223,7 +223,7 @@ public class Http2ConnectionRoundtripTest {
                     for (int i = 0, nextStream = 3; i < NUM_STREAMS; ++i, nextStream += 2) {
                         http2Client.writeHeaders(ctx(), nextStream, headers, 0, (short) 16, false, 0, false,
                                 newPromise());
-                        http2Client.writePing(ctx(), pingData.slice().retain(), newPromise());
+                        http2Client.writePing(ctx(), false, pingData.slice().retain(), newPromise());
                         http2Client.writeData(ctx(), nextStream, data.slice().retain(), 0, true, newPromise());
                     }
                 }

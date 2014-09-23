@@ -22,22 +22,28 @@ import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.HttpHeaders;
 
 /**
- * Light weight wrapper around {@link DelegatingHttp2ConnectionHandler} to provide HTTP/1.x object to HTTP/2 encoding
+ * Light weight wrapper around {@link Http2ConnectionHandler} to provide HTTP/1.x objects to HTTP/2 frames
+ * <p>
+ * See {@link InboundHttp2ToHttpAdapter} to get translation from HTTP/2 frames to HTTP/1.x objects
  */
-public class DelegatingHttp2HttpConnectionHandler extends DelegatingHttp2ConnectionHandler {
-
-    public DelegatingHttp2HttpConnectionHandler(boolean server, Http2FrameListener listener) {
+public class Http2ToHttpConnectionHandler extends Http2ConnectionHandler {
+    public Http2ToHttpConnectionHandler(boolean server, Http2FrameListener listener) {
         super(server, listener);
     }
 
-    public DelegatingHttp2HttpConnectionHandler(Http2Connection connection, Http2FrameReader frameReader,
-                    Http2FrameWriter frameWriter, Http2InboundFlowController inboundFlow,
-                    Http2OutboundFlowController outboundFlow, Http2FrameListener listener) {
-        super(connection, frameReader, frameWriter, inboundFlow, outboundFlow, listener);
+    public Http2ToHttpConnectionHandler(Http2Connection connection, Http2FrameListener listener) {
+        super(connection, listener);
     }
 
-    public DelegatingHttp2HttpConnectionHandler(Http2Connection connection, Http2FrameListener listener) {
-        super(connection, listener);
+    public Http2ToHttpConnectionHandler(Http2Connection connection, Http2FrameListener listener,
+            Http2FrameReader frameReader, Http2FrameWriter frameWriter) {
+        super(connection, listener, frameReader, frameWriter);
+    }
+
+    public Http2ToHttpConnectionHandler(Http2Connection connection, Http2FrameListener listener,
+            Http2FrameReader frameReader, Http2InboundFlowController inboundFlow,
+            Http2OutboundConnectionAdapter outbound) {
+        super(connection, listener, frameReader, inboundFlow, outbound);
     }
 
     /**
@@ -51,13 +57,13 @@ public class DelegatingHttp2HttpConnectionHandler extends DelegatingHttp2Connect
         int streamId = 0;
         String value = httpHeaders.get(HttpUtil.ExtensionHeaderNames.STREAM_ID.text());
         if (value == null) {
-            streamId = nextStreamId();
+            streamId = connection.local().nextStreamId();
         } else {
             try {
                 streamId = Integer.parseInt(value);
             } catch (NumberFormatException e) {
-                throw Http2Exception.format(Http2Error.INTERNAL_ERROR,
-                                    "Invalid user-specified stream id value '%s'", value);
+                throw Http2Exception.format(Http2Error.INTERNAL_ERROR, "Invalid user-specified stream id value '%s'",
+                        value);
             }
         }
 

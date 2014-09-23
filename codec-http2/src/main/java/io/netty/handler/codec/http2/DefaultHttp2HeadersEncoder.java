@@ -31,11 +31,11 @@ import java.util.TreeSet;
 
 import com.twitter.hpack.Encoder;
 
-public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder {
+public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2HeadersEncoder.Configuration {
     private final Encoder encoder;
     private final ByteArrayOutputStream tableSizeChangeOutput = new ByteArrayOutputStream();
     private final Set<String> sensitiveHeaders = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
-    private int maxHeaderListSize = Integer.MAX_VALUE;
+    private final Http2HeaderTable headerTable;
 
     public DefaultHttp2HeadersEncoder() {
         this(DEFAULT_HEADER_TABLE_SIZE, Collections.<String>emptySet());
@@ -44,15 +44,16 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder {
     public DefaultHttp2HeadersEncoder(int maxHeaderTableSize, Set<String> sensitiveHeaders) {
         encoder = new Encoder(maxHeaderTableSize);
         this.sensitiveHeaders.addAll(sensitiveHeaders);
+        headerTable = new Http2HeaderTableEncoder();
     }
 
     @Override
     public void encodeHeaders(Http2Headers headers, ByteBuf buffer) throws Http2Exception {
         final OutputStream stream = new ByteBufOutputStream(buffer);
         try {
-            if (headers.size() > maxHeaderListSize) {
+            if (headers.size() > headerTable.maxHeaderListSize()) {
                 throw protocolError("Number of headers (%d) exceeds maxHeaderListSize (%d)",
-                        headers.size(), maxHeaderListSize);
+                        headers.size(), headerTable.maxHeaderListSize());
             }
 
             // If there was a change in the table size, serialize the output from the encoder
@@ -92,35 +93,42 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder {
     }
 
     @Override
-    public void maxHeaderTableSize(int size) throws Http2Exception {
-        try {
-            // No headers should be emitted. If they are, we throw.
-            encoder.setMaxHeaderTableSize(tableSizeChangeOutput, size);
-        } catch (IOException e) {
-            throw new Http2Exception(Http2Error.COMPRESSION_ERROR, e.getMessage(), e);
-        }
+    public Http2HeaderTable headerTable() {
+        return headerTable;
     }
 
     @Override
-    public int maxHeaderTableSize() {
-        return encoder.getMaxHeaderTableSize();
-    }
-
-    @Override
-    public void maxHeaderListSize(int max) {
-        if (max < 0) {
-            throw new IllegalArgumentException("maxHeaderListSize must be positive: " + max);
-        }
-        maxHeaderListSize = max;
-    }
-
-    @Override
-    public int maxHeaderListSize() {
-        return maxHeaderListSize;
+    public Configuration configuration() {
+        return this;
     }
 
     private void encodeHeader(AsciiString key, AsciiString value, OutputStream stream) throws IOException {
         boolean sensitive = sensitiveHeaders.contains(key);
         encoder.encodeHeader(stream, key.array(), value.array(), sensitive);
+    }
+
+    /**
+     * {@link Http2HeaderTable} implementation to support {@link Http2HeadersEncoder}
+     */
+    private final class Http2HeaderTableEncoder extends DefaultHttp2HeaderTableListSize implements Http2HeaderTable {
+        @Override
+        public void maxHeaderTableSize(int max) throws Http2Exception {
+            if (max < 0) {
+                throw Http2Exception.protocolError("Header Table Size must be non-negative but was %d", max);
+            }
+            try {
+                // No headers should be emitted. If they are, we throw.
+                encoder.setMaxHeaderTableSize(tableSizeChangeOutput, max);
+            } catch (IOException e) {
+                throw new Http2Exception(Http2Error.COMPRESSION_ERROR, e.getMessage(), e);
+            } catch (Throwable t) {
+                throw new Http2Exception(Http2Error.PROTOCOL_ERROR, t.getMessage(), t);
+            }
+        }
+
+        @Override
+        public int maxHeaderTableSize() {
+            return encoder.getMaxHeaderTableSize();
+        }
     }
 }

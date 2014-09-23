@@ -26,7 +26,6 @@ import io.netty.channel.ChannelPromise;
  * writer.
  */
 public class Http2OutboundFrameLogger implements Http2FrameWriter {
-
     private final Http2FrameWriter writer;
     private final Http2FrameLogger logger;
 
@@ -132,32 +131,7 @@ public class Http2OutboundFrameLogger implements Http2FrameWriter {
     }
 
     @Override
-    public void maxHeaderTableSize(long max) throws Http2Exception {
-        writer.maxHeaderTableSize(max);
-    }
-
-    @Override
-    public long maxHeaderTableSize() {
-        return writer.maxHeaderTableSize();
-    }
-
-    @Override
-    public void maxFrameSize(int max) {
-        writer.maxFrameSize(max);
-    }
-
-    @Override
-    public int maxFrameSize() {
-        return writer.maxFrameSize();
-    }
-
-    @Override
-    public void maxHeaderListSize(int max) {
-        writer.maxHeaderListSize(max);
-    }
-
-    @Override
-    public int maxHeaderListSize() {
-        return writer.maxHeaderListSize();
+    public Configuration configuration() {
+        return writer.configuration();
     }
 }

@@ -29,10 +29,9 @@ import java.io.InputStream;
 import com.twitter.hpack.Decoder;
 import com.twitter.hpack.HeaderListener;
 
-public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder {
-
+public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2HeadersDecoder.Configuration {
     private final Decoder decoder;
-    private int maxHeaderListSize = Integer.MAX_VALUE;
+    private final Http2HeaderTable headerTable;
 
     public DefaultHttp2HeadersDecoder() {
         this(DEFAULT_MAX_HEADER_SIZE, DEFAULT_HEADER_TABLE_SIZE);
@@ -40,29 +39,17 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder {
 
     public DefaultHttp2HeadersDecoder(int maxHeaderSize, int maxHeaderTableSize) {
         decoder = new Decoder(maxHeaderSize, maxHeaderTableSize);
+        headerTable = new Http2HeaderTableDecoder();
     }
 
     @Override
-    public void maxHeaderTableSize(int size) {
-        decoder.setMaxHeaderTableSize(size);
+    public Http2HeaderTable headerTable() {
+        return headerTable;
     }
 
     @Override
-    public int maxHeaderTableSize() {
-        return decoder.getMaxHeaderTableSize();
-    }
-
-    @Override
-    public void maxHeaderListSize(int max) {
-        if (max < 0) {
-            throw new IllegalArgumentException("maxHeaderListSize must be >= 0: " + max);
-        }
-        maxHeaderListSize = max;
-    }
-
-    @Override
-    public int maxHeaderListSize() {
-        return maxHeaderListSize;
+    public Configuration configuration() {
+        return this;
     }
 
     @Override
@@ -83,9 +70,9 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder {
                 // TODO: what's the right thing to do here?
             }
 
-            if (headers.size() > maxHeaderListSize) {
+            if (headers.size() > headerTable.maxHeaderListSize()) {
                 throw protocolError("Number of headers (%d) exceeds maxHeaderListSize (%d)",
-                        headers.size(), maxHeaderListSize);
+                        headers.size(), headerTable.maxHeaderListSize());
             }
 
             return headers;
@@ -93,8 +80,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder {
             throw new Http2Exception(COMPRESSION_ERROR, e.getMessage());
         } catch (Throwable e) {
             // Default handler for any other types of errors that may have occurred. For example,
-            // the the Header builder throws IllegalArgumentException if the key or value was
-            // invalid
+            // the the Header builder throws IllegalArgumentException if the key or value was invalid
             // for any reason (e.g. the key was an invalid pseudo-header).
             throw new Http2Exception(Http2Error.PROTOCOL_ERROR, e.getMessage(), e);
         } finally {
@@ -103,6 +89,28 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder {
             } catch (IOException e) {
                 throw new Http2Exception(Http2Error.INTERNAL_ERROR, e.getMessage(), e);
             }
+        }
+    }
+
+    /**
+     * {@link Http2HeaderTable} implementation to support {@link Http2HeadersDecoder}
+     */
+    private final class Http2HeaderTableDecoder extends DefaultHttp2HeaderTableListSize implements Http2HeaderTable {
+        @Override
+        public void maxHeaderTableSize(int max) throws Http2Exception {
+            if (max < 0) {
+                throw Http2Exception.protocolError("Header Table Size must be non-negative but was %d", max);
+            }
+            try {
+                decoder.setMaxHeaderTableSize(max);
+            } catch (Throwable t) {
+                throw Http2Exception.format(Http2Error.PROTOCOL_ERROR, t.getMessage(), t);
+            }
+        }
+
+        @Override
+        public int maxHeaderTableSize() {
+            return decoder.getMaxHeaderTableSize();
         }
     }
 }

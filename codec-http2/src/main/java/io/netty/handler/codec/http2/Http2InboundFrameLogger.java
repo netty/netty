@@ -24,7 +24,6 @@ import io.netty.channel.ChannelHandlerContext;
  * back the listener.
  */
 public class Http2InboundFrameLogger implements Http2FrameReader {
-
     private final Http2FrameReader reader;
     private final Http2FrameLogger logger;
 
@@ -145,32 +144,7 @@ public class Http2InboundFrameLogger implements Http2FrameReader {
     }
 
     @Override
-    public void maxHeaderTableSize(long max) {
-        reader.maxHeaderTableSize(max);
-    }
-
-    @Override
-    public long maxHeaderTableSize() {
-        return reader.maxHeaderTableSize();
-    }
-
-    @Override
-    public void maxFrameSize(int max) {
-        reader.maxFrameSize(max);
-    }
-
-    @Override
-    public int maxFrameSize() {
-        return reader.maxFrameSize();
-    }
-
-    @Override
-    public void maxHeaderListSize(int max) {
-        reader.maxHeaderListSize(max);
-    }
-
-    @Override
-    public int maxHeaderListSize() {
-        return reader.maxHeaderListSize();
+    public Configuration configuration() {
+        return reader.configuration();
     }
 }

@@ -41,26 +41,16 @@ import static java.lang.Math.min;
  * Basic implementation of {@link Http2OutboundFlowController}.
  */
 public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowController {
-
     /**
      * A comparators that sorts priority nodes in ascending order by the amount of priority data available for its
      * subtree.
      */
     private static final Comparator<Http2Stream> DATA_WEIGHT = new Comparator<Http2Stream>() {
-        private static final int MAX_DATA_THRESHOLD = Integer.MAX_VALUE / 256;
-
         @Override
         public int compare(Http2Stream o1, Http2Stream o2) {
-            int o1Data = state(o1).priorityBytes();
-            int o2Data = state(o2).priorityBytes();
-            if (o1Data > MAX_DATA_THRESHOLD || o2Data > MAX_DATA_THRESHOLD) {
-                // Corner case to make sure we don't overflow an integer with
-                // the multiply.
-                return o1Data - o2Data;
-            }
-
-            // Scale the data by the weight.
-            return o1Data * o1.weight() - o2Data * o2.weight();
+            final long result = ((long) state(o1).priorityBytes()) * o1.weight() -
+                                ((long) state(o2).priorityBytes()) * o2.weight();
+            return result > 0 ? 1 : (result < 0 ? -1 : 0);
         }
     };
 
@@ -621,9 +611,10 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             void write() throws Http2Exception {
                 // Using a do/while loop because if the buffer is empty we still need to call
                 // the writer once to send the empty frame.
+                final Http2FrameSizePolicy frameSizePolicy = frameWriter.configuration().frameSizePolicy();
                 do {
                     int bytesToWrite = size();
-                    int frameBytes = Math.min(bytesToWrite, frameWriter.maxFrameSize());
+                    int frameBytes = Math.min(bytesToWrite, frameSizePolicy.maxFrameSize());
                     if (frameBytes == bytesToWrite) {
                         // All the bytes fit into a single HTTP/2 frame, just send it all.
                         connectionState().incrementStreamWindow(-bytesToWrite);

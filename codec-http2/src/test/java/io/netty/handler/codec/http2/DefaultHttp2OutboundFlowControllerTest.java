@@ -32,6 +32,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.DefaultHttp2OutboundFlowController.OutboundFlowState;
+import io.netty.handler.codec.http2.Http2FrameWriter.Configuration;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 
@@ -62,6 +63,12 @@ public class DefaultHttp2OutboundFlowControllerTest {
 
     @Mock
     private Http2FrameWriter frameWriter;
+
+    @Mock
+    private Http2FrameSizePolicy frameWriterSizePolicy;
+
+    @Mock
+    private Configuration frameWriterConfiguration;
 
     @Mock
     private ChannelHandlerContext ctx;
@@ -134,7 +141,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
 
     @Test
     public void frameLargerThanMaxFrameSizeShouldBeSplit() throws Http2Exception {
-        when(frameWriter.maxFrameSize()).thenReturn(3);
+        when(frameWriterSizePolicy.maxFrameSize()).thenReturn(3);
 
         final ByteBuf data = dummyData(5, 0);
         try {
@@ -157,7 +164,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
 
     @Test
     public void frameShouldSplitForMaxFrameSize() throws Http2Exception {
-        when(frameWriter.maxFrameSize()).thenReturn(5);
+        when(frameWriterSizePolicy.maxFrameSize()).thenReturn(5);
         final ByteBuf data = dummyData(10, 0);
         try {
             ByteBuf slice1 = data.slice(0, 5);
@@ -1223,7 +1230,9 @@ public class DefaultHttp2OutboundFlowControllerTest {
 
     private void resetFrameWriter() {
         Mockito.reset(frameWriter);
-        when(frameWriter.maxFrameSize()).thenReturn(Integer.MAX_VALUE);
+        when(frameWriter.configuration()).thenReturn(frameWriterConfiguration);
+        when(frameWriterConfiguration.frameSizePolicy()).thenReturn(frameWriterSizePolicy);
+        when(frameWriterSizePolicy.maxFrameSize()).thenReturn(Integer.MAX_VALUE);
     }
 
     private int window(int streamId) {

@@ -23,6 +23,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_FRAME_SIZ
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTING_ENTRY_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isMaxFrameSizeValid;
 import static io.netty.handler.codec.http2.Http2CodecUtil.readUnsignedInt;
+import static io.netty.handler.codec.http2.Http2Error.FRAME_SIZE_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.protocolError;
 import static io.netty.handler.codec.http2.Http2FrameTypes.CONTINUATION;
 import static io.netty.handler.codec.http2.Http2FrameTypes.DATA;
@@ -37,12 +38,12 @@ import static io.netty.handler.codec.http2.Http2FrameTypes.WINDOW_UPDATE;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http2.Http2FrameReader.Configuration;
 
 /**
  * A {@link Http2FrameReader} that supports all frame types defined by the HTTP/2 specification.
  */
-public class DefaultHttp2FrameReader implements Http2FrameReader {
-
+public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSizePolicy, Configuration {
     private enum State {
         FRAME_HEADER,
         FRAME_PAYLOAD,
@@ -57,7 +58,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
     private Http2Flags flags;
     private int payloadLength;
     private HeadersContinuation headersContinuation;
-    private int maxFrameSize = DEFAULT_MAX_FRAME_SIZE;
+    private int maxFrameSize;
 
     public DefaultHttp2FrameReader() {
         this(new DefaultHttp2HeadersDecoder());
@@ -65,22 +66,28 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
 
     public DefaultHttp2FrameReader(Http2HeadersDecoder headersDecoder) {
         this.headersDecoder = headersDecoder;
+        maxFrameSize = DEFAULT_MAX_FRAME_SIZE;
     }
 
     @Override
-    public void maxHeaderTableSize(long max) {
-        headersDecoder.maxHeaderTableSize((int) Math.min(max, Integer.MAX_VALUE));
+    public Http2HeaderTable headerTable() {
+        return headersDecoder.configuration().headerTable();
     }
 
     @Override
-    public long maxHeaderTableSize() {
-        return headersDecoder.maxHeaderTableSize();
+    public Configuration configuration() {
+        return this;
     }
 
     @Override
-    public void maxFrameSize(int max) {
+    public Http2FrameSizePolicy frameSizePolicy() {
+        return this;
+    }
+
+    @Override
+    public void maxFrameSize(int max) throws Http2Exception {
         if (!isMaxFrameSizeValid(max)) {
-            throw new IllegalArgumentException("maxFrameSize is invalid: " + max);
+            Http2Exception.format(FRAME_SIZE_ERROR, "Invalid MAX_FRAME_SIZE specified in sent settings: %d", max);
         }
         maxFrameSize = max;
     }
@@ -88,16 +95,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
     @Override
     public int maxFrameSize() {
         return maxFrameSize;
-    }
-
-    @Override
-    public void maxHeaderListSize(int max) {
-        headersDecoder.maxHeaderListSize(max);
-    }
-
-    @Override
-    public int maxHeaderListSize() {
-        return headersDecoder.maxHeaderListSize();
     }
 
     @Override
@@ -643,7 +640,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
                 return;
             }
             if (headerBlock.isWritable(fragment.readableBytes())) {
-                // The buffer can hold the requeste bytes, just write it directly.
+                // The buffer can hold the requested bytes, just write it directly.
                 headerBlock.writeBytes(fragment);
             } else {
                 // Allocate a new buffer that is big enough to hold the entire header block so far.

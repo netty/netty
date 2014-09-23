@@ -23,11 +23,25 @@ import io.netty.channel.ChannelPromise;
 import java.io.Closeable;
 
 /**
- * A writer responsible for marshalling HTTP/2 frames to the channel. All of the write methods in
+ * A writer responsible for marshaling HTTP/2 frames to the channel. All of the write methods in
  * this interface write to the context, but DO NOT FLUSH. To perform a flush, you must separately
  * call {@link ChannelHandlerContext#flush()}.
  */
 public interface Http2FrameWriter extends Http2DataWriter, Closeable {
+    /**
+     * Configuration specific to {@link Http2FrameWriter}
+     */
+    public interface Configuration {
+        /**
+         * Get the {@link Http2HeaderTable} for this {@link Http2FrameWriter}
+         */
+        Http2HeaderTable headerTable();
+
+        /**
+         * Get the {@link Http2FrameSizePolicy} for this {@link Http2FrameWriter}
+         */
+        Http2FrameSizePolicy frameSizePolicy();
+    }
 
     /**
      * Writes a HEADERS frame to the remote endpoint.
@@ -177,38 +191,13 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
             Http2Flags flags, ByteBuf payload, ChannelPromise promise);
 
     /**
+     * Get the configuration related elements for this {@link Http2FrameWriter}
+     */
+    Configuration configuration();
+
+    /**
      * Closes this writer and frees any allocated resources.
      */
     @Override
     void close();
-
-    /**
-     * Sets the maximum size of the HPACK header table used for decoding HTTP/2 headers.
-     */
-    void maxHeaderTableSize(long max) throws Http2Exception;
-
-    /**
-     * Gets the maximum size of the HPACK header table used for decoding HTTP/2 headers.
-     */
-    long maxHeaderTableSize();
-
-    /**
-     * Sets the maximum allowed frame size. Attempts to write frames longer than this maximum will fail.
-     */
-    void maxFrameSize(int max);
-
-    /**
-     * Gets the maximum allowed frame size.
-     */
-    int maxFrameSize();
-
-    /**
-     * Sets the maximum allowed header elements.
-     */
-    void maxHeaderListSize(int max);
-
-    /**
-     * Gets the maximum allowed header elements.
-     */
-    int maxHeaderListSize();
 }

@@ -50,7 +50,7 @@ public class DefaultHttp2HeadersEncoderTest {
     @Test(expected = Http2Exception.class)
     public void headersExceedMaxSetSizeShouldFail() throws Http2Exception {
         Http2Headers headers = headers();
-        encoder.maxHeaderListSize(2);
+        encoder.headerTable().maxHeaderListSize(2);
         encoder.encodeHeaders(headers, Unpooled.buffer());
     }
 
