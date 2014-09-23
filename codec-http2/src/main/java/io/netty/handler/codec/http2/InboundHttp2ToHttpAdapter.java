@@ -30,6 +30,28 @@ import io.netty.util.collection.IntObjectMap;
  * here <a href="http://tools.ietf.org/html/draft-ietf-httpbis-http2-14#section-8.1.">HTTP/2 Spec Message Flow</a>
  */
 public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
+    private static final ImmediateSendDetector DEFAULT_SEND_DETECTOR = new ImmediateSendDetector() {
+        @Override
+        public boolean mustSendImmediately(FullHttpMessage msg) {
+            if (msg instanceof FullHttpResponse) {
+                return ((FullHttpResponse) msg).status().isInformational();
+            } else if (msg instanceof FullHttpRequest) {
+                return ((FullHttpRequest) msg).headers().contains(HttpHeaders.Names.EXPECT);
+            }
+            return false;
+        }
+
+        @Override
+        public FullHttpMessage copyIfNeeded(FullHttpMessage msg) {
+            if (msg instanceof FullHttpRequest) {
+                FullHttpRequest copy = ((FullHttpRequest) msg).copy(null);
+                copy.headers().remove(HttpHeaders.Names.EXPECT);
+                return copy;
+            }
+            return null;
+        }
+    };
+
     private final int maxContentLength;
     protected final Http2Connection connection;
     protected final boolean validateHttpHeaders;
@@ -111,7 +133,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         this.maxContentLength = maxContentLength;
         this.validateHttpHeaders = validateHttpHeaders;
         this.connection = connection;
-        sendDetector = DefaultImmediateSendDetector.getInstance();
+        sendDetector = DEFAULT_SEND_DETECTOR;
         messageMap = new IntObjectHashMap<FullHttpMessage>();
     }
 
@@ -201,8 +223,11 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         }
 
         if (sendDetector.mustSendImmediately(msg)) {
+            // Copy the message (if necessary) before sending. The content is not expected to be copied (or used) in
+            // this operation but just in case it is used do the copy before sending and the resource may be released
+            final FullHttpMessage copy = endOfStream ? null : sendDetector.copyIfNeeded(msg);
             fireChannelRead(ctx, msg, streamId);
-            return endOfStream ? null : sendDetector.copyIfNeeded(msg);
+            return copy;
         }
 
         return msg;
@@ -235,12 +260,13 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         }
 
         ByteBuf content = msg.content();
-        if (content.readableBytes() > maxContentLength - data.readableBytes()) {
+        final int dataReadableBytes = data.readableBytes();
+        if (content.readableBytes() > maxContentLength - dataReadableBytes) {
             throw Http2Exception.format(Http2Error.INTERNAL_ERROR,
                             "Content length exceeded max of %d for stream id %d", maxContentLength, streamId);
         }
 
-        content.writeBytes(data, data.readerIndex(), data.readableBytes());
+        content.writeBytes(data, data.readerIndex(), dataReadableBytes);
 
         if (endOfStream) {
             fireChannelRead(ctx, msg, streamId);
@@ -313,42 +339,5 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
          * @return A modified copy of the {@code msg} or {@code null} if a copy is not needed.
          */
         FullHttpMessage copyIfNeeded(FullHttpMessage msg);
-    }
-
-    /**
-     * Default implementation of {@link ImmediateSendDetector}
-     */
-    private static final class DefaultImmediateSendDetector implements ImmediateSendDetector {
-        private static DefaultImmediateSendDetector instance;
-
-        private DefaultImmediateSendDetector() {
-        }
-
-        public static DefaultImmediateSendDetector getInstance() {
-            if (instance == null) {
-                instance = new DefaultImmediateSendDetector();
-            }
-            return instance;
-        }
-
-        @Override
-        public boolean mustSendImmediately(FullHttpMessage msg) {
-            if (msg instanceof FullHttpResponse) {
-                return ((FullHttpResponse) msg).status().isInformational();
-            } else if (msg instanceof FullHttpRequest) {
-                return ((FullHttpRequest) msg).headers().contains(HttpHeaders.Names.EXPECT);
-            }
-            return false;
-        }
-
-        @Override
-        public FullHttpMessage copyIfNeeded(FullHttpMessage msg) {
-            if (msg instanceof FullHttpRequest) {
-                FullHttpRequest copy = ((FullHttpRequest) msg).copy(null);
-                copy.headers().remove(HttpHeaders.Names.EXPECT);
-                return copy;
-            }
-            return null;
-        }
     }
 }
