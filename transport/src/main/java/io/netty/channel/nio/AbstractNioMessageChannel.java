@@ -22,6 +22,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ServerChannel;
 
 import java.io.IOException;
+import java.net.PortUnreachableException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.util.ArrayList;
@@ -96,7 +97,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 pipeline.fireChannelReadComplete();
 
                 if (exception != null) {
-                    if (exception instanceof IOException) {
+                    if (exception instanceof IOException && !(exception instanceof PortUnreachableException)) {
                         // ServerChannel should not be closed even on IOException because it can often continue
                         // accepting incoming connections. (e.g. too many open files)
                         closed = !(AbstractNioMessageChannel.this instanceof ServerChannel);
