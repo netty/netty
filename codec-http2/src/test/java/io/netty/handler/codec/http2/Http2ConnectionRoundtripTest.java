@@ -20,11 +20,13 @@ import static io.netty.handler.codec.http2.Http2TestUtil.randomString;
 import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import io.netty.bootstrap.Bootstrap;
@@ -41,11 +43,12 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
-import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
 
+import java.io.ByteArrayOutputStream;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
@@ -54,9 +57,11 @@ import java.util.concurrent.TimeUnit;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 /**
  * Tests the full HTTP/2 framing stack including the connection and preface handlers.
@@ -144,7 +149,16 @@ public class Http2ConnectionRoundtripTest {
         final byte[] bytes = new byte[length];
         new Random().nextBytes(bytes);
         final ByteBuf data = Unpooled.wrappedBuffer(bytes);
-        List<ByteBuf> capturedData = null;
+        final ByteArrayOutputStream out = new ByteArrayOutputStream(length);
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock in) throws Throwable {
+                ByteBuf buf = (ByteBuf) in.getArguments()[2];
+                buf.readBytes(out, buf.readableBytes());
+                return null;
+            }
+        }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3),
+                any(ByteBuf.class), eq(0), Mockito.anyBoolean());
         try {
             // Initialize the data latch based on the number of bytes expected.
             requestLatch(new CountDownLatch(2));
@@ -163,18 +177,17 @@ public class Http2ConnectionRoundtripTest {
             assertTrue(dataLatch.await(5, TimeUnit.SECONDS));
 
             // Verify that headers were received and only one DATA frame was received with endStream set.
-            final ArgumentCaptor<ByteBuf> dataCaptor = ArgumentCaptor.forClass(ByteBuf.class);
             verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(headers), eq(0),
                     eq((short) 16), eq(false), eq(0), eq(false));
-            verify(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3), dataCaptor.capture(), eq(0),
+            verify(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3), any(ByteBuf.class), eq(0),
                     eq(true));
 
             // Verify we received all the bytes.
-            capturedData = dataCaptor.getAllValues();
-            assertEquals(data, capturedData.get(0));
+            out.flush();
+            byte[] received = out.toByteArray();
+            assertArrayEquals(bytes, received);
         } finally {
             data.release();
-            release(capturedData);
         }
     }
 
@@ -183,10 +196,25 @@ public class Http2ConnectionRoundtripTest {
         final Http2Headers headers = dummyHeaders();
         final String text = "hello world";
         final String pingMsg = "12345678";
-        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
-        final ByteBuf pingData = Unpooled.copiedBuffer(pingMsg.getBytes());
-        List<ByteBuf> capturedData = null;
-        List<ByteBuf> capturedPingData = null;
+        final ByteBuf data = Unpooled.copiedBuffer(text, UTF_8);
+        final ByteBuf pingData = Unpooled.copiedBuffer(pingMsg, UTF_8);
+        final List<String> receivedPingBuffers = new ArrayList<String>();
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock in) throws Throwable {
+                receivedPingBuffers.add(((ByteBuf) in.getArguments()[1]).toString(UTF_8));
+                return null;
+            }
+        }).when(serverListener).onPingRead(any(ChannelHandlerContext.class), eq(pingData));
+        final List<String> receivedDataBuffers = new ArrayList<String>();
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock in) throws Throwable {
+                receivedDataBuffers.add(((ByteBuf) in.getArguments()[2]).toString(UTF_8));
+                return null;
+            }
+        }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), anyInt(), eq(data),
+                eq(0), eq(true));
         try {
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
@@ -194,8 +222,8 @@ public class Http2ConnectionRoundtripTest {
                     for (int i = 0, nextStream = 3; i < NUM_STREAMS; ++i, nextStream += 2) {
                         http2Client.writeHeaders(ctx(), nextStream, headers, 0, (short) 16, false, 0, false,
                                 newPromise());
-                        http2Client.writePing(ctx(), pingData.retain(), newPromise());
-                        http2Client.writeData(ctx(), nextStream, data.retain(), 0, true, newPromise());
+                        http2Client.writePing(ctx(), pingData.slice().retain(), newPromise());
+                        http2Client.writeData(ctx(), nextStream, data.slice().retain(), 0, true, newPromise());
                     }
                 }
             });
@@ -203,28 +231,21 @@ public class Http2ConnectionRoundtripTest {
             assertTrue(requestLatch.await(STRESS_TIMEOUT_SECONDS, SECONDS));
             verify(serverListener, times(NUM_STREAMS)).onHeadersRead(any(ChannelHandlerContext.class), anyInt(),
                     eq(headers), eq(0), eq((short) 16), eq(false), eq(0), eq(false));
-            final ArgumentCaptor<ByteBuf> dataCaptor = ArgumentCaptor.forClass(ByteBuf.class);
-            final ArgumentCaptor<ByteBuf> pingDataCaptor = ArgumentCaptor.forClass(ByteBuf.class);
             verify(serverListener, times(NUM_STREAMS)).onPingRead(any(ChannelHandlerContext.class),
-                    pingDataCaptor.capture());
-            capturedPingData = pingDataCaptor.getAllValues();
-            verify(serverListener, times(NUM_STREAMS)).onDataRead(any(ChannelHandlerContext.class), anyInt(),
-                    dataCaptor.capture(), eq(0), eq(true));
-            capturedData = dataCaptor.getAllValues();
-            data.resetReaderIndex();
-            pingData.resetReaderIndex();
-            int i;
-            for (i = 0; i < capturedPingData.size(); ++i) {
-                assertEquals(pingData, capturedPingData.get(i));
+                    any(ByteBuf.class));
+            verify(serverListener, times(NUM_STREAMS)).onDataRead(any(ChannelHandlerContext.class),
+                    anyInt(), any(ByteBuf.class), eq(0), eq(true));
+            assertEquals(NUM_STREAMS, receivedPingBuffers.size());
+            assertEquals(NUM_STREAMS, receivedDataBuffers.size());
+            for (String receivedData : receivedDataBuffers) {
+                assertEquals(text, receivedData);
             }
-            for (i = 0; i < capturedData.size(); ++i) {
-                assertEquals(capturedData.get(i).toString(CharsetUtil.UTF_8), data, capturedData.get(i));
+            for (String receivedPing : receivedPingBuffers) {
+                assertEquals(pingMsg, receivedPing);
             }
         } finally {
             data.release();
             pingData.release();
-            release(capturedData);
-            release(capturedPingData);
         }
     }
 
@@ -248,14 +269,6 @@ public class Http2ConnectionRoundtripTest {
 
     private ChannelPromise newPromise() {
         return ctx().newPromise();
-    }
-
-    private static void release(List<ByteBuf> capturedData) {
-        if (capturedData != null) {
-            for (int i = 0; i < capturedData.size(); ++i) {
-                capturedData.get(i).release();
-            }
-        }
     }
 
     private Http2Headers dummyHeaders() {
