@@ -425,20 +425,20 @@ public class TrafficCounter {
     }
 
     /**
-	 * @return the realWrittenBytes
-	 */
-	public AtomicLong getRealWrittenBytes() {
-		return realWrittenBytes;
-	}
+     * @return the realWrittenBytes
+     */
+    public AtomicLong getRealWrittenBytes() {
+        return realWrittenBytes;
+    }
 
-	/**
-	 * @return the realWriteThroughput
-	 */
-	public long getRealWriteThroughput() {
-		return realWriteThroughput;
-	}
+    /**
+     * @return the realWriteThroughput
+     */
+    public long getRealWriteThroughput() {
+        return realWriteThroughput;
+    }
 
-	/**
+    /**
      * Reset both read and written cumulative bytes counters and the associated time.
      */
     public void resetCumulativeTime() {
@@ -538,7 +538,7 @@ public class TrafficCounter {
                     logger.debug("Time: " + time + ":" + sum + ":" + interval);
                 }
                 if (time > maxTime) {
-                    if (now + time - lastWrittenTime > maxTime ) {
+                    if (now + time - lastWrittenTime > maxTime) {
                         time = maxTime;
                     }
                 }
@@ -556,7 +556,7 @@ public class TrafficCounter {
                     logger.debug("Time: " + time + ":" + lastsum + ":" + lastinterval);
                 }
                 if (time > maxTime) {
-                    if (now + time - lastWrittenTime > maxTime ) {
+                    if (now + time - lastWrittenTime > maxTime) {
                         time = maxTime;
                     }
                 }
@@ -572,7 +572,7 @@ public class TrafficCounter {
                     logger.debug("Time: " + time + ":" + sum + ":" + lastinterval);
                 }
                 if (time > maxTime) {
-                    if (now + time - lastWrittenTime > maxTime ) {
+                    if (now + time - lastWrittenTime > maxTime) {
                         time = maxTime;
                     }
                 }
