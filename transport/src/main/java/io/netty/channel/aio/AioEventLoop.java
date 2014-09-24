@@ -72,9 +72,7 @@ final class AioEventLoop extends SingleThreadEventLoop {
 
     @Override
     protected void run() {
-        for (; ; ) {
-
-//            System.out.println("AioEventLoop.run");
+        for (;;) {
             Runnable task = takeTask();
             if (task != null) {
                 task.run();

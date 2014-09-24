@@ -299,7 +299,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             if (msg instanceof ByteBuf) {
                 ByteBuf buf = (ByteBuf) msg;
                 if (buf.isReadable()) {
-                    for (; ; ) {
+                    for (;;) {
                         if (buf.refCnt() == 0) {
                             break;
                         }
@@ -369,7 +369,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         }
         inDoBeginRead = true;
         try {
-            for (; ; ) {
+            for (;;) {
                 if (inputShutdown) {
                     break;
                 }
