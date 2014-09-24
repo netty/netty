@@ -16,8 +16,7 @@
 package io.netty.channel;
 
 /**
- * Factory that creates a new {@link io.netty.channel.Channel} on {@link io.netty.bootstrap.Bootstrap#bind()}, {@link io.netty.bootstrap.Bootstrap#connect()}, and
- * {@link io.netty.bootstrap.ServerBootstrap#bind()}.
+ * Creates a new {@link Channel}.
  */
 @SuppressWarnings({ "ClassNameSameAsAncestorName", "deprecation" })
 public interface ChannelFactory<T extends Channel> extends io.netty.bootstrap.ChannelFactory<T> {
