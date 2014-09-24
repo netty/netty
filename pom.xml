@@ -669,6 +669,17 @@
 
             <!-- SSLSession implelementation -->
             <ignore>javax.net.ssl.SSLEngine</ignore>
+			
+			<!-- NIO2 needed for AIO transport support -->
+			<ignore>java.nio.channels.AsynchronousChannelGroup</ignore>
+			<ignore>java.nio.channels.AsynchronousSocketChannel</ignore>
+			<ignore>java.nio.channels.AsynchronousChannel</ignore>
+			<ignore>java.nio.channels.AsynchronousServerSocketChannel</ignore>
+			<ignore>java.net.SocketOption</ignore>
+			<ignore>java.net.StandardSocketOptions</ignore>
+			<ignore>java.nio.channels.NetworkChannel</ignore>
+			<ignore>java.nio.channels.InterruptedByTimeoutException</ignore>
+			
           </ignores>
         </configuration>
         <executions>
