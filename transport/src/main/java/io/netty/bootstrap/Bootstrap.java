@@ -167,10 +167,11 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         }
 
         final Future<SocketAddress> resolveFuture = resolver.resolve(remoteAddress);
+        final Throwable resolveFailureCause = resolveFuture.cause();
 
-        if (resolveFuture.cause() != null) {
+        if (resolveFailureCause != null) {
             // Failed to resolve immediately
-            return new LazyConnectPromise().setFailure(resolveFuture.cause());
+            return new LazyConnectPromise().setFailure(resolveFailureCause);
         }
 
         if (resolveFuture.isDone()) {

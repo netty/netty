@@ -13,17 +13,17 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.bootstrap;
-
-import io.netty.channel.Channel;
+package io.netty.channel;
 
 /**
- * @deprecated Use {@link io.netty.channel.ChannelFactory} instead.
+ * Factory that creates a new {@link io.netty.channel.Channel} on {@link io.netty.bootstrap.Bootstrap#bind()}, {@link io.netty.bootstrap.Bootstrap#connect()}, and
+ * {@link io.netty.bootstrap.ServerBootstrap#bind()}.
  */
-@Deprecated
-public interface ChannelFactory<T extends Channel> {
+@SuppressWarnings({ "ClassNameSameAsAncestorName", "deprecation" })
+public interface ChannelFactory<T extends Channel> extends io.netty.bootstrap.ChannelFactory<T> {
     /**
      * Creates a new channel.
      */
+    @Override
     T newChannel();
 }
