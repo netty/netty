@@ -15,48 +15,78 @@
 package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.toByteBuf;
 import static io.netty.handler.codec.http2.Http2CodecUtil.toHttp2Exception;
-import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.protocolError;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 
-import java.io.Closeable;
 import java.util.ArrayDeque;
 
 /**
- * Provides the ability to write HTTP/2 frames
- * <p>
- * This class provides write methods which turn java calls into HTTP/2 frames
- * <p>
- * This interface enforces outbound flow control functionality through {@link Http2OutboundFlowController}
+ * Default implementation of {@link Http2ConnectionEncoder}.
  */
-public class Http2OutboundConnectionAdapter implements Http2FrameWriter, Http2OutboundFlowController, Closeable {
+public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     private final Http2FrameWriter frameWriter;
     private final Http2Connection connection;
     private final Http2OutboundFlowController outboundFlow;
+    private final Http2LifecycleManager lifecycleManager;
     // We prefer ArrayDeque to LinkedList because later will produce more GC.
     // This initial capacity is plenty for SETTINGS traffic.
     private final ArrayDeque<Http2Settings> outstandingLocalSettingsQueue = new ArrayDeque<Http2Settings>(4);
-    private ChannelFutureListener closeListener;
 
-    public Http2OutboundConnectionAdapter(Http2Connection connection, Http2FrameWriter frameWriter) {
-        this(connection, frameWriter, new DefaultHttp2OutboundFlowController(connection, frameWriter));
+    public DefaultHttp2ConnectionEncoder(Http2Connection connection, Http2FrameWriter frameWriter,
+            Http2OutboundFlowController outboundFlow, Http2LifecycleManager lifecycleManager) {
+        this.frameWriter = checkNotNull(frameWriter, "frameWriter");
+        this.connection = checkNotNull(connection, "connection");
+        this.outboundFlow = checkNotNull(outboundFlow, "outboundFlow");
+        this.lifecycleManager = checkNotNull(lifecycleManager, "lifecycleManager");
     }
 
-    public Http2OutboundConnectionAdapter(Http2Connection connection, Http2FrameWriter frameWriter,
-            Http2OutboundFlowController outboundFlow) {
-        this.frameWriter = frameWriter;
-        this.connection = connection;
-        this.outboundFlow = outboundFlow;
+    @Override
+    public void remoteSettings(Http2Settings settings) throws Http2Exception {
+        Boolean pushEnabled = settings.pushEnabled();
+        Http2FrameWriter.Configuration config = configuration();
+        Http2HeaderTable outboundHeaderTable = config.headerTable();
+        Http2FrameSizePolicy outboundFrameSizePolicy = config.frameSizePolicy();
+        if (pushEnabled != null) {
+            if (!connection.isServer()) {
+                throw protocolError("Client received SETTINGS frame with ENABLE_PUSH specified");
+            }
+            connection.remote().allowPushTo(pushEnabled);
+        }
+
+        Long maxConcurrentStreams = settings.maxConcurrentStreams();
+        if (maxConcurrentStreams != null) {
+            connection.local().maxStreams((int) Math.min(maxConcurrentStreams, Integer.MAX_VALUE));
+        }
+
+        Long headerTableSize = settings.headerTableSize();
+        if (headerTableSize != null) {
+            outboundHeaderTable.maxHeaderTableSize((int) Math.min(headerTableSize, Integer.MAX_VALUE));
+        }
+
+        Integer maxHeaderListSize = settings.maxHeaderListSize();
+        if (maxHeaderListSize != null) {
+            outboundHeaderTable.maxHeaderListSize(maxHeaderListSize);
+        }
+
+        Integer maxFrameSize = settings.maxFrameSize();
+        if (maxFrameSize != null) {
+            outboundFrameSizePolicy.maxFrameSize(maxFrameSize);
+        }
+
+        Integer initialWindowSize = settings.initialWindowSize();
+        if (initialWindowSize != null) {
+            initialOutboundWindowSize(initialWindowSize);
+        }
     }
 
     @Override
@@ -79,11 +109,11 @@ public class Http2OutboundConnectionAdapter implements Http2FrameWriter, Http2Ou
                 public void operationComplete(ChannelFuture future) throws Exception {
                     if (!future.isSuccess()) {
                         // The write failed, handle the error.
-                        onHttp2Exception(ctx, toHttp2Exception(future.cause()));
+                        lifecycleManager.onHttp2Exception(ctx, toHttp2Exception(future.cause()));
                     } else if (endStream) {
                         // Close the local side of the stream if this is the last frame
                         Http2Stream stream = connection.stream(streamId);
-                        closeLocalSide(stream, ctx.newPromise());
+                        lifecycleManager.closeLocalSide(stream, ctx.newPromise());
                     }
                 }
             });
@@ -139,7 +169,7 @@ public class Http2OutboundConnectionAdapter implements Http2FrameWriter, Http2Ou
 
             // If the headers are the end of the stream, close it now.
             if (endStream) {
-                closeLocalSide(stream, promise);
+                lifecycleManager.closeLocalSide(stream, promise);
             }
 
             return future;
@@ -171,7 +201,8 @@ public class Http2OutboundConnectionAdapter implements Http2FrameWriter, Http2Ou
     @Override
     public ChannelFuture writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
             ChannelPromise promise) {
-        return writeRstStream(ctx, streamId, errorCode, promise, false);
+        // Delegate to the lifecycle manager for proper updating of connection state.
+        return lifecycleManager.writeRstStream(ctx, streamId, errorCode, promise);
     }
 
     /**
@@ -201,7 +232,7 @@ public class Http2OutboundConnectionAdapter implements Http2FrameWriter, Http2Ou
 
         if (stream != null) {
             stream.terminateSent();
-            connection.close(stream, promise, closeListener);
+            lifecycleManager.closeStream(stream, promise);
         }
 
         return future;
@@ -274,42 +305,10 @@ public class Http2OutboundConnectionAdapter implements Http2FrameWriter, Http2Ou
         }
     }
 
-    /**
-     * Sends a GO_AWAY frame to the remote endpoint. Waits until all streams are closed before shutting down the
-     * connection.
-     * @param ctx the handler context
-     * @param promise the promise used to create the close listener.
-     * @param cause connection error that caused this GO_AWAY, or {@code null} if normal termination.
-     */
-    public void sendGoAway(ChannelHandlerContext ctx, ChannelPromise promise, Http2Exception cause) {
-        ChannelFuture future = null;
-        ChannelPromise closePromise = promise;
-        if (!connection.isGoAway()) {
-            int errorCode = cause != null ? cause.error().code() : NO_ERROR.code();
-            ByteBuf debugData = toByteBuf(ctx, cause);
-
-            future = writeGoAway(ctx, connection.remote().lastStreamCreated(), errorCode, debugData, promise);
-            ctx.flush();
-            closePromise = null;
-        }
-
-        closeListener = getOrCreateCloseListener(ctx, closePromise);
-
-        // If there are no active streams, close immediately after the send is complete.
-        // Otherwise wait until all streams are inactive.
-        if (cause != null || connection.numActiveStreams() == 0) {
-            if (future == null) {
-                future = ctx.newSucceededFuture();
-            }
-            future.addListener(closeListener);
-        }
-    }
-
     @Override
     public ChannelFuture writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData,
             ChannelPromise promise) {
-        connection.remote().goAwayReceived(lastStreamId);
-        return frameWriter.writeGoAway(ctx, lastStreamId, errorCode, debugData, promise);
+        return lifecycleManager.writeGoAway(ctx, lastStreamId, errorCode, debugData, promise);
     }
 
     @Override
@@ -324,99 +323,19 @@ public class Http2OutboundConnectionAdapter implements Http2FrameWriter, Http2Ou
         return frameWriter.writeFrame(ctx, frameType, streamId, flags, payload, promise);
     }
 
-    /**
-     * Processes the given exception. Depending on the type of exception, delegates to either
-     * {@link #onConnectionError(ChannelHandlerContext, Http2Exception)} or
-     * {@link #onStreamError(ChannelHandlerContext, Http2StreamException)}.
-     */
-    protected final void onHttp2Exception(ChannelHandlerContext ctx, Http2Exception e) {
-        if (e instanceof Http2StreamException) {
-            onStreamError(ctx, (Http2StreamException) e);
-        } else {
-            onConnectionError(ctx, e);
-        }
-    }
-
-    /**
-     * Handler for a stream error. Sends a RST_STREAM frame to the remote endpoint and closes the stream.
-     */
-    protected void onStreamError(ChannelHandlerContext ctx, Http2StreamException cause) {
-        writeRstStream(ctx, cause.streamId(), cause.error().code(), ctx.newPromise(), true);
-    }
-
-    /**
-     * Handler for a connection error. Sends a GO_AWAY frame to the remote endpoint and waits until all streams are
-     * closed before shutting down the connection.
-     */
-    protected void onConnectionError(ChannelHandlerContext ctx, Http2Exception cause) {
-        sendGoAway(ctx, ctx.newPromise(), cause);
-    }
-
-    /**
-     * If not already created, creates a new listener for the given promise which, when complete, closes the connection
-     * and frees any resources.
-     */
-    private ChannelFutureListener getOrCreateCloseListener(final ChannelHandlerContext ctx, ChannelPromise promise) {
-        final ChannelPromise closePromise = promise == null ? ctx.newPromise() : promise;
-        if (closeListener == null) {
-            // If no promise was provided, create a new one.
-            closeListener = new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    ctx.close(closePromise);
-                    close();
-                }
-            };
-        } else {
-            closePromise.setSuccess();
-        }
-
-        return closeListener;
-    }
-
-    /**
-     * Closes the remote side of the given stream. If this causes the stream to be closed, adds a hook to close the
-     * channel after the given future completes.
-     *
-     * @param stream the stream to be half closed.
-     * @param future If closing, the future after which to close the channel. If {@code null}, ignored.
-     */
-    private void closeLocalSide(Http2Stream stream, ChannelFuture future) {
-        switch (stream.state()) {
-        case HALF_CLOSED_LOCAL:
-        case OPEN:
-            stream.closeLocalSide();
-            break;
-        default:
-            connection.close(stream, future, closeListener);
-            break;
-        }
-    }
-
     @Override
     public void close() {
         frameWriter.close();
     }
 
-    /**
-     * Get the {@link Http2Settings} object on the top of the queue that has been sent but not ACKed.
-     * This may return {@code null}.
-     */
-    public Http2Settings pollSettings() {
+    @Override
+    public Http2Settings pollSentSettings() {
         return outstandingLocalSettingsQueue.poll();
     }
 
     @Override
     public Configuration configuration() {
         return frameWriter.configuration();
-    }
-
-    /**
-     * Get the close listener associated with this object
-     * @return
-     */
-    public ChannelFutureListener closeListener() {
-        return closeListener;
     }
 
     @Override

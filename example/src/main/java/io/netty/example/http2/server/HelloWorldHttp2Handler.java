@@ -27,16 +27,15 @@ import io.netty.handler.codec.http2.DefaultHttp2Connection;
 import io.netty.handler.codec.http2.DefaultHttp2FrameReader;
 import io.netty.handler.codec.http2.DefaultHttp2FrameWriter;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
-import io.netty.handler.codec.http2.DefaultHttp2InboundFlowController;
 import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2FrameAdapter;
 import io.netty.handler.codec.http2.Http2FrameLogger;
+import io.netty.handler.codec.http2.Http2FrameReader;
 import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.Http2InboundFrameLogger;
-import io.netty.handler.codec.http2.Http2OutboundConnectionAdapter;
 import io.netty.handler.codec.http2.Http2OutboundFrameLogger;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -51,18 +50,14 @@ public class HelloWorldHttp2Handler extends Http2ConnectionHandler {
     static final ByteBuf RESPONSE_BYTES = unreleasableBuffer(copiedBuffer("Hello World", CharsetUtil.UTF_8));
 
     public HelloWorldHttp2Handler() {
-        this(new DefaultHttp2Connection(true), new Http2OutboundFrameLogger(new DefaultHttp2FrameWriter(), logger));
+        this(new DefaultHttp2Connection(true), new Http2InboundFrameLogger(
+                new DefaultHttp2FrameReader(), logger), new Http2OutboundFrameLogger(
+                new DefaultHttp2FrameWriter(), logger));
     }
 
-    private HelloWorldHttp2Handler(Http2Connection connection, Http2FrameWriter frameWriter) {
-        this(connection, frameWriter, new Http2OutboundConnectionAdapter(connection, frameWriter));
-    }
-
-    private HelloWorldHttp2Handler(Http2Connection connection, Http2FrameWriter frameWriter,
-            Http2OutboundConnectionAdapter outbound) {
-        super(connection, new SimpleHttp2FrameListener(outbound),
-                new Http2InboundFrameLogger(new DefaultHttp2FrameReader(), logger),
-                new DefaultHttp2InboundFlowController(connection, frameWriter), outbound);
+    private HelloWorldHttp2Handler(Http2Connection connection, Http2FrameReader frameReader,
+            Http2FrameWriter frameWriter) {
+        super(connection, frameReader, frameWriter, new SimpleHttp2FrameListener(frameWriter));
     }
 
     /**
@@ -76,7 +71,7 @@ public class HelloWorldHttp2Handler extends Http2ConnectionHandler {
             Http2Headers headers =
                     new DefaultHttp2Headers().status(new AsciiString("200"))
                     .set(new AsciiString(UPGRADE_RESPONSE_HEADER), new AsciiString("true"));
-            writeHeaders(ctx, 1, headers, 0, true, ctx.newPromise());
+            encoder().writeHeaders(ctx, 1, headers, 0, true, ctx.newPromise());
         }
         super.userEventTriggered(ctx, evt);
     }
@@ -88,10 +83,10 @@ public class HelloWorldHttp2Handler extends Http2ConnectionHandler {
     }
 
     private static class SimpleHttp2FrameListener extends Http2FrameAdapter {
-        private Http2OutboundConnectionAdapter outbound;
+        private Http2FrameWriter frameWriter;
 
-        public SimpleHttp2FrameListener(Http2OutboundConnectionAdapter outbound) {
-            this.outbound = outbound;
+        public SimpleHttp2FrameListener(Http2FrameWriter frameWriter) {
+            this.frameWriter = frameWriter;
         }
 
         /**
@@ -123,8 +118,8 @@ public class HelloWorldHttp2Handler extends Http2ConnectionHandler {
         private void sendResponse(ChannelHandlerContext ctx, int streamId, ByteBuf payload) {
             // Send a frame for the response status
             Http2Headers headers = new DefaultHttp2Headers().status(new AsciiString("200"));
-            outbound.writeHeaders(ctx, streamId, headers, 0, false, ctx.newPromise());
-            outbound.writeData(ctx, streamId, payload, 0, true, ctx.newPromise());
+            frameWriter.writeHeaders(ctx, streamId, headers, 0, false, ctx.newPromise());
+            frameWriter.writeData(ctx, streamId, payload, 0, true, ctx.newPromise());
         }
     };
 }

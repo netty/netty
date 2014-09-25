@@ -15,6 +15,15 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
+import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
+import static io.netty.handler.codec.http2.Http2Exception.format;
+import static io.netty.handler.codec.http2.Http2Exception.protocolError;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -27,15 +36,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Queue;
-
-import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
-import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
-import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
-import static io.netty.handler.codec.http2.Http2Exception.format;
-import static io.netty.handler.codec.http2.Http2Exception.protocolError;
-import static java.lang.Math.max;
-import static java.lang.Math.min;
 
 /**
  * Basic implementation of {@link Http2OutboundFlowController}.
@@ -60,14 +60,8 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     private ChannelHandlerContext ctx;
 
     public DefaultHttp2OutboundFlowController(Http2Connection connection, Http2FrameWriter frameWriter) {
-        if (connection == null) {
-            throw new NullPointerException("connection");
-        }
-        if (frameWriter == null) {
-            throw new NullPointerException("frameWriter");
-        }
-        this.connection = connection;
-        this.frameWriter = frameWriter;
+        this.connection = checkNotNull(connection, "connection");
+        this.frameWriter = checkNotNull(frameWriter, "frameWriter");
 
         // Add a flow state for the connection.
         connection.connectionStream().outboundFlow(new OutboundFlowState(connection.connectionStream()));
@@ -161,15 +155,9 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     @Override
     public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
             int padding, boolean endStream, ChannelPromise promise) {
-        if (ctx == null) {
-            throw new NullPointerException("ctx");
-        }
-        if (promise == null) {
-            throw new NullPointerException("promise");
-        }
-        if (data == null) {
-            throw new NullPointerException("data");
-        }
+        checkNotNull(ctx, "ctx");
+        checkNotNull(promise, "promise");
+        checkNotNull(data, "data");
         if (this.ctx != null && this.ctx != ctx) {
             throw new IllegalArgumentException("Writing data from multiple ChannelHandlerContexts is not supported");
         }

@@ -39,6 +39,7 @@ import static io.netty.handler.codec.http2.Http2FrameTypes.PUSH_PROMISE;
 import static io.netty.handler.codec.http2.Http2FrameTypes.RST_STREAM;
 import static io.netty.handler.codec.http2.Http2FrameTypes.SETTINGS;
 import static io.netty.handler.codec.http2.Http2FrameTypes.WINDOW_UPDATE;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.ChannelFuture;
@@ -183,9 +184,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     public ChannelFuture writeSettings(ChannelHandlerContext ctx, Http2Settings settings,
             ChannelPromise promise) {
         try {
-            if (settings == null) {
-                throw new NullPointerException("settings");
-            }
+            checkNotNull(settings, "settings");
             int payloadLength = SETTING_ENTRY_LENGTH * settings.size();
             ByteBuf frame = ctx.alloc().buffer(FRAME_HEADER_LENGTH + payloadLength);
             writeFrameHeader(frame, payloadLength, SETTINGS, new Http2Flags(), 0);

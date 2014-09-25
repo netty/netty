@@ -15,8 +15,6 @@
 package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
-import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
 import static io.netty.handler.codec.http2.Http2Exception.protocolError;
@@ -24,14 +22,10 @@ import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.ByteToMessageDecoder;
 
-import java.util.Collection;
 import java.util.List;
 
 /**
@@ -42,89 +36,54 @@ import java.util.List;
  * <p>
  * This interface enforces inbound flow control functionality through {@link Http2InboundFlowController}
  */
-public class Http2InboundConnectionHandler extends ByteToMessageDecoder {
+public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     private final Http2FrameListener internalFrameListener = new FrameReadListener();
-    protected final Http2OutboundConnectionAdapter outbound;
-    private final Http2FrameListener listener;
+    private final Http2Connection connection;
+    private final Http2LifecycleManager lifecycleManager;
+    private final Http2ConnectionEncoder encoder;
     private final Http2FrameReader frameReader;
-    protected final Http2Connection connection;
     private final Http2InboundFlowController inboundFlow;
-    private ByteBuf clientPrefaceString;
-    private boolean prefaceSent;
+    private final Http2FrameListener listener;
     private boolean prefaceReceived;
 
-    public Http2InboundConnectionHandler(Http2Connection connection, Http2FrameListener listener,
-            Http2FrameReader frameReader, Http2InboundFlowController inboundFlow,
-            Http2OutboundConnectionAdapter outbound) {
-        if (connection == null) {
-            throw new NullPointerException("connection");
-        }
-        if (frameReader == null) {
-            throw new NullPointerException("frameReader");
-        }
-        if (listener == null) {
-            throw new NullPointerException("listener");
-        }
-        if (inboundFlow == null) {
-            throw new NullPointerException("inboundFlow");
-        }
-        if (outbound == null) {
-            throw new NullPointerException("outbound");
-        }
-
-        this.connection = connection;
-        this.frameReader = frameReader;
-        this.listener = listener;
-        this.outbound = outbound;
-        this.inboundFlow = inboundFlow;
-
-        // Set the expected client preface string. Only servers should receive this.
-        clientPrefaceString = connection.isServer() ? connectionPrefaceBuf() : null;
+    public DefaultHttp2ConnectionDecoder(Http2Connection connection, Http2FrameReader frameReader,
+            Http2InboundFlowController inboundFlow, Http2ConnectionEncoder encoder,
+            Http2LifecycleManager lifecycleManager, Http2FrameListener listener) {
+        this.connection = checkNotNull(connection, "connection");
+        this.frameReader = checkNotNull(frameReader, "frameReader");
+        this.lifecycleManager = checkNotNull(lifecycleManager, "lifecycleManager");
+        this.encoder = checkNotNull(encoder, "encoder");
+        this.inboundFlow = checkNotNull(inboundFlow, "inboundFlow");
+        this.listener = checkNotNull(listener, "listener");
     }
 
-    /**
-     * Handles the client-side (cleartext) upgrade from HTTP to HTTP/2.
-     * Reserves local stream 1 for the HTTP/2 response.
-     */
-    public void onHttpClientUpgrade() throws Http2Exception {
-        if (connection.isServer()) {
-            throw protocolError("Client-side HTTP upgrade requested for a server");
-        }
-        if (prefaceSent || prefaceReceived) {
-            throw protocolError("HTTP upgrade must occur before HTTP/2 preface is sent or received");
-        }
-
-        // Create a local stream used for the HTTP cleartext upgrade.
-        connection.createLocalStream(HTTP_UPGRADE_STREAM_ID, true);
+    public Http2Connection connection() {
+        return connection;
     }
 
-    /**
-     * Handles the server-side (cleartext) upgrade from HTTP to HTTP/2.
-     * @param settings the settings for the remote endpoint.
-     */
-    public void onHttpServerUpgrade(Http2Settings settings) throws Http2Exception {
-        if (!connection.isServer()) {
-            throw protocolError("Server-side HTTP upgrade requested for a client");
-        }
-        if (prefaceSent || prefaceReceived) {
-            throw protocolError("HTTP upgrade must occur before HTTP/2 preface is sent or received");
-        }
-
-        // Apply the settings but no ACK is necessary.
-        applyRemoteSettings(settings);
-
-        // Create a stream in the half-closed state.
-        connection.createRemoteStream(HTTP_UPGRADE_STREAM_ID, true);
+    public Http2FrameListener listener() {
+        return listener;
     }
 
-    /**
-     * Gets the local settings for this endpoint of the HTTP/2 connection.
-     */
-    public Http2Settings settings() {
+    public Http2LifecycleManager lifecycleManager() {
+        return lifecycleManager;
+    }
+
+    public boolean prefaceReceived() {
+        return prefaceReceived;
+    }
+
+    @Override
+    public void decodeFrame(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Http2Exception {
+        frameReader.readFrame(ctx, in, internalFrameListener);
+    }
+
+    @Override
+    public Http2Settings localSettings() {
         Http2Settings settings = new Http2Settings();
-        final Http2FrameReader.Configuration config = frameReader.configuration();
-        final Http2HeaderTable headerTable = config.headerTable();
-        final Http2FrameSizePolicy frameSizePolicy = config.frameSizePolicy();
+        Http2FrameReader.Configuration config = frameReader.configuration();
+        Http2HeaderTable headerTable = config.headerTable();
+        Http2FrameSizePolicy frameSizePolicy = config.frameSizePolicy();
         settings.initialWindowSize(inboundFlow.initialInboundWindowSize());
         settings.maxConcurrentStreams(connection.remote().maxStreams());
         settings.headerTableSize(headerTable.maxHeaderTableSize());
@@ -137,212 +96,49 @@ public class Http2InboundConnectionHandler extends ByteToMessageDecoder {
         return settings;
     }
 
-    /**
-     * Closes all closable resources and frees any allocated resources.
-     * <p>
-     * This does NOT close the {@link Http2OutboundConnectionAdapter} reference in this class
-     */
-    public void close() {
-        frameReader.close();
-        if (clientPrefaceString != null) {
-            clientPrefaceString.release();
-            clientPrefaceString = null;
-        }
-    }
-
     @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        // The channel just became active - send the connection preface to the remote
-        // endpoint.
-        sendPreface(ctx);
-        super.channelActive(ctx);
-    }
-
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        // This handler was just added to the context. In case it was handled after
-        // the connection became active, send the connection preface now.
-        sendPreface(ctx);
-    }
-
-    @Override
-    protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
-        close();
-    }
-
-    @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        // Avoid NotYetConnectedException
-        if (!ctx.channel().isActive()) {
-            ctx.close(promise);
-            return;
-        }
-
-        outbound.sendGoAway(ctx, promise, null);
-    }
-
-    @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        ChannelFuture future = ctx.newSucceededFuture();
-        final Collection<Http2Stream> streams = connection.activeStreams();
-        for (Http2Stream s : streams.toArray(new Http2Stream[streams.size()])) {
-            connection.close(s, future, outbound.closeListener());
-        }
-        super.channelInactive(ctx);
-    }
-
-    /**
-     * Handles {@link Http2Exception} objects that were thrown from other handlers. Ignores all other exceptions.
-     */
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        if (cause instanceof Http2Exception) {
-            onHttp2Exception(ctx, (Http2Exception) cause);
-        }
-
-        super.exceptionCaught(ctx, cause);
-    }
-
-    @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        try {
-            // Read the remaining of the client preface string if we haven't already.
-            // If this is a client endpoint, always returns true.
-            if (!readClientPrefaceString(ctx, in)) {
-                // Still processing the client preface.
-                return;
-            }
-
-            frameReader.readFrame(ctx, in, internalFrameListener);
-        } catch (Http2Exception e) {
-            onHttp2Exception(ctx, e);
-        } catch (Throwable e) {
-            onHttp2Exception(ctx, new Http2Exception(Http2Error.INTERNAL_ERROR, e.getMessage(), e));
-        }
-    }
-
-    /**
-     * Processes the given exception. Depending on the type of exception, delegates to either
-     * {@link #onConnectionError(ChannelHandlerContext, Http2Exception)} or
-     * {@link #onStreamError(ChannelHandlerContext, Http2StreamException)}.
-     */
-    protected final void onHttp2Exception(ChannelHandlerContext ctx, Http2Exception e) {
-        if (e instanceof Http2StreamException) {
-            onStreamError(ctx, (Http2StreamException) e);
-        } else {
-            onConnectionError(ctx, e);
-        }
-    }
-
-    /**
-     * Handler for a connection error. Sends a GO_AWAY frame to the remote endpoint and waits until all streams are
-     * closed before shutting down the connection.
-     */
-    protected void onConnectionError(ChannelHandlerContext ctx, Http2Exception cause) {
-        outbound.sendGoAway(ctx, ctx.newPromise(), cause);
-    }
-
-    /**
-     * Handler for a stream error. Sends a RST_STREAM frame to the remote endpoint and closes the stream.
-     */
-    protected void onStreamError(ChannelHandlerContext ctx, Http2StreamException cause) {
-        outbound.writeRstStream(ctx, cause.streamId(), cause.error().code(), ctx.newPromise(), true);
-    }
-
-    /**
-     * Sends the HTTP/2 connection preface upon establishment of the connection, if not already sent.
-     */
-    private void sendPreface(final ChannelHandlerContext ctx) {
-        if (prefaceSent || !ctx.channel().isActive()) {
-            return;
-        }
-
-        prefaceSent = true;
-
-        if (!connection.isServer()) {
-            // Clients must send the preface string as the first bytes on the connection.
-            ctx.write(connectionPrefaceBuf()).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
-        }
-
-        // Both client and server must send their initial settings.
-        outbound.writeSettings(ctx, settings(), ctx.newPromise()).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
-    }
-
-    /**
-     * Applies settings received from the remote endpoint.
-     */
-    private void applyRemoteSettings(Http2Settings settings) throws Http2Exception {
+    public void localSettings(Http2Settings settings) throws Http2Exception {
         Boolean pushEnabled = settings.pushEnabled();
-        final Http2FrameWriter.Configuration config = outbound.configuration();
-        final Http2HeaderTable headerTable = config.headerTable();
-        final Http2FrameSizePolicy frameSizePolicy = config.frameSizePolicy();
+        Http2FrameReader.Configuration config = frameReader.configuration();
+        Http2HeaderTable inboundHeaderTable = config.headerTable();
+        Http2FrameSizePolicy inboundFrameSizePolicy = config.frameSizePolicy();
         if (pushEnabled != null) {
-            if (!connection.isServer()) {
-                throw protocolError("Client received SETTINGS frame with ENABLE_PUSH specified");
+            if (connection.isServer()) {
+                throw protocolError("Server sending SETTINGS frame with ENABLE_PUSH specified");
             }
-            connection.remote().allowPushTo(pushEnabled);
+            connection.local().allowPushTo(pushEnabled);
         }
 
         Long maxConcurrentStreams = settings.maxConcurrentStreams();
         if (maxConcurrentStreams != null) {
             int value = (int) Math.min(maxConcurrentStreams, Integer.MAX_VALUE);
-            connection.local().maxStreams(value);
+            connection.remote().maxStreams(value);
         }
 
         Long headerTableSize = settings.headerTableSize();
         if (headerTableSize != null) {
-            headerTable.maxHeaderTableSize((int) Math.min(headerTableSize.intValue(), Integer.MAX_VALUE));
+            inboundHeaderTable.maxHeaderTableSize((int) Math.min(headerTableSize, Integer.MAX_VALUE));
         }
 
         Integer maxHeaderListSize = settings.maxHeaderListSize();
         if (maxHeaderListSize != null) {
-            headerTable.maxHeaderListSize(maxHeaderListSize);
+            inboundHeaderTable.maxHeaderListSize(maxHeaderListSize);
         }
 
         Integer maxFrameSize = settings.maxFrameSize();
         if (maxFrameSize != null) {
-            frameSizePolicy.maxFrameSize(maxFrameSize);
+            inboundFrameSizePolicy.maxFrameSize(maxFrameSize);
         }
 
         Integer initialWindowSize = settings.initialWindowSize();
         if (initialWindowSize != null) {
-            outbound.initialOutboundWindowSize(initialWindowSize);
+            inboundFlow.initialInboundWindowSize(initialWindowSize);
         }
     }
 
-    /**
-     * Decodes the client connection preface string from the input buffer.
-     *
-     * @return {@code true} if processing of the client preface string is complete. Since client preface strings can
-     *         only be received by servers, returns true immediately for client endpoints.
-     */
-    private boolean readClientPrefaceString(ChannelHandlerContext ctx, ByteBuf in) {
-        if (clientPrefaceString == null) {
-            return true;
-        }
-
-        int prefaceRemaining = clientPrefaceString.readableBytes();
-        int bytesRead = Math.min(in.readableBytes(), prefaceRemaining);
-
-        // Read the portion of the input up to the length of the preface, if reached.
-        ByteBuf sourceSlice = in.readSlice(bytesRead);
-
-        // Read the same number of bytes from the preface buffer.
-        ByteBuf prefaceSlice = clientPrefaceString.readSlice(bytesRead);
-
-        // If the input so far doesn't match the preface, break the connection.
-        if (bytesRead == 0 || !prefaceSlice.equals(sourceSlice)) {
-            ctx.close();
-            return false;
-        }
-
-        if (!clientPrefaceString.isReadable()) {
-            // Entire preface has been read.
-            clientPrefaceString.release();
-            clientPrefaceString = null;
-            return true;
-        }
-        return false;
+    @Override
+    public void close() {
+        frameReader.close();
     }
 
     /**
@@ -372,7 +168,7 @@ public class Http2InboundConnectionHandler extends ByteToMessageDecoder {
             listener.onDataRead(ctx, streamId, data, padding, endOfStream);
 
             if (endOfStream) {
-                closeRemoteSide(stream, ctx.newSucceededFuture());
+                lifecycleManager.closeRemoteSide(stream, ctx.newSucceededFuture());
             }
         }
 
@@ -382,25 +178,6 @@ public class Http2InboundConnectionHandler extends ByteToMessageDecoder {
         private void verifyPrefaceReceived() throws Http2Exception {
             if (!prefaceReceived) {
                 throw protocolError("Received non-SETTINGS as first frame.");
-            }
-        }
-
-        /**
-         * Closes the remote side of the given stream. If this causes the stream to be closed, adds a hook to close the
-         * channel after the given future completes.
-         *
-         * @param stream the stream to be half closed.
-         * @param future If closing, the future after which to close the channel. If {@code null}, ignored.
-         */
-        private void closeRemoteSide(Http2Stream stream, ChannelFuture future) {
-            switch (stream.state()) {
-            case HALF_CLOSED_REMOTE:
-            case OPEN:
-                stream.closeRemoteSide();
-                break;
-            default:
-                connection.close(stream, future, outbound.closeListener());
-                break;
             }
         }
 
@@ -436,13 +213,14 @@ public class Http2InboundConnectionHandler extends ByteToMessageDecoder {
                 }
             }
 
-            listener.onHeadersRead(ctx, streamId, headers, streamDependency, weight, exclusive, padding, endStream);
+            listener.onHeadersRead(ctx, streamId, headers,
+                    streamDependency, weight, exclusive, padding, endStream);
 
             stream.setPriority(streamDependency, weight, exclusive);
 
             // If the headers completes this stream, close it.
             if (endStream) {
-                closeRemoteSide(stream, ctx.newSucceededFuture());
+                lifecycleManager.closeRemoteSide(stream, ctx.newSucceededFuture());
             }
         }
 
@@ -479,7 +257,7 @@ public class Http2InboundConnectionHandler extends ByteToMessageDecoder {
 
             listener.onRstStreamRead(ctx, streamId, errorCode);
 
-            connection.close(stream, ctx.newSucceededFuture(), outbound.closeListener());
+            lifecycleManager.closeStream(stream, ctx.newSucceededFuture());
         }
 
         @Override
@@ -487,7 +265,7 @@ public class Http2InboundConnectionHandler extends ByteToMessageDecoder {
             verifyPrefaceReceived();
             // Apply oldest outstanding local settings here. This is a synchronization point
             // between endpoints.
-            Http2Settings settings = outbound.pollSettings();
+            Http2Settings settings = encoder.pollSentSettings();
 
             if (settings != null) {
                 applyLocalSettings(settings);
@@ -540,10 +318,10 @@ public class Http2InboundConnectionHandler extends ByteToMessageDecoder {
 
         @Override
         public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) throws Http2Exception {
-            applyRemoteSettings(settings);
+            encoder.remoteSettings(settings);
 
             // Acknowledge receipt of the settings.
-            outbound.writeSettingsAck(ctx, ctx.newPromise());
+            encoder.writeSettingsAck(ctx, ctx.newPromise());
             ctx.flush();
 
             // We've received at least one non-ack settings frame from the remote endpoint.
@@ -558,7 +336,7 @@ public class Http2InboundConnectionHandler extends ByteToMessageDecoder {
 
             // Send an ack back to the remote client.
             // Need to retain the buffer here since it will be released after the write completes.
-            outbound.writePing(ctx, true, data.retain(), ctx.newPromise());
+            encoder.writePing(ctx, true, data.retain(), ctx.newPromise());
             ctx.flush();
 
             listener.onPingRead(ctx, data);
@@ -613,7 +391,7 @@ public class Http2InboundConnectionHandler extends ByteToMessageDecoder {
             }
 
             // Update the outbound flow controller.
-            outbound.updateOutboundWindowSize(streamId, windowSizeIncrement);
+            encoder.updateOutboundWindowSize(streamId, windowSizeIncrement);
 
             listener.onWindowUpdateRead(ctx, streamId, windowSizeIncrement);
         }
