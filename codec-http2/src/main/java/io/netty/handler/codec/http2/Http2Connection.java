@@ -15,9 +15,6 @@
 
 package io.netty.handler.codec.http2;
 
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-
 import java.util.Collection;
 
 /**
@@ -272,12 +269,4 @@ public interface Http2Connection {
      * Indicates whether or not either endpoint has received a GOAWAY.
      */
     boolean isGoAway();
-
-    /**
-     * Closes the given stream and adds a hook to close the channel after the given future completes.
-     * @param stream the stream to be closed.
-     * @param future the future after which to close the channel. If {@code null}, ignored.
-     * @param closeListener the listener to add to the {@code future} if notification is expected
-     */
-    void close(Http2Stream stream, ChannelFuture future, ChannelFutureListener closeListener);
 }

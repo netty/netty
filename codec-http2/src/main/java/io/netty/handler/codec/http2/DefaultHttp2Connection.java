@@ -19,6 +19,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
+import static io.netty.handler.codec.http2.Http2CodecUtil.checkNotNull;
 import static io.netty.handler.codec.http2.Http2CodecUtil.immediateRemovalPolicy;
 import static io.netty.handler.codec.http2.Http2Exception.format;
 import static io.netty.handler.codec.http2.Http2Exception.protocolError;
@@ -29,8 +30,6 @@ import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http2.Http2StreamRemovalPolicy.Action;
 import io.netty.util.collection.IntObjectHashMap;
@@ -77,10 +76,8 @@ public class DefaultHttp2Connection implements Http2Connection {
      *            the policy to be used for removal of closed stream.
      */
     public DefaultHttp2Connection(boolean server, Http2StreamRemovalPolicy removalPolicy) {
-        if (removalPolicy == null) {
-            throw new NullPointerException("removalPolicy");
-        }
-        this.removalPolicy = removalPolicy;
+
+        this.removalPolicy = checkNotNull(removalPolicy, "removalPolicy");
         localEndpoint = new DefaultEndpoint(server);
         remoteEndpoint = new DefaultEndpoint(!server);
 
@@ -163,17 +160,6 @@ public class DefaultHttp2Connection implements Http2Connection {
     @Override
     public Http2Stream createRemoteStream(int streamId, boolean halfClosed) throws Http2Exception {
         return remote().createStream(streamId, halfClosed);
-    }
-
-    @Override
-    public void close(Http2Stream stream, ChannelFuture future, ChannelFutureListener closeListener) {
-        stream.close();
-
-        // If this connection is closing and there are no longer any
-        // active streams, close after the current operation completes.
-        if (closeListener != null && numActiveStreams() == 0) {
-            future.addListener(closeListener);
-        }
     }
 
     private void removeStream(DefaultStream stream) {

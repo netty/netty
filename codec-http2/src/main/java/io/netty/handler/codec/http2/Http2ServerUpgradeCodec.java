@@ -19,6 +19,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http2.Http2CodecUtil.FRAME_HEADER_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME;
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_SETTINGS_HEADER;
+import static io.netty.handler.codec.http2.Http2CodecUtil.checkNotNull;
 import static io.netty.handler.codec.http2.Http2CodecUtil.writeFrameHeader;
 import static io.netty.handler.codec.http2.Http2FrameTypes.SETTINGS;
 import io.netty.buffer.ByteBuf;
@@ -43,7 +44,7 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
             Collections.singletonList(HTTP_UPGRADE_SETTINGS_HEADER);
 
     private final String handlerName;
-    private final Http2InboundConnectionHandler connectionHandler;
+    private final Http2ConnectionHandler connectionHandler;
     private final Http2FrameReader frameReader;
     private Http2Settings settings;
 
@@ -53,7 +54,7 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
      *
      * @param connectionHandler the HTTP/2 connection handler.
      */
-    public Http2ServerUpgradeCodec(Http2InboundConnectionHandler connectionHandler) {
+    public Http2ServerUpgradeCodec(Http2ConnectionHandler connectionHandler) {
         this("http2ConnectionHandler", connectionHandler);
     }
 
@@ -63,16 +64,9 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
      * @param handlerName the name of the HTTP/2 connection handler to be used in the pipeline.
      * @param connectionHandler the HTTP/2 connection handler.
      */
-    public Http2ServerUpgradeCodec(String handlerName,
-            Http2InboundConnectionHandler connectionHandler) {
-        if (handlerName == null) {
-            throw new NullPointerException("handlerName");
-        }
-        if (connectionHandler == null) {
-            throw new NullPointerException("connectionHandler");
-        }
-        this.handlerName = handlerName;
-        this.connectionHandler = connectionHandler;
+    public Http2ServerUpgradeCodec(String handlerName, Http2ConnectionHandler connectionHandler) {
+        this.handlerName = checkNotNull(handlerName, "handlerName");
+        this.connectionHandler = checkNotNull(connectionHandler, "connectionHandler");
         frameReader = new DefaultHttp2FrameReader();
     }
 

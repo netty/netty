@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.checkNotNull;
 import static io.netty.handler.codec.http2.Http2FrameLogger.Direction.OUTBOUND;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
@@ -30,14 +31,8 @@ public class Http2OutboundFrameLogger implements Http2FrameWriter {
     private final Http2FrameLogger logger;
 
     public Http2OutboundFrameLogger(Http2FrameWriter writer, Http2FrameLogger logger) {
-        if (writer == null) {
-            throw new NullPointerException("writer");
-        }
-        if (logger == null) {
-            throw new NullPointerException("logger");
-        }
-        this.writer = writer;
-        this.logger = logger;
+        this.writer = checkNotNull(writer, "writer");
+        this.logger = checkNotNull(logger, "logger");
     }
 
     @Override

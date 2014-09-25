@@ -22,6 +22,7 @@ import static io.netty.util.CharsetUtil.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
@@ -35,6 +36,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -139,6 +142,84 @@ public class Http2ConnectionRoundtripTest {
     }
 
     @Test
+    public void http2ExceptionInPipelineShouldCloseConnection() throws Exception {
+
+        // Create a latch to track when the close occurs.
+        final CountDownLatch closeLatch = new CountDownLatch(1);
+        clientChannel.closeFuture().addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                closeLatch.countDown();
+            }
+        });
+
+        // Create a single stream by sending a HEADERS frame to the server.
+        final Http2Headers headers = dummyHeaders();
+        requestLatch(new CountDownLatch(1));
+        runInChannel(clientChannel, new Http2Runnable() {
+            @Override
+            public void run() {
+                http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0, false,
+                        newPromise());
+            }
+        });
+
+        // Wait for the server to create the stream.
+        assertTrue(requestLatch.await(5, TimeUnit.SECONDS));
+
+        // Add a handler that will immediately throw an exception.
+        clientChannel.pipeline().addFirst(new ChannelHandlerAdapter() {
+            @Override
+            public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                throw Http2Exception.protocolError("Fake Exception");
+            }
+        });
+
+        // Wait for the close to occur.
+        assertTrue(closeLatch.await(5, TimeUnit.SECONDS));
+        assertFalse(clientChannel.isOpen());
+    }
+
+    @Test
+    public void nonHttp2ExceptionInPipelineShouldNotCloseConnection() throws Exception {
+
+        // Create a latch to track when the close occurs.
+        final CountDownLatch closeLatch = new CountDownLatch(1);
+        clientChannel.closeFuture().addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                closeLatch.countDown();
+            }
+        });
+
+        // Create a single stream by sending a HEADERS frame to the server.
+        final Http2Headers headers = dummyHeaders();
+        requestLatch(new CountDownLatch(1));
+        runInChannel(clientChannel, new Http2Runnable() {
+            @Override
+            public void run() {
+                http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0, false,
+                        newPromise());
+            }
+        });
+
+        // Wait for the server to create the stream.
+        assertTrue(requestLatch.await(5, TimeUnit.SECONDS));
+
+        // Add a handler that will immediately throw an exception.
+        clientChannel.pipeline().addFirst(new ChannelHandlerAdapter() {
+            @Override
+            public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                throw new RuntimeException("Fake Exception");
+            }
+        });
+
+        // The close should NOT occur.
+        assertFalse(closeLatch.await(5, TimeUnit.SECONDS));
+        assertTrue(clientChannel.isOpen());
+    }
+
+    @Test
     public void flowControlProperlyChunksLargeMessage() throws Exception {
         final Http2Headers headers = dummyHeaders();
 
@@ -168,8 +249,9 @@ public class Http2ConnectionRoundtripTest {
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() {
-                    http2Client.writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0, false, newPromise());
-                    http2Client.writeData(ctx(), 3, data.retain(), 0, true, newPromise());
+                    http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0,
+                            false, newPromise());
+                    http2Client.encoder().writeData(ctx(), 3, data.retain(), 0, true, newPromise());
                 }
             });
 
@@ -221,10 +303,12 @@ public class Http2ConnectionRoundtripTest {
                 @Override
                 public void run() {
                     for (int i = 0, nextStream = 3; i < NUM_STREAMS; ++i, nextStream += 2) {
-                        http2Client.writeHeaders(ctx(), nextStream, headers, 0, (short) 16, false, 0, false,
+                        http2Client.encoder().writeHeaders(ctx(), nextStream, headers, 0,
+                                (short) 16, false, 0, false, newPromise());
+                        http2Client.encoder().writePing(ctx(), false, pingData.slice().retain(),
                                 newPromise());
-                        http2Client.writePing(ctx(), false, pingData.slice().retain(), newPromise());
-                        http2Client.writeData(ctx(), nextStream, data.slice().retain(), 0, true, newPromise());
+                        http2Client.encoder().writeData(ctx(), nextStream, data.slice().retain(),
+                                0, true, newPromise());
                     }
                 }
             });

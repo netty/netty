@@ -17,6 +17,7 @@ package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.checkNotNull;
 import static io.netty.handler.codec.http2.Http2Exception.flowControlError;
 import static io.netty.handler.codec.http2.Http2Exception.protocolError;
 import io.netty.buffer.ByteBuf;
@@ -43,14 +44,8 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
     private int initialWindowSize = DEFAULT_WINDOW_SIZE;
 
     public DefaultHttp2InboundFlowController(Http2Connection connection, Http2FrameWriter frameWriter) {
-        if (connection == null) {
-            throw new NullPointerException("connection");
-        }
-        if (frameWriter == null) {
-            throw new NullPointerException("frameWriter");
-        }
-        this.connection = connection;
-        this.frameWriter = frameWriter;
+        this.connection = checkNotNull(connection, "connection");
+        this.frameWriter = checkNotNull(frameWriter, "frameWriter");
 
         // Add a flow state for the connection.
         connection.connectionStream().inboundFlow(new InboundFlowState(CONNECTION_STREAM_ID));

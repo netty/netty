@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -40,14 +41,8 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
     }
 
     public Http2FrameLogger(InternalLogLevel level, InternalLogger logger) {
-        if (level == null) {
-            throw new NullPointerException("level");
-        }
-        if (logger == null) {
-            throw new NullPointerException("logger");
-        }
-        this.level = level;
-        this.logger = logger;
+        this.level = checkNotNull(level, "level");
+        this.logger = checkNotNull(logger, "logger");
     }
 
     public void logData(Direction direction, int streamId, ByteBuf data, int padding,

@@ -14,6 +14,7 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.TooLongFrameException;
@@ -124,9 +125,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
      */
     protected InboundHttp2ToHttpAdapter(Http2Connection connection, int maxContentLength,
                     boolean validateHttpHeaders) {
-        if (connection == null) {
-            throw new NullPointerException("connection");
-        }
+        checkNotNull(connection, "connection");
         if (maxContentLength <= 0) {
             throw new IllegalArgumentException("maxContentLength must be a positive integer: " + maxContentLength);
         }

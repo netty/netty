@@ -16,7 +16,6 @@
 package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
-import static io.netty.handler.codec.http2.Http2Exception.format;
 import static io.netty.util.CharsetUtil.UTF_8;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -105,10 +104,7 @@ public final class Http2CodecUtil {
 
             @Override
             public void setAction(Action action) {
-                if (action == null) {
-                    throw new NullPointerException("action");
-                }
-                this.action = action;
+                this.action = checkNotNull(action, "action");
             }
 
             @Override
@@ -135,11 +131,27 @@ public final class Http2CodecUtil {
      * Converts the given cause to a {@link Http2Exception} if it isn't already.
      */
     public static Http2Exception toHttp2Exception(Throwable cause) {
-        if (cause instanceof Http2Exception) {
-            return (Http2Exception) cause;
+        // Look for an embedded Http2Exception.
+        Http2Exception httpException = getEmbeddedHttp2Exception(cause);
+        if (httpException != null) {
+            return httpException;
         }
-        String msg = cause != null ? cause.getMessage() : "Failed writing the data frame.";
-        return format(INTERNAL_ERROR, msg);
+
+        return new Http2Exception(INTERNAL_ERROR, cause.getMessage(), cause);
+    }
+
+    /**
+     * Iteratively looks through the causaility chain for the given exception and returns the first
+     * {@link Http2Exception} or {@code null} if none.
+     */
+    public static Http2Exception getEmbeddedHttp2Exception(Throwable cause) {
+        while (cause != null) {
+            if (cause instanceof Http2Exception) {
+                return (Http2Exception) cause;
+            }
+            cause = cause.getCause();
+        }
+        return null;
     }
 
     /**
@@ -204,6 +216,17 @@ public final class Http2CodecUtil {
             promise.setFailure(cause);
         }
         throw cause;
+    }
+
+    /**
+     * Checks that the given argument is not null. If it is, throws {@link NullPointerException}.
+     * Otherwise, returns the argument.
+     */
+    static <T> T checkNotNull(T arg, String text) {
+        if (arg == null) {
+            throw new NullPointerException(text);
+        }
+        return arg;
     }
 
     /**

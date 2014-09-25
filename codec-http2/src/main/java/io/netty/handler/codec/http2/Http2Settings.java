@@ -22,6 +22,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_INITIAL_WINDO
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_CONCURRENT_STREAMS;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_FRAME_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_HEADER_LIST_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.checkNotNull;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isMaxFrameSizeValid;
 import io.netty.util.collection.IntObjectHashMap;
 
@@ -177,9 +178,7 @@ public final class Http2Settings extends IntObjectHashMap<Long> {
     }
 
     private void verifyStandardSetting(int key, Long value) {
-        if (value == null) {
-            throw new NullPointerException("value");
-        }
+        checkNotNull(value, "value");
         switch (key) {
             case SETTINGS_HEADER_TABLE_SIZE:
                 if (value < 0L || value > MAX_UNSIGNED_INT) {

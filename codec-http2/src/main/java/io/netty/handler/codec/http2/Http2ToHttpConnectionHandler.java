@@ -22,7 +22,7 @@ import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.HttpHeaders;
 
 /**
- * Light weight wrapper around {@link Http2ConnectionHandler} to provide HTTP/1.x objects to HTTP/2 frames
+ * Light weight wrapper around {@link DelegatingHttp2ConnectionHandler} to provide HTTP/1.x objects to HTTP/2 frames
  * <p>
  * See {@link InboundHttp2ToHttpAdapter} to get translation from HTTP/2 frames to HTTP/1.x objects
  */
@@ -35,15 +35,15 @@ public class Http2ToHttpConnectionHandler extends Http2ConnectionHandler {
         super(connection, listener);
     }
 
-    public Http2ToHttpConnectionHandler(Http2Connection connection, Http2FrameListener listener,
-            Http2FrameReader frameReader, Http2FrameWriter frameWriter) {
-        super(connection, listener, frameReader, frameWriter);
+    public Http2ToHttpConnectionHandler(Http2Connection connection, Http2FrameReader frameReader,
+            Http2FrameWriter frameWriter, Http2FrameListener listener) {
+        super(connection, frameReader, frameWriter, listener);
     }
 
-    public Http2ToHttpConnectionHandler(Http2Connection connection, Http2FrameListener listener,
-            Http2FrameReader frameReader, Http2InboundFlowController inboundFlow,
-            Http2OutboundConnectionAdapter outbound) {
-        super(connection, listener, frameReader, inboundFlow, outbound);
+    public Http2ToHttpConnectionHandler(Http2Connection connection, Http2FrameReader frameReader,
+            Http2FrameWriter frameWriter, Http2InboundFlowController inboundFlow,
+            Http2OutboundFlowController outboundFlow, Http2FrameListener listener) {
+        super(connection, frameReader, frameWriter, inboundFlow, outboundFlow, listener);
     }
 
     /**
@@ -57,7 +57,7 @@ public class Http2ToHttpConnectionHandler extends Http2ConnectionHandler {
         int streamId = 0;
         String value = httpHeaders.get(HttpUtil.ExtensionHeaderNames.STREAM_ID.text());
         if (value == null) {
-            streamId = connection.local().nextStreamId();
+            streamId = connection().local().nextStreamId();
         } else {
             try {
                 streamId = Integer.parseInt(value);
@@ -97,10 +97,10 @@ public class Http2ToHttpConnectionHandler extends Http2ConnectionHandler {
                 ChannelPromise headerPromise = ctx.newPromise();
                 ChannelPromise dataPromise = ctx.newPromise();
                 promiseAggregator.add(headerPromise, dataPromise);
-                writeHeaders(ctx, streamId, http2Headers, 0, false, headerPromise);
-                writeData(ctx, streamId, httpMsg.content(), 0, true, dataPromise);
+                encoder().writeHeaders(ctx, streamId, http2Headers, 0, false, headerPromise);
+                encoder().writeData(ctx, streamId, httpMsg.content(), 0, true, dataPromise);
             } else {
-                writeHeaders(ctx, streamId, http2Headers, 0, true, promise);
+                encoder().writeHeaders(ctx, streamId, http2Headers, 0, true, promise);
             }
         } else {
             ctx.write(msg, promise);

@@ -14,6 +14,7 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 
@@ -24,10 +25,7 @@ public class Http2FrameListenerDecorator implements Http2FrameListener {
     protected final Http2FrameListener listener;
 
     public Http2FrameListenerDecorator(Http2FrameListener listener) {
-        if (listener == null) {
-            throw new NullPointerException("listener");
-        }
-        this.listener = listener;
+        this.listener = checkNotNull(listener, "listener");
     }
 
     @Override

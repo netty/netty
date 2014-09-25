@@ -39,7 +39,7 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
     private static final List<String> UPGRADE_HEADERS = Collections.singletonList(HTTP_UPGRADE_SETTINGS_HEADER);
 
     private final String handlerName;
-    private final Http2InboundConnectionHandler connectionHandler;
+    private final Http2ConnectionHandler connectionHandler;
 
     /**
      * Creates the codec using a default name for the connection handler when adding to the
@@ -47,7 +47,7 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
      *
      * @param connectionHandler the HTTP/2 connection handler.
      */
-    public Http2ClientUpgradeCodec(Http2InboundConnectionHandler connectionHandler) {
+    public Http2ClientUpgradeCodec(Http2ConnectionHandler connectionHandler) {
         this("http2ConnectionHandler", connectionHandler);
     }
 
@@ -58,15 +58,9 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
      * @param connectionHandler the HTTP/2 connection handler.
      */
     public Http2ClientUpgradeCodec(String handlerName,
-            Http2InboundConnectionHandler connectionHandler) {
-        if (handlerName == null) {
-            throw new NullPointerException("handlerName");
-        }
-        if (connectionHandler == null) {
-            throw new NullPointerException("connectionHandler");
-        }
-        this.handlerName = handlerName;
-        this.connectionHandler = connectionHandler;
+            Http2ConnectionHandler connectionHandler) {
+        this.handlerName = checkNotNull(handlerName, "handlerName");
+        this.connectionHandler = checkNotNull(connectionHandler, "connectionHandler");
     }
 
     @Override
@@ -101,7 +95,7 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
         ByteBuf encodedBuf = null;
         try {
             // Get the local settings for the handler.
-            Http2Settings settings = connectionHandler.settings();
+            Http2Settings settings = connectionHandler.decoder().localSettings();
 
             // Serialize the payload of the SETTINGS frame.
             int payloadLength = SETTING_ENTRY_LENGTH * settings.size();
