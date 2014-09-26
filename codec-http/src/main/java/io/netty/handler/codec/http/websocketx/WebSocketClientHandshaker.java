@@ -28,6 +28,7 @@ import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
+import io.netty.util.internal.StringUtil;
 
 import java.net.URI;
 
@@ -199,7 +200,35 @@ public abstract class WebSocketClientHandshaker {
      */
     public final void finishHandshake(Channel channel, FullHttpResponse response) {
         verify(response);
-        setActualSubprotocol(response.headers().get(HttpHeaders.Names.SEC_WEBSOCKET_PROTOCOL));
+
+        // Verify the subprotocol that we received from the server.
+        // This must be one of our expected subprotocols - or null/empty if we didn't want to speak a subprotocol
+        String receivedProtocol = response.headers().get(HttpHeaders.Names.SEC_WEBSOCKET_PROTOCOL);
+        receivedProtocol = receivedProtocol != null ? receivedProtocol.trim() : null;
+        String expectedProtocol = expectedSubprotocol != null ? expectedSubprotocol : "";
+        boolean protocolValid = false;
+
+        if (expectedProtocol.isEmpty() && receivedProtocol == null) {
+            // No subprotocol required and none received
+            protocolValid = true;
+            setActualSubprotocol(expectedSubprotocol); // null or "" - we echo what the user requested
+        } else if (!expectedProtocol.isEmpty() && receivedProtocol != null && !receivedProtocol.isEmpty()) {
+            // We require a subprotocol and received one -> verify it
+            for (String protocol : StringUtil.split(expectedSubprotocol, ',')) {
+                if (protocol.trim().equals(receivedProtocol)) {
+                    protocolValid = true;
+                    setActualSubprotocol(receivedProtocol);
+                    break;
+                }
+            }
+        } // else mixed cases - which are all errors
+
+        if (!protocolValid) {
+            throw new WebSocketHandshakeException(String.format(
+                    "Invalid subprotocol. Actual: %s. Expected one of: %s",
+                    receivedProtocol, expectedSubprotocol));
+        }
+
         setHandshakeComplete();
 
         ChannelPipeline p = channel.pipeline();
