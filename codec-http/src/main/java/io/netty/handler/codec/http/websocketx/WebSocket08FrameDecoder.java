@@ -301,8 +301,8 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
                             return;
                         }
                         if (frameOpcode == OPCODE_CLOSE) {
-                            checkCloseFrameBody(ctx, payloadBuffer);
                             receivedClosingHandshake = true;
+                            checkCloseFrameBody(ctx, payloadBuffer);
                             out.add(new CloseWebSocketFrame(frameFinalFlag, frameRsv, payloadBuffer));
                             payloadBuffer = null;
                             return;
@@ -394,7 +394,13 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
     private void protocolViolation(ChannelHandlerContext ctx, CorruptedFrameException ex) {
         state = State.CORRUPT;
         if (ctx.channel().isActive()) {
-            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+            Object closeMessage;
+            if (receivedClosingHandshake) {
+                closeMessage = Unpooled.EMPTY_BUFFER;
+            } else {
+                closeMessage = new CloseWebSocketFrame(1002, null);
+            }
+            ctx.writeAndFlush(closeMessage).addListener(ChannelFutureListener.CLOSE);
         }
         throw ex;
     }
