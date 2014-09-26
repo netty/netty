@@ -314,8 +314,8 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                         return;
                     }
                     if (frameOpcode == OPCODE_CLOSE) {
-                        checkCloseFrameBody(ctx, framePayload);
                         receivedClosingHandshake = true;
+                        checkCloseFrameBody(ctx, framePayload);
                         out.add(new CloseWebSocketFrame(frameFinalFlag, frameRsv, framePayload));
                         framePayload = null;
                         return;
@@ -414,7 +414,13 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
     private void protocolViolation(ChannelHandlerContext ctx, CorruptedFrameException ex) {
         checkpoint(State.CORRUPT);
         if (ctx.channel().isActive()) {
-            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+            Object closeMessage;
+            if (receivedClosingHandshake) {
+                closeMessage = Unpooled.EMPTY_BUFFER;
+            } else {
+                closeMessage = new CloseWebSocketFrame(1002, null);
+            }
+            ctx.writeAndFlush(closeMessage).addListener(ChannelFutureListener.CLOSE);
         }
         throw ex;
     }
