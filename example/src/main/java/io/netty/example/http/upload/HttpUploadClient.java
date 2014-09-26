@@ -36,7 +36,7 @@ import io.netty.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData;
 import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -85,8 +85,7 @@ public final class HttpUploadClient {
         final boolean ssl = "https".equalsIgnoreCase(scheme);
         final SslContext sslCtx;
         if (ssl) {
-            SelfSignedCertificate ssc = new SelfSignedCertificate();
-            sslCtx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
+            sslCtx = SslContext.newClientContext(InsecureTrustManagerFactory.INSTANCE);
         } else {
             sslCtx = null;
         }
