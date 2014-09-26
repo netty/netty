@@ -43,6 +43,11 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
     private final boolean handleCloseFrames;
 
     /**
+     * Returns the used handshaker
+     */
+    public WebSocketClientHandshaker handshaker() { return handshaker; }
+
+    /**
      * Events that are fired to notify about handshake status
      */
     public enum ClientHandshakeStateEvent {
