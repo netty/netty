@@ -49,6 +49,16 @@ public class TrafficCounter {
     private final AtomicLong currentReadBytes = new AtomicLong();
 
     /**
+     * Last writing time during current check interval
+     */
+    private long writingTime = System.currentTimeMillis();
+
+    /**
+     * Last reading delay during current check interval
+     */
+    private long readingTime = System.currentTimeMillis();
+
+    /**
      * Long life written bytes
      */
     private final AtomicLong cumulativeWrittenBytes = new AtomicLong();
@@ -74,16 +84,6 @@ public class TrafficCounter {
     private long lastReadThroughput;
 
     /**
-     * Real written bytes
-     */
-    private final AtomicLong realWrittenBytes = new AtomicLong();
-
-    /**
-     * Real writing bandwidth
-     */
-    private long realWriteThroughput;
-
-    /**
      * Last Time Check taken
      */
     private final AtomicLong lastTime = new AtomicLong();
@@ -99,29 +99,24 @@ public class TrafficCounter {
     private long lastReadBytes;
 
     /**
-     * Last non 0 written bytes number during last check interval
+     * Last future writing time during last check interval
      */
-    private long lastNonNullWrittenBytes;
+    private long lastWritingTime = System.currentTimeMillis();
 
     /**
-     * Last time written bytes with non 0 written bytes during last check interval
+     * Last reading time during last check interval
      */
-    private long lastNonNullWrittenTime;
+    private long lastReadingTime = System.currentTimeMillis();
 
     /**
-     * Last time read bytes with non 0 written bytes during last check interval
+     * Real written bytes
      */
-    private long lastNonNullReadTime;
+    private final AtomicLong realWrittenBytes = new AtomicLong();
 
     /**
-     * Last non 0 read bytes number during last check interval
+     * Real writing bandwidth
      */
-    private long lastNonNullReadBytes;
-
-    /**
-     * Last computed delay time a write operation shall occur
-     */
-    private long lastWrittenTime;
+    private long realWriteThroughput;
 
     /**
      * Delay between two captures
@@ -248,19 +243,13 @@ public class TrafficCounter {
         }
         lastReadBytes = currentReadBytes.getAndSet(0);
         lastWrittenBytes = currentWrittenBytes.getAndSet(0);
-        lastReadThroughput = lastReadBytes / interval * 1000;
+        lastReadThroughput = lastReadBytes * 1000 / interval;
         // nb byte / checkInterval in ms * 1000 (1s)
-        lastWriteThroughput = lastWrittenBytes / interval * 1000;
+        lastWriteThroughput = lastWrittenBytes * 1000 / interval;
         // nb byte / checkInterval in ms * 1000 (1s)
-        realWriteThroughput = realWrittenBytes.getAndSet(0) / interval * 1000;
-        if (lastWrittenBytes > 0) {
-            lastNonNullWrittenBytes = lastWrittenBytes;
-            lastNonNullWrittenTime = newLastTime;
-        }
-        if (lastReadBytes > 0) {
-            lastNonNullReadBytes = lastReadBytes;
-            lastNonNullReadTime = newLastTime;
-        }
+        realWriteThroughput = realWrittenBytes.getAndSet(0) * 1000 / interval;
+        lastWritingTime = Math.max(lastWritingTime, writingTime);
+        lastReadingTime = Math.max(lastReadingTime, readingTime);
     }
 
     /**
@@ -333,6 +322,8 @@ public class TrafficCounter {
      *
      * @param write
      *            the size in bytes to write
+     * @param schedule
+     *            the time when this write was scheduled
      */
     void bytesRealWriteFlowControl(long write) {
         realWrittenBytes.addAndGet(write);
@@ -469,45 +460,47 @@ public class TrafficCounter {
     public synchronized long readTimeToWait(final long size, final long limitTraffic, final long maxTime) {
         final long now = System.currentTimeMillis();
         bytesRecvFlowControl(size);
-        if (limitTraffic == 0) {
+        if (size == 0 || limitTraffic == 0) {
             return 0;
         }
+        if (size == 0 || limitTraffic == 0) {
+            return 0;
+        }
+        final long lastTimeCheck = lastTime.get();
+        final long interval = now - lastTimeCheck;
+        long pastDelay = Math.max(lastReadingTime - lastTimeCheck, 0);
         long sum = currentReadBytes.get();
-        long interval = now - lastTime.get();
-        // Short time checking
-        if (interval > AbstractTrafficShapingHandler.MINIMAL_WAIT && sum > 0) {
-            long time = (sum * 1000 / limitTraffic - interval) / 10 * 10;
+        if (interval > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
+            // Enough interval time to compute shaping
+            long time = (sum * 1000 / limitTraffic - interval + pastDelay) / 10 * 10;
             if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Time: " + time + ":" + sum + ":" + interval);
+                    logger.debug("Time: " + time + ":" + sum + ":" + interval + ":" + pastDelay);
                 }
-                return time > maxTime ? maxTime : time;
+                if (time > maxTime && now + time - readingTime > maxTime) {
+                    time = maxTime;
+                }
+                readingTime = Math.max(readingTime, now + time);
+                return time;
             }
+            readingTime = Math.max(readingTime, now);
             return 0;
         }
-        // long time checking
-        if (lastNonNullReadBytes > 0 && lastNonNullReadTime + AbstractTrafficShapingHandler.MINIMAL_WAIT < now) {
-            long lastsum = sum + lastNonNullReadBytes;
-            long lastinterval = now - lastNonNullReadTime;
-            long time = (lastsum * 1000 / limitTraffic - lastinterval) / 10 * 10;
-            if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Time: " + time + ":" + lastsum + ":" + lastinterval);
-                }
-                return time > maxTime ? maxTime : time;
+        // take the last read interval check to get enough interval time
+        long lastsum = sum + lastReadBytes;
+        long lastinterval = interval + checkInterval.get();
+        long time = (lastsum * 1000 / limitTraffic - lastinterval + pastDelay) / 10 * 10;
+        if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Time: " + time + ":" + lastsum + ":" + lastinterval + ":" + pastDelay);
             }
-        } else {
-            // final "middle" time checking in case resetAccounting called very recently
-            sum += lastReadBytes;
-            long lastinterval = AbstractTrafficShapingHandler.MINIMAL_WAIT;
-            long time = (sum * 1000 / limitTraffic - lastinterval) / 10 * 10;
-            if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Time: " + time + ":" + sum + ":" + lastinterval);
-                }
-                return time > maxTime ? maxTime : time;
+            if (time > maxTime && now + time - readingTime > maxTime) {
+                time = maxTime;
             }
+            readingTime = Math.max(readingTime, now + time);
+            return time;
         }
+        readingTime = Math.max(readingTime, now);
         return 0;
     }
 
@@ -525,61 +518,45 @@ public class TrafficCounter {
      */
     public synchronized long writeTimeToWait(final long size, final long limitTraffic, final long maxTime) {
         bytesWriteFlowControl(size);
-        if (limitTraffic == 0) {
+        if (size == 0 || limitTraffic == 0) {
             return 0;
         }
-        long sum = currentWrittenBytes.get();
         final long now = System.currentTimeMillis();
-        long interval = now - lastTime.get();
-        if (interval > AbstractTrafficShapingHandler.MINIMAL_WAIT && sum > 0) {
-            long time = (sum * 1000 / limitTraffic - interval) / 10 * 10;
+        final long lastTimeCheck = lastTime.get();
+        final long interval = now - lastTimeCheck;
+        long pastDelay = Math.max(lastWritingTime - lastTimeCheck, 0);
+        long sum = currentWrittenBytes.get();
+        if (interval > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
+            // Enough interval time to compute shaping
+            long time = (sum * 1000 / limitTraffic - interval + pastDelay) / 10 * 10;
             if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Time: " + time + ":" + sum + ":" + interval);
+                    logger.debug("Time: " + time + ":" + sum + ":" + interval + ":" + pastDelay);
                 }
-                if (time > maxTime) {
-                    if (now + time - lastWrittenTime > maxTime) {
-                        time = maxTime;
-                    }
+                if (time > maxTime && now + time - writingTime > maxTime) {
+                    time = maxTime;
                 }
-                lastWrittenTime = now + time;
+                writingTime = Math.max(writingTime, now + time);
                 return time;
             }
+            writingTime = Math.max(writingTime, now);
             return 0;
         }
-        if (lastNonNullWrittenBytes > 0 && lastNonNullWrittenTime + AbstractTrafficShapingHandler.MINIMAL_WAIT < now) {
-            long lastsum = sum + lastNonNullWrittenBytes;
-            long lastinterval = now - lastNonNullWrittenTime;
-            long time = (lastsum * 1000 / limitTraffic - lastinterval) / 10 * 10;
-            if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Time: " + time + ":" + lastsum + ":" + lastinterval);
-                }
-                if (time > maxTime) {
-                    if (now + time - lastWrittenTime > maxTime) {
-                        time = maxTime;
-                    }
-                }
-                lastWrittenTime = now + time;
-                return time;
+        // take the last write interval check to get enough interval time
+        long lastsum = sum + lastWrittenBytes;
+        long lastinterval = interval + checkInterval.get();
+        long time = (lastsum * 1000 / limitTraffic - lastinterval + pastDelay) / 10 * 10;
+        if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Time: " + time + ":" + lastsum + ":" + lastinterval + ":" + pastDelay);
             }
-        } else {
-            sum += lastWrittenBytes;
-            long lastinterval = AbstractTrafficShapingHandler.MINIMAL_WAIT + Math.abs(interval);
-            long time = (sum * 1000 / limitTraffic - lastinterval) / 10 * 10;
-            if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Time: " + time + ":" + sum + ":" + lastinterval);
-                }
-                if (time > maxTime) {
-                    if (now + time - lastWrittenTime > maxTime) {
-                        time = maxTime;
-                    }
-                }
-                lastWrittenTime = now + time;
-                return time;
+            if (time > maxTime && now + time - writingTime > maxTime) {
+                time = maxTime;
             }
+            writingTime = Math.max(writingTime, now + time);
+            return time;
         }
+        writingTime = Math.max(writingTime, now);
         return 0;
     }
 

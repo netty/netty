@@ -42,7 +42,8 @@ import java.util.concurrent.TimeUnit;
  * </ul>
  */
 public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractTrafficShapingHandler.class);
+    private static final InternalLogger logger =
+            InternalLoggerFactory.getInstance(AbstractTrafficShapingHandler.class);
 
     /**
      * Default delay between two checks: 1s
@@ -55,6 +56,11 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
      * Shall be less than TIMEOUT. Here half of "standard" 30s
      */
     public static final long DEFAULT_MAX_TIME = 15000;
+
+    /**
+     * Default max size to not exceed in buffer (write only).
+     */
+    public static final long DEFAULT_MAX_SIZE = 4*1024*1024L;
 
     /**
      * Default minimal time to wait
@@ -86,11 +92,31 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
      */
     protected long checkInterval = DEFAULT_CHECK_INTERVAL; // default 1 s
 
+    /**
+     * Max time to delay before proposing to stop writing new objects from next handlers
+     */
+    protected long maxWriteDelay = DEFAULT_CHECK_INTERVAL; // default 1 s
+    /**
+     * Max size in the list before proposing to stop writing new objects from next handlers
+     */
+    protected long maxWriteSize = DEFAULT_MAX_SIZE; // default 4MB
+
     private static final AttributeKey<Boolean> READ_SUSPENDED = AttributeKey
             .valueOf(AbstractTrafficShapingHandler.class.getName() + ".READ_SUSPENDED");
     private static final AttributeKey<Runnable> REOPEN_TASK = AttributeKey.valueOf(AbstractTrafficShapingHandler.class
             .getName() + ".REOPEN_TASK");
+    /**
+     * Attribute to use internally through <code>checkWriteSuspended()</code> or directly in next handlers
+     */
+    public static final AttributeKey<Boolean> WRITE_SUSPENDED = AttributeKey
+            .valueOf(AbstractTrafficShapingHandler.class.getName() + ".WRITE_SUSPENDED");
 
+    public static enum TrafficShapingEvent {
+        /**
+         * Event to inform Write is enable again
+         */
+        WRITE_ENABLED
+    }
     /**
      *
      * @param newTrafficCounter
@@ -247,7 +273,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
     }
 
     /**
-     * @param checkInterval the checkInterval to set
+     * @param checkInterval the interval in ms between each step check to set
      */
     public void setCheckInterval(long checkInterval) {
         this.checkInterval = checkInterval;
@@ -266,10 +292,39 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
     }
 
     /**
-     * @return the max delay in wait
+     * @return the max delay in wait to prevent TIME OUT
      */
     public long getMaxTimeWait() {
         return maxTime;
+    }
+
+    /**
+     * @return the maxWriteDelay
+     */
+    public long getMaxWriteDelay() {
+        return maxWriteDelay;
+    }
+
+    /**
+     * @param maxWriteDelay the maximum Write Delay in ms in the buffer allowed before write suspended is set
+     */
+    public void setMaxWriteDelay(long maxWriteDelay) {
+        this.maxWriteDelay = maxWriteDelay;
+    }
+
+    /**
+     * @return the maxWriteSize
+     */
+    public long getMaxWriteSize() {
+        return maxWriteSize;
+    }
+
+    /**
+     * @param maxWriteSize the maximum Write Size allowed in the buffer
+     *            per channel before write suspended is set
+     */
+    public void setMaxWriteSize(long maxWriteSize) {
+        this.maxWriteSize = maxWriteSize;
     }
 
     /**
@@ -294,24 +349,24 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
         }
 
         public void run() {
-            if (!ctx.channel().config().isAutoRead() && isHandlerActive(ctx)) {
+            if (!ctx.channel().config().isAutoRead() && isHandlerReadActive(ctx)) {
                 // If AutoRead is False and Active is True, user make a direct setAutoRead(false)
                 // Then Just reset the status
                 if (logger.isDebugEnabled()) {
                     logger.debug("Channel:" + ctx.channel().hashCode() +
-                            " Not Unsuspend: " + ctx.channel().config().isAutoRead() + ":" + isHandlerActive(ctx));
+                            " Not Unsuspend: " + ctx.channel().config().isAutoRead() + ":" + isHandlerReadActive(ctx));
                 }
                 ctx.attr(READ_SUSPENDED).set(false);
             } else {
                 // Anything else allows the handler to reset the AutoRead
                 if (logger.isDebugEnabled()) {
-                    if (ctx.channel().config().isAutoRead() && !isHandlerActive(ctx)) {
+                    if (ctx.channel().config().isAutoRead() && !isHandlerReadActive(ctx)) {
                         logger.debug("Channel:" + ctx.channel().hashCode() +
-                                " Unsuspend: " + ctx.channel().config().isAutoRead() + ":" + isHandlerActive(ctx));
+                                " Unsuspend: " + ctx.channel().config().isAutoRead() + ":" + isHandlerReadActive(ctx));
                     } else {
                         logger.debug("Channel:" + ctx.channel().hashCode() +
                                 " Normal Unsuspend: " + ctx.channel().config().isAutoRead() + ":"
-                                + isHandlerActive(ctx));
+                                + isHandlerReadActive(ctx));
                     }
                 }
                 ctx.attr(READ_SUSPENDED).set(false);
@@ -321,7 +376,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
             if (logger.isDebugEnabled()) {
                 logger.debug("Channel:" + ctx.channel().hashCode() +
                         " Unsupsend final status => " + ctx.channel().config().isAutoRead() + ":"
-                        + isHandlerActive(ctx));
+                        + isHandlerReadActive(ctx));
             }
         }
     }
@@ -333,15 +388,16 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
         if (size > 0 && trafficCounter != null) {
             // compute the number of ms to wait before reopening the channel
             long wait = trafficCounter.readTimeToWait(size, readLimit, maxTime);
+            wait = checkWaitReadTime(ctx, wait);
             if (wait >= MINIMAL_WAIT) { // At least 10ms seems a minimal
                 // time in order to try to limit the traffic
                 // Only AutoRead AND HandlerActive True means Context Active
                 if (logger.isDebugEnabled()) {
                     logger.debug("Channel:" + ctx.channel().hashCode() +
                             " Read Suspend: " + wait + ":" + ctx.channel().config().isAutoRead() + ":"
-                            + isHandlerActive(ctx));
+                            + isHandlerReadActive(ctx));
                 }
-                if (ctx.channel().config().isAutoRead() && isHandlerActive(ctx)) {
+                if (ctx.channel().config().isAutoRead() && isHandlerReadActive(ctx)) {
                     ctx.channel().config().setAutoRead(false);
                     ctx.attr(READ_SUSPENDED).set(true);
                     // Create a Runnable to reactive the read if needed. If one was create before it will just be
@@ -356,23 +412,42 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                     if (logger.isDebugEnabled()) {
                         logger.debug("Channel:" + ctx.channel().hashCode() +
                                 " Suspend final status => " + ctx.channel().config().isAutoRead() + ":"
-                                + isHandlerActive(ctx) +
+                                + isHandlerReadActive(ctx) +
                                 " will reopened at: " + wait);
                     }
                 }
             }
         }
+        informReadOperation(ctx);
         ctx.fireChannelRead(msg);
     }
 
-    protected static boolean isHandlerActive(ChannelHandlerContext ctx) {
+    /**
+     * Method overridden in GTSH to take into account specific timer for the channel
+     * @param ctx
+     * @param wait
+     * @return the wait to use according to the context
+     */
+    protected long checkWaitReadTime(final ChannelHandlerContext ctx, long wait) {
+        // no change by default
+        return wait;
+    }
+
+    /**
+     * Method overridden in GTSH to take into account specific timer for the channel
+     * @param ctx
+     */
+    protected void informReadOperation(final ChannelHandlerContext ctx) {
+        // default noop
+    }
+    protected static boolean isHandlerReadActive(ChannelHandlerContext ctx) {
         Boolean suspended = ctx.attr(READ_SUSPENDED).get();
         return suspended == null || Boolean.FALSE.equals(suspended);
     }
 
     @Override
     public void read(ChannelHandlerContext ctx) {
-        if (isHandlerActive(ctx)) {
+        if (isHandlerReadActive(ctx)) {
             // For Global Traffic (and Read when using EventLoop in pipeline) : check if READ_SUSPENDED is False
             ctx.read();
         }
@@ -387,29 +462,56 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
             // compute the number of ms to wait before continue with the channel
             long wait = trafficCounter.writeTimeToWait(size, writeLimit, maxTime);
             if (wait >= MINIMAL_WAIT) {
-                /*
-                 * Option 2: but issue with ctx.executor().schedule()
-                 * Thread.sleep(wait);
-                 * System.out.println("Write unsuspended");
-                 * Option 1: use an ordered list of messages to send
-                 * Warning of memory pressure!
-                 */
                 if (logger.isDebugEnabled()) {
                     logger.debug("Channel:" + ctx.channel().hashCode() +
                             " Write suspend: " + wait + ":" + ctx.channel().config().isAutoRead() + ":"
-                            + isHandlerActive(ctx));
+                            + isHandlerReadActive(ctx));
                 }
-                submitWrite(ctx, msg, wait, promise);
+                submitWrite(ctx, msg, size, wait, promise);
                 return;
             }
         }
         // to keep message order if not using option 2
-        submitWrite(ctx, msg, 0, promise);
+        submitWrite(ctx, msg, size, 0, promise);
     }
 
-    protected abstract void submitWrite(final ChannelHandlerContext ctx, final Object msg, final long delay,
-            final ChannelPromise promise);
+    protected abstract void submitWrite(final ChannelHandlerContext ctx, final Object msg, final long size,
+            final long delay, final ChannelPromise promise);
 
+    @Override
+    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+        ctx.channel().attr(WRITE_SUSPENDED).set(false);
+        super.channelRegistered(ctx);
+    }
+
+    /**
+     * Check the writability according to delay and size for the channel.
+     * Set if necessary WRITE_SUSPENDED status.
+     * @param ctx
+     * @param delay
+     * @param queueSize
+     */
+    protected void checkWriteSuspend(ChannelHandlerContext ctx, long delay, long queueSize) {
+        if (queueSize > maxWriteSize || delay > maxWriteDelay) {
+            ctx.channel().attr(WRITE_SUSPENDED).set(true);
+        }
+    }
+    /**
+     * Explicitly release the Write suspended status and trigger the event WRITE_ENABLED
+     * @param ctx
+     */
+    protected void releaseWriteSuspended(ChannelHandlerContext ctx) {
+        ctx.channel().attr(WRITE_SUSPENDED).set(false);
+        ctx.fireUserEventTriggered(TrafficShapingEvent.WRITE_ENABLED);
+    }
+    /**
+     * Check if the current channel is WRITE SUSPENDED by a TrafficShapingHandler
+     * @param ctx
+     * @return True if write is in Suspended status
+     */
+    public static boolean checkWriteSuspended(ChannelHandlerContext ctx) {
+        return ctx.channel().attr(WRITE_SUSPENDED).get();
+    }
     /**
      *
      * @return the current TrafficCounter (if
@@ -422,7 +524,8 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
     @Override
     public String toString() {
         return "TrafficShaping with Write Limit: " + writeLimit + " Read Limit: " + readLimit +
-                " CheckInterval: " + checkInterval + " and Counter: "
+                " CheckInterval: " + checkInterval + " maxDelay: " + maxWriteDelay +
+                " maxSize: " + maxWriteSize + " and Counter: "
                 + (trafficCounter != null ? trafficCounter.toString() : "none");
     }
 
