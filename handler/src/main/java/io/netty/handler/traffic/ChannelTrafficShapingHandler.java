@@ -52,7 +52,7 @@ import io.netty.channel.ChannelPromise;
  */
 public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler {
     private List<ToSend> messagesQueue = new LinkedList<ToSend>();
-    private long queueSize = 0;
+    private long queueSize;
 
     /**
      * Create a new instance
@@ -187,7 +187,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
         ctx.flush();
     }
     /**
-     * 
+     *
      * @return current size in bytes of the write buffer
      */
     public long queueSize() {

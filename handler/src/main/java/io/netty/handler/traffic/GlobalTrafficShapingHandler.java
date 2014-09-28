@@ -70,12 +70,12 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     /**
      * Global queues size
      */
-    private long queuesSize = 0;
+    private long queuesSize;
     /**
      * Max size in the list before proposing to stop writing new objects from next handlers
      * for all channel (global)
      */
-    protected long maxGlobalWriteSize = DEFAULT_MAX_SIZE*100; // default 400MB
+    protected long maxGlobalWriteSize = DEFAULT_MAX_SIZE * 100; // default 400MB
 
     private static class PerChannel {
         List<ToSend> messagesQueue;
@@ -211,7 +211,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         Integer key = ctx.channel().hashCode();
         PerChannel perChannel = new PerChannel();
-        perChannel.messagesQueue = new LinkedList<ToSend>();;
+        perChannel.messagesQueue = new LinkedList<ToSend>();
         perChannel.queueSize = 0L;
         perChannel.lastRead = System.currentTimeMillis();
         perChannel.lastWrite = System.currentTimeMillis();
@@ -273,7 +273,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
             final ChannelPromise promise) {
         Integer key = ctx.channel().hashCode();
         PerChannel perChannel = channelQueues.get(key);
-        if (writedelay == 0 && (perChannel == null || perChannel.messagesQueue == null || 
+        if (writedelay == 0 && (perChannel == null || perChannel.messagesQueue == null ||
                 perChannel.messagesQueue.isEmpty())) {
             trafficCounter.bytesRealWriteFlowControl(size);
             ctx.write(msg, promise);
@@ -287,7 +287,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         final ToSend newToSend = new ToSend(delay, msg, promise);
         if (perChannel == null) {
             perChannel = new PerChannel();
-            perChannel.messagesQueue = new LinkedList<ToSend>();;
+            perChannel.messagesQueue = new LinkedList<ToSend>();
             perChannel.queueSize = 0L;
             perChannel.lastRead = System.currentTimeMillis();
             perChannel.lastWrite = System.currentTimeMillis();

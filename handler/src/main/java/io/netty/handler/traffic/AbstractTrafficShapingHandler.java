@@ -60,7 +60,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
     /**
      * Default max size to not exceed in buffer (write only).
      */
-    public static final long DEFAULT_MAX_SIZE = 4*1024*1024L;
+    public static final long DEFAULT_MAX_SIZE = 4 * 1024 * 1024L;
 
     /**
      * Default minimal time to wait
