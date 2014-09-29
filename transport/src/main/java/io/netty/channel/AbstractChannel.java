@@ -62,6 +62,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private volatile SocketAddress remoteAddress;
     private volatile EventLoop eventLoop;
     private volatile boolean registered;
+    private volatile boolean softWritable = true;
 
     /** Cache for the string representation of this channel */
     private boolean strValActive;
@@ -82,10 +83,20 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     @Override
     public boolean isWritable() {
         ChannelOutboundBuffer buf = unsafe.outboundBuffer();
-        return buf != null && buf.isWritable();
+        return buf != null && buf.isWritable() && softWritable;
     }
 
     @Override
+	public boolean isSoftWritable() {
+		return softWritable;
+	}
+
+    @Override
+	public void softWritable(boolean softWritable) {
+		this.softWritable = softWritable;
+	}
+
+	@Override
     public Channel parent() {
         return parent;
     }
