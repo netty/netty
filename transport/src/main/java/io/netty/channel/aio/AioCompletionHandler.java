@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -26,7 +26,7 @@ import java.nio.channels.CompletionHandler;
 public abstract class AioCompletionHandler<V, A extends Channel> implements CompletionHandler<V, A> {
 
     // According to JDK AIO documentation, the ExecutorService a user specified must not call the Runnable given by
-    // JDK AIO implementation directly.  However, we violates that rull by calling Runnable.run() directly for
+    // JDK AIO implementation directly.  However, we violates that rule by calling Runnable.run() directly for
     // optimization purposes, and it can result in infinite recursion in combination with the fact that the JDK AIO
     // implementation often makes recursive invocations.  Therefore, we must make sure we don't go too deep in the
     // stack.
@@ -62,7 +62,7 @@ public abstract class AioCompletionHandler<V, A extends Channel> implements Comp
                 }
             } else {
                 // schedule it with a special runnable to make sure we keep the right
-                // order and exist the recursive call to prevent stackoverflow
+                // order and exit the recursive call to prevent stackoverflow
                 loop.execute(new AioEventLoop.RecursionBreakingRunnable() {
                     @Override
                     public void run() {

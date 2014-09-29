@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -26,6 +26,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.aio.AbstractAioChannel;
 import io.netty.channel.aio.AioCompletionHandler;
 import io.netty.channel.aio.AioEventLoopGroup;
@@ -40,13 +41,13 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousChannelGroup;
+import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.CompletionHandler;
 import java.nio.channels.InterruptedByTimeoutException;
 import java.nio.channels.WritableByteChannel;
 import java.util.concurrent.TimeUnit;
-
 
 /**
  * {@link SocketChannel} implementation which uses NIO2.
@@ -74,6 +75,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     private int writeInProgress;
     private boolean inDoFlushByteBuffer;
     private ByteBuf byteBuf;
+    private RecvByteBufAllocator.Handle allocHandle;
 
     /**
      * Create a new instance which has not yet attached an {@link AsynchronousSocketChannel}. The {@link
@@ -102,40 +104,12 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         }
     }
 
-    // 0 - not expanded because the buffer is writable
-    // 1 - expanded because the buffer was not writable
-    // 2 - could not expand because the buffer was at its maximum although the buffer is not writable.
-    protected static int expandReadBuffer(ByteBuf byteBuf) {
-        final int writerIndex = byteBuf.writerIndex();
-        final int capacity = byteBuf.capacity();
-        if (capacity != writerIndex) {
-            return 0;
-        }
-
-        final int maxCapacity = byteBuf.maxCapacity();
-        if (capacity == maxCapacity) {
-            return 2;
-        }
-
-        // FIXME: Magic number
-        final int increment = 4096;
-
-        if (writerIndex + increment > maxCapacity) {
-            // Expand to maximum capacity.
-            byteBuf.capacity(maxCapacity);
-        } else {
-            // Expand by the increment.
-            byteBuf.ensureWritable(increment);
-        }
-
-        return 1;
-    }
-
     protected static boolean notReadable(ChannelOutboundBuffer buffer) {
         if (buffer == null) {
             return true;
         }
-        for (int i = 0; i < buffer.size(); i++) {
+        int size = buffer.size();
+        for (int i = 0; i < size; i++) {
             Object msg = buffer.current();
             if (msg == null) {
                 return true;
@@ -144,11 +118,12 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 ByteBuf buf = (ByteBuf) msg;
                 if (!buf.isReadable()) {
                     buffer.remove();
+                } else {
+                    break;
                 }
             }
         }
-
-        return buffer.size() < 1;
+        return buffer.isEmpty();
     }
 
     @Override
@@ -284,7 +259,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-
         if (inDoFlushByteBuffer || writeInProgress != NO_WRITE_IN_PROGRESS) {
             return;
         }
@@ -298,53 +272,48 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             Object msg = in.current();
             if (msg instanceof ByteBuf) {
                 ByteBuf buf = (ByteBuf) msg;
-                if (buf.isReadable()) {
-                    for (;;) {
-                        if (buf.refCnt() == 0) {
-                            break;
-                        }
-                        // Ensure the readerIndex of the buffer is 0 before beginning an async write.
-                        // Otherwise, JDK can write into a wrong region of the buffer when a handler calls
-                        // discardReadBytes() later, modifying the readerIndex and the writerIndex unexpectedly.
-                        buf.discardReadBytes();
+                for (;;) {
+                    // Ensure the readerIndex of the buffer is 0 before beginning an async write.
+                    // Otherwise, JDK can write into a wrong region of the buffer when a handler calls
+                    // discardReadBytes() later, modifying the readerIndex and the writerIndex unexpectedly.
+                    buf.discardReadBytes();
 
-                        writeInProgress = WRITE_IN_PROGRESS;
-                        if (buf.nioBufferCount() == 1) {
+                    writeInProgress = WRITE_IN_PROGRESS;
+                    if (buf.nioBufferCount() == 1) {
+                        javaChannel().write(
+                                buf.nioBuffer(), config.getWriteTimeout(), TimeUnit.MILLISECONDS, this,
+                                WRITE_HANDLER);
+                    } else {
+                        ByteBuffer[] buffers = buf.nioBuffers(buf.readerIndex(), buf.readableBytes());
+                        if (buffers.length == 1) {
                             javaChannel().write(
-                                    buf.nioBuffer(), config.getWriteTimeout(), TimeUnit.MILLISECONDS, this,
+                                    buffers[0], config.getWriteTimeout(), TimeUnit.MILLISECONDS, this,
                                     WRITE_HANDLER);
                         } else {
-                            ByteBuffer[] buffers = buf.nioBuffers(buf.readerIndex(), buf.readableBytes());
-                            if (buffers.length == 1) {
-                                javaChannel().write(
-                                        buffers[0], config.getWriteTimeout(), TimeUnit.MILLISECONDS, this,
-                                        WRITE_HANDLER);
-                            } else {
-                                javaChannel().write(
-                                        buffers, 0, buffers.length, config.getWriteTimeout(), TimeUnit.MILLISECONDS,
-                                        this, GATHERING_WRITE_HANDLER);
-                            }
+                            javaChannel().write(
+                                    buffers, 0, buffers.length, config.getWriteTimeout(), TimeUnit.MILLISECONDS,
+                                    this, GATHERING_WRITE_HANDLER);
                         }
-
-                        if (writeInProgress != NO_WRITE_IN_PROGRESS) {
-                            if (writeInProgress == WRITE_FAILED) {
-                                // failed because of an exception so reset state and break out of the loop now
-                                // See #1242
-                                writeInProgress = NO_WRITE_IN_PROGRESS;
-                                break;
-                            }
-                            // JDK decided to write data (or notify handler) later.
-                            break;
-                        }
-
-                        // JDK performed the write operation immediately and notified the handler.
-                        // We know this because we set asyncWriteInProgress to false in the handler.
-                        if (!buf.isReadable()) {
-                            // There's nothing left in the buffer. No need to retry writing.
-                            break;
-                        }
-                        // There's more to write. Continue the loop.
                     }
+
+                    if (writeInProgress != NO_WRITE_IN_PROGRESS) {
+                        if (writeInProgress == WRITE_FAILED) {
+                            // failed because of an exception so reset state and break out of the loop now
+                            // See #1242
+                            writeInProgress = NO_WRITE_IN_PROGRESS;
+                            break;
+                        }
+                        // JDK decided to write data (or notify handler) later.
+                        break;
+                    }
+
+                    // JDK performed the write operation immediately and notified the handler.
+                    // We know this because we set asyncWriteInProgress to false in the handler.
+                    if (!buf.isReadable()) {
+                        // There's nothing left in the buffer. No need to retry writing.
+                        break;
+                    }
+                    // There's more to write. Continue the loop.
                 }
             } else if (msg instanceof FileRegion) {
                 FileRegion region = (FileRegion) msg;
@@ -368,16 +337,22 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             return;
         }
         inDoBeginRead = true;
+
         try {
+            final ByteBufAllocator allocator = config.getAllocator();
+            RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
+            if (allocHandle == null) {
+                this.allocHandle = allocHandle = config.getRecvByteBufAllocator().newHandle();
+            }
+
             for (;;) {
                 if (inputShutdown) {
                     break;
                 }
 
                 if (byteBuf == null) {
-                    final ByteBufAllocator allocator = config.getAllocator();
-                    byteBuf = allocator.ioBuffer();
-                    expandReadBuffer(byteBuf);
+                    int byteBufCapacity = allocHandle.guess();
+                    byteBuf = allocator.ioBuffer(byteBufCapacity);
                 }
 
                 readInProgress = true;
@@ -424,11 +399,10 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
         @Override
         protected void completed0(T result, AioSocketChannel channel) {
-
             channel.writeInProgress = NO_WRITE_IN_PROGRESS;
 
             ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
-            if (notReadable(buffer)) {
+            if (buffer == null) {
                 return;
             }
 
@@ -436,9 +410,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
             if (msg instanceof ByteBuf) {
                 ByteBuf buf = (ByteBuf) msg;
-                if (buf.refCnt() == 0) {
-                    return;
-                }
                 int writtenBytes = result.intValue();
                 if (writtenBytes > 0) {
                     // Update the readerIndex with the amount of read bytes
@@ -464,7 +435,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                     channel.unsafe().flush();
                 } else {
                     buffer.remove();
-                    if (buffer.size() >= 1) {
+                    if (!buffer.isEmpty()) {
                         channel.unsafe().flush();
                     }
                 }
@@ -476,6 +447,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         @Override
         protected void failed0(Throwable cause, AioSocketChannel channel) {
             channel.writeInProgress = WRITE_FAILED;
+            ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
+            if(buffer != null) buffer.remove(cause);
             // Check if the exception was raised because of an InterruptedByTimeoutException which means that the
             // write timeout was hit. In that case we should close the channel as it may be unusable anyway.
             // See http://openjdk.java.net/projects/nio/javadoc/java/nio/channels/AsynchronousSocketChannel.html
@@ -489,7 +462,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
         @Override
         protected void completed0(T result, AioSocketChannel channel) {
-
             channel.readInProgress = false;
             if (channel.inputShutdown) {
                 // Channel has been closed during read. Because the inbound buffer has been deallocated already,
@@ -513,6 +485,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                     // each others index
                     byteBuf.writerIndex(byteBuf.writerIndex() + localReadAmount);
                     read = true;
+                    channel.allocHandle.record(localReadAmount);
                 } else if (localReadAmount < 0) {
                     closed = true;
                 }
@@ -560,7 +533,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 channel.byteBuf = null;
             }
             channel.readInProgress = false;
-            if (t instanceof ClosedChannelException) {
+            if (t instanceof ClosedChannelException || t instanceof AsynchronousCloseException) {
                 channel.inputShutdown = true;
                 return;
             }

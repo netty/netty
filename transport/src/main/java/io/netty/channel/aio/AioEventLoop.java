@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -126,7 +126,7 @@ final class AioEventLoop extends SingleThreadEventLoop {
     /**
      * Special Runnable which is used by {@link AioCompletionHandler} to break a recursive call and so prevent from
      * StackOverFlowError. When a task is executed that implement it needs to put on the first position of the queue to
-     * guaranteer execution order and break the recursive call.
+     * guarantee execution order and break the recursive call.
      */
     interface RecursionBreakingRunnable extends Runnable {
         // Marker interface
