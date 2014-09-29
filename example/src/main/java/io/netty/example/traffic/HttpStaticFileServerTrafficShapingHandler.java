@@ -292,9 +292,9 @@ public class HttpStaticFileServerTrafficShapingHandler extends SimpleChannelInbo
         }
         doSendCheckWritabilityChanged(ctx);
         ctx.fireChannelWritabilityChanged();
-	}
+    }
 
-	/**
+    /**
      * Using ChannelTrafficShapingHandler.checkWriteSuspended
      * or GlobalTrafficShapingHandler.checkWriteSuspended (no impact on the choice) to
      * check if the buffer is full or not. Use then the userEventTrigger to restart
