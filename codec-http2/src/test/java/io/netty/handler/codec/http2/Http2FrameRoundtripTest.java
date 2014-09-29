@@ -47,6 +47,7 @@ import io.netty.util.concurrent.Future;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -132,7 +133,7 @@ public class Http2FrameRoundtripTest {
     public void dataFrameShouldMatch() throws Exception {
         final String text = "hello world";
         final ByteBuf data = Unpooled.copiedBuffer(text, UTF_8);
-        final List<String> receivedBuffers = new ArrayList<String>();
+        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<String>());
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock in) throws Throwable {
@@ -194,7 +195,7 @@ public class Http2FrameRoundtripTest {
     public void goAwayFrameShouldMatch() throws Exception {
         final String text = "test";
         final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
-        final List<String> receivedBuffers = new ArrayList<String>();
+        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<String>());
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock in) throws Throwable {
@@ -225,7 +226,7 @@ public class Http2FrameRoundtripTest {
     public void pingFrameShouldMatch() throws Exception {
         String text = "01234567";
         final ByteBuf data = Unpooled.copiedBuffer(text, UTF_8);
-        final List<String> receivedBuffers = new ArrayList<String>();
+        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<String>());
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock in) throws Throwable {
@@ -332,7 +333,7 @@ public class Http2FrameRoundtripTest {
         final String text = "hello world";
         final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
         final int numStreams = 10000;
-        final List<String> receivedBuffers = new ArrayList<String>(numStreams);
+        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<String>(numStreams));
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock in) throws Throwable {
