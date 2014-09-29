@@ -480,7 +480,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
 
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-    	ctx.channel().softWritable(true);
+        ctx.channel().softWritable(true);
         ctx.channel().attr(WRITE_SUSPENDED).set(false);
         super.channelRegistered(ctx);
     }
@@ -494,9 +494,9 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
      */
     protected void checkWriteSuspend(ChannelHandlerContext ctx, long delay, long queueSize) {
         if (queueSize > maxWriteSize || delay > maxWriteDelay) {
-        	ctx.channel().softWritable(false);
+            ctx.channel().softWritable(false);
             ctx.channel().attr(WRITE_SUSPENDED).set(true);
-        	ctx.fireChannelWritabilityChanged();
+            ctx.fireChannelWritabilityChanged();
         }
     }
     /**
@@ -504,9 +504,9 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
      * @param ctx
      */
     protected void releaseWriteSuspended(ChannelHandlerContext ctx) {
-    	ctx.channel().softWritable(true);
-    	ctx.channel().attr(WRITE_SUSPENDED).set(false);
-    	ctx.fireChannelWritabilityChanged();
+        ctx.channel().softWritable(true);
+        ctx.channel().attr(WRITE_SUSPENDED).set(false);
+        ctx.fireChannelWritabilityChanged();
         ctx.fireUserEventTriggered(TrafficShapingEvent.WRITE_ENABLED);
     }
     /**
