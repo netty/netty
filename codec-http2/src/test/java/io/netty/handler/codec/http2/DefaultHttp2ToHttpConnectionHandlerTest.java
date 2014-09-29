@@ -53,6 +53,7 @@ import io.netty.util.concurrent.Future;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -175,7 +176,7 @@ public class DefaultHttp2ToHttpConnectionHandlerTest {
         requestLatch(new CountDownLatch(CONNECTION_SETUP_READ_COUNT + 2));
         final String text = "foooooogoooo";
         final ByteBuf data = Unpooled.copiedBuffer(text, UTF_8);
-        final List<String> receivedBuffers = new ArrayList<String>();
+        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<String>());
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock in) throws Throwable {

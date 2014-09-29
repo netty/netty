@@ -49,6 +49,7 @@ import io.netty.util.concurrent.Future;
 import java.io.ByteArrayOutputStream;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
@@ -199,7 +200,7 @@ public class Http2ConnectionRoundtripTest {
         final String pingMsg = "12345678";
         final ByteBuf data = Unpooled.copiedBuffer(text, UTF_8);
         final ByteBuf pingData = Unpooled.copiedBuffer(pingMsg, UTF_8);
-        final List<String> receivedPingBuffers = new ArrayList<String>(NUM_STREAMS);
+        final List<String> receivedPingBuffers = Collections.synchronizedList(new ArrayList<String>(NUM_STREAMS));
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock in) throws Throwable {
