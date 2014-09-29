@@ -158,7 +158,7 @@ public interface Channel extends AttributeMap, Comparable<Channel> {
      */
     boolean isWritable();
     /**
-     * 
+     *
      * @return the current status of soft Writable property. False means
      * an handler is willing to block the write operation. If False,
      * isWritable() will also returns False.
@@ -169,7 +169,7 @@ public interface Channel extends AttributeMap, Comparable<Channel> {
      * Allow to set the soft writable status for this channel.
      * @param softWritable
      */
-	void softWritable(boolean softWritable);
+    void softWritable(boolean softWritable);
     /**
      * Returns an <em>internal-use-only</em> object that provides unsafe operations.
      */

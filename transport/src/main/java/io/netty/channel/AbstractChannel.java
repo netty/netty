@@ -87,16 +87,16 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-	public boolean isSoftWritable() {
-		return softWritable;
-	}
+    public boolean isSoftWritable() {
+        return softWritable;
+    }
 
     @Override
-	public void softWritable(boolean softWritable) {
-		this.softWritable = softWritable;
-	}
+    public void softWritable(boolean softWritable) {
+        this.softWritable = softWritable;
+    }
 
-	@Override
+    @Override
     public Channel parent() {
         return parent;
     }
