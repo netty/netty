@@ -51,7 +51,6 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
  * useGlobalTSH = true
  *     => to show that individual speeds are divided by the number of concurrent requests<br>
  *
- * @author "Frederic Bregier"
  *
  */
 public final class HttpStaticFileServerTrafficShaping {
@@ -61,8 +60,8 @@ public final class HttpStaticFileServerTrafficShaping {
         useCheckWritability, useChunkedFile, useDefault
     }
     static ModeTransfer modeTransfer = ModeTransfer.useCheckWritability;
-    static boolean simulLongTask = false;
-    static boolean useGlobalTSH = false;
+    static boolean simulLongTask;
+    static boolean useGlobalTSH;
     /*
      * useFutureListener = true
      *     => best choice: 1 block at a time in memory, but lot of object creations (GenericFutureListener)
@@ -99,7 +98,7 @@ public final class HttpStaticFileServerTrafficShaping {
         EventLoopGroup globalGroup = null;
         if (useGlobalTSH) {
             globalGroup = new NioEventLoopGroup();
-            gtsh = new GlobalTrafficShapingHandlerWithLog(globalGroup, 1024*1024, 1024*1024, 1000);
+            gtsh = new GlobalTrafficShapingHandlerWithLog(globalGroup, 1024 * 1024, 1024 * 1024, 1000);
         }
         EventLoopGroup bossGroup = new NioEventLoopGroup();
         EventLoopGroup workerGroup = new NioEventLoopGroup();
@@ -125,6 +124,5 @@ public final class HttpStaticFileServerTrafficShaping {
             }
         }
     }
-
 
 }

@@ -23,7 +23,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 public class ChannelTrafficShapingHandlerWithLog extends ChannelTrafficShapingHandler {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(ChannelTrafficShapingHandlerWithLog.class);
-    
+
     public ChannelTrafficShapingHandlerWithLog(long writeLimit, long readLimit, long checkInterval,
             long maxTime) {
         super(writeLimit, readLimit, checkInterval, maxTime);
@@ -44,7 +44,7 @@ public class ChannelTrafficShapingHandlerWithLog extends ChannelTrafficShapingHa
     // Shall be updated to fit the needs
     @Override
     protected void doAccounting(TrafficCounter counter) {
-        logger.warn(this.toString() + " QueueSize: "+queueSize());
+        logger.warn(this.toString() + " QueueSize: " + queueSize());
         super.doAccounting(counter);
     }
 

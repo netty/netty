@@ -61,7 +61,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 
 /**
- * Based on HttpStaticFileServer example, which serves incoming HTTP requests 
+ * Based on HttpStaticFileServer example, which serves incoming HTTP requests
  * to send their respective HTTP responses, it shows several ways to implement
  * Traffic shaping using the TrafficShapingHandler.
  *
@@ -161,8 +161,8 @@ public class HttpStaticFileServerTrafficShapingHandler extends SimpleChannelInbo
                 doSendCheckWriteSuspended(ctx);
                 break;
             case useCheckWritability:
-            	doSendCheckWritabilityChanged(ctx);
-            	break;
+                doSendCheckWritabilityChanged(ctx);
+                break;
             case useChunkedFile:
                 doSendChunkedFile(ctx);
                 break;
@@ -181,12 +181,12 @@ public class HttpStaticFileServerTrafficShapingHandler extends SimpleChannelInbo
         }
     }
 
-    volatile ChannelFuture nextFuture = null;
+    volatile ChannelFuture nextFuture;
     /**
      * Using explicit future listener on send to send one element while the next one is prepared.
-     * 
+     *
      * The advantage of this method is to only have one element in the buffer of the TrafficShapingHandler.
-     * 
+     *
      * @param ctx
      * @throws Exception
      */
@@ -219,9 +219,9 @@ public class HttpStaticFileServerTrafficShapingHandler extends SimpleChannelInbo
     }
     /**
      * Using explicit future listener on send to send one element while the next one is prepared.
-     * 
+     *
      * The advantage of this method is to only have one fix set of blocks in the buffer of the TrafficShapingHandler.
-     * 
+     *
      * @param ctx
      * @throws Exception
      */
@@ -257,7 +257,7 @@ public class HttpStaticFileServerTrafficShapingHandler extends SimpleChannelInbo
     /**
      * Using Channel.isWritable to check if the buffer is full or not.
      * Use then the channelWritabilityChanged to restart the sending operation.
-     * 
+     *
      * @param ctx
      * @throws Exception
      */
@@ -284,7 +284,8 @@ public class HttpStaticFileServerTrafficShapingHandler extends SimpleChannelInbo
 
     @Override
     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
-        if (HttpStaticFileServerTrafficShaping.modeTransfer != HttpStaticFileServerTrafficShaping.ModeTransfer.useCheckWritability
+        if (HttpStaticFileServerTrafficShaping.modeTransfer !=
+                HttpStaticFileServerTrafficShaping.ModeTransfer.useCheckWritability
                 || raf == null || ! ctx.channel().isWritable()) {
             ctx.fireChannelWritabilityChanged();
             return;
@@ -298,7 +299,7 @@ public class HttpStaticFileServerTrafficShapingHandler extends SimpleChannelInbo
      * or GlobalTrafficShapingHandler.checkWriteSuspended (no impact on the choice) to
      * check if the buffer is full or not. Use then the userEventTrigger to restart
      * the sending operation.
-     * 
+     *
      * @param ctx
      * @throws Exception
      */
@@ -326,7 +327,8 @@ public class HttpStaticFileServerTrafficShapingHandler extends SimpleChannelInbo
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt == TrafficShapingEvent.WRITE_ENABLED) {
-            if (HttpStaticFileServerTrafficShaping.modeTransfer != HttpStaticFileServerTrafficShaping.ModeTransfer.useCheckWriteSuspended
+            if (HttpStaticFileServerTrafficShaping.modeTransfer !=
+                    HttpStaticFileServerTrafficShaping.ModeTransfer.useCheckWriteSuspended
                     || raf == null || ChannelTrafficShapingHandler.checkWriteSuspended(ctx)) {
                 return;
             }
@@ -337,7 +339,7 @@ public class HttpStaticFileServerTrafficShapingHandler extends SimpleChannelInbo
 
     /**
      * Simple send, using ChunkedFile
-     * 
+     *
      * @param ctx
      * @throws Exception
      */
@@ -365,7 +367,7 @@ public class HttpStaticFileServerTrafficShapingHandler extends SimpleChannelInbo
 
     /**
      * Simple send, chunk by chunk by hand
-     * 
+     *
      * @param ctx
      * @throws Exception
      */

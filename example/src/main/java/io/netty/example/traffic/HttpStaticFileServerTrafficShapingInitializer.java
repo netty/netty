@@ -41,11 +41,11 @@ public class HttpStaticFileServerTrafficShapingInitializer extends ChannelInitia
         if (HttpStaticFileServerTrafficShaping.useGlobalTSH) {
             pipeline.addLast(HttpStaticFileServerTrafficShaping.gtsh);
         }
-        pipeline.addLast(new ChannelTrafficShapingHandlerWithLog(1024*1024, 1024*1024, 1000));
+        pipeline.addLast(new ChannelTrafficShapingHandlerWithLog(1024 * 1024, 1024 * 1024, 1000));
         pipeline.addLast(new HttpServerCodec());
         pipeline.addLast(new HttpObjectAggregator(65536));
         if (HttpStaticFileServerTrafficShaping.modeTransfer == ModeTransfer.useChunkedFile) {
-        	pipeline.addLast(new ChunkedWriteHandler());
+            pipeline.addLast(new ChunkedWriteHandler());
         }
         // Note that one should have a different EventLoopGroup than
         // TrafficShapingHandler to ensure triggered event are sent in time

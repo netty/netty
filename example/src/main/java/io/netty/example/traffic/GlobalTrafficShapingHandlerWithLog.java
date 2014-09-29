@@ -53,7 +53,7 @@ public class GlobalTrafficShapingHandlerWithLog extends GlobalTrafficShapingHand
     // Shall be updated to fit the needs
     @Override
     protected void doAccounting(TrafficCounter counter) {
-        logger.warn(this.toString() + " QueuesSize: "+queuesSize());
+        logger.warn(this.toString() + " QueuesSize: " + queuesSize());
         super.doAccounting(counter);
     }
 
