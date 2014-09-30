@@ -14,6 +14,7 @@
  */
 package io.netty.handler.codec;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.util.internal.PlatformDependent;
 
 import java.util.Arrays;
@@ -287,12 +288,6 @@ public class DefaultBinaryHeaders implements BinaryHeaders {
     @Override
     public String toString() {
         return Utils.toStringUtf8(this);
-    }
-
-    static <T> void checkNotNull(T value, String name) {
-        if (value == null) {
-            throw new NullPointerException(name);
-        }
     }
 
     private static final class AsciiStringHeaderEntry implements Map.Entry<AsciiString, AsciiString> {

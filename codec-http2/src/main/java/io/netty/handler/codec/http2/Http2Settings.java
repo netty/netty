@@ -22,8 +22,8 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_INITIAL_WINDO
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_CONCURRENT_STREAMS;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_FRAME_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_HEADER_LIST_SIZE;
-import static io.netty.handler.codec.http2.Http2CodecUtil.checkNotNull;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isMaxFrameSizeValid;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.util.collection.IntObjectHashMap;
 
 /**

@@ -17,6 +17,7 @@ package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.util.CharsetUtil.UTF_8;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
@@ -216,17 +217,6 @@ public final class Http2CodecUtil {
             promise.setFailure(cause);
         }
         throw cause;
-    }
-
-    /**
-     * Checks that the given argument is not null. If it is, throws {@link NullPointerException}.
-     * Otherwise, returns the argument.
-     */
-    static <T> T checkNotNull(T arg, String text) {
-        if (arg == null) {
-            throw new NullPointerException(text);
-        }
-        return arg;
     }
 
     /**

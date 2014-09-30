@@ -16,6 +16,7 @@
 
 package io.netty.handler.codec;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
 
@@ -594,12 +595,6 @@ public class DefaultTextHeaders implements TextHeaders {
         }
 
         return true;
-    }
-
-    private static <T> void checkNotNull(T value, String name) {
-        if (value == null) {
-            throw new NullPointerException(name);
-        }
     }
 
     private static final class StringHeaderEntry implements Entry<String, String> {

@@ -14,6 +14,8 @@
  */
 package io.netty.handler.codec;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -745,13 +747,6 @@ public class HeaderMap implements Iterable<Entry<CharSequence, CharSequence>> {
 
     private CharSequence convertName(CharSequence name) {
         return nameConverter.convertName(checkNotNull(name, "name"));
-    }
-
-    private static <T> T checkNotNull(T value, String name) {
-        if (value == null) {
-            throw new NullPointerException(name);
-        }
-        return value;
     }
 
     private static int hashCode(CharSequence name) {

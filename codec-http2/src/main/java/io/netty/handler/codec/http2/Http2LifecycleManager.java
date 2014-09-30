@@ -15,6 +15,7 @@
 package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -32,8 +33,8 @@ public class Http2LifecycleManager {
     private ChannelFutureListener closeListener;
 
     public Http2LifecycleManager(Http2Connection connection, Http2FrameWriter frameWriter) {
-        this.connection = connection;
-        this.frameWriter = frameWriter;
+        this.connection = checkNotNull(connection, "connection");
+        this.frameWriter = checkNotNull(frameWriter, "frameWriter");
     }
 
     /**
@@ -141,33 +142,9 @@ public class Http2LifecycleManager {
     }
 
     /**
-     * Sends a GO_AWAY frame to the remote endpoint.
+     * Writes a RST_STREAM frame to the remote endpoint and updates the connection state appropriately.
      */
-    private ChannelFuture writeGoAway(ChannelHandlerContext ctx, Http2Exception cause) {
-        if (connection.isGoAway()) {
-            return ctx.newSucceededFuture();
-        }
-
-        // The connection isn't alredy going away, send the GO_AWAY frame now to start
-        // the process.
-        int errorCode = cause != null ? cause.error().code() : NO_ERROR.code();
-        ByteBuf debugData = Http2CodecUtil.toByteBuf(ctx, cause);
-        int lastKnownStream = connection.remote().lastStreamCreated();
-        ChannelFuture sendFuture =
-                frameWriter.writeGoAway(ctx, lastKnownStream, errorCode, debugData,
-                        ctx.newPromise());
-        ctx.flush();
-
-        // Update the connection state and notify any listeners that this connection is going away.
-        connection.remote().goAwayReceived(lastKnownStream);
-
-        return sendFuture;
-    }
-
-    /**
-     * Writes a RST_STREAM frame to the remote endpoint.
-     */
-    private ChannelFuture writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
+    public ChannelFuture writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
             ChannelPromise promise) {
         Http2Stream stream = connection.stream(streamId);
         ChannelFuture future = frameWriter.writeRstStream(ctx, streamId, errorCode, promise);
@@ -180,6 +157,40 @@ public class Http2LifecycleManager {
 
         return future;
     }
+
+    /**
+     * Sends a {@code GO_AWAY} frame to the remote endpoint and updates the connection state appropriately.
+     */
+    public ChannelFuture writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData,
+            ChannelPromise promise) {
+        if (connection.isGoAway()) {
+            debugData.release();
+            return ctx.newSucceededFuture();
+        }
+
+        ChannelFuture future = frameWriter.writeGoAway(ctx, lastStreamId, errorCode, debugData, promise);
+        ctx.flush();
+
+        connection.remote().goAwayReceived(lastStreamId);
+        return future;
+    }
+
+    /**
+     * Sends a GO_AWAY frame appropriate for the given exception.
+     */
+    private ChannelFuture writeGoAway(ChannelHandlerContext ctx, Http2Exception cause) {
+        if (connection.isGoAway()) {
+            return ctx.newSucceededFuture();
+        }
+
+        // The connection isn't alredy going away, send the GO_AWAY frame now to start
+        // the process.
+        int errorCode = cause != null ? cause.error().code() : NO_ERROR.code();
+        ByteBuf debugData = Http2CodecUtil.toByteBuf(ctx, cause);
+        int lastKnownStream = connection.remote().lastStreamCreated();
+        return writeGoAway(ctx, lastKnownStream, errorCode, debugData, ctx.newPromise());
+    }
+
     /**
      * Closes the channel when the future completes.
      */

@@ -15,13 +15,13 @@
 package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.checkNotNull;
 import static io.netty.handler.codec.http2.Http2CodecUtil.toHttp2Exception;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.protocolError;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -50,10 +50,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         this.lifecycleManager = checkNotNull(lifecycleManager, "lifecycleManager");
     }
 
-    public Http2Connection connection() {
-        return connection;
-    }
-
     @Override
     public void remoteSettings(Http2Settings settings) throws Http2Exception {
         Boolean pushEnabled = settings.pushEnabled();
@@ -74,7 +70,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
         Long headerTableSize = settings.headerTableSize();
         if (headerTableSize != null) {
-            outboundHeaderTable.maxHeaderTableSize((int) Math.min(headerTableSize.intValue(), Integer.MAX_VALUE));
+            outboundHeaderTable.maxHeaderTableSize((int) Math.min(headerTableSize, Integer.MAX_VALUE));
         }
 
         Integer maxHeaderListSize = settings.maxHeaderListSize();
@@ -212,13 +208,8 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             return promise;
         }
 
-        ChannelFuture future = frameWriter.writeRstStream(ctx, streamId, errorCode, promise);
-        ctx.flush();
-
-        stream.terminateSent();
-        lifecycleManager.closeStream(stream, promise);
-
-        return future;
+        // Delegate to the lifecycle manager for proper updating of connection state.
+        return lifecycleManager.writeRstStream(ctx, streamId, errorCode, promise);
     }
 
     /**
@@ -324,11 +315,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     @Override
     public ChannelFuture writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData,
             ChannelPromise promise) {
-        ChannelFuture future = frameWriter.writeGoAway(ctx, lastStreamId, errorCode, debugData, promise);
-        ctx.flush();
-
-        connection.remote().goAwayReceived(lastStreamId);
-        return future;
+        return lifecycleManager.writeGoAway(ctx, lastStreamId, errorCode, debugData, promise);
     }
 
     @Override

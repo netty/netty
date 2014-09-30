@@ -15,6 +15,15 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
+import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
+import static io.netty.handler.codec.http2.Http2Exception.format;
+import static io.netty.handler.codec.http2.Http2Exception.protocolError;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -27,16 +36,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Queue;
-
-import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
-import static io.netty.handler.codec.http2.Http2CodecUtil.checkNotNull;
-import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
-import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
-import static io.netty.handler.codec.http2.Http2Exception.format;
-import static io.netty.handler.codec.http2.Http2Exception.protocolError;
-import static java.lang.Math.max;
-import static java.lang.Math.min;
 
 /**
  * Basic implementation of {@link Http2OutboundFlowController}.

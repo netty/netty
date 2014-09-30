@@ -17,9 +17,9 @@ package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
-import static io.netty.handler.codec.http2.Http2CodecUtil.checkNotNull;
 import static io.netty.handler.codec.http2.Http2Exception.flowControlError;
 import static io.netty.handler.codec.http2.Http2Exception.protocolError;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 
