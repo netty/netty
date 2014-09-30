@@ -201,13 +201,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     @Override
     public ChannelFuture writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
             ChannelPromise promise) {
-        Http2Stream stream = connection.stream(streamId);
-        if (stream == null) {
-            // The stream may already have been closed ... ignore.
-            promise.setSuccess();
-            return promise;
-        }
-
         // Delegate to the lifecycle manager for proper updating of connection state.
         return lifecycleManager.writeRstStream(ctx, streamId, errorCode, promise);
     }
