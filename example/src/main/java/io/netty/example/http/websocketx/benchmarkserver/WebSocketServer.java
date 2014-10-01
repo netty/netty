@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.http.websocketx.server;
+package io.netty.example.http.websocketx.benchmarkserver;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -26,23 +26,12 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 /**
- * A HTTP server which serves Web Socket requests at:
+ * A Benchmark application for websocket which is served at:
  *
  * http://localhost:8080/websocket
  *
- * Open your browser at http://localhost:8080/, then the demo page will be loaded and a Web Socket connection will be
- * made automatically.
- *
- * This server illustrates support for the different web socket specification versions and will work with:
- *
- * <ul>
- * <li>Safari 5+ (draft-ietf-hybi-thewebsocketprotocol-00)
- * <li>Chrome 6-13 (draft-ietf-hybi-thewebsocketprotocol-00)
- * <li>Chrome 14+ (draft-ietf-hybi-thewebsocketprotocol-10)
- * <li>Chrome 16+ (RFC 6455 aka draft-ietf-hybi-thewebsocketprotocol-17)
- * <li>Firefox 7+ (draft-ietf-hybi-thewebsocketprotocol-10)
- * <li>Firefox 11+ (RFC 6455 aka draft-ietf-hybi-thewebsocketprotocol-17)
- * </ul>
+ * Open your browser at http://localhost:8080/, then the benchmark page will be loaded and a Web Socket connection will
+ * be made automatically.
  */
 public final class WebSocketServer {
 
@@ -65,7 +54,6 @@ public final class WebSocketServer {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
-             .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new WebSocketServerInitializer(sslCtx));
 
             Channel ch = b.bind(PORT).sync().channel();
