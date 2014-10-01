@@ -82,7 +82,7 @@ public class DefaultHttp2ToHttpConnectionHandlerTest {
     private Bootstrap cb;
     private Channel serverChannel;
     private Channel clientChannel;
-    private CountDownLatch requestLatch;
+    private volatile CountDownLatch requestLatch;
     private Http2TestUtil.FrameCountDown serverFrameCountDown;
 
     @Before
