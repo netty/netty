@@ -63,6 +63,7 @@ import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.nio.ByteOrder;
 import java.util.List;
 
 import static io.netty.buffer.ByteBufUtil.readBytes;
@@ -356,7 +357,29 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
     }
 
     private void unmask(ByteBuf frame) {
-        for (int i = frame.readerIndex(); i < frame.writerIndex(); i++) {
+        int i = frame.readerIndex();
+        int end = frame.writerIndex();
+
+        ByteOrder order = frame.order();
+
+        // Remark: & 0xFF is necessary because Java will do signed expansion from
+        // byte to int which we don't want.
+        int intMask = ((maskingKey[0] & 0xFF) << 24)
+                    | ((maskingKey[1] & 0xFF) << 16)
+                    | ((maskingKey[2] & 0xFF) << 8)
+                    | (maskingKey[3] & 0xFF);
+
+        // If the byte order of our buffers it little endian we have to bring our mask
+        // into the same format, because getInt() and writeInt() will use a reversed byte order
+        if (order == ByteOrder.LITTLE_ENDIAN) {
+            intMask = Integer.reverseBytes(intMask);
+        }
+
+        for (; i + 3 < end; i += 4) {
+            int unmasked = frame.getInt(i) ^ intMask;
+            frame.setInt(i, unmasked);
+        }
+        for (; i < end; i++) {
             frame.setByte(i, frame.getByte(i) ^ maskingKey[i % 4]);
         }
     }
