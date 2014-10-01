@@ -219,7 +219,10 @@ abstract class AbstractNioSelector implements NioSelector {
                             SelectableChannel ch = key.channel();
                             try {
                                 if (ch instanceof DatagramChannel && !ch.isOpen() ||
-                                        ch instanceof SocketChannel && !((SocketChannel) ch).isConnected()) {
+                                        ch instanceof SocketChannel && !((SocketChannel) ch).isConnected() &&
+                                                // Only cancel if the connection is not pending
+                                                // See https://github.com/netty/netty/issues/2931
+                                                !((SocketChannel) ch).isConnectionPending()) {
                                     notConnected = true;
                                     // cancel the key just to be on the safe side
                                     key.cancel();
