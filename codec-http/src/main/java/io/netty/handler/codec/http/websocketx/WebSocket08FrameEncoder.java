@@ -61,6 +61,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.List;
 
 /**
@@ -173,8 +174,34 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
                 mask = ByteBuffer.allocate(4).putInt(random).array();
                 buf.writeBytes(mask);
 
+                ByteOrder srcOrder = data.order();
+                ByteOrder dstOrder = buf.order();
+
                 int counter = 0;
-                for (int i = data.readerIndex(); i < data.writerIndex(); i ++) {
+                int i = data.readerIndex();
+                int end = data.writerIndex();
+
+                if (srcOrder == dstOrder) {
+                    // Use the optimized path only when byte orders match
+                    // Remark: & 0xFF is necessary because Java will do signed expansion from
+                    // byte to int which we don't want.
+                    int intMask = ((mask[0] & 0xFF) << 24)
+                                | ((mask[1] & 0xFF) << 16)
+                                | ((mask[2] & 0xFF) << 8)
+                                | (mask[3] & 0xFF);
+
+                    // If the byte order of our buffers it little endian we have to bring our mask
+                    // into the same format, because getInt() and writeInt() will use a reversed byte order
+                    if (srcOrder == ByteOrder.LITTLE_ENDIAN) {
+                        intMask = Integer.reverseBytes(intMask);
+                    }
+
+                    for (; i + 3 < end; i += 4) {
+                        int intData = data.getInt(i);
+                        buf.writeInt(intData ^ intMask);
+                    }
+                }
+                for (; i < end; i++) {
                     byte byteData = data.getByte(i);
                     buf.writeByte(byteData ^ mask[counter++ % 4]);
                 }
