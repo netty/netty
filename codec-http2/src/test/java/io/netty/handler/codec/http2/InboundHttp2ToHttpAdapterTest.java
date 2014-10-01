@@ -81,8 +81,8 @@ public class InboundHttp2ToHttpAdapterTest {
     private Channel serverChannel;
     private Channel serverConnectedChannel;
     private Channel clientChannel;
-    private CountDownLatch serverLatch;
-    private CountDownLatch clientLatch;
+    private volatile CountDownLatch serverLatch;
+    private volatile CountDownLatch clientLatch;
     private int maxContentLength;
     private HttpResponseDelegator serverDelegator;
     private HttpResponseDelegator clientDelegator;

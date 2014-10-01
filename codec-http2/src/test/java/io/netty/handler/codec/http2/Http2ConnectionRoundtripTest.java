@@ -87,8 +87,8 @@ public class Http2ConnectionRoundtripTest {
     private Channel serverChannel;
     private Channel clientChannel;
     private Http2TestUtil.FrameCountDown serverFrameCountDown;
-    private CountDownLatch requestLatch;
-    private CountDownLatch dataLatch;
+    private volatile CountDownLatch requestLatch;
+    private volatile CountDownLatch dataLatch;
 
     @Before
     public void setup() throws Exception {

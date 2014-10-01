@@ -82,8 +82,8 @@ public class DataCompressionHttp2Test {
     private Channel serverChannel;
     private Channel serverConnectedChannel;
     private Channel clientChannel;
-    private CountDownLatch serverLatch;
-    private CountDownLatch clientLatch;
+    private volatile CountDownLatch serverLatch;
+    private volatile CountDownLatch clientLatch;
     private Http2TestUtil.FrameAdapter serverAdapter;
     private Http2TestUtil.FrameAdapter clientAdapter;
     private Http2Connection serverConnection;
