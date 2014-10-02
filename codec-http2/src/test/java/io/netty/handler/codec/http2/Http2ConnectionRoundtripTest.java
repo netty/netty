@@ -290,7 +290,7 @@ public class Http2ConnectionRoundtripTest {
                 return null;
             }
         }).when(serverListener).onPingRead(any(ChannelHandlerContext.class), eq(pingData));
-        final List<String> receivedDataBuffers = new ArrayList<String>();
+        final List<String> receivedDataBuffers = Collections.synchronizedList(new ArrayList<String>(NUM_STREAMS));
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock in) throws Throwable {
