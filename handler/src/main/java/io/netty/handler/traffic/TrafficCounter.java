@@ -457,7 +457,7 @@ public class TrafficCounter {
      *            the max time in ms to wait in case of excess of traffic
      * @return the current time to wait (in ms) if needed for Read operation
      */
-    public synchronized long readTimeToWait(final long size, final long limitTraffic, final long maxTime) {
+    public long readTimeToWait(final long size, final long limitTraffic, final long maxTime) {
         final long now = System.currentTimeMillis();
         bytesRecvFlowControl(size);
         if (size == 0 || limitTraffic == 0) {
@@ -516,7 +516,7 @@ public class TrafficCounter {
      *            the max time in ms to wait in case of excess of traffic
      * @return the current time to wait (in ms) if needed for Write operation
      */
-    public synchronized long writeTimeToWait(final long size, final long limitTraffic, final long maxTime) {
+    public long writeTimeToWait(final long size, final long limitTraffic, final long maxTime) {
         bytesWriteFlowControl(size);
         if (size == 0 || limitTraffic == 0) {
             return 0;

@@ -67,9 +67,10 @@ public final class HttpStaticFileServerTrafficShaping {
      *     => best choice: 1 block at a time in memory, but lot of object creations (GenericFutureListener)
      * useSetFutureListener = true
      *     => best choice: similar to useFutureListener by set of blocks
-     * useCheckWriteSuspended = true
+     * useCheckWritability = true (using default channelWritabilityChanged, isWritable with softWritable extension)
+     * useCheckWriteSuspended = true (using specific user triggered event and AttributeKey)
      *     => second best choice: limited blocks in memory, but depending on application speed:
-     *     too quick could fill up the buffers, else will be fine
+     *     too quick could fill up the buffers, else will be fine.
      * useChunkFile = true
      *     => not recommended since will create all blocks in memory without taking into account contention
      * useDefault = true
