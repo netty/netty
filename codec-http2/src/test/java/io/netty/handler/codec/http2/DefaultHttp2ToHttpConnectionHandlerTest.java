@@ -224,7 +224,7 @@ public class DefaultHttp2ToHttpConnectionHandlerTest {
     }
 
     private void awaitRequests() throws Exception {
-        requestLatch.await(2, SECONDS);
+        assertTrue(requestLatch.await(2, SECONDS));
     }
 
     private ChannelHandlerContext ctx() {

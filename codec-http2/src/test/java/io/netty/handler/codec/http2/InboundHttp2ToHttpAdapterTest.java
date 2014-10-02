@@ -670,11 +670,11 @@ public class InboundHttp2ToHttpAdapterTest {
     }
 
     private void awaitRequests() throws Exception {
-        serverLatch.await(2, SECONDS);
+        assertTrue(serverLatch.await(2, SECONDS));
     }
 
     private void awaitResponses() throws Exception {
-        clientLatch.await(2, SECONDS);
+        assertTrue(clientLatch.await(2, SECONDS));
     }
 
     private ChannelHandlerContext ctxClient() {
