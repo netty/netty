@@ -609,8 +609,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                     } catch (Throwable cause) {
                         attachment.pipeline().fireExceptionCaught(cause);
                     } finally {
-                        if(done) {
-                            if(buffer != null) {
+                        if (done) {
+                            if (buffer != null) {
                                 buffer.remove();
                             }
                         }
