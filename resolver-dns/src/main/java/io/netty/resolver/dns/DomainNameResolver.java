@@ -215,17 +215,21 @@ public class DomainNameResolver extends SimpleNameResolver<InetSocketAddress> {
         query(question).addListener(new FutureListener<DnsResponse>() {
             @Override
             public void operationComplete(Future<DnsResponse> future) throws Exception {
-                if (future.isSuccess()) {
-                    InetAddress[] resolved = decodeAddressRecords(hostname, future.getNow());
-                    if (resolved == null) {
-                        // No address decoded
-                        resolvePromise.setFailure(new IllegalStateException());
+                final DnsResponse response = future.getNow();
+                try {
+                    if (future.isSuccess()) {
+                        InetAddress resolved = decodeFirstAddressRecord(hostname, response);
+                        if (resolved == null) {
+                            // No address decoded
+                            resolvePromise.setFailure(new IllegalStateException());
+                        } else {
+                            resolvePromise.setSuccess(new InetSocketAddress(resolved, port));
+                        }
                     } else {
-                        // TODO: Pluggable mechanism for choosing an address among many.
-                        resolvePromise.setSuccess(new InetSocketAddress(resolved[0], port));
+                        resolvePromise.setFailure(future.cause());
                     }
-                } else {
-                    resolvePromise.setFailure(future.cause());
+                } finally {
+                    ReferenceCountUtil.safeRelease(response);
                 }
             }
         });
@@ -233,12 +237,10 @@ public class DomainNameResolver extends SimpleNameResolver<InetSocketAddress> {
         return resolvePromise;
     }
 
-    private static InetAddress[] decodeAddressRecords(String hostname, DnsResponse response)  {
+    private static InetAddress decodeFirstAddressRecord(String hostname, DnsResponse response)  {
 
         final List<DnsResource> answers = response.answers();
         final int maxCount = answers.size();
-        final InetAddress[] resolved = new InetAddress[maxCount];
-        int count = 0;
 
         for (int i = 0; i < maxCount; i ++) {
             final DnsResource a = answers.get(i);
@@ -264,18 +266,14 @@ public class DomainNameResolver extends SimpleNameResolver<InetSocketAddress> {
 
             content.readBytes(addrBytes);
             try {
-                resolved[count ++] = InetAddress.getByAddress(hostname, addrBytes);
+                return InetAddress.getByAddress(hostname, addrBytes);
             } catch (UnknownHostException ignore) {
                 // Should never happen
                 throw new Error();
             }
         }
 
-        if (count == 0) {
-            return null;
-        }
-
-        return resolved;
+        return null;
     }
 
     public Future<DnsResponse> query(final DnsQuestion question) {
@@ -362,27 +360,34 @@ public class DomainNameResolver extends SimpleNameResolver<InetSocketAddress> {
     private final class DnsResponseHandler extends ChannelInboundHandlerAdapter {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            final DnsResponse res = (DnsResponse) msg;
-            final DnsResponsePromise p = promises.getAndSet(res.header().id(), null);
+            boolean success = false;
+            try {
+                final DnsResponse res = (DnsResponse) msg;
+                final DnsResponsePromise p = promises.getAndSet(res.header().id(), null);
 
-            if (p == null) {
-                return;
-            }
+                if (p == null) {
+                    return;
+                }
 
-            // Cancel the timeout task.
-            final ScheduledFuture<?> timeoutFuture = p.timeoutFuture;
-            if (timeoutFuture != null) {
-                timeoutFuture.cancel(false);
-            }
+                // Cancel the timeout task.
+                final ScheduledFuture<?> timeoutFuture = p.timeoutFuture;
+                if (timeoutFuture != null) {
+                    timeoutFuture.cancel(false);
+                }
 
-            if (res.header().responseCode() == DnsResponseCode.NOERROR) {
-                // TODO: Implement positive cache with configurable minimum and maximum TTL.
-                p.setSuccess(res);
-            } else {
-                // TODO: Implement negative cache with configurable TTL.
-                ReferenceCountUtil.safeRelease(res);
-                p.setFailure(new UnknownHostException(
-                        "failed to resolve: " + p.question + " (" + res.header().responseCode() + ')'));
+                if (res.header().responseCode() == DnsResponseCode.NOERROR) {
+                    // TODO: Implement positive cache with configurable minimum and maximum TTL.
+                    p.setSuccess(res);
+                    success = true;
+                } else {
+                    // TODO: Implement negative cache with configurable TTL.
+                    p.setFailure(new UnknownHostException(
+                            "failed to resolve: " + p.question + " (" + res.header().responseCode() + ')'));
+                }
+            } finally {
+                if (!success) {
+                    ReferenceCountUtil.safeRelease(msg);
+                }
             }
         }
 
