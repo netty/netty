@@ -47,6 +47,7 @@ import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.io.Closeable;
 import java.lang.reflect.Method;
 import java.net.IDN;
 import java.net.InetAddress;
@@ -60,7 +61,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
-public class DomainNameResolver extends SimpleNameResolver<InetSocketAddress> {
+public class DomainNameResolver extends SimpleNameResolver<InetSocketAddress> implements Closeable {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DomainNameResolver.class);
 
@@ -193,6 +194,15 @@ public class DomainNameResolver extends SimpleNameResolver<InetSocketAddress> {
             throw new IllegalArgumentException("queryTimeoutMillis: " + queryTimeoutMillis + " (expected: >= 0)");
         }
         this.queryTimeoutMillis = queryTimeoutMillis;
+    }
+
+    /**
+     * Closes the internal datagram channel used for sending and receiving DNS messages.
+     * Attempting to send a DNS query or to resolve a domain name will fail once this method has been called.
+     */
+    @Override
+    public void close() {
+        ch.close();
     }
 
     @Override
