@@ -26,7 +26,7 @@ import java.nio.channels.CompletionHandler;
 public abstract class AioCompletionHandler<V, A extends Channel> implements CompletionHandler<V, A> {
 
     // According to JDK AIO documentation, the ExecutorService a user specified must not call the Runnable given by
-    // JDK AIO implementation directly.  However, we violates that rule by calling Runnable.run() directly for
+    // JDK AIO implementation directly.  However, we violate that rule by calling Runnable.run() directly for
     // optimization purposes, and it can result in infinite recursion in combination with the fact that the JDK AIO
     // implementation often makes recursive invocations.  Therefore, we must make sure we don't go too deep in the
     // stack.

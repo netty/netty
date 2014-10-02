@@ -252,6 +252,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     @Override
     protected void doClose() throws Exception {
+        javaChannel().shutdownInput();
+        javaChannel().shutdownOutput();
         javaChannel().close();
         inputShutdown = true;
         outputShutdown = true;
@@ -578,6 +580,9 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
                 @Override
                 public void completed0(Integer result, Channel attachment) {
+                    boolean done = false;
+                    ChannelOutboundBuffer buffer = attachment.unsafe().outboundBuffer();
+
                     try {
                         if (result == 0) {
                             javaChannel().write(src, AioSocketChannel.this, this);
@@ -585,11 +590,15 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                         }
                         if (result == -1) {
                             checkEOF(region);
+                            done = true;
                             return;
                         }
+
                         written += result;
+                        buffer.progress(result);
 
                         if (written >= region.count()) {
+                            done = true;
                             return;
                         }
                         if (src.hasRemaining()) {
@@ -599,6 +608,12 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                         }
                     } catch (Throwable cause) {
                         attachment.pipeline().fireExceptionCaught(cause);
+                    } finally {
+                        if(done) {
+                            if(buffer != null) {
+                                buffer.remove();
+                            }
+                        }
                     }
                 }
 
