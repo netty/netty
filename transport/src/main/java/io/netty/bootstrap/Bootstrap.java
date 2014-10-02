@@ -23,7 +23,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.ThreadPerChannelEventLoopGroup;
-import io.netty.resolver.JdkDomainNameResolver;
+import io.netty.resolver.DefaultNameResolver;
 import io.netty.resolver.NameResolver;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutor;
@@ -57,7 +57,7 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
      * Note that the {@link GlobalEventExecutor} is only used for the notification of name resolution failures,
      * because we replace the executor after successful resolution in {@link LazyConnectPromise#setChannel(Channel)}.
      */
-    private static final NameResolver DEFAULT_RESOLVER = new JdkDomainNameResolver(GlobalEventExecutor.INSTANCE);
+    private static final NameResolver DEFAULT_RESOLVER = new DefaultNameResolver(GlobalEventExecutor.INSTANCE);
 
     private volatile NameResolver resolver = DEFAULT_RESOLVER;
     private volatile SocketAddress remoteAddress;

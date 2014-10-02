@@ -28,9 +28,9 @@ import java.net.UnknownHostException;
  * A {@link NameResolver} that resolves an {@link InetSocketAddress} using JDK's built-in domain name lookup mechanism.
  * Note that this resolver performs a blocking name lookup from the caller thread.
  */
-public class JdkDomainNameResolver extends SimpleNameResolver<InetSocketAddress> {
+public class DefaultNameResolver extends SimpleNameResolver<InetSocketAddress> {
 
-    public JdkDomainNameResolver(EventExecutor executor) {
+    public DefaultNameResolver(EventExecutor executor) {
         super(executor);
     }
 
