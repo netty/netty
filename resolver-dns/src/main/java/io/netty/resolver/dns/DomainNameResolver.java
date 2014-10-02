@@ -43,6 +43,7 @@ import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.OneTimeTask;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -58,6 +59,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
@@ -115,9 +117,7 @@ public class DomainNameResolver extends SimpleNameResolver<InetSocketAddress> im
     // TODO: Implement a NameResolver wrapper that retries on failure.
 
     private final InetSocketAddress nameServerAddress;
-    private final DatagramChannel ch;
-
-    private volatile int queryTimeoutMillis = 5000;
+    final DatagramChannel ch;
 
     /**
      * An array whose index is the ID of a DNS query and whose value is the promise of the corresponsing response. We
@@ -127,7 +127,16 @@ public class DomainNameResolver extends SimpleNameResolver<InetSocketAddress> im
     private final AtomicReferenceArray<DnsResponsePromise> promises =
             new AtomicReferenceArray<DnsResponsePromise>(65536);
 
+    final ConcurrentMap<DnsQuestion, Object> cache = PlatformDependent.newConcurrentHashMap();
+
     private final DnsResponseHandler responseHandler = new DnsResponseHandler();
+
+    private volatile int queryTimeoutMillis = 5000;
+
+    // The default TTL values here respect the TTL returned by the DNS server and do not cache the negative response.
+    private volatile int minTtl;
+    private volatile int maxTtl = Integer.MAX_VALUE;
+    private volatile int negativeTtl;
 
     public DomainNameResolver(
             EventLoop eventLoop, Class<? extends DatagramChannel> channelType,
@@ -196,6 +205,42 @@ public class DomainNameResolver extends SimpleNameResolver<InetSocketAddress> im
         this.queryTimeoutMillis = queryTimeoutMillis;
     }
 
+    public int minTtl() {
+        return minTtl;
+    }
+
+    public int maxTtl() {
+        return maxTtl;
+    }
+
+    public void setTtl(int minTtl, int maxTtl) {
+        if (minTtl < 0) {
+            throw new IllegalArgumentException("minTtl: " + minTtl + " (expected: >= 0)");
+        }
+        if (maxTtl < 0) {
+            throw new IllegalArgumentException("maxTtl: " + maxTtl + " (expected: >= 0)");
+        }
+        if (minTtl > maxTtl) {
+            throw new IllegalArgumentException(
+                    "minTtl: " + minTtl + ", maxTtl: " + maxTtl + " (expected: 0 <= minTtl <= maxTtl)");
+        }
+
+        this.maxTtl = maxTtl;
+        this.minTtl = minTtl;
+    }
+
+    public int negativeTtl() {
+        return negativeTtl;
+    }
+
+    public void setNegativeTtl(int negativeTtl) {
+        if (negativeTtl < 0) {
+            throw new IllegalArgumentException("negativeTtl: " + negativeTtl + " (expected: >= 0)");
+        }
+
+        this.negativeTtl = negativeTtl;
+    }
+
     /**
      * Closes the internal datagram channel used for sending and receiving DNS messages.
      * Attempting to send a DNS query or to resolve a domain name will fail once this method has been called.
@@ -222,32 +267,48 @@ public class DomainNameResolver extends SimpleNameResolver<InetSocketAddress> im
 
         final DnsQuestion question = new DnsQuestion(hostname, DnsType.ANY);
         final Promise<SocketAddress> resolvePromise = executor().newPromise();
-        query(question).addListener(new FutureListener<DnsResponse>() {
-            @Override
-            public void operationComplete(Future<DnsResponse> future) throws Exception {
-                final DnsResponse response = future.getNow();
-                try {
-                    if (future.isSuccess()) {
-                        InetAddress resolved = decodeFirstAddressRecord(hostname, response);
-                        if (resolved == null) {
-                            // No address decoded
-                            resolvePromise.setFailure(new IllegalStateException());
-                        } else {
-                            resolvePromise.setSuccess(new InetSocketAddress(resolved, port));
-                        }
-                    } else {
-                        resolvePromise.setFailure(future.cause());
-                    }
-                } finally {
-                    ReferenceCountUtil.safeRelease(response);
+        final Future<DnsResponse> queryFuture = query(question);
+        if (queryFuture.isDone()) {
+            // Query has been finished immediately - probably cached result.
+            onQueryComplete(hostname, port, question, queryFuture, resolvePromise);
+        } else {
+            queryFuture.addListener(new FutureListener<DnsResponse>() {
+                @Override
+                public void operationComplete(Future<DnsResponse> future) throws Exception {
+                    onQueryComplete(hostname, port, question, future, resolvePromise);
                 }
-            }
-        });
+            });
+        }
 
         return resolvePromise;
     }
 
-    private static InetAddress decodeFirstAddressRecord(String hostname, DnsResponse response)  {
+    private void onQueryComplete(
+            String hostname, int port, DnsQuestion question,
+            Future<DnsResponse> queryFuture, Promise<SocketAddress> resolvePromise) {
+
+        final DnsResponse response = queryFuture.getNow();
+        try {
+            if (queryFuture.isSuccess()) {
+                InetAddress resolved = decodeFirstAddressRecord(hostname, response);
+                if (resolved == null) {
+                    // No address decoded
+                    final UnknownHostException cause =
+                            new UnknownHostException("no address resource found: " + question);
+                    cache(question, cause);
+                    resolvePromise.setFailure(cause);
+                } else {
+                    resolvePromise.setSuccess(new InetSocketAddress(resolved, port));
+                }
+            } else {
+                resolvePromise.setFailure(queryFuture.cause());
+            }
+        } finally {
+            ReferenceCountUtil.safeRelease(response);
+        }
+    }
+
+    static InetAddress decodeFirstAddressRecord(String hostname, DnsResponse response)  {
 
         final List<DnsResource> answers = response.answers();
         final int maxCount = answers.size();
@@ -274,7 +335,8 @@ public class DomainNameResolver extends SimpleNameResolver<InetSocketAddress> im
                 continue;
             }
 
-            content.readBytes(addrBytes);
+            content.getBytes(content.readerIndex(), addrBytes);
+
             try {
                 return InetAddress.getByAddress(hostname, addrBytes);
             } catch (UnknownHostException ignore) {
@@ -288,6 +350,19 @@ public class DomainNameResolver extends SimpleNameResolver<InetSocketAddress> im
 
     public Future<DnsResponse> query(final DnsQuestion question) {
         final EventLoop eventLoop = ch.eventLoop();
+        final Object cachedResult = cache.get(question);
+        if (cachedResult != null) {
+            if (cachedResult instanceof DnsResponse) {
+                return eventLoop.newSucceededFuture(((DnsResponse) cachedResult).retain());
+            } else {
+                return eventLoop.newFailedFuture((Throwable) cachedResult);
+            }
+        } else {
+            return query0(eventLoop, question);
+        }
+    }
+
+    private Future<DnsResponse> query0(EventLoop eventLoop, DnsQuestion question) {
         final DnsResponsePromise p = new DnsResponsePromise(question);
 
         int id = ThreadLocalRandom.current().nextInt(promises.length());
@@ -295,6 +370,7 @@ public class DomainNameResolver extends SimpleNameResolver<InetSocketAddress> im
         int tries = 0;
         for (;;) {
             if (promises.compareAndSet(id, null, p)) {
+                p.id = id;
                 break;
             }
 
@@ -306,12 +382,7 @@ public class DomainNameResolver extends SimpleNameResolver<InetSocketAddress> im
             }
         }
 
-        final DnsQuery query = new DnsQuery(0, nameServerAddress);
-
-        p.id = id;
-        query.header().setId(id);
-        query.addQuestion(question);
-
+        final DnsQuery query = new DnsQuery(id, nameServerAddress).addQuestion(question);
         final ChannelFuture writeFuture = ch.writeAndFlush(query);
         if (writeFuture.isDone()) {
             onQueryWriteCompletion(writeFuture, p);
@@ -355,8 +426,51 @@ public class DomainNameResolver extends SimpleNameResolver<InetSocketAddress> im
         }
     }
 
-    private final class DnsResponsePromise extends DefaultPromise<DnsResponse> {
 
+    private void cache(DnsQuestion question, DnsResponse res) {
+        final int maxTtl = maxTtl();
+        if (maxTtl == 0) {
+            return;
+        }
+
+        long ttl = Long.MAX_VALUE;
+        // Find the smallest TTL value returned by the server.
+        for (DnsResource r: res.answers()) {
+            long rTtl = r.timeToLive();
+            if (ttl > rTtl) {
+                ttl = rTtl;
+            }
+        }
+
+        // Ensure that the found TTL is between minTtl and maxTtl.
+        ttl = Math.max(minTtl(), Math.min(maxTtl, ttl));
+
+        res.retain();
+        cache.put(question, res);
+        scheduleCacheExpiration(question, ttl);
+    }
+
+    private void cache(final DnsQuestion question, Throwable cause) {
+        final int negativeTtl = negativeTtl();
+        if (negativeTtl == 0) {
+            return;
+        }
+
+        cache.put(question, cause);
+        scheduleCacheExpiration(question, negativeTtl);
+    }
+
+    private void scheduleCacheExpiration(final DnsQuestion question, long delaySeconds) {
+        ch.eventLoop().schedule(new OneTimeTask() {
+            @Override
+            public void run() {
+                Object response = cache.remove(question);
+                ReferenceCountUtil.safeRelease(response);
+            }
+        }, delaySeconds, TimeUnit.SECONDS);
+    }
+
+    private final class DnsResponsePromise extends DefaultPromise<DnsResponse> {
         int id;
         final DnsQuestion question;
         volatile ScheduledFuture<?> timeoutFuture;
@@ -385,14 +499,16 @@ public class DomainNameResolver extends SimpleNameResolver<InetSocketAddress> im
                     timeoutFuture.cancel(false);
                 }
 
-                if (res.header().responseCode() == DnsResponseCode.NOERROR) {
-                    // TODO: Implement positive cache with configurable minimum and maximum TTL.
+                if (res.header().responseCode() == DnsResponseCode.NOERROR && !res.answers().isEmpty()) {
+                    cache(p.question, res);
                     p.setSuccess(res);
                     success = true;
                 } else {
-                    // TODO: Implement negative cache with configurable TTL.
-                    p.setFailure(new UnknownHostException(
-                            "failed to resolve: " + p.question + " (" + res.header().responseCode() + ')'));
+                    final UnknownHostException cause = new UnknownHostException(
+                            "failed to resolve: " + p.question + " (" + res.header().responseCode() + ')');
+
+                    cache(p.question, cause);
+                    p.setFailure(cause);
                 }
             } finally {
                 if (!success) {
