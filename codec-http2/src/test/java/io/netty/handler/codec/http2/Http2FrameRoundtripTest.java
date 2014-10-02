@@ -367,7 +367,7 @@ public class Http2FrameRoundtripTest {
     }
 
     private void awaitRequests(long seconds) throws InterruptedException {
-        requestLatch.await(seconds, SECONDS);
+        assertTrue(requestLatch.await(seconds, SECONDS));
     }
 
     private void awaitRequests() throws InterruptedException {
