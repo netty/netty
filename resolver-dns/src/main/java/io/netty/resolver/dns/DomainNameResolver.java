@@ -24,20 +24,16 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoop;
 import io.netty.channel.ReflectiveChannelFactory;
-import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.codec.dns.DnsClass;
 import io.netty.handler.codec.dns.DnsQuery;
 import io.netty.handler.codec.dns.DnsQueryEncoder;
-import io.netty.handler.codec.dns.DnsQueryHeader;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsResource;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.handler.codec.dns.DnsResponseDecoder;
 import io.netty.handler.codec.dns.DnsType;
-import io.netty.resolver.NameResolver;
 import io.netty.resolver.SimpleNameResolver;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.collection.IntObjectHashMap;
@@ -57,7 +53,9 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceArray;
@@ -71,13 +69,13 @@ public class DomainNameResolver extends SimpleNameResolver<InetSocketAddress> {
     private static final int INADDRSZ6 = 16;
     private static final int DNS_PORT = 53;
 
-    private static final InetSocketAddress[] DEFAULT_NAME_SERVERS;
+    private static final List<InetSocketAddress> DEFAULT_NAME_SERVERS;
 
     private static final DnsResponseDecoder DECODER = new DnsResponseDecoder();
     private static final DnsQueryEncoder ENCODER = new DnsQueryEncoder();
 
     static {
-        InetSocketAddress[] defaultNameServers;
+        List<InetSocketAddress> defaultNameServers = new ArrayList<InetSocketAddress>(2);
         try {
             Class<?> configClass = Class.forName("sun.net.dns.ResolverConfiguration");
             Method open = configClass.getMethod("open");
@@ -86,30 +84,30 @@ public class DomainNameResolver extends SimpleNameResolver<InetSocketAddress> {
             @SuppressWarnings("unchecked")
             List<String> list = (List<String>) nameservers.invoke(instance);
 
-            defaultNameServers = new InetSocketAddress[list.size()];
-            for (int i = 0; i < defaultNameServers.length; i++) {
-                defaultNameServers[i] = new InetSocketAddress(InetAddress.getByName(list.get(i)), DNS_PORT);
+            for (int i = 0; i < list.size(); i ++) {
+                defaultNameServers.add(new InetSocketAddress(InetAddress.getByName(list.get(i)), DNS_PORT));
             }
 
             if (logger.isDebugEnabled()) {
                 logger.debug(
-                        "Default DNS servers: {} (sun.net.dns.ResolverConfiguration)",
-                        Arrays.asList(defaultNameServers));
+                        "Default DNS servers: {} (sun.net.dns.ResolverConfiguration)", defaultNameServers);
             }
         } catch (Exception ignore) {
-            defaultNameServers = new InetSocketAddress[] {
+            defaultNameServers = Arrays.asList(
                     new InetSocketAddress("8.8.8.8", DNS_PORT),
-                    new InetSocketAddress("8.8.4.4", DNS_PORT)
-            };
+                    new InetSocketAddress("8.8.4.4", DNS_PORT));
 
             if (logger.isWarnEnabled()) {
                 logger.warn(
-                        "Default DNS servers: {} (Google Public DNS as a fallback)",
-                        Arrays.asList(defaultNameServers));
+                        "Default DNS servers: {} (Google Public DNS as a fallback)", defaultNameServers);
             }
         }
 
-        DEFAULT_NAME_SERVERS = defaultNameServers;
+        DEFAULT_NAME_SERVERS = Collections.unmodifiableList(defaultNameServers);
+    }
+
+    public static List<InetSocketAddress> defaultNameServers() {
+        return DEFAULT_NAME_SERVERS;
     }
 
     // TODO: Support multiple name servers with pluggable policy.
@@ -212,11 +210,9 @@ public class DomainNameResolver extends SimpleNameResolver<InetSocketAddress> {
         final String hostname = IDN.toASCII(unresolvedAddress.getHostString());
         final int port = unresolvedAddress.getPort();
 
-        final DnsQuery query = new DnsQuery(0, nameServerAddress);
-        query.addQuestion(new DnsQuestion(hostname, DnsType.ANY));
-
+        final DnsQuestion question = new DnsQuestion(hostname, DnsType.ANY);
         final Promise<SocketAddress> resolvePromise = executor().newPromise();
-        query(query).addListener(new FutureListener<DnsResponse>() {
+        query(question).addListener(new FutureListener<DnsResponse>() {
             @Override
             public void operationComplete(Future<DnsResponse> future) throws Exception {
                 if (future.isSuccess()) {
@@ -282,38 +278,31 @@ public class DomainNameResolver extends SimpleNameResolver<InetSocketAddress> {
         return resolved;
     }
 
-    public Future<DnsResponse> query(final DnsQuery query) {
+    public Future<DnsResponse> query(final DnsQuestion question) {
         final EventLoop eventLoop = ch.eventLoop();
-        final DnsResponsePromise p = new DnsResponsePromise(query);
-        final DnsQueryHeader header = query.header();
+        final DnsResponsePromise p = new DnsResponsePromise(question);
 
-        int id = header.id();
-        if (id == 0) {
-            // The caller did not set the query ID; generate one.
-            id = ThreadLocalRandom.current().nextInt(promises.length());
-            final int maxTries = promises.length() << 1;
-            int tries = 0;
-            for (;;) {
-                if (promises.compareAndSet(id, null, p)) {
-                    break;
-                }
-
-                id = id + 1 & 0xFFFF;
-
-                if (++ tries >= maxTries) {
-                    return eventLoop.newFailedFuture(
-                            new UnknownHostException("query ID space exhausted: " + query));
-                }
+        int id = ThreadLocalRandom.current().nextInt(promises.length());
+        final int maxTries = promises.length() << 1;
+        int tries = 0;
+        for (;;) {
+            if (promises.compareAndSet(id, null, p)) {
+                break;
             }
 
-            header.setId(id);
-        } else {
-            // The caller set the query ID already; respect the specified query ID while preventing the conflict.
-            if (!promises.compareAndSet(id, null, p)) {
+            id = id + 1 & 0xFFFF;
+
+            if (++ tries >= maxTries) {
                 return eventLoop.newFailedFuture(
-                        new IllegalArgumentException("query ID (" + id + ") in use by other query"));
+                        new UnknownHostException("query ID space exhausted: " + question));
             }
         }
+
+        final DnsQuery query = new DnsQuery(0, nameServerAddress);
+
+        p.id = id;
+        query.header().setId(id);
+        query.addQuestion(question);
 
         final ChannelFuture writeFuture = ch.writeAndFlush(query);
         if (writeFuture.isDone()) {
@@ -331,12 +320,12 @@ public class DomainNameResolver extends SimpleNameResolver<InetSocketAddress> {
     }
 
     private void onQueryWriteCompletion(ChannelFuture writeFuture, final DnsResponsePromise p) {
-        final int id = p.query.header().id();
+        final int id = p.id;
 
         if (!writeFuture.isSuccess()) {
             promises.lazySet(id, null);
             p.setFailure(
-                    new UnknownHostException("failed to send a query: " + p.query).initCause(writeFuture.cause()));
+                    new UnknownHostException("failed to send a query: " + p.question).initCause(writeFuture.cause()));
             return;
         }
 
@@ -352,7 +341,7 @@ public class DomainNameResolver extends SimpleNameResolver<InetSocketAddress> {
                     }
 
                     promises.lazySet(id, null);
-                    p.setFailure(new UnknownHostException("query timeout: " + p.query));
+                    p.setFailure(new UnknownHostException("query timeout: " + p.question));
                 }
             }, queryTimeoutMillis, TimeUnit.MILLISECONDS);
         }
@@ -360,12 +349,13 @@ public class DomainNameResolver extends SimpleNameResolver<InetSocketAddress> {
 
     private final class DnsResponsePromise extends DefaultPromise<DnsResponse> {
 
-        final DnsQuery query;
+        int id;
+        final DnsQuestion question;
         volatile ScheduledFuture<?> timeoutFuture;
 
-        DnsResponsePromise(DnsQuery query) {
+        DnsResponsePromise(DnsQuestion question) {
             super(DomainNameResolver.this.executor());
-            this.query = query;
+            this.question = question;
         }
     }
 
@@ -392,7 +382,7 @@ public class DomainNameResolver extends SimpleNameResolver<InetSocketAddress> {
                 // TODO: Implement negative cache with configurable TTL.
                 ReferenceCountUtil.safeRelease(res);
                 p.setFailure(new UnknownHostException(
-                        "failed to resolve: " + p.query + " (" + res.header().responseCode() + ')'));
+                        "failed to resolve: " + p.question + " (" + res.header().responseCode() + ')'));
             }
         }
 
@@ -400,12 +390,5 @@ public class DomainNameResolver extends SimpleNameResolver<InetSocketAddress> {
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             logger.debug("Unexpected exception: ", cause);
         }
-    }
-
-    public static void main(String[] args) throws Exception {
-        EventLoop loop = new NioEventLoopGroup(1).next();
-        NameResolver resolver = new DomainNameResolver(loop, NioDatagramChannel.class, DEFAULT_NAME_SERVERS[0]);
-
-        System.err.println(resolver.resolve("netty.io", 80).sync().getNow());
     }
 }
