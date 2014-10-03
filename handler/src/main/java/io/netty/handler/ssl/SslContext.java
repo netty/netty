@@ -20,17 +20,14 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 
+import java.io.File;
+import java.util.List;
+
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
-
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
 
 /**
  * A secure socket protocol implementation which acts as a factory for {@link SSLEngine} and {@link SslHandler}.
@@ -78,28 +75,6 @@ public abstract class SslContext {
     }
 
     /**
-     * Translate an {@link Iterable} of protocols to an unmodifiable {@link List}
-     * @param protocols Protocols to translate
-     * @return An unmodifiable {@link List} of protocols
-     */
-    public static List<String> translateProtocols(Iterable<String> protocols) {
-        Iterator<String> itr = protocols == null ? null : protocols.iterator();
-        if (itr != null) {
-            List<String> nextProtoList = new ArrayList<String>(4);
-            while (itr.hasNext()) {
-                String p = itr.next();
-                if (p == null) {
-                    break;
-                }
-                nextProtoList.add(p);
-            }
-            return Collections.unmodifiableList(nextProtoList);
-        } else {
-            return Collections.emptyList();
-        }
-    }
-
-    /**
      * Creates a new server-side {@link SslContext}.
      *
      * @param certChainFile an X.509 certificate chain file in PEM format
@@ -134,11 +109,7 @@ public abstract class SslContext {
      * @param ciphers the cipher suites to enable, in the order of preference.
      *                {@code null} to use the default cipher suites.
      * @param cipherFilter a filter to apply over the supplied list of ciphers
-     * @param nextProtocols the application layer protocols to accept, in the order of preference.
-     *                      {@code null} to disable TLS NPN/ALPN extension.
-     * @param wrapperFactory a factory used to wrap the underlying {@link SSLEngine}.
-     *                       This is required if {@code nextProtocols} is not {@code null} or empty
-     *                       and if OpenSSL is available
+     * @param apn Provides a means to configure parameters related to application protocol negotiation.
      * @param sessionCacheSize the size of the cache used for storing SSL session objects.
      *                         {@code 0} to use the default value.
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
@@ -147,12 +118,11 @@ public abstract class SslContext {
      */
     public static SslContext newServerContext(
             File certChainFile, File keyFile, String keyPassword,
-            Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
-            Iterable<String> nextProtocols, SslEngineWrapperFactory wrapperFactory,
+            Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
         return newServerContext(
                 null, certChainFile, keyFile, keyPassword,
-                ciphers, cipherFilter, nextProtocols, wrapperFactory, sessionCacheSize, sessionTimeout);
+                ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
     }
 
     /**
@@ -183,7 +153,7 @@ public abstract class SslContext {
     public static SslContext newServerContext(
             SslProvider provider, File certChainFile, File keyFile, String keyPassword) throws SSLException {
         return newServerContext(provider, certChainFile, keyFile, keyPassword, null, IdentityCipherSuiteFilter.INSTANCE,
-                null, DefaultSslWrapperFactory.INSTANCE, 0, 0);
+                null, 0, 0);
     }
 
     /**
@@ -199,11 +169,7 @@ public abstract class SslContext {
      *                {@code null} to use the default cipher suites.
      * @param cipherFilter a filter to apply over the supplied list of ciphers
      *                Only required if {@code provider} is {@link SslProvider#JDK}
-     * @param nextProtocols the application layer protocols to accept, in the order of preference.
-     *                      {@code null} to disable TLS NPN/ALPN extension.
-     * @param wrapperFactory a factory used to wrap the underlying {@link SSLEngine}.
-     *                       This is required if {@code nextProtocols} is not {@code null} or empty
-     *                       and if the {@code provider} is {@link SslProvider#JDK}
+     * @param apn Provides a means to configure parameters related to application protocol negotiation.
      * @param sessionCacheSize the size of the cache used for storing SSL session objects.
      *                         {@code 0} to use the default value.
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
@@ -213,8 +179,7 @@ public abstract class SslContext {
     public static SslContext newServerContext(
             SslProvider provider,
             File certChainFile, File keyFile, String keyPassword,
-            Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
-            Iterable<String> nextProtocols, SslEngineWrapperFactory wrapperFactory,
+            Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
 
         if (provider == null) {
@@ -225,11 +190,11 @@ public abstract class SslContext {
             case JDK:
                 return new JdkSslServerContext(
                         certChainFile, keyFile, keyPassword,
-                        ciphers, cipherFilter, nextProtocols, wrapperFactory, sessionCacheSize, sessionTimeout);
+                        ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
             case OPENSSL:
                 return new OpenSslServerContext(
                         certChainFile, keyFile, keyPassword,
-                        ciphers, nextProtocols, sessionCacheSize, sessionTimeout);
+                        ciphers, apn, sessionCacheSize, sessionTimeout);
             default:
                 throw new Error(provider.toString());
         }
@@ -295,11 +260,7 @@ public abstract class SslContext {
      * @param ciphers the cipher suites to enable, in the order of preference.
      *                {@code null} to use the default cipher suites.
      * @param cipherFilter a filter to apply over the supplied list of ciphers
-     * @param nextProtocols the application layer protocols to accept, in the order of preference.
-     *                      {@code null} to disable TLS NPN/ALPN extension.
-     * @param wrapperFactory a factory used to wrap the underlying {@link SSLEngine}.
-     *                       This is required if {@code nextProtocols} is not {@code null} or empty
-     *                       and if OpenSSL is available
+     * @param apn Provides a means to configure parameters related to application protocol negotiation.
      * @param sessionCacheSize the size of the cache used for storing SSL session objects.
      *                         {@code 0} to use the default value.
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
@@ -309,12 +270,11 @@ public abstract class SslContext {
      */
     public static SslContext newClientContext(
             File certChainFile, TrustManagerFactory trustManagerFactory,
-            Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
-            Iterable<String> nextProtocols, SslEngineWrapperFactory wrapperFactory,
+            Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
         return newClientContext(
                 null, certChainFile, trustManagerFactory,
-                ciphers, cipherFilter, nextProtocols, wrapperFactory, sessionCacheSize, sessionTimeout);
+                ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
     }
 
     /**
@@ -375,7 +335,7 @@ public abstract class SslContext {
     public static SslContext newClientContext(
             SslProvider provider, File certChainFile, TrustManagerFactory trustManagerFactory) throws SSLException {
         return newClientContext(provider, certChainFile, trustManagerFactory, null, IdentityCipherSuiteFilter.INSTANCE,
-                null, DefaultSslWrapperFactory.INSTANCE, 0, 0);
+                null, 0, 0);
     }
 
     /**
@@ -391,11 +351,7 @@ public abstract class SslContext {
      * @param ciphers the cipher suites to enable, in the order of preference.
      *                {@code null} to use the default cipher suites.
      * @param cipherFilter a filter to apply over the supplied list of ciphers
-     * @param nextProtocols the application layer protocols to accept, in the order of preference.
-     *                      {@code null} to disable TLS NPN/ALPN extension.
-     * @param wrapperFactory a factory used to wrap the underlying {@link SSLEngine}.
-     *                       This is required if {@code nextProtocols} is not {@code null} or empty
-     *                       and if the {@code provider} is {@link SslProvider#JDK}
+     * @param apn Provides a means to configure parameters related to application protocol negotiation.
      * @param sessionCacheSize the size of the cache used for storing SSL session objects.
      *                         {@code 0} to use the default value.
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
@@ -406,8 +362,7 @@ public abstract class SslContext {
     public static SslContext newClientContext(
             SslProvider provider,
             File certChainFile, TrustManagerFactory trustManagerFactory,
-            Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
-            Iterable<String> nextProtocols, SslEngineWrapperFactory wrapperFactory,
+            Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
 
         if (provider != null && provider != SslProvider.JDK) {
@@ -416,7 +371,7 @@ public abstract class SslContext {
 
         return new JdkSslClientContext(
                 certChainFile, trustManagerFactory,
-                ciphers, cipherFilter, nextProtocols, wrapperFactory, sessionCacheSize, sessionTimeout);
+                ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
     }
 
     SslContext() { }
@@ -449,12 +404,9 @@ public abstract class SslContext {
     public abstract long sessionTimeout();
 
     /**
-     * Returns the list of application layer protocols for the TLS NPN/ALPN extension, in the order of preference.
-     *
-     * @return the list of application layer protocols.
-     *         {@code null} if NPN/ALPN extension has been disabled.
+     * Returns the object responsible for negotiating application layer protocols for the TLS NPN/ALPN extensions.
      */
-    public abstract List<String> nextProtocols();
+    public abstract ApplicationProtocolNegotiator applicationProtocolNegotiator();
 
     /**
      * Creates a new {@link SSLEngine}.
