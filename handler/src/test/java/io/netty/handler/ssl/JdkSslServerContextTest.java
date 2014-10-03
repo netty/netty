@@ -32,6 +32,14 @@ public class JdkSslServerContextTest {
     }
 
     @Test
+    public void testJdkSslServerWithEncryptedPrivateKey2() throws SSLException {
+        File keyFile = new File(getClass().getResource("test2_encrypted.pem").getFile());
+        File crtFile = new File(getClass().getResource("test2.crt").getFile());
+
+        new JdkSslServerContext(crtFile, keyFile, "12345");
+    }
+
+    @Test
     public void testJdkSslServerWithUnencryptedPrivateKey() throws SSLException {
         File keyFile = new File(getClass().getResource("test_unencrypted.pem").getFile());
         File crtFile = new File(getClass().getResource("test.crt").getFile());
