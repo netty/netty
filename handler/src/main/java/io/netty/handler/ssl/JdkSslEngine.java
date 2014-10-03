@@ -13,12 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.handler.ssl;
 
-import org.eclipse.jetty.npn.NextProtoNego;
-import org.eclipse.jetty.npn.NextProtoNego.ClientProvider;
-import org.eclipse.jetty.npn.NextProtoNego.ServerProvider;
+import java.nio.ByteBuffer;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -26,105 +23,32 @@ import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSession;
-import java.nio.ByteBuffer;
-import java.util.List;
 
-final class JettyNpnSslEngine extends SSLEngine {
-
-    private static boolean available;
-
-    static boolean isAvailable() {
-        updateAvailability();
-        return available;
-    }
-
-    private static void updateAvailability() {
-        if (available) {
-            return;
-        }
-        try {
-            // Try to get the bootstrap class loader.
-            ClassLoader bootloader = ClassLoader.getSystemClassLoader().getParent();
-            if (bootloader == null) {
-                // If failed, use the system class loader,
-                // although it's not perfect to tell if NPN extension has been loaded.
-                bootloader = ClassLoader.getSystemClassLoader();
-            }
-            Class.forName("sun.security.ssl.NextProtoNegoExtension", true, bootloader);
-            available = true;
-        } catch (Exception ignore) {
-            // npn-boot was not loaded.
-        }
-    }
-
+class JdkSslEngine extends SSLEngine {
     private final SSLEngine engine;
-    private final JettyNpnSslSession session;
+    private final JdkSslSession session;
 
-    JettyNpnSslEngine(SSLEngine engine, final List<String> nextProtocols, boolean server) {
-        assert !nextProtocols.isEmpty();
-
+    JdkSslEngine(SSLEngine engine) {
         this.engine = engine;
-        session = new JettyNpnSslSession(engine);
-
-        if (server) {
-            NextProtoNego.put(engine, new ServerProvider() {
-                @Override
-                public void unsupported() {
-                    getSession().setApplicationProtocol(nextProtocols.get(nextProtocols.size() - 1));
-                }
-
-                @Override
-                public List<String> protocols() {
-                    return nextProtocols;
-                }
-
-                @Override
-                public void protocolSelected(String protocol) {
-                    getSession().setApplicationProtocol(protocol);
-                }
-            });
-        } else {
-            final String[] list = nextProtocols.toArray(new String[nextProtocols.size()]);
-            final String fallback = list[list.length - 1];
-
-            NextProtoNego.put(engine, new ClientProvider() {
-                @Override
-                public boolean supports() {
-                    return true;
-                }
-
-                @Override
-                public void unsupported() {
-                    session.setApplicationProtocol(null);
-                }
-
-                @Override
-                public String selectProtocol(List<String> protocols) {
-                    for (String p: list) {
-                        if (protocols.contains(p)) {
-                            return p;
-                        }
-                    }
-                    return fallback;
-                }
-            });
-        }
+        session = new JdkSslSession(engine);
     }
 
     @Override
-    public JettyNpnSslSession getSession() {
+    public JdkSslSession getSession() {
         return session;
+    }
+
+    public SSLEngine getWrappedEngine() {
+        return engine;
     }
 
     @Override
     public void closeInbound() throws SSLException {
-        NextProtoNego.remove(engine);
         engine.closeInbound();
     }
 
     @Override
     public void closeOutbound() {
-        NextProtoNego.remove(engine);
         engine.closeOutbound();
     }
 

@@ -26,6 +26,12 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.memcache.binary.BinaryMemcacheClientCodec;
 import io.netty.handler.codec.memcache.binary.BinaryMemcacheObjectAggregator;
+import io.netty.handler.codec.spdy.SpdyOrHttpChooser.SelectedProtocol;
+import io.netty.handler.ssl.ApplicationProtocolConfig;
+import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
+import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
+import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
+import io.netty.handler.ssl.IdentityCipherSuiteFilter;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
@@ -45,7 +51,15 @@ public final class MemcacheClient {
         // Configure SSL.
         final SslContext sslCtx;
         if (SSL) {
-            sslCtx = SslContext.newClientContext(InsecureTrustManagerFactory.INSTANCE);
+            sslCtx = SslContext.newClientContext(
+                    null, InsecureTrustManagerFactory.INSTANCE, null,
+                    IdentityCipherSuiteFilter.INSTANCE,
+                    new ApplicationProtocolConfig(
+                            Protocol.ALPN,
+                            SelectorFailureBehavior.FATAL_ALERT,
+                            SelectedListenerFailureBehavior.FATAL_ALERT,
+                            SelectedProtocol.HTTP_1_1.protocolName()),
+                    0, 0);
         } else {
             sslCtx = null;
         }
