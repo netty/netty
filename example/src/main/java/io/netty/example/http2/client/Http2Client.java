@@ -29,14 +29,16 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http2.Http2OrHttpChooser.SelectedProtocol;
 import io.netty.handler.codec.http2.Http2SecurityUtil;
-import io.netty.handler.ssl.JettyAlpnSslEngineWrapper;
+import io.netty.handler.ssl.ApplicationProtocolConfig;
+import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
+import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
+import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.CharsetUtil;
 
 import java.net.URI;
-import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -63,8 +65,12 @@ public final class Http2Client {
                     /* NOTE: the following filter may not include all ciphers required by the HTTP/2 specification
                      * Please refer to the HTTP/2 specification for cipher requirements. */
                     SupportedCipherSuiteFilter.INSTANCE,
-                    Arrays.asList(SelectedProtocol.HTTP_2.protocolName(), SelectedProtocol.HTTP_1_1.protocolName()),
-                    JettyAlpnSslEngineWrapper.instance(),
+                    new ApplicationProtocolConfig(
+                            Protocol.ALPN,
+                            SelectorFailureBehavior.FATAL_ALERT,
+                            SelectedListenerFailureBehavior.FATAL_ALERT,
+                            SelectedProtocol.HTTP_2.protocolName(),
+                            SelectedProtocol.HTTP_1_1.protocolName()),
                     0, 0);
         } else {
             sslCtx = null;
