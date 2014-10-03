@@ -80,6 +80,14 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
     private static final byte OPCODE_PING = 0x9;
     private static final byte OPCODE_PONG = 0xA;
 
+    /**
+     * The size treshold for gathering writes. Non-Masked messages bigger than this size will be be sent fragmented as
+     * a header and a content ByteBuf whereas messages smaller than the size will be merged into a single buffer and
+     * sent at once.<br>
+     * Masked messages will always be sent at once.
+     */
+    private static final int GATHERING_WRITE_TRESHOLD = 1024;
+
     private final boolean maskPayload;
 
     /**
@@ -139,7 +147,7 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
             int maskLength = maskPayload ? 4 : 0;
             if (length <= 125) {
                 int size = 2 + maskLength;
-                if (maskPayload) {
+                if (maskPayload || length <= GATHERING_WRITE_TRESHOLD) {
                     size += length;
                 }
                 buf = ctx.alloc().buffer(size);
@@ -148,7 +156,7 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
                 buf.writeByte(b);
             } else if (length <= 0xFFFF) {
                 int size = 4 + maskLength;
-                if (maskPayload) {
+                if (maskPayload || length <= GATHERING_WRITE_TRESHOLD) {
                     size += length;
                 }
                 buf = ctx.alloc().buffer(size);
@@ -158,7 +166,7 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
                 buf.writeByte(length & 0xFF);
             } else {
                 int size = 10 + maskLength;
-                if (maskPayload) {
+                if (maskPayload || length <= GATHERING_WRITE_TRESHOLD) {
                     size += length;
                 }
                 buf = ctx.alloc().buffer(size);
