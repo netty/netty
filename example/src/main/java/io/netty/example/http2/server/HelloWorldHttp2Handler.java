@@ -120,6 +120,7 @@ public class HelloWorldHttp2Handler extends Http2ConnectionHandler {
             Http2Headers headers = new DefaultHttp2Headers().status(new AsciiString("200"));
             frameWriter.writeHeaders(ctx, streamId, headers, 0, false, ctx.newPromise());
             frameWriter.writeData(ctx, streamId, payload, 0, true, ctx.newPromise());
+            ctx.flush();
         }
     };
 }
