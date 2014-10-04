@@ -71,7 +71,7 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    protected void setInterestOpsNow(int interestOps) {
+    protected void setInternalInterestOps(int interestOps) {
         // Ignore.
     }
 

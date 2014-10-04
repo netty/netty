@@ -15,10 +15,6 @@
  */
 package org.jboss.netty.channel.socket.oio;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-
 import org.jboss.netty.channel.AbstractChannel;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
@@ -26,6 +22,10 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.socket.Worker;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
 abstract class AbstractOioChannel extends AbstractChannel {
     private volatile InetSocketAddress localAddress;
@@ -49,8 +49,13 @@ abstract class AbstractOioChannel extends AbstractChannel {
     }
 
     @Override
-    protected void setInterestOpsNow(int interestOps) {
-        super.setInterestOpsNow(interestOps);
+    protected int getInternalInterestOps() {
+        return super.getInternalInterestOps();
+    }
+
+    @Override
+    protected void setInternalInterestOps(int interestOps) {
+        super.setInternalInterestOps(interestOps);
     }
 
     @Override
