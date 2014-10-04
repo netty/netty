@@ -317,11 +317,11 @@ abstract class AbstractNioWorker extends AbstractNioSelector implements Worker {
             return;
         }
 
-        int interestOps = channel.getRawInterestOps();
+        int interestOps = channel.getInternalInterestOps();
         if ((interestOps & SelectionKey.OP_WRITE) == 0) {
             interestOps |= SelectionKey.OP_WRITE;
             key.interestOps(interestOps);
-            channel.setRawInterestOpsNow(interestOps);
+            channel.setInternalInterestOps(interestOps);
         }
     }
 
@@ -336,11 +336,11 @@ abstract class AbstractNioWorker extends AbstractNioSelector implements Worker {
             return;
         }
 
-        int interestOps = channel.getRawInterestOps();
+        int interestOps = channel.getInternalInterestOps();
         if ((interestOps & SelectionKey.OP_WRITE) != 0) {
             interestOps &= ~SelectionKey.OP_WRITE;
             key.interestOps(interestOps);
-            channel.setRawInterestOpsNow(interestOps);
+            channel.setInternalInterestOps(interestOps);
         }
     }
 
@@ -464,16 +464,16 @@ abstract class AbstractNioWorker extends AbstractNioSelector implements Worker {
             SelectionKey key = channel.channel.keyFor(selector);
 
             // Override OP_WRITE flag - a user cannot change this flag.
-            int newInterestOps = interestOps & ~Channel.OP_WRITE | channel.getRawInterestOps() & Channel.OP_WRITE;
+            int newInterestOps = interestOps & ~Channel.OP_WRITE | channel.getInternalInterestOps() & Channel.OP_WRITE;
 
             if (key == null || selector == null) {
-                if (channel.getRawInterestOps() != newInterestOps) {
+                if (channel.getInternalInterestOps() != newInterestOps) {
                     changed = true;
                 }
 
                 // Not registered to the worker yet.
                 // Set the rawInterestOps immediately; RegisterTask will pick it up.
-                channel.setRawInterestOpsNow(newInterestOps);
+                channel.setInternalInterestOps(newInterestOps);
 
                 future.setSuccess();
                 if (changed) {
@@ -487,14 +487,14 @@ abstract class AbstractNioWorker extends AbstractNioSelector implements Worker {
                 return;
             }
 
-            if (channel.getRawInterestOps() != newInterestOps) {
+            if (channel.getInternalInterestOps() != newInterestOps) {
                 changed = true;
                 key.interestOps(newInterestOps);
                 if (Thread.currentThread() != thread &&
                     wakenUp.compareAndSet(false, true)) {
                     selector.wakeup();
                 }
-                channel.setRawInterestOpsNow(newInterestOps);
+                channel.setInternalInterestOps(newInterestOps);
             }
 
             future.setSuccess();

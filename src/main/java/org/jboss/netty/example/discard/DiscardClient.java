@@ -23,8 +23,14 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.handler.ssl.SslContext;
 import org.jboss.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import org.jboss.netty.handler.traffic.ChannelTrafficShapingHandler;
+import org.jboss.netty.handler.traffic.GlobalTrafficShapingHandler;
+import org.jboss.netty.util.HashedWheelTimer;
+import org.jboss.netty.util.Timer;
 
 import java.net.InetSocketAddress;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.Executors;
 
 /**
@@ -36,6 +42,9 @@ public final class DiscardClient {
     static final String HOST = System.getProperty("host", "127.0.0.1");
     static final int PORT = Integer.parseInt(System.getProperty("port", "8009"));
     static final int SIZE = Integer.parseInt(System.getProperty("size", "256"));
+    static final int MAXGLOBALTHROUGHPUT = Integer.parseInt(System.getProperty("maxGlobalThroughput", "0"));
+    static final int MAXCHANNELTHROUGHPUT = Integer.parseInt(System.getProperty("maxChannelThroughput", "0"));
+    static final int connectionCount = Integer.parseInt(System.getProperty("connectionCount", "1"));
 
     public static void main(String[] args) throws Exception {
         // Configure SSL.
@@ -51,7 +60,20 @@ public final class DiscardClient {
                 new NioClientSocketChannelFactory(
                         Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
-
+        final Timer timer = new HashedWheelTimer();
+        final GlobalTrafficShapingHandler gtsh;
+        final GlobalChannelTrafficShapingHandlerWithLog gctsh;
+        if (MAXGLOBALTHROUGHPUT > 0 && MAXCHANNELTHROUGHPUT > 0) {
+            gctsh = new GlobalChannelTrafficShapingHandlerWithLog(timer, MAXGLOBALTHROUGHPUT, 0,
+                    MAXCHANNELTHROUGHPUT, 0, 1000);
+            gtsh = null;
+        } else if (MAXGLOBALTHROUGHPUT > 0) {
+            gtsh = new GlobalTrafficShapingHandler(timer, MAXGLOBALTHROUGHPUT, 0, 1000);
+            gctsh = null;
+        } else {
+            gtsh = null;
+            gctsh = null;
+        }
         try {
             bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
                 public ChannelPipeline getPipeline() {
@@ -59,19 +81,44 @@ public final class DiscardClient {
                     if (sslCtx != null) {
                         p.addLast("ssl", sslCtx.newHandler(HOST, PORT));
                     }
+                    if (MAXGLOBALTHROUGHPUT > 0 && MAXCHANNELTHROUGHPUT > 0) {
+                        p.addLast("Mixte", gctsh);
+                    } else if (MAXGLOBALTHROUGHPUT > 0) {
+                        p.addLast("Global", gtsh);
+                    } else if (MAXCHANNELTHROUGHPUT > 0) {
+                        p.addLast("Channel", new ChannelTrafficShapingHandler(timer, MAXCHANNELTHROUGHPUT, 0, 1000));
+                    }
                     p.addLast("discard", new DiscardClientHandler());
                     return p;
                 }
             });
 
-            // Start the connection attempt.
-            ChannelFuture future = bootstrap.connect(new InetSocketAddress(HOST, PORT));
-
+            List<ChannelFuture> futures = new LinkedList<ChannelFuture>();
+            for (int i = 0; i < connectionCount; i++) {
+                // Start the connection attempt.
+                futures.add(bootstrap.connect(new InetSocketAddress(HOST, PORT)));
+            }
             // Wait until the connection is closed or the connection attempt fails.
-            future.getChannel().getCloseFuture().sync();
+            for (ChannelFuture channelFuture : futures) {
+                channelFuture.getChannel().getCloseFuture().sync();
+                if (MAXCHANNELTHROUGHPUT > 0 && MAXGLOBALTHROUGHPUT <= 0) {
+                    ChannelTrafficShapingHandler ctsh =
+                            channelFuture.getChannel().getPipeline().get(ChannelTrafficShapingHandler.class);
+                    if (ctsh != null) {
+                        ctsh.releaseExternalResources();
+                    }
+                }
+            }
         } finally {
             // Shut down thread pools to exit.
             bootstrap.releaseExternalResources();
+            if (gtsh != null) {
+                gtsh.releaseExternalResources();
+            }
+            if (gctsh != null) {
+                gctsh.releaseExternalResources();
+            }
+            timer.stop();
         }
     }
 }

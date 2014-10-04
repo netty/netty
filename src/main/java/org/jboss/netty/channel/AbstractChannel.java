@@ -20,6 +20,7 @@ import org.jboss.netty.util.internal.ConcurrentHashMap;
 import java.net.SocketAddress;
 import java.util.Random;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
  * A skeletal {@link Channel} implementation.
@@ -57,6 +58,14 @@ public abstract class AbstractChannel implements Channel {
     private boolean strValConnected;
     private String strVal;
     private volatile Object attachment;
+
+    private static final AtomicIntegerFieldUpdater<AbstractChannel> UNWRITABLE_UPDATER;
+    @SuppressWarnings("UnusedDeclaration")
+    private volatile int unwritable;
+
+    static {
+        UNWRITABLE_UPDATER = AtomicIntegerFieldUpdater.newUpdater(AbstractChannel.class, "unwritable");
+    }
 
     /**
      * Creates a new instance.
@@ -212,6 +221,14 @@ public abstract class AbstractChannel implements Channel {
     }
 
     public int getInterestOps() {
+        if (!isOpen()) {
+            return Channel.OP_WRITE;
+        }
+
+        int interestOps = getInternalInterestOps() & ~OP_WRITE;
+        if (!isWritable()) {
+            interestOps |= OP_WRITE;
+        }
         return interestOps;
     }
 
@@ -219,21 +236,104 @@ public abstract class AbstractChannel implements Channel {
         return Channels.setInterestOps(this, interestOps);
     }
 
+    protected int getInternalInterestOps() {
+        return interestOps;
+    }
+
     /**
      * Sets the {@link #getInterestOps() interestOps} property of this channel
      * immediately.  This method is intended to be called by an internal
      * component - please do not call it unless you know what you are doing.
      */
-    protected void setInterestOpsNow(int interestOps) {
+    protected void setInternalInterestOps(int interestOps) {
         this.interestOps = interestOps;
     }
 
     public boolean isReadable() {
-        return (getInterestOps() & OP_READ) != 0;
+        return (getInternalInterestOps() & OP_READ) != 0;
     }
 
     public boolean isWritable() {
-        return (getInterestOps() & OP_WRITE) == 0;
+        return unwritable == 0;
+    }
+
+    public final boolean getUserDefinedWritability(int index) {
+        return (unwritable & writabilityMask(index)) == 0;
+    }
+
+    public final void setUserDefinedWritability(int index, boolean writable) {
+        if (writable) {
+            setUserDefinedWritability(index);
+        } else {
+            clearUserDefinedWritability(index);
+        }
+    }
+
+    private void setUserDefinedWritability(int index) {
+        final int mask = ~writabilityMask(index);
+        for (;;) {
+            final int oldValue = unwritable;
+            final int newValue = oldValue & mask;
+            if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
+                if (oldValue != 0 && newValue == 0) {
+                    getPipeline().sendUpstream(
+                            new UpstreamChannelStateEvent(
+                                    this, ChannelState.INTEREST_OPS, getInterestOps()));
+                }
+                break;
+            }
+        }
+    }
+
+    private void clearUserDefinedWritability(int index) {
+        final int mask = writabilityMask(index);
+        for (;;) {
+            final int oldValue = unwritable;
+            final int newValue = oldValue | mask;
+            if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
+                if (oldValue == 0 && newValue != 0) {
+                    getPipeline().sendUpstream(
+                            new UpstreamChannelStateEvent(
+                                    this, ChannelState.INTEREST_OPS, getInterestOps()));
+                }
+                break;
+            }
+        }
+    }
+
+    private static int writabilityMask(int index) {
+        if (index < 1 || index > 31) {
+            throw new IllegalArgumentException("index: " + index + " (expected: 1~31)");
+        }
+        return 1 << index;
+    }
+
+    protected boolean setWritable() {
+        for (;;) {
+            final int oldValue = unwritable;
+            final int newValue = oldValue & ~1;
+            if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
+                if (oldValue != 0 && newValue == 0) {
+                    return true;
+                }
+                break;
+            }
+        }
+        return false;
+    }
+
+    protected boolean setUnwritable() {
+        for (;;) {
+            final int oldValue = unwritable;
+            final int newValue = oldValue | 1;
+            if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
+                if (oldValue == 0 && newValue != 0) {
+                    return true;
+                }
+                break;
+            }
+        }
+        return false;
     }
 
     public ChannelFuture setReadable(boolean readable) {
@@ -335,7 +435,7 @@ public abstract class AbstractChannel implements Channel {
 
     private final class ChannelCloseFuture extends DefaultChannelFuture {
 
-        public ChannelCloseFuture() {
+        ChannelCloseFuture() {
             super(AbstractChannel.this, false);
         }
 

@@ -15,6 +15,8 @@
  */
 package org.jboss.netty.example.discard;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
@@ -34,6 +36,7 @@ public class DiscardClientHandler extends SimpleChannelUpstreamHandler {
 
     private long transferredBytes;
     private final byte[] content;
+    private AtomicBoolean lock = new AtomicBoolean();
 
     public DiscardClientHandler() {
         content = new byte[DiscardClient.SIZE];
@@ -58,13 +61,14 @@ public class DiscardClientHandler extends SimpleChannelUpstreamHandler {
     @Override
     public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) {
         // Send the initial messages.
-        generateTraffic(e);
+        generateTraffic(ctx);
     }
 
     @Override
-    public void channelInterestChanged(ChannelHandlerContext ctx, ChannelStateEvent e) {
-        // Keep sending messages whenever the current socket buffer has room.
-        generateTraffic(e);
+    public void channelInterestChanged(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+        if (ctx.getChannel().isWritable()) {
+            generateTraffic(ctx);
+        }
     }
 
     @Override
@@ -84,18 +88,22 @@ public class DiscardClientHandler extends SimpleChannelUpstreamHandler {
         e.getChannel().close();
     }
 
-    private void generateTraffic(ChannelStateEvent e) {
-        // Keep generating traffic until the channel is unwritable.
-        // A channel becomes unwritable when its internal buffer is full.
-        // If you keep writing messages ignoring this property,
-        // you will end up with an OutOfMemoryError.
-        Channel channel = e.getChannel();
-        while (channel.isWritable()) {
-            ChannelBuffer m = nextMessage();
-            if (m == null) {
-                break;
+    private void generateTraffic(ChannelHandlerContext ctx) {
+        if (lock.compareAndSet(false, true)) {
+            // Keep generating traffic until the channel is unwritable.
+            // A channel becomes unwritable when its internal buffer is full.
+            // If you keep writing messages ignoring this property,
+            // you will end up with an OutOfMemoryError.
+            Channel channel = ctx.getChannel();
+            // The test using channel.isWritable() is enough
+            while (channel.isWritable()) {
+                ChannelBuffer m = nextMessage();
+                if (m == null) {
+                    break;
+                }
+                channel.write(m);
             }
-            channel.write(m);
+            lock.set(false);
         }
     }
 
