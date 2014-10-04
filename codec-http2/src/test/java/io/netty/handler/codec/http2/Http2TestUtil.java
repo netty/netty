@@ -88,7 +88,7 @@ final class Http2TestUtil {
         private final Http2Connection connection;
         private final Http2FrameListener listener;
         private final DefaultHttp2FrameReader reader;
-        private volatile CountDownLatch latch;
+        private final CountDownLatch latch;
 
         FrameAdapter(Http2FrameListener listener, CountDownLatch latch) {
             this(null, listener, latch);
@@ -103,10 +103,6 @@ final class Http2TestUtil {
             this.connection = connection;
             this.listener = listener;
             this.reader = reader;
-            latch(latch);
-        }
-
-        public void latch(CountDownLatch latch) {
             this.latch = latch;
         }
 
@@ -264,8 +260,8 @@ final class Http2TestUtil {
      */
     static class FrameCountDown implements Http2FrameListener {
         private final Http2FrameListener listener;
-        private volatile CountDownLatch messageLatch;
-        private volatile CountDownLatch dataLatch;
+        private final CountDownLatch messageLatch;
+        private final CountDownLatch dataLatch;
 
         public FrameCountDown(Http2FrameListener listener, CountDownLatch messageLatch) {
             this(listener, messageLatch, null);
@@ -275,14 +271,6 @@ final class Http2TestUtil {
             this.listener = listener;
             this.messageLatch = messageLatch;
             this.dataLatch = dataLatch;
-        }
-
-        public void messageLatch(CountDownLatch latch) {
-            messageLatch = latch;
-        }
-
-        public void dataLatch(CountDownLatch latch) {
-            dataLatch = latch;
         }
 
         @Override

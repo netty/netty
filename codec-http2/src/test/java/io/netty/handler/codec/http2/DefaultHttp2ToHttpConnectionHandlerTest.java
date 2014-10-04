@@ -70,7 +70,6 @@ import org.mockito.stubbing.Answer;
  * Testing the {@link Http2ToHttpConnectionHandler} for {@link FullHttpRequest} objects into HTTP/2 frames
  */
 public class DefaultHttp2ToHttpConnectionHandlerTest {
-    private static final int CONNECTION_SETUP_READ_COUNT = 2;
 
     @Mock
     private Http2FrameListener clientListener;
@@ -88,41 +87,6 @@ public class DefaultHttp2ToHttpConnectionHandlerTest {
     @Before
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
-
-        requestLatch(new CountDownLatch(CONNECTION_SETUP_READ_COUNT + 1));
-
-        sb = new ServerBootstrap();
-        cb = new Bootstrap();
-
-        sb.group(new NioEventLoopGroup(), new NioEventLoopGroup());
-        sb.channel(NioServerSocketChannel.class);
-        sb.childHandler(new ChannelInitializer<Channel>() {
-            @Override
-            protected void initChannel(Channel ch) throws Exception {
-                ChannelPipeline p = ch.pipeline();
-                serverFrameCountDown = new Http2TestUtil.FrameCountDown(serverListener, requestLatch);
-                p.addLast(new Http2ToHttpConnectionHandler(true, serverFrameCountDown));
-                p.addLast(ignoreSettingsHandler());
-            }
-        });
-
-        cb.group(new NioEventLoopGroup());
-        cb.channel(NioSocketChannel.class);
-        cb.handler(new ChannelInitializer<Channel>() {
-            @Override
-            protected void initChannel(Channel ch) throws Exception {
-                ChannelPipeline p = ch.pipeline();
-                p.addLast(new Http2ToHttpConnectionHandler(false, clientListener));
-                p.addLast(ignoreSettingsHandler());
-            }
-        });
-
-        serverChannel = sb.bind(new InetSocketAddress(0)).sync().channel();
-        int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
-
-        ChannelFuture ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
-        assertTrue(ccf.awaitUninterruptibly().isSuccess());
-        clientChannel = ccf.channel();
     }
 
     @After
@@ -138,6 +102,7 @@ public class DefaultHttp2ToHttpConnectionHandlerTest {
 
     @Test
     public void testJustHeadersRequest() throws Exception {
+        bootstrapEnv(3);
         final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/example");
         try {
             final HttpHeaders httpHeaders = request.headers();
@@ -173,7 +138,6 @@ public class DefaultHttp2ToHttpConnectionHandlerTest {
 
     @Test
     public void testRequestWithBody() throws Exception {
-        requestLatch(new CountDownLatch(CONNECTION_SETUP_READ_COUNT + 2));
         final String text = "foooooogoooo";
         final ByteBuf data = Unpooled.copiedBuffer(text, UTF_8);
         final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<String>());
@@ -185,6 +149,7 @@ public class DefaultHttp2ToHttpConnectionHandlerTest {
             }
         }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3),
                 any(ByteBuf.class), eq(0), eq(true));
+        bootstrapEnv(4);
         try {
             final HttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, "/example", data.retain());
             final HttpHeaders httpHeaders = request.headers();
@@ -216,11 +181,41 @@ public class DefaultHttp2ToHttpConnectionHandlerTest {
         }
     }
 
-    private void requestLatch(CountDownLatch latch) {
-        requestLatch = latch;
-        if (serverFrameCountDown != null) {
-            serverFrameCountDown.messageLatch(latch);
-        }
+    private void bootstrapEnv(int requestCountDown) throws Exception {
+        requestLatch = new CountDownLatch(requestCountDown);
+
+        sb = new ServerBootstrap();
+        cb = new Bootstrap();
+
+        sb.group(new NioEventLoopGroup(), new NioEventLoopGroup());
+        sb.channel(NioServerSocketChannel.class);
+        sb.childHandler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ChannelPipeline p = ch.pipeline();
+                serverFrameCountDown = new Http2TestUtil.FrameCountDown(serverListener, requestLatch);
+                p.addLast(new Http2ToHttpConnectionHandler(true, serverFrameCountDown));
+                p.addLast(ignoreSettingsHandler());
+            }
+        });
+
+        cb.group(new NioEventLoopGroup());
+        cb.channel(NioSocketChannel.class);
+        cb.handler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ChannelPipeline p = ch.pipeline();
+                p.addLast(new Http2ToHttpConnectionHandler(false, clientListener));
+                p.addLast(ignoreSettingsHandler());
+            }
+        });
+
+        serverChannel = sb.bind(new InetSocketAddress(0)).sync().channel();
+        int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
+
+        ChannelFuture ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
+        assertTrue(ccf.awaitUninterruptibly().isSuccess());
+        clientChannel = ccf.channel();
     }
 
     private void awaitRequests() throws Exception {

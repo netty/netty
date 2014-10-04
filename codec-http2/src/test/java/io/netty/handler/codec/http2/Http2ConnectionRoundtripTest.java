@@ -71,9 +71,6 @@ import org.mockito.stubbing.Answer;
  * Tests the full HTTP/2 framing stack including the connection and preface handlers.
  */
 public class Http2ConnectionRoundtripTest {
-    private static final int STRESS_TIMEOUT_SECONDS = 30;
-    private static final int NUM_STREAMS = 5000;
-    private final byte[] DATA_TEXT = "hello world".getBytes(UTF_8);
 
     @Mock
     private Http2FrameListener clientListener;
@@ -93,42 +90,6 @@ public class Http2ConnectionRoundtripTest {
     @Before
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
-
-        requestLatch(new CountDownLatch(NUM_STREAMS * 3));
-        dataLatch(new CountDownLatch(NUM_STREAMS * DATA_TEXT.length));
-        sb = new ServerBootstrap();
-        cb = new Bootstrap();
-
-        sb.group(new NioEventLoopGroup(), new NioEventLoopGroup());
-        sb.channel(NioServerSocketChannel.class);
-        sb.childHandler(new ChannelInitializer<Channel>() {
-            @Override
-            protected void initChannel(Channel ch) throws Exception {
-                ChannelPipeline p = ch.pipeline();
-                serverFrameCountDown = new Http2TestUtil.FrameCountDown(serverListener, requestLatch, dataLatch);
-                p.addLast(new Http2ConnectionHandler(true, serverFrameCountDown));
-                p.addLast(Http2CodecUtil.ignoreSettingsHandler());
-            }
-        });
-
-        cb.group(new NioEventLoopGroup());
-        cb.channel(NioSocketChannel.class);
-        cb.handler(new ChannelInitializer<Channel>() {
-            @Override
-            protected void initChannel(Channel ch) throws Exception {
-                ChannelPipeline p = ch.pipeline();
-                p.addLast(new Http2ConnectionHandler(false, clientListener));
-                p.addLast(Http2CodecUtil.ignoreSettingsHandler());
-            }
-        });
-
-        serverChannel = sb.bind(new InetSocketAddress(0)).sync().channel();
-        int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
-
-        ChannelFuture ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
-        assertTrue(ccf.awaitUninterruptibly().isSuccess());
-        clientChannel = ccf.channel();
-        http2Client = clientChannel.pipeline().get(Http2ConnectionHandler.class);
     }
 
     @After
@@ -144,6 +105,7 @@ public class Http2ConnectionRoundtripTest {
 
     @Test
     public void http2ExceptionInPipelineShouldCloseConnection() throws Exception {
+        bootstrapEnv(1, 1);
 
         // Create a latch to track when the close occurs.
         final CountDownLatch closeLatch = new CountDownLatch(1);
@@ -156,7 +118,6 @@ public class Http2ConnectionRoundtripTest {
 
         // Create a single stream by sending a HEADERS frame to the server.
         final Http2Headers headers = dummyHeaders();
-        requestLatch(new CountDownLatch(1));
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() {
@@ -183,6 +144,7 @@ public class Http2ConnectionRoundtripTest {
 
     @Test
     public void nonHttp2ExceptionInPipelineShouldNotCloseConnection() throws Exception {
+        bootstrapEnv(1, 1);
 
         // Create a latch to track when the close occurs.
         final CountDownLatch closeLatch = new CountDownLatch(1);
@@ -195,7 +157,6 @@ public class Http2ConnectionRoundtripTest {
 
         // Create a single stream by sending a HEADERS frame to the server.
         final Http2Headers headers = dummyHeaders();
-        requestLatch(new CountDownLatch(1));
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() {
@@ -243,8 +204,7 @@ public class Http2ConnectionRoundtripTest {
                 any(ByteBuf.class), eq(0), Mockito.anyBoolean());
         try {
             // Initialize the data latch based on the number of bytes expected.
-            requestLatch(new CountDownLatch(2));
-            dataLatch(new CountDownLatch(length));
+            bootstrapEnv(length, 2);
 
             // Create the stream and send all of the data at once.
             runInChannel(clientChannel, new Http2Runnable() {
@@ -282,7 +242,8 @@ public class Http2ConnectionRoundtripTest {
         final String pingMsg = "12345678";
         final ByteBuf data = Unpooled.copiedBuffer(text, UTF_8);
         final ByteBuf pingData = Unpooled.copiedBuffer(pingMsg, UTF_8);
-        final List<String> receivedPingBuffers = Collections.synchronizedList(new ArrayList<String>(NUM_STREAMS));
+        final int numStreams = 5000;
+        final List<String> receivedPingBuffers = Collections.synchronizedList(new ArrayList<String>(numStreams));
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock in) throws Throwable {
@@ -290,7 +251,7 @@ public class Http2ConnectionRoundtripTest {
                 return null;
             }
         }).when(serverListener).onPingRead(any(ChannelHandlerContext.class), eq(pingData));
-        final List<String> receivedDataBuffers = Collections.synchronizedList(new ArrayList<String>(NUM_STREAMS));
+        final List<String> receivedDataBuffers = Collections.synchronizedList(new ArrayList<String>(numStreams));
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock in) throws Throwable {
@@ -300,10 +261,11 @@ public class Http2ConnectionRoundtripTest {
         }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), anyInt(), eq(data),
                 eq(0), eq(true));
         try {
+            bootstrapEnv(numStreams * text.length(), numStreams * 3);
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() {
-                    for (int i = 0, nextStream = 3; i < NUM_STREAMS; ++i, nextStream += 2) {
+                    for (int i = 0, nextStream = 3; i < numStreams; ++i, nextStream += 2) {
                         http2Client.encoder().writeHeaders(ctx(), nextStream, headers, 0,
                                 (short) 16, false, 0, false, newPromise());
                         http2Client.encoder().writePing(ctx(), false, pingData.slice().retain(),
@@ -314,15 +276,15 @@ public class Http2ConnectionRoundtripTest {
                 }
             });
             // Wait for all frames to be received.
-            assertTrue(requestLatch.await(STRESS_TIMEOUT_SECONDS, SECONDS));
-            verify(serverListener, times(NUM_STREAMS)).onHeadersRead(any(ChannelHandlerContext.class), anyInt(),
+            assertTrue(requestLatch.await(30, SECONDS));
+            verify(serverListener, times(numStreams)).onHeadersRead(any(ChannelHandlerContext.class), anyInt(),
                     eq(headers), eq(0), eq((short) 16), eq(false), eq(0), eq(false));
-            verify(serverListener, times(NUM_STREAMS)).onPingRead(any(ChannelHandlerContext.class),
+            verify(serverListener, times(numStreams)).onPingRead(any(ChannelHandlerContext.class),
                     any(ByteBuf.class));
-            verify(serverListener, times(NUM_STREAMS)).onDataRead(any(ChannelHandlerContext.class),
+            verify(serverListener, times(numStreams)).onDataRead(any(ChannelHandlerContext.class),
                     anyInt(), any(ByteBuf.class), eq(0), eq(true));
-            assertEquals(NUM_STREAMS, receivedPingBuffers.size());
-            assertEquals(NUM_STREAMS, receivedDataBuffers.size());
+            assertEquals(numStreams, receivedPingBuffers.size());
+            assertEquals(numStreams, receivedDataBuffers.size());
             for (String receivedData : receivedDataBuffers) {
                 assertEquals(text, receivedData);
             }
@@ -335,18 +297,42 @@ public class Http2ConnectionRoundtripTest {
         }
     }
 
-    private void dataLatch(CountDownLatch latch) {
-        dataLatch = latch;
-        if (serverFrameCountDown != null) {
-            serverFrameCountDown.dataLatch(latch);
-        }
-    }
+    private void bootstrapEnv(int dataCountDown, int requestCountDown) throws Exception {
+        requestLatch = new CountDownLatch(requestCountDown);
+        dataLatch = new CountDownLatch(dataCountDown);
+        sb = new ServerBootstrap();
+        cb = new Bootstrap();
 
-    private void requestLatch(CountDownLatch latch) {
-        requestLatch = latch;
-        if (serverFrameCountDown != null) {
-            serverFrameCountDown.messageLatch(latch);
-        }
+        sb.group(new NioEventLoopGroup(), new NioEventLoopGroup());
+        sb.channel(NioServerSocketChannel.class);
+        sb.childHandler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ChannelPipeline p = ch.pipeline();
+                serverFrameCountDown = new Http2TestUtil.FrameCountDown(serverListener, requestLatch, dataLatch);
+                p.addLast(new Http2ConnectionHandler(true, serverFrameCountDown));
+                p.addLast(Http2CodecUtil.ignoreSettingsHandler());
+            }
+        });
+
+        cb.group(new NioEventLoopGroup());
+        cb.channel(NioSocketChannel.class);
+        cb.handler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ChannelPipeline p = ch.pipeline();
+                p.addLast(new Http2ConnectionHandler(false, clientListener));
+                p.addLast(Http2CodecUtil.ignoreSettingsHandler());
+            }
+        });
+
+        serverChannel = sb.bind(new InetSocketAddress(0)).sync().channel();
+        int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
+
+        ChannelFuture ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
+        assertTrue(ccf.awaitUninterruptibly().isSuccess());
+        clientChannel = ccf.channel();
+        http2Client = clientChannel.pipeline().get(Http2ConnectionHandler.class);
     }
 
     private ChannelHandlerContext ctx() {

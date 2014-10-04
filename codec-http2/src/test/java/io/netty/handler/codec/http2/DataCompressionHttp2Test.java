@@ -91,48 +91,6 @@ public class DataCompressionHttp2Test {
     @Before
     public void setup() throws InterruptedException {
         MockitoAnnotations.initMocks(this);
-        alloc = UnpooledByteBufAllocator.DEFAULT;
-        sb = new ServerBootstrap();
-        cb = new Bootstrap();
-
-        serverLatch(new CountDownLatch(1));
-        clientLatch(new CountDownLatch(1));
-        frameWriter = new DefaultHttp2FrameWriter();
-        serverConnection = new DefaultHttp2Connection(true);
-
-        sb.group(new NioEventLoopGroup(), new NioEventLoopGroup());
-        sb.channel(NioServerSocketChannel.class);
-        sb.childHandler(new ChannelInitializer<Channel>() {
-            @Override
-            protected void initChannel(Channel ch) throws Exception {
-                ChannelPipeline p = ch.pipeline();
-                serverAdapter = new Http2TestUtil.FrameAdapter(serverConnection,
-                                new DelegatingDecompressorFrameListener(serverConnection, serverListener),
-                                serverLatch);
-                p.addLast("reader", serverAdapter);
-                p.addLast(Http2CodecUtil.ignoreSettingsHandler());
-                serverConnectedChannel = ch;
-            }
-        });
-
-        cb.group(new NioEventLoopGroup());
-        cb.channel(NioSocketChannel.class);
-        cb.handler(new ChannelInitializer<Channel>() {
-            @Override
-            protected void initChannel(Channel ch) throws Exception {
-                ChannelPipeline p = ch.pipeline();
-                clientAdapter = new Http2TestUtil.FrameAdapter(clientListener, clientLatch);
-                p.addLast("reader", clientAdapter);
-                p.addLast(Http2CodecUtil.ignoreSettingsHandler());
-            }
-        });
-
-        serverChannel = sb.bind(new InetSocketAddress(0)).sync().channel();
-        int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
-
-        ChannelFuture ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
-        assertTrue(ccf.awaitUninterruptibly().isSuccess());
-        clientChannel = ccf.channel();
     }
 
     @After
@@ -157,6 +115,7 @@ public class DataCompressionHttp2Test {
 
     @Test
     public void justHeadersNoData() throws Exception {
+        bootstrapEnv(2, 1);
         final Http2Headers headers =
                 new DefaultHttp2Headers().method(GET).path(PATH).set(CONTENT_ENCODING, GZIP);
         // Required because the decompressor intercepts the onXXXRead events before
@@ -175,7 +134,7 @@ public class DataCompressionHttp2Test {
 
     @Test
     public void gzipEncodingSingleEmptyMessage() throws Exception {
-        serverLatch(new CountDownLatch(2));
+        bootstrapEnv(2, 1);
         final String text = "";
         final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
         final EmbeddedChannel encoder = new EmbeddedChannel(ZlibCodecFactory.newZlibEncoder(ZlibWrapper.GZIP));
@@ -209,7 +168,7 @@ public class DataCompressionHttp2Test {
 
     @Test
     public void gzipEncodingSingleMessage() throws Exception {
-        serverLatch(new CountDownLatch(2));
+        bootstrapEnv(2, 1);
         final String text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
         final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
         final EmbeddedChannel encoder = new EmbeddedChannel(ZlibCodecFactory.newZlibEncoder(ZlibWrapper.GZIP));
@@ -243,7 +202,7 @@ public class DataCompressionHttp2Test {
 
     @Test
     public void gzipEncodingMultipleMessages() throws Exception {
-        serverLatch(new CountDownLatch(3));
+        bootstrapEnv(3, 1);
         final String text1 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
         final String text2 = "dddddddddddddddddddeeeeeeeeeeeeeeeeeeeffffffffffffffffffff";
         final ByteBuf data1 = Unpooled.copiedBuffer(text1.getBytes());
@@ -288,7 +247,7 @@ public class DataCompressionHttp2Test {
 
     @Test
     public void deflateEncodingSingleLargeMessageReducedWindow() throws Exception {
-        serverLatch(new CountDownLatch(3));
+        bootstrapEnv(3, 1);
         final int BUFFER_SIZE = 1 << 16;
         final ByteBuf data = Unpooled.buffer(BUFFER_SIZE);
         final EmbeddedChannel encoder = new EmbeddedChannel(ZlibCodecFactory.newZlibEncoder(ZlibWrapper.ZLIB));
@@ -367,18 +326,49 @@ public class DataCompressionHttp2Test {
         }
     }
 
-    private void serverLatch(CountDownLatch latch) {
-        serverLatch = latch;
-        if (serverAdapter != null) {
-            serverAdapter.latch(serverLatch);
-        }
-    }
+    private void bootstrapEnv(int serverCountDown, int clientCountDown) throws Exception {
+        alloc = UnpooledByteBufAllocator.DEFAULT;
+        sb = new ServerBootstrap();
+        cb = new Bootstrap();
 
-    private void clientLatch(CountDownLatch latch) {
-        clientLatch = latch;
-        if (clientAdapter != null) {
-            clientAdapter.latch(clientLatch);
-        }
+        serverLatch = new CountDownLatch(serverCountDown);
+        clientLatch = new CountDownLatch(clientCountDown);
+        frameWriter = new DefaultHttp2FrameWriter();
+        serverConnection = new DefaultHttp2Connection(true);
+
+        sb.group(new NioEventLoopGroup(), new NioEventLoopGroup());
+        sb.channel(NioServerSocketChannel.class);
+        sb.childHandler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ChannelPipeline p = ch.pipeline();
+                serverAdapter = new Http2TestUtil.FrameAdapter(serverConnection,
+                                new DelegatingDecompressorFrameListener(serverConnection, serverListener),
+                                serverLatch);
+                p.addLast("reader", serverAdapter);
+                p.addLast(Http2CodecUtil.ignoreSettingsHandler());
+                serverConnectedChannel = ch;
+            }
+        });
+
+        cb.group(new NioEventLoopGroup());
+        cb.channel(NioSocketChannel.class);
+        cb.handler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ChannelPipeline p = ch.pipeline();
+                clientAdapter = new Http2TestUtil.FrameAdapter(clientListener, clientLatch);
+                p.addLast("reader", clientAdapter);
+                p.addLast(Http2CodecUtil.ignoreSettingsHandler());
+            }
+        });
+
+        serverChannel = sb.bind(new InetSocketAddress(0)).sync().channel();
+        int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
+
+        ChannelFuture ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
+        assertTrue(ccf.awaitUninterruptibly().isSuccess());
+        clientChannel = ccf.channel();
     }
 
     private void awaitClient() throws Exception {
