@@ -43,6 +43,7 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -509,7 +510,7 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> imple
                 failureMessages = new StringBuilder(128);
             }
 
-            failureMessages.append(System.lineSeparator());
+            failureMessages.append(StringUtil.NEWLINE);
             failureMessages.append("\tfrom ");
             failureMessages.append(nameServerAddr);
             failureMessages.append(": ");
