@@ -313,7 +313,9 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
             queuesSize += size;
             checkWriteSuspend(ctx, delay, perChannel.queueSize);
             if (queuesSize > maxGlobalWriteSize) {
+                ctx.channel().softWritable(false);
                 ctx.channel().attr(WRITE_SUSPENDED).set(true);
+                ctx.fireChannelWritabilityChanged();
             }
             final PerChannel forSchedule = perChannel;
             ctx.executor().schedule(new Runnable() {
