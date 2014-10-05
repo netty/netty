@@ -57,7 +57,10 @@ public final class DnsServerAddresses {
                     defaultNameServers.add(new InetSocketAddress(InetAddress.getByName(dnsAddr), DNS_PORT));
                 }
             }
-        } catch (Exception ignore) { }
+        } catch (Exception ignore) {
+            // Failed to get the system name server list.
+            // Will add the default name servers afterwards.
+        }
 
         if (!defaultNameServers.isEmpty()) {
             if (logger.isDebugEnabled()) {
@@ -261,7 +264,6 @@ public final class DnsServerAddresses {
             throw new UnsupportedOperationException();
         }
     }
-
 
     private static final class RandomAddresses implements Iterator<InetSocketAddress> {
 
