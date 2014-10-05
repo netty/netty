@@ -83,7 +83,7 @@ public final class DnsServerAddresses {
         DEFAULT_NAME_SERVER_ARRAY = defaultNameServers.toArray(new InetSocketAddress[defaultNameServers.size()]);
     }
 
-    public static List<InetSocketAddress> defaultNameServers() {
+    public static List<InetSocketAddress> defaultAddresses() {
         return DEFAULT_NAME_SERVER_LIST;
     }
 
