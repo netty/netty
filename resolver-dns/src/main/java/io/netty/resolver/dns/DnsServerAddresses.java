@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -104,20 +105,23 @@ public final class DnsServerAddresses {
         };
     }
 
-    public static Iterable<InetSocketAddress> random(Iterable<? extends InetSocketAddress> addresses) {
-        return random0(sanitize(addresses));
+    public static Iterable<InetSocketAddress> shuffled(Iterable<? extends InetSocketAddress> addresses) {
+        return shuffled0(sanitize(addresses));
     }
 
-    public static Iterable<InetSocketAddress> random(InetSocketAddress... addresses) {
-        return random0(sanitize(addresses));
+    public static Iterable<InetSocketAddress> shuffled(InetSocketAddress... addresses) {
+        return shuffled0(sanitize(addresses));
     }
 
-    private static Iterable<InetSocketAddress> random0(InetSocketAddress[] addresses) {
-        final Iterator<InetSocketAddress> iterator = new RandomAddresses(addresses);
+    private static Iterable<InetSocketAddress> shuffled0(final InetSocketAddress[] addresses) {
+        if (addresses.length == 1) {
+            return singleton(addresses[0]);
+        }
+
         return new Iterable<InetSocketAddress>() {
             @Override
             public Iterator<InetSocketAddress> iterator() {
-                return iterator;
+                return new ShuffledAddresses(addresses);
             }
         };
     }
@@ -265,12 +269,27 @@ public final class DnsServerAddresses {
         }
     }
 
-    private static final class RandomAddresses implements Iterator<InetSocketAddress> {
+    private static final class ShuffledAddresses implements Iterator<InetSocketAddress> {
 
         private final InetSocketAddress[] addresses;
+        private int i;
 
-        RandomAddresses(InetSocketAddress[] addresses) {
-            this.addresses = addresses;
+        ShuffledAddresses(InetSocketAddress[] addresses) {
+            this.addresses = addresses.clone();
+
+            shuffle();
+        }
+
+        private void shuffle() {
+            final InetSocketAddress[] addresses = this.addresses;
+            final Random r = ThreadLocalRandom.current();
+
+            for (int i = addresses.length - 1; i >= 0; i --) {
+                InetSocketAddress tmp = addresses[i];
+                int j = r.nextInt(i + 1);
+                addresses[i] = addresses[j];
+                addresses[j] = tmp;
+            }
         }
 
         @Override
@@ -280,7 +299,15 @@ public final class DnsServerAddresses {
 
         @Override
         public InetSocketAddress next() {
-            return addresses[ThreadLocalRandom.current().nextInt(addresses.length)];
+            int i = this.i;
+            InetSocketAddress next = addresses[i];
+            if (++ i < addresses.length) {
+                this.i = i;
+            } else {
+                this.i = 0;
+                shuffle();
+            }
+            return next;
         }
 
         @Override

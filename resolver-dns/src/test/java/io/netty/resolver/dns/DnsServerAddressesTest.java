@@ -90,16 +90,11 @@ public class DnsServerAddressesTest {
         assertNext(i, ADDR1);
         assertNext(i, ADDR2);
         assertNext(i, ADDR3);
-
-        assertThat(seq.iterator(), is(not(sameInstance(seq.iterator()))));
     }
 
     @Test
-    public void testRandom() {
-        Iterable<InetSocketAddress> seq = DnsServerAddresses.random(ADDR1, ADDR2, ADDR3);
-
-        // Should return the same iterator instance for least possible footprint.
-        assertThat(seq.iterator(), is(sameInstance(seq.iterator())));
+    public void testShuffled() {
+        Iterable<InetSocketAddress> seq = DnsServerAddresses.shuffled(ADDR1, ADDR2, ADDR3);
 
         // Ensure that all three addresses are returned by the iterator.
         // In theory, this test can fail at extremely low chance, but we don't really care.
@@ -111,6 +106,7 @@ public class DnsServerAddressesTest {
         }
 
         assertThat(set.size(), is(3));
+        assertThat(seq.iterator(), is(not(sameInstance(seq.iterator()))));
     }
 
     @Test
