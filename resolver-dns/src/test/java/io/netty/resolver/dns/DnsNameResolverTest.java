@@ -19,12 +19,12 @@ package io.netty.resolver.dns;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.resolver.NameResolver;
 import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
@@ -38,7 +38,7 @@ public class DnsNameResolverTest {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsNameResolver.class);
 
-    private static final List<InetSocketAddress> SERVER_ADDRS = Arrays.asList(
+    private static final List<InetSocketAddress> SERVERS = Arrays.asList(
             new InetSocketAddress("8.8.8.8", 53), // Google Public DNS
             new InetSocketAddress("8.8.4.4", 53),
             new InetSocketAddress("208.67.222.222", 53), // OpenDNS
@@ -47,7 +47,23 @@ public class DnsNameResolverTest {
             new InetSocketAddress("37.235.1.177", 53)
     );
 
-    // Using Alexa top 20 web sites on 10/05/2014.
+    private static final List<InetSocketAddress> ROOT_SERVERS = Arrays.asList(
+            new InetSocketAddress("198.41.0.4", 53),
+            new InetSocketAddress("192.228.79.201", 53),
+            new InetSocketAddress("192.33.4.12", 53),
+            new InetSocketAddress("199.7.91.13", 53),
+            new InetSocketAddress("192.203.230.10", 53),
+            new InetSocketAddress("192.5.5.241", 53),
+            new InetSocketAddress("192.112.36.4", 53),
+            new InetSocketAddress("128.63.2.53", 53),
+            new InetSocketAddress("192.36.148.17", 53),
+            new InetSocketAddress("192.58.128.30", 53),
+            new InetSocketAddress("193.0.14.129", 53),
+            new InetSocketAddress("199.7.83.42", 53),
+            new InetSocketAddress("202.12.27.33", 53)
+    );
+
+    // Using the web sites top-ranked in Alexa.com (Oct 2014)
     private static final List<String> DOMAINS = Arrays.asList(
             "www.google.com",
             "www.facebook.com",
@@ -57,26 +73,36 @@ public class DnsNameResolverTest {
             "www.wikipedia.org",
             "www.amazon.com",
             "www.twitter.com",
-            //"www.qq.com", - QQ.com's authoritative name server does not understand wildcard queries.
+            //"www.qq.com", - QQ.com's authoritative name server does not implement wildcard queries.
             "www.linkedin.com",
             "www.taobao.com",
             "www.google.co.in",
             "www.live.com",
             "www.hao123.com",
-            "www.sina.com.cn",
+            //"www.sina.com.cn", - *.dns.cn is not very responsive and makes the test very flakey.
             "www.blogspot.com",
             "www.weibo.com",
             "www.yahoo.co.jp",
             "www.tmall.com",
-            "www.yandex.ru"
+            "www.yandex.ru",
+            "www.bing.com",
+            "www.sohu.com",
+            "www.pinterest.com",
+            "www.ebay.com"
     );
 
     private static final EventLoopGroup group = new NioEventLoopGroup(1);
-    private static final DnsNameResolver resolver = new DnsNameResolver(
-            group.next(), NioDatagramChannel.class, DnsServerAddresses.shuffled(SERVER_ADDRS));
+    private static final DnsNameResolver basicResolver = new DnsNameResolver(
+            group.next(), NioDatagramChannel.class, DnsServerAddresses.shuffled(SERVERS));
+    private static final DnsNameResolver rootResolver = new DnsNameResolver(
+            group.next(), NioDatagramChannel.class, DnsServerAddresses.rotational(ROOT_SERVERS));
 
     static {
-        resolver.setMaxTries(SERVER_ADDRS.size());
+        basicResolver.setMaxTries(SERVERS.size());
+
+        rootResolver.setRecursionDesired(false);
+        rootResolver.setMaxTries(ROOT_SERVERS.size());
+        rootResolver.setMaxRecursionLevel(16);
     }
 
     @AfterClass
@@ -86,27 +112,26 @@ public class DnsNameResolverTest {
 
     @Before
     public void reset() {
-        resolver.clearCache();
+        basicResolver.clearCache();
+        rootResolver.clearCache();
     }
 
     @Test
     public void testResolveWithRecursionDesired() throws Exception {
-        assertThat(resolver.isRecursionDesired(), is(true));
+        assertThat(basicResolver.isRecursionDesired(), is(true));
         for (String name: DOMAINS) {
-            testResolve(name);
+            testResolve(basicResolver, name);
         }
     }
 
     @Test
-    @Ignore("Fails due to a known issue")
     public void testResolveWithoutRecursionDesired() throws Exception {
-        resolver.setRecursionDesired(false);
         for (String name: DOMAINS) {
-            testResolve(name);
+            testResolve(rootResolver, name);
         }
     }
 
-    private static void testResolve(String hostname) throws Exception {
+    private static void testResolve(NameResolver resolver, String hostname) throws Exception {
         int port = ThreadLocalRandom.current().nextInt(65536);
         InetSocketAddress resolved = (InetSocketAddress) resolver.resolve(hostname, port).sync().getNow();
 

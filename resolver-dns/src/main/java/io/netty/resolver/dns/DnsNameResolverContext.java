@@ -69,7 +69,16 @@ final class DnsNameResolverContext extends DefaultPromise<SocketAddress> {
         remainingRecursions = maxRecursionLevel;
     }
 
-    DnsNameResolverContext resolve(final Iterable<InetSocketAddress> nameServerAddresses, final DnsQuestion question) {
+    DnsNameResolverContext resolve(
+            final Iterable<InetSocketAddress> nameServerAddresses,
+            final DnsQuestion question) {
+        return resolve(nameServerAddresses, nameServerAddresses, question);
+    }
+
+    private DnsNameResolverContext resolve(
+            final Iterable<InetSocketAddress> initialNameServerAddresses,
+            final Iterable<InetSocketAddress> currentNameServerAddresses,
+            final DnsQuestion question) {
 
         if (remainingRecursions <= 0) {
             setResolveFailure();
@@ -78,15 +87,15 @@ final class DnsNameResolverContext extends DefaultPromise<SocketAddress> {
 
         remainingRecursions --;
 
-        final Future<DnsResponse> queryFuture = parent.query(nameServerAddresses, question);
+        final Future<DnsResponse> queryFuture = parent.query(currentNameServerAddresses, question);
         if (queryFuture.isDone()) {
             // Query has been finished immediately - probably cached result.
-            onResponse(nameServerAddresses, question, queryFuture);
+            onResponse(initialNameServerAddresses, question, queryFuture);
         } else {
             queryFuture.addListener(new FutureListener<DnsResponse>() {
                 @Override
                 public void operationComplete(Future<DnsResponse> future) throws Exception {
-                    onResponse(nameServerAddresses, question, future);
+                    onResponse(initialNameServerAddresses, question, future);
                 }
             });
         }
@@ -157,13 +166,13 @@ final class DnsNameResolverContext extends DefaultPromise<SocketAddress> {
         // try to find NS record and query the first authoritative DNS server.
         if (followNs) {
             for (final DnsResource a: answers) {
-                if (handleNsOrSoa(DnsType.NS, question, response, a)) {
+                if (handleNsOrSoa(nameServerAddresses, DnsType.NS, question, response, a)) {
                     return;
                 }
             }
 
             for (final DnsResource a: response.authorityResources()) {
-                if (handleNsOrSoa(DnsType.NS, question, response, a)) {
+                if (handleNsOrSoa(nameServerAddresses, DnsType.NS, question, response, a)) {
                     return;
                 }
             }
@@ -171,13 +180,13 @@ final class DnsNameResolverContext extends DefaultPromise<SocketAddress> {
 
         if (followSoa) {
             for (final DnsResource a: answers) {
-                if (handleNsOrSoa(DnsType.SOA, question, response, a)) {
+                if (handleNsOrSoa(nameServerAddresses, DnsType.SOA, question, response, a)) {
                     return;
                 }
             }
 
             for (final DnsResource a: response.authorityResources()) {
-                if (handleNsOrSoa(DnsType.SOA, question, response, a)) {
+                if (handleNsOrSoa(nameServerAddresses, DnsType.SOA, question, response, a)) {
                     return;
                 }
             }
@@ -242,6 +251,7 @@ final class DnsNameResolverContext extends DefaultPromise<SocketAddress> {
     }
 
     private boolean handleNsOrSoa(
+            final Iterable<InetSocketAddress> nameServerAddresses,
             final DnsType expectedType,
             final DnsQuestion question, final DnsResponse response, DnsResource a) {
 
@@ -259,6 +269,15 @@ final class DnsNameResolverContext extends DefaultPromise<SocketAddress> {
             return false;
         }
 
+        // Check if the address of the name server is available in the additional resources section.
+        InetSocketAddress nsAddr = resolveAddressUsingAdditionalResources(response, nsName);
+
+        // Successfully resolved the NS/SOA record from the addition resources section.
+        if (nsAddr != null) {
+            followNsOrSoa(nameServerAddresses, expectedType, nsAddr, response.sender(), question.name(), a.name());
+            return true;
+        }
+
         final String name = a.name();
 
         addTrace(response.sender(), name + ' ' + expectedType + ' ' + nsName);
@@ -274,11 +293,97 @@ final class DnsNameResolverContext extends DefaultPromise<SocketAddress> {
                 }
 
                 final InetSocketAddress nsAddr = (InetSocketAddress) future.getNow();
-                followNsOrSoa(expectedType, nsAddr, response.sender(), question.name(), name);
+                followNsOrSoa(nameServerAddresses, expectedType, nsAddr, response.sender(), question.name(), name);
             }
         });
 
         return true;
+    }
+
+    private InetSocketAddress resolveAddressUsingAdditionalResources(DnsResponse response, String nsName) {
+        InetSocketAddress nsAddr = null;
+        switch (preferredProtocolFamily) {
+        case IPv4:
+            nsAddr = resolveAddressUsingAdditionalResources4(response, nsName);
+            if (nsAddr == null) {
+                nsAddr = resolveAddressUsingAdditionalResources6(response, nsName);
+            }
+            break;
+        case IPv6:
+            nsAddr = resolveAddressUsingAdditionalResources6(response, nsName);
+            if (nsAddr == null) {
+                nsAddr = resolveAddressUsingAdditionalResources4(response, nsName);
+            }
+            break;
+        }
+
+        return nsAddr;
+    }
+
+    private static InetSocketAddress resolveAddressUsingAdditionalResources4(DnsResponse response, String nsName) {
+        for (DnsResource ar: response.additionalResources()) {
+            if (ar.dnsClass() != DnsClass.IN) {
+                continue;
+            }
+
+            final DnsType arType = ar.type();
+            if (arType != DnsType.A) {
+                continue;
+            }
+
+            final ByteBuf content = ar.content();
+            if (content.readableBytes() != INADDRSZ4) {
+                continue;
+            }
+
+            if (!ar.name().equalsIgnoreCase(nsName)) {
+                continue;
+            }
+
+            final byte[] addrBytes = new byte[INADDRSZ4];
+            content.getBytes(content.readerIndex(), addrBytes);
+
+            try {
+                return new InetSocketAddress(InetAddress.getByAddress(nsName, addrBytes), 53);
+            } catch (UnknownHostException ignore) {
+                // Should never reach here
+            }
+        }
+
+        return null;
+    }
+
+    private static InetSocketAddress resolveAddressUsingAdditionalResources6(DnsResponse response, String nsName) {
+        for (DnsResource ar: response.additionalResources()) {
+            if (ar.dnsClass() != DnsClass.IN) {
+                continue;
+            }
+
+            final DnsType arType = ar.type();
+            if (arType != DnsType.AAAA) {
+                continue;
+            }
+
+            final ByteBuf content = ar.content();
+            if (content.readableBytes() != INADDRSZ6) {
+                continue;
+            }
+
+            if (!ar.name().equalsIgnoreCase(nsName)) {
+                continue;
+            }
+
+            final byte[] addrBytes = new byte[INADDRSZ6];
+            content.getBytes(content.readerIndex(), addrBytes);
+
+            try {
+                return new InetSocketAddress(InetAddress.getByAddress(nsName, addrBytes), 53);
+            } catch (UnknownHostException ignore) {
+                // Should never reach here
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -346,6 +451,7 @@ final class DnsNameResolverContext extends DefaultPromise<SocketAddress> {
     }
 
     void followNsOrSoa(
+            Iterable<InetSocketAddress> initialNameServerAddresses,
             DnsType type, InetSocketAddress authoritativeNsAddr,
             InetSocketAddress nameServerAddr, String nameInQuestion, String nameInAnswer) {
 
@@ -370,11 +476,12 @@ final class DnsNameResolverContext extends DefaultPromise<SocketAddress> {
         if (cachedResult != null) {
             if (!(cachedResult instanceof DnsResponse) ||
                 !((DnsResponse) cachedResult).sender().equals(authoritativeNsAddr)) {
+                // FIXME: Cancel the expiration task, too.
                 parent.queryCache.remove(question);
             }
         }
 
-        resolve(DnsServerAddresses.singleton(authoritativeNsAddr), question);
+        resolve(initialNameServerAddresses, DnsServerAddresses.singleton(authoritativeNsAddr), question);
     }
 
     private void addTrace(Throwable cause) {
