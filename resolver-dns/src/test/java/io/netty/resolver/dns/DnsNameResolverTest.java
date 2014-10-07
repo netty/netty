@@ -19,7 +19,12 @@ package io.netty.resolver.dns;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
-import io.netty.resolver.NameResolver;
+import io.netty.handler.codec.dns.DnsQuestion;
+import io.netty.handler.codec.dns.DnsResource;
+import io.netty.handler.codec.dns.DnsResponse;
+import io.netty.handler.codec.dns.DnsResponseCode;
+import io.netty.handler.codec.dns.DnsType;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -28,6 +33,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -47,58 +53,41 @@ public class DnsNameResolverTest {
             new InetSocketAddress("37.235.1.177", 53)
     );
 
-    private static final List<InetSocketAddress> ROOT_SERVERS = Arrays.asList(
-            new InetSocketAddress("198.41.0.4", 53),
-            new InetSocketAddress("192.228.79.201", 53),
-            new InetSocketAddress("192.33.4.12", 53),
-            new InetSocketAddress("199.7.91.13", 53),
-            new InetSocketAddress("192.203.230.10", 53),
-            new InetSocketAddress("192.5.5.241", 53),
-            new InetSocketAddress("192.112.36.4", 53),
-            new InetSocketAddress("128.63.2.53", 53),
-            new InetSocketAddress("192.36.148.17", 53),
-            new InetSocketAddress("192.58.128.30", 53),
-            new InetSocketAddress("193.0.14.129", 53),
-            new InetSocketAddress("199.7.83.42", 53),
-            new InetSocketAddress("202.12.27.33", 53)
-    );
-
-    // Using the top US web sites ranked in Alexa.com (Oct 2014)
-    private static final List<String> DOMAINS = Arrays.asList(
+    // Using the top web sites ranked in Alexa.com (Oct 2014)
+    private static final String[] DOMAINS = {
             "google.com",
             "facebook.com",
-            "yahoo.com",
             "youtube.com",
-            "amazon.com",
+            "yahoo.com",
+            "baidu.com",
             "wikipedia.org",
-            "linkedin.com",
-            "ebay.com",
+            "amazon.com",
             "twitter.com",
-            "craigslist.org",
-            "bing.com",
-            "pinterest.com",
-            "go.com",
-            "espn.go.com",
-            "blogspot.com",
-            "reddit.com",
-            "instagram.com",
+            "qq.com",
+            "taobao.com",
+            "linkedin.com",
+            "google.co.in",
             "live.com",
-            "paypal.com",
-            "imgur.com"
-    );
+            "hao123.com",
+            "sina.com.cn",
+            "blogspot.com",
+            "weibo.com",
+            "yahoo.co.jp",
+            "tmall.com",
+            "yandex.ru",
+    };
+
+    private static final String[] DOMAINS_WITHOUT_MX = {
+            "hao123.com",
+            "blogspot.com",
+    };
 
     private static final EventLoopGroup group = new NioEventLoopGroup(1);
-    private static final DnsNameResolver basicResolver = new DnsNameResolver(
+    private static final DnsNameResolver resolver = new DnsNameResolver(
             group.next(), NioDatagramChannel.class, DnsServerAddresses.shuffled(SERVERS));
-    private static final DnsNameResolver rootResolver = new DnsNameResolver(
-            group.next(), NioDatagramChannel.class, DnsServerAddresses.rotational(ROOT_SERVERS));
 
     static {
-        basicResolver.setMaxTries(SERVERS.size());
-
-        rootResolver.setRecursionDesired(false);
-        rootResolver.setMaxTries(ROOT_SERVERS.size());
-        rootResolver.setMaxRecursionLevel(16);
+        resolver.setMaxTries(SERVERS.size());
     }
 
     @AfterClass
@@ -108,26 +97,26 @@ public class DnsNameResolverTest {
 
     @Before
     public void reset() {
-        basicResolver.clearCache();
-        rootResolver.clearCache();
+        resolver.clearCache();
     }
 
     @Test
-    public void testResolveWithRecursionDesired() throws Exception {
-        assertThat(basicResolver.isRecursionDesired(), is(true));
+    public void testResolve() throws Exception {
+        assertThat(resolver.isRecursionDesired(), is(true));
         for (String name: DOMAINS) {
-            testResolve(basicResolver, name);
+            testResolve(name);
         }
     }
 
     @Test
-    public void testResolveWithoutRecursionDesired() throws Exception {
+    public void testQueryMx() throws Exception {
+        assertThat(resolver.isRecursionDesired(), is(true));
         for (String name: DOMAINS) {
-            testResolve(rootResolver, name);
+            testQueryMx(name);
         }
     }
 
-    private static void testResolve(NameResolver resolver, String hostname) throws Exception {
+    private static void testResolve(String hostname) throws Exception {
         int port = ThreadLocalRandom.current().nextInt(65536);
         InetSocketAddress resolved = (InetSocketAddress) resolver.resolve(hostname, port).sync().getNow();
 
@@ -136,5 +125,46 @@ public class DnsNameResolverTest {
         assertThat(resolved.isUnresolved(), is(false));
         assertThat(resolved.getHostString(), is(hostname));
         assertThat(resolved.getPort(), is(port));
+    }
+
+    private static void testQueryMx(String hostname) throws Exception {
+        DnsResponse response = resolver.query(new DnsQuestion(hostname, DnsType.MX)).sync().getNow();
+
+        assertThat(response.header().responseCode(), is(DnsResponseCode.NOERROR));
+        List<DnsResource> mxList = new ArrayList<DnsResource>();
+        for (DnsResource r: response.answers()) {
+            if (r.type() == DnsType.MX) {
+                mxList.add(r);
+            }
+        }
+
+        boolean mxExpected = true;
+        for (String v: DOMAINS_WITHOUT_MX) {
+            if (hostname.equals(v)) {
+                mxExpected = false;
+                break;
+            }
+        }
+
+        if (mxExpected) {
+            assertThat(mxList.size(), is(greaterThan(0)));
+            StringBuilder buf = new StringBuilder();
+            for (DnsResource r: mxList) {
+                buf.append(StringUtil.NEWLINE);
+                buf.append('\t');
+                buf.append(r.name());
+                buf.append(' ');
+                buf.append(r.type());
+                buf.append(' ');
+                buf.append(r.content().readUnsignedShort());
+                buf.append(' ');
+                buf.append(DnsNameResolverContext.decodeDomainName(r.content()));
+            }
+            logger.info("{} has the following MX records:{}", hostname, buf);
+        } else {
+            logger.info("{} is known to have no MX records.");
+        }
+
+        response.release();
     }
 }

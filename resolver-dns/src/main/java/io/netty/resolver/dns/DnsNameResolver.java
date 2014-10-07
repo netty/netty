@@ -30,7 +30,6 @@ import io.netty.handler.codec.dns.DnsResource;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.handler.codec.dns.DnsResponseDecoder;
-import io.netty.handler.codec.dns.DnsType;
 import io.netty.resolver.SimpleNameResolver;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.collection.IntObjectHashMap;
@@ -58,7 +57,7 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> imple
     private static final DnsResponseDecoder DECODER = new DnsResponseDecoder();
     private static final DnsQueryEncoder ENCODER = new DnsQueryEncoder();
 
-    private final Iterable<InetSocketAddress> nameServerAddresses;
+    final Iterable<InetSocketAddress> nameServerAddresses;
     final DatagramChannel ch;
 
     /**
@@ -85,10 +84,7 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> imple
 
     private volatile InternetProtocolFamily preferredProtocolFamily = InternetProtocolFamily.IPv4;
     private volatile boolean recursionDesired = true;
-    private volatile int maxRecursionLevel = 8;
-    private volatile boolean followCname = true;
-    private volatile boolean followNs = true;
-    private volatile boolean followSoa = true;
+    private volatile int maxQueriesPerResolve = 8;
 
     private volatile int maxPayloadSize;
     private volatile DnsClass maxPayloadSizeClass; // EDNS uses the CLASS field as the payload size field.
@@ -251,39 +247,15 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> imple
         this.recursionDesired = recursionDesired;
     }
 
-    public int maxRecursionLevel() {
-        return maxRecursionLevel;
+    public int maxQueriesPerResolve() {
+        return maxQueriesPerResolve;
     }
 
-    public void setMaxRecursionLevel(int maxRecursionLevel) {
-        if (maxRecursionLevel <= 0) {
-            throw new IllegalArgumentException("maxRecursionLevel: " + maxRecursionLevel + " (expected: > 0)");
+    public void setMaxQueriesPerResolve(int maxQueriesPerResolve) {
+        if (maxQueriesPerResolve <= 0) {
+            throw new IllegalArgumentException("maxQueriesPerResolve: " + maxQueriesPerResolve + " (expected: > 0)");
         }
-        this.maxRecursionLevel = maxRecursionLevel;
-    }
-
-    public boolean isFollowCname() {
-        return followCname;
-    }
-
-    public void setFollowCname(boolean followCname) {
-        this.followCname = followCname;
-    }
-
-    public boolean isFollowNs() {
-        return followNs;
-    }
-
-    public void setFollowNs(boolean followNs) {
-        this.followNs = followNs;
-    }
-
-    public boolean isFollowSoa() {
-        return followSoa;
-    }
-
-    public void setFollowSoa(boolean followSoa) {
-        this.followSoa = followSoa;
+        this.maxQueriesPerResolve = maxQueriesPerResolve;
     }
 
     public int maxPayloadSize() {
@@ -305,6 +277,10 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> imple
 
     public void clearCache() {
         queryCache.clear();
+    }
+
+    public boolean clearCache(DnsQuestion question) {
+        return queryCache.remove(question) != null;
     }
 
     /**
@@ -331,10 +307,9 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> imple
         final String hostname = IDN.toASCII(unresolvedAddress.getHostString());
         final int port = unresolvedAddress.getPort();
 
-        final DnsQuestion question = new DnsQuestion(hostname, DnsType.ANY);
         final DnsNameResolverContext ctx = new DnsNameResolverContext(this, hostname, port);
 
-        return ctx.resolve(nameServerAddresses, question);
+        return ctx.resolve();
     }
 
     public Future<DnsResponse> query(DnsQuestion question) {
@@ -409,11 +384,10 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> imple
                     timeoutFuture.cancel(false);
                 }
 
-                if (res.header().responseCode() == DnsResponseCode.NOERROR &&
-                    (!res.answers().isEmpty() || !res.authorityResources().isEmpty())) {
+                if (res.header().responseCode() == DnsResponseCode.NOERROR) {
                     cache(p.question(), res);
                     promises.lazySet(queryId, null);
-                    p.setSuccess(res);
+                    p.trySuccess(res);
                     success = true;
                 } else {
                     p.retry(res.sender(),

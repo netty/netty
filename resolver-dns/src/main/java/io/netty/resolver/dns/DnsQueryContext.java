@@ -68,7 +68,6 @@ final class DnsQueryContext extends DefaultPromise<DnsResponse> {
         remainingTries = maxTries;
         optResource = new DnsResource("", DnsType.OPT, parent.maxPayloadSizeClass(), 0, Unpooled.EMPTY_BUFFER);
 
-
         this.nameServerAddresses = nameServerAddresses.iterator();
     }
 
@@ -114,7 +113,7 @@ final class DnsQueryContext extends DefaultPromise<DnsResponse> {
             }
 
             cache(question, cause);
-            setFailure(cause);
+            tryFailure(cause);
             return;
         }
 
@@ -165,6 +164,10 @@ final class DnsQueryContext extends DefaultPromise<DnsResponse> {
     }
 
     void retry(InetSocketAddress nameServerAddr, String message) {
+        if (isCancelled()) {
+            return;
+        }
+
         if (trace == null) {
             trace = new StringBuilder(128);
         }
