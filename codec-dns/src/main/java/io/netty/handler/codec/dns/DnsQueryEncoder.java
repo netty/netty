@@ -40,7 +40,10 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
         encodeHeader(query.header(), buf);
         List<DnsQuestion> questions = query.questions();
         for (DnsQuestion question : questions) {
-            encodeQuestion(question, CharsetUtil.UTF_8, buf);
+            encodeQuestion(question, CharsetUtil.US_ASCII, buf);
+        }
+        for (DnsResource resource: query.additionalResources()) {
+            encodeResource(resource, CharsetUtil.US_ASCII, buf);
         }
         out.add(new DatagramPacket(buf, query.recipient(), null));
     }
@@ -62,9 +65,9 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
         flags |= header.isRecursionDesired() ? 1 << 8 : 0;
         buf.writeShort(flags);
         buf.writeShort(header.questionCount());
-        buf.writeShort(header.answerCount()); // Must be 0
-        buf.writeShort(header.authorityResourceCount()); // Must be 0
-        buf.writeShort(header.additionalResourceCount()); // Must be 0
+        buf.writeShort(0); // answerCount
+        buf.writeShort(0); // authorityResourceCount
+        buf.writeShort(header.additionalResourceCount());
     }
 
     /**
@@ -81,11 +84,38 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
     private static void encodeQuestion(DnsQuestion question, Charset charset, ByteBuf buf) {
         String[] parts = StringUtil.split(question.name(), '.');
         for (String part: parts) {
-            buf.writeByte(part.length());
+            final int partLen = part.length();
+            if (partLen == 0) {
+                continue;
+            }
+            buf.writeByte(partLen);
             buf.writeBytes(part.getBytes(charset));
         }
         buf.writeByte(0); // marks end of name field
         buf.writeShort(question.type().intValue());
         buf.writeShort(question.dnsClass().intValue());
+    }
+
+    private static void encodeResource(DnsResource resource, Charset charset, ByteBuf buf) {
+        String[] parts = StringUtil.split(resource.name(), '.');
+        for (String part: parts) {
+            final int partLen = part.length();
+            if (partLen == 0) {
+                continue;
+            }
+            buf.writeByte(partLen);
+            buf.writeBytes(part.getBytes(charset));
+        }
+        buf.writeByte(0); // marks end of name field
+
+        buf.writeShort(resource.type().intValue());
+        buf.writeShort(resource.dnsClass().intValue());
+        buf.writeInt((int) resource.timeToLive());
+
+        ByteBuf content = resource.content();
+        int contentLen = content.readableBytes();
+
+        buf.writeShort(contentLen);
+        buf.writeBytes(content, content.readerIndex(), contentLen);
     }
 }
