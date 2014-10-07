@@ -21,6 +21,7 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.util.concurrent.EventExecutor;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -180,10 +181,12 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
 
         lastReadTime = System.nanoTime();
         if (timeoutNanos > 0) {
-            timeout = ctx.executor().schedule(
-                    new ReadTimeoutTask(ctx),
-                    timeoutNanos, TimeUnit.NANOSECONDS);
+            timeout = newScheduledFuture(ctx.executor(), new ReadTimeoutTask(ctx), timeoutNanos);
         }
+    }
+
+    private ScheduledFuture<?> newScheduledFuture(EventExecutor loop, Runnable runnable, long delayNanos) {
+        return state == 1 ? loop.schedule(runnable, delayNanos, TimeUnit.NANOSECONDS) : null;
     }
 
     private void destroy() {
@@ -224,7 +227,7 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
             long nextDelay = timeoutNanos - (currentTime - lastReadTime);
             if (nextDelay <= 0) {
                 // Read timed out - set a new timeout and notify the callback.
-                timeout = ctx.executor().schedule(this, timeoutNanos, TimeUnit.NANOSECONDS);
+                timeout = newScheduledFuture(ctx.executor(), this, timeoutNanos);
                 try {
                     readTimedOut(ctx);
                 } catch (Throwable t) {
@@ -232,7 +235,7 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
                 }
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
-                timeout = ctx.executor().schedule(this, nextDelay, TimeUnit.NANOSECONDS);
+                timeout = newScheduledFuture(ctx.executor(), this, nextDelay);
             }
         }
     }

@@ -311,20 +311,18 @@ public class IdleStateHandler extends ChannelDuplexHandler {
 
         lastReadTime = lastWriteTime = System.nanoTime();
         if (readerIdleTimeNanos > 0) {
-            readerIdleTimeout = loop.schedule(
-                    new ReaderIdleTimeoutTask(ctx),
-                    readerIdleTimeNanos, TimeUnit.NANOSECONDS);
+            readerIdleTimeout = newScheduledFuture(loop, new ReaderIdleTimeoutTask(ctx), readerIdleTimeNanos);
         }
         if (writerIdleTimeNanos > 0) {
-            writerIdleTimeout = loop.schedule(
-                    new WriterIdleTimeoutTask(ctx),
-                    writerIdleTimeNanos, TimeUnit.NANOSECONDS);
+            writerIdleTimeout = newScheduledFuture(loop, new WriterIdleTimeoutTask(ctx), writerIdleTimeNanos);
         }
         if (allIdleTimeNanos > 0) {
-            allIdleTimeout = loop.schedule(
-                    new AllIdleTimeoutTask(ctx),
-                    allIdleTimeNanos, TimeUnit.NANOSECONDS);
+            allIdleTimeout = newScheduledFuture(loop, new AllIdleTimeoutTask(ctx), allIdleTimeNanos);
         }
+    }
+
+    private ScheduledFuture<?> newScheduledFuture(EventExecutor loop, Runnable runnable, long delayNanos) {
+        return state == 1 ? loop.schedule(runnable, delayNanos, TimeUnit.NANOSECONDS) : null;
     }
 
     private void destroy() {
@@ -371,8 +369,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
             long nextDelay = readerIdleTimeNanos - (currentTime - lastReadTime);
             if (nextDelay <= 0) {
                 // Reader is idle - set a new timeout and notify the callback.
-                readerIdleTimeout =
-                    ctx.executor().schedule(this, readerIdleTimeNanos, TimeUnit.NANOSECONDS);
+                readerIdleTimeout = newScheduledFuture(ctx.executor(), this, readerIdleTimeNanos);
                 try {
                     IdleStateEvent event;
                     if (firstReaderIdleEvent) {
@@ -387,7 +384,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
                 }
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
-                readerIdleTimeout = ctx.executor().schedule(this, nextDelay, TimeUnit.NANOSECONDS);
+                readerIdleTimeout = newScheduledFuture(ctx.executor(), this, nextDelay);
             }
         }
     }
@@ -411,8 +408,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
             long nextDelay = writerIdleTimeNanos - (currentTime - lastWriteTime);
             if (nextDelay <= 0) {
                 // Writer is idle - set a new timeout and notify the callback.
-                writerIdleTimeout = ctx.executor().schedule(
-                        this, writerIdleTimeNanos, TimeUnit.NANOSECONDS);
+                writerIdleTimeout = newScheduledFuture(ctx.executor(), this, writerIdleTimeNanos);
                 try {
                     IdleStateEvent event;
                     if (firstWriterIdleEvent) {
@@ -427,7 +423,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
                 }
             } else {
                 // Write occurred before the timeout - set a new timeout with shorter delay.
-                writerIdleTimeout = ctx.executor().schedule(this, nextDelay, TimeUnit.NANOSECONDS);
+                writerIdleTimeout = newScheduledFuture(ctx.executor(), this, nextDelay);
             }
         }
     }
@@ -452,8 +448,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
             if (nextDelay <= 0) {
                 // Both reader and writer are idle - set a new timeout and
                 // notify the callback.
-                allIdleTimeout = ctx.executor().schedule(
-                        this, allIdleTimeNanos, TimeUnit.NANOSECONDS);
+                allIdleTimeout = newScheduledFuture(ctx.executor(), this, allIdleTimeNanos);
                 try {
                     IdleStateEvent event;
                     if (firstAllIdleEvent) {
@@ -469,7 +464,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
             } else {
                 // Either read or write occurred before the timeout - set a new
                 // timeout with shorter delay.
-                allIdleTimeout = ctx.executor().schedule(this, nextDelay, TimeUnit.NANOSECONDS);
+                allIdleTimeout = newScheduledFuture(ctx.executor(), this, nextDelay);
             }
         }
     }
