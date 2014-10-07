@@ -161,10 +161,9 @@ public class HttpObjectAggregator
             });
 
             // If the client started to send data already, close because it's impossible to recover.
-            // If 'Expect: 100-continue' is missing, close becuase it's impossible to recover.
-            // If keep-alive is off, no need to leave the connection open.
+            // If keep-alive is off and 'Expect: 100-continue' is missing, no need to leave the connection open.
             if (oversized instanceof FullHttpMessage ||
-                    !HttpHeaders.is100ContinueExpected(oversized) || !HttpHeaders.isKeepAlive(oversized)) {
+                    (!HttpHeaders.is100ContinueExpected(oversized) && !HttpHeaders.isKeepAlive(oversized))) {
                 future.addListener(ChannelFutureListener.CLOSE);
             }
 
