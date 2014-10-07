@@ -100,6 +100,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     private final long readerIdleTimeNanos;
     private final long writerIdleTimeNanos;
     private final long allIdleTimeNanos;
+    private final boolean cancelInterrupt;
 
     volatile ScheduledFuture<?> readerIdleTimeout;
     volatile long lastReadTime;
@@ -161,6 +162,34 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     public IdleStateHandler(
             long readerIdleTime, long writerIdleTime, long allIdleTime,
             TimeUnit unit) {
+        this(readerIdleTime, writerIdleTime, allIdleTime, unit, false);
+    }
+
+    /**
+     * Creates a new instance firing {@link IdleStateEvent}s.
+     *
+     * @param readerIdleTime
+     *        an {@link IdleStateEvent} whose state is {@link IdleState#READER_IDLE}
+     *        will be triggered when no read was performed for the specified
+     *        period of time.  Specify {@code 0} to disable.
+     * @param writerIdleTime
+     *        an {@link IdleStateEvent} whose state is {@link IdleState#WRITER_IDLE}
+     *        will be triggered when no write was performed for the specified
+     *        period of time.  Specify {@code 0} to disable.
+     * @param allIdleTime
+     *        an {@link IdleStateEvent} whose state is {@link IdleState#ALL_IDLE}
+     *        will be triggered when neither read nor write was performed for
+     *        the specified period of time.  Specify {@code 0} to disable.
+     * @param unit
+     *        the {@link TimeUnit} of {@code readerIdleTime},
+     *        {@code writeIdleTime}, and {@code allIdleTime}
+     * @param cancelInterrupt
+     *        {@code true} to interrupt the timeout task when cleaning up.
+     *        {@code false} to let the timeout task complete if it is running when cleaning up.
+     */
+    public IdleStateHandler(
+            long readerIdleTime, long writerIdleTime, long allIdleTime,
+            TimeUnit unit, boolean cancelInterrupt) {
         if (unit == null) {
             throw new NullPointerException("unit");
         }
@@ -180,6 +209,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
         } else {
             allIdleTimeNanos = Math.max(unit.toNanos(allIdleTime), MIN_TIMEOUT_NANOS);
         }
+        this.cancelInterrupt = cancelInterrupt;
     }
 
     /**
@@ -301,15 +331,15 @@ public class IdleStateHandler extends ChannelDuplexHandler {
         state = 2;
 
         if (readerIdleTimeout != null) {
-            readerIdleTimeout.cancel(false);
+            readerIdleTimeout.cancel(cancelInterrupt);
             readerIdleTimeout = null;
         }
         if (writerIdleTimeout != null) {
-            writerIdleTimeout.cancel(false);
+            writerIdleTimeout.cancel(cancelInterrupt);
             writerIdleTimeout = null;
         }
         if (allIdleTimeout != null) {
-            allIdleTimeout.cancel(false);
+            allIdleTimeout.cancel(cancelInterrupt);
             allIdleTimeout = null;
         }
     }
