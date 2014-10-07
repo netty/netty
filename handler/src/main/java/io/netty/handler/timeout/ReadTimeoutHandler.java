@@ -65,6 +65,7 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
     private static final long MIN_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(1);
 
     private final long timeoutNanos;
+    private final boolean cancelInterrupt;
 
     private volatile ScheduledFuture<?> timeout;
     private volatile long lastReadTime;
@@ -92,6 +93,21 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
      *        the {@link TimeUnit} of {@code timeout}
      */
     public ReadTimeoutHandler(long timeout, TimeUnit unit) {
+        this(timeout, unit, false);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param timeout
+     *        read timeout
+     * @param unit
+     *        the {@link TimeUnit} of {@code timeout}
+     * @param cancelInterrupt
+     *        {@code true} to interrupt the timeout task when cleaning up.
+     *        {@code false} to let the timeout task complete if it is running when cleaning up.
+     */
+    public ReadTimeoutHandler(long timeout, TimeUnit unit, boolean cancelInterrupt) {
         if (unit == null) {
             throw new NullPointerException("unit");
         }
@@ -101,6 +117,7 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
         } else {
             timeoutNanos = Math.max(unit.toNanos(timeout), MIN_TIMEOUT_NANOS);
         }
+        this.cancelInterrupt = cancelInterrupt;
     }
 
     @Override
@@ -173,7 +190,7 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
         state = 2;
 
         if (timeout != null) {
-            timeout.cancel(false);
+            timeout.cancel(cancelInterrupt);
             timeout = null;
         }
     }
