@@ -332,7 +332,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
 
         @Override
         public void run() {
-            if (!ctx.channel().isOpen()) {
+            if (!ctx.channel().isOpen() || state != 1) {
                 return;
             }
 
@@ -372,7 +372,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
 
         @Override
         public void run() {
-            if (!ctx.channel().isOpen()) {
+            if (!ctx.channel().isOpen() || state != 1) {
                 return;
             }
 
@@ -412,7 +412,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
 
         @Override
         public void run() {
-            if (!ctx.channel().isOpen()) {
+            if (!ctx.channel().isOpen() || state != 1) {
                 return;
             }
 

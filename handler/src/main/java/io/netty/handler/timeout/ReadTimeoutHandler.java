@@ -199,7 +199,7 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
 
         @Override
         public void run() {
-            if (!ctx.channel().isOpen()) {
+            if (!ctx.channel().isOpen() || state != 1) {
                 return;
             }
 
