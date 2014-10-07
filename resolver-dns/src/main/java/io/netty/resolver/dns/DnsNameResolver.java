@@ -23,6 +23,7 @@ import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.handler.codec.dns.DnsClass;
 import io.netty.handler.codec.dns.DnsQueryEncoder;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsResource;
@@ -89,6 +90,9 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> imple
     private volatile boolean followNs = true;
     private volatile boolean followSoa = true;
 
+    private volatile int maxPayloadSize;
+    private volatile DnsClass maxPayloadSizeClass; // EDNS uses the CLASS field as the payload size field.
+
     public DnsNameResolver(
             EventLoop eventLoop, Class<? extends DatagramChannel> channelType,
             InetSocketAddress nameServerAddress) {
@@ -152,13 +156,14 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> imple
 
         this.nameServerAddresses = nameServerAddresses;
         ch = newChannel(channelFactory, localAddress);
+
+        setMaxPayloadSize(4096);
     }
 
     private DatagramChannel newChannel(
             ChannelFactory<? extends DatagramChannel> channelFactory, InetSocketAddress localAddress) {
 
         DatagramChannel ch = channelFactory.newChannel();
-        ch.config().setRecvByteBufAllocator(new FixedRecvByteBufAllocator(4096));
         ch.pipeline().addLast(DECODER, ENCODER, responseHandler);
 
         // Register and bind the channel synchronously.
@@ -279,6 +284,23 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> imple
 
     public void setFollowSoa(boolean followSoa) {
         this.followSoa = followSoa;
+    }
+
+    public int maxPayloadSize() {
+        return maxPayloadSize;
+    }
+
+    public void setMaxPayloadSize(int maxPayloadSize) {
+        if (maxPayloadSize <= 0) {
+            throw new IllegalArgumentException("maxPayloadSize: " + maxPayloadSize + " (expected: > 0)");
+        }
+        this.maxPayloadSize = maxPayloadSize;
+        maxPayloadSizeClass = DnsClass.valueOf(maxPayloadSize);
+        ch.config().setRecvByteBufAllocator(new FixedRecvByteBufAllocator(maxPayloadSize));
+    }
+
+    DnsClass maxPayloadSizeClass() {
+        return maxPayloadSizeClass;
     }
 
     public void clearCache() {

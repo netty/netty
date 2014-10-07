@@ -16,11 +16,14 @@
 
 package io.netty.resolver.dns;
 
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.dns.DnsQuery;
 import io.netty.handler.codec.dns.DnsQuestion;
+import io.netty.handler.codec.dns.DnsResource;
 import io.netty.handler.codec.dns.DnsResponse;
+import io.netty.handler.codec.dns.DnsType;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.OneTimeTask;
@@ -41,6 +44,7 @@ final class DnsQueryContext extends DefaultPromise<DnsResponse> {
     private final DnsNameResolver parent;
     private final int id;
     private final DnsQuestion question;
+    private final DnsResource optResource;
     private final Iterator<InetSocketAddress> nameServerAddresses;
 
     private final boolean recursionDesired;
@@ -62,6 +66,8 @@ final class DnsQueryContext extends DefaultPromise<DnsResponse> {
         recursionDesired = parent.isRecursionDesired();
         maxTries = parent.maxTries();
         remainingTries = maxTries;
+        optResource = new DnsResource("", DnsType.OPT, parent.maxPayloadSizeClass(), 0, Unpooled.EMPTY_BUFFER);
+
 
         this.nameServerAddresses = nameServerAddresses.iterator();
     }
@@ -118,6 +124,7 @@ final class DnsQueryContext extends DefaultPromise<DnsResponse> {
         final DnsQuery query = new DnsQuery(id, nameServerAddr);
         query.addQuestion(question);
         query.header().setRecursionDesired(recursionDesired);
+        query.addAdditionalResource(optResource);
 
         logger.debug("Sending {} to {}", question, nameServerAddr);
 

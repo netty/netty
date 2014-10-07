@@ -63,32 +63,28 @@ public class DnsNameResolverTest {
             new InetSocketAddress("202.12.27.33", 53)
     );
 
-    // Using the web sites top-ranked in Alexa.com (Oct 2014)
+    // Using the top US web sites ranked in Alexa.com (Oct 2014)
     private static final List<String> DOMAINS = Arrays.asList(
-            "www.google.com",
-            "www.facebook.com",
-            "www.youtube.com",
-            "www.yahoo.com",
-            "www.baidu.com",
-            "www.wikipedia.org",
-            "www.amazon.com",
-            "www.twitter.com",
-            //"www.qq.com", - QQ.com's authoritative name server does not implement wildcard queries.
-            "www.linkedin.com",
-            "www.taobao.com",
-            "www.google.co.in",
-            "www.live.com",
-            "www.hao123.com",
-            //"www.sina.com.cn", - *.dns.cn is not very responsive and makes the test very flakey.
-            "www.blogspot.com",
-            "www.weibo.com",
-            "www.yahoo.co.jp",
-            "www.tmall.com",
-            "www.yandex.ru",
-            "www.bing.com",
-            "www.sohu.com",
-            "www.pinterest.com",
-            "www.ebay.com"
+            "google.com",
+            "facebook.com",
+            "yahoo.com",
+            "youtube.com",
+            "amazon.com",
+            "wikipedia.org",
+            "linkedin.com",
+            "ebay.com",
+            "twitter.com",
+            "craigslist.org",
+            "bing.com",
+            "pinterest.com",
+            "go.com",
+            "espn.go.com",
+            "blogspot.com",
+            "reddit.com",
+            "instagram.com",
+            "live.com",
+            "paypal.com",
+            "imgur.com"
     );
 
     private static final EventLoopGroup group = new NioEventLoopGroup(1);
