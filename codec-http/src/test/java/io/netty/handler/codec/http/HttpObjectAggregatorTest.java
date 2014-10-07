@@ -230,8 +230,25 @@ public class HttpObjectAggregatorTest {
         HttpResponse response = embedder.readOutbound();
         assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
         assertEquals("0", response.headers().get(Names.CONTENT_LENGTH));
-        assertFalse(embedder.isOpen());
-        assertFalse(embedder.finish());
+
+        if (serverShouldCloseConnection(message)) {
+            assertFalse(embedder.isOpen());
+            assertFalse(embedder.finish());
+        } else {
+            assertTrue(embedder.isOpen());
+        }
+    }
+
+    private static boolean serverShouldCloseConnection(HttpRequest message) {
+        // The connection should only be kept open if Expect: 100-continue is set,
+        // or if keep-alive is on.
+        if (HttpHeaders.is100ContinueExpected(message)) {
+            return false;
+        }
+        if (HttpHeaders.isKeepAlive(message)) {
+            return false;
+        }
+        return true;
     }
 
     @Test
