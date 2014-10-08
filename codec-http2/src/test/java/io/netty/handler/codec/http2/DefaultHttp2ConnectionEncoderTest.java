@@ -60,7 +60,7 @@ public class DefaultHttp2ConnectionEncoderTest {
     private static final int STREAM_ID = 1;
     private static final int PUSH_STREAM_ID = 2;
 
-    private DefaultHttp2ConnectionEncoder encoder;
+    private Http2ConnectionEncoder encoder;
 
     @Mock
     private Http2Connection connection;
@@ -143,7 +143,10 @@ public class DefaultHttp2ConnectionEncoderTest {
         when(ctx.newPromise()).thenReturn(promise);
         when(ctx.write(any())).thenReturn(future);
 
-        encoder = new DefaultHttp2ConnectionEncoder(connection, writer, outboundFlow, lifecycleManager);
+        encoder =
+                DefaultHttp2ConnectionEncoder.newBuilder().connection(connection)
+                        .frameWriter(writer).outboundFlow(outboundFlow)
+                        .lifecycleManager(lifecycleManager).build();
     }
 
     @Test

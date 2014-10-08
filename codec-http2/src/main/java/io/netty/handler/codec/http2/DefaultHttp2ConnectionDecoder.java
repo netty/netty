@@ -46,29 +46,78 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     private final Http2FrameListener listener;
     private boolean prefaceReceived;
 
-    public DefaultHttp2ConnectionDecoder(Http2Connection connection, Http2FrameReader frameReader,
-            Http2InboundFlowController inboundFlow, Http2ConnectionEncoder encoder,
-            Http2LifecycleManager lifecycleManager, Http2FrameListener listener) {
-        this.connection = checkNotNull(connection, "connection");
-        this.frameReader = checkNotNull(frameReader, "frameReader");
-        this.lifecycleManager = checkNotNull(lifecycleManager, "lifecycleManager");
-        this.encoder = checkNotNull(encoder, "encoder");
-        this.inboundFlow = checkNotNull(inboundFlow, "inboundFlow");
-        this.listener = checkNotNull(listener, "listener");
+    /**
+     * Builder for instances of {@link DefaultHttp2ConnectionDecoder}.
+     */
+    public static class Builder implements Http2ConnectionDecoder.Builder {
+        private Http2Connection connection;
+        private Http2LifecycleManager lifecycleManager;
+        private Http2ConnectionEncoder encoder;
+        private Http2FrameReader frameReader;
+        private Http2InboundFlowController inboundFlow;
+        private Http2FrameListener listener;
+
+        @Override
+        public Builder connection(Http2Connection connection) {
+            this.connection = connection;
+            return this;
+        }
+
+        @Override
+        public Builder lifecycleManager(Http2LifecycleManager lifecycleManager) {
+            this.lifecycleManager = lifecycleManager;
+            return this;
+        }
+
+        @Override
+        public Builder inboundFlow(Http2InboundFlowController inboundFlow) {
+            this.inboundFlow = inboundFlow;
+            return this;
+        }
+
+        @Override
+        public Builder frameReader(Http2FrameReader frameReader) {
+            this.frameReader = frameReader;
+            return this;
+        }
+
+        @Override
+        public Builder listener(Http2FrameListener listener) {
+            this.listener = listener;
+            return this;
+        }
+
+        @Override
+        public Builder encoder(Http2ConnectionEncoder encoder) {
+            this.encoder = encoder;
+            return this;
+        }
+
+        @Override
+        public Http2ConnectionDecoder build() {
+            return new DefaultHttp2ConnectionDecoder(this);
+        }
     }
 
+    public static Builder newBuilder() {
+        return new Builder();
+    }
+
+    protected DefaultHttp2ConnectionDecoder(Builder builder) {
+        this.connection = checkNotNull(builder.connection, "connection");
+        this.frameReader = checkNotNull(builder.frameReader, "frameReader");
+        this.lifecycleManager = checkNotNull(builder.lifecycleManager, "lifecycleManager");
+        this.encoder = checkNotNull(builder.encoder, "encoder");
+        this.inboundFlow = checkNotNull(builder.inboundFlow, "inboundFlow");
+        this.listener = checkNotNull(builder.listener, "listener");
+    }
+
+    @Override
     public Http2Connection connection() {
         return connection;
     }
 
-    public Http2FrameListener listener() {
-        return listener;
-    }
-
-    public Http2LifecycleManager lifecycleManager() {
-        return lifecycleManager;
-    }
-
+    @Override
     public boolean prefaceReceived() {
         return prefaceReceived;
     }

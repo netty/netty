@@ -79,7 +79,10 @@ public class Http2ConnectionHandlerTest {
     private Http2Stream stream;
 
     @Mock
-    private Http2LifecycleManager lifecycleManager;
+    private Http2ConnectionDecoder.Builder decoderBuilder;
+
+    @Mock
+    private Http2ConnectionEncoder.Builder encoderBuilder;
 
     @Mock
     private Http2ConnectionDecoder decoder;
@@ -87,13 +90,24 @@ public class Http2ConnectionHandlerTest {
     @Mock
     private Http2ConnectionEncoder encoder;
 
+    @Mock
+    private Http2FrameWriter frameWriter;
+
     @Before
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
 
         promise = new DefaultChannelPromise(channel);
 
+        when(encoderBuilder.build()).thenReturn(encoder);
+        when(decoderBuilder.build()).thenReturn(decoder);
+        when(encoder.connection()).thenReturn(connection);
+        when(decoder.connection()).thenReturn(connection);
+        when(encoder.frameWriter()).thenReturn(frameWriter);
+        when(frameWriter.writeGoAway(eq(ctx), anyInt(), anyInt(), any(ByteBuf.class), eq(promise))).thenReturn(future);
         when(channel.isActive()).thenReturn(true);
+        when(connection.remote()).thenReturn(remote);
+        when(connection.local()).thenReturn(local);
         when(connection.activeStreams()).thenReturn(Collections.singletonList(stream));
         doAnswer(new Answer<Http2Stream>() {
             @Override
@@ -120,7 +134,7 @@ public class Http2ConnectionHandlerTest {
     }
 
     private Http2ConnectionHandler newHandler() {
-        return new Http2ConnectionHandler(connection, decoder, encoder, lifecycleManager);
+        return new Http2ConnectionHandler(decoderBuilder, encoderBuilder);
     }
 
     @After
@@ -147,7 +161,8 @@ public class Http2ConnectionHandlerTest {
         when(connection.isServer()).thenReturn(true);
         handler = newHandler();
         handler.channelRead(ctx, copiedBuffer("BAD_PREFACE", UTF_8));
-        verify(lifecycleManager).onHttp2Exception(eq(ctx), any(Http2Exception.class));
+        verify(frameWriter).writeGoAway(eq(ctx), eq(0), eq((long) PROTOCOL_ERROR.code()),
+                any(ByteBuf.class), eq(promise));
     }
 
     @Test
@@ -158,22 +173,17 @@ public class Http2ConnectionHandlerTest {
     }
 
     @Test
-    public void closeShouldCallLifecycleManager() throws Exception {
-        handler.close(ctx, promise);
-        verify(lifecycleManager).close(eq(ctx), eq(promise));
-    }
-
-    @Test
     public void channelInactiveShouldCloseStreams() throws Exception {
         handler.channelInactive(ctx);
-        verify(lifecycleManager).closeStream(eq(stream), eq(future));
+        verify(stream).close();
     }
 
     @Test
-    public void http2ExceptionShouldCallLifecycleManager() throws Exception {
+    public void connectionErrorShouldStartShutdown() throws Exception {
         Http2Exception e = new Http2Exception(PROTOCOL_ERROR);
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
         handler.exceptionCaught(ctx, e);
-        verify(lifecycleManager).onHttp2Exception(eq(ctx), eq(e));
+        verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID), eq((long) PROTOCOL_ERROR.code()),
+                any(ByteBuf.class), eq(promise));
     }
 }

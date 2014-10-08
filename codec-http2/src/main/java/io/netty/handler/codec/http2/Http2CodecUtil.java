@@ -132,13 +132,24 @@ public final class Http2CodecUtil {
      * Converts the given cause to a {@link Http2Exception} if it isn't already.
      */
     public static Http2Exception toHttp2Exception(Throwable cause) {
-        // Look for an embedded Http2Exception.
-        Http2Exception httpException = getEmbeddedHttp2Exception(cause);
-        if (httpException != null) {
-            return httpException;
+        if (cause instanceof Http2Exception) {
+            return (Http2Exception) cause;
         }
 
-        return new Http2Exception(INTERNAL_ERROR, cause.getMessage(), cause);
+        // Look for an embedded Http2Exception to see the appropriate error to use.
+        Http2Error error = INTERNAL_ERROR;
+        Http2Exception embedded = getEmbeddedHttp2Exception(cause);
+        if (embedded != null) {
+            error = embedded.error();
+        }
+
+        // Wrap the cause.
+        if (embedded instanceof Http2StreamException) {
+            int streamId = ((Http2StreamException) embedded).streamId();
+            return new Http2StreamException(streamId, error, cause.getMessage(), cause);
+        } else {
+            return new Http2Exception(error, cause.getMessage(), cause);
+        }
     }
 
     /**

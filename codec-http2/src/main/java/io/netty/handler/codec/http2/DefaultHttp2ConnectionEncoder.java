@@ -15,7 +15,6 @@
 package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.toHttp2Exception;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.protocolError;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
@@ -42,12 +41,68 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     // This initial capacity is plenty for SETTINGS traffic.
     private final ArrayDeque<Http2Settings> outstandingLocalSettingsQueue = new ArrayDeque<Http2Settings>(4);
 
-    public DefaultHttp2ConnectionEncoder(Http2Connection connection, Http2FrameWriter frameWriter,
-            Http2OutboundFlowController outboundFlow, Http2LifecycleManager lifecycleManager) {
-        this.frameWriter = checkNotNull(frameWriter, "frameWriter");
-        this.connection = checkNotNull(connection, "connection");
-        this.outboundFlow = checkNotNull(outboundFlow, "outboundFlow");
-        this.lifecycleManager = checkNotNull(lifecycleManager, "lifecycleManager");
+    /**
+     * Builder for new instances of {@link DefaultHttp2ConnectionEncoder}.
+     */
+    public static class Builder implements Http2ConnectionEncoder.Builder {
+        protected Http2FrameWriter frameWriter;
+        protected Http2Connection connection;
+        protected Http2OutboundFlowController outboundFlow;
+        protected Http2LifecycleManager lifecycleManager;
+
+        @Override
+        public Builder connection(
+                Http2Connection connection) {
+            this.connection = connection;
+            return this;
+        }
+
+        @Override
+        public Builder lifecycleManager(
+                Http2LifecycleManager lifecycleManager) {
+            this.lifecycleManager = lifecycleManager;
+            return this;
+        }
+
+        @Override
+        public Builder frameWriter(
+                Http2FrameWriter frameWriter) {
+            this.frameWriter = frameWriter;
+            return this;
+        }
+
+        @Override
+        public Builder outboundFlow(
+                Http2OutboundFlowController outboundFlow) {
+            this.outboundFlow = outboundFlow;
+            return this;
+        }
+
+        @Override
+        public Http2ConnectionEncoder build() {
+            return new DefaultHttp2ConnectionEncoder(this);
+        }
+    }
+
+    public static Builder newBuilder() {
+        return new Builder();
+    }
+
+    protected DefaultHttp2ConnectionEncoder(Builder builder) {
+        this.frameWriter = checkNotNull(builder.frameWriter, "frameWriter");
+        this.connection = checkNotNull(builder.connection, "connection");
+        this.outboundFlow = checkNotNull(builder.outboundFlow, "outboundFlow");
+        this.lifecycleManager = checkNotNull(builder.lifecycleManager, "lifecycleManager");
+    }
+
+    @Override
+    public Http2FrameWriter frameWriter() {
+        return frameWriter;
+    }
+
+    @Override
+    public Http2Connection connection() {
+        return connection;
     }
 
     @Override
@@ -109,7 +164,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                 public void operationComplete(ChannelFuture future) throws Exception {
                     if (!future.isSuccess()) {
                         // The write failed, handle the error.
-                        lifecycleManager.onHttp2Exception(ctx, toHttp2Exception(future.cause()));
+                        lifecycleManager.onException(ctx, future.cause());
                     } else if (endStream) {
                         // Close the local side of the stream if this is the last frame
                         Http2Stream stream = connection.stream(streamId);

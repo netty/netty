@@ -25,6 +25,11 @@ public class Http2StreamException extends Http2Exception {
         this.streamId = streamId;
     }
 
+    public Http2StreamException(int streamId, Http2Error error, String message, Throwable cause) {
+        super(error, message, cause);
+        this.streamId = streamId;
+    }
+
     public Http2StreamException(int streamId, Http2Error error) {
         super(error);
         this.streamId = streamId;

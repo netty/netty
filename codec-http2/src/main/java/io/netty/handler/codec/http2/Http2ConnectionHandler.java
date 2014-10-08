@@ -17,6 +17,8 @@ package io.netty.handler.codec.http2;
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static io.netty.handler.codec.http2.Http2CodecUtil.getEmbeddedHttp2Exception;
+import static io.netty.handler.codec.http2.Http2CodecUtil.toHttp2Exception;
+import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.protocolError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
@@ -37,13 +39,12 @@ import java.util.List;
  * <p>
  * This interface enforces inbound flow control functionality through {@link Http2InboundFlowController}
  */
-public class Http2ConnectionHandler extends ByteToMessageDecoder {
-    private final Http2LifecycleManager lifecycleManager;
+public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http2LifecycleManager {
     private final Http2ConnectionDecoder decoder;
     private final Http2ConnectionEncoder encoder;
-    private final Http2Connection connection;
     private ByteBuf clientPrefaceString;
     private boolean prefaceSent;
+    private ChannelFutureListener closeListener;
 
     public Http2ConnectionHandler(boolean server, Http2FrameListener listener) {
         this(new DefaultHttp2Connection(server), listener);
@@ -63,36 +64,41 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder {
     public Http2ConnectionHandler(Http2Connection connection, Http2FrameReader frameReader,
             Http2FrameWriter frameWriter, Http2InboundFlowController inboundFlow,
             Http2OutboundFlowController outboundFlow, Http2FrameListener listener) {
-        checkNotNull(frameWriter, "frameWriter");
-        checkNotNull(inboundFlow, "inboundFlow");
-        checkNotNull(outboundFlow, "outboundFlow");
-        checkNotNull(listener, "listener");
-        this.connection = checkNotNull(connection, "connection");
-        this.lifecycleManager = new Http2LifecycleManager(connection, frameWriter);
         this.encoder =
-                new DefaultHttp2ConnectionEncoder(connection, frameWriter, outboundFlow,
-                        lifecycleManager);
+                DefaultHttp2ConnectionEncoder.newBuilder().connection(connection)
+                        .frameWriter(frameWriter).outboundFlow(outboundFlow).lifecycleManager(this)
+                        .build();
         this.decoder =
-                new DefaultHttp2ConnectionDecoder(connection, frameReader, inboundFlow, encoder,
-                        lifecycleManager, listener);
+                DefaultHttp2ConnectionDecoder.newBuilder().connection(connection)
+                        .frameReader(frameReader).inboundFlow(inboundFlow).encoder(encoder)
+                        .listener(listener).lifecycleManager(this).build();
         clientPrefaceString = clientPrefaceString(connection);
     }
 
-    public Http2ConnectionHandler(Http2Connection connection, Http2ConnectionDecoder decoder,
-            Http2ConnectionEncoder encoder, Http2LifecycleManager lifecycleManager) {
-        this.connection = checkNotNull(connection, "connection");
-        this.lifecycleManager = checkNotNull(lifecycleManager, "lifecycleManager");
-        this.encoder = checkNotNull(encoder, "encoder");
-        this.decoder = checkNotNull(decoder, "decoder");
-        clientPrefaceString = clientPrefaceString(connection);
+    /**
+     * Constructor for pre-configured encoder and decoder builders. Just sets the {@code this} as the
+     * {@link Http2LifecycleManager} and builds them.
+     */
+    public Http2ConnectionHandler(Http2ConnectionDecoder.Builder decoderBuilder,
+            Http2ConnectionEncoder.Builder encoderBuilder) {
+        checkNotNull(decoderBuilder, "decoderBuilder");
+        checkNotNull(encoderBuilder, "encoderBuilder");
+        decoderBuilder.lifecycleManager(this);
+        encoderBuilder.lifecycleManager(this);
+
+        this.encoder = checkNotNull(encoderBuilder.build(), "encoder");
+        this.decoder = checkNotNull(decoderBuilder.build(), "decoder");
+        checkNotNull(encoder.connection(), "encoder.connection");
+        checkNotNull(decoder.connection(), "decoder.connection");
+        if (encoder.connection() != decoder.connection()) {
+            throw new IllegalArgumentException("Encoder and Decoder do not share the same connection object");
+        }
+
+        clientPrefaceString = clientPrefaceString(encoder.connection());
     }
 
     public Http2Connection connection() {
-        return connection;
-    }
-
-    public Http2LifecycleManager lifecycleManager() {
-        return lifecycleManager;
+        return encoder.connection();
     }
 
     public Http2ConnectionDecoder decoder() {
@@ -108,7 +114,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder {
      * Reserves local stream 1 for the HTTP/2 response.
      */
     public void onHttpClientUpgrade() throws Http2Exception {
-        if (connection.isServer()) {
+        if (connection().isServer()) {
             throw protocolError("Client-side HTTP upgrade requested for a server");
         }
         if (prefaceSent || decoder.prefaceReceived()) {
@@ -116,7 +122,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder {
         }
 
         // Create a local stream used for the HTTP cleartext upgrade.
-        connection.createLocalStream(HTTP_UPGRADE_STREAM_ID, true);
+        connection().createLocalStream(HTTP_UPGRADE_STREAM_ID, true);
     }
 
     /**
@@ -124,7 +130,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder {
      * @param settings the settings for the remote endpoint.
      */
     public void onHttpServerUpgrade(Http2Settings settings) throws Http2Exception {
-        if (!connection.isServer()) {
+        if (!connection().isServer()) {
             throw protocolError("Server-side HTTP upgrade requested for a client");
         }
         if (prefaceSent || decoder.prefaceReceived()) {
@@ -135,7 +141,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder {
         encoder.remoteSettings(settings);
 
         // Create a stream in the half-closed state.
-        connection.createRemoteStream(HTTP_UPGRADE_STREAM_ID, true);
+        connection().createRemoteStream(HTTP_UPGRADE_STREAM_ID, true);
     }
 
     @Override
@@ -160,15 +166,29 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder {
 
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        lifecycleManager.close(ctx, promise);
+     // Avoid NotYetConnectedException
+        if (!ctx.channel().isActive()) {
+            ctx.close(promise);
+            return;
+        }
+
+        ChannelFuture future = writeGoAway(ctx, null);
+
+        // If there are no active streams, close immediately after the send is complete.
+        // Otherwise wait until all streams are inactive.
+        if (connection().numActiveStreams() == 0) {
+            future.addListener(new ClosingChannelFutureListener(ctx, promise));
+        } else {
+            closeListener = new ClosingChannelFutureListener(ctx, promise);
+        }
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         ChannelFuture future = ctx.newSucceededFuture();
-        final Collection<Http2Stream> streams = connection.activeStreams();
+        final Collection<Http2Stream> streams = connection().activeStreams();
         for (Http2Stream s : streams.toArray(new Http2Stream[streams.size()])) {
-            lifecycleManager.closeStream(s, future);
+            closeStream(s, future);
         }
         super.channelInactive(ctx);
     }
@@ -178,12 +198,150 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder {
      */
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        Http2Exception ex = getEmbeddedHttp2Exception(cause);
-        if (ex != null) {
-            lifecycleManager.onHttp2Exception(ctx, ex);
+        if (getEmbeddedHttp2Exception(cause) != null) {
+            // Some exception in the causality chain is an Http2Exception - handle it.
+            onException(ctx, cause);
         } else {
             super.exceptionCaught(ctx, cause);
         }
+    }
+
+    /**
+     * Closes the remote side of the given stream. If this causes the stream to be closed, adds a
+     * hook to close the channel after the given future completes.
+     *
+     * @param stream the stream to be half closed.
+     * @param future If closing, the future after which to close the channel.
+     */
+    public void closeLocalSide(Http2Stream stream, ChannelFuture future) {
+        switch (stream.state()) {
+            case HALF_CLOSED_LOCAL:
+            case OPEN:
+                stream.closeLocalSide();
+                break;
+            default:
+                closeStream(stream, future);
+                break;
+        }
+    }
+
+    /**
+     * Closes the remote side of the given stream. If this causes the stream to be closed, adds a
+     * hook to close the channel after the given future completes.
+     *
+     * @param stream the stream to be half closed.
+     * @param future If closing, the future after which to close the channel.
+     */
+    public void closeRemoteSide(Http2Stream stream, ChannelFuture future) {
+        switch (stream.state()) {
+            case HALF_CLOSED_REMOTE:
+            case OPEN:
+                stream.closeRemoteSide();
+                break;
+            default:
+                closeStream(stream, future);
+                break;
+        }
+    }
+
+    /**
+     * Closes the given stream and adds a hook to close the channel after the given future
+     * completes.
+     *
+     * @param stream the stream to be closed.
+     * @param future the future after which to close the channel.
+     */
+    @Override
+    public void closeStream(Http2Stream stream, ChannelFuture future) {
+        stream.close();
+
+        // If this connection is closing and there are no longer any
+        // active streams, close after the current operation completes.
+        if (closeListener != null && connection().numActiveStreams() == 0) {
+            future.addListener(closeListener);
+        }
+    }
+
+    /**
+     * Central handler for all exceptions caught during HTTP/2 processing.
+     */
+    @Override
+    public void onException(ChannelHandlerContext ctx, Throwable cause) {
+        Http2Exception hCause = toHttp2Exception(cause);
+        if (hCause instanceof Http2StreamException) {
+            onStreamError(ctx, (Http2StreamException) hCause);
+        } else {
+            onConnectionError(ctx, hCause);
+        }
+    }
+
+    /**
+     * Handler for a connection error. Sends a GO_AWAY frame to the remote endpoint and waits until
+     * all streams are closed before shutting down the connection().
+     */
+    protected void onConnectionError(ChannelHandlerContext ctx, Http2Exception cause) {
+        writeGoAway(ctx, cause).addListener(new ClosingChannelFutureListener(ctx, ctx.newPromise()));
+    }
+
+    /**
+     * Handler for a stream error. Sends a RST_STREAM frame to the remote endpoint and closes the stream.
+     */
+    protected void onStreamError(ChannelHandlerContext ctx, Http2StreamException cause) {
+        writeRstStream(ctx, cause.streamId(), cause.error().code(), ctx.newPromise());
+    }
+
+    protected Http2FrameWriter frameWriter() {
+        return encoder().frameWriter();
+    }
+
+    /**
+     * Writes a RST_STREAM frame to the remote endpoint and updates the connection state appropriately.
+     */
+    public ChannelFuture writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
+            ChannelPromise promise) {
+        Http2Stream stream = connection().stream(streamId);
+        ChannelFuture future = frameWriter().writeRstStream(ctx, streamId, errorCode, promise);
+        ctx.flush();
+
+        if (stream != null) {
+            stream.terminateSent();
+            closeStream(stream, promise);
+        }
+
+        return future;
+    }
+
+    /**
+     * Sends a {@code GO_AWAY} frame to the remote endpoint and updates the connection state appropriately.
+     */
+    public ChannelFuture writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData,
+            ChannelPromise promise) {
+        if (connection().isGoAway()) {
+            debugData.release();
+            return ctx.newSucceededFuture();
+        }
+
+        ChannelFuture future = frameWriter().writeGoAway(ctx, lastStreamId, errorCode, debugData, promise);
+        ctx.flush();
+
+        connection().remote().goAwayReceived(lastStreamId);
+        return future;
+    }
+
+    /**
+     * Sends a GO_AWAY frame appropriate for the given exception.
+     */
+    private ChannelFuture writeGoAway(ChannelHandlerContext ctx, Http2Exception cause) {
+        if (connection().isGoAway()) {
+            return ctx.newSucceededFuture();
+        }
+
+        // The connection isn't alredy going away, send the GO_AWAY frame now to start
+        // the process.
+        int errorCode = cause != null ? cause.error().code() : NO_ERROR.code();
+        ByteBuf debugData = Http2CodecUtil.toByteBuf(ctx, cause);
+        int lastKnownStream = connection().remote().lastStreamCreated();
+        return writeGoAway(ctx, lastKnownStream, errorCode, debugData, ctx.newPromise());
     }
 
     @Override
@@ -197,10 +355,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder {
             }
 
             decoder.decodeFrame(ctx, in, out);
-        } catch (Http2Exception e) {
-            lifecycleManager.onHttp2Exception(ctx, e);
         } catch (Throwable e) {
-            lifecycleManager.onHttp2Exception(ctx, new Http2Exception(Http2Error.INTERNAL_ERROR, e.getMessage(), e));
+            onException(ctx, e);
         }
     }
 
@@ -214,7 +370,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder {
 
         prefaceSent = true;
 
-        if (!connection.isServer()) {
+        if (!connection().isServer()) {
             // Clients must send the preface string as the first bytes on the connection.
             ctx.write(connectionPrefaceBuf()).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
         }
@@ -275,5 +431,185 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder {
      */
     private static ByteBuf clientPrefaceString(Http2Connection connection) {
         return connection.isServer() ? connectionPrefaceBuf() : null;
+    }
+
+    /**
+     * Manager for the life cycle of the HTTP/2 connection. Handles graceful shutdown of the channel,
+     * closing only after all of the streams have closed.
+     */
+    public class DefaultHttp2LifecycleManager {
+        private ChannelFutureListener closeListener;
+
+        /**
+         * Handles the close processing on behalf of the {@link DelegatingHttp2ConnectionHandler}.
+         */
+        public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            // Avoid NotYetConnectedException
+            if (!ctx.channel().isActive()) {
+                ctx.close(promise);
+                return;
+            }
+
+            ChannelFuture future = writeGoAway(ctx, null);
+
+            // If there are no active streams, close immediately after the send is complete.
+            // Otherwise wait until all streams are inactive.
+            if (connection().numActiveStreams() == 0) {
+                future.addListener(new ClosingChannelFutureListener(ctx, promise));
+            } else {
+                closeListener = new ClosingChannelFutureListener(ctx, promise);
+            }
+        }
+
+        /**
+         * Closes the remote side of the given stream. If this causes the stream to be closed, adds a
+         * hook to close the channel after the given future completes.
+         *
+         * @param stream the stream to be half closed.
+         * @param future If closing, the future after which to close the channel.
+         */
+        public void closeLocalSide(Http2Stream stream, ChannelFuture future) {
+            switch (stream.state()) {
+                case HALF_CLOSED_LOCAL:
+                case OPEN:
+                    stream.closeLocalSide();
+                    break;
+                default:
+                    closeStream(stream, future);
+                    break;
+            }
+        }
+
+        /**
+         * Closes the remote side of the given stream. If this causes the stream to be closed, adds a
+         * hook to close the channel after the given future completes.
+         *
+         * @param stream the stream to be half closed.
+         * @param future If closing, the future after which to close the channel.
+         */
+        public void closeRemoteSide(Http2Stream stream, ChannelFuture future) {
+            switch (stream.state()) {
+                case HALF_CLOSED_REMOTE:
+                case OPEN:
+                    stream.closeRemoteSide();
+                    break;
+                default:
+                    closeStream(stream, future);
+                    break;
+            }
+        }
+
+        /**
+         * Closes the given stream and adds a hook to close the channel after the given future
+         * completes.
+         *
+         * @param stream the stream to be closed.
+         * @param future the future after which to close the channel.
+         */
+        public void closeStream(Http2Stream stream, ChannelFuture future) {
+            stream.close();
+
+            // If this connection is closing and there are no longer any
+            // active streams, close after the current operation completes.
+            if (closeListener != null && connection().numActiveStreams() == 0) {
+                future.addListener(closeListener);
+            }
+        }
+
+        /**
+         * Processes the given exception. Depending on the type of exception, delegates to either
+         * {@link #onConnectionError(ChannelHandlerContext, Http2Exception)} or
+         * {@link #onStreamError(ChannelHandlerContext, Http2StreamException)}.
+         */
+        public void onHttp2Exception(ChannelHandlerContext ctx, Http2Exception e) {
+            if (e instanceof Http2StreamException) {
+                onStreamError(ctx, (Http2StreamException) e);
+            } else {
+                onConnectionError(ctx, e);
+            }
+        }
+
+        /**
+         * Handler for a connection error. Sends a GO_AWAY frame to the remote endpoint and waits until
+         * all streams are closed before shutting down the connection.
+         */
+        private void onConnectionError(ChannelHandlerContext ctx, Http2Exception cause) {
+            writeGoAway(ctx, cause).addListener(new ClosingChannelFutureListener(ctx, ctx.newPromise()));
+        }
+
+        /**
+         * Handler for a stream error. Sends a RST_STREAM frame to the remote endpoint and closes the stream.
+         */
+        private void onStreamError(ChannelHandlerContext ctx, Http2StreamException cause) {
+            writeRstStream(ctx, cause.streamId(), cause.error().code(), ctx.newPromise());
+        }
+
+        /**
+         * Writes a RST_STREAM frame to the remote endpoint and updates the connection state appropriately.
+         */
+        public ChannelFuture writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
+                ChannelPromise promise) {
+            Http2Stream stream = connection().stream(streamId);
+            ChannelFuture future = frameWriter().writeRstStream(ctx, streamId, errorCode, promise);
+            ctx.flush();
+
+            if (stream != null) {
+                stream.terminateSent();
+                closeStream(stream, promise);
+            }
+
+            return future;
+        }
+
+        /**
+         * Sends a {@code GO_AWAY} frame to the remote endpoint and updates the connection state appropriately.
+         */
+        public ChannelFuture writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData,
+                ChannelPromise promise) {
+            if (connection().isGoAway()) {
+                debugData.release();
+                return ctx.newSucceededFuture();
+            }
+
+            ChannelFuture future = frameWriter().writeGoAway(ctx, lastStreamId, errorCode, debugData, promise);
+            ctx.flush();
+
+            connection().remote().goAwayReceived(lastStreamId);
+            return future;
+        }
+
+        /**
+         * Sends a GO_AWAY frame appropriate for the given exception.
+         */
+        private ChannelFuture writeGoAway(ChannelHandlerContext ctx, Http2Exception cause) {
+            if (connection().isGoAway()) {
+                return ctx.newSucceededFuture();
+            }
+
+            // The connection isn't alredy going away, send the GO_AWAY frame now to start
+            // the process.
+            int errorCode = cause != null ? cause.error().code() : NO_ERROR.code();
+            ByteBuf debugData = Http2CodecUtil.toByteBuf(ctx, cause);
+            int lastKnownStream = connection().remote().lastStreamCreated();
+            return writeGoAway(ctx, lastKnownStream, errorCode, debugData, ctx.newPromise());
+        }
+    }
+
+    /**
+     * Closes the channel when the future completes.
+     */
+    private static final class ClosingChannelFutureListener implements ChannelFutureListener {
+        private final ChannelHandlerContext ctx;
+        private final ChannelPromise promise;
+
+        ClosingChannelFutureListener(ChannelHandlerContext ctx, ChannelPromise promise) {
+            this.ctx = ctx;
+            this.promise = promise;
+        }
+
+        @Override
+        public void operationComplete(ChannelFuture sentGoAwayFuture) throws Exception {
+            ctx.close(promise);
+        }
     }
 }
