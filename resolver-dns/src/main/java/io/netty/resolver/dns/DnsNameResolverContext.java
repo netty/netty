@@ -38,13 +38,25 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 final class DnsNameResolverContext extends DefaultPromise<SocketAddress> {
 
     private static final int INADDRSZ4 = 4;
     private static final int INADDRSZ6 = 16;
+
+    private static final FutureListener<DnsResponse> RELEASE_RESPONSE = new FutureListener<DnsResponse>() {
+        @Override
+        public void operationComplete(Future<DnsResponse> future) {
+            if (future.isSuccess()) {
+                future.getNow().release();
+            }
+        }
+    };
 
     private final DnsNameResolver parent;
     private final String hostname;
@@ -52,10 +64,11 @@ final class DnsNameResolverContext extends DefaultPromise<SocketAddress> {
     private final int maxAllowedQueries;
     private final InternetProtocolFamily preferredProtocolFamily;
 
+    private final Set<Future<DnsResponse>> queriesInProgress =
+            Collections.newSetFromMap(new IdentityHashMap<Future<DnsResponse>, Boolean>());
     private List<InetAddress> resolvedAddresses;
     private StringBuilder trace;
     private int allowedQueries;
-    private int unfinishedQueries;
     private boolean triedCNAME;
 
     DnsNameResolverContext(DnsNameResolver parent, String hostname, int port) {
@@ -101,13 +114,16 @@ final class DnsNameResolverContext extends DefaultPromise<SocketAddress> {
         }
 
         allowedQueries --;
-        unfinishedQueries ++;
 
-        parent.query(nameServerAddresses, question).addListener(new FutureListener<DnsResponse>() {
+        final Future<DnsResponse> f = parent.query(nameServerAddresses, question);
+        queriesInProgress.add(f);
+
+        f.addListener(new FutureListener<DnsResponse>() {
             @Override
             public void operationComplete(Future<DnsResponse> future) throws Exception {
+                queriesInProgress.remove(future);
+
                 if (isDone()) {
-                    unfinishedQueries --;
                     return;
                 }
 
@@ -242,11 +258,10 @@ final class DnsNameResolverContext extends DefaultPromise<SocketAddress> {
     }
 
     void tryToFinishResolve() {
-        if (-- unfinishedQueries != 0) {
+        if (!queriesInProgress.isEmpty()) {
             // There are still some queries we did not receive responses for.
             if (gotPreferredAddress()) {
                 // But it's OK to finish the resolution process if we got a resolved address of the preferred type.
-                // TODO: Attempt to cancel all unfinished queries.
                 finishResolve();
             }
 
@@ -296,6 +311,18 @@ final class DnsNameResolverContext extends DefaultPromise<SocketAddress> {
     }
 
     private void finishResolve() {
+        if (!queriesInProgress.isEmpty()) {
+            // If there are queries in progress, we should cancel it because we already finished the resolution.
+            for (Iterator<Future<DnsResponse>> i = queriesInProgress.iterator(); i.hasNext();) {
+                Future<DnsResponse> f = i.next();
+                i.remove();
+
+                if (!f.cancel(false)) {
+                    f.addListener(RELEASE_RESPONSE);
+                }
+            }
+        }
+
         if (resolvedAddresses == null) {
             // No resolved address found.
             int tries = maxAllowedQueries - allowedQueries;
@@ -402,7 +429,6 @@ final class DnsNameResolverContext extends DefaultPromise<SocketAddress> {
         trace.append(nameServerAddr);
         trace.append(": ");
         trace.append(name);
-        trace.append(" => ");
         trace.append(" CNAME ");
         trace.append(cname);
 
