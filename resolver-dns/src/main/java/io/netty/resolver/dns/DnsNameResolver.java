@@ -44,7 +44,9 @@ import java.io.Closeable;
 import java.net.IDN;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceArray;
@@ -277,11 +279,17 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> imple
     }
 
     public void clearCache() {
-        queryCache.clear();
+        for (Iterator<Entry<DnsQuestion, Object>> i = queryCache.entrySet().iterator(); i.hasNext();) {
+            Entry<DnsQuestion, Object> e = i.next();
+            i.remove();
+            ReferenceCountUtil.safeRelease(e.getValue());
+        }
     }
 
     public boolean clearCache(DnsQuestion question) {
-        return queryCache.remove(question) != null;
+        Object v = queryCache.remove(question);
+        ReferenceCountUtil.safeRelease(v);
+        return v != null;
     }
 
     /**
