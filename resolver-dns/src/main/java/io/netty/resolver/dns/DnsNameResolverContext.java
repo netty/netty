@@ -33,7 +33,6 @@ import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -44,7 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-final class DnsNameResolverContext extends DefaultPromise<SocketAddress> {
+final class DnsNameResolverContext extends DefaultPromise<InetSocketAddress> {
 
     private static final int INADDRSZ4 = 4;
     private static final int INADDRSZ6 = 16;

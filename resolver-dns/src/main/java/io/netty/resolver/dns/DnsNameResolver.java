@@ -43,7 +43,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.Closeable;
 import java.net.IDN;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -312,7 +311,7 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> imple
     }
 
     @Override
-    protected Future<SocketAddress> doResolve(final InetSocketAddress unresolvedAddress) throws Exception {
+    protected Future<InetSocketAddress> doResolve(final InetSocketAddress unresolvedAddress) throws Exception {
         final String hostname = IDN.toASCII(unresolvedAddress.getHostString());
         final int port = unresolvedAddress.getPort();
 

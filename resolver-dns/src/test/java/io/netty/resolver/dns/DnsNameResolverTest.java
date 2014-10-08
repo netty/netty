@@ -34,7 +34,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -220,8 +219,8 @@ public class DnsNameResolverTest {
     public void testResolve() throws Exception {
         assertThat(resolver.isRecursionDesired(), is(true));
 
-        Map<InetSocketAddress, Future<SocketAddress>> futures =
-                new LinkedHashMap<InetSocketAddress, Future<SocketAddress>>();
+        Map<InetSocketAddress, Future<InetSocketAddress>> futures =
+                new LinkedHashMap<InetSocketAddress, Future<InetSocketAddress>>();
         for (String name: DOMAINS) {
             if (EXCLUSIONS_RESOLVE.contains(name)) {
                 continue;
@@ -230,9 +229,9 @@ public class DnsNameResolverTest {
             resolve(futures, name);
         }
 
-        for (Entry<InetSocketAddress, Future<SocketAddress>> e: futures.entrySet()) {
+        for (Entry<InetSocketAddress, Future<InetSocketAddress>> e: futures.entrySet()) {
             InetSocketAddress unresolved = e.getKey();
-            InetSocketAddress resolved = (InetSocketAddress) e.getValue().sync().getNow();
+            InetSocketAddress resolved = e.getValue().sync().getNow();
 
             logger.info("{} has been resolved into {}.", unresolved, resolved);
 
@@ -287,7 +286,7 @@ public class DnsNameResolverTest {
         }
     }
 
-    private static void resolve(Map<InetSocketAddress, Future<SocketAddress>> futures, String hostname) {
+    private static void resolve(Map<InetSocketAddress, Future<InetSocketAddress>> futures, String hostname) {
         InetSocketAddress unresolved =
                 InetSocketAddress.createUnresolved(hostname, ThreadLocalRandom.current().nextInt(65536));
 

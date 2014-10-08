@@ -24,7 +24,7 @@ import java.nio.channels.UnsupportedAddressTypeException;
 /**
  * Resolves an arbitrary string that represents the name of an endpoint into a {@link SocketAddress}.
  */
-public interface NameResolver {
+public interface NameResolver<T extends SocketAddress> {
 
     /**
      * Returns {@code true} if and only if the specified address is supported by this resolved.
@@ -45,7 +45,7 @@ public interface NameResolver {
      *
      * @return the {@link SocketAddress} as the result of the resolution
      */
-    Future<SocketAddress> resolve(String inetHost, int inetPort);
+    Future<T> resolve(String inetHost, int inetPort);
 
     /**
      * Resolves the specified unresolved address into a resolved one. If the specified address is resolved already,
@@ -55,5 +55,5 @@ public interface NameResolver {
      *
      * @return the {@link SocketAddress} as the result of the resolution
      */
-    Future<SocketAddress> resolve(SocketAddress unresolvedAddress);
+    Future<T> resolve(SocketAddress unresolvedAddress);
 }

@@ -57,9 +57,10 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
      * Note that the {@link GlobalEventExecutor} is only used for the notification of name resolution failures,
      * because we replace the executor after successful resolution in {@link LazyConnectPromise#setChannel(Channel)}.
      */
-    private static final NameResolver DEFAULT_RESOLVER = new DefaultNameResolver(GlobalEventExecutor.INSTANCE);
+    private static final NameResolver<?> DEFAULT_RESOLVER = new DefaultNameResolver(GlobalEventExecutor.INSTANCE);
 
-    private volatile NameResolver resolver = DEFAULT_RESOLVER;
+    @SuppressWarnings("unchecked")
+    private volatile NameResolver<SocketAddress> resolver = (NameResolver<SocketAddress>) DEFAULT_RESOLVER;
     private volatile SocketAddress remoteAddress;
 
     public Bootstrap() { }
@@ -72,11 +73,12 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     /**
      * Sets the {@link NameResolver} which will resolve the address of the unresolved named address.
      */
-    public Bootstrap resolver(NameResolver resolver) {
+    @SuppressWarnings("unchecked")
+    public Bootstrap resolver(NameResolver<?> resolver) {
         if (resolver == null) {
             throw new NullPointerException("resolver");
         }
-        this.resolver = resolver;
+        this.resolver = (NameResolver<SocketAddress>) resolver;
         return this;
     }
 
@@ -159,7 +161,7 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
      * @see {@link #connect()}
      */
     private ChannelFuture doResolveAndConnect(SocketAddress remoteAddress, final SocketAddress localAddress) {
-        final NameResolver resolver = this.resolver;
+        final NameResolver<SocketAddress> resolver = this.resolver;
 
         if (!resolver.isSupported(remoteAddress) || resolver.isResolved(remoteAddress)) {
             // Resolver has no idea about what to do with the specified remote address or it's resolved already.

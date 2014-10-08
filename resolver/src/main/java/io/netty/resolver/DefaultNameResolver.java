@@ -21,7 +21,6 @@ import io.netty.util.concurrent.Future;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.net.UnknownHostException;
 
 /**
@@ -40,10 +39,10 @@ public class DefaultNameResolver extends SimpleNameResolver<InetSocketAddress> {
     }
 
     @Override
-    protected Future<SocketAddress> doResolve(InetSocketAddress unresolvedAddress) throws Exception {
+    protected Future<InetSocketAddress> doResolve(InetSocketAddress unresolvedAddress) throws Exception {
         try {
             return executor().newSucceededFuture(
-                    (SocketAddress) new InetSocketAddress(
+                    new InetSocketAddress(
                             InetAddress.getByName(unresolvedAddress.getHostString()),
                             unresolvedAddress.getPort()));
         } catch (UnknownHostException e) {

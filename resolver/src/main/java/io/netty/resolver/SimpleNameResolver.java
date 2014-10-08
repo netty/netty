@@ -27,7 +27,7 @@ import java.nio.channels.UnsupportedAddressTypeException;
 /**
  * A skeletal {@link NameResolver} implementation.
  */
-public abstract class SimpleNameResolver<T extends SocketAddress> implements NameResolver {
+public abstract class SimpleNameResolver<T extends SocketAddress> implements NameResolver<T> {
 
     private final EventExecutor executor;
     private final TypeParameterMatcher matcher;
@@ -90,7 +90,7 @@ public abstract class SimpleNameResolver<T extends SocketAddress> implements Nam
     protected abstract boolean doIsResolved(T address);
 
     @Override
-    public final Future<SocketAddress> resolve(String inetHost, int inetPort) {
+    public final Future<T> resolve(String inetHost, int inetPort) {
         if (inetHost == null) {
             throw new NullPointerException("inetHost");
         }
@@ -99,7 +99,7 @@ public abstract class SimpleNameResolver<T extends SocketAddress> implements Nam
     }
 
     @Override
-    public final Future<SocketAddress> resolve(SocketAddress unresolvedAddress) {
+    public final Future<T> resolve(SocketAddress unresolvedAddress) {
         if (unresolvedAddress == null) {
             throw new NullPointerException("unresolvedAddress");
         }
@@ -111,13 +111,15 @@ public abstract class SimpleNameResolver<T extends SocketAddress> implements Nam
 
         if (isResolved(unresolvedAddress)) {
             // Resolved already; no need to perform a lookup
-            return executor.newSucceededFuture(unresolvedAddress);
+            @SuppressWarnings("unchecked")
+            final T cast = (T) unresolvedAddress;
+            return executor.newSucceededFuture(cast);
         }
 
         try {
             @SuppressWarnings("unchecked")
-            final T castAddress = (T) unresolvedAddress;
-            return doResolve(castAddress);
+            final T cast = (T) unresolvedAddress;
+            return doResolve(cast);
         } catch (Exception e) {
             return executor().newFailedFuture(e);
         }
@@ -127,5 +129,5 @@ public abstract class SimpleNameResolver<T extends SocketAddress> implements Nam
      * Invoked by {@link #resolve(SocketAddress)} and {@link #resolve(String, int)} to perform the actual name
      * resolution.
      */
-    protected abstract Future<SocketAddress> doResolve(T unresolvedAddress) throws Exception;
+    protected abstract Future<T> doResolve(T unresolvedAddress) throws Exception;
 }
