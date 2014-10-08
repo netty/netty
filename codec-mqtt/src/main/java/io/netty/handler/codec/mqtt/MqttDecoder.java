@@ -204,7 +204,7 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
     private static Result<MqttConnectVariableHeader> decodeConnectionVariableHeader(ByteBuf buffer) {
         final Result<String> protoString = decodeString(buffer);
         if (!PROTOCOL_NAME.equals(protoString.value)) {
-            throw new DecoderException("missing " + PROTOCOL_NAME + " signature");
+            throw new MqttUnacceptableProtocolVersionException("missing " + PROTOCOL_NAME + " signature");
         }
 
         int numberOfBytesConsumed = protoString.numberOfBytesConsumed;
@@ -322,7 +322,7 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
         final Result<String> decodedClientId = decodeString(buffer);
         final String decodedClientIdValue = decodedClientId.value;
         if (!isValidClientId(decodedClientIdValue)) {
-            throw new DecoderException("invalid clientIdentifier: " + decodedClientIdValue);
+            throw new MqttIdentifierRejectedException("invalid clientIdentifier: " + decodedClientIdValue);
         }
         int numberOfBytesConsumed = decodedClientId.numberOfBytesConsumed;
 
