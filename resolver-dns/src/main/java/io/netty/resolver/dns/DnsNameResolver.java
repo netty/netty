@@ -44,6 +44,7 @@ import java.io.Closeable;
 import java.net.IDN;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceArray;
@@ -378,6 +379,18 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> imple
                     return;
                 }
 
+                final List<DnsQuestion> questions = res.questions();
+                if (questions.size() != 1) {
+                    logger.warn("Received a DNS response with invalid number of questions: {}", res);
+                    return;
+                }
+
+                final DnsQuestion q = p.question();
+                if (!q.equals(questions.get(0))) {
+                    logger.warn("Received a mismatching DNS response: {}", res);
+                    return;
+                }
+
                 // Cancel the timeout task.
                 final ScheduledFuture<?> timeoutFuture = p.timeoutFuture();
                 if (timeoutFuture != null) {
@@ -385,7 +398,7 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> imple
                 }
 
                 if (res.header().responseCode() == DnsResponseCode.NOERROR) {
-                    cache(p.question(), res);
+                    cache(q, res);
                     promises.lazySet(queryId, null);
                     p.trySuccess(res);
                     success = true;
