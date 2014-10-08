@@ -61,7 +61,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     private static final int STREAM_ID = 1;
     private static final int PUSH_STREAM_ID = 2;
 
-    private DefaultHttp2ConnectionDecoder decoder;
+    private Http2ConnectionDecoder decoder;
 
     @Mock
     private Http2Connection connection;
@@ -143,9 +143,9 @@ public class DefaultHttp2ConnectionDecoderTest {
         when(ctx.newPromise()).thenReturn(promise);
         when(ctx.write(any())).thenReturn(future);
 
-        decoder =
-                new DefaultHttp2ConnectionDecoder(connection, reader, inboundFlow, encoder,
-                        lifecycleManager, listener);
+        decoder = DefaultHttp2ConnectionDecoder.newBuilder().connection(connection)
+                        .frameReader(reader).inboundFlow(inboundFlow).encoder(encoder)
+                        .listener(listener).lifecycleManager(lifecycleManager).build();
 
         // Simulate receiving the initial settings from the remote endpoint.
         decode().onSettingsRead(ctx, new Http2Settings());

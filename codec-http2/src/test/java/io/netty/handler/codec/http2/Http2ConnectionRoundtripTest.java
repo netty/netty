@@ -28,6 +28,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import io.netty.bootstrap.Bootstrap;
@@ -136,6 +137,41 @@ public class Http2ConnectionRoundtripTest {
                 throw Http2Exception.protocolError("Fake Exception");
             }
         });
+
+        // Wait for the close to occur.
+        assertTrue(closeLatch.await(5, TimeUnit.SECONDS));
+        assertFalse(clientChannel.isOpen());
+    }
+
+    @Test
+    public void listenerExceptionShouldCloseConnection() throws Exception {
+        final Http2Headers headers = dummyHeaders();
+        doThrow(new RuntimeException("Fake Exception")).when(serverListener).onHeadersRead(
+                any(ChannelHandlerContext.class), eq(3), eq(headers), eq(0), eq((short) 16),
+                eq(false), eq(0), eq(false));
+
+        bootstrapEnv(1, 1);
+
+        // Create a latch to track when the close occurs.
+        final CountDownLatch closeLatch = new CountDownLatch(1);
+        clientChannel.closeFuture().addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                closeLatch.countDown();
+            }
+        });
+
+        // Create a single stream by sending a HEADERS frame to the server.
+        runInChannel(clientChannel, new Http2Runnable() {
+            @Override
+            public void run() {
+                http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0, false,
+                        newPromise());
+            }
+        });
+
+        // Wait for the server to create the stream.
+        assertTrue(requestLatch.await(5, TimeUnit.SECONDS));
 
         // Wait for the close to occur.
         assertTrue(closeLatch.await(5, TimeUnit.SECONDS));

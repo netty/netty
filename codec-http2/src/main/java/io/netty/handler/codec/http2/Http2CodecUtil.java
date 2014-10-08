@@ -15,7 +15,6 @@
 
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
@@ -126,19 +125,6 @@ public final class Http2CodecUtil {
      */
     public static ChannelHandler ignoreSettingsHandler() {
         return ignoreSettingsHandler;
-    }
-
-    /**
-     * Converts the given cause to a {@link Http2Exception} if it isn't already.
-     */
-    public static Http2Exception toHttp2Exception(Throwable cause) {
-        // Look for an embedded Http2Exception.
-        Http2Exception httpException = getEmbeddedHttp2Exception(cause);
-        if (httpException != null) {
-            return httpException;
-        }
-
-        return new Http2Exception(INTERNAL_ERROR, cause.getMessage(), cause);
     }
 
     /**
