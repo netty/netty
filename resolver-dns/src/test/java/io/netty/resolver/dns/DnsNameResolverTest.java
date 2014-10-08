@@ -24,6 +24,7 @@ import io.netty.handler.codec.dns.DnsResource;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.handler.codec.dns.DnsType;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
@@ -33,9 +34,16 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
@@ -53,7 +61,11 @@ public class DnsNameResolverTest {
             new InetSocketAddress("37.235.1.177", 53)
     );
 
-    // Using the top web sites ranked in Alexa.com (Oct 2014)
+    // Using the top-100 web sites ranked in Alexa.com (Oct 2014)
+    // Please use the following series of shell commands to get this up-to-date:
+    // $ curl -O http://s3.amazonaws.com/alexa-static/top-1m.csv.zip
+    // $ unzip -o top-1m.csv.zip top-1m.csv
+    // $ head -100 top-1m.csv | cut -d, -f2 | cut -d/ -f1 | while read L; do echo '"'"$L"'",'; done > topsites.txt
     private static final String[] DOMAINS = {
             "google.com",
             "facebook.com",
@@ -75,12 +87,116 @@ public class DnsNameResolverTest {
             "yahoo.co.jp",
             "tmall.com",
             "yandex.ru",
+            "sohu.com",
+            "bing.com",
+            "ebay.com",
+            "pinterest.com",
+            "vk.com",
+            "google.de",
+            "wordpress.com",
+            "apple.com",
+            "google.co.jp",
+            "google.co.uk",
+            "360.cn",
+            "instagram.com",
+            "google.fr",
+            "msn.com",
+            "ask.com",
+            "soso.com",
+            "google.com.br",
+            "tumblr.com",
+            "paypal.com",
+            "mail.ru",
+            "xvideos.com",
+            "microsoft.com",
+            "google.ru",
+            "reddit.com",
+            "google.it",
+            "imgur.com",
+            "163.com",
+            "google.es",
+            "imdb.com",
+            "aliexpress.com",
+            "t.co",
+            "go.com",
+            "adcash.com",
+            "craigslist.org",
+            "amazon.co.jp",
+            "alibaba.com",
+            "google.com.mx",
+            "stackoverflow.com",
+            "xhamster.com",
+            "fc2.com",
+            "google.ca",
+            "bbc.co.uk",
+            "espn.go.com",
+            "cnn.com",
+            "google.co.id",
+            "people.com.cn",
+            "gmw.cn",
+            "pornhub.com",
+            "blogger.com",
+            "huffingtonpost.com",
+            "flipkart.com",
+            "akamaihd.net",
+            "google.com.tr",
+            "amazon.de",
+            "netflix.com",
+            "onclickads.net",
+            "googleusercontent.com",
+            "kickass.to",
+            "google.com.au",
+            "google.pl",
+            "xinhuanet.com",
+            "ebay.de",
+            "wordpress.org",
+            "odnoklassniki.ru",
+            "google.com.hk",
+            "adobe.com",
+            "dailymotion.com",
+            "dailymail.co.uk",
+            "indiatimes.com",
+            "thepiratebay.se",
+            "amazon.co.uk",
+            "xnxx.com",
+            "rakuten.co.jp",
+            "dropbox.com",
+            "tudou.com",
+            "about.com",
+            "cnet.com",
+            "vimeo.com",
+            "redtube.com",
+            "blogspot.in",
     };
 
-    private static final String[] DOMAINS_WITHOUT_MX = {
-            "hao123.com",
-            "blogspot.com",
-    };
+    /**
+     * The list of the domain names to exclude from {@link #testResolve()}.
+     */
+    private static final Set<String> EXCLUSIONS_RESOLVE = new HashSet<String>();
+    static {
+        Collections.addAll(
+                EXCLUSIONS_RESOLVE,
+                "akamaihd.net",
+                "googleusercontent.com",
+                "");
+    }
+
+    /**
+     * The list of the domain names to exclude from {@link #testQueryMx()}.
+     */
+    private static final Set<String> EXCLUSIONS_QUERY_MX = new HashSet<String>();
+    static {
+        Collections.addAll(
+                EXCLUSIONS_QUERY_MX,
+                "hao123.com",
+                "blogspot.com",
+                "t.co",
+                "espn.go.com",
+                "people.com.cn",
+                "googleusercontent.com",
+                "blogspot.in",
+                "");
+    }
 
     private static final EventLoopGroup group = new NioEventLoopGroup(1);
     private static final DnsNameResolver resolver = new DnsNameResolver(
@@ -103,50 +219,55 @@ public class DnsNameResolverTest {
     @Test
     public void testResolve() throws Exception {
         assertThat(resolver.isRecursionDesired(), is(true));
+
+        Map<InetSocketAddress, Future<SocketAddress>> futures =
+                new LinkedHashMap<InetSocketAddress, Future<SocketAddress>>();
         for (String name: DOMAINS) {
-            testResolve(name);
+            if (EXCLUSIONS_RESOLVE.contains(name)) {
+                continue;
+            }
+
+            resolve(futures, name);
+        }
+
+        for (Entry<InetSocketAddress, Future<SocketAddress>> e: futures.entrySet()) {
+            InetSocketAddress unresolved = e.getKey();
+            InetSocketAddress resolved = (InetSocketAddress) e.getValue().sync().getNow();
+
+            logger.info("{} has been resolved into {}.", unresolved, resolved);
+
+            assertThat(resolved.isUnresolved(), is(false));
+            assertThat(resolved.getHostString(), is(unresolved.getHostString()));
+            assertThat(resolved.getPort(), is(unresolved.getPort()));
         }
     }
 
     @Test
     public void testQueryMx() throws Exception {
         assertThat(resolver.isRecursionDesired(), is(true));
+
+        Map<String, Future<DnsResponse>> futures =
+                new LinkedHashMap<String, Future<DnsResponse>>();
         for (String name: DOMAINS) {
-            testQueryMx(name);
-        }
-    }
-
-    private static void testResolve(String hostname) throws Exception {
-        int port = ThreadLocalRandom.current().nextInt(65536);
-        InetSocketAddress resolved = (InetSocketAddress) resolver.resolve(hostname, port).sync().getNow();
-
-        logger.info("{}:{} has been resolved into {}.", hostname, port, resolved);
-
-        assertThat(resolved.isUnresolved(), is(false));
-        assertThat(resolved.getHostString(), is(hostname));
-        assertThat(resolved.getPort(), is(port));
-    }
-
-    private static void testQueryMx(String hostname) throws Exception {
-        DnsResponse response = resolver.query(new DnsQuestion(hostname, DnsType.MX)).sync().getNow();
-
-        assertThat(response.header().responseCode(), is(DnsResponseCode.NOERROR));
-        List<DnsResource> mxList = new ArrayList<DnsResource>();
-        for (DnsResource r: response.answers()) {
-            if (r.type() == DnsType.MX) {
-                mxList.add(r);
+            if (EXCLUSIONS_QUERY_MX.contains(name)) {
+                continue;
             }
+
+            queryMx(futures, name);
         }
 
-        boolean mxExpected = true;
-        for (String v: DOMAINS_WITHOUT_MX) {
-            if (hostname.equals(v)) {
-                mxExpected = false;
-                break;
+        for (Entry<String, Future<DnsResponse>> e: futures.entrySet()) {
+            String hostname = e.getKey();
+            DnsResponse response = e.getValue().sync().getNow();
+
+            assertThat(response.header().responseCode(), is(DnsResponseCode.NOERROR));
+            List<DnsResource> mxList = new ArrayList<DnsResource>();
+            for (DnsResource r: response.answers()) {
+                if (r.type() == DnsType.MX) {
+                    mxList.add(r);
+                }
             }
-        }
 
-        if (mxExpected) {
             assertThat(mxList.size(), is(greaterThan(0)));
             StringBuilder buf = new StringBuilder();
             for (DnsResource r: mxList) {
@@ -160,11 +281,20 @@ public class DnsNameResolverTest {
                 buf.append(' ');
                 buf.append(DnsNameResolverContext.decodeDomainName(r.content()));
             }
-            logger.info("{} has the following MX records:{}", hostname, buf);
-        } else {
-            logger.info("{} is known to have no MX records.");
-        }
 
-        response.release();
+            logger.info("{} has the following MX records:{}", hostname, buf);
+            response.release();
+        }
+    }
+
+    private static void resolve(Map<InetSocketAddress, Future<SocketAddress>> futures, String hostname) {
+        InetSocketAddress unresolved =
+                InetSocketAddress.createUnresolved(hostname, ThreadLocalRandom.current().nextInt(65536));
+
+        futures.put(unresolved, resolver.resolve(unresolved));
+    }
+
+    private static void queryMx(Map<String, Future<DnsResponse>> futures, String hostname) throws Exception {
+        futures.put(hostname, resolver.query(new DnsQuestion(hostname, DnsType.MX)));
     }
 }
