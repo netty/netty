@@ -41,6 +41,7 @@ import java.util.List;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -161,8 +162,10 @@ public class Http2ConnectionHandlerTest {
         when(connection.isServer()).thenReturn(true);
         handler = newHandler();
         handler.channelRead(ctx, copiedBuffer("BAD_PREFACE", UTF_8));
+        ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
         verify(frameWriter).writeGoAway(eq(ctx), eq(0), eq((long) PROTOCOL_ERROR.code()),
-                any(ByteBuf.class), eq(promise));
+                captor.capture(), eq(promise));
+        captor.getValue().release();
     }
 
     @Test
@@ -183,7 +186,9 @@ public class Http2ConnectionHandlerTest {
         Http2Exception e = new Http2Exception(PROTOCOL_ERROR);
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
         handler.exceptionCaught(ctx, e);
+        ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
         verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID), eq((long) PROTOCOL_ERROR.code()),
-                any(ByteBuf.class), eq(promise));
+                captor.capture(), eq(promise));
+        captor.getValue().release();
     }
 }

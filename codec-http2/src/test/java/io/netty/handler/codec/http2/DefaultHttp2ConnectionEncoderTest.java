@@ -143,8 +143,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         when(ctx.newPromise()).thenReturn(promise);
         when(ctx.write(any())).thenReturn(future);
 
-        encoder =
-                DefaultHttp2ConnectionEncoder.newBuilder().connection(connection)
+        encoder = DefaultHttp2ConnectionEncoder.newBuilder().connection(connection)
                         .frameWriter(writer).outboundFlow(outboundFlow)
                         .lifecycleManager(lifecycleManager).build();
     }
