@@ -187,17 +187,6 @@ public interface Http2Connection {
         int lastKnownStream();
 
         /**
-         * Indicates whether or not a GOAWAY was received by this endpoint.
-         */
-        boolean isGoAwayReceived();
-
-        /**
-         * Indicates that a GOAWAY was received from the opposite endpoint and sets the last known stream
-         * created by this endpoint.
-         */
-        void goAwayReceived(int lastKnownStream);
-
-        /**
          * Gets the {@link Endpoint} opposite this one.
          */
         Endpoint opposite();
@@ -264,6 +253,26 @@ public interface Http2Connection {
      * Creates a new stream initiated by the remote endpoint. See {@link Endpoint#createStream(int, boolean)}.
      */
     Http2Stream createRemoteStream(int streamId, boolean halfClosed) throws Http2Exception;
+
+    /**
+     * Indicates whether or not a {@code GOAWAY} was received from the remote endpoint.
+     */
+    boolean goAwayReceived();
+
+    /**
+     * Indicates that a {@code GOAWAY} was received from the remote endpoint and sets the last known stream.
+     */
+    void goAwayReceived(int lastKnownStream);
+
+    /**
+     * Indicates whether or not a {@code GOAWAY} was sent to the remote endpoint.
+     */
+    boolean goAwaySent();
+
+    /**
+     * Indicates that a {@code GOAWAY} was sent to the remote endpoint and sets the last known stream.
+     */
+    void goAwaySent(int lastKnownStream);
 
     /**
      * Indicates whether or not either endpoint has received a GOAWAY.
