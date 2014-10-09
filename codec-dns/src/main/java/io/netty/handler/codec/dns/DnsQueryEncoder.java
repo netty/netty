@@ -18,6 +18,7 @@ package io.netty.handler.codec.dns;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
@@ -36,16 +37,21 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
 
     @Override
     protected void encode(ChannelHandlerContext ctx, DnsQuery query, List<Object> out) throws Exception {
-        ByteBuf buf = ctx.alloc().buffer();
-        encodeHeader(query.header(), buf);
+        ByteBuf packet = ctx.alloc().buffer();
+        ByteBuf payload = ctx.alloc().buffer();
+        encodeHeader(query.header(), payload);
         List<DnsQuestion> questions = query.questions();
         for (DnsQuestion question : questions) {
-            encodeQuestion(question, CharsetUtil.US_ASCII, buf);
+            encodeQuestion(question, CharsetUtil.US_ASCII, payload);
         }
         for (DnsResource resource: query.additionalResources()) {
-            encodeResource(resource, CharsetUtil.US_ASCII, buf);
+            encodeResource(resource, CharsetUtil.US_ASCII, payload);
         }
-        out.add(new DatagramPacket(buf, query.recipient(), null));
+        if (ctx.channel() instanceof DatagramChannel) {
+            out.add(new DatagramPacket(payload, query.recipient(), null));
+        } else {
+            out.add(packet.writeShort(payload.writerIndex()).writeBytes(payload));
+        }
     }
 
     /**

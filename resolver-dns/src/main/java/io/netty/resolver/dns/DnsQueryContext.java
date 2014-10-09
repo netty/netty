@@ -33,6 +33,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
@@ -163,7 +164,7 @@ final class DnsQueryContext extends DefaultPromise<DnsResponse> {
         }
     }
 
-    void retry(InetSocketAddress nameServerAddr, String message) {
+    void retry(SocketAddress nameServerAddr, String message) {
         if (isCancelled()) {
             return;
         }

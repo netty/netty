@@ -16,6 +16,7 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
@@ -23,6 +24,7 @@ import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.CharsetUtil;
 
+import java.net.SocketAddress;
 import java.util.List;
 
 /**
@@ -31,10 +33,12 @@ import java.util.List;
  * DnsResponses such as questions and resource records.
  */
 @ChannelHandler.Sharable
-public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> {
+public class DnsResponseDecoder extends MessageToMessageDecoder<AddressedEnvelope<ByteBuf, SocketAddress>> {
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, DatagramPacket packet, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx,
+                          AddressedEnvelope<ByteBuf, SocketAddress> packet,
+                          List<Object> out) throws Exception {
         ByteBuf buf = packet.content();
 
         int id = buf.readUnsignedShort();

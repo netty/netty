@@ -15,21 +15,25 @@
  */
 package io.netty.resolver.dns;
 
+
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoop;
-import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.ReflectiveChannelFactory;
+import io.netty.channel.FixedRecvByteBufAllocator;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.InternetProtocolFamily;
-import io.netty.handler.codec.dns.DnsClass;
+import io.netty.handler.codec.dns.DnsMessageFrameDecoder;
+
 import io.netty.handler.codec.dns.DnsQueryEncoder;
 import io.netty.handler.codec.dns.DnsQuestion;
-import io.netty.handler.codec.dns.DnsResource;
+import io.netty.handler.codec.dns.DnsClass;
 import io.netty.handler.codec.dns.DnsResponse;
-import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.handler.codec.dns.DnsResponseDecoder;
+import io.netty.handler.codec.dns.DnsResponseCode;
+import io.netty.handler.codec.dns.DnsResource;
 import io.netty.resolver.SimpleNameResolver;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.collection.IntObjectHashMap;
@@ -56,11 +60,12 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> imple
 
     private static final InetSocketAddress ANY_LOCAL_ADDR = new InetSocketAddress(0);
 
+    private static final DnsMessageFrameDecoder FRAME_DECODER = new DnsMessageFrameDecoder();
     private static final DnsResponseDecoder DECODER = new DnsResponseDecoder();
     private static final DnsQueryEncoder ENCODER = new DnsQueryEncoder();
 
     final Iterable<InetSocketAddress> nameServerAddresses;
-    final DatagramChannel ch;
+    final Channel ch;
 
     /**
      * An array whose index is the ID of a DNS query and whose value is the promise of the corresponsing response. We
@@ -92,49 +97,49 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> imple
     private volatile DnsClass maxPayloadSizeClass; // EDNS uses the CLASS field as the payload size field.
 
     public DnsNameResolver(
-            EventLoop eventLoop, Class<? extends DatagramChannel> channelType,
+            EventLoop eventLoop, Class<? extends Channel> channelType,
             InetSocketAddress nameServerAddress) {
         this(eventLoop, channelType, ANY_LOCAL_ADDR, nameServerAddress);
     }
 
     public DnsNameResolver(
-            EventLoop eventLoop, Class<? extends DatagramChannel> channelType,
+            EventLoop eventLoop, Class<? extends Channel> channelType,
             InetSocketAddress localAddress, InetSocketAddress nameServerAddress) {
-        this(eventLoop, new ReflectiveChannelFactory<DatagramChannel>(channelType), localAddress, nameServerAddress);
+        this(eventLoop, new ReflectiveChannelFactory<Channel>(channelType), localAddress, nameServerAddress);
     }
 
     public DnsNameResolver(
-            EventLoop eventLoop, ChannelFactory<? extends DatagramChannel> channelFactory,
+            EventLoop eventLoop, ChannelFactory<? extends Channel> channelFactory,
             InetSocketAddress nameServerAddress) {
         this(eventLoop, channelFactory, ANY_LOCAL_ADDR, nameServerAddress);
     }
 
     public DnsNameResolver(
-            EventLoop eventLoop, ChannelFactory<? extends DatagramChannel> channelFactory,
+            EventLoop eventLoop, ChannelFactory<? extends Channel> channelFactory,
             InetSocketAddress localAddress, InetSocketAddress nameServerAddress) {
         this(eventLoop, channelFactory, localAddress, DnsServerAddresses.singleton(nameServerAddress));
     }
 
     public DnsNameResolver(
-            EventLoop eventLoop, Class<? extends DatagramChannel> channelType,
+            EventLoop eventLoop, Class<? extends Channel> channelType,
             Iterable<InetSocketAddress> nameServerAddresses) {
         this(eventLoop, channelType, ANY_LOCAL_ADDR, nameServerAddresses);
     }
 
     public DnsNameResolver(
-            EventLoop eventLoop, Class<? extends DatagramChannel> channelType,
+            EventLoop eventLoop, Class<? extends Channel> channelType,
             InetSocketAddress localAddress, Iterable<InetSocketAddress> nameServerAddresses) {
-        this(eventLoop, new ReflectiveChannelFactory<DatagramChannel>(channelType), localAddress, nameServerAddresses);
+        this(eventLoop, new ReflectiveChannelFactory<Channel>(channelType), localAddress, nameServerAddresses);
     }
 
     public DnsNameResolver(
-            EventLoop eventLoop, ChannelFactory<? extends DatagramChannel> channelFactory,
+            EventLoop eventLoop, ChannelFactory<? extends Channel> channelFactory,
             Iterable<InetSocketAddress> nameServerAddresses) {
         this(eventLoop, channelFactory, ANY_LOCAL_ADDR, nameServerAddresses);
     }
 
     public DnsNameResolver(
-            EventLoop eventLoop, ChannelFactory<? extends DatagramChannel> channelFactory,
+            EventLoop eventLoop, ChannelFactory<? extends Channel> channelFactory,
             InetSocketAddress localAddress, Iterable<InetSocketAddress> nameServerAddresses) {
 
         super(eventLoop);
@@ -158,11 +163,11 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> imple
         setMaxPayloadSize(4096);
     }
 
-    private DatagramChannel newChannel(
-            ChannelFactory<? extends DatagramChannel> channelFactory, InetSocketAddress localAddress) {
+    private Channel newChannel(
+            ChannelFactory<? extends Channel> channelFactory, InetSocketAddress localAddress) {
 
-        DatagramChannel ch = channelFactory.newChannel();
-        ch.pipeline().addLast(DECODER, ENCODER, responseHandler);
+        Channel ch = channelFactory.newChannel();
+        ch.pipeline().addLast(FRAME_DECODER, DECODER, ENCODER, responseHandler);
 
         // Register and bind the channel synchronously.
         // It should not take very long at all because it does not involve any remote I/O.

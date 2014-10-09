@@ -33,6 +33,7 @@ import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -417,7 +418,7 @@ final class DnsNameResolverContext extends DefaultPromise<InetSocketAddress> {
     }
 
     private void followCname(
-            InetSocketAddress nameServerAddr, String name, String cname) {
+            SocketAddress nameServerAddr, String name, String cname) {
 
         if (trace == null) {
             trace = new StringBuilder(128);
@@ -435,7 +436,7 @@ final class DnsNameResolverContext extends DefaultPromise<InetSocketAddress> {
         query(parent.nameServerAddresses, new DnsQuestion(cname, DnsType.AAAA, DnsClass.IN));
     }
 
-    private void addTrace(InetSocketAddress nameServerAddr, String msg) {
+    private void addTrace(SocketAddress nameServerAddr, String msg) {
         if (trace == null) {
             trace = new StringBuilder(128);
         }
