@@ -72,6 +72,11 @@ public interface Http2ConnectionDecoder extends Closeable {
     Http2Connection connection();
 
     /**
+     * Provides direct access to the underlying frame listener.
+     */
+    Http2FrameListener listener();
+
+    /**
      * Called by the {@link Http2ConnectionHandler} to decode the next frame from the input buffer.
      */
     void decodeFrame(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Http2Exception;

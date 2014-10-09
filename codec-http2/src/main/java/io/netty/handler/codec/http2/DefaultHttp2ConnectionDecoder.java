@@ -118,6 +118,11 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     }
 
     @Override
+    public Http2FrameListener listener() {
+        return listener;
+    }
+
+    @Override
     public boolean prefaceReceived() {
         return prefaceReceived;
     }
