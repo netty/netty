@@ -85,17 +85,16 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         checkNotNull(encoderBuilder, "encoderBuilder");
 
         // Build the encoder.
-        decoderBuilder.lifecycleManager(this);
+        encoderBuilder.lifecycleManager(this);
         encoder = checkNotNull(encoderBuilder.build(), "encoder");
 
         // Build the decoder.
         decoderBuilder.encoder(encoder);
-        encoderBuilder.lifecycleManager(this);
+        decoderBuilder.lifecycleManager(this);
         decoder = checkNotNull(decoderBuilder.build(), "decoder");
 
         // Verify that the encoder and decoder use the same connection.
         checkNotNull(encoder.connection(), "encoder.connection");
-        checkNotNull(decoder.connection(), "decoder.connection");
         if (encoder.connection() != decoder.connection()) {
             throw new IllegalArgumentException("Encoder and Decoder do not share the same connection object");
         }
