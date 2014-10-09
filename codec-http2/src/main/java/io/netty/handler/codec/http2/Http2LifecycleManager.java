@@ -53,7 +53,7 @@ public interface Http2LifecycleManager {
     void closeStream(Http2Stream stream, ChannelFuture future);
 
     /**
-     * Writes a RST_STREAM frame to the remote endpoint and updates the connection state
+     * Writes a {@code RST_STREAM} frame to the remote endpoint and updates the connection state
      * appropriately.
      */
     ChannelFuture writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
