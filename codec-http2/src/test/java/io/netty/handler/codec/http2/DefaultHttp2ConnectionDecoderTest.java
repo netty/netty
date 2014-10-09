@@ -159,7 +159,7 @@ public class DefaultHttp2ConnectionDecoderTest {
 
     @Test
     public void dataReadAfterGoAwayShouldApplyFlowControl() throws Exception {
-        when(remote.isGoAwayReceived()).thenReturn(true);
+        when(connection.goAwaySent()).thenReturn(true);
         final ByteBuf data = dummyData();
         try {
             decode().onDataRead(ctx, STREAM_ID, data, 10, true);
@@ -187,7 +187,7 @@ public class DefaultHttp2ConnectionDecoderTest {
 
     @Test
     public void headersReadAfterGoAwayShouldBeIgnored() throws Exception {
-        when(remote.isGoAwayReceived()).thenReturn(true);
+        when(connection.goAwaySent()).thenReturn(true);
         decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
         verify(remote, never()).createStream(eq(STREAM_ID), eq(false));
 
@@ -235,7 +235,7 @@ public class DefaultHttp2ConnectionDecoderTest {
 
     @Test
     public void pushPromiseReadAfterGoAwayShouldBeIgnored() throws Exception {
-        when(remote.isGoAwayReceived()).thenReturn(true);
+        when(connection.goAwaySent()).thenReturn(true);
         decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
         verify(remote, never()).reservePushStream(anyInt(), any(Http2Stream.class));
         verify(listener, never()).onPushPromiseRead(eq(ctx), anyInt(), anyInt(), any(Http2Headers.class), anyInt());
@@ -251,7 +251,7 @@ public class DefaultHttp2ConnectionDecoderTest {
 
     @Test
     public void priorityReadAfterGoAwayShouldBeIgnored() throws Exception {
-        when(remote.isGoAwayReceived()).thenReturn(true);
+        when(connection.goAwaySent()).thenReturn(true);
         decode().onPriorityRead(ctx, STREAM_ID, 0, (short) 255, true);
         verify(stream, never()).setPriority(anyInt(), anyShort(), anyBoolean());
         verify(listener, never()).onPriorityRead(eq(ctx), anyInt(), anyInt(), anyShort(), anyBoolean());
@@ -266,7 +266,7 @@ public class DefaultHttp2ConnectionDecoderTest {
 
     @Test
     public void windowUpdateReadAfterGoAwayShouldBeIgnored() throws Exception {
-        when(remote.isGoAwayReceived()).thenReturn(true);
+        when(connection.goAwaySent()).thenReturn(true);
         decode().onWindowUpdateRead(ctx, STREAM_ID, 10);
         verify(encoder, never()).updateOutboundWindowSize(anyInt(), anyInt());
         verify(listener, never()).onWindowUpdateRead(eq(ctx), anyInt(), anyInt());
@@ -287,7 +287,7 @@ public class DefaultHttp2ConnectionDecoderTest {
 
     @Test
     public void rstStreamReadAfterGoAwayShouldSucceed() throws Exception {
-        when(remote.isGoAwayReceived()).thenReturn(true);
+        when(connection.goAwaySent()).thenReturn(true);
         decode().onRstStreamRead(ctx, STREAM_ID, PROTOCOL_ERROR.code());
         verify(lifecycleManager).closeStream(eq(stream), eq(future));
         verify(listener).onRstStreamRead(eq(ctx), anyInt(), anyLong());
@@ -342,7 +342,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     @Test
     public void goAwayShouldReadShouldUpdateConnectionState() throws Exception {
         decode().onGoAwayRead(ctx, 1, 2L, EMPTY_BUFFER);
-        verify(local).goAwayReceived(1);
+        verify(connection).goAwayReceived(1);
         verify(listener).onGoAwayRead(eq(ctx), eq(1), eq(2L), eq(EMPTY_BUFFER));
     }
 

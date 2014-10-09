@@ -149,7 +149,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
     @Override
     public boolean isGoAway() {
-        return localEndpoint.isGoAwayReceived() || remoteEndpoint.isGoAwayReceived();
+        return goAwaySent() || goAwayReceived();
     }
 
     @Override
@@ -160,6 +160,26 @@ public class DefaultHttp2Connection implements Http2Connection {
     @Override
     public Http2Stream createRemoteStream(int streamId, boolean halfClosed) throws Http2Exception {
         return remote().createStream(streamId, halfClosed);
+    }
+
+    @Override
+    public boolean goAwayReceived() {
+        return localEndpoint.lastKnownStream >= 0;
+    }
+
+    @Override
+    public void goAwayReceived(int lastKnownStream) {
+        localEndpoint.lastKnownStream(lastKnownStream);
+    }
+
+    @Override
+    public boolean goAwaySent() {
+        return remoteEndpoint.lastKnownStream >= 0;
+    }
+
+    @Override
+    public void goAwaySent(int lastKnownStream) {
+        remoteEndpoint.lastKnownStream(lastKnownStream);
     }
 
     private void removeStream(DefaultStream stream) {
@@ -791,16 +811,10 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public int lastKnownStream() {
-            return isGoAwayReceived() ? lastKnownStream : lastStreamCreated;
+            return lastKnownStream >= 0 ? lastKnownStream : lastStreamCreated;
         }
 
-        @Override
-        public boolean isGoAwayReceived() {
-            return lastKnownStream >= 0;
-        }
-
-        @Override
-        public void goAwayReceived(int lastKnownStream) {
+        private void lastKnownStream(int lastKnownStream) {
             boolean alreadyNotified = isGoAway();
             this.lastKnownStream = lastKnownStream;
             if (!alreadyNotified) {

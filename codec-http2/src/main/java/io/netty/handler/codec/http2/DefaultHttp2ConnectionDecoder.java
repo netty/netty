@@ -249,7 +249,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             Http2Stream stream = connection.stream(streamId);
             verifyGoAwayNotReceived();
             verifyRstStreamNotReceived(stream);
-            if (connection.remote().isGoAwayReceived() || stream != null && shouldIgnoreFrame(stream)) {
+            if (connection.goAwaySent() || stream != null && shouldIgnoreFrame(stream)) {
                 // Ignore this frame.
                 return;
             }
@@ -426,7 +426,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
                 throws Http2Exception {
             // Don't allow any more connections to be created.
-            connection.local().goAwayReceived(lastStreamId);
+            connection.goAwayReceived(lastStreamId);
 
             listener.onGoAwayRead(ctx, lastStreamId, errorCode, debugData);
         }
@@ -461,7 +461,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
          * stream/connection.
          */
         private boolean shouldIgnoreFrame(Http2Stream stream) {
-            if (connection.remote().isGoAwayReceived() && connection.remote().lastStreamCreated() <= stream.id()) {
+            if (connection.goAwaySent() && connection.remote().lastStreamCreated() <= stream.id()) {
                 // Frames from streams created after we sent a go-away should be ignored.
                 // Frames for the connection stream ID (i.e. 0) will always be allowed.
                 return true;
@@ -476,7 +476,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
          * exception.
          */
         private void verifyGoAwayNotReceived() throws Http2Exception {
-            if (connection.local().isGoAwayReceived()) {
+            if (connection.goAwayReceived()) {
                 throw protocolError("Received frames after receiving GO_AWAY");
             }
         }

@@ -342,7 +342,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         ChannelFuture future = frameWriter().writeGoAway(ctx, lastStreamId, errorCode, debugData, promise);
         ctx.flush();
 
-        connection().remote().goAwayReceived(lastStreamId);
+        connection().goAwaySent(lastStreamId);
         return future;
     }
 

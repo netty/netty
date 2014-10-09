@@ -174,7 +174,7 @@ public class DefaultHttp2ConnectionTest {
 
     @Test(expected = Http2Exception.class)
     public void goAwayReceivedShouldDisallowCreation() throws Http2Exception {
-        server.local().goAwayReceived(0);
+        server.goAwayReceived(0);
         server.remote().createStream(3, true);
     }
 
