@@ -213,7 +213,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     /**
-     * Closes the remote side of the given stream. If this causes the stream to be closed, adds a
+     * Closes the local side of the given stream. If this causes the stream to be closed, adds a
      * hook to close the channel after the given future completes.
      *
      * @param stream the stream to be half closed.
@@ -298,7 +298,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     /**
-     * Handler for a stream error. Sends a RST_STREAM frame to the remote endpoint and closes the
+     * Handler for a stream error. Sends a {@code RST_STREAM} frame to the remote endpoint and closes the
      * stream.
      *
      * @param ctx the channel context
@@ -314,7 +314,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     /**
-     * Writes a RST_STREAM frame to the remote endpoint and updates the connection state appropriately.
+     * Writes a {@code RST_STREAM} frame to the remote endpoint and updates the connection state appropriately.
      */
     public ChannelFuture writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
             ChannelPromise promise) {
@@ -348,7 +348,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     /**
-     * Sends a GO_AWAY frame appropriate for the given exception.
+     * Sends a {@code GO_AWAY} frame appropriate for the given exception.
      */
     private ChannelFuture writeGoAway(ChannelHandlerContext ctx, Http2Exception cause) {
         if (connection().isGoAway()) {
