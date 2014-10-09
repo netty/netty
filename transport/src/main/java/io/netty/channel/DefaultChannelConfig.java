@@ -18,7 +18,9 @@ package io.netty.channel;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.util.internal.PlatformDependent;
 
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -35,6 +37,17 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     private static final int DEFAULT_CONNECT_TIMEOUT = 30000;
 
+    private static final AtomicIntegerFieldUpdater<DefaultChannelConfig> AUTOREAD_UPDATER;
+
+    static {
+        AtomicIntegerFieldUpdater<DefaultChannelConfig> autoReadUpdater =
+            PlatformDependent.newAtomicIntegerFieldUpdater(DefaultChannelConfig.class, "autoRead");
+        if (autoReadUpdater == null) {
+            autoReadUpdater = AtomicIntegerFieldUpdater.newUpdater(DefaultChannelConfig.class, "autoRead");
+        }
+        AUTOREAD_UPDATER = autoReadUpdater;
+    }
+
     protected final Channel channel;
 
     private volatile ByteBufAllocator allocator = ByteBufAllocator.DEFAULT;
@@ -44,7 +57,8 @@ public class DefaultChannelConfig implements ChannelConfig {
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
     private volatile int maxMessagesPerRead;
     private volatile int writeSpinCount = 16;
-    private volatile boolean autoRead = true;
+    @SuppressWarnings("FieldMayBeFinal")
+    private volatile int autoRead = 1;
     private volatile boolean autoClose = true;
     private volatile int writeBufferHighWaterMark = 64 * 1024;
     private volatile int writeBufferLowWaterMark = 32 * 1024;
@@ -257,13 +271,12 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public boolean isAutoRead() {
-        return autoRead;
+        return autoRead == 1;
     }
 
     @Override
     public ChannelConfig setAutoRead(boolean autoRead) {
-        boolean oldAutoRead = this.autoRead;
-        this.autoRead = autoRead;
+        boolean oldAutoRead = AUTOREAD_UPDATER.getAndSet(this, autoRead ? 1 : 0) == 1;
         if (autoRead && !oldAutoRead) {
             channel.read();
         } else if (!autoRead && oldAutoRead) {
