@@ -699,7 +699,7 @@ public class InboundHttp2ToHttpAdapterTest {
 
     private final class HttpResponseDelegator extends SimpleChannelInboundHandler<HttpObject> {
         private final HttpResponseListener listener;
-        private CountDownLatch latch;
+        private volatile CountDownLatch latch;
 
         public HttpResponseDelegator(HttpResponseListener listener, CountDownLatch latch) {
             super(false);
