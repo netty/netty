@@ -28,6 +28,7 @@ import io.netty.handler.codec.http2.DefaultHttp2FrameReader;
 import io.netty.handler.codec.http2.DefaultHttp2FrameWriter;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.Http2Connection;
+import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2FrameAdapter;
@@ -52,12 +53,13 @@ public class HelloWorldHttp2Handler extends Http2ConnectionHandler {
     public HelloWorldHttp2Handler() {
         this(new DefaultHttp2Connection(true), new Http2InboundFrameLogger(
                 new DefaultHttp2FrameReader(), logger), new Http2OutboundFrameLogger(
-                new DefaultHttp2FrameWriter(), logger));
+                new DefaultHttp2FrameWriter(), logger), new SimpleHttp2FrameListener());
     }
 
     private HelloWorldHttp2Handler(Http2Connection connection, Http2FrameReader frameReader,
-            Http2FrameWriter frameWriter) {
-        super(connection, frameReader, frameWriter, new SimpleHttp2FrameListener(frameWriter));
+            Http2FrameWriter frameWriter, SimpleHttp2FrameListener listener) {
+        super(connection, frameReader, frameWriter, listener);
+        listener.encoder(encoder());
     }
 
     /**
@@ -83,10 +85,10 @@ public class HelloWorldHttp2Handler extends Http2ConnectionHandler {
     }
 
     private static class SimpleHttp2FrameListener extends Http2FrameAdapter {
-        private Http2FrameWriter frameWriter;
+        private Http2ConnectionEncoder encoder;
 
-        public SimpleHttp2FrameListener(Http2FrameWriter frameWriter) {
-            this.frameWriter = frameWriter;
+        public void encoder(Http2ConnectionEncoder encoder) {
+            this.encoder = encoder;
         }
 
         /**
@@ -118,8 +120,8 @@ public class HelloWorldHttp2Handler extends Http2ConnectionHandler {
         private void sendResponse(ChannelHandlerContext ctx, int streamId, ByteBuf payload) {
             // Send a frame for the response status
             Http2Headers headers = new DefaultHttp2Headers().status(new AsciiString("200"));
-            frameWriter.writeHeaders(ctx, streamId, headers, 0, false, ctx.newPromise());
-            frameWriter.writeData(ctx, streamId, payload, 0, true, ctx.newPromise());
+            encoder.writeHeaders(ctx, streamId, headers, 0, false, ctx.newPromise());
+            encoder.writeData(ctx, streamId, payload, 0, true, ctx.newPromise());
             ctx.flush();
         }
     };
