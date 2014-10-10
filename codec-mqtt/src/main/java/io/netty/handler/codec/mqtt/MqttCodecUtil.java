@@ -21,6 +21,7 @@ import io.netty.handler.codec.DecoderException;
 final class MqttCodecUtil {
 
     private static final char[] TOPIC_WILDCARDS = {'#', '+'};
+    private static final int MIN_CLIENT_ID_LENGTH = 1;
     private static final int MAX_CLIENT_ID_LENGTH = 23;
 
     static boolean isValidPublishTopicName(String topicName) {
@@ -38,7 +39,8 @@ final class MqttCodecUtil {
     }
 
     static boolean isValidClientId(String clientId) {
-        return clientId != null && clientId.length() <= MAX_CLIENT_ID_LENGTH;
+        return clientId != null && clientId.length() >= MIN_CLIENT_ID_LENGTH &&
+            clientId.length() <= MAX_CLIENT_ID_LENGTH;
     }
 
     static MqttFixedHeader validateFixedHeader(MqttFixedHeader mqttFixedHeader) {
