@@ -74,14 +74,14 @@ public final class CharsetUtil {
         CharsetEncoder e = map.get(charset);
         if (e != null) {
             e.reset();
-            e.onMalformedInput(CodingErrorAction.REPLACE);
-            e.onUnmappableCharacter(CodingErrorAction.REPLACE);
+            e.onMalformedInput(CodingErrorAction.REPORT);
+            e.onUnmappableCharacter(CodingErrorAction.REPORT);
             return e;
         }
 
         e = charset.newEncoder();
-        e.onMalformedInput(CodingErrorAction.REPLACE);
-        e.onUnmappableCharacter(CodingErrorAction.REPLACE);
+        e.onMalformedInput(CodingErrorAction.REPORT);
+        e.onUnmappableCharacter(CodingErrorAction.REPORT);
         map.put(charset, e);
         return e;
     }
@@ -99,14 +99,14 @@ public final class CharsetUtil {
         CharsetDecoder d = map.get(charset);
         if (d != null) {
             d.reset();
-            d.onMalformedInput(CodingErrorAction.REPLACE);
-            d.onUnmappableCharacter(CodingErrorAction.REPLACE);
+            d.onMalformedInput(CodingErrorAction.REPORT);
+            d.onUnmappableCharacter(CodingErrorAction.REPORT);
             return d;
         }
 
         d = charset.newDecoder();
-        d.onMalformedInput(CodingErrorAction.REPLACE);
-        d.onUnmappableCharacter(CodingErrorAction.REPLACE);
+        d.onMalformedInput(CodingErrorAction.REPORT);
+        d.onUnmappableCharacter(CodingErrorAction.REPORT);
         map.put(charset, d);
         return d;
     }
