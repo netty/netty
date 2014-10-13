@@ -16,6 +16,7 @@
 package io.netty.handler.codec.dns;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
 /**
  * A DNS response packet which is sent to a client after a server receives a
@@ -23,9 +24,9 @@ import java.net.InetSocketAddress;
  */
 public final class DnsResponse extends DnsMessage {
 
-    private final InetSocketAddress sender;
+    private final SocketAddress sender;
 
-    public DnsResponse(int id, InetSocketAddress sender) {
+    public DnsResponse(int id, SocketAddress sender) {
         super(id);
         if (sender == null) {
             throw new NullPointerException("sender");
@@ -36,7 +37,7 @@ public final class DnsResponse extends DnsMessage {
     /**
      * The {@link InetSocketAddress} of the sender of this {@link DnsResponse}
      */
-    public InetSocketAddress sender() {
+    public SocketAddress sender() {
         return sender;
     }
 

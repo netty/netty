@@ -18,6 +18,7 @@ package io.netty.handler.codec.dns;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
@@ -40,9 +41,14 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
         encodeHeader(query.header(), buf);
         List<DnsQuestion> questions = query.questions();
         for (DnsQuestion question : questions) {
-            encodeQuestion(question, CharsetUtil.UTF_8, buf);
+            encodeQuestion(question, CharsetUtil.US_ASCII, buf);
         }
-        out.add(new DatagramPacket(buf, query.recipient(), null));
+        if (ctx.channel() instanceof DatagramChannel) {
+            out.add(new DatagramPacket(buf, query.recipient(), null));
+        } else {
+            ByteBuf packet = ctx.alloc().buffer();
+            out.add(packet.writeShort(buf.writerIndex()).writeBytes(buf));
+        }
     }
 
     /**

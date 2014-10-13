@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.dns;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
 
 import io.netty.channel.socket.DatagramPacket;
@@ -48,8 +49,8 @@ public class DnsQueryTest {
             Assert.assertEquals("Invalid type, should be TYPE_QUERY (0)", DnsHeader.TYPE_QUERY, query.header()
                     .type());
             embedder.writeOutbound(query);
-            DatagramPacket packet = embedder.readOutbound();
-            Assert.assertTrue(packet.content().isReadable());
+            ByteBuf packet = embedder.readOutbound();
+            Assert.assertTrue(packet.isReadable());
             packet.release();
             Assert.assertNull(embedder.readOutbound());
         }
