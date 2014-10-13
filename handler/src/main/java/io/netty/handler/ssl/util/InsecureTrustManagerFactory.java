@@ -28,10 +28,10 @@ import java.security.KeyStore;
 import java.security.cert.X509Certificate;
 
 /**
- * An insecure {@link javax.net.ssl.TrustManagerFactory} that trusts all X.509 certificates without any verification.
+ * An insecure {@link TrustManagerFactory} that trusts all X.509 certificates without any verification.
  * <p>
  * <strong>NOTE:</strong>
- * Never use this {@link javax.net.ssl.TrustManagerFactory} in production.
+ * Never use this {@link TrustManagerFactory} in production.
  * It is purely for testing purposes, and thus it is very insecure.
  * </p>
  */

@@ -32,6 +32,7 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.JdkSslClientContext;
 import io.netty.handler.ssl.JdkSslServerContext;
 import io.netty.handler.ssl.OpenSsl;
+import io.netty.handler.ssl.OpenSslClientContext;
 import io.netty.handler.ssl.OpenSslServerContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
@@ -91,9 +92,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         boolean hasOpenSsl = OpenSsl.isAvailable();
         if (hasOpenSsl) {
             serverContexts.add(new OpenSslServerContext(CERT_FILE, KEY_FILE));
-
-            // TODO: Client mode is not supported yet.
-            // clientContexts.add(new OpenSslContext(CERT_FILE));
+            clientContexts.add(new OpenSslClientContext(CERT_FILE));
         } else {
             logger.warn("OpenSSL is unavailable and thus will not be tested.", OpenSsl.unavailabilityCause());
         }
