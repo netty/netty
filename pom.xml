@@ -324,7 +324,7 @@
         </property>
       </activation>
       <properties>
-        <jetty.npn.version>1.1.7.v20140316</jetty.npn.version>
+        <jetty.npn.version>1.1.8.v20141013</jetty.npn.version>
         <jetty.alpn.version>7.0.0.v20140317</jetty.alpn.version>
         <!-- Defer definition of Xbootclasspath to default or forcenpn profile -->
       </properties>
@@ -338,7 +338,7 @@
         </property>
       </activation>
       <properties>
-        <jetty.npn.version>1.1.7.v20140316</jetty.npn.version>
+        <jetty.npn.version>1.1.8.v20141013</jetty.npn.version>
         <jetty.alpn.version>7.0.0.v20140317</jetty.alpn.version>
         <!-- Defer definition of Xbootclasspath to default or forcenpn profile -->
       </properties>
@@ -352,7 +352,7 @@
         </property>
       </activation>
       <properties>
-        <jetty.npn.version>1.1.7.v20140316</jetty.npn.version>
+        <jetty.npn.version>1.1.8.v20141013</jetty.npn.version>
         <jetty.alpn.version>7.0.0.v20140317</jetty.alpn.version>
         <!-- Defer definition of Xbootclasspath to default or forcenpn profile -->
       </properties>
@@ -366,7 +366,7 @@
         </property>
       </activation>
       <properties>
-        <jetty.npn.version>1.1.7.v20140316</jetty.npn.version>
+        <jetty.npn.version>1.1.8.v20141013</jetty.npn.version>
         <jetty.alpn.version>7.0.0.v20140317</jetty.alpn.version>
         <!-- Defer definition of Xbootclasspath to default or forcenpn profile -->
       </properties>
@@ -394,7 +394,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <jboss.marshalling.version>1.3.18.GA</jboss.marshalling.version>
-    <jetty.npn.version>1.1.7.v20140316</jetty.npn.version>
+    <jetty.npn.version>1.1.8.v20141013</jetty.npn.version>
     <jetty.npn.path>${settings.localRepository}/org/mortbay/jetty/npn/npn-boot/${jetty.npn.version}/npn-boot-${jetty.npn.version}.jar</jetty.npn.path>
     <jetty.alpn.version>8.0.0.v20140317</jetty.alpn.version>
     <jetty.alpn.path>${settings.localRepository}/org/mortbay/jetty/alpn/alpn-boot/${jetty.alpn.version}/alpn-boot-${jetty.alpn.version}.jar</jetty.alpn.path>
