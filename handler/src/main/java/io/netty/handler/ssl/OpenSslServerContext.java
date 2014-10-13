@@ -16,17 +16,12 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.apache.tomcat.jni.Pool;
 import org.apache.tomcat.jni.SSL;
 import org.apache.tomcat.jni.SSLContext;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import static io.netty.util.internal.ObjectUtil.*;
@@ -34,42 +29,7 @@ import static io.netty.util.internal.ObjectUtil.*;
 /**
  * A server-side {@link SslContext} which uses OpenSSL's SSL/TLS implementation.
  */
-public final class OpenSslServerContext extends SslContext {
-
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(OpenSslServerContext.class);
-    private static final List<String> DEFAULT_CIPHERS;
-
-    static {
-        List<String> ciphers = new ArrayList<String>();
-        // XXX: Make sure to sync this list with JdkSslEngineFactory.
-        Collections.addAll(
-                ciphers,
-                "ECDHE-RSA-AES128-GCM-SHA256",
-                "ECDHE-RSA-AES128-SHA",
-                "ECDHE-RSA-AES256-SHA",
-                "AES128-GCM-SHA256",
-                "AES128-SHA",
-                "AES256-SHA",
-                "DES-CBC3-SHA",
-                "RC4-SHA");
-        DEFAULT_CIPHERS = Collections.unmodifiableList(ciphers);
-
-        if (logger.isDebugEnabled()) {
-            logger.debug("Default cipher suite (OpenSSL): " + ciphers);
-        }
-    }
-
-    private final long aprPool;
-
-    private final List<String> ciphers = new ArrayList<String>();
-    private final List<String> unmodifiableCiphers = Collections.unmodifiableList(ciphers);
-    private final long sessionCacheSize;
-    private final long sessionTimeout;
-    private final OpenSslApplicationProtocolNegotiator apn;
-
-    /** The OpenSSL SSL_CTX object */
-    private final long ctx;
-    private final OpenSslSessionStats stats;
+public final class OpenSslServerContext extends OpenSslContext {
 
     /**
      * Creates a new instance.
@@ -163,6 +123,7 @@ public final class OpenSslServerContext extends SslContext {
             Iterable<String> ciphers, OpenSslApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
 
+        super(ciphers, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_SERVER);
         OpenSsl.ensureAvailability();
 
         checkNotNull(certChainFile, "certChainFile");
@@ -170,65 +131,28 @@ public final class OpenSslServerContext extends SslContext {
             throw new IllegalArgumentException("certChainFile is not a file: " + certChainFile);
         }
         checkNotNull(keyFile, "keyFile");
-        this.apn = checkNotNull(apn, "apn");
         if (!keyFile.isFile()) {
             throw new IllegalArgumentException("keyPath is not a file: " + keyFile);
         }
-        if (ciphers == null) {
-            ciphers = DEFAULT_CIPHERS;
-        }
-
         if (keyPassword == null) {
             keyPassword = "";
         }
 
-        for (String c: ciphers) {
-            if (c == null) {
-                break;
-            }
-            this.ciphers.add(c);
-        }
-
-        // Allocate a new APR pool.
-        aprPool = Pool.create(0);
-
         // Create a new SSL_CTX and configure it.
         boolean success = false;
         try {
-            synchronized (OpenSslServerContext.class) {
-                try {
-                    ctx = SSLContext.make(aprPool, SSL.SSL_PROTOCOL_ALL, SSL.SSL_MODE_SERVER);
-                } catch (Exception e) {
-                    throw new SSLException("failed to create an SSL_CTX", e);
-                }
-
-                SSLContext.setOptions(ctx, SSL.SSL_OP_ALL);
-                SSLContext.setOptions(ctx, SSL.SSL_OP_NO_SSLv2);
-                SSLContext.setOptions(ctx, SSL.SSL_OP_NO_SSLv3);
-                SSLContext.setOptions(ctx, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
-                SSLContext.setOptions(ctx, SSL.SSL_OP_SINGLE_ECDH_USE);
-                SSLContext.setOptions(ctx, SSL.SSL_OP_SINGLE_DH_USE);
-                SSLContext.setOptions(ctx, SSL.SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
-
-                /* List the ciphers that the client is permitted to negotiate. */
-                try {
-                    // Convert the cipher list into a colon-separated string.
-                    StringBuilder cipherBuf = new StringBuilder();
-                    for (String c: this.ciphers) {
-                        cipherBuf.append(c);
-                        cipherBuf.append(':');
-                    }
-                    cipherBuf.setLength(cipherBuf.length() - 1);
-
-                    SSLContext.setCipherSuite(ctx, cipherBuf.toString());
-                } catch (SSLException e) {
-                    throw e;
-                } catch (Exception e) {
-                    throw new SSLException("failed to set cipher suite: " + this.ciphers, e);
-                }
-
+            synchronized (OpenSslContext.class) {
                 /* Set certificate verification policy. */
-                SSLContext.setVerify(ctx, SSL.SSL_CVERIFY_NONE, 10);
+                SSLContext.setVerify(ctx, SSL.SSL_CVERIFY_NONE, VERIFY_DEPTH);
+
+                /* Load the certificate chain. We must skip the first cert when server mode */
+                if (!SSLContext.setCertificateChainFile(ctx, certChainFile.getPath(), true)) {
+                    String error = SSL.getLastError();
+                    if (OpenSsl.isError(error)) {
+                        throw new SSLException(
+                                "failed to set certificate chain: " + certChainFile + " (" + SSL.getLastError() + ')');
+                    }
+                }
 
                 /* Load the certificate file and private key. */
                 try {
@@ -242,51 +166,6 @@ public final class OpenSslServerContext extends SslContext {
                 } catch (Exception e) {
                     throw new SSLException("failed to set certificate: " + certChainFile + " and " + keyFile, e);
                 }
-
-                /* Load the certificate chain. We must skip the first cert since it was loaded above. */
-                if (!SSLContext.setCertificateChainFile(ctx, certChainFile.getPath(), true)) {
-                    String error = SSL.getLastError();
-                    if (!error.startsWith(OpenSsl.IGNORABLE_ERROR_PREFIX)) {
-                        throw new SSLException(
-                                "failed to set certificate chain: " + certChainFile + " (" + SSL.getLastError() + ')');
-                    }
-                }
-
-                /* Set next protocols for next protocol negotiation extension, if specified */
-                List<String> protocols = apn.protocols();
-                if (!protocols.isEmpty()) {
-                    // Convert the protocol list into a comma-separated string.
-                    StringBuilder nextProtocolBuf = new StringBuilder();
-                    for (int i = 0; i < protocols.size(); ++i) {
-                        nextProtocolBuf.append(protocols.get(i));
-                        nextProtocolBuf.append(',');
-                    }
-                    nextProtocolBuf.setLength(nextProtocolBuf.length() - 1);
-
-                    SSLContext.setNextProtos(ctx, nextProtocolBuf.toString());
-                }
-
-                /* Set session cache size, if specified */
-                if (sessionCacheSize > 0) {
-                    this.sessionCacheSize = sessionCacheSize;
-                    SSLContext.setSessionCacheSize(ctx, sessionCacheSize);
-                } else {
-                    // Get the default session cache size using SSLContext.setSessionCacheSize()
-                    this.sessionCacheSize = sessionCacheSize = SSLContext.setSessionCacheSize(ctx, 20480);
-                    // Revert the session cache size to the default value.
-                    SSLContext.setSessionCacheSize(ctx, sessionCacheSize);
-                }
-
-                /* Set session timeout, if specified */
-                if (sessionTimeout > 0) {
-                    this.sessionTimeout = sessionTimeout;
-                    SSLContext.setSessionCacheTimeout(ctx, sessionTimeout);
-                } else {
-                    // Get the default session timeout using SSLContext.setSessionCacheTimeout()
-                    this.sessionTimeout = sessionTimeout = SSLContext.setSessionCacheTimeout(ctx, 300);
-                    // Revert the session timeout to the default value.
-                    SSLContext.setSessionCacheTimeout(ctx, sessionTimeout);
-                }
             }
             success = true;
         } finally {
@@ -294,47 +173,6 @@ public final class OpenSslServerContext extends SslContext {
                 destroyPools();
             }
         }
-
-        stats = new OpenSslSessionStats(ctx);
-    }
-
-    @Override
-    public boolean isClient() {
-        return false;
-    }
-
-    @Override
-    public List<String> cipherSuites() {
-        return unmodifiableCiphers;
-    }
-
-    @Override
-    public long sessionCacheSize() {
-        return sessionCacheSize;
-    }
-
-    @Override
-    public long sessionTimeout() {
-        return sessionTimeout;
-    }
-
-    @Override
-    public ApplicationProtocolNegotiator applicationProtocolNegotiator() {
-        return apn;
-    }
-
-    /**
-     * Returns the {@code SSL_CTX} object of this context.
-     */
-    public long context() {
-        return ctx;
-    }
-
-    /**
-     * Returns the stats of this context.
-     */
-    public OpenSslSessionStats stats() {
-        return stats;
     }
 
     /**
@@ -342,79 +180,11 @@ public final class OpenSslServerContext extends SslContext {
      */
     @Override
     public SSLEngine newEngine(ByteBufAllocator alloc) {
-        List<String> protocols = apn.protocols();
-        if (protocols.isEmpty()) {
-            return new OpenSslEngine(ctx, alloc, null);
+        List<String> protos = applicationProtocolNegotiator().protocols();
+        if (protos.isEmpty()) {
+            return new OpenSslEngine(ctx, alloc, null, isClient(), null);
         } else {
-            return new OpenSslEngine(ctx, alloc, protocols.get(protocols.size() - 1));
-        }
-    }
-
-    @Override
-    public SSLEngine newEngine(ByteBufAllocator alloc, String peerHost, int peerPort) {
-        throw new UnsupportedOperationException();
-    }
-
-    /**
-     * Sets the SSL session ticket keys of this context.
-     */
-    public void setTicketKeys(byte[] keys) {
-        if (keys == null) {
-            throw new NullPointerException("keys");
-        }
-        SSLContext.setSessionTicketKeys(ctx, keys);
-    }
-
-    @Override
-    @SuppressWarnings("FinalizeDeclaration")
-    protected void finalize() throws Throwable {
-        super.finalize();
-        synchronized (OpenSslServerContext.class) {
-            if (ctx != 0) {
-                SSLContext.free(ctx);
-            }
-        }
-
-        destroyPools();
-    }
-
-    private void destroyPools() {
-        if (aprPool != 0) {
-            Pool.destroy(aprPool);
-        }
-    }
-
-    /**
-     * Translate a {@link ApplicationProtocolConfig} object to a
-     * {@link OpenSslApplicationProtocolNegotiator} object.
-     * @param config The configuration which defines the translation
-     * @param isServer {@code true} if a server {@code false} otherwise.
-     * @return The results of the translation
-     */
-    private static OpenSslApplicationProtocolNegotiator toNegotiator(ApplicationProtocolConfig config,
-            boolean isServer) {
-        if (config == null) {
-            return OpenSslDefaultApplicationProtocolNegotiator.INSTANCE;
-        }
-
-        switch(config.protocol()) {
-        case NONE:
-            return OpenSslDefaultApplicationProtocolNegotiator.INSTANCE;
-        case NPN:
-            if (isServer) {
-                switch(config.selectedListenerFailureBehavior()) {
-                case CHOOSE_MY_LAST_PROTOCOL:
-                    return new OpenSslNpnApplicationProtocolNegotiator(config.supportedProtocols());
-                default:
-                    throw new UnsupportedOperationException(new StringBuilder("OpenSSL provider does not support ")
-                    .append(config.selectedListenerFailureBehavior()).append(" behavior").toString());
-                }
-            } else {
-                throw new UnsupportedOperationException("OpenSSL provider does not support client mode");
-            }
-        default:
-            throw new UnsupportedOperationException(new StringBuilder("OpenSSL provider does not support ")
-            .append(config.protocol()).append(" protocol").toString());
+            return new OpenSslEngine(ctx, alloc, protos.get(protos.size() - 1), isClient(), null);
         }
     }
 }
