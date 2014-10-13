@@ -16,7 +16,6 @@
 
 package io.netty.handler.ssl;
 
-
 import java.io.File;
 
 import javax.net.ssl.KeyManager;
