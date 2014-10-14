@@ -74,7 +74,6 @@ final class JettyNpnSslEngine extends JettySslEngine {
             });
         } else {
             final String[] array = nextProtocols.toArray(new String[nextProtocols.size()]);
-            final String fallback = array[array.length - 1];
 
             NextProtoNego.put(engine, new ClientProvider() {
                 @Override
@@ -96,8 +95,8 @@ final class JettyNpnSslEngine extends JettySslEngine {
                             return p;
                         }
                     }
-                    session.setApplicationProtocol(fallback);
-                    return fallback;
+                    session.setApplicationProtocol(null);
+                    return null;
                 }
             });
         }
