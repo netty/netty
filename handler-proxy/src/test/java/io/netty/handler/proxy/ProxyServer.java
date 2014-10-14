@@ -24,8 +24,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
@@ -158,7 +158,7 @@ abstract class ProxyServer {
         private Channel backend;
 
         @Override
-        protected final void channelRead0(final ChannelHandlerContext ctx, Object msg) throws Exception {
+        protected final void messageReceived(final ChannelHandlerContext ctx, Object msg) throws Exception {
             if (finished) {
                 received.add(ReferenceCountUtil.retain(msg));
                 flush();
@@ -232,7 +232,7 @@ abstract class ProxyServer {
             ctx.close();
         }
 
-        private final class BackendHandler extends ChannelInboundHandlerAdapter {
+        private final class BackendHandler extends ChannelHandlerAdapter {
 
             private final ChannelHandlerContext frontend;
 
@@ -268,7 +268,7 @@ abstract class ProxyServer {
         private boolean finished;
 
         @Override
-        protected final void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+        protected final void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
             if (finished) {
                 String str = ((ByteBuf) msg).toString(CharsetUtil.US_ASCII);
                 if ("A\n".equals(str)) {

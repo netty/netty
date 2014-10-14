@@ -435,7 +435,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         @Override
         public final ChannelHandlerInvoker invoker() {
             // return the unwrapped invoker.
-            return ((PausableChannelEventLoop) eventLoop().asInvoker()).unwrapInvoker();
+            return ((PausableChannelEventExecutor) eventLoop().asInvoker()).unwrapInvoker();
         }
 
         @Override
@@ -509,7 +509,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 }
                 doRegister();
                 registered = true;
-                AbstractChannel.this.eventLoop.acceptNewTasks();
+                eventLoop.acceptNewTasks();
                 safeSetSuccess(promise);
                 pipeline.fireChannelRegistered();
                 if (isActive()) {

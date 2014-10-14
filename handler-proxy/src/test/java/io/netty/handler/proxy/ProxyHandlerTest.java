@@ -37,7 +37,7 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.CharsetUtil;
-import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.concurrent.DefaultExecutorServiceFactory;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.StringUtil;
@@ -77,7 +77,7 @@ public class ProxyHandlerTest {
     private static final String BAD_USERNAME = "badUser";
     private static final String BAD_PASSWORD = "badPassword";
 
-    static final EventLoopGroup group = new NioEventLoopGroup(3, new DefaultThreadFactory("proxy", true));
+    static final EventLoopGroup group = new NioEventLoopGroup(3, new DefaultExecutorServiceFactory("proxy"));
 
     static final SslContext serverSslCtx;
     static final SslContext clientSslCtx;
@@ -381,7 +381,7 @@ public class ProxyHandlerTest {
         }
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+        protected void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
             String str = ((ByteBuf) msg).toString(CharsetUtil.US_ASCII);
             received.add(str);
             if ("2".equals(str)) {
@@ -437,7 +437,7 @@ public class ProxyHandlerTest {
         }
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+        protected void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
             fail("Unexpected message: " + msg);
         }
 

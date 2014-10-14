@@ -37,7 +37,6 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
-import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -468,7 +467,6 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
     }
 
     final class EpollSocketUnsafe extends AbstractEpollUnsafe {
-        private RecvByteBufAllocator.Handle allocHandle;
 
         private void closeOnRead(ChannelPipeline pipeline) {
             inputShutdown = true;

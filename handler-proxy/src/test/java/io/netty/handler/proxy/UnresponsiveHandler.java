@@ -28,7 +28,7 @@ final class UnresponsiveHandler extends SimpleChannelInboundHandler<Object> {
     private UnresponsiveHandler() { }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+    protected void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
         // Ignore
     }
 }
