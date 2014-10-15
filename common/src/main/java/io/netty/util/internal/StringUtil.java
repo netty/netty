@@ -112,6 +112,51 @@ public final class StringUtil {
     }
 
     /**
+     * Splits the specified {@link String} with the specified delimiter in maximum 2 parts.
+     * This operation is a simplified and optimized
+     * version of {@link String#split(String, 2)}.
+     */
+    public static String[] splitInTwo(String value, char delim) {
+        final int end = value.length();
+        String[] res = new String[2];
+        int i = 0;
+        for (; i < end; i ++) {
+            if (value.charAt(i) == delim) {
+                if (0 == i) {
+                    res[0] = EMPTY_STRING;
+                } else {
+                    res[0] = value.substring(0, i);
+                }
+                break;
+            }
+        }
+        if (i == 0) { // If no delimiter was found in the value
+            res[1] = value;
+        } else {
+            if (i < end) {
+                // Add the last element if it's not empty.
+                res[1] = value.substring(i + 1);
+            } else {
+                res[1] = EMPTY_STRING;
+            }
+        }
+
+        return res;
+    }
+
+    /**
+     * Get the item after one char delim if the delim is found (else null).
+     * This operation is a simplified and optimized
+     * version of {@link String#split(String, int)}.
+     */
+    public static String afterDelim(String value, char delim) {
+        int pos = value.indexOf(delim);
+        if (pos >= 0) {
+            return value.substring(pos + 1);
+        }
+        return null;
+    }
+    /**
      * Converts the specified byte value into a 2-digit hexadecimal integer.
      */
     public static String byteToHexStringPadded(int value) {

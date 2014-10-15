@@ -672,7 +672,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                 if (checkSecondArg) {
                     // read next values and store them in the map as Attribute
                     for (int i = 2; i < contents.length; i++) {
-                        String[] values = StringUtil.split(contents[i], '=');
+                        String[] values = StringUtil.splitInTwo(contents[i], '=');
                         Attribute attribute;
                         try {
                             String name = cleanString(values[0]);
@@ -721,8 +721,8 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                 // Take care of possible "multipart/mixed"
                 if (contents[1].equalsIgnoreCase(HttpPostBodyUtil.MULTIPART_MIXED)) {
                     if (currentStatus == MultiPartStatus.DISPOSITION) {
-                        String[] values = StringUtil.split(contents[2], '=');
-                        multipartMixedBoundary = "--" + values[1];
+                        String values = StringUtil.afterDelim(contents[2], '=');
+                        multipartMixedBoundary = "--" + values;
                         currentStatus = MultiPartStatus.MIXEDDELIMITER;
                         return decodeMultipart(MultiPartStatus.MIXEDDELIMITER);
                     } else {
@@ -731,11 +731,11 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                 } else {
                     for (int i = 1; i < contents.length; i++) {
                         if (contents[i].toLowerCase().startsWith(HttpHeaders.Values.CHARSET.toString())) {
-                            String[] values = StringUtil.split(contents[i], '=');
+                            String values = StringUtil.afterDelim(contents[i], '=');
                             Attribute attribute;
                             try {
                                 attribute = factory.createAttribute(request, HttpHeaders.Values.CHARSET.toString(),
-                                        cleanString(values[1]));
+                                        cleanString(values));
                             } catch (NullPointerException e) {
                                 throw new ErrorDataDecoderException(e);
                             } catch (IllegalArgumentException e) {

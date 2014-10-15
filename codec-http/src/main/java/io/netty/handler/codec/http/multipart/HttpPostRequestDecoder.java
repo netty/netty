@@ -169,25 +169,25 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
             } else {
                 return null;
             }
-            String[] boundary = StringUtil.split(headerContentType[mrank], '=');
-            if (boundary.length != 2) {
+            String boundary = StringUtil.afterDelim(headerContentType[mrank], '=');
+            if (boundary == null) {
                 throw new ErrorDataDecoderException("Needs a boundary value");
             }
-            if (boundary[1].charAt(0) == '"') {
-                String bound = boundary[1].trim();
+            if (boundary.charAt(0) == '"') {
+                String bound = boundary.trim();
                 int index = bound.length() - 1;
                 if (bound.charAt(index) == '"') {
-                    boundary[1] = bound.substring(1, index);
+                    boundary = bound.substring(1, index);
                 }
             }
             if (headerContentType[crank].toLowerCase().startsWith(
                     HttpHeaders.Values.CHARSET.toString())) {
-                String[] charset = StringUtil.split(headerContentType[crank], '=');
-                if (charset.length > 1) {
-                    return new String[] {"--" + boundary[1], charset[1]};
+                String charset = StringUtil.afterDelim(headerContentType[crank], '=');
+                if (charset != null) {
+                    return new String[] {"--" + boundary, charset};
                 }
             }
-            return new String[] {"--" + boundary[1]};
+            return new String[] {"--" + boundary};
         }
         return null;
     }
