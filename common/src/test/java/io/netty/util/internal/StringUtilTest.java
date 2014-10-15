@@ -70,4 +70,15 @@ public class StringUtilTest {
     public void splitWithDelimiterAtBeginning() {
         assertArrayEquals(new String[] { "", "foo", "bar" }, split("#foo#bar", '#'));
     }
+
+    @Test
+    public void splitMaxPart() {
+        assertArrayEquals(new String[] { "foo", "bar:bar2" }, split("foo:bar:bar2", ':', 2));
+        assertArrayEquals(new String[] { "foo", "bar", "bar2" }, split("foo:bar:bar2", ':', 3));
+    }
+
+    @Test
+    public void substringAfterTest() {
+        assertEquals("bar:bar2", substringAfter("foo:bar:bar2", ':'));
+    }
 }
