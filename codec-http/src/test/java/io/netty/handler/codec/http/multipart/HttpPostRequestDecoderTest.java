@@ -51,7 +51,8 @@ public class HttpPostRequestDecoderTest {
     }
 
     private static void testBinaryStreamUpload(boolean withSpace) throws Exception {
-        final String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
+        // Boundary starts here with '=' to check against issue https://github.com/netty/netty/issues/3004
+        final String boundary = "=dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
         final String contentTypeValue;
         if (withSpace) {
             contentTypeValue = "multipart/form-data; boundary=" + boundary;
