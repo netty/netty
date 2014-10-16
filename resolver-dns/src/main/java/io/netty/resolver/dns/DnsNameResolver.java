@@ -751,7 +751,6 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
     private final class DnsResponseHandler extends ChannelInboundHandlerAdapter {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            boolean success = false;
             try {
                 final DnsResponse res = (DnsResponse) msg;
                 final int queryId = res.header().id();
@@ -790,8 +789,7 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
                 if (res.header().responseCode() == DnsResponseCode.NOERROR) {
                     cache(q, res);
                     promises.set(queryId, null);
-                    qCtx.promise().trySuccess(res);
-                    success = true;
+                    qCtx.promise().trySuccess(res.retain());
                 } else {
                     qCtx.retry(res.sender(),
                             "response code: " + res.header().responseCode() +
@@ -799,9 +797,7 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
                             res.authorityResources().size() + " authority resource(s)");
                 }
             } finally {
-                if (!success) {
-                    ReferenceCountUtil.safeRelease(msg);
-                }
+                ReferenceCountUtil.safeRelease(msg);
             }
         }
 
@@ -823,8 +819,6 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
             // Ensure that the found TTL is between minTtl and maxTtl.
             ttl = Math.max(minTtl(), Math.min(maxTtl, ttl));
 
-            res.retain();
-
             DnsNameResolver.this.cache(question, new DnsCacheEntry(res), ttl);
         }
 
@@ -840,7 +834,7 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
         volatile ScheduledFuture<?> expirationFuture;
 
         DnsCacheEntry(DnsResponse response) {
-            this.response = response;
+            this.response = response.retain();
             cause = null;
         }
 
