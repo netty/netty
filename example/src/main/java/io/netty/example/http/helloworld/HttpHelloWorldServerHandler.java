@@ -17,7 +17,7 @@ package io.netty.example.http.helloworld;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -30,7 +30,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 
 
-public class HttpHelloWorldServerHandler extends ChannelHandlerAdapter {
+public class HttpHelloWorldServerHandler extends ChannelInboundHandlerAdapter {
     private static final byte[] CONTENT = { 'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd' };
 
     @Override
