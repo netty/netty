@@ -20,7 +20,6 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGH
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.immediateRemovalPolicy;
-import static io.netty.handler.codec.http2.Http2Exception.format;
 import static io.netty.handler.codec.http2.Http2Exception.protocolError;
 import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
@@ -215,8 +214,10 @@ public class DefaultHttp2Connection implements Http2Connection {
         private DefaultStream parent;
         private IntObjectMap<DefaultStream> children = newChildMap();
         private int totalChildWeights;
-        private boolean terminateSent;
-        private boolean terminateReceived;
+        private boolean resetSent;
+        private boolean resetReceived;
+        private boolean endOfStreamSent;
+        private boolean endOfStreamReceived;
         private FlowState inboundFlow;
         private FlowState outboundFlow;
         private EmbeddedChannel decompressor;
@@ -237,28 +238,52 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public boolean isTerminateReceived() {
-            return terminateReceived;
+        public boolean isEndOfStreamReceived() {
+            return endOfStreamReceived;
         }
 
         @Override
-        public void terminateReceived() {
-            terminateReceived = true;
+        public Http2Stream endOfStreamReceived() {
+            endOfStreamReceived = true;
+            return this;
         }
 
         @Override
-        public boolean isTerminateSent() {
-            return terminateSent;
+        public boolean isEndOfStreamSent() {
+            return endOfStreamSent;
         }
 
         @Override
-        public void terminateSent() {
-            terminateSent = true;
+        public Http2Stream endOfStreamSent() {
+            endOfStreamSent = true;
+            return this;
         }
 
         @Override
-        public boolean isTerminated() {
-            return terminateSent || terminateReceived;
+        public boolean isResetReceived() {
+            return resetReceived;
+        }
+
+        @Override
+        public Http2Stream resetReceived() {
+            resetReceived = true;
+            return this;
+        }
+
+        @Override
+        public boolean isResetSent() {
+            return resetSent;
+        }
+
+        @Override
+        public Http2Stream resetSent() {
+            resetSent = true;
+            return this;
+        }
+
+        @Override
+        public boolean isReset() {
+            return resetSent || resetReceived;
         }
 
         @Override
@@ -392,16 +417,6 @@ public class DefaultHttp2Connection implements Http2Connection {
             }
 
             return this;
-        }
-
-        @Override
-        public Http2Stream verifyState(Http2Error error, State... allowedStates) throws Http2Exception {
-            for (State allowedState : allowedStates) {
-                if (state == allowedState) {
-                    return this;
-                }
-            }
-            throw format(error, "Stream %d in unexpected state: %s", id, state);
         }
 
         @Override
@@ -629,11 +644,6 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public Http2Stream setPriority(int parentStreamId, short weight, boolean exclusive) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public Http2Stream verifyState(Http2Error error, State... allowedStates) {
             throw new UnsupportedOperationException();
         }
 

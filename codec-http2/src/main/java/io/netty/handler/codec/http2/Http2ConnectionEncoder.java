@@ -14,6 +14,11 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
+
 
 /**
  * Handler for outbound traffic on behalf of {@link Http2ConectionHandler}.
@@ -71,4 +76,12 @@ public interface Http2ConnectionEncoder extends Http2FrameWriter, Http2OutboundF
      * Sets the settings for the remote endpoint of the HTTP/2 connection.
      */
     void remoteSettings(Http2Settings settings) throws Http2Exception;
+
+    /**
+     * Writes the given data to the internal {@link Http2FrameWriter} without performing any
+     * state checks on the connection/stream.
+     */
+    @Override
+    ChannelFuture writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
+            Http2Flags flags, ByteBuf payload, ChannelPromise promise);
 }

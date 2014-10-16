@@ -48,11 +48,6 @@ public interface Http2Stream {
     State state();
 
     /**
-     * Verifies that the stream is in one of the given allowed states.
-     */
-    Http2Stream verifyState(Http2Error error, State... allowedStates) throws Http2Exception;
-
-    /**
      * If this is a reserved push stream, opens the stream for push in one direction.
      */
     Http2Stream openForPush() throws Http2Exception;
@@ -75,32 +70,56 @@ public interface Http2Stream {
     Http2Stream closeRemoteSide();
 
     /**
-     * Indicates whether a RST_STREAM frame has been received from the remote endpoint for this stream.
+     * Indicates whether a frame with {@code END_STREAM} set was received from the remote endpoint
+     * for this stream.
      */
-    boolean isTerminateReceived();
+    boolean isEndOfStreamReceived();
 
     /**
-     * Sets the flag indicating that a RST_STREAM frame has been received from the remote endpoint
+     * Sets the flag indicating that a frame with {@code END_STREAM} set was received from the
+     * remote endpoint for this stream.
+     */
+    Http2Stream endOfStreamReceived();
+
+    /**
+     * Indicates whether a frame with {@code END_STREAM} set was sent to the remote endpoint for
+     * this stream.
+     */
+    boolean isEndOfStreamSent();
+
+    /**
+     * Sets the flag indicating that a frame with {@code END_STREAM} set was sent to the remote
+     * endpoint for this stream.
+     */
+    Http2Stream endOfStreamSent();
+
+    /**
+     * Indicates whether a {@code RST_STREAM} frame has been received from the remote endpoint for this stream.
+     */
+    boolean isResetReceived();
+
+    /**
+     * Sets the flag indicating that a {@code RST_STREAM} frame has been received from the remote endpoint
      * for this stream. This does not affect the stream state.
      */
-    void terminateReceived();
+    Http2Stream resetReceived();
 
     /**
-     * Indicates whether a RST_STREAM frame has been sent from the local endpoint for this stream.
+     * Indicates whether a {@code RST_STREAM} frame has been sent from the local endpoint for this stream.
      */
-    boolean isTerminateSent();
+    boolean isResetSent();
 
     /**
-     * Sets the flag indicating that a RST_STREAM frame has been sent from the local endpoint
+     * Sets the flag indicating that a {@code RST_STREAM} frame has been sent from the local endpoint
      * for this stream. This does not affect the stream state.
      */
-    void terminateSent();
+    Http2Stream resetSent();
 
     /**
-     * Indicates whether or not this stream has been terminated. This is a short form for
-     * {@link #isTerminateSent()} || {@link #isTerminateReceived()}.
+     * Indicates whether or not this stream has been reset. This is a short form for
+     * {@link #isResetSent()} || {@link #isResetReceived()}.
      */
-    boolean isTerminated();
+    boolean isReset();
 
     /**
      * Indicates whether the remote side of this stream is open (i.e. the state is either

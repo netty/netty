@@ -21,7 +21,10 @@ import java.io.Closeable;
 import java.util.List;
 
 /**
- * Handler for inbound traffic on behalf of {@link Http2ConnectionHandler}.
+ * Handler for inbound traffic on behalf of {@link Http2ConnectionHandler}. Performs basic protocol
+ * conformance on inbound frames before calling the delegate {@link Http2FrameListener} for
+ * application-specific processing. Note that frames of an unknown type (i.e. HTTP/2 extensions)
+ * will skip all protocol checks and be given directly to the listener for processing.
  */
 public interface Http2ConnectionDecoder extends Closeable {
 
