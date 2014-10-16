@@ -19,8 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FixedRecvByteBufAllocator;
@@ -748,7 +748,7 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
         }
     }
 
-    private final class DnsResponseHandler extends ChannelInboundHandlerAdapter {
+    private final class DnsResponseHandler extends ChannelHandlerAdapter {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             try {
