@@ -41,11 +41,11 @@ public interface Http2FrameListener extends Http2DataListener {
      * @param streamId the subject stream for the frame.
      * @param headers the received headers.
      * @param padding the number of padding bytes found at the end of the frame.
-     * @param endStream Indicates whether this is the last frame to be sent from the remote endpoint
+     * @param endOfStream Indicates whether this is the last frame to be sent from the remote endpoint
      *            for this stream.
      */
     void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
-            boolean endStream) throws Http2Exception;
+            boolean endOfStream) throws Http2Exception;
 
     /**
      * Handles an inbound HEADERS frame with priority information specified. Only called if END_HEADERS encountered.
@@ -70,11 +70,11 @@ public interface Http2FrameListener extends Http2DataListener {
      * @param weight the new weight for the stream.
      * @param exclusive whether or not the stream should be the exclusive dependent of its parent.
      * @param padding the number of padding bytes found at the end of the frame.
-     * @param endStream Indicates whether this is the last frame to be sent from the remote endpoint
+     * @param endOfStream Indicates whether this is the last frame to be sent from the remote endpoint
      *            for this stream.
      */
     void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-            int streamDependency, short weight, boolean exclusive, int padding, boolean endStream)
+            int streamDependency, short weight, boolean exclusive, int padding, boolean endOfStream)
             throws Http2Exception;
 
     /**

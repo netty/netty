@@ -172,6 +172,48 @@ public class DefaultHttp2ConnectionDecoderTest {
         }
     }
 
+    @Test(expected = Http2StreamException.class)
+    public void dataReadForStreamInInvalidStateShouldThrow() throws Exception {
+        // Throw an exception when checking stream state.
+        when(stream.state()).thenReturn(Http2Stream.State.CLOSED);
+        final ByteBuf data = dummyData();
+        try {
+            decode().onDataRead(ctx, STREAM_ID, data, 10, true);
+        } finally {
+            data.release();
+        }
+    }
+
+    @Test
+    public void dataReadAfterGoAwayForStreamInInvalidStateShouldIgnore() throws Exception {
+        // Throw an exception when checking stream state.
+        when(stream.state()).thenReturn(Http2Stream.State.CLOSED);
+        when(connection.goAwaySent()).thenReturn(true);
+        final ByteBuf data = dummyData();
+        try {
+            decode().onDataRead(ctx, STREAM_ID, data, 10, true);
+            verify(inboundFlow, never()).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(10), eq(true));
+            verify(listener, never()).onDataRead(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean());
+        } finally {
+            data.release();
+        }
+    }
+
+    @Test
+    public void dataReadAfterRstStreamForStreamInInvalidStateShouldIgnore() throws Exception {
+        // Throw an exception when checking stream state.
+        when(stream.state()).thenReturn(Http2Stream.State.CLOSED);
+        when(stream.isResetSent()).thenReturn(true);
+        final ByteBuf data = dummyData();
+        try {
+            decode().onDataRead(ctx, STREAM_ID, data, 10, true);
+            verify(inboundFlow).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(10), eq(true));
+            verify(listener, never()).onDataRead(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean());
+        } finally {
+            data.release();
+        }
+    }
+
     @Test
     public void dataReadWithEndOfStreamShouldCloseRemoteSide() throws Exception {
         final ByteBuf data = dummyData();

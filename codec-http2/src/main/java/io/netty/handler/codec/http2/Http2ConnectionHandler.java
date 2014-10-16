@@ -317,7 +317,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         ctx.flush();
 
         if (stream != null) {
-            stream.terminateSent();
+            stream.resetSent();
             closeStream(stream, promise);
         }
 
