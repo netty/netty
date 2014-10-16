@@ -207,7 +207,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
             // Check if we received a data frame for a stream which is half-closed
             Http2Stream stream = connection.requireStream(streamId);
-            stream.verifyState(STREAM_CLOSED, OPEN, HALF_CLOSED_LOCAL);
 
             // Apply flow control.
             inboundFlow.onDataRead(ctx, streamId, data, padding, endOfStream);
@@ -218,6 +217,9 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 // Ignore this frame.
                 return;
             }
+
+            // If we get here, the stream must NOT be closed.
+            stream.verifyState(STREAM_CLOSED, OPEN, HALF_CLOSED_LOCAL);
 
             listener.onDataRead(ctx, streamId, data, padding, endOfStream);
 

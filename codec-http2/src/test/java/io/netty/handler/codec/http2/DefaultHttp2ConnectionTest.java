@@ -210,6 +210,13 @@ public class DefaultHttp2ConnectionTest {
         assertTrue(server.activeStreams().isEmpty());
     }
 
+    @Test(expected = Http2StreamException.class)
+    public void verifyStateShouldThrow() throws Http2Exception {
+        Http2Stream stream = server.remote().createStream(3, true);
+        stream.close();
+        stream.verifyState(Http2Error.STREAM_CLOSED, State.OPEN);
+    }
+
     @Test
     public void prioritizeShouldUseDefaults() throws Exception {
         Http2Stream stream = client.local().createStream(1, false);

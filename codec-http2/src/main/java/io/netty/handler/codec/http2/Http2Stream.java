@@ -50,7 +50,7 @@ public interface Http2Stream {
     /**
      * Verifies that the stream is in one of the given allowed states.
      */
-    Http2Stream verifyState(Http2Error error, State... allowedStates) throws Http2Exception;
+    Http2Stream verifyState(Http2Error error, State... allowedStates) throws Http2StreamException;
 
     /**
      * If this is a reserved push stream, opens the stream for push in one direction.

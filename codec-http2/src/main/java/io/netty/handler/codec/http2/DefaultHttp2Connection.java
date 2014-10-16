@@ -20,7 +20,6 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGH
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.immediateRemovalPolicy;
-import static io.netty.handler.codec.http2.Http2Exception.format;
 import static io.netty.handler.codec.http2.Http2Exception.protocolError;
 import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
@@ -395,13 +394,13 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public Http2Stream verifyState(Http2Error error, State... allowedStates) throws Http2Exception {
+        public Http2Stream verifyState(Http2Error error, State... allowedStates) throws Http2StreamException {
             for (State allowedState : allowedStates) {
                 if (state == allowedState) {
                     return this;
                 }
             }
-            throw format(error, "Stream %d in unexpected state: %s", id, state);
+            throw new Http2StreamException(id, error, String.format("Stream %d in unexpected state: %s", id, state));
         }
 
         @Override
