@@ -134,16 +134,23 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         Channel cc = cb.connect().sync().channel();
         FileRegion region = new DefaultFileRegion(
                 new FileInputStream(file).getChannel(), startOffset, data.length - bufferSize);
-        // Do write ByteBuf and FileRegion to be sure that mixed writes work
+        FileRegion emptyRegion = new DefaultFileRegion(new FileInputStream(file).getChannel(), 0, 0);
+
+        // Do write ByteBuf and then FileRegion to ensure that mixed writes work
+        // Also, write an empty FileRegion to test if writing an empty FileRegion does not cause any issues.
         //
         // See https://github.com/netty/netty/issues/2769
+        //     https://github.com/netty/netty/issues/2964
         if (voidPromise) {
             assertEquals(cc.voidPromise(), cc.write(Unpooled.wrappedBuffer(data, 0, bufferSize), cc.voidPromise()));
+            assertEquals(cc.voidPromise(), cc.write(emptyRegion, cc.voidPromise()));
             assertEquals(cc.voidPromise(), cc.writeAndFlush(region, cc.voidPromise()));
         } else {
             assertNotEquals(cc.voidPromise(), cc.write(Unpooled.wrappedBuffer(data, 0, bufferSize)));
+            assertNotEquals(cc.voidPromise(), cc.write(emptyRegion));
             assertNotEquals(cc.voidPromise(), cc.writeAndFlush(region));
         }
+
         while (sh.counter < data.length) {
             if (sh.exception.get() != null) {
                 break;
