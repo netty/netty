@@ -169,7 +169,7 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
             } else {
                 return null;
             }
-            String boundary = StringUtil.afterDelim(headerContentType[mrank], '=');
+            String boundary = StringUtil.substringAfter(headerContentType[mrank], '=');
             if (boundary == null) {
                 throw new ErrorDataDecoderException("Needs a boundary value");
             }
@@ -182,7 +182,7 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
             }
             if (headerContentType[crank].toLowerCase().startsWith(
                     HttpHeaders.Values.CHARSET.toString())) {
-                String charset = StringUtil.afterDelim(headerContentType[crank], '=');
+                String charset = StringUtil.substringAfter(headerContentType[crank], '=');
                 if (charset != null) {
                     return new String[] {"--" + boundary, charset};
                 }

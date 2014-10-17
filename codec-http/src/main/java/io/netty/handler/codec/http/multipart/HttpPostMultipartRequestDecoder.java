@@ -672,7 +672,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                 if (checkSecondArg) {
                     // read next values and store them in the map as Attribute
                     for (int i = 2; i < contents.length; i++) {
-                        String[] values = StringUtil.splitInTwo(contents[i], '=');
+                        String[] values = StringUtil.split(contents[i], '=', 2);
                         Attribute attribute;
                         try {
                             String name = cleanString(values[0]);
@@ -721,7 +721,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                 // Take care of possible "multipart/mixed"
                 if (contents[1].equalsIgnoreCase(HttpPostBodyUtil.MULTIPART_MIXED)) {
                     if (currentStatus == MultiPartStatus.DISPOSITION) {
-                        String values = StringUtil.afterDelim(contents[2], '=');
+                        String values = StringUtil.substringAfter(contents[2], '=');
                         multipartMixedBoundary = "--" + values;
                         currentStatus = MultiPartStatus.MIXEDDELIMITER;
                         return decodeMultipart(MultiPartStatus.MIXEDDELIMITER);
@@ -731,7 +731,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                 } else {
                     for (int i = 1; i < contents.length; i++) {
                         if (contents[i].toLowerCase().startsWith(HttpHeaders.Values.CHARSET.toString())) {
-                            String values = StringUtil.afterDelim(contents[i], '=');
+                            String values = StringUtil.substringAfter(contents[i], '=');
                             Attribute attribute;
                             try {
                                 attribute = factory.createAttribute(request, HttpHeaders.Values.CHARSET.toString(),
