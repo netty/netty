@@ -115,11 +115,11 @@ public final class OpenSslClientContext extends OpenSslContext {
                 if (certChainFile != null) {
                     /* Load the certificate chain. We must skip the first cert when server mode */
                     if (!SSLContext.setCertificateChainFile(ctx, certChainFile.getPath(), true)) {
-                        String error = SSL.getLastError();
+                        long error = SSL.getLastErrorNumber();
                         if (OpenSsl.isError(error)) {
                             throw new SSLException(
                                     "failed to set certificate chain: "
-                                            + certChainFile + " (" + SSL.getLastError() + ')');
+                                            + certChainFile + " (" + SSL.getErrorString(error) + ')');
                         }
                     }
                 }
