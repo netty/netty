@@ -220,9 +220,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                 // An existing stream...
                 switch (stream.state()) {
                     case RESERVED_LOCAL:
-                        // Sending headers on a reserved push stream ... open it for push to the
-                        // remote
-                        // endpoint.
+                        // Sending headers on a reserved push stream ... open it for push to the remote endpoint.
                         stream.openForPush();
                         break;
                     case OPEN:
@@ -348,9 +346,9 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             return promise.setFailure(protocolError("Sending ping after connection going away."));
         }
 
-        frameWriter.writePing(ctx, ack, data, promise);
+        ChannelFuture future = frameWriter.writePing(ctx, ack, data, promise);
         ctx.flush();
-        return promise;
+        return future;
     }
 
     @Override
@@ -369,9 +367,11 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         }
 
         // Write the frame.
-        frameWriter.writePushPromise(ctx, streamId, promisedStreamId, headers, padding, promise);
+        ChannelFuture future =
+                frameWriter.writePushPromise(ctx, streamId, promisedStreamId, headers, padding,
+                        promise);
         ctx.flush();
-        return promise;
+        return future;
     }
 
     @Override
@@ -389,6 +389,10 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     @Override
     public ChannelFuture writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
             ByteBuf payload, ChannelPromise promise) {
+        Http2Stream stream = connection.stream(streamId);
+        if (stream != null && streamId > 0 && flags.endOfStream()) {
+            stream.endOfStreamSent();
+        }
         return frameWriter.writeFrame(ctx, frameType, streamId, flags, payload, promise);
     }
 

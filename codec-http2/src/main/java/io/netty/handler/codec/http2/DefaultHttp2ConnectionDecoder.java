@@ -209,41 +209,50 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             verifyGoAwayNotReceived();
             verifyRstStreamNotReceived(stream);
 
-            // Apply flow control if appropriate.
+            // We should ignore this frame if RST_STREAM was sent or if GO_AWAY was sent with a
+            // lower stream ID.
+            boolean shouldIgnore = shouldIgnoreFrame(stream);
+
+            boolean shouldApplyFlowControl = false;
+            Http2Exception error = null;
             switch (stream.state()) {
                 case OPEN:
                 case HALF_CLOSED_LOCAL:
-                    // Apply flow control to the inbound frame.
-                    inboundFlow.onDataRead(ctx, streamId, data, padding, endOfStream);
+                    shouldApplyFlowControl = true;
+                    break;
+                case HALF_CLOSED_REMOTE:
+                case CLOSED:
+                    if (stream.isResetSent()) {
+                        shouldApplyFlowControl = true;
+                    }
+                    if (!shouldIgnore) {
+                        // Stream error.
+                        error = streamClosedError(stream.id(), "Stream %d in unexpected state: %s",
+                                stream.id(), stream.state());
+                    }
                     break;
                 default:
-                    // Only apply flow control if RST_STREAM was sent.
-                    if (stream.isResetSent()) {
-                        inboundFlow.onDataRead(ctx, streamId, data, padding, endOfStream);
+                    if (!shouldIgnore) {
+                        // Connection error.
+                        error = protocolError("Stream %d in unexpected state: %s", stream.id(),
+                            stream.state());
                     }
                     break;
             }
 
-            // Ignore this frame if RST_STREAM was sent or if GO_AWAY was sent with a lower stream ID.
-            if (shouldIgnoreFrame(stream)) {
+            // If we should apply flow control, do so now.
+            if (shouldApplyFlowControl) {
+                inboundFlow.onDataRead(ctx, streamId, data, padding, endOfStream);
+            }
+
+            // If we should ignore this frame, do so now.
+            if (shouldIgnore) {
                 return;
             }
 
-            // Verify that the stream state allows receipt of DATA frames.
-            switch (stream.state()) {
-                case OPEN:
-                case HALF_CLOSED_LOCAL:
-                    // DATA allowed in these states.
-                    break;
-                case HALF_CLOSED_REMOTE:
-                case CLOSED:
-                    // Stream error.
-                    throw streamClosedError(stream.id(), "Stream %d in unexpected state: %s",
-                            stream.id(), stream.state());
-                default:
-                    // Connection error.
-                    throw protocolError("Stream %d in unexpected state: %s", stream.id(),
-                            stream.state());
+            // If the stream was in an invalid state to receive the frame, throw the error.
+            if (error != null) {
+                throw error;
             }
 
             listener.onDataRead(ctx, streamId, data, padding, endOfStream);
@@ -497,6 +506,12 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
                 ByteBuf payload) {
             listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
+
+            // Mark the end of stream if it's set in the flags.
+            Http2Stream stream = connection.stream(streamId);
+            if (stream != null && streamId > 0 && flags.endOfStream()) {
+                stream.endOfStreamReceived();
+            }
         }
 
         /**
