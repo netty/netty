@@ -149,6 +149,9 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             }
 
             Http2Stream stream = connection.requireStream(streamId);
+            if (stream.isResetSent()) {
+                throw new IllegalStateException("Sending data after sending RST_STREAM.");
+            }
             if (stream.isEndOfStreamSent()) {
                 throw new IllegalStateException("Sending data after sending END_STREAM.");
             }
@@ -213,6 +216,9 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                 // Create a new locally-initiated stream.
                 stream = connection.createLocalStream(streamId, endOfStream);
             } else {
+                if (stream.isResetSent()) {
+                    throw new IllegalStateException("Sending headers after sending RST_STREAM.");
+                }
                 if (stream.isEndOfStreamSent()) {
                     throw new IllegalStateException("Sending headers after sending END_STREAM.");
                 }
@@ -383,6 +389,12 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     @Override
     public ChannelFuture writeWindowUpdate(ChannelHandlerContext ctx, int streamId, int windowSizeIncrement,
             ChannelPromise promise) {
+        if (streamId > 0) {
+            Http2Stream stream = connection().stream(streamId);
+            if (stream != null && stream.isResetSent()) {
+                throw new IllegalStateException("Sending data after sending RST_STREAM.");
+            }
+        }
         return frameWriter.writeWindowUpdate(ctx, streamId, windowSizeIncrement, promise);
     }
 
