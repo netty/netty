@@ -214,8 +214,8 @@ public class DefaultHttp2Connection implements Http2Connection {
         private DefaultStream parent;
         private IntObjectMap<DefaultStream> children = newChildMap();
         private int totalChildWeights;
-        private boolean rstSent;
-        private boolean rstReceived;
+        private boolean resetSent;
+        private boolean resetReceived;
         private boolean endOfStreamSent;
         private boolean endOfStreamReceived;
         private FlowState inboundFlow;
@@ -260,30 +260,30 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public boolean isRstReceived() {
-            return rstReceived;
+        public boolean isResetReceived() {
+            return resetReceived;
         }
 
         @Override
-        public Http2Stream rstReceived() {
-            rstReceived = true;
+        public Http2Stream resetReceived() {
+            resetReceived = true;
             return this;
         }
 
         @Override
-        public boolean isRstSent() {
-            return rstSent;
+        public boolean isResetSent() {
+            return resetSent;
         }
 
         @Override
-        public Http2Stream rstSent() {
-            rstSent = true;
+        public Http2Stream resetSent() {
+            resetSent = true;
             return this;
         }
 
         @Override
-        public boolean isTerminated() {
-            return rstSent || rstReceived;
+        public boolean isReset() {
+            return resetSent || resetReceived;
         }
 
         @Override

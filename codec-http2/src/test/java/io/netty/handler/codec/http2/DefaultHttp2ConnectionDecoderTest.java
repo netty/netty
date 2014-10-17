@@ -203,7 +203,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     public void dataReadAfterRstStreamForStreamInInvalidStateShouldIgnore() throws Exception {
         // Throw an exception when checking stream state.
         when(stream.state()).thenReturn(Http2Stream.State.CLOSED);
-        when(stream.isRstSent()).thenReturn(true);
+        when(stream.isResetSent()).thenReturn(true);
         final ByteBuf data = dummyData();
         try {
             decode().onDataRead(ctx, STREAM_ID, data, 10, true);

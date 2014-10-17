@@ -306,7 +306,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         ctx.flush();
 
         if (stream != null) {
-            stream.rstSent();
+            stream.resetSent();
             lifecycleManager.closeStream(stream, promise);
         }
 

@@ -218,7 +218,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                     break;
                 default:
                     // Only apply flow control if RST_STREAM was sent.
-                    if (stream.isRstSent()) {
+                    if (stream.isResetSent()) {
                         inboundFlow.onDataRead(ctx, streamId, data, padding, endOfStream);
                     }
                     break;
@@ -350,7 +350,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 return;
             }
 
-            stream.rstReceived();
+            stream.resetReceived();
 
             listener.onRstStreamRead(ctx, streamId, errorCode);
 
@@ -511,7 +511,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             }
 
             // Also ignore inbound frames after we sent a RST_STREAM frame.
-            return stream.isRstSent();
+            return stream.isResetSent();
         }
 
         /**
@@ -542,7 +542,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
          * stream error.
          */
         private void verifyRstStreamNotReceived(Http2Stream stream) throws Http2Exception {
-            if (stream != null && stream.isRstReceived()) {
+            if (stream != null && stream.isResetReceived()) {
                 // Stream error.
                 throw streamClosedError(stream.id(),
                         "Frame received after receiving RST_STREAM for stream: " + stream.id());
