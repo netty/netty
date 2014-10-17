@@ -19,6 +19,7 @@ import io.netty.util.NetUtil;
 import org.junit.rules.TestName;
 
 import java.io.IOException;
+import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.channels.Channel;
@@ -58,27 +59,64 @@ public final class TestUtils {
      */
     public static int getFreePort() {
         for (int i = 0; i < NUM_CANDIDATES; i ++) {
-            int port = nextCandidatePort();
-            try {
-                // Ensure it is possible to bind on both wildcard and loopback.
-                ServerSocket ss;
-                ss = new ServerSocket();
-                ss.setReuseAddress(false);
-                ss.bind(new InetSocketAddress(port));
-                ss.close();
+            final int port = nextCandidatePort();
+            final InetSocketAddress wildcardAddr = new InetSocketAddress(port);
+            final InetSocketAddress loopbackAddr = new InetSocketAddress(NetUtil.LOCALHOST4, port);
 
-                ss = new ServerSocket();
-                ss.setReuseAddress(false);
-                ss.bind(new InetSocketAddress(NetUtil.LOCALHOST, port));
-                ss.close();
-
+            // Ensure it is possible to bind on wildcard/loopback and tcp/udp.
+            if (isTcpPortAvailable(wildcardAddr) &&
+                isTcpPortAvailable(loopbackAddr) &&
+                isUdpPortAvailable(wildcardAddr) &&
+                isUdpPortAvailable(loopbackAddr)) {
                 return port;
-            } catch (IOException e) {
-                // ignore
             }
         }
 
         throw new RuntimeException("unable to find a free port");
+    }
+
+    private static boolean isTcpPortAvailable(InetSocketAddress localAddress) {
+        ServerSocket ss = null;
+        try {
+            ss = new ServerSocket();
+            ss.setReuseAddress(false);
+            ss.bind(localAddress);
+            ss.close();
+            ss = null;
+            return true;
+        } catch (Exception ignore) {
+            // Unavailable
+        } finally {
+            if (ss != null) {
+                try {
+                    ss.close();
+                } catch (IOException ignore) {
+                    // Ignore
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static boolean isUdpPortAvailable(InetSocketAddress localAddress) {
+        DatagramSocket ds = null;
+        try {
+            ds = new DatagramSocket(null);
+            ds.setReuseAddress(false);
+            ds.bind(localAddress);
+            ds.close();
+            ds = null;
+            return true;
+        } catch (Exception ignore) {
+            // Unavailable
+        } finally {
+            if (ds != null) {
+                ds.close();
+            }
+        }
+
+        return false;
     }
 
     /**
