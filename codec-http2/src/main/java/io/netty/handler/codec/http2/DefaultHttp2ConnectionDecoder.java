@@ -506,12 +506,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
                 ByteBuf payload) {
             listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
-
-            // Mark the end of stream if it's set in the flags.
-            Http2Stream stream = connection.stream(streamId);
-            if (stream != null && streamId > 0 && flags.endOfStream()) {
-                stream.endOfStreamReceived();
-            }
         }
 
         /**
