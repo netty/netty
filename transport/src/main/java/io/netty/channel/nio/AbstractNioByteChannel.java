@@ -219,27 +219,31 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 }
             } else if (msg instanceof FileRegion) {
                 FileRegion region = (FileRegion) msg;
+                boolean done = region.transfered() >= region.count();
                 boolean setOpWrite = false;
-                boolean done = false;
-                long flushedAmount = 0;
-                if (writeSpinCount == -1) {
-                    writeSpinCount = config().getWriteSpinCount();
-                }
-                for (int i = writeSpinCount - 1; i >= 0; i --) {
-                    long localFlushedAmount = doWriteFileRegion(region);
-                    if (localFlushedAmount == 0) {
-                        setOpWrite = true;
-                        break;
+
+                if (!done) {
+                    long flushedAmount = 0;
+                    if (writeSpinCount == -1) {
+                        writeSpinCount = config().getWriteSpinCount();
                     }
 
-                    flushedAmount += localFlushedAmount;
-                    if (region.transfered() >= region.count()) {
-                        done = true;
-                        break;
-                    }
-                }
+                    for (int i = writeSpinCount - 1; i >= 0; i--) {
+                        long localFlushedAmount = doWriteFileRegion(region);
+                        if (localFlushedAmount == 0) {
+                            setOpWrite = true;
+                            break;
+                        }
 
-                in.progress(flushedAmount);
+                        flushedAmount += localFlushedAmount;
+                        if (region.transfered() >= region.count()) {
+                            done = true;
+                            break;
+                        }
+                    }
+
+                    in.progress(flushedAmount);
+                }
 
                 if (done) {
                     in.remove();
