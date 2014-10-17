@@ -30,8 +30,8 @@ import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.net.Inet4Address;
@@ -253,8 +253,8 @@ public class DnsNameResolverTest {
         group.shutdownGracefully();
     }
 
-    @Before
-    public void reset() {
+    @After
+    public void reset() throws Exception {
         resolver.clearCache();
     }
 

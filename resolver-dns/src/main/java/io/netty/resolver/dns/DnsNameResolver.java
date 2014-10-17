@@ -726,14 +726,17 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
     }
 
     void cache(final DnsQuestion question, DnsCacheEntry entry, long delaySeconds) {
-        queryCache.put(question, entry);
+        DnsCacheEntry oldEntry = queryCache.put(question, entry);
+        if (oldEntry != null) {
+            oldEntry.release();
+        }
+
         boolean scheduled = false;
         try {
             entry.expirationFuture = ch.eventLoop().schedule(new OneTimeTask() {
                 @Override
                 public void run() {
-                    Object response = queryCache.remove(question);
-                    ReferenceCountUtil.safeRelease(response);
+                    clearCache(question);
                 }
             }, delaySeconds, TimeUnit.SECONDS);
 
@@ -742,7 +745,7 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
             if (!scheduled) {
                 // If failed to schedule the expiration task,
                 // remove the entry from the cache so that it does not leak.
-                queryCache.remove(question);
+                clearCache(question);
                 entry.release();
             }
         }
@@ -789,12 +792,16 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
                 if (res.header().responseCode() == DnsResponseCode.NOERROR) {
                     cache(q, res);
                     promises.set(queryId, null);
-                    qCtx.promise().trySuccess(res.retain());
+
+                    Promise<DnsResponse> qPromise = qCtx.promise();
+                    if (qPromise.setUncancellable()) {
+                        qPromise.setSuccess(res.retain());
+                    }
                 } else {
                     qCtx.retry(res.sender(),
-                            "response code: " + res.header().responseCode() +
-                            " with " + res.answers().size() + " answer(s) and " +
-                            res.authorityResources().size() + " authority resource(s)");
+                               "response code: " + res.header().responseCode() +
+                               " with " + res.answers().size() + " answer(s) and " +
+                               res.authorityResources().size() + " authority resource(s)");
                 }
             } finally {
                 ReferenceCountUtil.safeRelease(msg);
