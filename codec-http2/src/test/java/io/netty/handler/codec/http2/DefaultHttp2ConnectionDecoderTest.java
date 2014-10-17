@@ -192,7 +192,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         final ByteBuf data = dummyData();
         try {
             decode().onDataRead(ctx, STREAM_ID, data, 10, true);
-            verify(inboundFlow).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(10), eq(true));
+            verify(inboundFlow, never()).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(10), eq(true));
             verify(listener, never()).onDataRead(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean());
         } finally {
             data.release();

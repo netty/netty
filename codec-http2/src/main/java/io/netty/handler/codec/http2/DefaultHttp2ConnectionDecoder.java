@@ -205,14 +205,27 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             // Check if we received a data frame for a stream which is half-closed
             Http2Stream stream = connection.requireStream(streamId);
 
-            // Apply flow control.
-            inboundFlow.onDataRead(ctx, streamId, data, padding, endOfStream);
-
             verifyEndOfStreamNotReceived(stream);
             verifyGoAwayNotReceived();
             verifyRstStreamNotReceived(stream);
+
+            // Apply flow control if appropriate.
+            switch (stream.state()) {
+                case OPEN:
+                case HALF_CLOSED_LOCAL:
+                    // Apply flow control to the inbound frame.
+                    inboundFlow.onDataRead(ctx, streamId, data, padding, endOfStream);
+                    break;
+                default:
+                    // Only apply flow control if RST_STREAM was sent.
+                    if (stream.isRstSent()) {
+                        inboundFlow.onDataRead(ctx, streamId, data, padding, endOfStream);
+                    }
+                    break;
+            }
+
+            // Ignore this frame if RST_STREAM was sent or if GO_AWAY was sent with a lower stream ID.
             if (shouldIgnoreFrame(stream)) {
-                // Ignore this frame.
                 return;
             }
 
