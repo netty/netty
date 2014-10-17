@@ -38,4 +38,12 @@ public class Http2StreamException extends Http2Exception {
     public int streamId() {
         return streamId;
     }
+
+    public static Http2StreamException format(int id, Http2Error error, String fmt, Object... args) {
+        return new Http2StreamException(id, error, String.format(fmt, args));
+    }
+
+    public static Http2StreamException streamClosedError(int id, String fmt, Object... args) {
+        return format(id, Http2Error.STREAM_CLOSED, fmt, args);
+    }
 }

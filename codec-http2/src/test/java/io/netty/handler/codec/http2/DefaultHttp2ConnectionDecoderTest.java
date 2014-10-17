@@ -32,7 +32,6 @@ import static org.mockito.Matchers.anyShort;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -51,7 +50,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -177,7 +175,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     @Test(expected = Http2StreamException.class)
     public void dataReadForStreamInInvalidStateShouldThrow() throws Exception {
         // Throw an exception when checking stream state.
-        mockIllegalStreamState();
+        when(stream.state()).thenReturn(Http2Stream.State.CLOSED);
         final ByteBuf data = dummyData();
         try {
             decode().onDataRead(ctx, STREAM_ID, data, 10, true);
@@ -189,7 +187,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     @Test
     public void dataReadAfterGoAwayForStreamInInvalidStateShouldIgnore() throws Exception {
         // Throw an exception when checking stream state.
-        mockIllegalStreamState();
+        when(stream.state()).thenReturn(Http2Stream.State.CLOSED);
         when(connection.goAwaySent()).thenReturn(true);
         final ByteBuf data = dummyData();
         try {
@@ -204,8 +202,8 @@ public class DefaultHttp2ConnectionDecoderTest {
     @Test
     public void dataReadAfterRstStreamForStreamInInvalidStateShouldIgnore() throws Exception {
         // Throw an exception when checking stream state.
-        mockIllegalStreamState();
-        when(stream.isTerminateSent()).thenReturn(true);
+        when(stream.state()).thenReturn(Http2Stream.State.CLOSED);
+        when(stream.isRstSent()).thenReturn(true);
         final ByteBuf data = dummyData();
         try {
             decode().onDataRead(ctx, STREAM_ID, data, 10, true);
@@ -393,11 +391,6 @@ public class DefaultHttp2ConnectionDecoderTest {
     private static ByteBuf dummyData() {
         // The buffer is purposely 8 bytes so it will even work for a ping frame.
         return wrappedBuffer("abcdefgh".getBytes(UTF_8));
-    }
-
-    private void mockIllegalStreamState() throws Http2StreamException {
-        doThrow(new Http2StreamException(STREAM_ID, Http2Error.STREAM_CLOSED, "fake")).when(stream)
-                .verifyState(any(Http2Error.class), Mockito.<Http2Stream.State>anyVararg());
     }
 
     /**

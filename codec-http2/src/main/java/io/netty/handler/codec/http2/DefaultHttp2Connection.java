@@ -214,8 +214,10 @@ public class DefaultHttp2Connection implements Http2Connection {
         private DefaultStream parent;
         private IntObjectMap<DefaultStream> children = newChildMap();
         private int totalChildWeights;
-        private boolean terminateSent;
-        private boolean terminateReceived;
+        private boolean rstSent;
+        private boolean rstReceived;
+        private boolean endOfStreamSent;
+        private boolean endOfStreamReceived;
         private FlowState inboundFlow;
         private FlowState outboundFlow;
         private EmbeddedChannel decompressor;
@@ -236,28 +238,52 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public boolean isTerminateReceived() {
-            return terminateReceived;
+        public boolean isEndOfStreamReceived() {
+            return endOfStreamReceived;
         }
 
         @Override
-        public void terminateReceived() {
-            terminateReceived = true;
+        public Http2Stream endOfStreamReceived() {
+            endOfStreamReceived = true;
+            return this;
         }
 
         @Override
-        public boolean isTerminateSent() {
-            return terminateSent;
+        public boolean isEndOfStreamSent() {
+            return endOfStreamSent;
         }
 
         @Override
-        public void terminateSent() {
-            terminateSent = true;
+        public Http2Stream endOfStreamSent() {
+            endOfStreamSent = true;
+            return this;
+        }
+
+        @Override
+        public boolean isRstReceived() {
+            return rstReceived;
+        }
+
+        @Override
+        public Http2Stream rstReceived() {
+            rstReceived = true;
+            return this;
+        }
+
+        @Override
+        public boolean isRstSent() {
+            return rstSent;
+        }
+
+        @Override
+        public Http2Stream rstSent() {
+            rstSent = true;
+            return this;
         }
 
         @Override
         public boolean isTerminated() {
-            return terminateSent || terminateReceived;
+            return rstSent || rstReceived;
         }
 
         @Override
@@ -391,16 +417,6 @@ public class DefaultHttp2Connection implements Http2Connection {
             }
 
             return this;
-        }
-
-        @Override
-        public Http2Stream verifyState(Http2Error error, State... allowedStates) throws Http2StreamException {
-            for (State allowedState : allowedStates) {
-                if (state == allowedState) {
-                    return this;
-                }
-            }
-            throw new Http2StreamException(id, error, String.format("Stream %d in unexpected state: %s", id, state));
         }
 
         @Override
@@ -628,11 +644,6 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public Http2Stream setPriority(int parentStreamId, short weight, boolean exclusive) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public Http2Stream verifyState(Http2Error error, State... allowedStates) {
             throw new UnsupportedOperationException();
         }
 

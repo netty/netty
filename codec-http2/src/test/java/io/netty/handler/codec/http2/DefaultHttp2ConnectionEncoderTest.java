@@ -154,7 +154,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         final ByteBuf data = dummyData();
         try {
             ChannelFuture future = encoder.writeData(ctx, STREAM_ID, data, 0, false, promise);
-            assertTrue(future.awaitUninterruptibly().cause() instanceof Http2Exception);
+            assertTrue(future.awaitUninterruptibly().cause() instanceof IllegalStateException);
         } finally {
             while (data.refCnt() > 0) {
                 data.release();

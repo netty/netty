@@ -15,11 +15,7 @@
 package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.protocolError;
-import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
-import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
-import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
@@ -146,40 +142,55 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
     @Override
     public ChannelFuture writeData(final ChannelHandlerContext ctx, final int streamId, ByteBuf data, int padding,
-            final boolean endStream, ChannelPromise promise) {
-        boolean release = true;
+            final boolean endOfStream, ChannelPromise promise) {
         try {
             if (connection.isGoAway()) {
-                throw protocolError("Sending data after connection going away.");
+                throw new IllegalStateException("Sending data after connection going away.");
             }
 
             Http2Stream stream = connection.requireStream(streamId);
-            stream.verifyState(PROTOCOL_ERROR, OPEN, HALF_CLOSED_REMOTE);
-
-            // Hand control of the frame to the flow controller.
-            ChannelFuture future = outboundFlow.writeData(ctx, streamId, data, padding, endStream, promise);
-            release = false;
-            future.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    if (!future.isSuccess()) {
-                        // The write failed, handle the error.
-                        lifecycleManager.onException(ctx, future.cause());
-                    } else if (endStream) {
-                        // Close the local side of the stream if this is the last frame
-                        Http2Stream stream = connection.stream(streamId);
-                        lifecycleManager.closeLocalSide(stream, ctx.newPromise());
-                    }
-                }
-            });
-
-            return future;
-        } catch (Http2Exception e) {
-            if (release) {
-                data.release();
+            if (stream.isEndOfStreamSent()) {
+                throw new IllegalStateException("Sending data after sending END_STREAM.");
             }
+
+            // Verify that the stream is in the appropriate state for sending DATA frames.
+            switch (stream.state()) {
+                case OPEN:
+                case HALF_CLOSED_REMOTE:
+                    // Allowed sending DATA frames in these states.
+                    break;
+                default:
+                    throw new IllegalStateException(String.format(
+                            "Stream %d in unexpected state: %s", stream.id(), stream.state()));
+            }
+
+            if (endOfStream) {
+                // Indicate that we have sent END_STREAM.
+                stream.endOfStreamSent();
+            }
+        } catch (Throwable e) {
+            data.release();
             return promise.setFailure(e);
         }
+
+        // Hand control of the frame to the flow controller.
+        ChannelFuture future =
+                outboundFlow.writeData(ctx, streamId, data, padding, endOfStream, promise);
+        future.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                if (!future.isSuccess()) {
+                    // The write failed, handle the error.
+                    lifecycleManager.onException(ctx, future.cause());
+                } else if (endOfStream) {
+                    // Close the local side of the stream if this is the last frame
+                    Http2Stream stream = connection.stream(streamId);
+                    lifecycleManager.closeLocalSide(stream, ctx.newPromise());
+                }
+            }
+        });
+
+        return future;
     }
 
     @Override
@@ -190,47 +201,55 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-            int streamDependency, short weight, boolean exclusive, int padding, boolean endStream,
+            int streamDependency, short weight, boolean exclusive, int padding, boolean endOfStream,
             ChannelPromise promise) {
+        Http2Stream stream = connection.stream(streamId);
         try {
             if (connection.isGoAway()) {
                 throw protocolError("Sending headers after connection going away.");
             }
 
-            Http2Stream stream = connection.stream(streamId);
             if (stream == null) {
                 // Create a new locally-initiated stream.
-                stream = connection.createLocalStream(streamId, endStream);
+                stream = connection.createLocalStream(streamId, endOfStream);
             } else {
-                // An existing stream...
-                if (stream.state() == RESERVED_LOCAL) {
-                    // Sending headers on a reserved push stream ... open it for push to the remote
-                    // endpoint.
-                    stream.openForPush();
-                } else {
-                    // The stream already exists, make sure it's in an allowed state.
-                    stream.verifyState(PROTOCOL_ERROR, OPEN, HALF_CLOSED_REMOTE);
+                if (stream.isEndOfStreamSent()) {
+                    throw new IllegalStateException("Sending headers after sending END_STREAM.");
+                }
 
-                    // Update the priority for this stream only if we'll be sending more data.
-                    if (!endStream) {
-                        stream.setPriority(streamDependency, weight, exclusive);
-                    }
+                // An existing stream...
+                switch (stream.state()) {
+                    case RESERVED_LOCAL:
+                        // Sending headers on a reserved push stream ... open it for push to the
+                        // remote
+                        // endpoint.
+                        stream.openForPush();
+                        break;
+                    case OPEN:
+                    case HALF_CLOSED_REMOTE:
+                        // Allowed sending headers in these states.
+                        break;
+                    default:
+                        throw new IllegalStateException(String.format(
+                                "Stream %d in unexpected state: %s", stream.id(), stream.state()));
                 }
             }
-
-            ChannelFuture future = frameWriter.writeHeaders(ctx, streamId, headers, streamDependency, weight,
-                    exclusive, padding, endStream, promise);
-            ctx.flush();
-
-            // If the headers are the end of the stream, close it now.
-            if (endStream) {
-                lifecycleManager.closeLocalSide(stream, promise);
-            }
-
-            return future;
-        } catch (Http2Exception e) {
+        } catch (Throwable e) {
             return promise.setFailure(e);
         }
+
+        ChannelFuture future =
+                frameWriter.writeHeaders(ctx, streamId, headers, streamDependency, weight,
+                        exclusive, padding, endOfStream, promise);
+        ctx.flush();
+
+        // If the headers are the end of the stream, close it now.
+        if (endOfStream) {
+            stream.endOfStreamSent();
+            lifecycleManager.closeLocalSide(stream, promise);
+        }
+
+        return future;
     }
 
     @Override
@@ -243,14 +262,15 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
             // Update the priority on this stream.
             connection.requireStream(streamId).setPriority(streamDependency, weight, exclusive);
-
-            ChannelFuture future = frameWriter.writePriority(ctx, streamId, streamDependency, weight, exclusive,
-                    promise);
-            ctx.flush();
-            return future;
-        } catch (Http2Exception e) {
+        } catch (Throwable e) {
             return promise.setFailure(e);
         }
+
+        ChannelFuture future =
+                frameWriter.writePriority(ctx, streamId, streamDependency, weight, exclusive,
+                        promise);
+        ctx.flush();
+        return future;
     }
 
     @Override
@@ -286,7 +306,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         ctx.flush();
 
         if (stream != null) {
-            stream.terminateSent();
+            stream.rstSent();
             lifecycleManager.closeStream(stream, promise);
         }
 
@@ -294,7 +314,8 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     }
 
     @Override
-    public ChannelFuture writeSettings(ChannelHandlerContext ctx, Http2Settings settings, ChannelPromise promise) {
+    public ChannelFuture writeSettings(ChannelHandlerContext ctx, Http2Settings settings,
+            ChannelPromise promise) {
         outstandingLocalSettingsQueue.add(settings);
         try {
             if (connection.isGoAway()) {
@@ -305,13 +326,13 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             if (pushEnabled != null && connection.isServer()) {
                 throw protocolError("Server sending SETTINGS frame with ENABLE_PUSH specified");
             }
-
-            ChannelFuture future = frameWriter.writeSettings(ctx, settings, promise);
-            ctx.flush();
-            return future;
-        } catch (Http2Exception e) {
+        } catch (Throwable e) {
             return promise.setFailure(e);
         }
+
+        ChannelFuture future = frameWriter.writeSettings(ctx, settings, promise);
+        ctx.flush();
+        return future;
     }
 
     @Override
@@ -320,23 +341,16 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     }
 
     @Override
-    public ChannelFuture writePing(ChannelHandlerContext ctx, boolean ack, ByteBuf data, ChannelPromise promise) {
-        boolean release = true;
-        try {
-            if (connection.isGoAway()) {
-                throw protocolError("Sending ping after connection going away.");
-            }
-
-            frameWriter.writePing(ctx, ack, data, promise);
-            release = false;
-            ctx.flush();
-            return promise;
-        } catch (Http2Exception e) {
-            if (release) {
-                data.release();
-            }
-            return promise.setFailure(e);
+    public ChannelFuture writePing(ChannelHandlerContext ctx, boolean ack, ByteBuf data,
+            ChannelPromise promise) {
+        if (connection.isGoAway()) {
+            data.release();
+            return promise.setFailure(protocolError("Sending ping after connection going away."));
         }
+
+        frameWriter.writePing(ctx, ack, data, promise);
+        ctx.flush();
+        return promise;
     }
 
     @Override
@@ -350,14 +364,14 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             // Reserve the promised stream.
             Http2Stream stream = connection.requireStream(streamId);
             connection.local().reservePushStream(promisedStreamId, stream);
-
-            // Write the frame.
-            frameWriter.writePushPromise(ctx, streamId, promisedStreamId, headers, padding, promise);
-            ctx.flush();
-            return promise;
-        } catch (Http2Exception e) {
+        } catch (Throwable e) {
             return promise.setFailure(e);
         }
+
+        // Write the frame.
+        frameWriter.writePushPromise(ctx, streamId, promisedStreamId, headers, padding, promise);
+        ctx.flush();
+        return promise;
     }
 
     @Override
