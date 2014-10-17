@@ -38,7 +38,7 @@ import java.util.Map.Entry;
  * <p>The {@link #bind()} methods are useful in combination with connectionless transports such as datagram (UDP).
  * For regular TCP connections, please use the provided {@link #connect()} methods.</p>
  */
-public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
+public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Bootstrap.class);
 
