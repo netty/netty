@@ -504,17 +504,18 @@ public final class OpenSslEngine extends SSLEngine {
         }
 
         // Check for OpenSSL errors caused by the priming read
-        String error = SSL.getLastError();
+        long error = SSL.getLastErrorNumber();
         if (OpenSsl.isError(error)) {
+            String err = SSL.getErrorString(error);
             if (logger.isInfoEnabled()) {
                 logger.info(
                         "SSL_read failed: primingReadResult: " + lastPrimingReadResult +
-                                "; OpenSSL error: '" + error + '\'');
+                                "; OpenSSL error: '" + err + '\'');
             }
 
             // There was an internal error -- shutdown
             shutdown();
-            throw new SSLException(error);
+            throw new SSLException(err);
         }
 
         // There won't be any application data until we're done handshaking
@@ -958,16 +959,17 @@ public final class OpenSslEngine extends SSLEngine {
         int code = SSL.doHandshake(ssl);
         if (code <= 0) {
             // Check for OpenSSL errors caused by the handshake
-            String error = SSL.getLastError();
+            long error = SSL.getLastErrorNumber();
             if (OpenSsl.isError(error)) {
+                String err = SSL.getErrorString(error);
                 if (logger.isInfoEnabled()) {
                     logger.info(
-                            "SSL_do_handshake failed: OpenSSL error: '" + error + '\'');
+                            "SSL_do_handshake failed: OpenSSL error: '" + err + '\'');
                 }
 
                 // There was an internal error -- shutdown
                 shutdown();
-                throw new SSLException(error);
+                throw new SSLException(err);
             }
         }
     }
