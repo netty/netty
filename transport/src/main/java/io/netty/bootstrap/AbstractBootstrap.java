@@ -392,7 +392,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     /**
      * Return the configured {@link EventLoopGroup} or {@code null} if non is configured yet.
      */
-    public final EventLoopGroup group() {
+    public EventLoopGroup group() {
         return group;
     }
 
