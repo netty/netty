@@ -340,7 +340,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         ctx.executor().execute(new Runnable() {
             @Override
             public void run() {
-                engine.closeOutbound();
+                engine().closeOutbound();
                 try {
                     write(ctx, Unpooled.EMPTY_BUFFER, future);
                     flush(ctx);
@@ -437,6 +437,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         ByteBuf out = null;
         ChannelPromise promise = null;
         try {
+            SSLEngine engine = engine();
             for (;;) {
                 Object msg = pendingUnencryptedWrites.current();
                 if (msg == null) {
@@ -520,6 +521,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private void wrapNonAppData(ChannelHandlerContext ctx, boolean inUnwrap) throws SSLException {
         ByteBuf out = null;
         try {
+            SSLEngine engine = engine();
             for (;;) {
                 if (out == null) {
                     out = allocateOutNetBuf(ctx, 0);
@@ -731,10 +733,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         // SSLv3 or TLS - Check ContentType
         boolean tls;
         switch (buffer.getUnsignedByte(offset)) {
-            case 20:  // change_cipher_spec
-            case 21:  // alert
-            case 22:  // handshake
-            case 23:  // application_data
+            case SslConstants.SSL_CONTENT_TYPE_CHANGE_CIPHER_SPEC:
+            case SslConstants.SSL_CONTENT_TYPE_ALERT:
+            case SslConstants.SSL_CONTENT_TYPE_HANDSHAKE:
+            case SslConstants.SSL_CONTENT_TYPE_APPLICATION_DATA:
                 tls = true;
                 break;
             default:
@@ -852,7 +854,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             in.skipBytes(totalLength);
             final ByteBuffer inNetBuf = in.nioBuffer(startOffset, totalLength);
             unwrap(ctx, inNetBuf, totalLength);
-            assert !inNetBuf.hasRemaining() || engine.isInboundDone();
+            assert !inNetBuf.hasRemaining() || engine().isInboundDone();
         }
 
         if (nonSslRecord) {
@@ -903,6 +905,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
         boolean wrapLater = false;
         ByteBuf decodeOut = allocate(ctx, initialOutAppBufCapacity);
+        SSLEngine engine = engine();
         try {
             for (;;) {
                 final SSLEngineResult result = unwrap(engine, packet, decodeOut);
@@ -1005,6 +1008,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * the {@link #delegatedTaskExecutor} and wait until the tasks are finished.
      */
     private void runDelegatedTasks() {
+        SSLEngine engine = engine();
         if (delegatedTaskExecutor == ImmediateExecutor.INSTANCE) {
             for (;;) {
                 Runnable task = engine.getDelegatedTask();
@@ -1080,6 +1084,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * Notify all the handshake futures about the successfully handshake
      */
     private void setHandshakeSuccess() {
+        SSLEngine engine = engine();
         // Work around the JVM crash which occurs when a cipher suite with GCM enabled.
         final String cipherSuite = String.valueOf(engine.getSession().getCipherSuite());
         if (!wantsDirectBuffer && (cipherSuite.contains("_GCM_") || cipherSuite.contains("-GCM-"))) {
@@ -1098,6 +1103,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * Notify all the handshake futures about the failure during the handshake.
      */
     private void setHandshakeFailure(Throwable cause) {
+        SSLEngine engine = engine();
         // Release all resources such as internal buffers that SSLEngine
         // is managing.
         engine.closeOutbound();
@@ -1136,7 +1142,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             return;
         }
 
-        engine.closeOutbound();
+        engine().closeOutbound();
 
         ChannelPromise closeNotifyFuture = ctx.newPromise();
         write(ctx, Unpooled.EMPTY_BUFFER, closeNotifyFuture);
@@ -1149,7 +1155,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         this.ctx = ctx;
         pendingUnencryptedWrites = new PendingWriteQueue(ctx);
 
-        if (ctx.channel().isActive() && engine.getUseClientMode()) {
+        if (ctx.channel().isActive() && engine().getUseClientMode()) {
             // channelActive() event has been fired already, which means this.channelActive() will
             // not be invoked. We have to initialize here instead.
             handshake();
@@ -1184,7 +1190,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
         });
         try {
-            engine.beginHandshake();
+            engine().beginHandshake();
             wrapNonAppData(ctx, false);
             ctx.flush();
         } catch (Exception e) {
@@ -1198,7 +1204,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      */
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
-        if (!startTls && engine.getUseClientMode()) {
+        if (!startTls && engine().getUseClientMode()) {
             // issue and handshake and add a listener to it which will fire an exception event if
             // an exception was thrown while doing the handshake
             handshake().addListener(new GenericFutureListener<Future<Channel>>() {
