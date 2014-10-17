@@ -161,10 +161,11 @@ public final class OpenSslServerContext extends OpenSslContext {
 
                 /* Load the certificate chain. We must skip the first cert when server mode */
                 if (!SSLContext.setCertificateChainFile(ctx, certChainFile.getPath(), true)) {
-                    String error = SSL.getLastError();
+                    long error = SSL.getLastErrorNumber();
                     if (OpenSsl.isError(error)) {
+                        String err = SSL.getErrorString(error);
                         throw new SSLException(
-                                "failed to set certificate chain: " + certChainFile + " (" + SSL.getLastError() + ')');
+                                "failed to set certificate chain: " + certChainFile + " (" + err + ')');
                     }
                 }
 
@@ -172,8 +173,12 @@ public final class OpenSslServerContext extends OpenSslContext {
                 try {
                     if (!SSLContext.setCertificate(
                             ctx, certChainFile.getPath(), keyFile.getPath(), keyPassword, SSL.SSL_AIDX_RSA)) {
-                        throw new SSLException("failed to set certificate: " +
-                                certChainFile + " and " + keyFile + " (" + SSL.getLastError() + ')');
+                        long error = SSL.getLastErrorNumber();
+                        if (OpenSsl.isError(error)) {
+                            String err = SSL.getErrorString(error);
+                            throw new SSLException("failed to set certificate: " +
+                                    certChainFile + " and " + keyFile + " (" + err + ')');
+                        }
                     }
                 } catch (SSLException e) {
                     throw e;
