@@ -26,6 +26,12 @@ import static io.netty.handler.codec.http.HttpConstants.*;
 public class HttpResponseEncoder extends HttpObjectEncoder<HttpResponse> {
     private static final byte[] CRLF = { CR, LF };
 
+    public HttpResponseEncoder() { }
+
+    public HttpResponseEncoder(int initialBufferCapacity, int flushThreshold) {
+        super(initialBufferCapacity, flushThreshold);
+    }
+
     @Override
     public boolean acceptOutboundMessage(Object msg) throws Exception {
         return super.acceptOutboundMessage(msg) && !(msg instanceof HttpRequest);
