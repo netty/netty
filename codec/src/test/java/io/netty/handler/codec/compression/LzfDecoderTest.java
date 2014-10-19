@@ -60,9 +60,9 @@ public class LzfDecoderTest {
     }
 
     @Test
-    public void testUnexpectedSignatureOfChunk() throws Exception {
+    public void testUnexpectedBlockIdentifier() throws Exception {
         expected.expect(DecompressionException.class);
-        expected.expectMessage("Unexpected signature of chunk");
+        expected.expectMessage("unexpected block identifier");
 
         ByteBuf in = Unpooled.buffer();
         in.writeShort(0x1234);  //random value
@@ -75,7 +75,7 @@ public class LzfDecoderTest {
     @Test
     public void testUnknownTypeOfChunk() throws Exception {
         expected.expect(DecompressionException.class);
-        expected.expectMessage("Unknown type of chunk");
+        expected.expectMessage("unknown type of chunk");
 
         ByteBuf in = Unpooled.buffer();
         in.writeByte(BYTE_Z);
