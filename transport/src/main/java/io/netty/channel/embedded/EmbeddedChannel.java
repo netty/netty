@@ -29,6 +29,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.EndpointType;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
@@ -52,7 +53,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EmbeddedChannel.class);
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false, EndpointType.CLIENT);
 
     private final EmbeddedEventLoop loop = new EmbeddedEventLoop();
     private final ChannelConfig config = new DefaultChannelConfig(this);

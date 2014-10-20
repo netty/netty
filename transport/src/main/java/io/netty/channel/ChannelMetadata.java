@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import io.netty.util.internal.EndpointType;
+
 import java.net.SocketAddress;
 
 /**
@@ -24,15 +26,21 @@ public final class ChannelMetadata {
 
     private final boolean hasDisconnect;
 
+    private final EndpointType endpointType;
+
     /**
      * Create a new instance
      *
      * @param hasDisconnect     {@code true} if and only if the channel has the {@code disconnect()} operation
      *                          that allows a user to disconnect and then call {@link Channel#connect(SocketAddress)}
      *                                      again, such as UDP/IP.
+     * @param endpointType      {@link io.netty.util.internal.EndpointType#SERVER} if and only if the channel extends
+     *                          the {@link io.netty.channel.ServerChannel} interface, otherwise this must be set to
+     *                          {@link io.netty.util.internal.EndpointType#CLIENT}
      */
-    public ChannelMetadata(boolean hasDisconnect) {
+    public ChannelMetadata(boolean hasDisconnect, EndpointType endpointType) {
         this.hasDisconnect = hasDisconnect;
+        this.endpointType = endpointType;
     }
 
     /**
@@ -42,5 +50,15 @@ public final class ChannelMetadata {
      */
     public boolean hasDisconnect() {
         return hasDisconnect;
+    }
+
+    /**
+     * Checks to see if the {@link io.netty.channel.Channel} associated with this
+     * {@link io.netty.channel.ChannelMetadata} is a {@link io.netty.channel.ServerChannel}
+     *
+     * @return True if a {@link io.netty.channel.ServerChannel}, otherwise false
+     */
+    public boolean isServerChannel() {
+        return endpointType.equals(EndpointType.SERVER);
     }
 }

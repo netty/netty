@@ -18,6 +18,7 @@ package io.netty.channel.udt.nio;
 import com.barchart.udt.TypeUDT;
 import com.barchart.udt.nio.SocketChannelUDT;
 import io.netty.channel.ChannelMetadata;
+import io.netty.util.internal.EndpointType;
 
 import java.util.List;
 
@@ -26,7 +27,7 @@ import java.util.List;
  */
 public class NioUdtMessageAcceptorChannel extends NioUdtAcceptorChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false, EndpointType.SERVER);
 
     public NioUdtMessageAcceptorChannel() {
         super(TypeUDT.DATAGRAM);

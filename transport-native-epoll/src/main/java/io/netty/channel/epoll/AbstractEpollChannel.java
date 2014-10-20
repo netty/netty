@@ -24,13 +24,14 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.EventLoop;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.EndpointType;
 import io.netty.util.internal.OneTimeTask;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.UnresolvedAddressException;
 
 abstract class AbstractEpollChannel extends AbstractChannel {
-    private static final ChannelMetadata DATA = new ChannelMetadata(false);
+    private static final ChannelMetadata DATA = new ChannelMetadata(false, EndpointType.CLIENT);
     private final int readFlag;
     protected int flags;
     protected volatile boolean active;
