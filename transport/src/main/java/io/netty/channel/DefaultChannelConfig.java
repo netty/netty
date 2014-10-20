@@ -67,11 +67,12 @@ public class DefaultChannelConfig implements ChannelConfig {
         }
         this.channel = channel;
 
-        if (channel instanceof ServerChannel || channel instanceof AbstractNioByteChannel) {
+        if (channel.metadata().isServerChannel() || channel instanceof AbstractNioByteChannel) {
             // Server channels: Accept as many incoming connections as possible.
             // NIO byte channels: Implemented to reduce unnecessary system calls even if it's > 1.
             //                    See https://github.com/netty/netty/issues/2079
-            // TODO: Add some property to ChannelMetadata so we can remove the ugly instanceof
+            // TODO: Add some property to ChannelMetadata to see if the channel is a NIO Byte Channel
+            //       so we can remove the ugly instanceof
             maxMessagesPerRead = 16;
         } else {
             maxMessagesPerRead = 1;
