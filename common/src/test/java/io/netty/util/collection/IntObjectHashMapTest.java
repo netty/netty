@@ -117,6 +117,14 @@ public class IntObjectHashMapTest {
     }
 
     @Test
+    public void negativeKeyShouldSucceed() {
+        Value v = new Value("v");
+        map.put(-3, v);
+        assertEquals(1, map.size());
+        assertEquals(v, map.get(-3));
+    }
+
+    @Test
     public void removeMissingValueShouldReturnNull() {
         assertNull(map.remove(1));
         assertEquals(0, map.size());
