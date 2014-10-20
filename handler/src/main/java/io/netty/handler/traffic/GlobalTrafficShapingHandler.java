@@ -298,7 +298,9 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         try {
             if (writedelay == 0 && (perChannel == null || perChannel.messagesQueue == null ||
                     perChannel.messagesQueue.isEmpty())) {
-                trafficCounter.bytesRealWriteFlowControl(size);
+                if (trafficCounter != null) {
+                    trafficCounter.bytesRealWriteFlowControl(size);
+                }
                 ctx.write(msg, promise);
                 perChannel.lastWrite = System.currentTimeMillis();
                 return;
@@ -336,7 +338,9 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
                 ToSend newToSend = perChannel.messagesQueue.remove(0);
                 if (newToSend.date <= System.currentTimeMillis()) {
                     long size = calculateSize(newToSend.toSend);
-                    trafficCounter.bytesRealWriteFlowControl(size);
+                    if (trafficCounter != null) {
+                        trafficCounter.bytesRealWriteFlowControl(size);
+                    }
                     perChannel.queueSize -= size;
                     queuesSize -= size;
                     ctx.write(newToSend.toSend, newToSend.promise);

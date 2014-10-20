@@ -152,7 +152,9 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
             final long size, final long delay,
             final ChannelPromise promise) {
         if (delay == 0 && messagesQueue.isEmpty()) {
-            trafficCounter.bytesRealWriteFlowControl(size);
+            if (trafficCounter != null) {
+                trafficCounter.bytesRealWriteFlowControl(size);
+            }
             ctx.write(msg, promise);
             return;
         }
@@ -173,7 +175,9 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
             ToSend newToSend = messagesQueue.remove(0);
             if (newToSend.date <= System.currentTimeMillis()) {
                 long size = calculateSize(newToSend.toSend);
-                trafficCounter.bytesRealWriteFlowControl(size);
+                if (trafficCounter != null) {
+                    trafficCounter.bytesRealWriteFlowControl(size);
+                }
                 queueSize -= size;
                 ctx.write(newToSend.toSend, newToSend.promise);
             } else {
