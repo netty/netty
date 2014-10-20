@@ -312,9 +312,8 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
      * Returns the hashed index for the given key.
      */
     private int hashIndex(int key) {
-        int length = keys.length;
         // Allowing for negative keys by adding the length after the first mod operation.
-        return (key % length + length) % length;
+        return (key % keys.length + keys.length) % keys.length;
     }
 
     /**
