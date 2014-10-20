@@ -18,6 +18,7 @@ package io.netty.channel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.EndpointType;
 import org.junit.Test;
 
 import java.net.SocketAddress;
@@ -193,7 +194,7 @@ public class ChannelOutboundBufferTest {
 
         @Override
         public ChannelMetadata metadata() {
-            throw new UnsupportedOperationException();
+            return new ChannelMetadata(false, EndpointType.CLIENT);
         }
 
         final class TestUnsafe extends AbstractUnsafe {
