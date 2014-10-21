@@ -289,7 +289,7 @@
             <configuration>
               <target>
                 <taskdef resource="net/sf/antcontrib/antlib.xml" />
-                <propertyselector property="versions" match="^(${project.groupId}:(?!netty-example)[^:]+:jar)$" select="\1" />
+                <propertyselector property="versions" match="^(${project.groupId}:(?!netty-example)[^:]+:jar(?::[^:]+)?)$" select="\1" />
                 <for list="${versions}" param="x">
                   <sequential>
                     <unzip src="${@{x}}" dest="${dependencyVersionsDir}">
