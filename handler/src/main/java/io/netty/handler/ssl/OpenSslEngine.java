@@ -32,17 +32,13 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSessionBindingEvent;
 import javax.net.ssl.SSLSessionBindingListener;
 import javax.net.ssl.SSLSessionContext;
-import javax.net.ssl.X509TrustManager;
 import javax.security.cert.X509Certificate;
-import java.io.ByteArrayInputStream;
+import javax.security.cert.CertificateException;
 import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
 import java.security.Principal;
 import java.security.cert.Certificate;
-import java.security.cert.CertificateException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -130,7 +126,6 @@ public final class OpenSslEngine extends SSLEngine {
 
     private int lastPrimingReadResult;
 
-    private final X509TrustManager[] managers;
     private final boolean clientMode;
     private final ByteBufAllocator alloc;
     private final String fallbackApplicationProtocol;
@@ -146,7 +141,7 @@ public final class OpenSslEngine extends SSLEngine {
      */
     @Deprecated
     public OpenSslEngine(long sslCtx, ByteBufAllocator alloc, String fallbackApplicationProtocol) {
-        this(sslCtx, alloc, fallbackApplicationProtocol, false, null);
+        this(sslCtx, alloc, fallbackApplicationProtocol, false);
     }
 
     /**
@@ -157,7 +152,7 @@ public final class OpenSslEngine extends SSLEngine {
      * @param clientMode {@code true} if this is used for clients, {@code false} otherwise
      */
     OpenSslEngine(long sslCtx, ByteBufAllocator alloc, String fallbackApplicationProtocol,
-                  boolean clientMode, X509TrustManager[] managers) {
+                  boolean clientMode) {
         OpenSsl.ensureAvailability();
         if (sslCtx == 0) {
             throw new NullPointerException("sslContext");
@@ -171,11 +166,6 @@ public final class OpenSslEngine extends SSLEngine {
         networkBIO = SSL.makeNetworkBIO(ssl);
         this.fallbackApplicationProtocol = fallbackApplicationProtocol;
         this.clientMode = clientMode;
-        if (managers == null || managers.length == 0) {
-            this.managers = null;
-        } else {
-            this.managers = managers;
-        }
     }
 
     /**
@@ -375,7 +365,7 @@ public final class OpenSslEngine extends SSLEngine {
 
         // In handshake or close_notify stages, check if call to wrap was made
         // without regard to the handshake status.
-        SSLEngineResult.HandshakeStatus handshakeStatus = handshakeStatus(true);
+        SSLEngineResult.HandshakeStatus handshakeStatus = getHandshakeStatus();
 
         if ((!handshakeFinished || engineClosed) && handshakeStatus == NEED_UNWRAP) {
             return new SSLEngineResult(getEngineStatus(), NEED_UNWRAP, 0, 0);
@@ -407,7 +397,7 @@ public final class OpenSslEngine extends SSLEngine {
                 shutdown();
             }
 
-            return new SSLEngineResult(getEngineStatus(), handshakeStatus(true), 0, bytesProduced);
+            return new SSLEngineResult(getEngineStatus(), getHandshakeStatus(), 0, bytesProduced);
         }
 
         // There was no pending data in the network BIO -- encrypt any application data
@@ -430,7 +420,7 @@ public final class OpenSslEngine extends SSLEngine {
                     int capacity = dst.remaining();
                     if (capacity < pendingNet) {
                         return new SSLEngineResult(
-                                BUFFER_OVERFLOW, handshakeStatus(true), bytesConsumed, bytesProduced);
+                                BUFFER_OVERFLOW, getHandshakeStatus(), bytesConsumed, bytesProduced);
                     }
 
                     // Write the pending data from the network BIO into the dst buffer
@@ -440,12 +430,12 @@ public final class OpenSslEngine extends SSLEngine {
                         throw new SSLException(e);
                     }
 
-                    return new SSLEngineResult(getEngineStatus(), handshakeStatus(true), bytesConsumed, bytesProduced);
+                    return new SSLEngineResult(getEngineStatus(), getHandshakeStatus(), bytesConsumed, bytesProduced);
                 }
             }
         }
 
-        return new SSLEngineResult(getEngineStatus(), handshakeStatus(true), bytesConsumed, bytesProduced);
+        return new SSLEngineResult(getEngineStatus(), getHandshakeStatus(), bytesConsumed, bytesProduced);
     }
 
     @Override
@@ -490,7 +480,7 @@ public final class OpenSslEngine extends SSLEngine {
 
         // In handshake or close_notify stages, check if call to unwrap was made
         // without regard to the handshake status.
-        SSLEngineResult.HandshakeStatus handshakeStatus = handshakeStatus(true);
+        SSLEngineResult.HandshakeStatus handshakeStatus = getHandshakeStatus();
         if ((!handshakeFinished || engineClosed) && handshakeStatus == NEED_WRAP) {
             return new SSLEngineResult(getEngineStatus(), NEED_WRAP, 0, 0);
         }
@@ -532,7 +522,7 @@ public final class OpenSslEngine extends SSLEngine {
 
         // Do we have enough room in dsts to write decrypted data?
         if (capacity < pendingApp) {
-            return new SSLEngineResult(BUFFER_OVERFLOW, handshakeStatus(true), bytesConsumed, 0);
+            return new SSLEngineResult(BUFFER_OVERFLOW, getHandshakeStatus(), bytesConsumed, 0);
         }
 
         // Write decrypted data to dsts buffers
@@ -575,7 +565,7 @@ public final class OpenSslEngine extends SSLEngine {
             closeInbound();
         }
 
-        return new SSLEngineResult(getEngineStatus(), handshakeStatus(true), bytesConsumed, bytesProduced);
+        return new SSLEngineResult(getEngineStatus(), getHandshakeStatus(), bytesConsumed, bytesProduced);
     }
 
     @Override
@@ -679,33 +669,27 @@ public final class OpenSslEngine extends SSLEngine {
         if (chain == null && clientCert == null) {
             throw new SSLPeerUnverifiedException("peer not verified");
         }
-        try {
-            int len = 0;
-            if (chain != null) {
-                len += chain.length;
-            }
-
-            int i = 0;
-            Certificate[] peerCerts;
-            if (clientCert != null) {
-                len++;
-                peerCerts = new Certificate[len];
-                peerCerts[i++] = SslContext.X509_CERT_FACTORY.generateCertificate(
-                        new ByteArrayInputStream(clientCert));
-            } else {
-                peerCerts = new Certificate[len];
-            }
-            if (chain != null) {
-                int a = 0;
-                for (; i < peerCerts.length; i++) {
-                    peerCerts[i] = SslContext.X509_CERT_FACTORY.generateCertificate(
-                            new ByteArrayInputStream(chain[a++]));
-                }
-            }
-            return peerCerts;
-        } catch (CertificateException e) {
-            throw new IllegalStateException(e);
+        int len = 0;
+        if (chain != null) {
+            len += chain.length;
         }
+
+        int i = 0;
+        Certificate[] peerCerts;
+        if (clientCert != null) {
+            len++;
+            peerCerts = new Certificate[len];
+            peerCerts[i++] = new OpenSslX509Certificate(clientCert);
+        } else {
+            peerCerts = new Certificate[len];
+        }
+        if (chain != null) {
+            int a = 0;
+            for (; i < peerCerts.length; i++) {
+                peerCerts[i] = new OpenSslX509Certificate(chain[a++]);
+            }
+        }
+        return peerCerts;
     }
 
     @Override
@@ -851,7 +835,7 @@ public final class OpenSslEngine extends SSLEngine {
                         for (int i = 0; i < peerCerts.length; i++) {
                             try {
                                 peerCerts[i] = X509Certificate.getInstance(chain[i]);
-                            } catch (javax.security.cert.CertificateException e) {
+                            } catch (CertificateException e) {
                                 throw new IllegalStateException(e);
                             }
                         }
@@ -997,16 +981,6 @@ public final class OpenSslEngine extends SSLEngine {
 
     @Override
     public synchronized SSLEngineResult.HandshakeStatus getHandshakeStatus() {
-        try {
-            return handshakeStatus(false);
-        } catch (SSLException e) {
-            // Can not happen!
-            throw new Error(e);
-        }
-    }
-
-    // No need to synchronize access as it is only called from within synchronized methods
-    private SSLEngineResult.HandshakeStatus handshakeStatus(boolean verify) throws SSLException {
         if (accepted == 0 || destroyed != 0) {
             return NOT_HANDSHAKING;
         }
@@ -1036,10 +1010,6 @@ public final class OpenSslEngine extends SSLEngine {
                     this.applicationProtocol = applicationProtocol.replace(':', '_');
                 } else {
                     this.applicationProtocol = null;
-                }
-                if (verify && managers != null) {
-                    peerCerts = initPeerCertChain();
-                    verifyCertificates(managers, peerCerts, cipher);
                 }
                 return FINISHED;
             }
@@ -1129,31 +1099,6 @@ public final class OpenSslEngine extends SSLEngine {
     @Override
     public boolean getEnableSessionCreation() {
         return false;
-    }
-
-    private void verifyCertificates(X509TrustManager[] managers, Certificate[] peerCerts, String cipher)
-            throws SSLException {
-
-        List<java.security.cert.X509Certificate> certs =
-                new ArrayList<java.security.cert.X509Certificate>(peerCerts.length);
-        for (Certificate c: peerCerts) {
-            if (c instanceof java.security.cert.X509Certificate) {
-                certs.add((java.security.cert.X509Certificate) c);
-            }
-        }
-        java.security.cert.X509Certificate[] certArray =
-                certs.toArray(new java.security.cert.X509Certificate[certs.size()]);
-        for (X509TrustManager tm: managers) {
-            try {
-                if (clientMode) {
-                    tm.checkServerTrusted(certArray, cipher);
-                } else {
-                    tm.checkClientTrusted(certArray, cipher);
-                }
-            } catch (CertificateException e) {
-                throw new SSLException("peer certificate chain not trusted", e);
-            }
-        }
     }
 
     @Override
