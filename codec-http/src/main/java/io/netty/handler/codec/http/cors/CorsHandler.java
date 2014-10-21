@@ -29,6 +29,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 import static io.netty.handler.codec.http.HttpMethod.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
+import static io.netty.util.ReferenceCountUtil.release;
 
 /**
  * Handles <a href="http://www.w3.org/TR/cors/">Cross Origin Resource Sharing</a> (CORS) requests.
@@ -72,6 +73,7 @@ public class CorsHandler extends ChannelDuplexHandler {
             setMaxAge(response);
             setPreflightHeaders(response);
         }
+        release(request);
         ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
     }
 
@@ -199,6 +201,7 @@ public class CorsHandler extends ChannelDuplexHandler {
     private static void forbidden(final ChannelHandlerContext ctx, final HttpRequest request) {
         ctx.writeAndFlush(new DefaultFullHttpResponse(request.getProtocolVersion(), FORBIDDEN))
                 .addListener(ChannelFutureListener.CLOSE);
+        release(request);
     }
 }
 
