@@ -238,6 +238,27 @@ public class CorsHandlerTest {
         assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is(nullValue()));
     }
 
+    @Test
+    public void preflightRequestShouldReleaseRequest() {
+        final CorsConfig config = CorsConfig.withOrigin("http://localhost:8888")
+                .preflightResponseHeader("CustomHeader", Arrays.asList("value1", "value2"))
+                .build();
+        final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
+        final FullHttpRequest request = optionsRequest("http://localhost:8888", "content-type, xheader1");
+        channel.writeInbound(request);
+        assertThat(request.refCnt(), is(0));
+    }
+
+    @Test
+    public void forbiddenShouldReleaseRequest() {
+        final CorsConfig config = CorsConfig.withOrigin("https://localhost").shortCurcuit().build();
+        final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config), new EchoHandler());
+        final FullHttpRequest request = createHttpRequest(GET);
+        request.headers().set(ORIGIN, "http://localhost:8888");
+        channel.writeInbound(request);
+        assertThat(request.refCnt(), is(0));
+    }
+
     private static HttpResponse simpleRequest(final CorsConfig config, final String origin) {
         return simpleRequest(config, origin, null);
     }
@@ -268,12 +289,16 @@ public class CorsHandlerTest {
                                                  final String origin,
                                                  final String requestHeaders) {
         final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
+        channel.writeInbound(optionsRequest(origin, requestHeaders));
+        return (HttpResponse) channel.readOutbound();
+    }
+
+    private static FullHttpRequest optionsRequest(final String origin, final String requestHeaders) {
         final FullHttpRequest httpRequest = createHttpRequest(OPTIONS);
         httpRequest.headers().set(ORIGIN, origin);
         httpRequest.headers().set(ACCESS_CONTROL_REQUEST_METHOD, httpRequest.method().toString());
         httpRequest.headers().set(ACCESS_CONTROL_REQUEST_HEADERS, requestHeaders);
-        channel.writeInbound(httpRequest);
-        return (HttpResponse) channel.readOutbound();
+        return httpRequest;
     }
 
     private static FullHttpRequest createHttpRequest(HttpMethod method) {
