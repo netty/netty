@@ -20,16 +20,15 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLSessionContext;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLSessionContext;
 
 /**
  * An {@link SslContext} which uses JDK's SSL/TLS implementation.
@@ -64,7 +63,7 @@ public abstract class JdkSslContext extends SslContext {
         List<String> protocols = new ArrayList<String>();
         addIfSupported(
                 supportedProtocolsSet, protocols,
-                "TLSv1.2", "TLSv1.1", "TLSv1", "SSLv3");
+                "TLSv1.2", "TLSv1.1", "TLSv1");
 
         if (!protocols.isEmpty()) {
             PROTOCOLS = protocols.toArray(new String[protocols.size()]);
