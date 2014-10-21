@@ -15,7 +15,12 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufInputStream;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.apache.tomcat.jni.CertificateVerifier;
 import org.apache.tomcat.jni.SSL;
 import org.apache.tomcat.jni.SSLContext;
 
@@ -24,17 +29,21 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
+import javax.security.auth.x500.X500Principal;
 import java.io.File;
+import java.io.IOException;
 import java.security.KeyStore;
-import java.util.ArrayList;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.List;
 
 /**
  * A client-side {@link SslContext} which uses OpenSSL's SSL/TLS implementation.
  */
 public final class OpenSslClientContext extends OpenSslContext {
-
-    private final X509TrustManager[] managers;
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(OpenSslClientContext.class);
 
     /**
      * Creates a new instance.
@@ -116,32 +125,31 @@ public final class OpenSslClientContext extends OpenSslContext {
                 }
                 SSLContext.setVerify(ctx, SSL.SSL_VERIFY_NONE, VERIFY_DEPTH);
 
-                // check if verification should take place or not.
-                if (trustManagerFactory != null) {
-                    try {
-                        if (certChainFile == null) {
-                            trustManagerFactory.init((KeyStore) null);
-                        } else {
-                            initTrustManagerFactory(certChainFile, trustManagerFactory);
-                        }
-                    } catch (Exception e) {
-                        throw new SSLException("failed to initialize the client-side SSL context", e);
+                try {
+                    // Set up trust manager factory to use our key store.
+                    if (trustManagerFactory == null) {
+                        trustManagerFactory = TrustManagerFactory.getInstance(
+                                TrustManagerFactory.getDefaultAlgorithm());
                     }
-                    TrustManager[] tms = trustManagerFactory.getTrustManagers();
-                    if (tms == null || tms.length == 0) {
-                        managers = null;
-                    } else {
-                        List<X509TrustManager> managerList = new ArrayList<X509TrustManager>(tms.length);
-                        for (TrustManager tm: tms) {
-                            if (tm instanceof X509TrustManager) {
-                                managerList.add((X509TrustManager) tm);
+                    initTrustManagerFactory(certChainFile, trustManagerFactory);
+                    final X509TrustManager manager = chooseTrustManager(trustManagerFactory.getTrustManagers());
+
+                    SSLContext.setCertVerifyCallback(ctx, new CertificateVerifier() {
+                        @Override
+                        public boolean verify(long ssl, byte[][] chain, String auth) {
+                            X509Certificate[] peerCerts = certificates(chain);
+                            try {
+                                manager.checkServerTrusted(peerCerts, auth);
+                                return true;
+                            } catch (Exception e) {
+                                logger.debug("verification of certificate failed", e);
                             }
+                            return false;
                         }
-                        managers = managerList.toArray(new X509TrustManager[managerList.size()]);
-                    }
-                } else {
-                    managers = null;
-               }
+                    });
+                } catch (Exception e) {
+                    throw new SSLException("unable to setup trustmanager", e);
+                }
             }
             success = true;
         } finally {
@@ -151,13 +159,35 @@ public final class OpenSslClientContext extends OpenSslContext {
         }
     }
 
+    private static void initTrustManagerFactory(File certChainFile, TrustManagerFactory trustManagerFactory)
+            throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException {
+        KeyStore ks = KeyStore.getInstance("JKS");
+        ks.load(null, null);
+        if (certChainFile != null) {
+            ByteBuf[] certs = PemReader.readCertificates(certChainFile);
+            try {
+                for (ByteBuf buf: certs) {
+                    X509Certificate cert = (X509Certificate) X509_CERT_FACTORY.generateCertificate(
+                            new ByteBufInputStream(buf));
+                    X500Principal principal = cert.getSubjectX500Principal();
+                    ks.setCertificateEntry(principal.getName("RFC2253"), cert);
+                }
+            } finally {
+                for (ByteBuf buf: certs) {
+                    buf.release();
+                }
+            }
+        }
+        trustManagerFactory.init(ks);
+    }
+
     @Override
     public SSLEngine newEngine(ByteBufAllocator alloc) {
         List<String> protos = applicationProtocolNegotiator().protocols();
         if (protos.isEmpty()) {
-            return new OpenSslEngine(ctx, alloc, null, isClient(), managers);
+            return new OpenSslEngine(ctx, alloc, null, isClient());
         } else {
-            return new OpenSslEngine(ctx, alloc, protos.get(protos.size() - 1), isClient(), managers);
+            return new OpenSslEngine(ctx, alloc, protos.get(protos.size() - 1), isClient());
         }
     }
 }

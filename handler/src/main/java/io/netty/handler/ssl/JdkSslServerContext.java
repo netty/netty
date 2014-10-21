@@ -19,6 +19,7 @@ package io.netty.handler.ssl;
 import java.io.File;
 
 import javax.net.ssl.KeyManager;
+
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;

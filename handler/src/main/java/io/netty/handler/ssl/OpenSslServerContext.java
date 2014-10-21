@@ -15,13 +15,29 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufInputStream;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.apache.tomcat.jni.CertificateVerifier;
 import org.apache.tomcat.jni.SSL;
 import org.apache.tomcat.jni.SSLContext;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
 import java.io.File;
+import java.security.KeyFactory;
+import java.security.KeyStore;
+import java.security.PrivateKey;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.ArrayList;
 import java.util.List;
 
 import static io.netty.util.internal.ObjectUtil.*;
@@ -30,6 +46,7 @@ import static io.netty.util.internal.ObjectUtil.*;
  * A server-side {@link SslContext} which uses OpenSSL's SSL/TLS implementation.
  */
 public final class OpenSslServerContext extends OpenSslContext {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(OpenSslServerContext.class);
 
     /**
      * Creates a new instance.
@@ -138,6 +155,62 @@ public final class OpenSslServerContext extends OpenSslContext {
                 } catch (Exception e) {
                     throw new SSLException("failed to set certificate: " + certChainFile + " and " + keyFile, e);
                 }
+                try {
+                    KeyStore ks = KeyStore.getInstance("JKS");
+                    ks.load(null, null);
+                    CertificateFactory cf = CertificateFactory.getInstance("X.509");
+                    KeyFactory rsaKF = KeyFactory.getInstance("RSA");
+                    KeyFactory dsaKF = KeyFactory.getInstance("DSA");
+
+                    ByteBuf encodedKeyBuf = PemReader.readPrivateKey(keyFile);
+                    byte[] encodedKey = new byte[encodedKeyBuf.readableBytes()];
+                    encodedKeyBuf.readBytes(encodedKey).release();
+
+                    char[] keyPasswordChars = keyPassword.toCharArray();
+                    PKCS8EncodedKeySpec encodedKeySpec = generateKeySpec(keyPasswordChars, encodedKey);
+
+                    PrivateKey key;
+                    try {
+                        key = rsaKF.generatePrivate(encodedKeySpec);
+                    } catch (InvalidKeySpecException ignore) {
+                        key = dsaKF.generatePrivate(encodedKeySpec);
+                    }
+
+                    List<Certificate> certChain = new ArrayList<Certificate>();
+                    ByteBuf[] certs = PemReader.readCertificates(certChainFile);
+                    try {
+                        for (ByteBuf buf: certs) {
+                            certChain.add(cf.generateCertificate(new ByteBufInputStream(buf)));
+                        }
+                    } finally {
+                        for (ByteBuf buf: certs) {
+                            buf.release();
+                        }
+                    }
+
+                    ks.setKeyEntry("key", key, keyPasswordChars, certChain.toArray(new Certificate[certChain.size()]));
+
+                    // This mimics the behavior of using SSLContext.init(...);
+                    TrustManagerFactory factory = TrustManagerFactory.getInstance(
+                            TrustManagerFactory.getDefaultAlgorithm());
+                    factory.init((KeyStore) null);
+                    final X509TrustManager manager = chooseTrustManager(factory.getTrustManagers());
+                    SSLContext.setCertVerifyCallback(ctx, new CertificateVerifier() {
+                        @Override
+                        public boolean verify(long ssl, byte[][] chain, String auth) {
+                            X509Certificate[] peerCerts = certificates(chain);
+                            try {
+                                manager.checkClientTrusted(peerCerts, auth);
+                                return true;
+                            } catch (Exception e) {
+                                logger.debug("verification of certificate failed", e);
+                            }
+                            return false;
+                        }
+                    });
+                } catch (Exception e) {
+                    throw new SSLException("unable to setup trustmanager", e);
+                }
             }
             success = true;
         } finally {
@@ -147,16 +220,13 @@ public final class OpenSslServerContext extends OpenSslContext {
         }
     }
 
-    /**
-     * Returns a new server-side {@link javax.net.ssl.SSLEngine} with the current configuration.
-     */
     @Override
     public SSLEngine newEngine(ByteBufAllocator alloc) {
         List<String> protos = applicationProtocolNegotiator().protocols();
         if (protos.isEmpty()) {
-            return new OpenSslEngine(ctx, alloc, null, isClient(), null);
+            return new OpenSslEngine(ctx, alloc, null, isClient());
         } else {
-            return new OpenSslEngine(ctx, alloc, protos.get(protos.size() - 1), isClient(), null);
+            return new OpenSslEngine(ctx, alloc, protos.get(protos.size() - 1), isClient());
         }
     }
 }
