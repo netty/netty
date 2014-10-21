@@ -73,7 +73,7 @@ public class ChannelDeregistrationTest {
      * It's important to make sure that they are preserved during and after
      * {@linkplain io.netty.channel.Channel#deregister()}.
      */
-    @Test(timeout = 2000)
+    @Test(timeout = 5000)
     public void testDeregisterFromDifferentEventExecutorGroup() throws Exception  {
         final AtomicBoolean handlerExecuted1 = new AtomicBoolean();
         final AtomicBoolean handlerExecuted2 = new AtomicBoolean();
@@ -128,7 +128,7 @@ public class ChannelDeregistrationTest {
      * Make sure the {@link EventLoop} and {@link ChannelHandlerInvoker} accessible from within a
      * {@link ChannelHandler} are wrapped by a {@link PausableEventExecutor}.
      */
-    @Test(timeout = 2000)
+    @Test(timeout = 5000)
     public void testWrappedEventLoop() throws Exception {
         final AtomicBoolean channelActiveCalled1 = new AtomicBoolean();
         final AtomicBoolean channelActiveCalled2 = new AtomicBoolean();
@@ -205,7 +205,7 @@ public class ChannelDeregistrationTest {
     /**
      * See https://github.com/netty/netty/issues/2814
      */
-    @Test(timeout = 1000)
+    @Test(timeout = 5000)
     public void testPromise() {
         ChannelHandler handler = new TestChannelHandler1();
         AbstractChannel ch = new EmbeddedChannel(handler);
