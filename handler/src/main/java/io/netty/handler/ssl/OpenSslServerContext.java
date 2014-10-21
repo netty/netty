@@ -170,6 +170,7 @@ public final class OpenSslServerContext extends SslContext {
 
                 SSLContext.setOptions(ctx, SSL.SSL_OP_ALL);
                 SSLContext.setOptions(ctx, SSL.SSL_OP_NO_SSLv2);
+                SSLContext.setOptions(ctx, SSL.SSL_OP_NO_SSLv3);
                 SSLContext.setOptions(ctx, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
                 SSLContext.setOptions(ctx, SSL.SSL_OP_SINGLE_ECDH_USE);
                 SSLContext.setOptions(ctx, SSL.SSL_OP_SINGLE_DH_USE);
