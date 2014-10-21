@@ -25,6 +25,9 @@ import org.apache.tomcat.jni.SSLContext;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -221,6 +224,7 @@ public abstract class OpenSslContext extends SslContext {
     public final SSLEngine newEngine(ByteBufAllocator alloc, String peerHost, int peerPort) {
         throw new UnsupportedOperationException();
     }
+
     /**
      * Returns the {@code SSL_CTX} object of this context.
      */
@@ -265,6 +269,23 @@ public abstract class OpenSslContext extends SslContext {
         }
     }
 
+    protected static X509Certificate[] certificates(byte[][] chain) {
+        X509Certificate[] peerCerts = new X509Certificate[chain.length];
+        for (int i = 0; i < peerCerts.length; i++) {
+            peerCerts[i] = new OpenSslX509Certificate(chain[i]);
+        }
+        return peerCerts;
+    }
+
+    protected static X509TrustManager chooseTrustManager(TrustManager[] managers) {
+        for (TrustManager m: managers) {
+            if (m instanceof X509TrustManager) {
+                return (X509TrustManager) m;
+            }
+        }
+        throw new IllegalStateException("no X509TrustManager found");
+    }
+
     /**
      * Translate a {@link ApplicationProtocolConfig} object to a
      * {@link OpenSslApplicationProtocolNegotiator} object.
@@ -273,7 +294,7 @@ public abstract class OpenSslContext extends SslContext {
      * @return The results of the translation
      */
     static OpenSslApplicationProtocolNegotiator toNegotiator(ApplicationProtocolConfig config,
-                                                                     boolean isServer) {
+                                                             boolean isServer) {
         if (config == null) {
             return OpenSslDefaultApplicationProtocolNegotiator.INSTANCE;
         }
@@ -289,7 +310,8 @@ public abstract class OpenSslContext extends SslContext {
                         default:
                             throw new UnsupportedOperationException(
                                     new StringBuilder("OpenSSL provider does not support ")
-                                    .append(config.selectedListenerFailureBehavior()).append(" behavior").toString());
+                                            .append(config.selectedListenerFailureBehavior())
+                                            .append(" behavior").toString());
                     }
                 } else {
                     throw new UnsupportedOperationException("OpenSSL provider does not support client mode");
