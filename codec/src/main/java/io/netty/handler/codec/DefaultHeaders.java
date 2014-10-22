@@ -340,43 +340,43 @@ public class DefaultHeaders<T> implements Headers<T> {
     }
 
     @Override
-    public boolean containsBoolean(T name, int value) {
-        return contains(name, valueConverter.convertObject(checkNotNull(value, "value")));
+    public boolean containsBoolean(T name, boolean value) {
+        return contains(name, valueConverter.convertBoolean(checkNotNull(value, "value")));
     }
 
     @Override
     public boolean containsByte(T name, byte value) {
-        return contains(name, valueConverter.convertObject(checkNotNull(value, "value")));
+        return contains(name, valueConverter.convertByte(checkNotNull(value, "value")));
     }
 
     @Override
     public boolean containsChar(T name, char value) {
-        return contains(name, valueConverter.convertObject(checkNotNull(value, "value")));
+        return contains(name, valueConverter.convertChar(checkNotNull(value, "value")));
     }
 
     @Override
-    public boolean containsShort(T name, byte value) {
-        return contains(name, valueConverter.convertObject(checkNotNull(value, "value")));
+    public boolean containsShort(T name, short value) {
+        return contains(name, valueConverter.convertShort(checkNotNull(value, "value")));
     }
 
     @Override
     public boolean containsInt(T name, int value) {
-        return contains(name, valueConverter.convertObject(checkNotNull(value, "value")));
+        return contains(name, valueConverter.convertInt(checkNotNull(value, "value")));
     }
 
     @Override
     public boolean containsLong(T name, long value) {
-        return contains(name, valueConverter.convertObject(checkNotNull(value, "value")));
+        return contains(name, valueConverter.convertLong(checkNotNull(value, "value")));
     }
 
     @Override
     public boolean containsFloat(T name, float value) {
-        return contains(name, valueConverter.convertObject(checkNotNull(value, "value")));
+        return contains(name, valueConverter.convertFloat(checkNotNull(value, "value")));
     }
 
     @Override
     public boolean containsDouble(T name, double value) {
-        return contains(name, valueConverter.convertObject(checkNotNull(value, "value")));
+        return contains(name, valueConverter.convertDouble(checkNotNull(value, "value")));
     }
 
     @Override

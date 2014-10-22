@@ -253,7 +253,7 @@ public class EmptyHeaders<T> implements Headers<T> {
     }
 
     @Override
-    public boolean containsBoolean(T name, int value) {
+    public boolean containsBoolean(T name, boolean value) {
         return false;
     }
 
@@ -268,7 +268,7 @@ public class EmptyHeaders<T> implements Headers<T> {
     }
 
     @Override
-    public boolean containsShort(T name, byte value) {
+    public boolean containsShort(T name, short value) {
         return false;
     }
 
