@@ -21,7 +21,7 @@ public class WebSocket08FrameDecoderTest {
 
     @Test
     public void channelInactive() throws Exception {
-        final WebSocket08FrameDecoder decoder = new WebSocket08FrameDecoder(true, true, 65535);
+        final WebSocket08FrameDecoder decoder = new WebSocket08FrameDecoder(true, true, 65535, false);
         final ChannelHandlerContext ctx = EasyMock.createMock(ChannelHandlerContext.class);
         decoder.channelInactive(ctx);
     }
