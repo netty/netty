@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Locale;
 
@@ -191,8 +192,61 @@ final class Native {
     public static native boolean connect(int fd, byte[] address, int scopeId, int port) throws IOException;
     public static native boolean finishConnect(int fd) throws IOException;
 
-    public static native InetSocketAddress remoteAddress(int fd);
-    public static native InetSocketAddress localAddress(int fd);
+    public static InetSocketAddress remoteAddress(int fd) {
+        byte[] addr = remoteAddress0(fd);
+        return address(addr);
+    }
+
+    public static InetSocketAddress localAddress(int fd) {
+        byte[] addr = localAddress0(fd);
+        return address(addr);
+    }
+
+    private static InetSocketAddress address(byte[] addr) {
+        int len = addr.length;
+        // The last 4 bytes are always the port
+        final int port = decodeInt(addr, len - 4);
+        final InetAddress address;
+
+        try {
+            switch (len) {
+                // 8 bytes:
+                // - 4  == ipaddress
+                // - 4  == port
+                case 8:
+                    byte[] ipv4 = new byte[4];
+                    System.arraycopy(addr, 0, ipv4, 0, 4);
+                    address = InetAddress.getByAddress(ipv4);
+                    break;
+
+                // 24 bytes:
+                // - 16  == ipaddress
+                // - 4   == scopeId
+                // - 4   == port
+                case 24:
+                    byte[] ipv6 = new byte[16];
+                    System.arraycopy(addr, 0, ipv6, 0, 16);
+                    int scopeId = decodeInt(addr, len  - 8);
+                    address = Inet6Address.getByAddress(null, ipv6, scopeId);
+                    break;
+                default:
+                    throw new Error();
+            }
+            return new InetSocketAddress(address, port);
+        } catch (UnknownHostException e) {
+            throw new Error("Should never happen", e);
+        }
+    }
+
+    private static int decodeInt(byte[] addr, int index) {
+        return  (addr[index]     & 0xff) << 24 |
+                (addr[index + 1] & 0xff) << 16 |
+                (addr[index + 2] & 0xff) <<  8 |
+                addr[index + 3] & 0xff;
+    }
+
+    private static native byte[] remoteAddress0(int fd);
+    private static native byte[] localAddress0(int fd);
     public static native int accept(int fd) throws IOException;
     public static native void shutdown(int fd, boolean read, boolean write) throws IOException;
 
