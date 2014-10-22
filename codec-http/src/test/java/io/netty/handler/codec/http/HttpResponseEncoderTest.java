@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.FileRegion;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
@@ -24,6 +25,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
 public class HttpResponseEncoderTest {
@@ -107,5 +109,29 @@ public class HttpResponseEncoderTest {
         public boolean release(int decrement) {
             return false;
         }
+    }
+
+    @Test
+    public void testEmptyBufferBypass() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
+
+        // Test writing an empty buffer works when the encoder is at ST_INIT.
+        channel.writeOutbound(Unpooled.EMPTY_BUFFER);
+        ByteBuf buffer = (ByteBuf) channel.readOutbound();
+        assertThat(buffer, is(sameInstance(Unpooled.EMPTY_BUFFER)));
+
+        // Leave the ST_INIT state.
+        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        assertTrue(channel.writeOutbound(response));
+        buffer = (ByteBuf) channel.readOutbound();
+        assertEquals("HTTP/1.1 200 OK\r\n\r\n", buffer.toString(CharsetUtil.US_ASCII));
+        buffer.release();
+
+        // Test writing an empty buffer works when the encoder is not at ST_INIT.
+        channel.writeOutbound(Unpooled.EMPTY_BUFFER);
+        buffer = (ByteBuf) channel.readOutbound();
+        assertThat(buffer, is(sameInstance(Unpooled.EMPTY_BUFFER)));
+
+        assertFalse(channel.finish());
     }
 }
