@@ -41,6 +41,7 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
 
+import java.io.File;
 import java.net.InetSocketAddress;
 import java.security.cert.CertificateException;
 import java.util.List;
@@ -315,6 +316,57 @@ public class JdkSslEngineTest {
         }
     }
 
+    @Test
+    public void testMutualAuthSameCerts() throws Exception {
+        mySetupMutualAuth(new File(getClass().getResource("test_unencrypted.pem").getFile()),
+                          new File(getClass().getResource("test.crt").getFile()),
+                          null);
+        runTest(null);
+    }
+
+    @Test
+    public void testMutualAuthDiffCerts() throws Exception {
+        File serverKeyFile = new File(getClass().getResource("test_encrypted.pem").getFile());
+        File serverCrtFile = new File(getClass().getResource("test.crt").getFile());
+        String serverKeyPassword = "12345";
+        File clientKeyFile = new File(getClass().getResource("test2_encrypted.pem").getFile());
+        File clientCrtFile = new File(getClass().getResource("test2.crt").getFile());
+        String clientKeyPassword = "12345";
+        mySetupMutualAuth(clientCrtFile, serverKeyFile, serverCrtFile, serverKeyPassword,
+                serverCrtFile, clientKeyFile, clientCrtFile, clientKeyPassword);
+        runTest(null);
+    }
+
+    @Test
+    public void testMutualAuthDiffCertsServerFailure() throws Exception {
+        File serverKeyFile = new File(getClass().getResource("test_encrypted.pem").getFile());
+        File serverCrtFile = new File(getClass().getResource("test.crt").getFile());
+        String serverKeyPassword = "12345";
+        File clientKeyFile = new File(getClass().getResource("test2_encrypted.pem").getFile());
+        File clientCrtFile = new File(getClass().getResource("test2.crt").getFile());
+        String clientKeyPassword = "12345";
+        // Client trusts server but server only trusts itself
+        mySetupMutualAuth(serverCrtFile, serverKeyFile, serverCrtFile, serverKeyPassword,
+                serverCrtFile, clientKeyFile, clientCrtFile, clientKeyPassword);
+        assertTrue(serverLatch.await(2, TimeUnit.SECONDS));
+        assertTrue(serverException instanceof SSLHandshakeException);
+    }
+
+    @Test
+    public void testMutualAuthDiffCertsClientFailure() throws Exception {
+        File serverKeyFile = new File(getClass().getResource("test_unencrypted.pem").getFile());
+        File serverCrtFile = new File(getClass().getResource("test.crt").getFile());
+        String serverKeyPassword = null;
+        File clientKeyFile = new File(getClass().getResource("test2_unencrypted.pem").getFile());
+        File clientCrtFile = new File(getClass().getResource("test2.crt").getFile());
+        String clientKeyPassword = null;
+        // Server trusts client but client only trusts itself
+        mySetupMutualAuth(clientCrtFile, serverKeyFile, serverCrtFile, serverKeyPassword,
+                clientCrtFile, clientKeyFile, clientCrtFile, clientKeyPassword);
+        assertTrue(clientLatch.await(2, TimeUnit.SECONDS));
+        assertTrue(clientException instanceof SSLHandshakeException);
+    }
+
     private void mySetup(JdkApplicationProtocolNegotiator apn) throws InterruptedException, SSLException,
             CertificateException {
         mySetup(apn, apn);
@@ -385,6 +437,82 @@ public class JdkSslEngineTest {
         clientChannel = ccf.channel();
     }
 
+    private void mySetupMutualAuth(File keyFile, File crtFile, String keyPassword)
+            throws SSLException, CertificateException, InterruptedException {
+        mySetupMutualAuth(crtFile, keyFile, crtFile, keyPassword, crtFile, keyFile, crtFile, keyPassword);
+    }
+
+    private void mySetupMutualAuth(
+            File servertTrustCrtFile, File serverKeyFile, File serverCrtFile, String serverKeyPassword,
+            File clientTrustCrtFile, File clientKeyFile, File clientCrtFile, String clientKeyPassword)
+            throws InterruptedException, SSLException, CertificateException {
+        serverSslCtx = new JdkSslServerContext(servertTrustCrtFile, null,
+                serverCrtFile, serverKeyFile, serverKeyPassword, null,
+                null, IdentityCipherSuiteFilter.INSTANCE, (ApplicationProtocolConfig) null, 0, 0);
+        clientSslCtx = new JdkSslClientContext(clientTrustCrtFile, null,
+                clientCrtFile, clientKeyFile, clientKeyPassword, null,
+                null, IdentityCipherSuiteFilter.INSTANCE, (ApplicationProtocolConfig) null, 0, 0);
+
+        serverConnectedChannel = null;
+        sb = new ServerBootstrap();
+        cb = new Bootstrap();
+
+        sb.group(new NioEventLoopGroup(), new NioEventLoopGroup());
+        sb.channel(NioServerSocketChannel.class);
+        sb.childHandler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ChannelPipeline p = ch.pipeline();
+                SSLEngine engine = serverSslCtx.newEngine(ch.alloc());
+                engine.setUseClientMode(false);
+                engine.setNeedClientAuth(true);
+                p.addLast(new SslHandler(engine));
+                p.addLast(new MessageDelegatorChannelHandler(serverReceiver, serverLatch));
+                p.addLast(new ChannelHandlerAdapter() {
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        if (cause.getCause() instanceof SSLHandshakeException) {
+                            serverException = cause.getCause();
+                            serverLatch.countDown();
+                        } else {
+                            ctx.fireExceptionCaught(cause);
+                        }
+                    }
+                });
+                serverConnectedChannel = ch;
+            }
+        });
+
+        cb.group(new NioEventLoopGroup());
+        cb.channel(NioSocketChannel.class);
+        cb.handler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ChannelPipeline p = ch.pipeline();
+                p.addLast(clientSslCtx.newHandler(ch.alloc()));
+                p.addLast(new MessageDelegatorChannelHandler(clientReceiver, clientLatch));
+                p.addLast(new ChannelHandlerAdapter() {
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        if (cause.getCause() instanceof SSLHandshakeException) {
+                            clientException = cause.getCause();
+                            clientLatch.countDown();
+                        } else {
+                            ctx.fireExceptionCaught(cause);
+                        }
+                    }
+                });
+            }
+        });
+
+        serverChannel = sb.bind(new InetSocketAddress(0)).sync().channel();
+        int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
+
+        ChannelFuture ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
+        assertTrue(ccf.awaitUninterruptibly().isSuccess());
+        clientChannel = ccf.channel();
+    }
+
     private void runTest() throws Exception {
         runTest(APPLICATION_LEVEL_PROTOCOL);
     }
@@ -395,8 +523,10 @@ public class JdkSslEngineTest {
         try {
             writeAndVerifyReceived(clientMessage.retain(), clientChannel, serverLatch, serverReceiver);
             writeAndVerifyReceived(serverMessage.retain(), serverConnectedChannel, clientLatch, clientReceiver);
-            verifyApplicationLevelProtocol(clientChannel, expectedApplicationProtocol);
-            verifyApplicationLevelProtocol(serverConnectedChannel, expectedApplicationProtocol);
+            if (expectedApplicationProtocol != null) {
+                verifyApplicationLevelProtocol(clientChannel, expectedApplicationProtocol);
+                verifyApplicationLevelProtocol(serverConnectedChannel, expectedApplicationProtocol);
+            }
         } finally {
             clientMessage.release();
             serverMessage.release();
