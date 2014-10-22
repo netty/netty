@@ -854,8 +854,8 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         private void verifyStreamId(int streamId) throws Http2Exception {
-            if (nextStreamId < 0) {
-                throw protocolError("No more streams can be created on this connection");
+            if (streamId < 0) {
+                throw new Http2NoMoreStreamIdsException();
             }
             if (streamId < nextStreamId) {
                 throw protocolError("Request stream %d is behind the next expected stream %d", streamId, nextStreamId);

@@ -239,6 +239,9 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                 }
             }
         } catch (Throwable e) {
+            if (e instanceof Http2NoMoreStreamIdsException) {
+                lifecycleManager.onException(ctx, e);
+            }
             return promise.setFailure(e);
         }
 
