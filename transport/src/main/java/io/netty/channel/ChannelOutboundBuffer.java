@@ -70,21 +70,21 @@ public final class ChannelOutboundBuffer {
 
     private static final AtomicLongFieldUpdater<ChannelOutboundBuffer> TOTAL_PENDING_SIZE_UPDATER;
 
-    @SuppressWarnings("unused")
+    @SuppressWarnings("UnusedDeclaration")
     private volatile long totalPendingSize;
 
-    private static final AtomicIntegerFieldUpdater<ChannelOutboundBuffer> WRITABLE_UPDATER;
+    private static final AtomicIntegerFieldUpdater<ChannelOutboundBuffer> UNWRITABLE_UPDATER;
 
-    @SuppressWarnings("FieldMayBeFinal")
-    private volatile int writable = 1;
+    @SuppressWarnings("UnusedDeclaration")
+    private volatile int unwritable;
 
     static {
-        AtomicIntegerFieldUpdater<ChannelOutboundBuffer> writableUpdater =
-                PlatformDependent.newAtomicIntegerFieldUpdater(ChannelOutboundBuffer.class, "writable");
-        if (writableUpdater == null) {
-            writableUpdater = AtomicIntegerFieldUpdater.newUpdater(ChannelOutboundBuffer.class, "writable");
+        AtomicIntegerFieldUpdater<ChannelOutboundBuffer> unwritableUpdater =
+                PlatformDependent.newAtomicIntegerFieldUpdater(ChannelOutboundBuffer.class, "unwritable");
+        if (unwritableUpdater == null) {
+            unwritableUpdater = AtomicIntegerFieldUpdater.newUpdater(ChannelOutboundBuffer.class, "unwritable");
         }
-        WRITABLE_UPDATER = writableUpdater;
+        UNWRITABLE_UPDATER = unwritableUpdater;
 
         AtomicLongFieldUpdater<ChannelOutboundBuffer> pendingSizeUpdater =
                 PlatformDependent.newAtomicLongFieldUpdater(ChannelOutboundBuffer.class, "totalPendingSize");
@@ -161,10 +161,8 @@ public final class ChannelOutboundBuffer {
         }
 
         long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, size);
-        if (newWriteBufferSize > channel.config().getWriteBufferHighWaterMark()) {
-            if (WRITABLE_UPDATER.compareAndSet(this, 1, 0)) {
-                channel.pipeline().fireChannelWritabilityChanged();
-            }
+        if (newWriteBufferSize >= channel.config().getWriteBufferHighWaterMark()) {
+            setUnwritable();
         }
     }
 
@@ -178,10 +176,8 @@ public final class ChannelOutboundBuffer {
         }
 
         long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, -size);
-        if (newWriteBufferSize == 0 || newWriteBufferSize < channel.config().getWriteBufferLowWaterMark()) {
-            if (WRITABLE_UPDATER.compareAndSet(this, 0, 1)) {
-                channel.pipeline().fireChannelWritabilityChanged();
-            }
+        if (newWriteBufferSize == 0 || newWriteBufferSize <= channel.config().getWriteBufferLowWaterMark()) {
+            setWritable();
         }
     }
 
@@ -439,7 +435,87 @@ public final class ChannelOutboundBuffer {
     }
 
     boolean isWritable() {
-        return writable != 0;
+        return unwritable == 0;
+    }
+
+    /**
+     * Returns {@code true} if and only if the user-defined writability flag at the specified index is set to
+     * {@code true}.
+     */
+    public boolean getUserDefinedWritability(int index) {
+        return (unwritable & writabilityMask(index)) == 0;
+    }
+
+    /**
+     * Sets a user-defined writability flag at the specified index.
+     */
+    public void setUserDefinedWritability(int index, boolean writable) {
+        if (writable) {
+            setUserDefinedWritability(index);
+        } else {
+            clearUserDefinedWritability(index);
+        }
+    }
+
+    private void setUserDefinedWritability(int index) {
+        final int mask = ~writabilityMask(index);
+        for (;;) {
+            final int oldValue = unwritable;
+            final int newValue = oldValue & mask;
+            if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
+                if (oldValue != 0 && newValue == 0) {
+                    channel.pipeline().fireChannelWritabilityChanged();
+                }
+                break;
+            }
+        }
+    }
+
+    private void clearUserDefinedWritability(int index) {
+        final int mask = writabilityMask(index);
+        for (;;) {
+            final int oldValue = unwritable;
+            final int newValue = oldValue | mask;
+            if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
+                if (oldValue == 0 && newValue != 0) {
+                    channel.pipeline().fireChannelWritabilityChanged();
+                }
+                break;
+            }
+        }
+    }
+
+    private static int writabilityMask(int index) {
+        if (index < 1 || index > 31) {
+            throw new IllegalArgumentException("index: " + index + " (expected: 1~31)");
+        }
+        return 1 << index;
+    }
+
+    private void setWritable() {
+        for (;;) {
+            final int oldValue = unwritable;
+            final int newValue = oldValue & ~1;
+            if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
+                if (oldValue != 0 && newValue == 0) {
+                    channel.pipeline().fireChannelWritabilityChanged();
+                }
+                break;
+            }
+        }
+    }
+
+    private void setUnwritable() {
+        for (;;) {
+            final int oldValue = unwritable;
+            final int newValue = oldValue | 1;
+            if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
+                if (oldValue == 0 && newValue != 0) {
+                    channel.pipeline().fireChannelWritabilityChanged();
+                }
+                break;
+            }
+        }
     }
 
     /**
