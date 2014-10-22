@@ -14,7 +14,6 @@
  */
 package io.netty.handler.codec;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.util.collection.CollectionUtils;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
@@ -38,6 +37,8 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.TreeSet;
+
+import static io.netty.util.internal.ObjectUtil.*;
 
 public class DefaultHeaders<T> implements Headers<T> {
     /**
@@ -85,7 +86,7 @@ public class DefaultHeaders<T> implements Headers<T> {
     private final EntryVisitor<T> setAllVisitor = new EntryVisitor<T>() {
         @Override
         public boolean visit(Entry<T, T> entry) {
-            DefaultHeaders.this.set(entry.getKey(), entry.getValue());
+            set(entry.getKey(), entry.getValue());
             return true;
         }
     };
@@ -93,7 +94,7 @@ public class DefaultHeaders<T> implements Headers<T> {
     private final EntryVisitor<T> addAllVisitor = new EntryVisitor<T>() {
         @Override
         public boolean visit(Entry<T, T> entry) {
-            DefaultHeaders.this.add(entry.getKey(), entry.getValue());
+            add(entry.getKey(), entry.getValue());
             return true;
         }
     };
@@ -335,47 +336,47 @@ public class DefaultHeaders<T> implements Headers<T> {
 
     @Override
     public boolean containsObject(T name, Object value) {
-        return contains(name, valueConverter.convert(checkNotNull(value, "value")));
+        return contains(name, valueConverter.convertObject(checkNotNull(value, "value")));
     }
 
     @Override
     public boolean containsBoolean(T name, int value) {
-        return contains(name, valueConverter.convert(checkNotNull(value, "value")));
+        return contains(name, valueConverter.convertObject(checkNotNull(value, "value")));
     }
 
     @Override
     public boolean containsByte(T name, byte value) {
-        return contains(name, valueConverter.convert(checkNotNull(value, "value")));
+        return contains(name, valueConverter.convertObject(checkNotNull(value, "value")));
     }
 
     @Override
     public boolean containsChar(T name, char value) {
-        return contains(name, valueConverter.convert(checkNotNull(value, "value")));
+        return contains(name, valueConverter.convertObject(checkNotNull(value, "value")));
     }
 
     @Override
     public boolean containsShort(T name, byte value) {
-        return contains(name, valueConverter.convert(checkNotNull(value, "value")));
+        return contains(name, valueConverter.convertObject(checkNotNull(value, "value")));
     }
 
     @Override
     public boolean containsInt(T name, int value) {
-        return contains(name, valueConverter.convert(checkNotNull(value, "value")));
+        return contains(name, valueConverter.convertObject(checkNotNull(value, "value")));
     }
 
     @Override
     public boolean containsLong(T name, long value) {
-        return contains(name, valueConverter.convert(checkNotNull(value, "value")));
+        return contains(name, valueConverter.convertObject(checkNotNull(value, "value")));
     }
 
     @Override
     public boolean containsFloat(T name, float value) {
-        return contains(name, valueConverter.convert(checkNotNull(value, "value")));
+        return contains(name, valueConverter.convertObject(checkNotNull(value, "value")));
     }
 
     @Override
     public boolean containsDouble(T name, double value) {
-        return contains(name, valueConverter.convert(checkNotNull(value, "value")));
+        return contains(name, valueConverter.convertObject(checkNotNull(value, "value")));
     }
 
     @Override
@@ -412,7 +413,8 @@ public class DefaultHeaders<T> implements Headers<T> {
     @Override
     public boolean containsObject(T name, Object value, Comparator<? super T> keyComparator,
             Comparator<? super T> valueComparator) {
-        return contains(name, valueConverter.convert(checkNotNull(value, "value")), keyComparator, valueComparator);
+        return contains(
+                name, valueConverter.convertObject(checkNotNull(value, "value")), keyComparator, valueComparator);
     }
 
     @Override
@@ -495,7 +497,7 @@ public class DefaultHeaders<T> implements Headers<T> {
 
     @Override
     public Headers<T> addObject(T name, Object value) {
-        return add(name, valueConverter.convert(checkNotNull(value, "value")));
+        return add(name, valueConverter.convertObject(checkNotNull(value, "value")));
     }
 
     @Override
@@ -509,7 +511,7 @@ public class DefaultHeaders<T> implements Headers<T> {
             if (o == null) {
                 break;
             }
-            T converted = valueConverter.convert(o);
+            T converted = valueConverter.convertObject(o);
             checkNotNull(converted, "converted");
             add0(h, i, name, converted);
         }
@@ -527,7 +529,7 @@ public class DefaultHeaders<T> implements Headers<T> {
             if (o == null) {
                 break;
             }
-            T converted = valueConverter.convert(o);
+            T converted = valueConverter.convertObject(o);
             checkNotNull(converted, "converted");
             add0(h, i, name, converted);
         }
@@ -536,42 +538,42 @@ public class DefaultHeaders<T> implements Headers<T> {
 
     @Override
     public Headers<T> addInt(T name, int value) {
-        return add(name, valueConverter.convert(value));
+        return add(name, valueConverter.convertInt(value));
     }
 
     @Override
     public Headers<T> addLong(T name, long value) {
-        return add(name, valueConverter.convert(value));
+        return add(name, valueConverter.convertLong(value));
     }
 
     @Override
     public Headers<T> addDouble(T name, double value) {
-        return add(name, valueConverter.convert(value));
+        return add(name, valueConverter.convertDouble(value));
     }
 
     @Override
     public Headers<T> addChar(T name, char value) {
-        return add(name, valueConverter.convert(value));
+        return add(name, valueConverter.convertChar(value));
     }
 
     @Override
     public Headers<T> addBoolean(T name, boolean value) {
-        return add(name, valueConverter.convert(value));
+        return add(name, valueConverter.convertBoolean(value));
     }
 
     @Override
     public Headers<T> addFloat(T name, float value) {
-        return add(name, valueConverter.convert(value));
+        return add(name, valueConverter.convertFloat(value));
     }
 
     @Override
     public Headers<T> addByte(T name, byte value) {
-        return add(name, valueConverter.convert(value));
+        return add(name, valueConverter.convertByte(value));
     }
 
     @Override
     public Headers<T> addShort(T name, short value) {
-        return add(name, valueConverter.convert(value));
+        return add(name, valueConverter.convertShort(value));
     }
 
     @Override
@@ -631,7 +633,7 @@ public class DefaultHeaders<T> implements Headers<T> {
 
     @Override
     public Headers<T> setObject(T name, Object value) {
-        return set(name, valueConverter.convert(checkNotNull(value, "value")));
+        return set(name, valueConverter.convertObject(checkNotNull(value, "value")));
     }
 
     @Override
@@ -646,7 +648,7 @@ public class DefaultHeaders<T> implements Headers<T> {
             if (o == null) {
                 break;
             }
-            T converted = valueConverter.convert(o);
+            T converted = valueConverter.convertObject(o);
             checkNotNull(converted, "converted");
             add0(h, i, name, converted);
         }
@@ -666,7 +668,7 @@ public class DefaultHeaders<T> implements Headers<T> {
             if (o == null) {
                 break;
             }
-            T converted = valueConverter.convert(o);
+            T converted = valueConverter.convertObject(o);
             checkNotNull(converted, "converted");
             add0(h, i, name, converted);
         }
@@ -676,42 +678,42 @@ public class DefaultHeaders<T> implements Headers<T> {
 
     @Override
     public Headers<T> setInt(T name, int value) {
-        return set(name, valueConverter.convert(value));
+        return set(name, valueConverter.convertInt(value));
     }
 
     @Override
     public Headers<T> setLong(T name, long value) {
-        return set(name, valueConverter.convert(value));
+        return set(name, valueConverter.convertLong(value));
     }
 
     @Override
     public Headers<T> setDouble(T name, double value) {
-        return set(name, valueConverter.convert(value));
+        return set(name, valueConverter.convertDouble(value));
     }
 
     @Override
     public Headers<T> setFloat(T name, float value) {
-        return set(name, valueConverter.convert(value));
+        return set(name, valueConverter.convertFloat(value));
     }
 
     @Override
     public Headers<T> setChar(T name, char value) {
-        return set(name, valueConverter.convert(value));
+        return set(name, valueConverter.convertChar(value));
     }
 
     @Override
     public Headers<T> setBoolean(T name, boolean value) {
-        return set(name, valueConverter.convert(value));
+        return set(name, valueConverter.convertBoolean(value));
     }
 
     @Override
     public Headers<T> setByte(T name, byte value) {
-        return set(name, valueConverter.convert(value));
+        return set(name, valueConverter.convertByte(value));
     }
 
     @Override
     public Headers<T> setShort(T name, short value) {
-        return set(name, valueConverter.convert(value));
+        return set(name, valueConverter.convertShort(value));
     }
 
     @Override
@@ -799,7 +801,7 @@ public class DefaultHeaders<T> implements Headers<T> {
         }
         try {
             return valueConverter.convertToBoolean(v);
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
             return null;
         }
     }
@@ -818,7 +820,7 @@ public class DefaultHeaders<T> implements Headers<T> {
         }
         try {
             return valueConverter.convertToByte(v);
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
             return null;
         }
     }
@@ -837,7 +839,7 @@ public class DefaultHeaders<T> implements Headers<T> {
         }
         try {
             return valueConverter.convertToChar(v);
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
             return null;
         }
     }
@@ -856,7 +858,7 @@ public class DefaultHeaders<T> implements Headers<T> {
         }
         try {
             return valueConverter.convertToShort(v);
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
             return null;
         }
     }
@@ -875,7 +877,7 @@ public class DefaultHeaders<T> implements Headers<T> {
         }
         try {
             return valueConverter.convertToInt(v);
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
             return null;
         }
     }
@@ -894,7 +896,7 @@ public class DefaultHeaders<T> implements Headers<T> {
         }
         try {
             return valueConverter.convertToLong(v);
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
             return null;
         }
     }
@@ -913,7 +915,7 @@ public class DefaultHeaders<T> implements Headers<T> {
         }
         try {
             return valueConverter.convertToFloat(v);
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
             return null;
         }
     }
@@ -932,7 +934,7 @@ public class DefaultHeaders<T> implements Headers<T> {
         }
         try {
             return valueConverter.convertToDouble(v);
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
             return null;
         }
     }
@@ -951,7 +953,7 @@ public class DefaultHeaders<T> implements Headers<T> {
         }
         try {
             return valueConverter.convertToTimeMillis(v);
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
             return null;
         }
     }
@@ -970,7 +972,7 @@ public class DefaultHeaders<T> implements Headers<T> {
         }
         try {
             return valueConverter.convertToBoolean(v);
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
             return null;
         }
     }
@@ -989,7 +991,7 @@ public class DefaultHeaders<T> implements Headers<T> {
         }
         try {
             return valueConverter.convertToByte(v);
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
             return null;
         }
     }
@@ -1008,7 +1010,7 @@ public class DefaultHeaders<T> implements Headers<T> {
         }
         try {
             return valueConverter.convertToChar(v);
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
             return null;
         }
     }
@@ -1027,7 +1029,7 @@ public class DefaultHeaders<T> implements Headers<T> {
         }
         try {
             return valueConverter.convertToShort(v);
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
             return null;
         }
     }
@@ -1046,7 +1048,7 @@ public class DefaultHeaders<T> implements Headers<T> {
         }
         try {
             return valueConverter.convertToInt(v);
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
             return null;
         }
     }
@@ -1065,7 +1067,7 @@ public class DefaultHeaders<T> implements Headers<T> {
         }
         try {
             return valueConverter.convertToLong(v);
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
             return null;
         }
     }
@@ -1084,7 +1086,7 @@ public class DefaultHeaders<T> implements Headers<T> {
         }
         try {
             return valueConverter.convertToFloat(v);
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
             return null;
         }
     }
@@ -1103,7 +1105,7 @@ public class DefaultHeaders<T> implements Headers<T> {
         }
         try {
             return valueConverter.convertToDouble(v);
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
             return null;
         }
     }
@@ -1122,7 +1124,7 @@ public class DefaultHeaders<T> implements Headers<T> {
         }
         try {
             return valueConverter.convertToTimeMillis(v);
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
             return null;
         }
     }

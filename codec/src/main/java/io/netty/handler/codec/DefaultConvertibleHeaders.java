@@ -121,7 +121,7 @@ public class DefaultConvertibleHeaders<UnconvertedType, ConvertedType> extends D
     }
 
     private final class ConvertedIterator implements Iterator<Entry<ConvertedType, ConvertedType>> {
-        private Iterator<Entry<UnconvertedType, UnconvertedType>> iter = iterator();
+        private final Iterator<Entry<UnconvertedType, UnconvertedType>> iter = iterator();
 
         @Override
         public boolean hasNext() {
@@ -146,7 +146,7 @@ public class DefaultConvertibleHeaders<UnconvertedType, ConvertedType> extends D
         private ConvertedType name;
         private ConvertedType value;
 
-        public ConvertedEntry(Entry<UnconvertedType, UnconvertedType> entry) {
+        ConvertedEntry(Entry<UnconvertedType, UnconvertedType> entry) {
             this.entry = entry;
         }
 

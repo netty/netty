@@ -15,15 +15,14 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_LENGTH;
-import static io.netty.handler.codec.http.HttpHeaders.Names.TRAILER;
-import static io.netty.handler.codec.http.HttpHeaders.Names.TRANSFER_ENCODING;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.AsciiString;
 import io.netty.util.internal.StringUtil;
 
 import java.util.Map;
+
+import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 
 /**
  * The default {@link LastHttpContent} implementation.
@@ -112,7 +111,7 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
 
     private static final class TrailingHttpHeaders extends DefaultHttpHeaders {
         private static final class TrailingHttpHeadersNameConverter extends HttpHeadersNameConverter {
-            public TrailingHttpHeadersNameConverter(boolean validate) {
+            TrailingHttpHeadersNameConverter(boolean validate) {
                 super(validate);
             }
 

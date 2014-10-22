@@ -510,27 +510,27 @@ public interface HttpHeaders extends TextHeaders {
         public static final AsciiString WEBSOCKET = new AsciiString("WebSocket");
         /**
          * {@code "name"}
-         * See {@link #HttpHeaders.Names.CONTENT_DISPOSITION}
+         * See {@link Names#CONTENT_DISPOSITION}
          */
         public static final AsciiString NAME = new AsciiString("name");
         /**
          * {@code "filename"}
-         * See {@link #HttpHeaders.Names.CONTENT_DISPOSITION}
+         * See {@link Names#CONTENT_DISPOSITION}
          */
         public static final AsciiString FILENAME = new AsciiString("filename");
         /**
          * {@code "form-data"}
-         * See {@link #HttpHeaders.Names.CONTENT_DISPOSITION}
+         * See {@link Names#CONTENT_DISPOSITION}
          */
         public static final AsciiString FORM_DATA = new AsciiString("form-data");
         /**
          * {@code "attachment"}
-         * See {@link #HttpHeaders.Names.CONTENT_DISPOSITION}
+         * See {@link Names#CONTENT_DISPOSITION}
          */
         public static final AsciiString ATTACHMENT = new AsciiString("attachment");
         /**
          * {@code "file"}
-         * See {@link #HttpHeaders.Names.CONTENT_DISPOSITION}
+         * See {@link Names#CONTENT_DISPOSITION}
          */
         public static final AsciiString FILE = new AsciiString("file");
 

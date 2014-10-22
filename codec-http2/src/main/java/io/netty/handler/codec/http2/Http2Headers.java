@@ -29,7 +29,7 @@ public interface Http2Headers extends BinaryHeaders {
     /**
      * HTTP/2 pseudo-headers names.
      */
-    public enum PseudoHeaderName {
+    enum PseudoHeaderName {
         /**
          * {@code :method}.
          */

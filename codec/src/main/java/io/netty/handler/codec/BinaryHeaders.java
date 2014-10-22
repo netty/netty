@@ -25,13 +25,13 @@ public interface BinaryHeaders extends Headers<AsciiString> {
     /**
      * A visitor that helps reduce GC pressure while iterating over a collection of {@link Headers}.
      */
-    public interface EntryVisitor extends Headers.EntryVisitor<AsciiString> {
+    interface EntryVisitor extends Headers.EntryVisitor<AsciiString> {
     }
 
     /**
      * A visitor that helps reduce GC pressure while iterating over a collection of {@link Headers}.
      */
-    public interface NameVisitor extends Headers.NameVisitor<AsciiString> {
+    interface NameVisitor extends Headers.NameVisitor<AsciiString> {
     }
 
     @Override

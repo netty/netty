@@ -19,7 +19,7 @@ package io.netty.handler.codec;
 /**
  * A typical string multimap used by text protocols such as HTTP for the representation of arbitrary key-value data. One
  * thing to note is that it uses {@link CharSequence} as its primary key and value type rather than {@link String}. When
- * you invoke the operations that produce {@link String}s such as {@link #get(CharSequence)}, a {@link CharSequence} is
+ * you invoke the operations that produce {@link String}s such as {@link #get(Object)}, a {@link CharSequence} is
  * implicitly converted to a {@link String}. This is particularly useful for speed optimization because this multimap
  * can hold a special {@link CharSequence} implementation that a codec can treat specially, such as {@link CharSequence}
  * .
@@ -28,13 +28,13 @@ public interface TextHeaders extends ConvertibleHeaders<CharSequence, String> {
     /**
      * A visitor that helps reduce GC pressure while iterating over a collection of {@link Headers}.
      */
-    public interface EntryVisitor extends Headers.EntryVisitor<CharSequence> {
+    interface EntryVisitor extends Headers.EntryVisitor<CharSequence> {
     }
 
     /**
      * A visitor that helps reduce GC pressure while iterating over a collection of {@link Headers}.
      */
-    public interface NameVisitor extends Headers.NameVisitor<CharSequence> {
+    interface NameVisitor extends Headers.NameVisitor<CharSequence> {
     }
 
     /**

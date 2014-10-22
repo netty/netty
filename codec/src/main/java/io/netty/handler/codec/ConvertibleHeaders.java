@@ -30,7 +30,7 @@ public interface ConvertibleHeaders<UnconvertedType, ConvertedType> extends Head
     /**
      * Interface to do conversions to and from the two generic type parameters
      */
-    public interface TypeConverter<UnconvertedType, ConvertedType> {
+    interface TypeConverter<UnconvertedType, ConvertedType> {
         /**
          * Convert a native value
          * @param value The value to be converted
@@ -91,21 +91,21 @@ public interface ConvertibleHeaders<UnconvertedType, ConvertedType> extends Head
 
     /**
      * Invokes {@link Headers#entries()} and lazily does a conversion on the results as they are accessed
-     * @param name The name of entry to get
+     *
      * @return The values corresponding to {@code name} and then lazily converted
      */
     List<Map.Entry<ConvertedType, ConvertedType>> entriesConverted();
 
     /**
      * Invokes {@link Headers#iterator()} and lazily does a conversion on the results as they are accessed
-     * @param name The name of entry to get
+     *
      * @return Iterator which will provide converted values corresponding to {@code name}
      */
     Iterator<Entry<ConvertedType, ConvertedType>> iteratorConverted();
 
     /**
      * Invokes {@link Headers#names()} and does a conversion on the results
-     * @param name The name of entry to get
+     *
      * @return The values corresponding to {@code name} and then converted
      */
     Set<ConvertedType> namesAndConvert(Comparator<ConvertedType> comparator);

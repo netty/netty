@@ -505,12 +505,12 @@ public class EmptyHeaders<T> implements Headers<T> {
     }
 
     @Override
-    public Entry<T, T> forEachEntry(io.netty.handler.codec.Headers.EntryVisitor<T> visitor) throws Exception {
+    public Entry<T, T> forEachEntry(Headers.EntryVisitor<T> visitor) throws Exception {
         return null;
     }
 
     @Override
-    public T forEachName(io.netty.handler.codec.Headers.NameVisitor<T> visitor) throws Exception {
+    public T forEachName(Headers.NameVisitor<T> visitor) throws Exception {
         return null;
     }
 

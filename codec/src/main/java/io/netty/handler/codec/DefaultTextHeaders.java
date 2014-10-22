@@ -16,12 +16,12 @@
 
 package io.netty.handler.codec;
 
-import static io.netty.handler.codec.AsciiString.CHARSEQUENCE_CASE_INSENSITIVE_ORDER;
-import static io.netty.handler.codec.AsciiString.CHARSEQUENCE_CASE_SENSITIVE_ORDER;
 import io.netty.util.internal.PlatformDependent;
 
 import java.text.ParseException;
 import java.util.Comparator;
+
+import static io.netty.handler.codec.AsciiString.*;
 
 public class DefaultTextHeaders extends DefaultConvertibleHeaders<CharSequence, String> implements TextHeaders {
     private static final HashCodeGenerator<CharSequence> CHARSEQUECE_CASE_INSENSITIVE_HASH_CODE_GENERATOR =
@@ -42,7 +42,7 @@ public class DefaultTextHeaders extends DefaultConvertibleHeaders<CharSequence, 
 
     public static class DefaultTextValueTypeConverter implements ValueConverter<CharSequence> {
         @Override
-        public CharSequence convert(Object value) {
+        public CharSequence convertObject(Object value) {
             if (value instanceof CharSequence) {
                 return (CharSequence) value;
             }
@@ -50,32 +50,32 @@ public class DefaultTextHeaders extends DefaultConvertibleHeaders<CharSequence, 
         }
 
         @Override
-        public CharSequence convert(int value) {
+        public CharSequence convertInt(int value) {
             return String.valueOf(value);
         }
 
         @Override
-        public CharSequence convert(long value) {
+        public CharSequence convertLong(long value) {
             return String.valueOf(value);
         }
 
         @Override
-        public CharSequence convert(double value) {
+        public CharSequence convertDouble(double value) {
             return String.valueOf(value);
         }
 
         @Override
-        public CharSequence convert(char value) {
+        public CharSequence convertChar(char value) {
             return String.valueOf(value);
         }
 
         @Override
-        public CharSequence convert(boolean value) {
+        public CharSequence convertBoolean(boolean value) {
             return String.valueOf(value);
         }
 
         @Override
-        public CharSequence convert(float value) {
+        public CharSequence convertFloat(float value) {
             return String.valueOf(value);
         }
 
@@ -85,7 +85,7 @@ public class DefaultTextHeaders extends DefaultConvertibleHeaders<CharSequence, 
         }
 
         @Override
-        public CharSequence convert(byte value) {
+        public CharSequence convertByte(byte value) {
             return String.valueOf(value);
         }
 
@@ -100,7 +100,7 @@ public class DefaultTextHeaders extends DefaultConvertibleHeaders<CharSequence, 
         }
 
         @Override
-        public CharSequence convert(short value) {
+        public CharSequence convertShort(short value) {
             return String.valueOf(value);
         }
 

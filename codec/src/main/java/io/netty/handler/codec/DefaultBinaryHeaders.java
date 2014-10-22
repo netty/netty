@@ -14,10 +14,11 @@
  */
 package io.netty.handler.codec;
 
-import static io.netty.handler.codec.AsciiString.CASE_INSENSITIVE_ORDER;
 import io.netty.util.internal.PlatformDependent;
 
 import java.text.ParseException;
+
+import static io.netty.handler.codec.AsciiString.*;
 
 public class DefaultBinaryHeaders extends DefaultHeaders<AsciiString> implements BinaryHeaders {
     private static final HashCodeGenerator<AsciiString> ASCII_HASH_CODE_GENERATOR =
@@ -30,42 +31,43 @@ public class DefaultBinaryHeaders extends DefaultHeaders<AsciiString> implements
 
     private static final ValueConverter<AsciiString> OBJECT_TO_ASCII = new ValueConverter<AsciiString>() {
         @Override
-        public AsciiString convert(Object value) {
+        public AsciiString convertObject(Object value) {
             if (value instanceof AsciiString) {
                 return (AsciiString) value;
-            } else if (value instanceof CharSequence) {
+            }
+            if (value instanceof CharSequence) {
                 return new AsciiString((CharSequence) value);
             }
             return new AsciiString(value.toString());
         }
 
         @Override
-        public AsciiString convert(int value) {
+        public AsciiString convertInt(int value) {
             return new AsciiString(String.valueOf(value));
         }
 
         @Override
-        public AsciiString convert(long value) {
+        public AsciiString convertLong(long value) {
             return new AsciiString(String.valueOf(value));
         }
 
         @Override
-        public AsciiString convert(double value) {
+        public AsciiString convertDouble(double value) {
             return new AsciiString(String.valueOf(value));
         }
 
         @Override
-        public AsciiString convert(char value) {
+        public AsciiString convertChar(char value) {
             return new AsciiString(String.valueOf(value));
         }
 
         @Override
-        public AsciiString convert(boolean value) {
+        public AsciiString convertBoolean(boolean value) {
             return new AsciiString(String.valueOf(value));
         }
 
         @Override
-        public AsciiString convert(float value) {
+        public AsciiString convertFloat(float value) {
             return new AsciiString(String.valueOf(value));
         }
 
@@ -110,7 +112,7 @@ public class DefaultBinaryHeaders extends DefaultHeaders<AsciiString> implements
         }
 
         @Override
-        public AsciiString convert(short value) {
+        public AsciiString convertShort(short value) {
             return new AsciiString(String.valueOf(value));
         }
 
@@ -120,7 +122,7 @@ public class DefaultBinaryHeaders extends DefaultHeaders<AsciiString> implements
         }
 
         @Override
-        public AsciiString convert(byte value) {
+        public AsciiString convertByte(byte value) {
             return new AsciiString(String.valueOf(value));
         }
 

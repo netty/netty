@@ -26,7 +26,7 @@ public class DefaultSpdyHeaders extends DefaultTextHeaders implements SpdyHeader
     private static final Headers.ValueConverter<CharSequence> SPDY_VALUE_CONVERTER =
             new DefaultTextValueTypeConverter() {
         @Override
-        public CharSequence convert(Object value) {
+        public CharSequence convertObject(Object value) {
             CharSequence seq;
             if (value instanceof CharSequence) {
                 seq = (CharSequence) value;

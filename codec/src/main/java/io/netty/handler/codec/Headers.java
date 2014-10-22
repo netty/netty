@@ -25,7 +25,7 @@ public interface Headers<T> extends Iterable<Map.Entry<T, T>> {
     /**
      * A visitor that helps reduce GC pressure while iterating over a collection of {@link Headers}.
      */
-    public interface EntryVisitor<T> {
+    interface EntryVisitor<T> {
         /**
          * @return <ul>
          *         <li>{@code true} if the processor wants to continue the loop and handle the entry.</li>
@@ -38,7 +38,7 @@ public interface Headers<T> extends Iterable<Map.Entry<T, T>> {
     /**
      * A visitor that helps reduce GC pressure while iterating over a collection of {@link Headers}.
      */
-    public interface NameVisitor<T> {
+    interface NameVisitor<T> {
         /**
          * @return <ul>
          *         <li>{@code true} if the processor wants to continue the loop and handle the entry.</li>
@@ -51,40 +51,40 @@ public interface Headers<T> extends Iterable<Map.Entry<T, T>> {
     /**
      * Converts to/from a generic object to the type of the name for this map
      */
-    public interface ValueConverter<T> {
-        T convert(Object value);
+    interface ValueConverter<T> {
+        T convertObject(Object value);
 
-        T convert(boolean value);
+        T convertBoolean(boolean value);
 
         boolean convertToBoolean(T value);
 
-        T convert(byte value);
+        T convertByte(byte value);
 
         byte convertToByte(T value);
 
-        T convert(char value);
+        T convertChar(char value);
 
         char convertToChar(T value);
 
-        T convert(short value);
+        T convertShort(short value);
 
         short convertToShort(T value);
 
-        T convert(int value);
+        T convertInt(int value);
 
         int convertToInt(T value);
 
-        T convert(long value);
+        T convertLong(long value);
 
         long convertToLong(T value);
 
         long convertToTimeMillis(T value);
 
-        T convert(float value);
+        T convertFloat(float value);
 
         float convertToFloat(T value);
 
-        T convert(double value);
+        T convertDouble(double value);
 
         double convertToDouble(T value);
     }
@@ -1042,9 +1042,9 @@ public interface Headers<T> extends Iterable<Map.Entry<T, T>> {
     Headers<T> set(Headers<T> headers);
 
     /**
-     * Retains all current headers but calls {@link #set(AsciiString, Object)} for each entry in {@code headers}
+     * Retains all current headers but calls {@link #set(Object, Object)} for each entry in {@code headers}
      *
-     * @param headers The headers used to {@link #set(AsciiString, Object)} values in this instance
+     * @param headers The headers used to {@link #set(Object, Object)} values in this instance
      * @return {@code this}
      */
     Headers<T> setAll(Headers<T> headers);
