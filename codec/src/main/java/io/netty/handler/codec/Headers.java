@@ -561,7 +561,7 @@ public interface Headers<T> extends Iterable<Map.Entry<T, T>> {
      * @param value the header value
      * @return {@code true} if it contains it {@code false} otherwise
      */
-    boolean containsBoolean(T name, int value);
+    boolean containsBoolean(T name, boolean value);
 
     /**
      * Returns {@code true} if a header with the name and value exists.
@@ -588,7 +588,7 @@ public interface Headers<T> extends Iterable<Map.Entry<T, T>> {
      * @param value the header value
      * @return {@code true} if it contains it {@code false} otherwise
      */
-    boolean containsShort(T name, byte value);
+    boolean containsShort(T name, short value);
 
     /**
      * Returns {@code true} if a header with the name and value exists.
