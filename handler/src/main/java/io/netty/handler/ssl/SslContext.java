@@ -16,9 +16,7 @@
 
 package io.netty.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
@@ -38,17 +36,13 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
-import javax.security.auth.x500.X500Principal;
 import java.io.File;
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.List;
@@ -246,10 +240,42 @@ public abstract class SslContext {
             File certChainFile, File keyFile, String keyPassword,
             Iterable<String> ciphers, Iterable<String> nextProtocols,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
+        return newServerContext(provider, certChainFile, keyFile, keyPassword,
+                ciphers, IdentityCipherSuiteFilter.INSTANCE,
+                toApplicationProtocolConfig(nextProtocols), sessionCacheSize, sessionTimeout);
+    }
+
+    /**
+     * Creates a new server-side {@link SslContext}.
+     *
+     * @param provider the {@link SslContext} implementation to use.
+     *                 {@code null} to use the current default one.
+     * @param certChainFile an X.509 certificate chain file in PEM format
+     * @param keyFile a PKCS#8 private key file in PEM format
+     * @param keyPassword the password of the {@code keyFile}.
+     *                    {@code null} if it's not password-protected.
+     * @param trustManagerFactory the {@link TrustManagerFactory} that provides the {@link javax.net.ssl.TrustManager}s
+     *                            that verifies the certificates sent from servers.
+     *                            {@code null} to use the default.
+     * @param ciphers the cipher suites to enable, in the order of preference.
+     *                {@code null} to use the default cipher suites.
+     * @param nextProtocols the application layer protocols to accept, in the order of preference.
+     *                      {@code null} to disable TLS NPN/ALPN extension.
+     * @param sessionCacheSize the size of the cache used for storing SSL session objects.
+     *                         {@code 0} to use the default value.
+     * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
+     *                       {@code 0} to use the default value.
+     * @return a new server-side {@link SslContext}
+     */
+    public static SslContext newServerContext(
+            SslProvider provider,
+            File certChainFile, File keyFile, String keyPassword, TrustManagerFactory trustManagerFactory,
+            Iterable<String> ciphers, Iterable<String> nextProtocols,
+            long sessionCacheSize, long sessionTimeout) throws SSLException {
 
         return newServerContext(
-                provider, certChainFile, keyFile, keyPassword,
-                ciphers, IdentityCipherSuiteFilter.INSTANCE,
+                provider, null, trustManagerFactory, certChainFile, keyFile, keyPassword,
+                null, ciphers, IdentityCipherSuiteFilter.INSTANCE,
                 toApplicationProtocolConfig(nextProtocols), sessionCacheSize, sessionTimeout);
     }
 
@@ -329,9 +355,6 @@ public abstract class SslContext {
                     trustCertChainFile, trustManagerFactory, keyCertChainFile, keyFile, keyPassword,
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
         case OPENSSL:
-            if (trustCertChainFile != null) {
-                throw new UnsupportedOperationException("OpenSSL provider does not support mutual authentication");
-            }
             return new OpenSslServerContext(
                     keyCertChainFile, keyFile, keyPassword,
                     ciphers, apn, sessionCacheSize, sessionTimeout);
