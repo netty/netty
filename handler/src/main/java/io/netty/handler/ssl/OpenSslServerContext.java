@@ -67,7 +67,8 @@ public final class OpenSslServerContext extends OpenSslContext {
      *                    {@code null} if it's not password-protected.
      */
     public OpenSslServerContext(File certChainFile, File keyFile, String keyPassword) throws SSLException {
-        this(certChainFile, keyFile, keyPassword, null, OpenSslDefaultApplicationProtocolNegotiator.INSTANCE, 0, 0);
+        this(certChainFile, keyFile, keyPassword, null, null,
+            OpenSslDefaultApplicationProtocolNegotiator.INSTANCE, 0, 0);
     }
 
     /**
@@ -89,7 +90,8 @@ public final class OpenSslServerContext extends OpenSslContext {
             File certChainFile, File keyFile, String keyPassword,
             Iterable<String> ciphers, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
-        this(certChainFile, keyFile, keyPassword, ciphers, toNegotiator(apn, false), sessionCacheSize, sessionTimeout);
+        this(certChainFile, keyFile, keyPassword, null, ciphers,
+            toNegotiator(apn, false), sessionCacheSize, sessionTimeout);
     }
 
     /**
@@ -108,12 +110,12 @@ public final class OpenSslServerContext extends OpenSslContext {
      *                       {@code 0} to use the default value.
      */
     public OpenSslServerContext(
-            File certChainFile, File keyFile, String keyPassword,
+            File certChainFile, File keyFile, String keyPassword, TrustManagerFactory trustManagerFactory,
             Iterable<String> ciphers, OpenSslApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
 
-        super(ciphers, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_SERVER);
-        OpenSsl.ensureAvailability();
+         super(ciphers, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_SERVER);
+         OpenSsl.ensureAvailability();
 
         checkNotNull(certChainFile, "certChainFile");
         if (!certChainFile.isFile()) {
@@ -190,11 +192,16 @@ public final class OpenSslServerContext extends OpenSslContext {
 
                     ks.setKeyEntry("key", key, keyPasswordChars, certChain.toArray(new Certificate[certChain.size()]));
 
-                    // This mimics the behavior of using SSLContext.init(...);
-                    TrustManagerFactory factory = TrustManagerFactory.getInstance(
-                            TrustManagerFactory.getDefaultAlgorithm());
-                    factory.init((KeyStore) null);
-                    final X509TrustManager manager = chooseTrustManager(factory.getTrustManagers());
+                    if (trustManagerFactory == null) {
+                        // Mimic the way SSLContext.getInstance(KeyManager[], null, null) works
+                        trustManagerFactory = TrustManagerFactory.getInstance(
+                                TrustManagerFactory.getDefaultAlgorithm());
+                        trustManagerFactory.init((KeyStore) null);
+                    } else {
+                        trustManagerFactory.init(ks);
+                    }
+
+                    final X509TrustManager manager = chooseTrustManager(trustManagerFactory.getTrustManagers());
                     SSLContext.setCertVerifyCallback(ctx, new CertificateVerifier() {
                         @Override
                         public boolean verify(long ssl, byte[][] chain, String auth) {

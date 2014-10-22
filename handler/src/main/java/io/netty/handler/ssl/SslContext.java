@@ -16,9 +16,7 @@
 
 package io.netty.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 
@@ -35,17 +33,13 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
-import javax.security.auth.x500.X500Principal;
 import java.io.File;
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.List;
@@ -256,19 +250,16 @@ public abstract class SslContext {
         }
 
         switch (provider) {
-            case JDK:
-                return new JdkSslServerContext(
-                        trustCertChainFile, trustManagerFactory, keyCertChainFile, keyFile, keyPassword,
-                        keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
-            case OPENSSL:
-                if (trustCertChainFile != null) {
-                    throw new UnsupportedOperationException("OpenSSL provider does not support mutual authentication");
-                }
-                return new OpenSslServerContext(
-                        keyCertChainFile, keyFile, keyPassword,
-                        ciphers, apn, sessionCacheSize, sessionTimeout);
-            default:
-                throw new Error(provider.toString());
+        case JDK:
+            return new JdkSslServerContext(
+                    trustCertChainFile, trustManagerFactory, keyCertChainFile, keyFile, keyPassword,
+                    keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
+        case OPENSSL:
+            return new OpenSslServerContext(
+                    keyCertChainFile, keyFile, keyPassword,
+                    ciphers, apn, sessionCacheSize, sessionTimeout);
+        default:
+            throw new Error(provider.toString());
         }
     }
 
