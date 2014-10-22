@@ -36,8 +36,14 @@ import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 /**
  * (Transport implementors only) an internal data structure used by {@link AbstractChannel} to store its pending
  * outbound write requests.
- *
- * All the methods should only be called by the {@link EventLoop} of the {@link Channel}.
+ * <p>
+ * All methods must be called by a transport implementation from an I/O thread, except the following ones:
+ * <ul>
+ * <li>{@link #size()} and {@link #isEmpty()}</li>
+ * <li>{@link #isWritable()}</li>
+ * <li>{@link #getUserDefinedWritability(int)} and {@link #setUserDefinedWritability(int, boolean)}</li>
+ * </ul>
+ * </p>
  */
 public final class ChannelOutboundBuffer {
 
@@ -70,21 +76,21 @@ public final class ChannelOutboundBuffer {
 
     private static final AtomicLongFieldUpdater<ChannelOutboundBuffer> TOTAL_PENDING_SIZE_UPDATER;
 
-    @SuppressWarnings("unused")
+    @SuppressWarnings("UnusedDeclaration")
     private volatile long totalPendingSize;
 
-    private static final AtomicIntegerFieldUpdater<ChannelOutboundBuffer> WRITABLE_UPDATER;
+    private static final AtomicIntegerFieldUpdater<ChannelOutboundBuffer> UNWRITABLE_UPDATER;
 
-    @SuppressWarnings("FieldMayBeFinal")
-    private volatile int writable = 1;
+    @SuppressWarnings("UnusedDeclaration")
+    private volatile int unwritable;
 
     static {
-        AtomicIntegerFieldUpdater<ChannelOutboundBuffer> writableUpdater =
-                PlatformDependent.newAtomicIntegerFieldUpdater(ChannelOutboundBuffer.class, "writable");
-        if (writableUpdater == null) {
-            writableUpdater = AtomicIntegerFieldUpdater.newUpdater(ChannelOutboundBuffer.class, "writable");
+        AtomicIntegerFieldUpdater<ChannelOutboundBuffer> unwritableUpdater =
+                PlatformDependent.newAtomicIntegerFieldUpdater(ChannelOutboundBuffer.class, "unwritable");
+        if (unwritableUpdater == null) {
+            unwritableUpdater = AtomicIntegerFieldUpdater.newUpdater(ChannelOutboundBuffer.class, "unwritable");
         }
-        WRITABLE_UPDATER = writableUpdater;
+        UNWRITABLE_UPDATER = unwritableUpdater;
 
         AtomicLongFieldUpdater<ChannelOutboundBuffer> pendingSizeUpdater =
                 PlatformDependent.newAtomicLongFieldUpdater(ChannelOutboundBuffer.class, "totalPendingSize");
@@ -161,10 +167,8 @@ public final class ChannelOutboundBuffer {
         }
 
         long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, size);
-        if (newWriteBufferSize > channel.config().getWriteBufferHighWaterMark()) {
-            if (WRITABLE_UPDATER.compareAndSet(this, 1, 0)) {
-                channel.pipeline().fireChannelWritabilityChanged();
-            }
+        if (newWriteBufferSize >= channel.config().getWriteBufferHighWaterMark()) {
+            setUnwritable();
         }
     }
 
@@ -178,10 +182,8 @@ public final class ChannelOutboundBuffer {
         }
 
         long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, -size);
-        if (newWriteBufferSize == 0 || newWriteBufferSize < channel.config().getWriteBufferLowWaterMark()) {
-            if (WRITABLE_UPDATER.compareAndSet(this, 0, 1)) {
-                channel.pipeline().fireChannelWritabilityChanged();
-            }
+        if (newWriteBufferSize == 0 || newWriteBufferSize <= channel.config().getWriteBufferLowWaterMark()) {
+            setWritable();
         }
     }
 
@@ -438,8 +440,94 @@ public final class ChannelOutboundBuffer {
         return nioBufferSize;
     }
 
-    boolean isWritable() {
-        return writable != 0;
+    /**
+     * Returns {@code true} if and only if {@linkplain #totalPendingWriteBytes() the total number of pending bytes} did
+     * not exceed the write watermark of the {@link Channel} and
+     * no {@linkplain #setUserDefinedWritability(int, boolean) user-defined writability flag} has been set to
+     * {@code false}.
+     */
+    public boolean isWritable() {
+        return unwritable == 0;
+    }
+
+    /**
+     * Returns {@code true} if and only if the user-defined writability flag at the specified index is set to
+     * {@code true}.
+     */
+    public boolean getUserDefinedWritability(int index) {
+        return (unwritable & writabilityMask(index)) == 0;
+    }
+
+    /**
+     * Sets a user-defined writability flag at the specified index.
+     */
+    public void setUserDefinedWritability(int index, boolean writable) {
+        if (writable) {
+            setUserDefinedWritability(index);
+        } else {
+            clearUserDefinedWritability(index);
+        }
+    }
+
+    private void setUserDefinedWritability(int index) {
+        final int mask = ~writabilityMask(index);
+        for (;;) {
+            final int oldValue = unwritable;
+            final int newValue = oldValue & mask;
+            if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
+                if (oldValue != 0 && newValue == 0) {
+                    channel.pipeline().fireChannelWritabilityChanged();
+                }
+                break;
+            }
+        }
+    }
+
+    private void clearUserDefinedWritability(int index) {
+        final int mask = writabilityMask(index);
+        for (;;) {
+            final int oldValue = unwritable;
+            final int newValue = oldValue | mask;
+            if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
+                if (oldValue == 0 && newValue != 0) {
+                    channel.pipeline().fireChannelWritabilityChanged();
+                }
+                break;
+            }
+        }
+    }
+
+    private static int writabilityMask(int index) {
+        if (index < 1 || index > 31) {
+            throw new IllegalArgumentException("index: " + index + " (expected: 1~31)");
+        }
+        return 1 << index;
+    }
+
+    private void setWritable() {
+        for (;;) {
+            final int oldValue = unwritable;
+            final int newValue = oldValue & ~1;
+            if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
+                if (oldValue != 0 && newValue == 0) {
+                    channel.pipeline().fireChannelWritabilityChanged();
+                }
+                break;
+            }
+        }
+    }
+
+    private void setUnwritable() {
+        for (;;) {
+            final int oldValue = unwritable;
+            final int newValue = oldValue | 1;
+            if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
+                if (oldValue == 0 && newValue != 0) {
+                    channel.pipeline().fireChannelWritabilityChanged();
+                }
+                break;
+            }
+        }
     }
 
     /**
