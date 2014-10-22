@@ -61,7 +61,7 @@ public class WebSocket07FrameDecoder extends WebSocket08FrameDecoder {
     /**
      * Constructor
      *
-     * @param maskedPayload
+     * @param expectMaskedFrames
      *            Web socket servers must set this to true processed incoming masked payload. Client implementations
      *            must set this to false.
      * @param allowExtensions
@@ -70,7 +70,27 @@ public class WebSocket07FrameDecoder extends WebSocket08FrameDecoder {
      *            Maximum length of a frame's payload. Setting this to an appropriate value for you application
      *            helps check for denial of services attacks.
      */
-    public WebSocket07FrameDecoder(boolean maskedPayload, boolean allowExtensions, int maxFramePayloadLength) {
-        super(maskedPayload, allowExtensions, maxFramePayloadLength);
+    public WebSocket07FrameDecoder(boolean expectMaskedFrames, boolean allowExtensions, int maxFramePayloadLength) {
+        this(expectMaskedFrames, allowExtensions, maxFramePayloadLength, false);
+    }
+
+    /**
+     * Constructor
+     *
+     * @param expectMaskedFrames
+     *            Web socket servers must set this to true processed incoming masked payload. Client implementations
+     *            must set this to false.
+     * @param allowExtensions
+     *            Flag to allow reserved extension bits to be used or not
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload. Setting this to an appropriate value for you application
+     *            helps check for denial of services attacks.
+     * @param allowMaskMismatch
+     *            Allows to loosen the masking requirement on received frames. When this is set to false then also
+     *            frames which are not masked properly according to the standard will still be accepted.
+     */
+    public WebSocket07FrameDecoder(boolean expectMaskedFrames, boolean allowExtensions, int maxFramePayloadLength,
+                                   boolean allowMaskMismatch) {
+        super(expectMaskedFrames, allowExtensions, maxFramePayloadLength, allowMaskMismatch);
     }
 }
