@@ -218,6 +218,28 @@ public class Http2ConnectionRoundtripTest {
     }
 
     @Test
+    public void noMoreStreamIdsShouldSendGoAway() throws Exception {
+        bootstrapEnv(1, 3);
+
+        // Create a single stream by sending a HEADERS frame to the server.
+        final Http2Headers headers = dummyHeaders();
+        runInChannel(clientChannel, new Http2Runnable() {
+            @Override
+            public void run() {
+                http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0,
+                        true, newPromise());
+                http2Client.encoder().writeHeaders(ctx(), Integer.MAX_VALUE + 1, headers, 0, (short) 16, false, 0,
+                        true, newPromise());
+            }
+        });
+
+        // Wait for the server to create the stream.
+        assertTrue(requestLatch.await(5, TimeUnit.SECONDS));
+        verify(serverListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(0),
+                eq(Http2Error.PROTOCOL_ERROR.code()), any(ByteBuf.class));
+    }
+
+    @Test
     public void flowControlProperlyChunksLargeMessage() throws Exception {
         final Http2Headers headers = dummyHeaders();
 

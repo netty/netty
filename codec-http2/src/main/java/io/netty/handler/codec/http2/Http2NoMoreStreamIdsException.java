@@ -12,37 +12,20 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package io.netty.handler.codec.http2;
 
 /**
- * All error codes identified by the HTTP/2 spec.
+ * This exception is thrown when there are no more stream IDs available for the current connection
  */
-public enum Http2Error {
-    NO_ERROR(0x0),
-    PROTOCOL_ERROR(0x1),
-    INTERNAL_ERROR(0x2),
-    FLOW_CONTROL_ERROR(0x3),
-    SETTINGS_TIMEOUT(0x4),
-    STREAM_CLOSED(0x5),
-    FRAME_SIZE_ERROR(0x6),
-    REFUSED_STREAM(0x7),
-    CANCEL(0x8),
-    COMPRESSION_ERROR(0x9),
-    CONNECT_ERROR(0xA),
-    ENHANCE_YOUR_CALM(0xB),
-    INADEQUATE_SECURITY(0xC);
+public class Http2NoMoreStreamIdsException extends Http2Exception {
+    private static final long serialVersionUID = -7756236161274851110L;
+    private static final String ERROR_MESSAGE = "No more streams can be created on this connection";
 
-    private final long code;
-
-    Http2Error(long code) {
-        this.code = code;
+    public Http2NoMoreStreamIdsException() {
+        super(Http2Error.PROTOCOL_ERROR, ERROR_MESSAGE);
     }
 
-    /**
-     * Gets the code for this error used on the wire.
-     */
-    public long code() {
-        return code;
+    public Http2NoMoreStreamIdsException(Throwable cause) {
+        super(Http2Error.PROTOCOL_ERROR, ERROR_MESSAGE, cause);
     }
 }

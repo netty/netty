@@ -329,7 +329,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      */
     public ChannelFuture writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData,
             ChannelPromise promise) {
-        if (connection().isGoAway()) {
+        Http2Connection connection = connection();
+        if (connection.isGoAway()) {
             debugData.release();
             return ctx.newSucceededFuture();
         }
@@ -337,7 +338,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         ChannelFuture future = frameWriter().writeGoAway(ctx, lastStreamId, errorCode, debugData, promise);
         ctx.flush();
 
-        connection().goAwaySent(lastStreamId);
+        connection.goAwaySent(lastStreamId);
         return future;
     }
 
@@ -345,15 +346,16 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      * Sends a {@code GO_AWAY} frame appropriate for the given exception.
      */
     private ChannelFuture writeGoAway(ChannelHandlerContext ctx, Http2Exception cause) {
-        if (connection().isGoAway()) {
+        Http2Connection connection = connection();
+        if (connection.isGoAway()) {
             return ctx.newSucceededFuture();
         }
 
         // The connection isn't alredy going away, send the GO_AWAY frame now to start
         // the process.
-        int errorCode = cause != null ? cause.error().code() : NO_ERROR.code();
+        long errorCode = cause != null ? cause.error().code() : NO_ERROR.code();
         ByteBuf debugData = Http2CodecUtil.toByteBuf(ctx, cause);
-        int lastKnownStream = connection().remote().lastStreamCreated();
+        int lastKnownStream = connection.remote().lastStreamCreated();
         return writeGoAway(ctx, lastKnownStream, errorCode, debugData, ctx.newPromise());
     }
 
