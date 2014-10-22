@@ -95,10 +95,12 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
 
     private final long maxFramePayloadLength;
     private final boolean allowExtensions;
-    private final boolean maskedPayload;
+    private final boolean expectMaskedFrames;
+    private final boolean allowMaskMismatch;
 
     private int fragmentedFramesCount;
     private boolean frameFinalFlag;
+    private boolean frameMasked;
     private int frameRsv;
     private int frameOpcode;
     private long framePayloadLength;
@@ -110,7 +112,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
     /**
      * Constructor
      *
-     * @param maskedPayload
+     * @param expectMaskedFrames
      *            Web socket servers must set this to true processed incoming masked payload. Client implementations
      *            must set this to false.
      * @param allowExtensions
@@ -119,8 +121,29 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
      *            Maximum length of a frame's payload. Setting this to an appropriate value for you application
      *            helps check for denial of services attacks.
      */
-    public WebSocket08FrameDecoder(boolean maskedPayload, boolean allowExtensions, int maxFramePayloadLength) {
-        this.maskedPayload = maskedPayload;
+    public WebSocket08FrameDecoder(boolean expectMaskedFrames, boolean allowExtensions, int maxFramePayloadLength) {
+        this(expectMaskedFrames, allowExtensions, maxFramePayloadLength, false);
+    }
+
+    /**
+     * Constructor
+     *
+     * @param expectMaskedFrames
+     *            Web socket servers must set this to true processed incoming masked payload. Client implementations
+     *            must set this to false.
+     * @param allowExtensions
+     *            Flag to allow reserved extension bits to be used or not
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload. Setting this to an appropriate value for you application
+     *            helps check for denial of services attacks.
+     * @param allowMaskMismatch
+     *            Allows to loosen the masking requirement on received frames. When this is set to false then also
+     *            frames which are not masked properly according to the standard will still be accepted.
+     */
+    public WebSocket08FrameDecoder(boolean expectMaskedFrames, boolean allowExtensions, int maxFramePayloadLength,
+                                   boolean allowMaskMismatch) {
+        this.expectMaskedFrames = expectMaskedFrames;
+        this.allowMaskMismatch = allowMaskMismatch;
         this.allowExtensions = allowExtensions;
         this.maxFramePayloadLength = maxFramePayloadLength;
     }
@@ -158,7 +181,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
                     }
                     // MASK, PAYLOAD LEN 1
                     b = in.readByte();
-                    boolean frameMasked = (b & 0x80) != 0;
+                    frameMasked = (b & 0x80) != 0;
                     framePayloadLen1 = b & 0x7F;
 
                     if (frameRsv != 0 && !allowExtensions) {
@@ -166,10 +189,11 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
                         return;
                     }
 
-                    if (maskedPayload && !frameMasked) {
-                        protocolViolation(ctx, "unmasked client to server frame");
+                    if (!allowMaskMismatch && expectMaskedFrames != frameMasked) {
+                        protocolViolation(ctx, "received a frame that is not masked as expected");
                         return;
                     }
+
                     if (frameOpcode > 7) { // control frame (have MSB in opcode set)
 
                         // control frames MUST NOT be fragmented
@@ -260,7 +284,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
 
                     state = State.MASKING_KEY;
                 case MASKING_KEY:
-                    if (maskedPayload) {
+                    if (frameMasked) {
                         if (in.readableBytes() < 4) {
                             return;
                         }
@@ -284,7 +308,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
                         state = State.READING_FIRST;
 
                         // Unmask data if needed
-                        if (maskedPayload) {
+                        if (frameMasked) {
                             unmask(payloadBuffer);
                         }
 

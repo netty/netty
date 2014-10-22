@@ -66,6 +66,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     private final String subprotocols;
     private final boolean allowExtensions;
     private final int maxFramePayloadLength;
+    private final boolean allowMaskMismatch;
 
     public WebSocketServerProtocolHandler(String websocketPath) {
         this(websocketPath, null, false);
@@ -80,11 +81,17 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     }
 
     public WebSocketServerProtocolHandler(String websocketPath, String subprotocols,
-            boolean allowExtensions, int maxFrameSize) {
+                                          boolean allowExtensions, int maxFrameSize) {
+        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, false);
+    }
+
+    public WebSocketServerProtocolHandler(String websocketPath, String subprotocols,
+            boolean allowExtensions, int maxFrameSize, boolean allowMaskMismatch) {
         this.websocketPath = websocketPath;
         this.subprotocols = subprotocols;
         this.allowExtensions = allowExtensions;
         maxFramePayloadLength = maxFrameSize;
+        this.allowMaskMismatch = allowMaskMismatch;
     }
 
     @Override
@@ -94,7 +101,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
             // Add the WebSocketHandshakeHandler before this one.
             ctx.pipeline().addBefore(ctx.name(), WebSocketServerProtocolHandshakeHandler.class.getName(),
                     new WebSocketServerProtocolHandshakeHandler(websocketPath, subprotocols,
-                            allowExtensions, maxFramePayloadLength));
+                            allowExtensions, maxFramePayloadLength, allowMaskMismatch));
         }
         if (cp.get(Utf8FrameValidator.class) == null) {
             // Add the UFT8 checking before this one.
