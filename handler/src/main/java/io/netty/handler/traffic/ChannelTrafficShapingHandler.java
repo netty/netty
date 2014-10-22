@@ -52,6 +52,7 @@ import io.netty.channel.ChannelPromise;
  */
 public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler {
     private List<ToSend> messagesQueue = new LinkedList<ToSend>();
+    private long queueSize;
 
     /**
      * Create a new instance
@@ -69,6 +70,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
     public ChannelTrafficShapingHandler(long writeLimit, long readLimit,
             long checkInterval, long maxTime) {
         super(writeLimit, readLimit, checkInterval, maxTime);
+        userDefinedWritabilityIndex = AbstractTrafficShapingHandler.CHANNEL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX;
     }
 
     /**
@@ -85,6 +87,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
     public ChannelTrafficShapingHandler(long writeLimit,
             long readLimit, long checkInterval) {
         super(writeLimit, readLimit, checkInterval);
+        userDefinedWritabilityIndex = AbstractTrafficShapingHandler.CHANNEL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX;
     }
 
     /**
@@ -98,6 +101,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
     public ChannelTrafficShapingHandler(long writeLimit,
             long readLimit) {
         super(writeLimit, readLimit);
+        userDefinedWritabilityIndex = AbstractTrafficShapingHandler.CHANNEL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX;
     }
 
     /**
@@ -109,6 +113,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
      */
     public ChannelTrafficShapingHandler(long checkInterval) {
         super(checkInterval);
+        userDefinedWritabilityIndex = AbstractTrafficShapingHandler.CHANNEL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX;
     }
 
     @Override
@@ -131,6 +136,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
             }
         }
         messagesQueue.clear();
+        releaseWriteSuspended(ctx);
         super.handlerRemoved(ctx);
     }
 
@@ -147,14 +153,20 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
     }
 
     @Override
-    protected synchronized void submitWrite(final ChannelHandlerContext ctx, final Object msg, final long delay,
+    protected synchronized void submitWrite(final ChannelHandlerContext ctx, final Object msg,
+            final long size, final long delay,
             final ChannelPromise promise) {
         if (delay == 0 && messagesQueue.isEmpty()) {
+            if (trafficCounter != null) {
+                trafficCounter.bytesRealWriteFlowControl(size);
+            }
             ctx.write(msg, promise);
             return;
         }
         final ToSend newToSend = new ToSend(delay, msg, promise);
         messagesQueue.add(newToSend);
+        queueSize += size;
+        checkWriteSuspend(ctx, delay, queueSize);
         ctx.executor().schedule(new Runnable() {
             @Override
             public void run() {
@@ -167,12 +179,28 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
         while (!messagesQueue.isEmpty()) {
             ToSend newToSend = messagesQueue.remove(0);
             if (newToSend.date <= System.currentTimeMillis()) {
+                long size = calculateSize(newToSend.toSend);
+                if (trafficCounter != null) {
+                    trafficCounter.bytesRealWriteFlowControl(size);
+                }
+                queueSize -= size;
                 ctx.write(newToSend.toSend, newToSend.promise);
             } else {
                 messagesQueue.add(0, newToSend);
                 break;
             }
         }
+        if (messagesQueue.isEmpty()) {
+            releaseWriteSuspended(ctx);
+        }
         ctx.flush();
     }
+
+    /**
+    *
+    * @return current size in bytes of the write buffer
+    */
+   public long queueSize() {
+       return queueSize;
+   }
 }
