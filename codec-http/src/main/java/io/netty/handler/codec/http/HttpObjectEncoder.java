@@ -73,7 +73,20 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             buf.writeBytes(CRLF);
             state = HttpHeaders.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
         }
+
+        // Bypass the encoder in case of an empty buffer, so that the following idiom works:
+        //
+        //     ch.write(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+        //
+        // See https://github.com/netty/netty/issues/2983 for more information.
+
+        if (msg instanceof ByteBuf && !((ByteBuf) msg).isReadable()) {
+            out.add(EMPTY_BUFFER);
+            return;
+        }
+
         if (msg instanceof HttpContent || msg instanceof ByteBuf || msg instanceof FileRegion) {
+
             if (state == ST_INIT) {
                 throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
             }
