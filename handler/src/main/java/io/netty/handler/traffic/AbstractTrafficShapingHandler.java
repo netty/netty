@@ -190,6 +190,12 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
 
     /**
      * Change the underlying limitations and check interval.
+     *<br>
+     * Note the change will be taken as best effort, meaning
+     * that all already scheduled traffics will not be
+     * changed, but only applied to new traffics.<br>
+     * So the expected usage of this method is to be used not too often,
+     * accordingly to the traffic shaping configuration.
      *
      * @param newWriteLimit The new write limit (in bytes)
      * @param newReadLimit The new read limit (in bytes)
@@ -203,6 +209,12 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
 
     /**
      * Change the underlying limitations.
+     *<br>
+     * Note the change will be taken as best effort, meaning
+     * that all already scheduled traffics will not be
+     * changed, but only applied to new traffics.<br>
+     * So the expected usage of this method is to be used not too often,
+     * accordingly to the traffic shaping configuration.
      *
      * @param newWriteLimit The new write limit (in bytes)
      * @param newReadLimit The new read limit (in bytes)
@@ -211,7 +223,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
         writeLimit = newWriteLimit;
         readLimit = newReadLimit;
         if (trafficCounter != null) {
-            trafficCounter.resetAccounting(System.currentTimeMillis() + 1);
+            trafficCounter.resetAccounting(TrafficCounter.milliSecondFromNano() + 1);
         }
     }
 
@@ -235,12 +247,18 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     }
 
     /**
+     * Note the change will be taken as best effort, meaning
+     * that all already scheduled traffics will not be
+     * changed, but only applied to new traffics.<br>
+     * So the expected usage of this method is to be used not too often,
+     * accordingly to the traffic shaping configuration.
+     *
      * @param writeLimit the writeLimit to set
      */
     public void setWriteLimit(long writeLimit) {
         this.writeLimit = writeLimit;
         if (trafficCounter != null) {
-            trafficCounter.resetAccounting(System.currentTimeMillis() + 1);
+            trafficCounter.resetAccounting(TrafficCounter.milliSecondFromNano() + 1);
         }
     }
 
@@ -252,12 +270,18 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     }
 
     /**
+     * Note the change will be taken as best effort, meaning
+     * that all already scheduled traffics will not be
+     * changed, but only applied to new traffics.<br>
+     * So the expected usage of this method is to be used not too often,
+     * accordingly to the traffic shaping configuration.
+     *
      * @param readLimit the readLimit to set
      */
     public void setReadLimit(long readLimit) {
         this.readLimit = readLimit;
         if (trafficCounter != null) {
-            trafficCounter.resetAccounting(System.currentTimeMillis() + 1);
+            trafficCounter.resetAccounting(TrafficCounter.milliSecondFromNano() + 1);
         }
     }
 
@@ -279,6 +303,11 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     }
 
     /**
+     * Note the change will be taken as best effort, meaning
+     * that all already scheduled traffics will not be
+     * changed, but only applied to new traffics.<br>
+     * So the expected usage of this method is to be used not too often,
+     * accordingly to the traffic shaping configuration.
      *
      * @param maxTime
      *            Max delay in wait, shall be less than TIME OUT in related protocol
@@ -302,7 +331,13 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     }
 
     /**
-     * @param maxWriteDelay the maximum Write Delay in ms in the buffer allowed before write suspended is set
+     * Note the change will be taken as best effort, meaning
+     * that all already scheduled traffics will not be
+     * changed, but only applied to new traffics.<br>
+     * So the expected usage of this method is to be used not too often,
+     * accordingly to the traffic shaping configuration.
+     *
+     * @param maxWriteDelay the maximum Write Delay in ms in the buffer allowed before write suspension is set
      */
     public void setMaxWriteDelay(long maxWriteDelay) {
         this.maxWriteDelay = maxWriteDelay;
@@ -316,6 +351,12 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     }
 
     /**
+     * Note that this limit is a best effort on memory limitation to prevent Out Of
+     * Memory Exception. To ensure it works, the handler generating the write should
+     * use one of the way provided by Netty to handle the capacity:</br>
+     * - the <code>Channel.isWritable()</code> property and the corresponding <code>channelWritabilityChanged()</code></br>
+     * - the <code>ChannelFuture.addListener(new GenericFutureListener())</code>
+     *
      * @param maxWriteSize the maximum Write Size allowed in the buffer
      *            per channel before write suspended is set
      */
@@ -374,14 +415,23 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
         }
     }
 
+    /**
+     * Release the Read suspension
+     * @param ctx
+     */
+    protected void releaseReadSuspended(ChannelHandlerContext ctx) {
+        ctx.attr(READ_SUSPENDED).set(false);
+        ctx.channel().config().setAutoRead(true);
+    }
+    
     @Override
     public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
         long size = calculateSize(msg);
-
+        long now = TrafficCounter.milliSecondFromNano();
         if (size > 0 && trafficCounter != null) {
             // compute the number of ms to wait before reopening the channel
-            long wait = trafficCounter.readTimeToWait(size, readLimit, maxTime);
-            wait = checkWaitReadTime(ctx, wait);
+            long wait = trafficCounter.readTimeToWait(size, readLimit, maxTime, now);
+            wait = checkWaitReadTime(ctx, wait, now);
             if (wait >= MINIMAL_WAIT) { // At least 10ms seems a minimal
                 // time in order to try to limit the traffic
                 // Only AutoRead AND HandlerActive True means Context Active
@@ -408,7 +458,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
                 }
             }
         }
-        informReadOperation(ctx);
+        informReadOperation(ctx, now);
         ctx.fireChannelRead(msg);
     }
 
@@ -416,9 +466,10 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
      * Method overridden in GTSH to take into account specific timer for the channel
      * @param ctx
      * @param wait
+     * @param now
      * @return the wait to use according to the context
      */
-    protected long checkWaitReadTime(final ChannelHandlerContext ctx, long wait) {
+    protected long checkWaitReadTime(final ChannelHandlerContext ctx, long wait, final long now) {
         // no change by default
         return wait;
     }
@@ -426,8 +477,9 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     /**
      * Method overridden in GTSH to take into account specific timer for the channel
      * @param ctx
+     * @param now
      */
-    protected void informReadOperation(final ChannelHandlerContext ctx) {
+    protected void informReadOperation(final ChannelHandlerContext ctx, final long now) {
         // default noop
     }
 
@@ -448,25 +500,25 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
             throws Exception {
         long size = calculateSize(msg);
-
+        long now = TrafficCounter.milliSecondFromNano();
         if (size > 0 && trafficCounter != null) {
             // compute the number of ms to wait before continue with the channel
-            long wait = trafficCounter.writeTimeToWait(size, writeLimit, maxTime);
+            long wait = trafficCounter.writeTimeToWait(size, writeLimit, maxTime, now);
             if (wait >= MINIMAL_WAIT) {
                 if (logger.isDebugEnabled()) {
                     logger.debug("Write suspend: " + wait + ":" + ctx.channel().config().isAutoRead() + ":"
                             + isHandlerReadActive(ctx));
                 }
-                submitWrite(ctx, msg, size, wait, promise);
+                submitWrite(ctx, msg, size, wait, now, promise);
                 return;
             }
         }
         // to maintain order of write
-        submitWrite(ctx, msg, size, 0, promise);
+        submitWrite(ctx, msg, size, 0, now, promise);
     }
 
     protected abstract void submitWrite(final ChannelHandlerContext ctx, final Object msg, final long size,
-            final long delay, final ChannelPromise promise);
+            final long delay, final long now, final ChannelPromise promise);
 
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
@@ -514,10 +566,18 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
 
     @Override
     public String toString() {
-        return "TrafficShaping with Write Limit: " + writeLimit + " Read Limit: " + readLimit +
-                " CheckInterval: " + checkInterval + " maxDelay: " + maxWriteDelay +
-                " maxSize: " + maxWriteSize + " and Counter: "
-                + (trafficCounter != null ? trafficCounter.toString() : "none");
+        StringBuilder builder = new StringBuilder("TrafficShaping with Write Limit: ").append(writeLimit);
+        builder.append(" Read Limit: ").append(readLimit);
+        builder.append(" CheckInterval: ").append(checkInterval);
+        builder.append(" maxDelay: ").append(maxWriteDelay);
+        builder.append(" maxSize: ").append(maxWriteSize);
+        builder.append(" and Counter: ");
+        if (trafficCounter != null) {
+            builder.append(trafficCounter.toString());
+        } else {
+            builder.append("none");
+        }
+        return builder.toString();
     }
 
     /**

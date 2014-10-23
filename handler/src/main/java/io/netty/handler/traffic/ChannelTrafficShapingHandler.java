@@ -15,8 +15,7 @@
  */
 package io.netty.handler.traffic;
 
-import java.util.LinkedList;
-import java.util.List;
+import java.util.ArrayDeque;
 import java.util.concurrent.TimeUnit;
 
 import io.netty.buffer.ByteBuf;
@@ -46,12 +45,24 @@ import io.netty.channel.ChannelPromise;
  * the less precise the traffic shaping will be. It is suggested as higher value something close
  * to 5 or 10 minutes.<br><br>
  *
- * maxTimeToWait, by default set to 15s, allows to specify an upper bound of time shaping.<br>
+ * maxTimeToWait, by default set to 15s, allows to specify an upper bound of time shaping.<br><br>
  * </li>
+ * <li>In your handler, you should consider to use the <code>channel.isWritable()</code> and
+ * <code>channelWritabilityChanged(ctx)</code> to handle writability, or through 
+ * <code>future.addListener(new GenericFutureListener())</code> on the future returned by
+ * <code>ctx.write()</code>.</li>
+ * <li>You shall also consider to have object size in read or write operations relatively adapted to
+ * the bandwidth you required: for instance having 10 MB objects for 10KB/s will lead to burst effect,
+ * while having 100 KB objects for 1 MB/s should be smoothly handle by this TrafficShaping handler.<br><br></li>
+ * <li>Some configuration methods will be taken as best effort, meaning
+ * that all already scheduled traffics will not be
+ * changed, but only applied to new traffics.<br>
+ * So the expected usage of those methods are to be used not too often,
+ * accordingly to the traffic shaping configuration.</li>
  * </ul><br>
  */
 public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler {
-    private List<ToSend> messagesQueue = new LinkedList<ToSend>();
+    private ArrayDeque<ToSend> messagesQueue = new ArrayDeque<ToSend>();
     private long queueSize;
 
     /**
@@ -130,13 +141,25 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
         if (trafficCounter != null) {
             trafficCounter.stop();
         }
-        for (ToSend toSend : messagesQueue) {
-            if (toSend.toSend instanceof ByteBuf) {
-                ((ByteBuf) toSend.toSend).release();
+        if (ctx.channel().isActive()) {
+            for (ToSend toSend : messagesQueue) {
+                long size = calculateSize(toSend.toSend);
+                if (trafficCounter != null) {
+                    trafficCounter.bytesRealWriteFlowControl(size);
+                }
+                queueSize -= size;
+                ctx.write(toSend.toSend, toSend.promise);
+            }
+        } else {
+            for (ToSend toSend : messagesQueue) {
+                if (toSend.toSend instanceof ByteBuf) {
+                    ((ByteBuf) toSend.toSend).release();
+                }
             }
         }
         messagesQueue.clear();
         releaseWriteSuspended(ctx);
+        releaseReadSuspended(ctx);
         super.handlerRemoved(ctx);
     }
 
@@ -146,7 +169,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
         final ChannelPromise promise;
 
         private ToSend(final long delay, final Object toSend, final ChannelPromise promise) {
-            this.date = System.currentTimeMillis() + delay;
+            this.date = delay;
             this.toSend = toSend;
             this.promise = promise;
         }
@@ -154,7 +177,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
 
     @Override
     protected synchronized void submitWrite(final ChannelHandlerContext ctx, final Object msg,
-            final long size, final long delay,
+            final long size, final long delay, final long now,
             final ChannelPromise promise) {
         if (delay == 0 && messagesQueue.isEmpty()) {
             if (trafficCounter != null) {
@@ -163,32 +186,34 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
             ctx.write(msg, promise);
             return;
         }
-        final ToSend newToSend = new ToSend(delay, msg, promise);
-        messagesQueue.add(newToSend);
+        final ToSend newToSend = new ToSend(delay + now, msg, promise);
+        final long futureNow = newToSend.date;
+        messagesQueue.addLast(newToSend);
         queueSize += size;
         checkWriteSuspend(ctx, delay, queueSize);
         ctx.executor().schedule(new Runnable() {
             @Override
             public void run() {
-                sendAllValid(ctx);
+                sendAllValid(ctx, futureNow);
             }
         }, delay, TimeUnit.MILLISECONDS);
     }
 
-    private synchronized void sendAllValid(ChannelHandlerContext ctx) {
-        while (!messagesQueue.isEmpty()) {
-            ToSend newToSend = messagesQueue.remove(0);
-            if (newToSend.date <= System.currentTimeMillis()) {
+    private synchronized void sendAllValid(final ChannelHandlerContext ctx, final long now) {
+        ToSend newToSend = messagesQueue.peekFirst();
+        while (newToSend != null) {
+            if (newToSend.date <= now) {
                 long size = calculateSize(newToSend.toSend);
                 if (trafficCounter != null) {
                     trafficCounter.bytesRealWriteFlowControl(size);
                 }
                 queueSize -= size;
                 ctx.write(newToSend.toSend, newToSend.promise);
+                messagesQueue.pollFirst();
             } else {
-                messagesQueue.add(0, newToSend);
                 break;
             }
+            newToSend = messagesQueue.peekFirst();
         }
         if (messagesQueue.isEmpty()) {
             releaseWriteSuspended(ctx);

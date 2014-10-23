@@ -20,12 +20,10 @@ import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.concurrent.EventExecutor;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.ArrayDeque;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
@@ -56,8 +54,20 @@ import java.util.concurrent.locks.ReentrantLock;
  * the less precise the traffic shaping will be. It is suggested as higher value something close
  * to 5 or 10 minutes.<br><br>
  *
- * maxTimeToWait, by default set to 15s, allows to specify an upper bound of time shaping.<br>
+ * maxTimeToWait, by default set to 15s, allows to specify an upper bound of time shaping.<br><br>
  * </li>
+ * <li>In your handler, you should consider to use the <code>channel.isWritable()</code> and
+ * <code>channelWritabilityChanged(ctx)</code> to handle writability, or through 
+ * <code>future.addListener(new GenericFutureListener())</code> on the future returned by
+ * <code>ctx.write()</code>.</li>
+ * <li>You shall also consider to have object size in read or write operations relatively adapted to
+ * the bandwidth you required: for instance having 10 MB objects for 10KB/s will lead to burst effect,
+ * while having 100 KB objects for 1 MB/s should be smoothly handle by this TrafficShaping handler.<br><br></li>
+ * <li>Some configuration methods will be taken as best effort, meaning
+ * that all already scheduled traffics will not be
+ * changed, but only applied to new traffics.<br>
+ * So the expected usage of those methods are to be used not too often,
+ * accordingly to the traffic shaping configuration.</li>
  * </ul><br>
  *
  * Be sure to call {@link #release()} once this handler is not needed anymore to release all internal resources.
@@ -68,11 +78,11 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     /**
      * All queues per channel
      */
-    private Map<Integer, PerChannel> channelQueues = new HashMap<Integer, PerChannel>();
+    private IntObjectHashMap<PerChannel> channelQueues = new IntObjectHashMap<PerChannel>();
     /**
      * Global queues size
      */
-    private long queuesSize;
+    private volatile long queuesSize;
     /**
      * Max size in the list before proposing to stop writing new objects from next handlers
      * for all channel (global)
@@ -80,7 +90,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     protected long maxGlobalWriteSize = DEFAULT_MAX_SIZE * 100; // default 400MB
 
     private static class PerChannel {
-        List<ToSend> messagesQueue;
+        ArrayDeque<ToSend> messagesQueue;
         long queueSize;
         long lastWrite;
         long lastRead;
@@ -94,8 +104,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         if (executor == null) {
             throw new NullPointerException("executor");
         }
-        TrafficCounter tc = new TrafficCounter(this, executor, "GlobalTC",
-                    checkInterval);
+        TrafficCounter tc = new TrafficCounter(this, executor, "GlobalTC", checkInterval);
         setTrafficCounter(tc);
         tc.start();
     }
@@ -193,6 +202,12 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     }
 
     /**
+     * Note the change will be taken as best effort, meaning
+     * that all already scheduled traffics will not be
+     * changed, but only applied to new traffics.<br>
+     * So the expected usage of this method is to be used not too often,
+     * accordingly to the traffic shaping configuration.
+     *
      * @param maxGlobalWriteSize the maximum Global Write Size allowed in the buffer
      *            globally for all channels before write suspended is set
      */
@@ -220,10 +235,10 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         PerChannel perChannel = channelQueues.get(key);
         if (perChannel == null) {
             perChannel = new PerChannel();
-            perChannel.messagesQueue = new LinkedList<ToSend>();
+            perChannel.messagesQueue = new ArrayDeque<ToSend>();
             perChannel.queueSize = 0L;
-            perChannel.lastRead = System.currentTimeMillis();
-            perChannel.lastWrite = System.currentTimeMillis();
+            perChannel.lastRead = TrafficCounter.milliSecondFromNano();
+            perChannel.lastWrite = perChannel.lastRead;
             perChannel.channelLock = new ReentrantLock(true);
             channelQueues.put(key, perChannel);
         }
@@ -244,10 +259,22 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         if (perChannel != null) {
             perChannel.channelLock.lock();
             try {
-                for (ToSend toSend : perChannel.messagesQueue) {
-                    queuesSize -= calculateSize(toSend.toSend);
-                    if (toSend.toSend instanceof ByteBuf) {
-                        ((ByteBuf) toSend.toSend).release();
+                if (ctx.channel().isActive()) {
+                    for (ToSend toSend : perChannel.messagesQueue) {
+                        long size = calculateSize(toSend.toSend);
+                        if (trafficCounter != null) {
+                            trafficCounter.bytesRealWriteFlowControl(size);
+                        }
+                        perChannel.queueSize -= size;
+                        queuesSize -= size;
+                        ctx.write(toSend.toSend, toSend.promise);
+                    }
+                } else {
+                    for (ToSend toSend : perChannel.messagesQueue) {
+                        queuesSize -= calculateSize(toSend.toSend);
+                        if (toSend.toSend instanceof ByteBuf) {
+                            ((ByteBuf) toSend.toSend).release();
+                        }
                     }
                 }
                 perChannel.messagesQueue.clear();
@@ -256,15 +283,16 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
             }
         }
         releaseWriteSuspended(ctx);
+        releaseReadSuspended(ctx);
         super.handlerRemoved(ctx);
     }
 
     @Override
-    protected long checkWaitReadTime(final ChannelHandlerContext ctx, long wait) {
+    protected long checkWaitReadTime(final ChannelHandlerContext ctx, long wait, final long now) {
         Integer key = ctx.channel().hashCode();
         PerChannel perChannel = channelQueues.get(key);
         if (perChannel != null) {
-            if (wait > maxTime && System.currentTimeMillis() + wait - perChannel.lastRead > maxTime) {
+            if (wait > maxTime && now + wait - perChannel.lastRead > maxTime) {
                 wait = maxTime;
             }
         }
@@ -272,11 +300,11 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     }
 
     @Override
-    protected void informReadOperation(final ChannelHandlerContext ctx) {
+    protected void informReadOperation(final ChannelHandlerContext ctx, final long now) {
         Integer key = ctx.channel().hashCode();
         PerChannel perChannel = channelQueues.get(key);
         if (perChannel != null) {
-            perChannel.lastRead = System.currentTimeMillis();
+            perChannel.lastRead = now;
         }
     }
 
@@ -286,7 +314,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         final ChannelPromise promise;
 
         private ToSend(final long delay, final Object toSend, final ChannelPromise promise) {
-            this.date = System.currentTimeMillis() + delay;
+            this.date = delay;
             this.toSend = toSend;
             this.promise = promise;
         }
@@ -294,7 +322,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
 
     @Override
     protected void submitWrite(final ChannelHandlerContext ctx, final Object msg,
-            final long size, final long writedelay,
+            final long size, final long writedelay, final long now,
             final ChannelPromise promise) {
         Integer key = ctx.channel().hashCode();
         PerChannel perChannel = channelQueues.get(key);
@@ -303,50 +331,55 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
             // imply a synchronized only if needed
             perChannel = getOrSetPerChannel(key);
         }
+        ToSend newToSend;
+        long delay = writedelay;
+        boolean globalSizeExceeded = false;
         perChannel.channelLock.lock();
         try {
-            if (writedelay == 0 && (perChannel == null || perChannel.messagesQueue == null ||
-                    perChannel.messagesQueue.isEmpty())) {
+            if (writedelay == 0 && perChannel.messagesQueue.isEmpty()) {
                 if (trafficCounter != null) {
                     trafficCounter.bytesRealWriteFlowControl(size);
                 }
                 ctx.write(msg, promise);
-                perChannel.lastWrite = System.currentTimeMillis();
+                perChannel.lastWrite = now;
                 return;
             }
-            long delay = writedelay;
-            if (delay > maxTime && System.currentTimeMillis() + delay - perChannel.lastWrite > maxTime) {
+            if (delay > maxTime && now + delay - perChannel.lastWrite > maxTime) {
                 delay = maxTime;
             }
-            final ToSend newToSend = new ToSend(delay, msg, promise);
-            perChannel.messagesQueue.add(newToSend);
+            newToSend = new ToSend(delay + now, msg, promise);
+            perChannel.messagesQueue.addLast(newToSend);
             perChannel.queueSize += size;
             queuesSize += size;
             checkWriteSuspend(ctx, delay, perChannel.queueSize);
             if (queuesSize > maxGlobalWriteSize) {
-                ChannelOutboundBuffer cob = ctx.channel().unsafe().outboundBuffer();
-                if (cob != null) {
-                    cob.setUserDefinedWritability(userDefinedWritabilityIndex, false);
-                }
+                globalSizeExceeded = true;
             }
-            final PerChannel forSchedule = perChannel;
-            ctx.executor().schedule(new Runnable() {
-                @Override
-                public void run() {
-                    sendAllValid(ctx, forSchedule);
-                }
-            }, delay, TimeUnit.MILLISECONDS);
         } finally {
             perChannel.channelLock.unlock();
         }
+        if (globalSizeExceeded) {
+            ChannelOutboundBuffer cob = ctx.channel().unsafe().outboundBuffer();
+            if (cob != null) {
+                cob.setUserDefinedWritability(userDefinedWritabilityIndex, false);
+            }
+        }
+        final long futureNow = newToSend.date;
+        final PerChannel forSchedule = perChannel;
+        ctx.executor().schedule(new Runnable() {
+            @Override
+            public void run() {
+                sendAllValid(ctx, forSchedule, futureNow);
+            }
+        }, delay, TimeUnit.MILLISECONDS);
     }
 
-    private void sendAllValid(final ChannelHandlerContext ctx, final PerChannel perChannel) {
+    private void sendAllValid(final ChannelHandlerContext ctx, final PerChannel perChannel, final long now) {
         perChannel.channelLock.lock();
         try {
-            while (!perChannel.messagesQueue.isEmpty()) {
-                ToSend newToSend = perChannel.messagesQueue.remove(0);
-                if (newToSend.date <= System.currentTimeMillis()) {
+            ToSend newToSend = perChannel.messagesQueue.peekFirst();
+            while (newToSend != null) {
+                if (newToSend.date <= now) {
                     long size = calculateSize(newToSend.toSend);
                     if (trafficCounter != null) {
                         trafficCounter.bytesRealWriteFlowControl(size);
@@ -354,18 +387,19 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
                     perChannel.queueSize -= size;
                     queuesSize -= size;
                     ctx.write(newToSend.toSend, newToSend.promise);
-                    perChannel.lastWrite = System.currentTimeMillis();
+                    perChannel.lastWrite = now;
+                    perChannel.messagesQueue.pollFirst();
                 } else {
-                    perChannel.messagesQueue.add(0, newToSend);
                     break;
                 }
+                newToSend = perChannel.messagesQueue.peekFirst();
             }
             if (perChannel.messagesQueue.isEmpty()) {
                 releaseWriteSuspended(ctx);
             }
-            ctx.flush();
         } finally {
             perChannel.channelLock.unlock();
         }
+        ctx.flush();
     }
 }
