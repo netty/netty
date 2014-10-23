@@ -445,7 +445,7 @@ public class TrafficCounter {
     }
 
     /**
-     * @return the name
+     * @return the name of this TrafficCounter
      */
     public String name() {
         return name;
@@ -563,9 +563,6 @@ public class TrafficCounter {
         return 0;
     }
 
-    /**
-     * String information
-     */
     @Override
     public String toString() {
         StringBuilder builder = new StringBuilder("Monitor ").append(name);

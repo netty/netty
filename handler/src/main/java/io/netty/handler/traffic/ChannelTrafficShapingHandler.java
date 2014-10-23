@@ -138,15 +138,11 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
 
     @Override
     public synchronized void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        if (trafficCounter != null) {
-            trafficCounter.stop();
-        }
+        trafficCounter.stop();
         if (ctx.channel().isActive()) {
             for (ToSend toSend : messagesQueue) {
                 long size = calculateSize(toSend.toSend);
-                if (trafficCounter != null) {
-                    trafficCounter.bytesRealWriteFlowControl(size);
-                }
+                trafficCounter.bytesRealWriteFlowControl(size);
                 queueSize -= size;
                 ctx.write(toSend.toSend, toSend.promise);
             }
@@ -180,9 +176,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
             final long size, final long delay, final long now,
             final ChannelPromise promise) {
         if (delay == 0 && messagesQueue.isEmpty()) {
-            if (trafficCounter != null) {
-                trafficCounter.bytesRealWriteFlowControl(size);
-            }
+            trafficCounter.bytesRealWriteFlowControl(size);
             ctx.write(msg, promise);
             return;
         }
@@ -200,20 +194,17 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
     }
 
     private synchronized void sendAllValid(final ChannelHandlerContext ctx, final long now) {
-        ToSend newToSend = messagesQueue.peekFirst();
-        while (newToSend != null) {
+        ToSend newToSend = messagesQueue.pollFirst();
+        for (; newToSend != null; newToSend = messagesQueue.pollFirst()) {
             if (newToSend.date <= now) {
                 long size = calculateSize(newToSend.toSend);
-                if (trafficCounter != null) {
-                    trafficCounter.bytesRealWriteFlowControl(size);
-                }
+                trafficCounter.bytesRealWriteFlowControl(size);
                 queueSize -= size;
                 ctx.write(newToSend.toSend, newToSend.promise);
-                messagesQueue.pollFirst();
             } else {
+                messagesQueue.addFirst(newToSend);
                 break;
             }
-            newToSend = messagesQueue.peekFirst();
         }
         if (messagesQueue.isEmpty()) {
             releaseWriteSuspended(ctx);

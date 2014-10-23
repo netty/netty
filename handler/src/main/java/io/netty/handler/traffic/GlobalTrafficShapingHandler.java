@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.collection.IntObjectMap;
 import io.netty.util.concurrent.EventExecutor;
 
 import java.util.ArrayDeque;
@@ -78,7 +79,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     /**
      * All queues per channel
      */
-    private IntObjectHashMap<PerChannel> channelQueues = new IntObjectHashMap<PerChannel>();
+    private IntObjectMap<PerChannel> channelQueues = new IntObjectHashMap<PerChannel>();
     /**
      * Global queues size
      */
@@ -226,12 +227,10 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
      * Release all internal resources of this instance
      */
     public final void release() {
-        if (trafficCounter != null) {
-            trafficCounter.stop();
-        }
+        trafficCounter.stop();
     }
 
-    private synchronized PerChannel getOrSetPerChannel(Integer key) {
+    private synchronized PerChannel getOrSetPerChannel(int key) {
         PerChannel perChannel = channelQueues.get(key);
         if (perChannel == null) {
             perChannel = new PerChannel();
@@ -247,14 +246,14 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        Integer key = ctx.channel().hashCode();
+        int key = ctx.channel().hashCode();
         getOrSetPerChannel(key);
         super.handlerAdded(ctx);
     }
 
     @Override
     public synchronized void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        Integer key = ctx.channel().hashCode();
+        int key = ctx.channel().hashCode();
         PerChannel perChannel = channelQueues.remove(key);
         if (perChannel != null) {
             perChannel.channelLock.lock();
@@ -262,9 +261,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
                 if (ctx.channel().isActive()) {
                     for (ToSend toSend : perChannel.messagesQueue) {
                         long size = calculateSize(toSend.toSend);
-                        if (trafficCounter != null) {
-                            trafficCounter.bytesRealWriteFlowControl(size);
-                        }
+                        trafficCounter.bytesRealWriteFlowControl(size);
                         perChannel.queueSize -= size;
                         queuesSize -= size;
                         ctx.write(toSend.toSend, toSend.promise);
@@ -289,7 +286,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
 
     @Override
     protected long checkWaitReadTime(final ChannelHandlerContext ctx, long wait, final long now) {
-        Integer key = ctx.channel().hashCode();
+        int key = ctx.channel().hashCode();
         PerChannel perChannel = channelQueues.get(key);
         if (perChannel != null) {
             if (wait > maxTime && now + wait - perChannel.lastRead > maxTime) {
@@ -301,7 +298,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
 
     @Override
     protected void informReadOperation(final ChannelHandlerContext ctx, final long now) {
-        Integer key = ctx.channel().hashCode();
+        int key = ctx.channel().hashCode();
         PerChannel perChannel = channelQueues.get(key);
         if (perChannel != null) {
             perChannel.lastRead = now;
@@ -324,7 +321,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     protected void submitWrite(final ChannelHandlerContext ctx, final Object msg,
             final long size, final long writedelay, final long now,
             final ChannelPromise promise) {
-        Integer key = ctx.channel().hashCode();
+        int key = ctx.channel().hashCode();
         PerChannel perChannel = channelQueues.get(key);
         if (perChannel == null) {
             // in case write occurs before handlerAdded is raized for this handler
@@ -337,9 +334,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         perChannel.channelLock.lock();
         try {
             if (writedelay == 0 && perChannel.messagesQueue.isEmpty()) {
-                if (trafficCounter != null) {
-                    trafficCounter.bytesRealWriteFlowControl(size);
-                }
+                trafficCounter.bytesRealWriteFlowControl(size);
                 ctx.write(msg, promise);
                 perChannel.lastWrite = now;
                 return;
@@ -377,22 +372,19 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     private void sendAllValid(final ChannelHandlerContext ctx, final PerChannel perChannel, final long now) {
         perChannel.channelLock.lock();
         try {
-            ToSend newToSend = perChannel.messagesQueue.peekFirst();
-            while (newToSend != null) {
+            ToSend newToSend = perChannel.messagesQueue.pollFirst();
+            for (; newToSend != null; newToSend = perChannel.messagesQueue.pollFirst()) {
                 if (newToSend.date <= now) {
                     long size = calculateSize(newToSend.toSend);
-                    if (trafficCounter != null) {
-                        trafficCounter.bytesRealWriteFlowControl(size);
-                    }
+                    trafficCounter.bytesRealWriteFlowControl(size);
                     perChannel.queueSize -= size;
                     queuesSize -= size;
                     ctx.write(newToSend.toSend, newToSend.promise);
                     perChannel.lastWrite = now;
-                    perChannel.messagesQueue.pollFirst();
                 } else {
+                    perChannel.messagesQueue.addFirst(newToSend);
                     break;
                 }
-                newToSend = perChannel.messagesQueue.peekFirst();
             }
             if (perChannel.messagesQueue.isEmpty()) {
                 releaseWriteSuspended(ctx);
