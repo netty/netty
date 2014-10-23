@@ -21,7 +21,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 
@@ -41,7 +40,7 @@ public class TrafficCounter {
             InternalLoggerFactory.getInstance(TrafficCounter.class);
 
     /**
-     * 
+     *
      * @return the time in ms using nanoTime, so not real EPOCH time but elapsed time in ms
      */
     public static final long milliSecondFromNano() {
@@ -161,7 +160,7 @@ public class TrafficCounter {
     /**
      * Is Monitor active
      */
-    final AtomicBoolean monitorActive = new AtomicBoolean();
+    private volatile boolean monitorActive;
 
     /**
      * Class to implement monitoring at fix delay
@@ -191,7 +190,7 @@ public class TrafficCounter {
 
         @Override
         public void run() {
-            if (!counter.monitorActive.get()) {
+            if (!counter.monitorActive) {
                 return;
             }
             counter.resetAccounting(milliSecondFromNano());
@@ -207,15 +206,16 @@ public class TrafficCounter {
      * Start the monitoring process
      */
     public synchronized void start() {
-        if (monitorActive.get()) {
+        if (monitorActive) {
             return;
         }
         lastTime.set(milliSecondFromNano());
-        if (checkInterval.get() > 0) {
-            monitorActive.set(true);
+        long localCheckInterval = checkInterval.get();
+        if (localCheckInterval > 0) {
+            monitorActive = true;
             monitor = new TrafficMonitoringTask(trafficShapingHandler, this);
             scheduledFuture =
-                executor.schedule(monitor, checkInterval.get(), TimeUnit.MILLISECONDS);
+                executor.schedule(monitor, localCheckInterval, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -223,10 +223,10 @@ public class TrafficCounter {
      * Stop the monitoring process
      */
     public synchronized void stop() {
-        if (!monitorActive.get()) {
+        if (!monitorActive) {
             return;
         }
-        monitorActive.set(false);
+        monitorActive = false;
         resetAccounting(milliSecondFromNano());
         if (trafficShapingHandler != null) {
             trafficShapingHandler.doAccounting(this);
@@ -247,7 +247,7 @@ public class TrafficCounter {
             // nothing to do
             return;
         }
-        if (logger.isDebugEnabled() && (interval > 2 * checkInterval())) {
+        if (logger.isDebugEnabled() && (interval > checkInterval() << 1)) {
             logger.debug("Acct schedule not ok: " + interval + " > 2*" + checkInterval() + " from " + name);
         }
         lastReadBytes = currentReadBytes.getAndSet(0);
@@ -289,8 +289,7 @@ public class TrafficCounter {
      */
     public void configure(long newcheckInterval) {
         long newInterval = newcheckInterval / 10 * 10;
-        if (checkInterval.get() != newInterval) {
-            checkInterval.set(newInterval);
+        if (checkInterval.getAndSet(newInterval) != newInterval) {
             if (newInterval <= 0) {
                 stop();
                 // No more active monitoring

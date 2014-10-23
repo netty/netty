@@ -353,8 +353,9 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     /**
      * Note that this limit is a best effort on memory limitation to prevent Out Of
      * Memory Exception. To ensure it works, the handler generating the write should
-     * use one of the way provided by Netty to handle the capacity:</br>
-     * - the <code>Channel.isWritable()</code> property and the corresponding <code>channelWritabilityChanged()</code></br>
+     * use one of the way provided by Netty to handle the capacity:<br>
+     * - the <code>Channel.isWritable()</code> property and the corresponding
+     * <code>channelWritabilityChanged()</code><br>
      * - the <code>ChannelFuture.addListener(new GenericFutureListener())</code>
      *
      * @param maxWriteSize the maximum Write Size allowed in the buffer
@@ -423,7 +424,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
         ctx.attr(READ_SUSPENDED).set(false);
         ctx.channel().config().setAutoRead(true);
     }
-    
+
     @Override
     public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
         long size = calculateSize(msg);

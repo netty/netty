@@ -48,7 +48,7 @@ import io.netty.channel.ChannelPromise;
  * maxTimeToWait, by default set to 15s, allows to specify an upper bound of time shaping.<br><br>
  * </li>
  * <li>In your handler, you should consider to use the <code>channel.isWritable()</code> and
- * <code>channelWritabilityChanged(ctx)</code> to handle writability, or through 
+ * <code>channelWritabilityChanged(ctx)</code> to handle writability, or through
  * <code>future.addListener(new GenericFutureListener())</code> on the future returned by
  * <code>ctx.write()</code>.</li>
  * <li>You shall also consider to have object size in read or write operations relatively adapted to
