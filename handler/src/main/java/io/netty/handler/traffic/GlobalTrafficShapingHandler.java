@@ -27,7 +27,6 @@ import io.netty.util.concurrent.EventExecutor;
 import java.util.ArrayDeque;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
 
 
 /**
@@ -95,7 +94,6 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         long queueSize;
         long lastWrite;
         long lastRead;
-        ReentrantLock channelLock;
     }
 
     /**
@@ -230,21 +228,18 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         trafficCounter.stop();
     }
 
-    private PerChannel getOrSetPerChannel(ChannelHandlerContext ctx) {
+    private synchronized PerChannel getOrSetPerChannel(ChannelHandlerContext ctx) {
         int key = ctx.channel().hashCode();
-        synchronized (ctx.channel()) {
-            PerChannel perChannel = channelQueues.get(key);
-            if (perChannel == null) {
-                perChannel = new PerChannel();
-                perChannel.messagesQueue = new ArrayDeque<ToSend>();
-                perChannel.queueSize = 0L;
-                perChannel.lastRead = TrafficCounter.milliSecondFromNano();
-                perChannel.lastWrite = perChannel.lastRead;
-                perChannel.channelLock = new ReentrantLock(true);
-                channelQueues.put(key, perChannel);
-            }
-            return perChannel;
+        PerChannel perChannel = channelQueues.get(key);
+        if (perChannel == null) {
+            perChannel = new PerChannel();
+            perChannel.messagesQueue = new ArrayDeque<ToSend>();
+            perChannel.queueSize = 0L;
+            perChannel.lastRead = TrafficCounter.milliSecondFromNano();
+            perChannel.lastWrite = perChannel.lastRead;
+            channelQueues.put(key, perChannel);
         }
+        return perChannel;
     }
 
     @Override
@@ -258,8 +253,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         int key = ctx.channel().hashCode();
         PerChannel perChannel = channelQueues.remove(key);
         if (perChannel != null) {
-            perChannel.channelLock.lock();
-            try {
+            synchronized (ctx.channel()) {
                 if (ctx.channel().isActive()) {
                     for (ToSend toSend : perChannel.messagesQueue) {
                         long size = calculateSize(toSend.toSend);
@@ -277,8 +271,6 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
                     }
                 }
                 perChannel.messagesQueue.clear();
-            } finally {
-                perChannel.channelLock.unlock();
             }
         }
         releaseWriteSuspended(ctx);
@@ -333,8 +325,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         ToSend newToSend;
         long delay = writedelay;
         boolean globalSizeExceeded = false;
-        perChannel.channelLock.lock();
-        try {
+        synchronized (ctx.channel()) {
             if (writedelay == 0 && perChannel.messagesQueue.isEmpty()) {
                 trafficCounter.bytesRealWriteFlowControl(size);
                 ctx.write(msg, promise);
@@ -352,8 +343,6 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
             if (queuesSize > maxGlobalWriteSize) {
                 globalSizeExceeded = true;
             }
-        } finally {
-            perChannel.channelLock.unlock();
         }
         if (globalSizeExceeded) {
             ChannelOutboundBuffer cob = ctx.channel().unsafe().outboundBuffer();
@@ -372,8 +361,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     }
 
     private void sendAllValid(final ChannelHandlerContext ctx, final PerChannel perChannel, final long now) {
-        perChannel.channelLock.lock();
-        try {
+        synchronized (ctx.channel()) {
             ToSend newToSend = perChannel.messagesQueue.pollFirst();
             for (; newToSend != null; newToSend = perChannel.messagesQueue.pollFirst()) {
                 if (newToSend.date <= now) {
@@ -391,8 +379,6 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
             if (perChannel.messagesQueue.isEmpty()) {
                 releaseWriteSuspended(ctx);
             }
-        } finally {
-            perChannel.channelLock.unlock();
         }
         ctx.flush();
     }
