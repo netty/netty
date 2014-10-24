@@ -16,6 +16,7 @@
 package io.netty.handler.traffic;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundBuffer;
@@ -231,19 +232,18 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
 
     private PerChannel getOrSetPerChannel(ChannelHandlerContext ctx) {
         // ensure creation is limited to one thread per channel
-        synchronized (ctx.channel()) {
-            int key = ctx.channel().hashCode();
-            PerChannel perChannel = channelQueues.get(key);
-            if (perChannel == null) {
-                perChannel = new PerChannel();
-                perChannel.messagesQueue = new ArrayDeque<ToSend>();
-                perChannel.queueSize = 0L;
-                perChannel.lastRead = TrafficCounter.milliSecondFromNano();
-                perChannel.lastWrite = perChannel.lastRead;
-                channelQueues.put(key, perChannel);
-            }
-            return perChannel;
+        Channel channel = ctx.channel();
+        Integer key = channel.hashCode();
+        PerChannel perChannel = channelQueues.get(key);
+        if (perChannel == null) {
+            perChannel = new PerChannel();
+            perChannel.messagesQueue = new ArrayDeque<ToSend>();
+            perChannel.queueSize = 0L;
+            perChannel.lastRead = TrafficCounter.milliSecondFromNano();
+            perChannel.lastWrite = perChannel.lastRead;
+            channelQueues.put(key, perChannel);
         }
+        return perChannel;
     }
 
     @Override
@@ -254,12 +254,13 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        int key = ctx.channel().hashCode();
+        Channel channel = ctx.channel();
+        Integer key = channel.hashCode();
         PerChannel perChannel = channelQueues.remove(key);
         if (perChannel != null) {
             // write operations need synchronization
-            synchronized (ctx.channel()) {
-                if (ctx.channel().isActive()) {
+            synchronized (channel) {
+                if (channel.isActive()) {
                     for (ToSend toSend : perChannel.messagesQueue) {
                         long size = calculateSize(toSend.toSend);
                         trafficCounter.bytesRealWriteFlowControl(size);
@@ -285,7 +286,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
 
     @Override
     protected long checkWaitReadTime(final ChannelHandlerContext ctx, long wait, final long now) {
-        int key = ctx.channel().hashCode();
+        Integer key = ctx.channel().hashCode();
         PerChannel perChannel = channelQueues.get(key);
         if (perChannel != null) {
             if (wait > maxTime && now + wait - perChannel.lastRead > maxTime) {
@@ -297,7 +298,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
 
     @Override
     protected void informReadOperation(final ChannelHandlerContext ctx, final long now) {
-        int key = ctx.channel().hashCode();
+        Integer key = ctx.channel().hashCode();
         PerChannel perChannel = channelQueues.get(key);
         if (perChannel != null) {
             perChannel.lastRead = now;
@@ -320,7 +321,8 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     protected void submitWrite(final ChannelHandlerContext ctx, final Object msg,
             final long size, final long writedelay, final long now,
             final ChannelPromise promise) {
-        int key = ctx.channel().hashCode();
+        Channel channel = ctx.channel();
+        Integer key = channel.hashCode();
         PerChannel perChannel = channelQueues.get(key);
         if (perChannel == null) {
             // in case write occurs before handlerAdded is raized for this handler
@@ -330,7 +332,8 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         ToSend newToSend;
         long delay = writedelay;
         boolean globalSizeExceeded = false;
-        synchronized (ctx.channel()) {
+        // write operations need synchronization
+        synchronized (channel) {
             if (writedelay == 0 && perChannel.messagesQueue.isEmpty()) {
                 trafficCounter.bytesRealWriteFlowControl(size);
                 ctx.write(msg, promise);
@@ -350,7 +353,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
             }
         }
         if (globalSizeExceeded) {
-            ChannelOutboundBuffer cob = ctx.channel().unsafe().outboundBuffer();
+            ChannelOutboundBuffer cob = channel.unsafe().outboundBuffer();
             if (cob != null) {
                 cob.setUserDefinedWritability(userDefinedWritabilityIndex, false);
             }
