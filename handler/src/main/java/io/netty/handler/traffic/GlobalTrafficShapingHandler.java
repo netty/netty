@@ -20,11 +20,11 @@ import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
-import io.netty.util.collection.IntObjectHashMap;
-import io.netty.util.collection.IntObjectMap;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.internal.PlatformDependent;
 
 import java.util.ArrayDeque;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -78,7 +78,8 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     /**
      * All queues per channel
      */
-    private IntObjectMap<PerChannel> channelQueues = new IntObjectHashMap<PerChannel>();
+    private ConcurrentMap<Integer, PerChannel> channelQueues = PlatformDependent.newConcurrentHashMap();
+
     /**
      * Global queues size
      */
@@ -228,18 +229,21 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         trafficCounter.stop();
     }
 
-    private synchronized PerChannel getOrSetPerChannel(ChannelHandlerContext ctx) {
-        int key = ctx.channel().hashCode();
-        PerChannel perChannel = channelQueues.get(key);
-        if (perChannel == null) {
-            perChannel = new PerChannel();
-            perChannel.messagesQueue = new ArrayDeque<ToSend>();
-            perChannel.queueSize = 0L;
-            perChannel.lastRead = TrafficCounter.milliSecondFromNano();
-            perChannel.lastWrite = perChannel.lastRead;
-            channelQueues.put(key, perChannel);
+    private PerChannel getOrSetPerChannel(ChannelHandlerContext ctx) {
+        // ensure creation is limited to one thread per channel
+        synchronized (ctx.channel()) {
+            int key = ctx.channel().hashCode();
+            PerChannel perChannel = channelQueues.get(key);
+            if (perChannel == null) {
+                perChannel = new PerChannel();
+                perChannel.messagesQueue = new ArrayDeque<ToSend>();
+                perChannel.queueSize = 0L;
+                perChannel.lastRead = TrafficCounter.milliSecondFromNano();
+                perChannel.lastWrite = perChannel.lastRead;
+                channelQueues.put(key, perChannel);
+            }
+            return perChannel;
         }
-        return perChannel;
     }
 
     @Override
@@ -249,10 +253,11 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     }
 
     @Override
-    public synchronized void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         int key = ctx.channel().hashCode();
         PerChannel perChannel = channelQueues.remove(key);
         if (perChannel != null) {
+            // write operations need synchronization
             synchronized (ctx.channel()) {
                 if (ctx.channel().isActive()) {
                     for (ToSend toSend : perChannel.messagesQueue) {
@@ -361,6 +366,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     }
 
     private void sendAllValid(final ChannelHandlerContext ctx, final PerChannel perChannel, final long now) {
+        // write operations need synchronization
         synchronized (ctx.channel()) {
             ToSend newToSend = perChannel.messagesQueue.pollFirst();
             for (; newToSend != null; newToSend = perChannel.messagesQueue.pollFirst()) {
