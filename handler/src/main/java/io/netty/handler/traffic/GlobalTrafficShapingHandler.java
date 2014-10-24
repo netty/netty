@@ -29,7 +29,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-
 /**
  * This implementation of the {@link AbstractTrafficShapingHandler} is for global
  * traffic shaping, that is to say a global limitation of the bandwidth, whatever
@@ -259,7 +258,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         PerChannel perChannel = channelQueues.remove(key);
         if (perChannel != null) {
             // write operations need synchronization
-            synchronized (channel) {
+            synchronized (perChannel) {
                 if (channel.isActive()) {
                     for (ToSend toSend : perChannel.messagesQueue) {
                         long size = calculateSize(toSend.toSend);
@@ -333,7 +332,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         long delay = writedelay;
         boolean globalSizeExceeded = false;
         // write operations need synchronization
-        synchronized (channel) {
+        synchronized (perChannel) {
             if (writedelay == 0 && perChannel.messagesQueue.isEmpty()) {
                 trafficCounter.bytesRealWriteFlowControl(size);
                 ctx.write(msg, promise);
@@ -370,7 +369,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
 
     private void sendAllValid(final ChannelHandlerContext ctx, final PerChannel perChannel, final long now) {
         // write operations need synchronization
-        synchronized (ctx.channel()) {
+        synchronized (perChannel) {
             ToSend newToSend = perChannel.messagesQueue.pollFirst();
             for (; newToSend != null; newToSend = perChannel.messagesQueue.pollFirst()) {
                 if (newToSend.date <= now) {
