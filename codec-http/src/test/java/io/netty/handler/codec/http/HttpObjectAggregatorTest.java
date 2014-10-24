@@ -223,6 +223,53 @@ public class HttpObjectAggregatorTest {
         assertFalse(embedder.finish());
     }
 
+    @Test
+    public void testRequestAfterOversized100ContinueAndDecoder() {
+        EmbeddedChannel embedder = new EmbeddedChannel(new HttpRequestDecoder(), new HttpObjectAggregator(15));
+
+        // Write first request with Expect: 100-continue
+        HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "http://localhost");
+        HttpHeaders.set100ContinueExpected(message);
+        HttpHeaders.setContentLength(message, 16);
+
+        HttpContent chunk1 = releaseLater(new DefaultHttpContent(Unpooled.copiedBuffer("some", CharsetUtil.US_ASCII)));
+        HttpContent chunk2 = releaseLater(new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII)));
+        HttpContent chunk3 = LastHttpContent.EMPTY_LAST_CONTENT;
+
+        // Send a request with 100-continue + large Content-Length header value.
+        assertFalse(embedder.writeInbound(message));
+
+        // The agregator should respond with '413 Request Entity Too Large.'
+        FullHttpResponse response = embedder.readOutbound();
+        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
+        assertEquals("0", response.headers().get(Names.CONTENT_LENGTH));
+
+        // An ill-behaving client could continue to send data without a respect, and such data should be discarded.
+        assertFalse(embedder.writeInbound(chunk1));
+
+        // The aggregator should not close the connection because keep-alive is on.
+        assertTrue(embedder.isOpen());
+
+        // Now send a valid request.
+        HttpRequest message2 = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "http://localhost");
+
+        assertFalse(embedder.writeInbound(message2));
+        assertFalse(embedder.writeInbound(chunk2));
+        assertTrue(embedder.writeInbound(chunk3));
+
+        FullHttpRequest fullMsg = embedder.readInbound();
+        assertNotNull(fullMsg);
+
+        assertEquals(
+                chunk2.content().readableBytes() + chunk3.content().readableBytes(),
+                HttpHeaders.getContentLength(fullMsg));
+
+        assertEquals(HttpHeaders.getContentLength(fullMsg), fullMsg.content().readableBytes());
+
+        fullMsg.release();
+        assertFalse(embedder.finish());
+    }
+
     private static void checkOversizedRequest(HttpRequest message) {
         EmbeddedChannel embedder = new EmbeddedChannel(new HttpObjectAggregator(4));
 
