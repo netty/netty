@@ -137,54 +137,61 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
     }
 
     @Override
-    public synchronized void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         trafficCounter.stop();
-        if (ctx.channel().isActive()) {
-            for (ToSend toSend : messagesQueue) {
-                long size = calculateSize(toSend.toSend);
-                trafficCounter.bytesRealWriteFlowControl(size);
-                queueSize -= size;
-                ctx.write(toSend.toSend, toSend.promise);
-            }
-        } else {
-            for (ToSend toSend : messagesQueue) {
-                if (toSend.toSend instanceof ByteBuf) {
-                    ((ByteBuf) toSend.toSend).release();
+        // write order control
+        synchronized (this) {
+            if (ctx.channel().isActive()) {
+                for (ToSend toSend : messagesQueue) {
+                    long size = calculateSize(toSend.toSend);
+                    trafficCounter.bytesRealWriteFlowControl(size);
+                    queueSize -= size;
+                    ctx.write(toSend.toSend, toSend.promise);
+                }
+            } else {
+                for (ToSend toSend : messagesQueue) {
+                    if (toSend.toSend instanceof ByteBuf) {
+                        ((ByteBuf) toSend.toSend).release();
+                    }
                 }
             }
+            messagesQueue.clear();
         }
-        messagesQueue.clear();
         releaseWriteSuspended(ctx);
         releaseReadSuspended(ctx);
         super.handlerRemoved(ctx);
     }
 
     private static final class ToSend {
-        final long date;
+        final long relativeTimeAction;
         final Object toSend;
         final ChannelPromise promise;
 
         private ToSend(final long delay, final Object toSend, final ChannelPromise promise) {
-            this.date = delay;
+            this.relativeTimeAction = delay;
             this.toSend = toSend;
             this.promise = promise;
         }
     }
 
     @Override
-    protected synchronized void submitWrite(final ChannelHandlerContext ctx, final Object msg,
+    protected void submitWrite(final ChannelHandlerContext ctx, final Object msg,
             final long size, final long delay, final long now,
             final ChannelPromise promise) {
-        if (delay == 0 && messagesQueue.isEmpty()) {
-            trafficCounter.bytesRealWriteFlowControl(size);
-            ctx.write(msg, promise);
-            return;
+        ToSend newToSend;
+        // write order control
+        synchronized (this) {
+            if (delay == 0 && messagesQueue.isEmpty()) {
+                trafficCounter.bytesRealWriteFlowControl(size);
+                ctx.write(msg, promise);
+                return;
+            }
+            newToSend = new ToSend(delay + now, msg, promise);
+            messagesQueue.addLast(newToSend);
+            queueSize += size;
+            checkWriteSuspend(ctx, delay, queueSize);
         }
-        final ToSend newToSend = new ToSend(delay + now, msg, promise);
-        final long futureNow = newToSend.date;
-        messagesQueue.addLast(newToSend);
-        queueSize += size;
-        checkWriteSuspend(ctx, delay, queueSize);
+        final long futureNow = newToSend.relativeTimeAction;
         ctx.executor().schedule(new Runnable() {
             @Override
             public void run() {
@@ -193,21 +200,24 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
         }, delay, TimeUnit.MILLISECONDS);
     }
 
-    private synchronized void sendAllValid(final ChannelHandlerContext ctx, final long now) {
-        ToSend newToSend = messagesQueue.pollFirst();
-        for (; newToSend != null; newToSend = messagesQueue.pollFirst()) {
-            if (newToSend.date <= now) {
-                long size = calculateSize(newToSend.toSend);
-                trafficCounter.bytesRealWriteFlowControl(size);
-                queueSize -= size;
-                ctx.write(newToSend.toSend, newToSend.promise);
-            } else {
-                messagesQueue.addFirst(newToSend);
-                break;
+    private void sendAllValid(final ChannelHandlerContext ctx, final long now) {
+        // write order control
+        synchronized (this) {
+            ToSend newToSend = messagesQueue.pollFirst();
+            for (; newToSend != null; newToSend = messagesQueue.pollFirst()) {
+                if (newToSend.relativeTimeAction <= now) {
+                    long size = calculateSize(newToSend.toSend);
+                    trafficCounter.bytesRealWriteFlowControl(size);
+                    queueSize -= size;
+                    ctx.write(newToSend.toSend, newToSend.promise);
+                } else {
+                    messagesQueue.addFirst(newToSend);
+                    break;
+                }
             }
-        }
-        if (messagesQueue.isEmpty()) {
-            releaseWriteSuspended(ctx);
+            if (messagesQueue.isEmpty()) {
+                releaseWriteSuspended(ctx);
+            }
         }
         ctx.flush();
     }

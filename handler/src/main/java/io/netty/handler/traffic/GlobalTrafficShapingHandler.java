@@ -305,12 +305,12 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     }
 
     private static final class ToSend {
-        final long date;
+        final long relativeTimeAction;
         final Object toSend;
         final ChannelPromise promise;
 
         private ToSend(final long delay, final Object toSend, final ChannelPromise promise) {
-            this.date = delay;
+            this.relativeTimeAction = delay;
             this.toSend = toSend;
             this.promise = promise;
         }
@@ -357,7 +357,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
                 cob.setUserDefinedWritability(userDefinedWritabilityIndex, false);
             }
         }
-        final long futureNow = newToSend.date;
+        final long futureNow = newToSend.relativeTimeAction;
         final PerChannel forSchedule = perChannel;
         ctx.executor().schedule(new Runnable() {
             @Override
@@ -372,7 +372,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         synchronized (perChannel) {
             ToSend newToSend = perChannel.messagesQueue.pollFirst();
             for (; newToSend != null; newToSend = perChannel.messagesQueue.pollFirst()) {
-                if (newToSend.date <= now) {
+                if (newToSend.relativeTimeAction <= now) {
                     long size = calculateSize(newToSend.toSend);
                     trafficCounter.bytesRealWriteFlowControl(size);
                     perChannel.queueSize -= size;
