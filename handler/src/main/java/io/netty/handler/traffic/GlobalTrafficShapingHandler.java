@@ -230,24 +230,26 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         trafficCounter.stop();
     }
 
-    private synchronized PerChannel getOrSetPerChannel(int key) {
-        PerChannel perChannel = channelQueues.get(key);
-        if (perChannel == null) {
-            perChannel = new PerChannel();
-            perChannel.messagesQueue = new ArrayDeque<ToSend>();
-            perChannel.queueSize = 0L;
-            perChannel.lastRead = TrafficCounter.milliSecondFromNano();
-            perChannel.lastWrite = perChannel.lastRead;
-            perChannel.channelLock = new ReentrantLock(true);
-            channelQueues.put(key, perChannel);
+    private PerChannel getOrSetPerChannel(ChannelHandlerContext ctx) {
+        int key = ctx.channel().hashCode();
+        synchronized (ctx.channel()) {
+            PerChannel perChannel = channelQueues.get(key);
+            if (perChannel == null) {
+                perChannel = new PerChannel();
+                perChannel.messagesQueue = new ArrayDeque<ToSend>();
+                perChannel.queueSize = 0L;
+                perChannel.lastRead = TrafficCounter.milliSecondFromNano();
+                perChannel.lastWrite = perChannel.lastRead;
+                perChannel.channelLock = new ReentrantLock(true);
+                channelQueues.put(key, perChannel);
+            }
+            return perChannel;
         }
-        return perChannel;
     }
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        int key = ctx.channel().hashCode();
-        getOrSetPerChannel(key);
+        getOrSetPerChannel(ctx);
         super.handlerAdded(ctx);
     }
 
@@ -326,7 +328,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         if (perChannel == null) {
             // in case write occurs before handlerAdded is raized for this handler
             // imply a synchronized only if needed
-            perChannel = getOrSetPerChannel(key);
+            perChannel = getOrSetPerChannel(ctx);
         }
         ToSend newToSend;
         long delay = writedelay;
