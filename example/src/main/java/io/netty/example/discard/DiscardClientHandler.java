@@ -60,9 +60,26 @@ public class DiscardClientHandler extends SimpleChannelInboundHandler<Object> {
     long counter;
 
     private void generateTraffic() {
-        // Flush the outbound buffer to the socket.
-        // Once flushed, generate the same amount of traffic again.
-        ctx.writeAndFlush(content.duplicate().retain()).addListener(trafficGenerator);
+        if (DiscardClient.useIsWritable) {
+            // Flush the outbound buffer to the socket.
+            // But checked the isWritable() property before generating the same amount of traffic again.
+            while (ctx.channel().isWritable()) {
+                ctx.writeAndFlush(content.duplicate().retain());
+            }
+        } else {
+            // Flush the outbound buffer to the socket.
+            // Once flushed, generate the same amount of traffic again.
+            ctx.writeAndFlush(content.duplicate().retain()).addListener(trafficGenerator);
+        }
+    }
+
+    @Override
+    public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+        if (DiscardClient.useIsWritable && ctx.channel().isWritable()) {
+            // We are in useIsWritable mode and the channel is again writable
+            generateTraffic();
+        }
+        ctx.fireChannelWritabilityChanged();
     }
 
     private final ChannelFutureListener trafficGenerator = new ChannelFutureListener() {

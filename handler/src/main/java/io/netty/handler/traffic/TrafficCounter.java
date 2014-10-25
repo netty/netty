@@ -21,7 +21,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 
@@ -41,6 +40,12 @@ public class TrafficCounter {
             InternalLoggerFactory.getInstance(TrafficCounter.class);
 
     /**
+     * @return the time in ms using nanoTime, so not real EPOCH time but elapsed time in ms
+     */
+    public static final long milliSecondFromNano() {
+        return System.nanoTime() / 1000000;
+    }
+    /**
      * Current written bytes
      */
     private final AtomicLong currentWrittenBytes = new AtomicLong();
@@ -49,6 +54,16 @@ public class TrafficCounter {
      * Current read bytes
      */
     private final AtomicLong currentReadBytes = new AtomicLong();
+
+    /**
+     * Last writing time during current check interval
+     */
+    private long writingTime;
+
+    /**
+     * Last reading delay during current check interval
+     */
+    private long readingTime;
 
     /**
      * Long life written bytes
@@ -61,7 +76,7 @@ public class TrafficCounter {
     private final AtomicLong cumulativeReadBytes = new AtomicLong();
 
     /**
-     * Last Time where cumulative bytes where reset to zero
+     * Last Time where cumulative bytes where reset to zero: this time is a real EPOC time (informative only)
      */
     private long lastCumulativeTime;
 
@@ -78,37 +93,37 @@ public class TrafficCounter {
     /**
      * Last Time Check taken
      */
-    private final AtomicLong lastTime = new AtomicLong();
+    final AtomicLong lastTime = new AtomicLong();
 
     /**
      * Last written bytes number during last check interval
      */
-    private long lastWrittenBytes;
+    private volatile long lastWrittenBytes;
 
     /**
      * Last read bytes number during last check interval
      */
-    private long lastReadBytes;
+    private volatile long lastReadBytes;
 
     /**
-     * Last non 0 written bytes number during last check interval
+     * Last future writing time during last check interval
      */
-    private long lastNonNullWrittenBytes;
+    private volatile long lastWritingTime;
 
     /**
-     * Last time written bytes with non 0 written bytes
+     * Last reading time during last check interval
      */
-    private long lastNonNullWrittenTime;
+    private volatile long lastReadingTime;
 
     /**
-     * Last time read bytes with non 0 written bytes
+     * Real written bytes
      */
-    private long lastNonNullReadTime;
+    private final AtomicLong realWrittenBytes = new AtomicLong();
 
     /**
-     * Last non 0 read bytes number during last check interval
+     * Real writing bandwidth
      */
-    private long lastNonNullReadBytes;
+    private long realWriteThroughput;
 
     /**
      * Delay between two captures
@@ -126,25 +141,25 @@ public class TrafficCounter {
     /**
      * The associated TrafficShapingHandler
      */
-    private final AbstractTrafficShapingHandler trafficShapingHandler;
+    final AbstractTrafficShapingHandler trafficShapingHandler;
 
     /**
      * Executor that will run the monitor
      */
-    private final ScheduledExecutorService executor;
+    final ScheduledExecutorService executor;
     /**
      * Monitor created once in start()
      */
-    private Runnable monitor;
+    Runnable monitor;
     /**
      * used in stop() to cancel the timer
      */
-    private volatile ScheduledFuture<?> scheduledFuture;
+    volatile ScheduledFuture<?> scheduledFuture;
 
     /**
      * Is Monitor active
      */
-    final AtomicBoolean monitorActive = new AtomicBoolean();
+    volatile boolean monitorActive;
 
     /**
      * Class to implement monitoring at fix delay
@@ -174,11 +189,10 @@ public class TrafficCounter {
 
         @Override
         public void run() {
-            if (!counter.monitorActive.get()) {
+            if (!counter.monitorActive) {
                 return;
             }
-            long endTime = System.currentTimeMillis();
-            counter.resetAccounting(endTime);
+            counter.resetAccounting(milliSecondFromNano());
             if (trafficShapingHandler1 != null) {
                 trafficShapingHandler1.doAccounting(counter);
             }
@@ -191,15 +205,17 @@ public class TrafficCounter {
      * Start the monitoring process
      */
     public synchronized void start() {
-        if (monitorActive.get()) {
+        if (monitorActive) {
             return;
         }
-        lastTime.set(System.currentTimeMillis());
-        if (checkInterval.get() > 0) {
-            monitorActive.set(true);
+        lastTime.set(milliSecondFromNano());
+        long localCheckInterval = checkInterval.get();
+        // if executor is null, it means it is piloted by a GlobalChannelTrafficCounter, so no executor
+        if (localCheckInterval > 0 && executor != null) {
+            monitorActive = true;
             monitor = new TrafficMonitoringTask(trafficShapingHandler, this);
             scheduledFuture =
-                executor.schedule(monitor, checkInterval.get(), TimeUnit.MILLISECONDS);
+                executor.schedule(monitor, localCheckInterval, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -207,11 +223,11 @@ public class TrafficCounter {
      * Stop the monitoring process
      */
     public synchronized void stop() {
-        if (!monitorActive.get()) {
+        if (!monitorActive) {
             return;
         }
-        monitorActive.set(false);
-        resetAccounting(System.currentTimeMillis());
+        monitorActive = false;
+        resetAccounting(milliSecondFromNano());
         if (trafficShapingHandler != null) {
             trafficShapingHandler.doAccounting(this);
         }
@@ -223,7 +239,7 @@ public class TrafficCounter {
     /**
      * Reset the accounting on Read and Write
      *
-     * @param newLastTime the millisecond unix timestamp that we should be considered up-to-date for
+     * @param newLastTime the milliseconds unix timestamp that we should be considered up-to-date for
      */
     synchronized void resetAccounting(long newLastTime) {
         long interval = newLastTime - lastTime.getAndSet(newLastTime);
@@ -231,7 +247,7 @@ public class TrafficCounter {
             // nothing to do
             return;
         }
-        if (logger.isDebugEnabled() && (interval > 2 * checkInterval())) {
+        if (logger.isDebugEnabled() && (interval > checkInterval() << 1)) {
             logger.debug("Acct schedule not ok: " + interval + " > 2*" + checkInterval() + " from " + name);
         }
         lastReadBytes = currentReadBytes.getAndSet(0);
@@ -240,30 +256,34 @@ public class TrafficCounter {
         // nb byte / checkInterval in ms * 1000 (1s)
         lastWriteThroughput = lastWrittenBytes * 1000 / interval;
         // nb byte / checkInterval in ms * 1000 (1s)
-        if (lastWrittenBytes > 0) {
-            lastNonNullWrittenBytes = lastWrittenBytes;
-            lastNonNullWrittenTime = newLastTime;
-        }
-        if (lastReadBytes > 0) {
-            lastNonNullReadBytes = lastReadBytes;
-            lastNonNullReadTime = newLastTime;
-        }
+        realWriteThroughput = realWrittenBytes.getAndSet(0) * 1000 / interval;
+        lastWritingTime = Math.max(lastWritingTime, writingTime);
+        lastReadingTime = Math.max(lastReadingTime, readingTime);
     }
 
     /**
      * Constructor with the {@link AbstractTrafficShapingHandler} that hosts it, the Timer to use, its
      * name, the checkInterval between two computations in millisecond
      * @param trafficShapingHandler the associated AbstractTrafficShapingHandler
-     * @param executor the underlying executor service for scheduling checks
+     * @param executor the underlying executor service for scheduling checks, might be null when used
+     * from {@link GlobalChannelTrafficCounter}
      * @param name  the name given to this monitor
      * @param checkInterval the checkInterval in millisecond between two computations
      */
     public TrafficCounter(AbstractTrafficShapingHandler trafficShapingHandler,
                           ScheduledExecutorService executor, String name, long checkInterval) {
+        if (trafficShapingHandler == null) {
+            throw new IllegalArgumentException("TrafficShapingHandler must not be null");
+        }
         this.trafficShapingHandler = trafficShapingHandler;
         this.executor = executor;
         this.name = name;
+        // absolute time: informative only
         lastCumulativeTime = System.currentTimeMillis();
+        writingTime = milliSecondFromNano();
+        readingTime = writingTime;
+        lastWritingTime = writingTime;
+        lastReadingTime = writingTime;
         configure(checkInterval);
     }
 
@@ -274,12 +294,11 @@ public class TrafficCounter {
      */
     public void configure(long newcheckInterval) {
         long newInterval = newcheckInterval / 10 * 10;
-        if (checkInterval.get() != newInterval) {
-            checkInterval.set(newInterval);
+        if (checkInterval.getAndSet(newInterval) != newInterval) {
             if (newInterval <= 0) {
                 stop();
                 // No more active monitoring
-                lastTime.set(System.currentTimeMillis());
+                lastTime.set(milliSecondFromNano());
             } else {
                 // Start if necessary
                 start();
@@ -310,7 +329,18 @@ public class TrafficCounter {
     }
 
     /**
+     * Computes counters for Real Write.
      *
+     * @param write
+     *            the size in bytes to write
+     * @param schedule
+     *            the time when this write was scheduled
+     */
+    void bytesRealWriteFlowControl(long write) {
+        realWrittenBytes.addAndGet(write);
+    }
+
+    /**
      * @return the current checkInterval between two computations of traffic counter
      *         in millisecond
      */
@@ -319,7 +349,6 @@ public class TrafficCounter {
     }
 
     /**
-     *
      * @return the Read Throughput in bytes/s computes in the last check interval
      */
     public long lastReadThroughput() {
@@ -327,7 +356,6 @@ public class TrafficCounter {
     }
 
     /**
-     *
      * @return the Write Throughput in bytes/s computes in the last check interval
      */
     public long lastWriteThroughput() {
@@ -335,7 +363,6 @@ public class TrafficCounter {
     }
 
     /**
-     *
      * @return the number of bytes read during the last check Interval
      */
     public long lastReadBytes() {
@@ -343,7 +370,6 @@ public class TrafficCounter {
     }
 
     /**
-     *
      * @return the number of bytes written during the last check Interval
      */
     public long lastWrittenBytes() {
@@ -351,7 +377,6 @@ public class TrafficCounter {
     }
 
     /**
-    *
     * @return the current number of bytes read since the last checkInterval
     */
     public long currentReadBytes() {
@@ -359,7 +384,6 @@ public class TrafficCounter {
     }
 
     /**
-     *
      * @return the current number of bytes written since the last check Interval
      */
     public long currentWrittenBytes() {
@@ -396,7 +420,22 @@ public class TrafficCounter {
     }
 
     /**
-     * Reset both read and written cumulative bytes counters and the associated time.
+     * @return the realWrittenBytes
+     */
+    public AtomicLong getRealWrittenBytes() {
+        return realWrittenBytes;
+    }
+
+    /**
+     * @return the realWriteThroughput
+     */
+    public long getRealWriteThroughput() {
+        return realWriteThroughput;
+    }
+
+    /**
+     * Reset both read and written cumulative bytes counters and the associated absolute time
+     * from System.currentTimeMillis().
      */
     public void resetCumulativeTime() {
         lastCumulativeTime = System.currentTimeMillis();
@@ -405,10 +444,27 @@ public class TrafficCounter {
     }
 
     /**
-     * @return the name
+     * @return the name of this TrafficCounter
      */
     public String name() {
         return name;
+    }
+
+    /**
+     * Returns the time to wait (if any) for the given length message, using the given limitTraffic and
+     * the max wait time
+     *
+     * @param size
+     *            the write size
+     * @param limitTraffic
+     *            the traffic limit in bytes per second
+     * @param maxTime
+     *            the max time in ms to wait in case of excess of traffic
+     * @return the current time to wait (in ms) if needed for Write operation
+     */
+    @Deprecated
+    public long readTimeToWait(final long size, final long limitTraffic, final long maxTime) {
+        return readTimeToWait(size, limitTraffic, maxTime, milliSecondFromNano());
     }
 
     /**
@@ -421,50 +477,51 @@ public class TrafficCounter {
      *            the traffic limit in bytes per second
      * @param maxTime
      *            the max time in ms to wait in case of excess of traffic
+     * @param now the current time
      * @return the current time to wait (in ms) if needed for Read operation
      */
-    public synchronized long readTimeToWait(final long size, final long limitTraffic, final long maxTime) {
-        final long now = System.currentTimeMillis();
+    public long readTimeToWait(final long size, final long limitTraffic, final long maxTime, final long now) {
         bytesRecvFlowControl(size);
-        if (limitTraffic == 0) {
+        if (size == 0 || limitTraffic == 0) {
             return 0;
         }
+        final long lastTimeCheck = lastTime.get();
         long sum = currentReadBytes.get();
-        long interval = now - lastTime.get();
-        // Short time checking
-        if (interval > AbstractTrafficShapingHandler.MINIMAL_WAIT && sum > 0) {
-            long time = (sum * 1000 / limitTraffic - interval) / 10 * 10;
+        long localReadingTime = readingTime;
+        long lastRB = lastReadBytes;
+        final long interval = now - lastTimeCheck;
+        long pastDelay = Math.max(lastReadingTime - lastTimeCheck, 0);
+        if (interval > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
+            // Enough interval time to compute shaping
+            long time = sum * 1000 / limitTraffic - interval + pastDelay;
             if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Time: " + time + ":" + sum + ":" + interval);
+                    logger.debug("Time: " + time + ":" + sum + ":" + interval + ":" + pastDelay);
                 }
-                return time > maxTime ? maxTime : time;
+                if (time > maxTime && now + time - localReadingTime > maxTime) {
+                    time = maxTime;
+                }
+                readingTime = Math.max(localReadingTime, now + time);
+                return time;
             }
+            readingTime = Math.max(localReadingTime, now);
             return 0;
         }
-        // long time checking
-        if (lastNonNullReadBytes > 0 && lastNonNullReadTime + AbstractTrafficShapingHandler.MINIMAL_WAIT < now) {
-            long lastsum = sum + lastNonNullReadBytes;
-            long lastinterval = now - lastNonNullReadTime;
-            long time = (lastsum * 1000 / limitTraffic - lastinterval) / 10 * 10;
-            if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Time: " + time + ":" + lastsum + ":" + lastinterval);
-                }
-                return time > maxTime ? maxTime : time;
+        // take the last read interval check to get enough interval time
+        long lastsum = sum + lastRB;
+        long lastinterval = interval + checkInterval.get();
+        long time = lastsum * 1000 / limitTraffic - lastinterval + pastDelay;
+        if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Time: " + time + ":" + lastsum + ":" + lastinterval + ":" + pastDelay);
             }
-        } else {
-            // final "middle" time checking in case resetAccounting called very recently
-            sum += lastReadBytes;
-            long lastinterval = AbstractTrafficShapingHandler.MINIMAL_WAIT;
-            long time = (sum * 1000 / limitTraffic - lastinterval) / 10 * 10;
-            if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Time: " + time + ":" + sum + ":" + lastinterval);
-                }
-                return time > maxTime ? maxTime : time;
+            if (time > maxTime && now + time - localReadingTime > maxTime) {
+                time = maxTime;
             }
+            readingTime = Math.max(localReadingTime, now + time);
+            return time;
         }
+        readingTime = Math.max(localReadingTime, now);
         return 0;
     }
 
@@ -480,57 +537,77 @@ public class TrafficCounter {
      *            the max time in ms to wait in case of excess of traffic
      * @return the current time to wait (in ms) if needed for Write operation
      */
-    public synchronized long writeTimeToWait(final long size, final long limitTraffic, final long maxTime) {
-        bytesWriteFlowControl(size);
-        if (limitTraffic == 0) {
-            return 0;
-        }
-        long sum = currentWrittenBytes.get();
-        final long now = System.currentTimeMillis();
-        long interval = now - lastTime.get();
-        if (interval > AbstractTrafficShapingHandler.MINIMAL_WAIT && sum > 0) {
-            long time = (sum * 1000 / limitTraffic - interval) / 10 * 10;
-            if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Time: " + time + ":" + sum + ":" + interval);
-                }
-                return time > maxTime ? maxTime : time;
-            }
-            return 0;
-        }
-        if (lastNonNullWrittenBytes > 0 && lastNonNullWrittenTime + AbstractTrafficShapingHandler.MINIMAL_WAIT < now) {
-            long lastsum = sum + lastNonNullWrittenBytes;
-            long lastinterval = now - lastNonNullWrittenTime;
-            long time = (lastsum * 1000 / limitTraffic - lastinterval) / 10 * 10;
-            if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Time: " + time + ":" + lastsum + ":" + lastinterval);
-                }
-                return time > maxTime ? maxTime : time;
-            }
-        } else {
-            sum += lastWrittenBytes;
-            long lastinterval = AbstractTrafficShapingHandler.MINIMAL_WAIT + Math.abs(interval);
-            long time = (sum * 1000 / limitTraffic - lastinterval) / 10 * 10;
-            if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Time: " + time + ":" + sum + ":" + lastinterval);
-                }
-                return time > maxTime ? maxTime : time;
-            }
-        }
-        return 0;
+    @Deprecated
+    public long writeTimeToWait(final long size, final long limitTraffic, final long maxTime) {
+        return writeTimeToWait(size, limitTraffic, maxTime, milliSecondFromNano());
     }
 
     /**
-     * String information
+     * Returns the time to wait (if any) for the given length message, using the given limitTraffic and
+     * the max wait time
+     *
+     * @param size
+     *            the write size
+     * @param limitTraffic
+     *            the traffic limit in bytes per second
+     * @param maxTime
+     *            the max time in ms to wait in case of excess of traffic
+     * @param now the current time
+     * @return the current time to wait (in ms) if needed for Write operation
      */
+    public long writeTimeToWait(final long size, final long limitTraffic, final long maxTime, final long now) {
+        bytesWriteFlowControl(size);
+        if (size == 0 || limitTraffic == 0) {
+            return 0;
+        }
+        final long lastTimeCheck = lastTime.get();
+        long sum = currentWrittenBytes.get();
+        long lastWB = lastWrittenBytes;
+        long localWritingTime = writingTime;
+        long pastDelay = Math.max(lastWritingTime - lastTimeCheck, 0);
+        final long interval = now - lastTimeCheck;
+        if (interval > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
+            // Enough interval time to compute shaping
+            long time = sum * 1000 / limitTraffic - interval + pastDelay;
+            if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Time: " + time + ":" + sum + ":" + interval + ":" + pastDelay);
+                }
+                if (time > maxTime && now + time - localWritingTime > maxTime) {
+                    time = maxTime;
+                }
+                writingTime = Math.max(localWritingTime, now + time);
+                return time;
+            }
+            writingTime = Math.max(localWritingTime, now);
+            return 0;
+        }
+        // take the last write interval check to get enough interval time
+        long lastsum = sum + lastWB;
+        long lastinterval = interval + checkInterval.get();
+        long time = lastsum * 1000 / limitTraffic - lastinterval + pastDelay;
+        if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Time: " + time + ":" + lastsum + ":" + lastinterval + ":" + pastDelay);
+            }
+            if (time > maxTime && now + time - localWritingTime > maxTime) {
+                time = maxTime;
+            }
+            writingTime = Math.max(localWritingTime, now + time);
+            return time;
+        }
+        writingTime = Math.max(localWritingTime, now);
+        return 0;
+    }
+
     @Override
     public String toString() {
-        return "Monitor " + name + " Current Speed Read: " +
-                (lastReadThroughput >> 10) + " KB/s, Write: " +
-                (lastWriteThroughput >> 10) + " KB/s Current Read: " +
-                (currentReadBytes.get() >> 10) + " KB Current Write: " +
-                (currentWrittenBytes.get() >> 10) + " KB";
+        return new StringBuilder("Monitor ").append(name)
+                .append(" Current Speed Read: ").append(lastReadThroughput >> 10).append(" KB/s, ")
+                .append("Asked Write: ").append(lastWriteThroughput >> 10).append(" KB/s, ")
+                .append("Real Write: ").append(realWriteThroughput >> 10).append(" KB/s, ")
+                .append("Current Read: ").append(currentReadBytes.get() >> 10).append(" KB, ")
+                .append("Current asked Write: ").append(currentWrittenBytes.get() >> 10).append(" KB, ")
+                .append("Current real Write: ").append(realWrittenBytes.get() >> 10).append(" KB").toString();
     }
 }
