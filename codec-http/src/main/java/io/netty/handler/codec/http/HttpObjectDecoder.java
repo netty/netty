@@ -384,7 +384,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<State> {
 
         // Handle the last unfinished message.
         if (message != null) {
-            boolean chunked = HttpHeaders.isTransferEncodingChunked(message);
+            boolean chunked = HttpHeaderUtil.isTransferEncodingChunked(message);
             if (state() == State.READ_VARIABLE_LENGTH_CONTENT && !in.isReadable() && !chunked) {
                 // End of connection.
                 out.add(LastHttpContent.EMPTY_LAST_CONTENT);
