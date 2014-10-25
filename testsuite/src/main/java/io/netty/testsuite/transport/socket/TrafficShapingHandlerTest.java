@@ -24,6 +24,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.traffic.AbstractTrafficShapingHandler;
 import io.netty.handler.traffic.ChannelTrafficShapingHandler;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
+import io.netty.handler.traffic.TrafficCounter;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Promise;
@@ -328,7 +329,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         for (int i = 1; i < multipleMessage.length; i++) {
             totalNb += multipleMessage[i];
         }
-        Long start = System.currentTimeMillis();
+        Long start = TrafficCounter.milliSecondFromNano();
         int nb = multipleMessage[0];
         for (int i = 0; i < nb; i++) {
             cc.write(cc.alloc().buffer().writeBytes(data));
@@ -336,7 +337,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         cc.flush();
 
         promise.await();
-        Long stop = System.currentTimeMillis();
+        Long stop = TrafficCounter.milliSecondFromNano();
         assertTrue("Error during exceution of TrafficShapping: " + promise.cause(), promise.isSuccess());
 
         float average = (totalNb * messageSize) / (float) (stop - start);
@@ -384,7 +385,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int step;
         // first message will always be validated
-        private long currentLastTime = System.currentTimeMillis();
+        private long currentLastTime = TrafficCounter.milliSecondFromNano();
         private final long[] minimalWaitBetween;
         private final int[] multipleMessage;
         private final int[] autoRead;
@@ -472,7 +473,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
             int nb = actual.length / messageSize;
             loggerServer.info("Step: " + step + " Read: " + nb + " blocks");
             in.readBytes(actual);
-            long timestamp = System.currentTimeMillis();
+            long timestamp = TrafficCounter.milliSecondFromNano();
             int isAutoRead = 0;
             int laststep = step;
             for (int i = 0; i < nb; i++) {
