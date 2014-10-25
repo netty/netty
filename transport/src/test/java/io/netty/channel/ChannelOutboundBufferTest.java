@@ -346,7 +346,7 @@ public class ChannelOutboundBufferTest {
     private static void safeClose(EmbeddedChannel ch) {
         ch.finish();
         for (;;) {
-            ByteBuf m = ch.readOutbound();
+            ByteBuf m = (ByteBuf) ch.readOutbound();
             if (m == null) {
                 break;
             }
