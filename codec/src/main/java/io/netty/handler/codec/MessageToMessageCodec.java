@@ -54,7 +54,7 @@ import java.util.List;
  */
 public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends ChannelHandlerAdapter {
 
-    private final MessageToMessageEncoder<Object> encoder = new MessageToMessageEncoder<Object>() {
+    private final MessageToMessageEncoder<OUTBOUND_IN> encoder = new MessageToMessageEncoder<OUTBOUND_IN>() {
 
         @Override
         public boolean acceptOutboundMessage(Object msg) throws Exception {
@@ -62,13 +62,12 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends Cha
         }
 
         @Override
-        @SuppressWarnings("unchecked")
-        protected void encode(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
-            MessageToMessageCodec.this.encode(ctx, (OUTBOUND_IN) msg, out);
+        protected void encode(ChannelHandlerContext ctx, OUTBOUND_IN msg, List<Object> out) throws Exception {
+            MessageToMessageCodec.this.encode(ctx, msg, out);
         }
     };
 
-    private final MessageToMessageDecoder<Object> decoder = new MessageToMessageDecoder<Object>() {
+    private final MessageToMessageDecoder<INBOUND_IN> decoder = new MessageToMessageDecoder<INBOUND_IN>() {
 
         @Override
         public boolean acceptInboundMessage(Object msg) throws Exception {
@@ -76,9 +75,8 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends Cha
         }
 
         @Override
-        @SuppressWarnings("unchecked")
-        protected void decode(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
-            MessageToMessageCodec.this.decode(ctx, (INBOUND_IN) msg, out);
+        protected void decode(ChannelHandlerContext ctx, INBOUND_IN msg, List<Object> out) throws Exception {
+            MessageToMessageCodec.this.decode(ctx, msg, out);
         }
     };
 
