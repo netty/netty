@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
 
 /**
@@ -63,8 +64,27 @@ import java.util.concurrent.TimeUnit;
  */
 @Sharable
 public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
-    private Map<Integer, List<ToSend>> messagesQueues = new HashMap<Integer, List<ToSend>>();
+    /**
+     * All queues per channel
+     */
+    private Map<Integer, PerChannel> channelQueues = new HashMap<Integer, PerChannel>();
+    /**
+     * Global queues size
+     */
+    private long queuesSize;
+    /**
+     * Max size in the list before proposing to stop writing new objects from next handlers
+     * for all channel (global)
+     */
+    protected long maxGlobalWriteSize = DEFAULT_MAX_SIZE * 100; // default 400MB
 
+    private static class PerChannel {
+        List<ToSend> messagesQueue;
+        long queueSize;
+        long lastWrite;
+        long lastRead;
+        ReentrantLock channelLock;
+    }
     /**
      * Create the global TrafficCounter
      */
@@ -159,6 +179,28 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     }
 
     /**
+     * @return the maxGlobalWriteSize
+     */
+    public long getMaxGlobalWriteSize() {
+        return maxGlobalWriteSize;
+    }
+
+    /**
+     * @param maxGlobalWriteSize the maximum Global Write Size allowed in the buffer
+     *            globally for all channels before write suspended is set
+     */
+    public void setMaxGlobalWriteSize(long maxGlobalWriteSize) {
+        this.maxGlobalWriteSize = maxGlobalWriteSize;
+    }
+
+    /**
+     * @return the global size of the buffers for all queues
+     */
+    public long queuesSize() {
+        return queuesSize;
+    }
+
+    /**
      * Release all internal resources of this instance
      */
     public final void release() {
@@ -167,27 +209,66 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         }
     }
 
+    private synchronized PerChannel getOrSetPerChannel(Integer key) {
+        PerChannel perChannel = channelQueues.get(key);
+        if (perChannel == null) {
+            perChannel = new PerChannel();
+            perChannel.messagesQueue = new LinkedList<ToSend>();
+            perChannel.queueSize = 0L;
+            perChannel.lastRead = System.currentTimeMillis();
+            perChannel.lastWrite = System.currentTimeMillis();
+            perChannel.channelLock = new ReentrantLock(true);
+            channelQueues.put(key, perChannel);
+        }
+        return perChannel;
+    }
+
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         Integer key = ctx.channel().hashCode();
-        List<ToSend> mq = new LinkedList<ToSend>();
-        messagesQueues.put(key, mq);
+        getOrSetPerChannel(key);
         super.handlerAdded(ctx);
     }
 
     @Override
     public synchronized void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         Integer key = ctx.channel().hashCode();
-        List<ToSend> mq = messagesQueues.remove(key);
-        if (mq != null) {
-            for (ToSend toSend : mq) {
-                if (toSend.toSend instanceof ByteBuf) {
-                    ((ByteBuf) toSend.toSend).release();
+        PerChannel perChannel = channelQueues.remove(key);
+        if (perChannel != null) {
+            perChannel.channelLock.lock();
+            try {
+                for (ToSend toSend : perChannel.messagesQueue) {
+                    queuesSize -= calculateSize(toSend.toSend);
+                    if (toSend.toSend instanceof ByteBuf) {
+                        ((ByteBuf) toSend.toSend).release();
+                    }
                 }
+                perChannel.messagesQueue.clear();
+            } finally {
+                perChannel.channelLock.unlock();
             }
-            mq.clear();
         }
         super.handlerRemoved(ctx);
+    }
+
+    @Override
+    protected long checkWaitReadTime(final ChannelHandlerContext ctx, long wait) {
+        Integer key = ctx.channel().hashCode();
+        PerChannel perChannel = channelQueues.get(key);
+        if (perChannel != null) {
+            if (wait > maxTime && System.currentTimeMillis() + wait - perChannel.lastRead > maxTime) {
+                wait = maxTime;
+            }
+        }
+        return wait;
+    }
+    @Override
+    protected void informReadOperation(final ChannelHandlerContext ctx) {
+        Integer key = ctx.channel().hashCode();
+        PerChannel perChannel = channelQueues.get(key);
+        if (perChannel != null) {
+            perChannel.lastRead = System.currentTimeMillis();
+        }
     }
 
     private static final class ToSend {
@@ -203,39 +284,77 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     }
 
     @Override
-    protected synchronized void submitWrite(final ChannelHandlerContext ctx, final Object msg, final long delay,
+    protected void submitWrite(final ChannelHandlerContext ctx, final Object msg,
+            final long size, final long writedelay,
             final ChannelPromise promise) {
         Integer key = ctx.channel().hashCode();
-        List<ToSend> messagesQueue = messagesQueues.get(key);
-        if (delay == 0 && (messagesQueue == null || messagesQueue.isEmpty())) {
-            ctx.write(msg, promise);
-            return;
+        PerChannel perChannel = channelQueues.get(key);
+        if (perChannel == null) {
+            // in case write occurs before handlerAdded is raized for this handler
+            // imply a synchronized only if needed
+            perChannel = getOrSetPerChannel(key);
         }
-        final ToSend newToSend = new ToSend(delay, msg, promise);
-        if (messagesQueue == null) {
-            messagesQueue = new LinkedList<ToSend>();
-            messagesQueues.put(key, messagesQueue);
-        }
-        messagesQueue.add(newToSend);
-        final List<ToSend> mqfinal = messagesQueue;
-        ctx.executor().schedule(new Runnable() {
-            @Override
-            public void run() {
-                sendAllValid(ctx, mqfinal);
+        perChannel.channelLock.lock();
+        try {
+            if (writedelay == 0 && (perChannel == null || perChannel.messagesQueue == null ||
+                    perChannel.messagesQueue.isEmpty())) {
+                if (trafficCounter != null) {
+                    trafficCounter.bytesRealWriteFlowControl(size);
+                }
+                ctx.write(msg, promise);
+                perChannel.lastWrite = System.currentTimeMillis();
+                return;
             }
-        }, delay, TimeUnit.MILLISECONDS);
+            long delay = writedelay;
+            if (delay > maxTime && System.currentTimeMillis() + delay - perChannel.lastWrite > maxTime) {
+                delay = maxTime;
+            }
+            final ToSend newToSend = new ToSend(delay, msg, promise);
+            perChannel.messagesQueue.add(newToSend);
+            perChannel.queueSize += size;
+            queuesSize += size;
+            checkWriteSuspend(ctx, delay, perChannel.queueSize);
+            if (queuesSize > maxGlobalWriteSize) {
+                ctx.channel().softWritable(false);
+                ctx.fireChannelWritabilityChanged();
+            }
+            final PerChannel forSchedule = perChannel;
+            ctx.executor().schedule(new Runnable() {
+                @Override
+                public void run() {
+                    sendAllValid(ctx, forSchedule);
+                }
+            }, delay, TimeUnit.MILLISECONDS);
+        } finally {
+            perChannel.channelLock.unlock();
+        }
     }
 
-    private synchronized void sendAllValid(final ChannelHandlerContext ctx, final List<ToSend> messagesQueue) {
-        while (!messagesQueue.isEmpty()) {
-            ToSend newToSend = messagesQueue.remove(0);
-            if (newToSend.date <= System.currentTimeMillis()) {
-                ctx.write(newToSend.toSend, newToSend.promise);
-            } else {
-                messagesQueue.add(0, newToSend);
-                break;
+    private void sendAllValid(final ChannelHandlerContext ctx, final PerChannel perChannel) {
+        perChannel.channelLock.lock();
+        try {
+            while (!perChannel.messagesQueue.isEmpty()) {
+                ToSend newToSend = perChannel.messagesQueue.remove(0);
+                if (newToSend.date <= System.currentTimeMillis()) {
+                    long size = calculateSize(newToSend.toSend);
+                    if (trafficCounter != null) {
+                        trafficCounter.bytesRealWriteFlowControl(size);
+                    }
+                    perChannel.queueSize -= size;
+                    queuesSize -= size;
+                    ctx.write(newToSend.toSend, newToSend.promise);
+                    perChannel.lastWrite = System.currentTimeMillis();
+                } else {
+                    perChannel.messagesQueue.add(0, newToSend);
+                    break;
+                }
             }
+            if (perChannel.messagesQueue.isEmpty()) {
+                releaseWriteSuspended(ctx);
+            }
+            ctx.flush();
+        } finally {
+            perChannel.channelLock.unlock();
         }
-        ctx.flush();
     }
 }
