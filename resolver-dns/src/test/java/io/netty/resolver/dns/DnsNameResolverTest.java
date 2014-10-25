@@ -286,7 +286,13 @@ public class DnsNameResolverTest {
 
             final Map<String, InetAddress> resultB = testResolve0(EXCLUSIONS_RESOLVE_A, InternetProtocolFamily.IPv4);
 
-            assertThat(resultA, is(resultB));
+            // Ensure the result from the cache is identical from the uncached one.
+            assertThat(resultB.size(), is(resultA.size()));
+            for (Entry<String, InetAddress> e: resultA.entrySet()) {
+                InetAddress expected = e.getValue();
+                InetAddress actual = resultB.get(e.getKey());
+                assertThat(actual, is(expected));
+            }
         } finally {
             // Restore the TTL configuration.
             resolver.setTtl(oldMinTtl, oldMaxTtl);
