@@ -209,7 +209,7 @@ public class ChannelOutboundBufferTest {
     @Test
     public void testWritability() {
         final StringBuilder buf = new StringBuilder();
-        EmbeddedChannel ch = new EmbeddedChannel(new ChannelHandlerAdapter() {
+        EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
             @Override
             public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
                 buf.append(ctx.channel().isWritable());
@@ -241,7 +241,7 @@ public class ChannelOutboundBufferTest {
     @Test
     public void testUserDefinedWritability() {
         final StringBuilder buf = new StringBuilder();
-        EmbeddedChannel ch = new EmbeddedChannel(new ChannelHandlerAdapter() {
+        EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
             @Override
             public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
                 buf.append(ctx.channel().isWritable());
@@ -273,7 +273,7 @@ public class ChannelOutboundBufferTest {
     @Test
     public void testUserDefinedWritability2() {
         final StringBuilder buf = new StringBuilder();
-        EmbeddedChannel ch = new EmbeddedChannel(new ChannelHandlerAdapter() {
+        EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
             @Override
             public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
                 buf.append(ctx.channel().isWritable());
@@ -309,7 +309,7 @@ public class ChannelOutboundBufferTest {
     @Test
     public void testMixedWritability() {
         final StringBuilder buf = new StringBuilder();
-        EmbeddedChannel ch = new EmbeddedChannel(new ChannelHandlerAdapter() {
+        EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
             @Override
             public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
                 buf.append(ctx.channel().isWritable());
