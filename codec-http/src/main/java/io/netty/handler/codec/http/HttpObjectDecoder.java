@@ -214,41 +214,41 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<State> {
             State nextState = readHeaders(buffer);
             checkpoint(nextState);
             switch (nextState) {
-                case SKIP_CONTROL_CHARS:
-                    // fast-path
-                    // No content is expected.
+            case SKIP_CONTROL_CHARS:
+                // fast-path
+                // No content is expected.
+                out.add(message);
+                out.add(LastHttpContent.EMPTY_LAST_CONTENT);
+                reset();
+                return;
+            case READ_CHUNK_SIZE:
+                if (!chunkedSupported) {
+                    throw new IllegalArgumentException("Chunked messages not supported");
+                }
+                // Chunked encoding - generate HttpMessage first.  HttpChunks will follow.
+                out.add(message);
+                return;
+            default:
+                long contentLength = contentLength();
+                if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
                     out.add(message);
                     out.add(LastHttpContent.EMPTY_LAST_CONTENT);
                     reset();
                     return;
-                case READ_CHUNK_SIZE:
-                    if (!chunkedSupported) {
-                        throw new IllegalArgumentException("Chunked messages not supported");
-                    }
-                    // Chunked encoding - generate HttpMessage first.  HttpChunks will follow.
-                    out.add(message);
-                    return;
-                default:
-                    long contentLength = contentLength();
-                    if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
-                        out.add(message);
-                        out.add(LastHttpContent.EMPTY_LAST_CONTENT);
-                        reset();
-                        return;
-                    }
+                }
 
-                    assert nextState == State.READ_FIXED_LENGTH_CONTENT ||
-                            nextState == State.READ_VARIABLE_LENGTH_CONTENT;
+                assert nextState == State.READ_FIXED_LENGTH_CONTENT ||
+                        nextState == State.READ_VARIABLE_LENGTH_CONTENT;
 
-                    out.add(message);
+                out.add(message);
 
-                    if (nextState == State.READ_FIXED_LENGTH_CONTENT) {
-                        // chunkSize will be decreased as the READ_FIXED_LENGTH_CONTENT state reads data chunk by chunk.
-                        chunkSize = contentLength;
-                    }
+                if (nextState == State.READ_FIXED_LENGTH_CONTENT) {
+                    // chunkSize will be decreased as the READ_FIXED_LENGTH_CONTENT state reads data chunk by chunk.
+                    chunkSize = contentLength;
+                }
 
-                    // We return here, this forces decode to be called again where we will decode the content
-                    return;
+                // We return here, this forces decode to be called again where we will decode the content
+                return;
             }
         } catch (Exception e) {
             out.add(invalidMessage(e));
@@ -379,7 +379,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<State> {
         // Handle the last unfinished message.
         if (message != null) {
             boolean chunked = HttpHeaders.isTransferEncodingChunked(message);
-             if (state() == State.READ_VARIABLE_LENGTH_CONTENT && !in.isReadable() && !chunked) {
+            if (state() == State.READ_VARIABLE_LENGTH_CONTENT && !in.isReadable() && !chunked) {
                 // End of connection.
                 out.add(LastHttpContent.EMPTY_LAST_CONTENT);
                 reset();
@@ -488,7 +488,11 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<State> {
             do {
                 char firstChar = line.charAt(0);
                 if (name != null && (firstChar == ' ' || firstChar == '\t')) {
-                    value = value.toString() + ' ' + line.toString().trim();
+                    StringBuilder buf = new StringBuilder(value.length() + line.length() + 1);
+                    buf.append(value);
+                    buf.append(' ');
+                    buf.append(line.toString().trim());
+                    value = buf.toString();
                 } else {
                     if (name != null) {
                         headers.add(name, value);
@@ -550,8 +554,8 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<State> {
                     splitHeader(line);
                     CharSequence headerName = name;
                     if (!HttpHeaders.equalsIgnoreCase(headerName, HttpHeaders.Names.CONTENT_LENGTH) &&
-                            !HttpHeaders.equalsIgnoreCase(headerName, HttpHeaders.Names.TRANSFER_ENCODING) &&
-                            !HttpHeaders.equalsIgnoreCase(headerName, HttpHeaders.Names.TRAILER)) {
+                        !HttpHeaders.equalsIgnoreCase(headerName, HttpHeaders.Names.TRANSFER_ENCODING) &&
+                        !HttpHeaders.equalsIgnoreCase(headerName, HttpHeaders.Names.TRAILER)) {
                         trailer.trailingHeaders().add(headerName, value);
                     }
                     lastHeader = name;
@@ -718,9 +722,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<State> {
         }
 
         protected TooLongFrameException newException(int maxLength) {
-            return new TooLongFrameException(
-                    "HTTP header is larger than  " + maxLength +
-                            " bytes.");
+            return new TooLongFrameException("HTTP header is larger than " + maxLength + " bytes.");
         }
     }
 
@@ -738,9 +740,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<State> {
 
         @Override
         protected TooLongFrameException newException(int maxLength) {
-            return new TooLongFrameException(
-                    "An HTTP line is larger than " + maxLength +
-                            " bytes.");
+            return new TooLongFrameException("An HTTP line is larger than " + maxLength + " bytes.");
         }
     }
 }
