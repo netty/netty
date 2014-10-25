@@ -59,12 +59,17 @@ public class WebSocket08EncoderDecoderTest {
 
         // Test without masking
         EmbeddedChannel outChannel = new EmbeddedChannel(new WebSocket08FrameEncoder(false));
-        EmbeddedChannel inChannel = new EmbeddedChannel(new WebSocket08FrameDecoder(false, false, 1024 * 1024));
+        EmbeddedChannel inChannel = new EmbeddedChannel(new WebSocket08FrameDecoder(false, false, 1024 * 1024, false));
         executeTests(outChannel, inChannel);
 
         // Test with activated masking
         outChannel = new EmbeddedChannel(new WebSocket08FrameEncoder(true));
-        inChannel = new EmbeddedChannel(new WebSocket08FrameDecoder(true, false, 1024 * 1024));
+        inChannel = new EmbeddedChannel(new WebSocket08FrameDecoder(true, false, 1024 * 1024, false));
+        executeTests(outChannel, inChannel);
+
+        // Test with activated masking and an unmasked expecting but forgiving decoder
+        outChannel = new EmbeddedChannel(new WebSocket08FrameEncoder(true));
+        inChannel = new EmbeddedChannel(new WebSocket08FrameDecoder(false, false, 1024 * 1024, true));
         executeTests(outChannel, inChannel);
 
         // Release test data
