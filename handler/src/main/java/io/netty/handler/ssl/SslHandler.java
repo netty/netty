@@ -388,6 +388,7 @@ public class SslHandler extends ByteToMessageDecoder {
     private void wrap(ChannelHandlerContext ctx, boolean inUnwrap) throws SSLException {
         ByteBuf out = null;
         ChannelPromise promise = null;
+        ByteBufAllocator alloc = ctx.alloc();
         try {
             for (;;) {
                 Object msg = pendingUnencryptedWrites.current();
@@ -405,7 +406,7 @@ public class SslHandler extends ByteToMessageDecoder {
                     out = allocateOutNetBuf(ctx, buf.readableBytes());
                 }
 
-                SSLEngineResult result = wrap(engine, buf, out);
+                SSLEngineResult result = wrap(alloc, engine, buf, out);
 
                 if (!buf.isReadable()) {
                     promise = pendingUnencryptedWrites.remove();
@@ -471,12 +472,13 @@ public class SslHandler extends ByteToMessageDecoder {
 
     private void wrapNonAppData(ChannelHandlerContext ctx, boolean inUnwrap) throws SSLException {
         ByteBuf out = null;
+        ByteBufAllocator alloc = ctx.alloc();
         try {
             for (;;) {
                 if (out == null) {
                     out = allocateOutNetBuf(ctx, 0);
                 }
-                SSLEngineResult result = wrap(engine, Unpooled.EMPTY_BUFFER, out);
+                SSLEngineResult result = wrap(alloc, engine, Unpooled.EMPTY_BUFFER, out);
 
                 if (result.bytesProduced() > 0) {
                     ctx.write(out);
@@ -526,26 +528,37 @@ public class SslHandler extends ByteToMessageDecoder {
         }
     }
 
-    private SSLEngineResult wrap(SSLEngine engine, ByteBuf in, ByteBuf out) throws SSLException {
-        ByteBuffer in0 = in.nioBuffer();
-        if (!in0.isDirect()) {
-            ByteBuffer newIn0 = ByteBuffer.allocateDirect(in0.remaining());
-            newIn0.put(in0).flip();
-            in0 = newIn0;
-        }
+    private SSLEngineResult wrap(ByteBufAllocator alloc, SSLEngine engine, ByteBuf in, ByteBuf out)
+            throws SSLException {
+        ByteBuf newDirectIn = null;
+        try {
+            final ByteBuffer in0;
+            if (in.isDirect()) {
+                in0 = in.nioBuffer();
+            } else {
+                int readableBytes = in.readableBytes();
+                newDirectIn = alloc.directBuffer(readableBytes);
+                newDirectIn.writeBytes(in, in.readerIndex(), readableBytes);
+                in0 = newDirectIn.internalNioBuffer(0, readableBytes);
+            }
 
-        for (;;) {
-            ByteBuffer out0 = out.nioBuffer(out.writerIndex(), out.writableBytes());
-            SSLEngineResult result = engine.wrap(in0, out0);
-            in.skipBytes(result.bytesConsumed());
-            out.writerIndex(out.writerIndex() + result.bytesProduced());
+            for (;;) {
+                ByteBuffer out0 = out.nioBuffer(out.writerIndex(), out.writableBytes());
+                SSLEngineResult result = engine.wrap(in0, out0);
+                in.skipBytes(result.bytesConsumed());
+                out.writerIndex(out.writerIndex() + result.bytesProduced());
 
-            switch (result.getStatus()) {
+                switch (result.getStatus()) {
                 case BUFFER_OVERFLOW:
                     out.ensureWritable(maxPacketBufferSize);
                     break;
                 default:
                     return result;
+                }
+            }
+        } finally {
+            if (newDirectIn != null) {
+                newDirectIn.release();
             }
         }
     }
