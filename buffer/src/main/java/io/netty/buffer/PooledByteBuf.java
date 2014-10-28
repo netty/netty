@@ -17,14 +17,13 @@
 package io.netty.buffer;
 
 import io.netty.util.Recycler;
-import io.netty.util.Recycler.Handle;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
-    private final Recycler.Handle<PooledByteBuf<T>> recyclerHandle;
+    private final Recycler.Handle recyclerHandle;
 
     protected PoolChunk<T> chunk;
     protected long handle;
@@ -36,9 +35,9 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     private ByteBuffer tmpNioBuf;
 
     @SuppressWarnings("unchecked")
-    protected PooledByteBuf(Recycler.Handle<? extends PooledByteBuf<T>> recyclerHandle, int maxCapacity) {
+    protected PooledByteBuf(Recycler.Handle recyclerHandle, int maxCapacity) {
         super(maxCapacity);
-        this.recyclerHandle = (Handle<PooledByteBuf<T>>) recyclerHandle;
+        this.recyclerHandle = recyclerHandle;
     }
 
     void init(PoolChunk<T> chunk, long handle, int offset, int length, int maxLength) {
@@ -152,7 +151,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     }
 
     private void recycle() {
-        recyclerHandle.recycle(this);
+        recyclerHandle.recycle();
     }
 
     protected final int idx(int index) {

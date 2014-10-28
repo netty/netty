@@ -15,7 +15,10 @@
 */
 package io.netty.util;
 
+import java.util.ArrayList;
 import java.util.Random;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -42,14 +45,14 @@ public class RecyclerTest {
 
         private static final Recycler<RecyclableObject> RECYCLER = new Recycler<RecyclableObject>() {
             @Override
-            protected RecyclableObject newObject(Handle<RecyclableObject> handle) {
+            protected RecyclableObject newObject(Handle handle) {
                 return new RecyclableObject(handle);
             }
         };
 
-        private final Recycler.Handle<RecyclableObject> handle;
+        private final Recycler.Handle handle;
 
-        private RecyclableObject(Recycler.Handle<RecyclableObject> handle) {
+        private RecyclableObject(Recycler.Handle handle) {
             this.handle = handle;
         }
 
@@ -58,7 +61,7 @@ public class RecyclerTest {
         }
 
         public void recycle() {
-            RECYCLER.recycle(this, handle);
+            handle.recycle();
         }
     }
 
@@ -78,8 +81,7 @@ public class RecyclerTest {
     void testMaxCapacity(int maxCapacity) {
         Recycler<HandledObject> recycler = new Recycler<HandledObject>(maxCapacity) {
             @Override
-            protected HandledObject newObject(
-                    Recycler.Handle<HandledObject> handle) {
+            protected HandledObject newObject(Recycler.Handle handle) {
                 return new HandledObject(handle);
             }
         };
@@ -90,7 +92,7 @@ public class RecyclerTest {
         }
 
         for (int i = 0; i < objects.length; i++) {
-            recycler.recycle(objects[i], objects[i].handle);
+            objects[i].handle.recycle();
             objects[i] = null;
         }
 
@@ -98,10 +100,103 @@ public class RecyclerTest {
     }
 
     static final class HandledObject {
-        Recycler.Handle<HandledObject> handle;
+        Recycler.Handle handle;
 
-        HandledObject(Recycler.Handle<HandledObject> handle) {
+        HandledObject(Recycler.Handle handle) {
             this.handle = handle;
         }
+    }
+
+    /**
+     * Test to make sure an recycled item can not be recycled again.
+     * We spawn a number a threads to multi recycle an item.
+     * We count the number of exceptions thrown and test if it is the right one.
+     */
+    @Test
+    public void testAlreadyRecycled() {
+        testAlreadyRecycled(true);
+        testAlreadyRecycled(false);
+    }
+
+    private static void testAlreadyRecycled(boolean recycleOwnerThreadTwice) {
+        final TestData testData = new TestData();
+
+        testData.container.clear();
+        for (int i = 0; i < TestData.NUM_ITEMS; i++) {
+            testData.container.add(RecyclableObject.newInstance());
+        }
+
+        ArrayList<Thread> threads = new ArrayList<Thread>();
+        for (int i = 0; i < TestData.NUM_THREADS; i++) {
+            Thread th = new Thread() {
+                @Override
+                public void run() {
+                    recycle(testData, false, TestData.NUM_THREADS);
+                }
+            };
+            th.start();
+            threads.add(th);
+        }
+
+        if (recycleOwnerThreadTwice) {
+            testData.counterRecyclers.incrementAndGet();
+            for (RecyclableObject testObject : testData.container) {
+                testObject.recycle();
+            }
+        }
+
+        recycle(testData, true, TestData.NUM_THREADS);
+
+        for (Thread th : threads) {
+            try {
+                th.join();
+            } catch (Exception ignored) {
+                continue;
+            }
+        }
+
+        int expected = (testData.counterRecyclers.get() - 1) * TestData.NUM_ITEMS;
+        int got = testData.counterExceptions.get();
+        Assert.assertEquals(expected, got);
+    }
+
+    private static void recycle(final TestData testData, final boolean master, final int extraRecyclers) {
+        try {
+            testData.counterRecyclers.incrementAndGet();
+
+            for (RecyclableObject testObject : testData.container) {
+                try {
+                    if (master) {
+                        testData.firstSemaphore.release(extraRecyclers);
+                    } else {
+                        testData.firstSemaphore.acquire();
+                    }
+                    try {
+                        testObject.recycle();
+                    } catch (Exception ignored) {
+                        testData.counterExceptions.incrementAndGet();
+                    }
+                } finally {
+                    if (master) {
+                        testData.secondSemaphore.acquire(extraRecyclers);
+                    } else {
+                        testData.secondSemaphore.release();
+                    }
+                }
+            }
+        } catch (InterruptedException exception) {
+            throw new RuntimeException(exception);
+        }
+    }
+
+    private static final class TestData {
+        private static final int NUM_THREADS = 10;
+        private static final int NUM_ITEMS = 10000;
+
+        public ArrayList<RecyclableObject> container = new ArrayList<RecyclableObject>();
+        public AtomicInteger counterExceptions = new AtomicInteger(0);
+        public AtomicInteger counterRecyclers = new AtomicInteger(0);
+        public Semaphore firstSemaphore = new Semaphore(0);
+        public Semaphore secondSemaphore = new Semaphore(0);
     }
 }

@@ -56,7 +56,7 @@ final class ThreadLocalPooledDirectByteBuf {
         private static final Recycler<ThreadLocalUnsafeDirectByteBuf> RECYCLER =
                 new Recycler<ThreadLocalUnsafeDirectByteBuf>() {
             @Override
-            protected ThreadLocalUnsafeDirectByteBuf newObject(Handle<ThreadLocalUnsafeDirectByteBuf> handle) {
+            protected ThreadLocalUnsafeDirectByteBuf newObject(Handle handle) {
                 return new ThreadLocalUnsafeDirectByteBuf(handle);
             }
         };
@@ -67,9 +67,9 @@ final class ThreadLocalPooledDirectByteBuf {
             return buf;
         }
 
-        private final Recycler.Handle<ThreadLocalUnsafeDirectByteBuf> handle;
+        private final Recycler.Handle handle;
 
-        private ThreadLocalUnsafeDirectByteBuf(Recycler.Handle<ThreadLocalUnsafeDirectByteBuf> handle) {
+        private ThreadLocalUnsafeDirectByteBuf(Recycler.Handle handle) {
             super(UnpooledByteBufAllocator.DEFAULT, 256, Integer.MAX_VALUE);
             this.handle = handle;
         }
@@ -80,7 +80,7 @@ final class ThreadLocalPooledDirectByteBuf {
                 super.deallocate();
             } else {
                 clear();
-                RECYCLER.recycle(this, handle);
+                handle.recycle();
             }
         }
     }
@@ -89,7 +89,7 @@ final class ThreadLocalPooledDirectByteBuf {
 
         private static final Recycler<ThreadLocalDirectByteBuf> RECYCLER = new Recycler<ThreadLocalDirectByteBuf>() {
             @Override
-            protected ThreadLocalDirectByteBuf newObject(Handle<ThreadLocalDirectByteBuf> handle) {
+            protected ThreadLocalDirectByteBuf newObject(Handle handle) {
                 return new ThreadLocalDirectByteBuf(handle);
             }
         };
@@ -100,9 +100,9 @@ final class ThreadLocalPooledDirectByteBuf {
             return buf;
         }
 
-        private final Recycler.Handle<ThreadLocalDirectByteBuf> handle;
+        private final Recycler.Handle handle;
 
-        private ThreadLocalDirectByteBuf(Recycler.Handle<ThreadLocalDirectByteBuf> handle) {
+        private ThreadLocalDirectByteBuf(Recycler.Handle handle) {
             super(UnpooledByteBufAllocator.DEFAULT, 256, Integer.MAX_VALUE);
             this.handle = handle;
         }
@@ -113,7 +113,7 @@ final class ThreadLocalPooledDirectByteBuf {
                 super.deallocate();
             } else {
                 clear();
-                RECYCLER.recycle(this, handle);
+                handle.recycle();
             }
         }
     }

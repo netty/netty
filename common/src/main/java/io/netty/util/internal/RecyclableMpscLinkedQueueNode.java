@@ -19,14 +19,14 @@ package io.netty.util.internal;
 import io.netty.util.Recycler;
 
 /**
- * {@link MpscLinkedQueueNode} that will automatically call {@link Recycler.Handle#recycle(Object)} when the node was
+ * {@link MpscLinkedQueueNode} that will automatically call {@link Recycler.Handle#recycle()} when the node was
  * unlinked.
  */
 public abstract class RecyclableMpscLinkedQueueNode<T> extends MpscLinkedQueueNode<T> {
     @SuppressWarnings("rawtypes")
     private final Recycler.Handle handle;
 
-    protected RecyclableMpscLinkedQueueNode(Recycler.Handle<? extends RecyclableMpscLinkedQueueNode<T>> handle) {
+    protected RecyclableMpscLinkedQueueNode(Recycler.Handle handle) {
         if (handle == null) {
             throw new NullPointerException("handle");
         }
@@ -37,6 +37,6 @@ public abstract class RecyclableMpscLinkedQueueNode<T> extends MpscLinkedQueueNo
     @Override
     final void unlink() {
         super.unlink();
-        handle.recycle(this);
+        handle.recycle();
     }
 }

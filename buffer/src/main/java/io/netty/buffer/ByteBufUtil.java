@@ -476,7 +476,7 @@ public final class ByteBufUtil {
                 super.deallocate();
             } else {
                 clear();
-                RECYCLER.recycle(this, handle);
+                handle.recycle();
             }
         }
     }
@@ -509,7 +509,7 @@ public final class ByteBufUtil {
                 super.deallocate();
             } else {
                 clear();
-                RECYCLER.recycle(this, handle);
+                handle.recycle();
             }
         }
     }

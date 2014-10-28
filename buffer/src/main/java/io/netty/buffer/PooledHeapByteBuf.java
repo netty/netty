@@ -29,7 +29,7 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
 
     private static final Recycler<PooledHeapByteBuf> RECYCLER = new Recycler<PooledHeapByteBuf>() {
         @Override
-        protected PooledHeapByteBuf newObject(Handle<PooledHeapByteBuf> handle) {
+        protected PooledHeapByteBuf newObject(Handle handle) {
             return new PooledHeapByteBuf(handle, 0);
         }
     };
@@ -41,7 +41,7 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
         return buf;
     }
 
-    private PooledHeapByteBuf(Recycler.Handle<PooledHeapByteBuf> recyclerHandle, int maxCapacity) {
+    private PooledHeapByteBuf(Recycler.Handle recyclerHandle, int maxCapacity) {
         super(recyclerHandle, maxCapacity);
     }
 
