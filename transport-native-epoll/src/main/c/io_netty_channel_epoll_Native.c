@@ -1101,7 +1101,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_accept(JNIEnv * env, j
     return socketFd;
 }
 
-JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_sendfile(JNIEnv *env, jclass clazz, jint fd, jobject fileRegion, jlong base_off, jlong off, jlong len) {
+JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_sendfile0(JNIEnv *env, jclass clazz, jint fd, jobject fileRegion, jlong base_off, jlong off, jlong len) {
     jobject fileChannel = (*env)->GetObjectField(env, fileRegion, fileChannelFieldId);
     if (fileChannel == NULL) {
         throwRuntimeException(env, "Unable to obtain FileChannel from FileRegion");

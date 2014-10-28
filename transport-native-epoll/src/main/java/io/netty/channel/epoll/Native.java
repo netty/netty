@@ -77,7 +77,16 @@ final class Native {
     public static native int read(int fd, ByteBuffer buf, int pos, int limit) throws IOException;
     public static native int readAddress(int fd, long address, int pos, int limit) throws IOException;
 
-    public static native long sendfile(
+    public static long sendfile(
+            int dest, DefaultFileRegion src, long baseOffset, long offset, long length) throws IOException {
+        // Open the file-region as it may be created via the lazy constructor. This is needed as we directly access
+        // the FileChannel field directly via JNI
+        src.open();
+
+        return sendfile0(dest, src, baseOffset, offset, length);
+    }
+
+    private static native long sendfile0(
             int dest, DefaultFileRegion src, long baseOffset, long offset, long length) throws IOException;
 
     public static int sendTo(
