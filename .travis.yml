@@ -3,6 +3,9 @@ jdk:
   - oraclejdk8
   - oraclejdk7
   - openjdk7
-before_install: 'mvn -version'
+before_install: 
+    - 'mvn -version'
+    - 'ldd --version | head -1'
+    - 'uname -r'
 install: 'mvn clean install -Pfull -DskipTests=true'
 script: 'mvn test -Pleak'
