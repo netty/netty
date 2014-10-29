@@ -182,7 +182,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     // BEGIN Platform-dependent flags
 
     /**
-     * {@code trus} if and only if {@link SSLEngine} expects a direct buffer.
+     * {@code true} if and only if {@link SSLEngine} expects a direct buffer.
      */
     private final boolean wantsDirectBuffer;
     /**
@@ -581,7 +581,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         ByteBuf newDirectIn = null;
         try {
             final ByteBuffer in0;
-            if (in.isDirect()) {
+            if (in.isDirect() || !wantsDirectBuffer) {
                 in0 = in.nioBuffer();
             } else {
                 int readableBytes = in.readableBytes();
