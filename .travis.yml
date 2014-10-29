@@ -8,4 +8,7 @@ before_install:
     - 'ldd --version | head -1'
     - 'uname -r'
 install: 'mvn clean install -Pfull -DskipTests=true'
+before_script:
+    - "echo $JAVA_OPTS"
+    - "export JAVA_OPTS=-Xmx2048m"
 script: 'mvn test -Pleak'
