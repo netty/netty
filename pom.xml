@@ -117,7 +117,7 @@
       <id>linux</id>
       <activation>
         <os>
-          <family>linux</family>
+            <family>windows</family>
         </os>
       </activation>
       <modules>
