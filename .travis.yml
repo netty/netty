@@ -9,6 +9,6 @@ before_install:
     - 'uname -r'
 install: 'mvn clean install -Pfull -DskipTests=true'
 before_script:
-    - "echo $JAVA_OPTS"
-    - "export JAVA_OPTS=-Xmx4g -Xms2g"
+    - 'echo $JAVA_OPTS'
+    - 'export JAVA_OPTS="-Xmx4g -Xms2g"'
 script: 'mvn test -Pleak'
