@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.0.24.Final-SNAPSHOT</version>
+    <version>4.0.24.Final</version>
   </parent>
   <artifactId>netty-transport-native-epoll</artifactId>
 
@@ -131,11 +131,11 @@
               <exportAntProperties>true</exportAntProperties>
               <tasks>
                 <exec executable="sh" outputproperty="ldd_version">
-                  <arg value="-c"/>
-                  <arg value="ldd --version | head -1"/>
+                  <arg value="-c" />
+                  <arg value="ldd --version | head -1" />
                 </exec>
                 <exec executable="uname" outputproperty="uname_os_version">
-                  <arg value="-r"/>
+                  <arg value="-r" />
                 </exec>
               </tasks>
             </configuration>
