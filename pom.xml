@@ -401,6 +401,7 @@
     <argLine.common>
       -server
       -dsa -da -ea:io.netty...
+      -Xmx4g
       -XX:+AggressiveOpts
       -XX:+TieredCompilation
       -XX:+UseBiasedLocking

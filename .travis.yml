@@ -10,5 +10,5 @@ before_install:
 install: 'mvn clean install -Pfull -DskipTests=true'
 before_script:
     - "echo $JAVA_OPTS"
-    - "export JAVA_OPTS=-Xmx2048m"
+    - "export JAVA_OPTS=-Xmx4g"
 script: 'mvn test -Pleak'
