@@ -117,7 +117,7 @@
       <id>linux</id>
       <activation>
         <os>
-          <family>linux</family>
+            <family>windows</family>
         </os>
       </activation>
       <modules>
@@ -401,6 +401,7 @@
     <argLine.common>
       -server
       -dsa -da -ea:io.netty...
+      -Xmx4g -Xms2g
       -XX:+AggressiveOpts
       -XX:+TieredCompilation
       -XX:+UseBiasedLocking

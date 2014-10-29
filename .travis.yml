@@ -1,12 +1,14 @@
 language: java
 jdk:
+  - oraclejdk8
   - oraclejdk7
   - openjdk7
-branches:
-  only:
-    - master
-    - 3
-    - 3.5
-before_install: 'mvn -version'
-install: 'mvn clean install -Pfull -DskipTests'
-
+before_install: 
+    - 'mvn -version'
+    - 'ldd --version | head -1'
+    - 'uname -r'
+install: 'mvn clean install -Pfull -DskipTests=true'
+before_script:
+    - 'echo $JAVA_OPTS'
+    - 'export JAVA_OPTS="-Xmx4g -Xms2g"'
+script: 'mvn test -Pleak'
