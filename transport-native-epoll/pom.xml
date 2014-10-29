@@ -134,8 +134,9 @@
                   <arg value="-c"/>
                   <arg value="ldd --version | head -1"/>
                 </exec>
-                <exec executable="uname" outputproperty="uname_os_version">
-                  <arg value="-r"/>
+                <exec executable="sh" outputproperty="uname_os_version">
+                  <arg value="-c"/>
+                  <arg value="uname -r"/>
                 </exec>
               </tasks>
             </configuration>
@@ -145,7 +146,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
-        <version>1.7</version>
+        <version>1.9.1</version>
         <executions>
           <execution>
             <!-- Phase must be before regex-combined-sendmmsg -->
