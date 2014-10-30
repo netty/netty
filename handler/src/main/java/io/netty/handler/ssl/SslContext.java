@@ -82,20 +82,24 @@ public abstract class SslContext {
      * @return {@link SslProvider#OPENSSL} if OpenSSL is available. {@link SslProvider#JDK} otherwise.
      */
     public static SslProvider defaultServerProvider() {
-        if (OpenSsl.isAvailable()) {
-            return SslProvider.OPENSSL;
-        } else {
-            return SslProvider.JDK;
-        }
+        return defaultProvider();
     }
 
     /**
      * Returns the default client-side implementation provider currently in use.
      *
-     * @return {@link SslProvider#JDK}, because it is the only implementation at the moment
+     * @return {@link SslProvider#OPENSSL} if OpenSSL is available. {@link SslProvider#JDK} otherwise.
      */
     public static SslProvider defaultClientProvider() {
-        return SslProvider.JDK;
+        return defaultProvider();
+    }
+
+    private static SslProvider defaultProvider() {
+        if (OpenSsl.isAvailable()) {
+            return SslProvider.OPENSSL;
+        } else {
+            return SslProvider.JDK;
+        }
     }
 
     /**
@@ -246,7 +250,7 @@ public abstract class SslContext {
             long sessionCacheSize, long sessionTimeout) throws SSLException {
 
         if (provider == null) {
-            provider = OpenSsl.isAvailable()? SslProvider.OPENSSL : SslProvider.JDK;
+            provider = defaultServerProvider();
         }
 
         switch (provider) {
@@ -256,7 +260,7 @@ public abstract class SslContext {
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
         case OPENSSL:
             return new OpenSslServerContext(
-                    keyCertChainFile, keyFile, keyPassword,
+                    keyCertChainFile, keyFile, keyPassword, trustManagerFactory,
                     ciphers, apn, sessionCacheSize, sessionTimeout);
         default:
             throw new Error(provider.toString());
@@ -470,12 +474,8 @@ public abstract class SslContext {
             File keyCertChainFile, File keyFile, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
-
-        if (provider != null && provider != SslProvider.JDK) {
-            throw new SSLException("client context unsupported for: " + provider);
-        }
         if (provider == null) {
-            provider = SslProvider.JDK;
+            provider = defaultClientProvider();
         }
         switch (provider) {
             case JDK:
