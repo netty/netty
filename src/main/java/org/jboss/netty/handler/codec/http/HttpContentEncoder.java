@@ -116,7 +116,9 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler
                             HttpHeaders.Names.CONTENT_ENCODING,
                             getTargetContentEncoding(acceptEncoding));
 
-                    if (!m.isChunked()) {
+                    if (m.isChunked()) {
+                        m.headers().remove(HttpHeaders.Names.CONTENT_LENGTH);
+                    } else {
                         ChannelBuffer content = m.getContent();
                         // Encode the content.
                         content = ChannelBuffers.wrappedBuffer(

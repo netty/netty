@@ -62,6 +62,45 @@ public class HttpContentEncoderTest {
         }
     }
 
+
+    @Test
+    public void testSanitization() throws Exception {
+        HttpContentEncoderEmbedder e = new HttpContentEncoderEmbedder();
+        e.fireMessageReceived(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
+
+        HttpResponse res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        res.setChunked(true);
+
+        // Add an incorrect content-length header to ensure that it is removed when a message is chunked.
+        res.headers().set(Names.CONTENT_LENGTH, 42);
+
+        e.offer(res);
+        e.offer(new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(new byte[1])));
+        e.offer(HttpChunk.LAST_CHUNK);
+
+        Object o = e.poll();
+        assertThat(o, is(instanceOf(HttpRequest.class)));
+
+        o = e.poll();
+        assertThat(o, is(instanceOf(HttpResponse.class)));
+
+        res = (HttpResponse) o;
+        assertThat(res.isChunked(), is(true));
+        assertThat(res.getContent().readableBytes(), is(0));
+        assertThat(res.headers().get(Names.TRANSFER_ENCODING), is(nullValue()));
+        assertThat(res.headers().get(Names.CONTENT_LENGTH), is(nullValue()));
+        assertThat(res.headers().get(Names.CONTENT_ENCODING), is("test"));
+
+        HttpChunk chunk;
+        chunk = (HttpChunk) e.poll();
+        assertThat(chunk.getContent().toString(CharsetUtil.US_ASCII), is("1"));
+
+        chunk = (HttpChunk) e.poll();
+        assertThat(chunk, is(instanceOf(HttpChunkTrailer.class)));
+
+        assertThat(e.poll(), is(nullValue()));
+    }
+
     @Test
     public void testSplitContent() throws Exception {
         HttpContentEncoderEmbedder e = new HttpContentEncoderEmbedder();
