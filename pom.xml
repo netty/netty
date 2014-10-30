@@ -444,7 +444,9 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.10</version>
         <configuration>
-          <forkMode>never</forkMode>
+          <forkCount>1</forkCount>
+          <reuseFork>true</reuseFork>
+          <argLine>-Xmx256m</argLine>
           <excludes>
             <exclude>**/Abstract*</exclude>
             <exclude>**/TestUtil*</exclude>
@@ -616,16 +618,9 @@
           </execution>
         </executions>
         <configuration>
-          <doclet>org.jboss.apiviz.APIviz</doclet>
-          <docletArtifact>
-            <groupId>org.jboss.apiviz</groupId>
-            <artifactId>apiviz</artifactId>
-            <version>1.3.2.GA</version>
-          </docletArtifact>
           <attach>true</attach>
           <javadocDirectory>${basedir}/src/javadoc</javadocDirectory>
           <docfilessubdirs>true</docfilessubdirs>
-          <useStandardDocletOptions>true</useStandardDocletOptions>
           <outputDirectory>${project.build.directory}/api</outputDirectory>
           <charset>UTF-8</charset>
           <docencoding>UTF-8</docencoding>
@@ -650,9 +645,6 @@
             -group "Client &amp; Server bootstrapping utilities" org.jboss.netty.bootstrap*
             -group "Reusable I/O event interceptors" org.jboss.netty.handler*
             -group "Miscellaneous" org.jboss.netty.logging*:org.jboss.netty.util*
-
-            -sourceclasspath ${project.build.outputDirectory}
-            -nopackagediagram
           </additionalparam>
           <encoding>UTF-8</encoding>
           <locale>en_US</locale>
