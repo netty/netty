@@ -131,6 +131,29 @@ public final class OpenSslServerContext extends OpenSslContext {
      *                    {@code null} if it's not password-protected.
      * @param ciphers the cipher suites to enable, in the order of preference.
      *                {@code null} to use the default cipher suites.
+     * @param config Application protocol config.
+     * @param sessionCacheSize the size of the cache used for storing SSL session objects.
+     *                         {@code 0} to use the default value.
+     * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
+     *                       {@code 0} to use the default value.
+     */
+    public OpenSslServerContext(
+            File certChainFile, File keyFile, String keyPassword, TrustManagerFactory trustManagerFactory,
+            Iterable<String> ciphers, ApplicationProtocolConfig config,
+            long sessionCacheSize, long sessionTimeout) throws SSLException {
+        this(certChainFile, keyFile, keyPassword, trustManagerFactory, ciphers,
+                toNegotiator(config, true), sessionCacheSize, sessionTimeout);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param certChainFile an X.509 certificate chain file in PEM format
+     * @param keyFile a PKCS#8 private key file in PEM format
+     * @param keyPassword the password of the {@code keyFile}.
+     *                    {@code null} if it's not password-protected.
+     * @param ciphers the cipher suites to enable, in the order of preference.
+     *                {@code null} to use the default cipher suites.
      * @param apn Application protocol negotiator.
      * @param sessionCacheSize the size of the cache used for storing SSL session objects.
      *                         {@code 0} to use the default value.
