@@ -16,208 +16,198 @@
 
 package io.netty.handler.codec;
 
-public class EmptyTextHeaders extends EmptyConvertibleHeaders<CharSequence, String> implements TextHeaders {
-    protected EmptyTextHeaders() {
+public class EmptyBinaryHeaders extends EmptyHeaders<AsciiString> implements BinaryHeaders {
+    protected EmptyBinaryHeaders() {
     }
 
     @Override
-    public boolean contains(CharSequence name, CharSequence value, boolean ignoreCase) {
-        return false;
-    }
-
-    @Override
-    public boolean containsObject(CharSequence name, Object value, boolean ignoreCase) {
-        return false;
-    }
-
-    @Override
-    public TextHeaders add(CharSequence name, CharSequence value) {
+    public BinaryHeaders add(AsciiString name, AsciiString value) {
         super.add(name, value);
         return this;
     }
 
     @Override
-    public TextHeaders add(CharSequence name, Iterable<? extends CharSequence> values) {
+    public BinaryHeaders add(AsciiString name, Iterable<? extends AsciiString> values) {
         super.add(name, values);
         return this;
     }
 
     @Override
-    public TextHeaders add(CharSequence name, CharSequence... values) {
+    public BinaryHeaders add(AsciiString name, AsciiString... values) {
         super.add(name, values);
         return this;
     }
 
     @Override
-    public TextHeaders addObject(CharSequence name, Object value) {
+    public BinaryHeaders addObject(AsciiString name, Object value) {
         super.addObject(name, value);
         return this;
     }
 
     @Override
-    public TextHeaders addObject(CharSequence name, Iterable<?> values) {
+    public BinaryHeaders addObject(AsciiString name, Iterable<?> values) {
         super.addObject(name, values);
         return this;
     }
 
     @Override
-    public TextHeaders addObject(CharSequence name, Object... values) {
+    public BinaryHeaders addObject(AsciiString name, Object... values) {
         super.addObject(name, values);
         return this;
     }
 
     @Override
-    public TextHeaders addBoolean(CharSequence name, boolean value) {
+    public BinaryHeaders addBoolean(AsciiString name, boolean value) {
         super.addBoolean(name, value);
         return this;
     }
 
     @Override
-    public TextHeaders addChar(CharSequence name, char value) {
+    public BinaryHeaders addChar(AsciiString name, char value) {
         super.addChar(name, value);
         return this;
     }
 
     @Override
-    public TextHeaders addByte(CharSequence name, byte value) {
+    public BinaryHeaders addByte(AsciiString name, byte value) {
         super.addByte(name, value);
         return this;
     }
 
     @Override
-    public TextHeaders addShort(CharSequence name, short value) {
+    public BinaryHeaders addShort(AsciiString name, short value) {
         super.addShort(name, value);
         return this;
     }
 
     @Override
-    public TextHeaders addInt(CharSequence name, int value) {
+    public BinaryHeaders addInt(AsciiString name, int value) {
         super.addInt(name, value);
         return this;
     }
 
     @Override
-    public TextHeaders addLong(CharSequence name, long value) {
+    public BinaryHeaders addLong(AsciiString name, long value) {
         super.addLong(name, value);
         return this;
     }
 
     @Override
-    public TextHeaders addFloat(CharSequence name, float value) {
+    public BinaryHeaders addFloat(AsciiString name, float value) {
         super.addFloat(name, value);
         return this;
     }
 
     @Override
-    public TextHeaders addDouble(CharSequence name, double value) {
+    public BinaryHeaders addDouble(AsciiString name, double value) {
         super.addDouble(name, value);
         return this;
     }
 
     @Override
-    public TextHeaders add(TextHeaders headers) {
+    public BinaryHeaders add(BinaryHeaders headers) {
         super.add(headers);
         return this;
     }
 
     @Override
-    public TextHeaders set(CharSequence name, CharSequence value) {
+    public BinaryHeaders set(AsciiString name, AsciiString value) {
         super.set(name, value);
         return this;
     }
 
     @Override
-    public TextHeaders set(CharSequence name, Iterable<? extends CharSequence> values) {
+    public BinaryHeaders set(AsciiString name, Iterable<? extends AsciiString> values) {
         super.set(name, values);
         return this;
     }
 
     @Override
-    public TextHeaders set(CharSequence name, CharSequence... values) {
+    public BinaryHeaders set(AsciiString name, AsciiString... values) {
         super.set(name, values);
         return this;
     }
 
     @Override
-    public TextHeaders setObject(CharSequence name, Object value) {
+    public BinaryHeaders setObject(AsciiString name, Object value) {
         super.setObject(name, value);
         return this;
     }
 
     @Override
-    public TextHeaders setObject(CharSequence name, Iterable<?> values) {
+    public BinaryHeaders setObject(AsciiString name, Iterable<?> values) {
         super.setObject(name, values);
         return this;
     }
 
     @Override
-    public TextHeaders setObject(CharSequence name, Object... values) {
+    public BinaryHeaders setObject(AsciiString name, Object... values) {
         super.setObject(name, values);
         return this;
     }
 
     @Override
-    public TextHeaders setBoolean(CharSequence name, boolean value) {
+    public BinaryHeaders setBoolean(AsciiString name, boolean value) {
         super.setBoolean(name, value);
         return this;
     }
 
     @Override
-    public TextHeaders setChar(CharSequence name, char value) {
+    public BinaryHeaders setChar(AsciiString name, char value) {
         super.setChar(name, value);
         return this;
     }
 
     @Override
-    public TextHeaders setByte(CharSequence name, byte value) {
+    public BinaryHeaders setByte(AsciiString name, byte value) {
         super.setByte(name, value);
         return this;
     }
 
     @Override
-    public TextHeaders setShort(CharSequence name, short value) {
+    public BinaryHeaders setShort(AsciiString name, short value) {
         super.setShort(name, value);
         return this;
     }
 
     @Override
-    public TextHeaders setInt(CharSequence name, int value) {
+    public BinaryHeaders setInt(AsciiString name, int value) {
         super.setInt(name, value);
         return this;
     }
 
     @Override
-    public TextHeaders setLong(CharSequence name, long value) {
+    public BinaryHeaders setLong(AsciiString name, long value) {
         super.setLong(name, value);
         return this;
     }
 
     @Override
-    public TextHeaders setFloat(CharSequence name, float value) {
+    public BinaryHeaders setFloat(AsciiString name, float value) {
         super.setFloat(name, value);
         return this;
     }
 
     @Override
-    public TextHeaders setDouble(CharSequence name, double value) {
+    public BinaryHeaders setDouble(AsciiString name, double value) {
         super.setDouble(name, value);
         return this;
     }
 
     @Override
-    public TextHeaders set(TextHeaders headers) {
+    public BinaryHeaders set(BinaryHeaders headers) {
         super.set(headers);
         return this;
     }
 
     @Override
-    public TextHeaders setAll(TextHeaders headers) {
+    public BinaryHeaders setAll(BinaryHeaders headers) {
         super.setAll(headers);
         return this;
     }
 
     @Override
-    public TextHeaders clear() {
+    public BinaryHeaders clear() {
         super.clear();
         return this;
     }

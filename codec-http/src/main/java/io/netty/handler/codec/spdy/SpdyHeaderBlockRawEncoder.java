@@ -15,13 +15,14 @@
  */
 package io.netty.handler.codec.spdy;
 
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_MAX_NV_LENGTH;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.AsciiString;
+import io.netty.util.CharsetUtil;
 
 import java.util.Set;
-
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 public class SpdyHeaderBlockRawEncoder extends SpdyHeaderBlockEncoder {
 
@@ -44,7 +45,7 @@ public class SpdyHeaderBlockRawEncoder extends SpdyHeaderBlockEncoder {
 
     @Override
     public ByteBuf encode(ByteBufAllocator alloc, SpdyHeadersFrame frame) throws Exception {
-        Set<String> names = frame.headers().names();
+        Set<CharSequence> names = frame.headers().names();
         int numHeaders = names.size();
         if (numHeaders == 0) {
             return Unpooled.EMPTY_BUFFER;
@@ -55,15 +56,15 @@ public class SpdyHeaderBlockRawEncoder extends SpdyHeaderBlockEncoder {
         }
         ByteBuf headerBlock = alloc.heapBuffer();
         writeLengthField(headerBlock, numHeaders);
-        for (String name: names) {
-            byte[] nameBytes = name.getBytes("UTF-8");
+        for (CharSequence name: names) {
+            byte[] nameBytes = AsciiString.getBytes(name, CharsetUtil.UTF_8);
             writeLengthField(headerBlock, nameBytes.length);
             headerBlock.writeBytes(nameBytes);
             int savedIndex = headerBlock.writerIndex();
             int valueLength = 0;
             writeLengthField(headerBlock, valueLength);
-            for (String value: frame.headers().getAll(name)) {
-                byte[] valueBytes = value.getBytes("UTF-8");
+            for (CharSequence value: frame.headers().getAll(name)) {
+                byte[] valueBytes = AsciiString.getBytes(value, CharsetUtil.UTF_8);
                 if (valueBytes.length > 0) {
                     headerBlock.writeBytes(valueBytes);
                     headerBlock.writeByte(0);

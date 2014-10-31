@@ -34,7 +34,7 @@ import static io.netty.handler.codec.http.HttpVersion.*;
  */
 public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
 
-    private static final CharSequence WEBSOCKET = HttpHeaders.newEntity(Values.WEBSOCKET.toLowerCase());
+    private static final CharSequence WEBSOCKET = Values.WEBSOCKET.toLowerCase();
 
     public static final String WEBSOCKET_13_ACCEPT_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
@@ -126,7 +126,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
             res.headers().add(headers);
         }
 
-        String key = req.headers().get(Names.SEC_WEBSOCKET_KEY);
+        CharSequence key = req.headers().get(Names.SEC_WEBSOCKET_KEY);
         if (key == null) {
             throw new WebSocketHandshakeException("not a WebSocket request: missing key");
         }

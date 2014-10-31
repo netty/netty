@@ -52,7 +52,7 @@ public class HttpHelloWorldServerHandler extends ChannelInboundHandlerAdapter {
             boolean keepAlive = HttpHeaders.isKeepAlive(req);
             FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, Unpooled.wrappedBuffer(CONTENT));
             response.headers().set(CONTENT_TYPE, "text/plain");
-            response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
+            response.headers().setInt(CONTENT_LENGTH, response.content().readableBytes());
 
             if (!keepAlive) {
                 ctx.write(response).addListener(ChannelFutureListener.CLOSE);

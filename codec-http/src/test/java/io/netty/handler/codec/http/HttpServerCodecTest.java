@@ -108,7 +108,8 @@ public class HttpServerCodecTest {
 
         // Ensure the encoder handles the response after handling 100 Continue.
         ByteBuf encodedRes = ch.readOutbound();
-        assertThat(encodedRes.toString(CharsetUtil.UTF_8), is("HTTP/1.1 201 Created\r\nContent-Length: 2\r\n\r\nOK"));
+        assertThat(encodedRes.toString(CharsetUtil.UTF_8), is("HTTP/1.1 201 Created\r\n" +
+                CONTENT_LENGTH + ": 2\r\n\r\nOK"));
         encodedRes.release();
 
         ch.finish();

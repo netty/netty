@@ -219,15 +219,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
     }
 
     private static long getContentLength(StompHeaders headers, long defaultValue) {
-        String contentLength = headers.get(StompHeaders.CONTENT_LENGTH);
-        if (contentLength != null) {
-            try {
-                return Long.parseLong(contentLength);
-            } catch (NumberFormatException ignored) {
-                return defaultValue;
-            }
-        }
-        return defaultValue;
+        return headers.getLong(StompHeaders.CONTENT_LENGTH, defaultValue);
     }
 
     private static void skipNullCharacter(ByteBuf buffer) {

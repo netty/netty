@@ -113,14 +113,14 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
             responseContent.append("\r\n\r\n");
 
             // new getMethod
-            for (Entry<String, String> entry : request.headers()) {
+            for (Entry<CharSequence, CharSequence> entry : request.headers()) {
                 responseContent.append("HEADER: " + entry.getKey() + '=' + entry.getValue() + "\r\n");
             }
             responseContent.append("\r\n\r\n");
 
             // new getMethod
             Set<Cookie> cookies;
-            String value = request.headers().get(COOKIE);
+            String value = request.headers().getAndConvert(COOKIE);
             if (value == null) {
                 cookies = Collections.emptySet();
             } else {
@@ -299,11 +299,11 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
         if (!close) {
             // There's no need to add 'Content-Length' header
             // if this is the last response.
-            response.headers().set(CONTENT_LENGTH, buf.readableBytes());
+            response.headers().setInt(CONTENT_LENGTH, buf.readableBytes());
         }
 
         Set<Cookie> cookies;
-        String value = request.headers().get(COOKIE);
+        String value = request.headers().getAndConvert(COOKIE);
         if (value == null) {
             cookies = Collections.emptySet();
         } else {
@@ -401,7 +401,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
                 HttpVersion.HTTP_1_1, HttpResponseStatus.OK, buf);
 
         response.headers().set(CONTENT_TYPE, "text/html; charset=UTF-8");
-        response.headers().set(CONTENT_LENGTH, buf.readableBytes());
+        response.headers().setInt(CONTENT_LENGTH, buf.readableBytes());
 
         // Write the response.
         ctx.channel().writeAndFlush(response);
