@@ -22,6 +22,7 @@ import java.security.cert.X509Certificate;
 public final class EmptyArrays {
 
     public static final byte[] EMPTY_BYTES = new byte[0];
+    public static final char[] EMPTY_CHARS = new char[0];
     public static final boolean[] EMPTY_BOOLEANS = new boolean[0];
     public static final double[] EMPTY_DOUBLES = new double[0];
     public static final float[] EMPTY_FLOATS = new float[0];
