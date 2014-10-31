@@ -40,6 +40,12 @@ public interface Http2OutboundFlowController extends Http2DataWriter {
             boolean endStream, ChannelPromise promise);
 
     /**
+     * Returns the most {@link ChannelFuture} for the most recent {@code DATA} write for the given
+     * stream. If no previous write for the stream has occurred, returns {@code null}.
+     */
+    ChannelFuture lastWriteForStream(int streamId);
+
+    /**
      * Sets the initial size of the connection's outbound flow control window. The outbound flow
      * control windows for all streams are updated by the delta in the initial window size. This is
      * called as part of the processing of a SETTINGS frame received from the remote endpoint.

@@ -22,6 +22,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelPromiseAggregator;
 
 import java.util.ArrayDeque;
 
@@ -197,16 +198,23 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     }
 
     @Override
+    public ChannelFuture lastWriteForStream(int streamId) {
+        return outboundFlow.lastWriteForStream(streamId);
+    }
+
+    @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
             boolean endStream, ChannelPromise promise) {
         return writeHeaders(ctx, streamId, headers, 0, DEFAULT_PRIORITY_WEIGHT, false, padding, endStream, promise);
     }
 
     @Override
-    public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-            int streamDependency, short weight, boolean exclusive, int padding, boolean endOfStream,
-            ChannelPromise promise) {
+    public ChannelFuture writeHeaders(final ChannelHandlerContext ctx, final int streamId,
+            final Http2Headers headers, final int streamDependency, final short weight,
+            final boolean exclusive, final int padding, final boolean endOfStream,
+            final ChannelPromise promise) {
         Http2Stream stream = connection.stream(streamId);
+        ChannelFuture lastDataWrite = lastWriteForStream(streamId);
         try {
             if (connection.isGoAway()) {
                 throw protocolError("Sending headers after connection going away.");
@@ -238,6 +246,12 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                                 "Stream %d in unexpected state: %s", stream.id(), stream.state()));
                 }
             }
+
+            if (lastDataWrite != null && !endOfStream) {
+                throw new IllegalStateException(
+                        "Sending non-trailing headers after data has been sent for stream: "
+                                + streamId);
+            }
         } catch (Throwable e) {
             if (e instanceof Http2NoMoreStreamIdsException) {
                 lifecycleManager.onException(ctx, e);
@@ -245,18 +259,37 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             return promise.setFailure(e);
         }
 
-        ChannelFuture future =
+        // Wrap the original promise in an aggregate which will complete the original promise
+        // once the headers are written.
+        final ChannelPromiseAggregator aggregatePromise = new ChannelPromiseAggregator(promise);
+        final ChannelPromise innerPromise = ctx.newPromise();
+        aggregatePromise.add(innerPromise);
+
+        // Only write the HEADERS frame after the previous DATA frame has been written.
+        final Http2Stream theStream = stream;
+        lastDataWrite = lastDataWrite != null ? lastDataWrite : ctx.newSucceededFuture();
+        lastDataWrite.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                if (!future.isSuccess()) {
+                    // The DATA write failed, also fail this write.
+                    innerPromise.setFailure(future.cause());
+                    return;
+                }
+
                 frameWriter.writeHeaders(ctx, streamId, headers, streamDependency, weight,
-                        exclusive, padding, endOfStream, promise);
-        ctx.flush();
+                                exclusive, padding, endOfStream, innerPromise);
+                ctx.flush();
 
-        // If the headers are the end of the stream, close it now.
-        if (endOfStream) {
-            stream.endOfStreamSent();
-            lifecycleManager.closeLocalSide(stream, promise);
-        }
+                // If the headers are the end of the stream, close it now.
+                if (endOfStream) {
+                    theStream.endOfStreamSent();
+                    lifecycleManager.closeLocalSide(theStream, innerPromise);
+                }
+            }
+        });
 
-        return future;
+        return promise;
     }
 
     @Override

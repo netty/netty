@@ -44,6 +44,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -205,6 +206,7 @@ public class DefaultHttp2ConnectionEncoderTest {
 
     @Test
     public void headersWriteForUnknownStreamShouldCreateStream() throws Exception {
+        mockFutureAddListener(true);
         when(local.createStream(eq(5), eq(false))).thenReturn(stream);
         encoder.writeHeaders(ctx, 5, EmptyHttp2Headers.INSTANCE, 0, false, promise);
         verify(local).createStream(eq(5), eq(false));
@@ -214,6 +216,7 @@ public class DefaultHttp2ConnectionEncoderTest {
 
     @Test
     public void headersWriteShouldCreateHalfClosedStream() throws Exception {
+        mockFutureAddListener(true);
         when(local.createStream(eq(5), eq(true))).thenReturn(stream);
         encoder.writeHeaders(ctx, 5, EmptyHttp2Headers.INSTANCE, 0, true, promise);
         verify(local).createStream(eq(5), eq(true));
@@ -222,7 +225,32 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
+    public void headersWriteAfterDataShouldWait() throws Exception {
+        final AtomicReference<ChannelFutureListener> listener = new AtomicReference<ChannelFutureListener>();
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocation) throws Throwable {
+                listener.set((ChannelFutureListener) invocation.getArguments()[0]);
+                return null;
+            }
+        }).when(future).addListener(any(ChannelFutureListener.class));
+
+        // Indicate that there was a previous data write operation that the headers must wait for.
+        when(outboundFlow.lastWriteForStream(anyInt())).thenReturn(future);
+        encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true, promise);
+        verify(writer, never()).writeHeaders(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true), eq(promise));
+
+        // Now complete the previous data write operation and verify that the headers were written.
+        when(future.isSuccess()).thenReturn(true);
+        listener.get().operationComplete(future);
+        verify(writer).writeHeaders(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true), eq(promise));
+    }
+
+    @Test
     public void headersWriteShouldOpenStreamForPush() throws Exception {
+        mockFutureAddListener(true);
         when(stream.state()).thenReturn(RESERVED_LOCAL);
         encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false, promise);
         verify(stream).openForPush();
@@ -233,6 +261,7 @@ public class DefaultHttp2ConnectionEncoderTest {
 
     @Test
     public void headersWriteShouldClosePushStream() throws Exception {
+        mockFutureAddListener(true);
         when(stream.state()).thenReturn(RESERVED_LOCAL).thenReturn(HALF_CLOSED_LOCAL);
         encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true, promise);
         verify(stream).openForPush();
@@ -313,6 +342,21 @@ public class DefaultHttp2ConnectionEncoderTest {
         settings.headerTableSize(2000);
         encoder.writeSettings(ctx, settings, promise);
         verify(writer).writeSettings(eq(ctx), eq(settings), eq(promise));
+    }
+
+    private void mockFutureAddListener(boolean success) {
+        when(future.isSuccess()).thenReturn(success);
+        if (!success) {
+            when(future.cause()).thenReturn(new Exception("Fake Exception"));
+        }
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocation) throws Throwable {
+                ChannelFutureListener listener = (ChannelFutureListener) invocation.getArguments()[0];
+                listener.operationComplete(future);
+                return null;
+            }
+        }).when(future).addListener(any(ChannelFutureListener.class));
     }
 
     private static ByteBuf dummyData() {
