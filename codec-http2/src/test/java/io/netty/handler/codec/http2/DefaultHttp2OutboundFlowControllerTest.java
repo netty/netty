@@ -29,6 +29,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.DefaultHttp2OutboundFlowController.OutboundFlowState;
@@ -134,6 +135,24 @@ public class DefaultHttp2OutboundFlowControllerTest {
             send(STREAM_A, data.slice(0, 5), 5);
             verifyWrite(STREAM_A, data.slice(0, 5), 5);
             assertEquals(1, data.refCnt());
+        } finally {
+            manualSafeRelease(data);
+        }
+    }
+
+    @Test
+    public void lastWriteFutureShouldBeSaved() throws Http2Exception {
+        ChannelPromise promise2 = Mockito.mock(ChannelPromise.class);
+        final ByteBuf data = dummyData(5, 5);
+        try {
+            // Write one frame.
+            ChannelFuture future1 = controller.writeData(ctx, STREAM_A, data, 0, false, promise);
+            assertEquals(future1, controller.lastWriteForStream(STREAM_A));
+
+            // Now write another and verify that the last write is updated.
+            ChannelFuture future2 = controller.writeData(ctx, STREAM_A, data, 0, false, promise2);
+            assertTrue(future1 != future2);
+            assertEquals(future2, controller.lastWriteForStream(STREAM_A));
         } finally {
             manualSafeRelease(data);
         }
@@ -1223,7 +1242,8 @@ public class DefaultHttp2OutboundFlowControllerTest {
     }
 
     private void send(int streamId, ByteBuf data, int padding) throws Http2Exception {
-        controller.writeData(ctx, streamId, data, padding, false, promise);
+        ChannelFuture future = controller.writeData(ctx, streamId, data, padding, false, promise);
+        assertEquals(future, controller.lastWriteForStream(streamId));
     }
 
     private void verifyWrite(int streamId, ByteBuf data, int padding) {

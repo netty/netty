@@ -85,8 +85,9 @@ public class Http2ConnectionRoundtripTest {
     private Channel serverChannel;
     private Channel clientChannel;
     private Http2TestUtil.FrameCountDown serverFrameCountDown;
-    private volatile CountDownLatch requestLatch;
-    private volatile CountDownLatch dataLatch;
+    private CountDownLatch requestLatch;
+    private CountDownLatch dataLatch;
+    private CountDownLatch trailersLatch;
 
     @Before
     public void setup() throws Exception {
@@ -106,7 +107,7 @@ public class Http2ConnectionRoundtripTest {
 
     @Test
     public void http2ExceptionInPipelineShouldCloseConnection() throws Exception {
-        bootstrapEnv(1, 1);
+        bootstrapEnv(1, 1, 1);
 
         // Create a latch to track when the close occurs.
         final CountDownLatch closeLatch = new CountDownLatch(1);
@@ -150,7 +151,7 @@ public class Http2ConnectionRoundtripTest {
                 any(ChannelHandlerContext.class), eq(3), eq(headers), eq(0), eq((short) 16),
                 eq(false), eq(0), eq(false));
 
-        bootstrapEnv(1, 1);
+        bootstrapEnv(1, 1, 1);
 
         // Create a latch to track when the close occurs.
         final CountDownLatch closeLatch = new CountDownLatch(1);
@@ -180,7 +181,7 @@ public class Http2ConnectionRoundtripTest {
 
     @Test
     public void nonHttp2ExceptionInPipelineShouldNotCloseConnection() throws Exception {
-        bootstrapEnv(1, 1);
+        bootstrapEnv(1, 1, 1);
 
         // Create a latch to track when the close occurs.
         final CountDownLatch closeLatch = new CountDownLatch(1);
@@ -219,7 +220,7 @@ public class Http2ConnectionRoundtripTest {
 
     @Test
     public void noMoreStreamIdsShouldSendGoAway() throws Exception {
-        bootstrapEnv(1, 3);
+        bootstrapEnv(1, 3, 1);
 
         // Create a single stream by sending a HEADERS frame to the server.
         final Http2Headers headers = dummyHeaders();
@@ -262,7 +263,7 @@ public class Http2ConnectionRoundtripTest {
                 any(ByteBuf.class), eq(0), Mockito.anyBoolean());
         try {
             // Initialize the data latch based on the number of bytes expected.
-            bootstrapEnv(length, 2);
+            bootstrapEnv(length, 2, 1);
 
             // Create the stream and send all of the data at once.
             runInChannel(clientChannel, new Http2Runnable() {
@@ -270,20 +271,25 @@ public class Http2ConnectionRoundtripTest {
                 public void run() {
                     http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0,
                             false, newPromise());
-                    http2Client.encoder().writeData(ctx(), 3, data.retain(), 0, true, newPromise());
+                    http2Client.encoder().writeData(ctx(), 3, data.retain(), 0, false, newPromise());
+
+                    // Write trailers.
+                    http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0,
+                            true, newPromise());
                 }
             });
 
-            // Wait for all DATA frames to be received at the server.
-            assertTrue(dataLatch.await(5, TimeUnit.SECONDS));
+            // Wait for the trailers to be received.
+            assertTrue(trailersLatch.await(5, TimeUnit.SECONDS));
 
-            // Verify that headers were received and only one DATA frame was received with endStream set.
+            // Verify that headers and trailers were received.
             verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(headers), eq(0),
                     eq((short) 16), eq(false), eq(0), eq(false));
-            verify(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3), any(ByteBuf.class), eq(0),
-                    eq(true));
+            verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(headers), eq(0),
+                    eq((short) 16), eq(false), eq(0), eq(true));
 
             // Verify we received all the bytes.
+            assertEquals(0, dataLatch.getCount());
             out.flush();
             byte[] received = out.toByteArray();
             assertArrayEquals(bytes, received);
@@ -317,9 +323,9 @@ public class Http2ConnectionRoundtripTest {
                 return null;
             }
         }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), anyInt(), eq(data),
-                eq(0), eq(true));
+                eq(0), eq(false));
         try {
-            bootstrapEnv(numStreams * text.length(), numStreams * 3);
+            bootstrapEnv(numStreams * text.length(), numStreams * 4, numStreams);
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() {
@@ -329,18 +335,23 @@ public class Http2ConnectionRoundtripTest {
                         http2Client.encoder().writePing(ctx(), false, pingData.slice().retain(),
                                 newPromise());
                         http2Client.encoder().writeData(ctx(), nextStream, data.slice().retain(),
-                                0, true, newPromise());
+                                0, false, newPromise());
+                        // Write trailers.
+                        http2Client.encoder().writeHeaders(ctx(), nextStream, headers, 0,
+                                (short) 16, false, 0, true, newPromise());
                     }
                 }
             });
             // Wait for all frames to be received.
-            assertTrue(requestLatch.await(30, SECONDS));
+            assertTrue(trailersLatch.await(30, SECONDS));
             verify(serverListener, times(numStreams)).onHeadersRead(any(ChannelHandlerContext.class), anyInt(),
                     eq(headers), eq(0), eq((short) 16), eq(false), eq(0), eq(false));
+            verify(serverListener, times(numStreams)).onHeadersRead(any(ChannelHandlerContext.class), anyInt(),
+                    eq(headers), eq(0), eq((short) 16), eq(false), eq(0), eq(true));
             verify(serverListener, times(numStreams)).onPingRead(any(ChannelHandlerContext.class),
                     any(ByteBuf.class));
             verify(serverListener, times(numStreams)).onDataRead(any(ChannelHandlerContext.class),
-                    anyInt(), any(ByteBuf.class), eq(0), eq(true));
+                    anyInt(), any(ByteBuf.class), eq(0), eq(false));
             assertEquals(numStreams, receivedPingBuffers.size());
             assertEquals(numStreams, receivedDataBuffers.size());
             for (String receivedData : receivedDataBuffers) {
@@ -355,9 +366,10 @@ public class Http2ConnectionRoundtripTest {
         }
     }
 
-    private void bootstrapEnv(int dataCountDown, int requestCountDown) throws Exception {
+    private void bootstrapEnv(int dataCountDown, int requestCountDown, int trailersCountDown) throws Exception {
         requestLatch = new CountDownLatch(requestCountDown);
         dataLatch = new CountDownLatch(dataCountDown);
+        trailersLatch = new CountDownLatch(trailersCountDown);
         sb = new ServerBootstrap();
         cb = new Bootstrap();
 
@@ -367,7 +379,9 @@ public class Http2ConnectionRoundtripTest {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                serverFrameCountDown = new Http2TestUtil.FrameCountDown(serverListener, requestLatch, dataLatch);
+                serverFrameCountDown =
+                        new Http2TestUtil.FrameCountDown(serverListener, requestLatch, dataLatch,
+                                trailersLatch);
                 p.addLast(new Http2ConnectionHandler(true, serverFrameCountDown));
                 p.addLast(Http2CodecUtil.ignoreSettingsHandler());
             }
