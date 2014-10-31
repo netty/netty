@@ -147,8 +147,9 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             // Update the stream window and write any pending frames for the stream.
             OutboundFlowState state = stateOrFail(streamId);
             state.incrementStreamWindow(delta);
-            state.writeBytes(state.writableWindow());
-            flush();
+            if (state.writeBytes(state.writableWindow()) > 0) {
+                flush();
+            }
         }
     }
 
@@ -508,7 +509,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                     // Window size is large enough to send entire data frame
                     bytesWritten += pendingWrite.size();
                     pendingWrite.write();
-                } else if (maxBytes == 0) {
+                } else if (maxBytes <= 0) {
                     // No data from the current frame can be written - we're done.
                     // We purposely check this after first testing the size of the
                     // pending frame to properly handle zero-length frame.

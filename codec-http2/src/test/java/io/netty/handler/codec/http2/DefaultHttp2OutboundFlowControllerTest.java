@@ -299,6 +299,55 @@ public class DefaultHttp2OutboundFlowControllerTest {
     }
 
     @Test
+    public void negativeWindowShouldNotThrowException() throws Http2Exception {
+        final int initWindow = 20;
+        final int secondWindowSize = 10;
+        controller.initialOutboundWindowSize(initWindow);
+        Http2Stream streamA = connection.stream(STREAM_A);
+
+        final ByteBuf data = dummyData(initWindow, 0);
+        final ByteBuf data2 = dummyData(5, 0);
+        try {
+            // Deplete the stream A window to 0
+            send(STREAM_A, data.slice(0, initWindow), 0);
+            verifyWrite(STREAM_A, data.slice(0, initWindow), 0);
+
+            // Make the window size for stream A negative
+            controller.initialOutboundWindowSize(initWindow - secondWindowSize);
+            assertEquals(-secondWindowSize, streamA.outboundFlow().window());
+
+            // Queue up a write. It should not be written now because the window is negative
+            resetFrameWriter();
+            send(STREAM_A, data2.slice(), 0);
+            verifyNoWrite(STREAM_A);
+
+            // Open the window size back up a bit (no send should happen)
+            controller.updateOutboundWindowSize(STREAM_A, 5);
+            assertEquals(-5, streamA.outboundFlow().window());
+            verifyNoWrite(STREAM_A);
+
+            // Open the window size back up a bit (no send should happen)
+            controller.updateOutboundWindowSize(STREAM_A, 5);
+            assertEquals(0, streamA.outboundFlow().window());
+            verifyNoWrite(STREAM_A);
+
+            // Open the window size back up and allow the write to happen
+            controller.updateOutboundWindowSize(STREAM_A, 5);
+            assertEquals(0, streamA.outboundFlow().window());
+
+            // Verify that the entire frame was sent.
+            ArgumentCaptor<ByteBuf> argument = ArgumentCaptor.forClass(ByteBuf.class);
+            captureWrite(STREAM_A, argument, 0, false);
+            final ByteBuf writtenBuf = argument.getValue();
+            assertEquals(data2, writtenBuf);
+            assertEquals(1, data2.refCnt());
+        } finally {
+            manualSafeRelease(data);
+            manualSafeRelease(data2);
+        }
+    }
+
+    @Test
     public void initialWindowUpdateShouldSendEmptyFrame() throws Http2Exception {
         controller.initialOutboundWindowSize(0);
 
