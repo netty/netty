@@ -17,8 +17,6 @@
 package io.netty.handler.ssl;
 
 
-import java.io.File;
-
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -26,6 +24,7 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSessionContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
+import java.io.File;
 
 /**
  * A client-side {@link SslContext} which uses JDK's SSL/TLS implementation.
@@ -74,6 +73,35 @@ public final class JdkSslClientContext extends JdkSslContext {
     public JdkSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory) throws SSLException {
         this(certChainFile, trustManagerFactory, null, IdentityCipherSuiteFilter.INSTANCE,
                 JdkDefaultApplicationProtocolNegotiator.INSTANCE, 0, 0);
+    }
+
+    /**
+     * @deprecated Use the constructors that accept {@link ApplicationProtocolConfig} or
+     *             {@link ApplicationProtocolNegotiator} instead.
+     *
+     * Creates a new instance.
+     *
+     * @param certChainFile an X.509 certificate chain file in PEM format.
+     *                      {@code null} to use the system default
+     * @param trustManagerFactory the {@link TrustManagerFactory} that provides the {@link TrustManager}s
+     *                            that verifies the certificates sent from servers.
+     *                            {@code null} to use the default.
+     * @param ciphers the cipher suites to enable, in the order of preference.
+     *                {@code null} to use the default cipher suites.
+     * @param nextProtocols the application layer protocols to accept, in the order of preference.
+     *                      {@code null} to disable TLS NPN/ALPN extension.
+     * @param sessionCacheSize the size of the cache used for storing SSL session objects.
+     *                         {@code 0} to use the default value.
+     * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
+     *                       {@code 0} to use the default value.
+     */
+    @Deprecated
+    public JdkSslClientContext(
+            File certChainFile, TrustManagerFactory trustManagerFactory,
+            Iterable<String> ciphers, Iterable<String> nextProtocols,
+            long sessionCacheSize, long sessionTimeout) throws SSLException {
+        this(certChainFile, trustManagerFactory, ciphers, IdentityCipherSuiteFilter.INSTANCE,
+             toNegotiator(toApplicationProtocolConfig(nextProtocols), false), sessionCacheSize, sessionTimeout);
     }
 
     /**
