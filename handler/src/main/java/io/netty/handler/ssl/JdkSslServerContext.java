@@ -16,8 +16,6 @@
 
 package io.netty.handler.ssl;
 
-import java.io.File;
-
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -25,6 +23,7 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSessionContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
+import java.io.File;
 
 /**
  * A server-side {@link SslContext} which uses JDK's SSL/TLS implementation.
@@ -54,6 +53,30 @@ public final class JdkSslServerContext extends JdkSslContext {
     public JdkSslServerContext(File certChainFile, File keyFile, String keyPassword) throws SSLException {
         this(certChainFile, keyFile, keyPassword, null, IdentityCipherSuiteFilter.INSTANCE,
                 JdkDefaultApplicationProtocolNegotiator.INSTANCE, 0, 0);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param certChainFile an X.509 certificate chain file in PEM format
+     * @param keyFile a PKCS#8 private key file in PEM format
+     * @param keyPassword the password of the {@code keyFile}.
+     *                    {@code null} if it's not password-protected.
+     * @param ciphers the cipher suites to enable, in the order of preference.
+     *                {@code null} to use the default cipher suites.
+     * @param nextProtocols the application layer protocols to accept, in the order of preference.
+     *                      {@code null} to disable TLS NPN/ALPN extension.
+     * @param sessionCacheSize the size of the cache used for storing SSL session objects.
+     *                         {@code 0} to use the default value.
+     * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
+     *                       {@code 0} to use the default value.
+     */
+    public JdkSslServerContext(
+            File certChainFile, File keyFile, String keyPassword,
+            Iterable<String> ciphers, Iterable<String> nextProtocols,
+            long sessionCacheSize, long sessionTimeout) throws SSLException {
+        this(certChainFile, keyFile, keyPassword, ciphers, IdentityCipherSuiteFilter.INSTANCE,
+             toNegotiator(toApplicationProtocolConfig(nextProtocols), true), sessionCacheSize, sessionTimeout);
     }
 
     /**
