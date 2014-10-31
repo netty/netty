@@ -1,3 +1,4 @@
+[![Build Status](http://clinker.netty.io/desktop/plugin/public/status/netty-build)](http://clinker.netty.io/jenkins/job/netty-build)
 # Netty Project
 
 Netty is an asynchronous event-driven network application framework for rapid development of maintainable high performance protocol servers & clients.
