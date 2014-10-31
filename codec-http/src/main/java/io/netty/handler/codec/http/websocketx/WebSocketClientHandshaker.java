@@ -25,6 +25,7 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpContentDecompressor;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
@@ -203,7 +204,7 @@ public abstract class WebSocketClientHandshaker {
 
         // Verify the subprotocol that we received from the server.
         // This must be one of our expected subprotocols - or null/empty if we didn't want to speak a subprotocol
-        String receivedProtocol = response.headers().get(HttpHeaders.Names.SEC_WEBSOCKET_PROTOCOL);
+        String receivedProtocol = response.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
         receivedProtocol = receivedProtocol != null ? receivedProtocol.trim() : null;
         String expectedProtocol = expectedSubprotocol != null ? expectedSubprotocol : "";
         boolean protocolValid = false;

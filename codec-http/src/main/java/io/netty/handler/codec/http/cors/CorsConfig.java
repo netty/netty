@@ -16,8 +16,8 @@
 package io.netty.handler.codec.http.cors;
 
 import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.util.internal.StringUtil;
 
@@ -510,8 +510,8 @@ public final class CorsConfig {
          */
         public CorsConfig build() {
             if (preflightHeaders.isEmpty() && !noPreflightHeaders) {
-                preflightHeaders.put(Names.DATE, new DateValueGenerator());
-                preflightHeaders.put(Names.CONTENT_LENGTH, new ConstantValueGenerator("0"));
+                preflightHeaders.put(HttpHeaderNames.DATE, new DateValueGenerator());
+                preflightHeaders.put(HttpHeaderNames.CONTENT_LENGTH, new ConstantValueGenerator("0"));
             }
             return new CorsConfig(this);
         }

@@ -17,7 +17,6 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
@@ -184,7 +183,7 @@ public class HttpResponseDecoderTest {
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
         assertThat(res.status(), is(HttpResponseStatus.OK));
-        assertThat(res.headers().get(Names.TRANSFER_ENCODING), is("chunked"));
+        assertThat(res.headers().get(HttpHeaderNames.TRANSFER_ENCODING), is("chunked"));
         assertThat(ch.readInbound(), is(nullValue()));
 
         // Close the connection without sending anything.
@@ -205,7 +204,7 @@ public class HttpResponseDecoderTest {
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
         assertThat(res.status(), is(HttpResponseStatus.OK));
-        assertThat(res.headers().get(Names.TRANSFER_ENCODING), is("chunked"));
+        assertThat(res.headers().get(HttpHeaderNames.TRANSFER_ENCODING), is("chunked"));
 
         // Read the partial content.
         HttpContent content = ch.readInbound();

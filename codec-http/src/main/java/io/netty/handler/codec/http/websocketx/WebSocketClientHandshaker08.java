@@ -15,13 +15,12 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpHeaders.Names;
-import io.netty.handler.codec.http.HttpHeaders.Values;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
@@ -41,7 +40,6 @@ import java.net.URI;
 public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketClientHandshaker08.class);
-    private static final CharSequence WEBSOCKET = Values.WEBSOCKET.toLowerCase();
 
     public static final String MAGIC_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
@@ -155,10 +153,10 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, path);
         HttpHeaders headers = request.headers();
 
-        headers.add(Names.UPGRADE, WEBSOCKET)
-               .add(Names.CONNECTION, Values.UPGRADE)
-               .add(Names.SEC_WEBSOCKET_KEY, key)
-               .add(Names.HOST, wsURL.getHost());
+        headers.add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)
+               .add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
+               .add(HttpHeaderNames.SEC_WEBSOCKET_KEY, key)
+               .add(HttpHeaderNames.HOST, wsURL.getHost());
 
         int wsPort = wsURL.getPort();
         String originValue = "http://" + wsURL.getHost();
@@ -167,14 +165,14 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
             // See http://tools.ietf.org/html/rfc6454#section-6.2
             originValue = originValue + ':' + wsPort;
         }
-        headers.add(Names.SEC_WEBSOCKET_ORIGIN, originValue);
+        headers.add(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN, originValue);
 
         String expectedSubprotocol = expectedSubprotocol();
         if (expectedSubprotocol != null && !expectedSubprotocol.isEmpty()) {
-            headers.add(Names.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
+            headers.add(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
         }
 
-        headers.add(Names.SEC_WEBSOCKET_VERSION, "8");
+        headers.add(HttpHeaderNames.SEC_WEBSOCKET_VERSION, "8");
 
         if (customHeaders != null) {
             headers.add(customHeaders);
@@ -208,17 +206,17 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
             throw new WebSocketHandshakeException("Invalid handshake response getStatus: " + response.status());
         }
 
-        CharSequence upgrade = headers.get(Names.UPGRADE);
-        if (!AsciiString.equalsIgnoreCase(Values.WEBSOCKET, upgrade)) {
+        CharSequence upgrade = headers.get(HttpHeaderNames.UPGRADE);
+        if (!HttpHeaderValues.WEBSOCKET.equalsIgnoreCase(upgrade)) {
             throw new WebSocketHandshakeException("Invalid handshake response upgrade: " + upgrade);
         }
 
-        CharSequence connection = headers.get(Names.CONNECTION);
-        if (!AsciiString.equalsIgnoreCase(Values.UPGRADE, connection)) {
+        CharSequence connection = headers.get(HttpHeaderNames.CONNECTION);
+        if (!HttpHeaderValues.UPGRADE.equalsIgnoreCase(connection)) {
             throw new WebSocketHandshakeException("Invalid handshake response connection: " + connection);
         }
 
-        CharSequence accept = headers.get(Names.SEC_WEBSOCKET_ACCEPT);
+        CharSequence accept = headers.get(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT);
         if (accept == null || !accept.equals(expectedChallengeResponseString)) {
             throw new WebSocketHandshakeException(String.format(
                     "Invalid challenge. Actual: %s. Expected: %s", accept, expectedChallengeResponseString));

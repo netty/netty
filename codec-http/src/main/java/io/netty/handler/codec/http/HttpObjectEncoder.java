@@ -72,7 +72,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             encodeInitialLine(buf, m);
             HttpHeaders.encode(m.headers(), buf);
             buf.writeBytes(CRLF);
-            state = HttpHeaders.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
+            state = HttpHeaderUtil.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
         }
 
         // Bypass the encoder in case of an empty buffer, so that the following idiom works:

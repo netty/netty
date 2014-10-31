@@ -22,6 +22,7 @@ import io.netty.handler.codec.DefaultTextHeaders;
 import io.netty.handler.codec.DefaultTextHeaders.DefaultTextValueTypeConverter;
 import io.netty.handler.codec.TextHeaders;
 
+import java.text.ParseException;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
@@ -298,6 +299,12 @@ public class DefaultHttpHeaders extends HttpHeaders {
     }
 
     @Override
+    public HttpHeaders addInt(CharSequence name, int value) {
+        headers.addInt(name, value);
+        return this;
+    }
+
+    @Override
     public HttpHeaders remove(String name) {
         headers.remove(name);
         return this;
@@ -334,6 +341,12 @@ public class DefaultHttpHeaders extends HttpHeaders {
     }
 
     @Override
+    public HttpHeaders setInt(CharSequence name, int value) {
+        headers.setInt(name, value);
+        return this;
+    }
+
+    @Override
     public HttpHeaders clear() {
         headers.clear();
         return this;
@@ -347,6 +360,35 @@ public class DefaultHttpHeaders extends HttpHeaders {
     @Override
     public String get(CharSequence name) {
         return headers.getAndConvert(name);
+    }
+
+    @Override
+    public Integer getInt(CharSequence name) {
+        return headers.getInt(name);
+    }
+
+    @Override
+    public int getInt(CharSequence name, int defaultValue) {
+        return headers.getInt(name, defaultValue);
+    }
+
+    @Override
+    public Date getDate(CharSequence name) {
+        return getDate(name, null);
+    }
+
+    @Override
+    public Date getDate(CharSequence name, Date defaultValue) {
+        String value = get(name);
+        if (value == null) {
+            return defaultValue;
+        }
+
+        try {
+            return HttpHeaderDateFormat.get().parse(value);
+        } catch (ParseException ignored) {
+            return defaultValue;
+        }
     }
 
     @Override

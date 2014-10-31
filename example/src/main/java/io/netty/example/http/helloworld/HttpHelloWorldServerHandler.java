@@ -22,7 +22,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpHeaderUtil;
 import io.netty.handler.codec.http.HttpRequest;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
@@ -46,10 +46,10 @@ public class HttpHelloWorldServerHandler extends ChannelInboundHandlerAdapter {
         if (msg instanceof HttpRequest) {
             HttpRequest req = (HttpRequest) msg;
 
-            if (HttpHeaders.is100ContinueExpected(req)) {
+            if (HttpHeaderUtil.is100ContinueExpected(req)) {
                 ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE));
             }
-            boolean keepAlive = HttpHeaders.isKeepAlive(req);
+            boolean keepAlive = HttpHeaderUtil.isKeepAlive(req);
             FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, Unpooled.wrappedBuffer(CONTENT));
             response.headers().set(CONTENT_TYPE, "text/plain");
             response.headers().setInt(CONTENT_LENGTH, response.content().readableBytes());

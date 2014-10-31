@@ -26,6 +26,9 @@ import io.netty.handler.codec.http.CookieDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderUtil;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
@@ -39,7 +42,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 
@@ -59,7 +61,7 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
         if (msg instanceof HttpRequest) {
             HttpRequest request = this.request = (HttpRequest) msg;
 
-            if (HttpHeaders.is100ContinueExpected(request)) {
+            if (HttpHeaderUtil.is100ContinueExpected(request)) {
                 send100Continue(ctx);
             }
 
@@ -68,12 +70,12 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
             buf.append("===================================\r\n");
 
             buf.append("VERSION: ").append(request.protocolVersion()).append("\r\n");
-            buf.append("HOSTNAME: ").append(HttpHeaders.getHost(request, "unknown")).append("\r\n");
+            buf.append("HOSTNAME: ").append(request.headers().get(HttpHeaderNames.HOST, "unknown")).append("\r\n");
             buf.append("REQUEST_URI: ").append(request.uri()).append("\r\n\r\n");
 
             HttpHeaders headers = request.headers();
             if (!headers.isEmpty()) {
-                for (Map.Entry<CharSequence, CharSequence> h: headers) {
+                for (Map.Entry<String, String> h: headers) {
                     CharSequence key = h.getKey();
                     CharSequence value = h.getValue();
                     buf.append("HEADER: ").append(key).append(" = ").append(value).append("\r\n");
@@ -144,36 +146,36 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
 
     private boolean writeResponse(HttpObject currentObj, ChannelHandlerContext ctx) {
         // Decide whether to close the connection or not.
-        boolean keepAlive = HttpHeaders.isKeepAlive(request);
+        boolean keepAlive = HttpHeaderUtil.isKeepAlive(request);
         // Build the response object.
         FullHttpResponse response = new DefaultFullHttpResponse(
                 HTTP_1_1, currentObj.decoderResult().isSuccess()? OK : BAD_REQUEST,
                 Unpooled.copiedBuffer(buf.toString(), CharsetUtil.UTF_8));
 
-        response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
+        response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=UTF-8");
 
         if (keepAlive) {
             // Add 'Content-Length' header only for a keep-alive connection.
-            response.headers().setInt(CONTENT_LENGTH, response.content().readableBytes());
+            response.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, response.content().readableBytes());
             // Add keep alive header as per:
             // - http://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Connection
-            response.headers().set(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
+            response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
         }
 
         // Encode the cookie.
-        String cookieString = request.headers().getAndConvert(COOKIE);
+        String cookieString = request.headers().get(HttpHeaderNames.COOKIE);
         if (cookieString != null) {
             Set<Cookie> cookies = CookieDecoder.decode(cookieString);
             if (!cookies.isEmpty()) {
                 // Reset the cookies if necessary.
                 for (Cookie cookie: cookies) {
-                    response.headers().add(SET_COOKIE, ServerCookieEncoder.encode(cookie));
+                    response.headers().add(HttpHeaderNames.SET_COOKIE, ServerCookieEncoder.encode(cookie));
                 }
             }
         } else {
             // Browser sent no cookie.  Add some.
-            response.headers().add(SET_COOKIE, ServerCookieEncoder.encode("key1", "value1"));
-            response.headers().add(SET_COOKIE, ServerCookieEncoder.encode("key2", "value2"));
+            response.headers().add(HttpHeaderNames.SET_COOKIE, ServerCookieEncoder.encode("key1", "value1"));
+            response.headers().add(HttpHeaderNames.SET_COOKIE, ServerCookieEncoder.encode("key2", "value2"));
         }
 
         // Write the response.

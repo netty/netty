@@ -15,10 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.handler.codec.http.HttpConstants.COLON;
-import static io.netty.handler.codec.http.HttpConstants.CR;
-import static io.netty.handler.codec.http.HttpConstants.LF;
-import static io.netty.handler.codec.http.HttpConstants.SP;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.AsciiString;
 
@@ -32,6 +28,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import static io.netty.handler.codec.http.HttpConstants.*;
+
 /**
  * Provides the constants for the standard HTTP header names and values and
  * commonly used utility methods that accesses an {@link HttpMessage}.
@@ -40,25 +38,31 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
 
     private static final byte[] HEADER_SEPERATOR = { COLON, SP };
     private static final byte[] CRLF = { CR, LF };
-    private static final CharSequence CONTENT_LENGTH_ENTITY = Names.CONTENT_LENGTH;
-    private static final CharSequence CONNECTION_ENTITY = Names.CONNECTION;
-    private static final CharSequence CLOSE_ENTITY = Values.CLOSE;
-    private static final CharSequence KEEP_ALIVE_ENTITY = Values.KEEP_ALIVE;
-    private static final CharSequence HOST_ENTITY = Names.HOST;
-    private static final CharSequence DATE_ENTITY = Names.DATE;
-    private static final CharSequence EXPECT_ENTITY = Names.EXPECT;
-    private static final CharSequence CONTINUE_ENTITY = Values.CONTINUE;
-    private static final CharSequence TRANSFER_ENCODING_ENTITY = Names.TRANSFER_ENCODING;
-    private static final CharSequence CHUNKED_ENTITY = Values.CHUNKED;
-    private static final CharSequence SEC_WEBSOCKET_KEY1_ENTITY = Names.SEC_WEBSOCKET_KEY1;
-    private static final CharSequence SEC_WEBSOCKET_KEY2_ENTITY = Names.SEC_WEBSOCKET_KEY2;
-    private static final CharSequence SEC_WEBSOCKET_ORIGIN_ENTITY = Names.SEC_WEBSOCKET_ORIGIN;
-    private static final CharSequence SEC_WEBSOCKET_LOCATION_ENTITY = Names.SEC_WEBSOCKET_LOCATION;
 
     public static final HttpHeaders EMPTY_HEADERS = new HttpHeaders() {
         @Override
         public String get(String name) {
             return null;
+        }
+
+        @Override
+        public Integer getInt(CharSequence name) {
+            return null;
+        }
+
+        @Override
+        public int getInt(CharSequence name, int defaultValue) {
+            return defaultValue;
+        }
+
+        @Override
+        public Date getDate(CharSequence name) {
+            return null;
+        }
+
+        @Override
+        public Date getDate(CharSequence name, Date defaultValue) {
+            return defaultValue;
         }
 
         @Override
@@ -97,12 +101,22 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         }
 
         @Override
+        public HttpHeaders addInt(CharSequence name, int value) {
+            throw new UnsupportedOperationException("read only");
+        }
+
+        @Override
         public HttpHeaders set(String name, Object value) {
             throw new UnsupportedOperationException("read only");
         }
 
         @Override
         public HttpHeaders set(String name, Iterable<?> values) {
+            throw new UnsupportedOperationException("read only");
+        }
+
+        @Override
+        public HttpHeaders setInt(CharSequence name, int value) {
             throw new UnsupportedOperationException("read only");
         }
 
@@ -123,353 +137,321 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     };
 
     /**
+     * @deprecated Use {@link HttpHeaderNames} instead.
+     *
      * Standard HTTP header names.
-     * <p>
-     * These are all defined as lowercase to support HTTP/2 requirements while also not
-     * violating HTTP/1.x requirements.  New header names should always be lowercase.
      */
+    @Deprecated
     public static final class Names {
         /**
-         * {@code "accept"}
+         * {@code "Accept"}
          */
-        public static final AsciiString ACCEPT = new AsciiString("accept");
+        public static final String ACCEPT = "Accept";
         /**
-         * {@code "accept-charset"}
+         * {@code "Accept-Charset"}
          */
-        public static final AsciiString ACCEPT_CHARSET = new AsciiString("accept-charset");
+        public static final String ACCEPT_CHARSET = "Accept-Charset";
         /**
-         * {@code "accept-encoding"}
+         * {@code "Accept-Encoding"}
          */
-        public static final AsciiString ACCEPT_ENCODING = new AsciiString("accept-encoding");
+        public static final String ACCEPT_ENCODING = "Accept-Encoding";
         /**
-         * {@code "accept-language"}
+         * {@code "Accept-Language"}
          */
-        public static final AsciiString ACCEPT_LANGUAGE = new AsciiString("accept-language");
+        public static final String ACCEPT_LANGUAGE = "Accept-Language";
         /**
-         * {@code "accept-ranges"}
+         * {@code "Accept-Ranges"}
          */
-        public static final AsciiString ACCEPT_RANGES = new AsciiString("accept-ranges");
+        public static final String ACCEPT_RANGES = "Accept-Ranges";
         /**
-         * {@code "accept-patch"}
+         * {@code "Accept-Patch"}
          */
-        public static final AsciiString ACCEPT_PATCH = new AsciiString("accept-patch");
+        public static final String ACCEPT_PATCH = "Accept-Patch";
         /**
-         * {@code "access-control-allow-credentials"}
+         * {@code "Access-Control-Allow-Credentials"}
          */
-        public static final AsciiString ACCESS_CONTROL_ALLOW_CREDENTIALS =
-                new AsciiString("access-control-allow-credentials");
+        public static final String ACCESS_CONTROL_ALLOW_CREDENTIALS = "Access-Control-Allow-Credentials";
         /**
-         * {@code "access-control-allow-headers"}
+         * {@code "Access-Control-Allow-Headers"}
          */
-        public static final AsciiString ACCESS_CONTROL_ALLOW_HEADERS =
-                new AsciiString("access-control-allow-headers");
+        public static final String ACCESS_CONTROL_ALLOW_HEADERS = "Access-Control-Allow-Headers";
         /**
-         * {@code "access-control-allow-methods"}
+         * {@code "Access-Control-Allow-Methods"}
          */
-        public static final AsciiString ACCESS_CONTROL_ALLOW_METHODS =
-                new AsciiString("access-control-allow-methods");
+        public static final String ACCESS_CONTROL_ALLOW_METHODS = "Access-Control-Allow-Methods";
         /**
-         * {@code "access-control-allow-origin"}
+         * {@code "Access-Control-Allow-Origin"}
          */
-        public static final AsciiString ACCESS_CONTROL_ALLOW_ORIGIN =
-                new AsciiString("access-control-allow-origin");
+        public static final String ACCESS_CONTROL_ALLOW_ORIGIN = "Access-Control-Allow-Origin";
         /**
-         * {@code "access-control-expose-headers"}
+         * {@code "Access-Control-Expose-Headers"}
          */
-        public static final AsciiString ACCESS_CONTROL_EXPOSE_HEADERS =
-                new AsciiString("access-control-expose-headers");
+        public static final String ACCESS_CONTROL_EXPOSE_HEADERS = "Access-Control-Expose-Headers";
         /**
-         * {@code "access-control-max-age"}
+         * {@code "Access-Control-Max-Age"}
          */
-        public static final AsciiString ACCESS_CONTROL_MAX_AGE = new AsciiString("access-control-max-age");
+        public static final String ACCESS_CONTROL_MAX_AGE = "Access-Control-Max-Age";
         /**
-         * {@code "access-control-request-headers"}
+         * {@code "Access-Control-Request-Headers"}
          */
-        public static final AsciiString ACCESS_CONTROL_REQUEST_HEADERS =
-                new AsciiString("access-control-request-headers");
+        public static final String ACCESS_CONTROL_REQUEST_HEADERS = "Access-Control-Request-Headers";
         /**
-         * {@code "access-control-request-method"}
+         * {@code "Access-Control-Request-Method"}
          */
-        public static final AsciiString ACCESS_CONTROL_REQUEST_METHOD =
-                new AsciiString("access-control-request-method");
+        public static final String ACCESS_CONTROL_REQUEST_METHOD = "Access-Control-Request-Method";
         /**
-         * {@code "age"}
+         * {@code "Age"}
          */
-        public static final AsciiString AGE = new AsciiString("age");
+        public static final String AGE = "Age";
         /**
-         * {@code "allow"}
+         * {@code "Allow"}
          */
-        public static final AsciiString ALLOW = new AsciiString("allow");
+        public static final String ALLOW = "Allow";
         /**
-         * {@code "authorization"}
+         * {@code "Authorization"}
          */
-        public static final AsciiString AUTHORIZATION = new AsciiString("authorization");
+        public static final String AUTHORIZATION = "Authorization";
         /**
-         * {@code "cache-control"}
+         * {@code "Cache-Control"}
          */
-        public static final AsciiString CACHE_CONTROL = new AsciiString("cache-control");
+        public static final String CACHE_CONTROL = "Cache-Control";
         /**
-         * {@code "connection"}
+         * {@code "Connection"}
          */
-        public static final AsciiString CONNECTION = new AsciiString("connection");
+        public static final String CONNECTION = "Connection";
         /**
-         * {@code "content-base"}
+         * {@code "Content-Base"}
          */
-        public static final AsciiString CONTENT_BASE = new AsciiString("content-base");
+        public static final String CONTENT_BASE = "Content-Base";
         /**
-         * {@code "content-encoding"}
+         * {@code "Content-Encoding"}
          */
-        public static final AsciiString CONTENT_ENCODING = new AsciiString("content-encoding");
+        public static final String CONTENT_ENCODING = "Content-Encoding";
         /**
-         * {@code "content-language"}
+         * {@code "Content-Language"}
          */
-        public static final AsciiString CONTENT_LANGUAGE = new AsciiString("content-language");
+        public static final String CONTENT_LANGUAGE = "Content-Language";
         /**
-         * {@code "content-length"}
+         * {@code "Content-Length"}
          */
-        public static final AsciiString CONTENT_LENGTH = new AsciiString("content-length");
+        public static final String CONTENT_LENGTH = "Content-Length";
         /**
-         * {@code "content-location"}
+         * {@code "Content-Location"}
          */
-        public static final AsciiString CONTENT_LOCATION = new AsciiString("content-location");
+        public static final String CONTENT_LOCATION = "Content-Location";
         /**
-         * {@code "content-transfer-encoding"}
+         * {@code "Content-Transfer-Encoding"}
          */
-        public static final AsciiString CONTENT_TRANSFER_ENCODING = new AsciiString("content-transfer-encoding");
+        public static final String CONTENT_TRANSFER_ENCODING = "Content-Transfer-Encoding";
         /**
-         * {@code "content-disposition"}
+         * {@code "Content-MD5"}
          */
-        public static final AsciiString CONTENT_DISPOSITION = new AsciiString("content-disposition");
+        public static final String CONTENT_MD5 = "Content-MD5";
         /**
-         * {@code "content-md5"}
+         * {@code "Content-Range"}
          */
-        public static final AsciiString CONTENT_MD5 = new AsciiString("content-md5");
+        public static final String CONTENT_RANGE = "Content-Range";
         /**
-         * {@code "content-range"}
+         * {@code "Content-Type"}
          */
-        public static final AsciiString CONTENT_RANGE = new AsciiString("content-range");
+        public static final String CONTENT_TYPE = "Content-Type";
         /**
-         * {@code "content-type"}
+         * {@code "Cookie"}
          */
-        public static final AsciiString CONTENT_TYPE = new AsciiString("content-type");
+        public static final String COOKIE = "Cookie";
         /**
-         * {@code "cookie"}
+         * {@code "Date"}
          */
-        public static final AsciiString COOKIE = new AsciiString("cookie");
+        public static final String DATE = "Date";
         /**
-         * {@code "date"}
+         * {@code "ETag"}
          */
-        public static final AsciiString DATE = new AsciiString("date");
+        public static final String ETAG = "ETag";
         /**
-         * {@code "etag"}
+         * {@code "Expect"}
          */
-        public static final AsciiString ETAG = new AsciiString("etag");
+        public static final String EXPECT = "Expect";
         /**
-         * {@code "expect"}
+         * {@code "Expires"}
          */
-        public static final AsciiString EXPECT = new AsciiString("expect");
+        public static final String EXPIRES = "Expires";
         /**
-         * {@code "expires"}
+         * {@code "From"}
          */
-        public static final AsciiString EXPIRES = new AsciiString("expires");
+        public static final String FROM = "From";
         /**
-         * {@code "from"}
+         * {@code "Host"}
          */
-        public static final AsciiString FROM = new AsciiString("from");
+        public static final String HOST = "Host";
         /**
-         * {@code "host"}
+         * {@code "If-Match"}
          */
-        public static final AsciiString HOST = new AsciiString("host");
+        public static final String IF_MATCH = "If-Match";
         /**
-         * {@code "if-match"}
+         * {@code "If-Modified-Since"}
          */
-        public static final AsciiString IF_MATCH = new AsciiString("if-match");
+        public static final String IF_MODIFIED_SINCE = "If-Modified-Since";
         /**
-         * {@code "if-modified-since"}
+         * {@code "If-None-Match"}
          */
-        public static final AsciiString IF_MODIFIED_SINCE = new AsciiString("if-modified-since");
+        public static final String IF_NONE_MATCH = "If-None-Match";
         /**
-         * {@code "if-none-match"}
+         * {@code "If-Range"}
          */
-        public static final AsciiString IF_NONE_MATCH = new AsciiString("if-none-match");
+        public static final String IF_RANGE = "If-Range";
         /**
-         * {@code "if-range"}
+         * {@code "If-Unmodified-Since"}
          */
-        public static final AsciiString IF_RANGE = new AsciiString("if-range");
+        public static final String IF_UNMODIFIED_SINCE = "If-Unmodified-Since";
         /**
-         * {@code "if-unmodified-since"}
+         * {@code "Last-Modified"}
          */
-        public static final AsciiString IF_UNMODIFIED_SINCE = new AsciiString("if-unmodified-since");
+        public static final String LAST_MODIFIED = "Last-Modified";
         /**
-         * {@code "last-modified"}
+         * {@code "Location"}
          */
-        public static final AsciiString LAST_MODIFIED = new AsciiString("last-modified");
+        public static final String LOCATION = "Location";
         /**
-         * {@code "location"}
+         * {@code "Max-Forwards"}
          */
-        public static final AsciiString LOCATION = new AsciiString("location");
+        public static final String MAX_FORWARDS = "Max-Forwards";
         /**
-         * {@code "max-forwards"}
+         * {@code "Origin"}
          */
-        public static final AsciiString MAX_FORWARDS = new AsciiString("max-forwards");
+        public static final String ORIGIN = "Origin";
         /**
-         * {@code "origin"}
+         * {@code "Pragma"}
          */
-        public static final AsciiString ORIGIN = new AsciiString("origin");
+        public static final String PRAGMA = "Pragma";
         /**
-         * {@code "pragma"}
+         * {@code "Proxy-Authenticate"}
          */
-        public static final AsciiString PRAGMA = new AsciiString("pragma");
+        public static final String PROXY_AUTHENTICATE = "Proxy-Authenticate";
         /**
-         * {@code "proxy-authenticate"}
+         * {@code "Proxy-Authorization"}
          */
-        public static final AsciiString PROXY_AUTHENTICATE = new AsciiString("proxy-authenticate");
+        public static final String PROXY_AUTHORIZATION = "Proxy-Authorization";
         /**
-         * {@code "proxy-authorization"}
+         * {@code "Range"}
          */
-        public static final AsciiString PROXY_AUTHORIZATION = new AsciiString("proxy-authorization");
+        public static final String RANGE = "Range";
         /**
-         * {@code "range"}
+         * {@code "Referer"}
          */
-        public static final AsciiString RANGE = new AsciiString("range");
+        public static final String REFERER = "Referer";
         /**
-         * {@code "referer"}
+         * {@code "Retry-After"}
          */
-        public static final AsciiString REFERER = new AsciiString("referer");
+        public static final String RETRY_AFTER = "Retry-After";
         /**
-         * {@code "retry-after"}
+         * {@code "Sec-WebSocket-Key1"}
          */
-        public static final AsciiString RETRY_AFTER = new AsciiString("retry-after");
+        public static final String SEC_WEBSOCKET_KEY1 = "Sec-WebSocket-Key1";
         /**
-         * {@code "sec-websocket-key1"}
+         * {@code "Sec-WebSocket-Key2"}
          */
-        public static final AsciiString SEC_WEBSOCKET_KEY1 = new AsciiString("sec-websocket-key1");
+        public static final String SEC_WEBSOCKET_KEY2 = "Sec-WebSocket-Key2";
         /**
-         * {@code "sec-websocket-key2"}
+         * {@code "Sec-WebSocket-Location"}
          */
-        public static final AsciiString SEC_WEBSOCKET_KEY2 = new AsciiString("sec-websocket-key2");
+        public static final String SEC_WEBSOCKET_LOCATION = "Sec-WebSocket-Location";
         /**
-         * {@code "sec-websocket-location"}
+         * {@code "Sec-WebSocket-Origin"}
          */
-        public static final AsciiString SEC_WEBSOCKET_LOCATION = new AsciiString("sec-websocket-location");
+        public static final String SEC_WEBSOCKET_ORIGIN = "Sec-WebSocket-Origin";
         /**
-         * {@code "sec-websocket-origin"}
+         * {@code "Sec-WebSocket-Protocol"}
          */
-        public static final AsciiString SEC_WEBSOCKET_ORIGIN = new AsciiString("sec-websocket-origin");
+        public static final String SEC_WEBSOCKET_PROTOCOL = "Sec-WebSocket-Protocol";
         /**
-         * {@code "sec-websocket-protocol"}
+         * {@code "Sec-WebSocket-Version"}
          */
-        public static final AsciiString SEC_WEBSOCKET_PROTOCOL = new AsciiString("sec-websocket-protocol");
+        public static final String SEC_WEBSOCKET_VERSION = "Sec-WebSocket-Version";
         /**
-         * {@code "sec-websocket-version"}
+         * {@code "Sec-WebSocket-Key"}
          */
-        public static final AsciiString SEC_WEBSOCKET_VERSION = new AsciiString("sec-websocket-version");
+        public static final String SEC_WEBSOCKET_KEY = "Sec-WebSocket-Key";
         /**
-         * {@code "sec-websocket-key"}
+         * {@code "Sec-WebSocket-Accept"}
          */
-        public static final AsciiString SEC_WEBSOCKET_KEY = new AsciiString("sec-websocket-key");
+        public static final String SEC_WEBSOCKET_ACCEPT = "Sec-WebSocket-Accept";
         /**
-         * {@code "sec-websocket-accept"}
+         * {@code "Server"}
          */
-        public static final AsciiString SEC_WEBSOCKET_ACCEPT = new AsciiString("sec-websocket-accept");
+        public static final String SERVER = "Server";
         /**
-         * {@code "sec-websocket-protocol"}
+         * {@code "Set-Cookie"}
          */
-        public static final AsciiString SEC_WEBSOCKET_EXTENSIONS = new AsciiString("sec-websocket-extensions");
+        public static final String SET_COOKIE = "Set-Cookie";
         /**
-         * {@code "server"}
+         * {@code "Set-Cookie2"}
          */
-        public static final AsciiString SERVER = new AsciiString("server");
+        public static final String SET_COOKIE2 = "Set-Cookie2";
         /**
-         * {@code "set-cookie"}
+         * {@code "TE"}
          */
-        public static final AsciiString SET_COOKIE = new AsciiString("set-cookie");
+        public static final String TE = "TE";
         /**
-         * {@code "set-cookie2"}
+         * {@code "Trailer"}
          */
-        public static final AsciiString SET_COOKIE2 = new AsciiString("set-cookie2");
+        public static final String TRAILER = "Trailer";
         /**
-         * {@code "te"}
+         * {@code "Transfer-Encoding"}
          */
-        public static final AsciiString TE = new AsciiString("te");
+        public static final String TRANSFER_ENCODING = "Transfer-Encoding";
         /**
-         * {@code "trailer"}
+         * {@code "Upgrade"}
          */
-        public static final AsciiString TRAILER = new AsciiString("trailer");
+        public static final String UPGRADE = "Upgrade";
         /**
-         * {@code "transfer-encoding"}
+         * {@code "User-Agent"}
          */
-        public static final AsciiString TRANSFER_ENCODING = new AsciiString("transfer-encoding");
+        public static final String USER_AGENT = "User-Agent";
         /**
-         * {@code "upgrade"}
+         * {@code "Vary"}
          */
-        public static final AsciiString UPGRADE = new AsciiString("upgrade");
+        public static final String VARY = "Vary";
         /**
-         * {@code "user-agent"}
+         * {@code "Via"}
          */
-        public static final AsciiString USER_AGENT = new AsciiString("user-agent");
+        public static final String VIA = "Via";
         /**
-         * {@code "vary"}
+         * {@code "Warning"}
          */
-        public static final AsciiString VARY = new AsciiString("vary");
+        public static final String WARNING = "Warning";
         /**
-         * {@code "via"}
+         * {@code "WebSocket-Location"}
          */
-        public static final AsciiString VIA = new AsciiString("via");
+        public static final String WEBSOCKET_LOCATION = "WebSocket-Location";
         /**
-         * {@code "warning"}
+         * {@code "WebSocket-Origin"}
          */
-        public static final AsciiString WARNING = new AsciiString("warning");
+        public static final String WEBSOCKET_ORIGIN = "WebSocket-Origin";
         /**
-         * {@code "websocket-location"}
+         * {@code "WebSocket-Protocol"}
          */
-        public static final AsciiString WEBSOCKET_LOCATION = new AsciiString("websocket-location");
+        public static final String WEBSOCKET_PROTOCOL = "WebSocket-Protocol";
         /**
-         * {@code "websocket-origin"}
+         * {@code "WWW-Authenticate"}
          */
-        public static final AsciiString WEBSOCKET_ORIGIN = new AsciiString("websocket-origin");
-        /**
-         * {@code "websocket-protocol"}
-         */
-        public static final AsciiString WEBSOCKET_PROTOCOL = new AsciiString("websocket-protocol");
-        /**
-         * {@code "www-authenticate"}
-         */
-        public static final AsciiString WWW_AUTHENTICATE = new AsciiString("www-authenticate");
-        /**
-         * {@code "keep-alive"}
-         * @deprecated use {@link #CONNECTION}
-         */
-        @Deprecated
-        public static final AsciiString KEEP_ALIVE = new AsciiString("keep-alive");
-        /**
-         * {@code "proxy-connection"}
-         * @deprecated use {@link #CONNECTION}
-         */
-        @Deprecated
-        public static final AsciiString PROXY_CONNECTION = new AsciiString("proxy-connection");
+        public static final String WWW_AUTHENTICATE = "WWW-Authenticate";
 
         private Names() {
         }
     }
 
     /**
+     * @deprecated Use {@link HttpHeaderValues} instead.
+     *
      * Standard HTTP header values.
      */
+    @Deprecated
     public static final class Values {
         /**
          * {@code "application/x-www-form-urlencoded"}
          */
-        public static final AsciiString APPLICATION_X_WWW_FORM_URLENCODED =
-                new AsciiString("application/x-www-form-urlencoded");
-        /**
-         * {@code "application/octet-stream"}
-         */
-        public static final AsciiString APPLICATION_OCTET_STREAM = new AsciiString("application/octet-stream");
-        /**
-         * {@code "text/plain"}
-         */
-        public static final AsciiString TEXT_PLAIN = new AsciiString("text/plain");
+        public static final String APPLICATION_X_WWW_FORM_URLENCODED =
+            "application/x-www-form-urlencoded";
         /**
          * {@code "base64"}
          */
@@ -539,10 +521,6 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
          */
         public static final String MULTIPART_FORM_DATA = "multipart/form-data";
         /**
-         * {@code "multipart/mixed"}
-         */
-        public static final AsciiString MULTIPART_MIXED = new AsciiString("multipart/mixed");
-        /**
          * {@code "must-revalidate"}
          */
         public static final String MUST_REVALIDATE = "must-revalidate";
@@ -597,57 +575,28 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         /**
          * {@code "WebSocket"}
          */
-        public static final AsciiString WEBSOCKET = new AsciiString("WebSocket");
-        /**
-         * {@code "name"}
-         * See {@link Names#CONTENT_DISPOSITION}
-         */
-        public static final AsciiString NAME = new AsciiString("name");
-        /**
-         * {@code "filename"}
-         * See {@link Names#CONTENT_DISPOSITION}
-         */
-        public static final AsciiString FILENAME = new AsciiString("filename");
-        /**
-         * {@code "form-data"}
-         * See {@link Names#CONTENT_DISPOSITION}
-         */
-        public static final AsciiString FORM_DATA = new AsciiString("form-data");
-        /**
-         * {@code "attachment"}
-         * See {@link Names#CONTENT_DISPOSITION}
-         */
-        public static final AsciiString ATTACHMENT = new AsciiString("attachment");
-        /**
-         * {@code "file"}
-         * See {@link Names#CONTENT_DISPOSITION}
-         */
-        public static final AsciiString FILE = new AsciiString("file");
+        public static final String WEBSOCKET = "WebSocket";
 
         private Values() {
         }
     }
 
     /**
+     * @deprecated Use {@link HttpHeaderUtil#isKeepAlive(HttpMessage)} instead.
+     *
      * Returns {@code true} if and only if the connection can remain open and
      * thus 'kept alive'.  This methods respects the value of the
      * {@code "Connection"} header first and then the return value of
      * {@link HttpVersion#isKeepAliveDefault()}.
      */
+    @Deprecated
     public static boolean isKeepAlive(HttpMessage message) {
-        String connection = message.headers().get(CONNECTION_ENTITY);
-        if (connection != null && AsciiString.equalsIgnoreCase(CLOSE_ENTITY, connection)) {
-            return false;
-        }
-
-        if (message.protocolVersion().isKeepAliveDefault()) {
-            return !AsciiString.equalsIgnoreCase(CLOSE_ENTITY, connection);
-        } else {
-            return AsciiString.equalsIgnoreCase(KEEP_ALIVE_ENTITY, connection);
-        }
+        return HttpHeaderUtil.isKeepAlive(message);
     }
 
     /**
+     * @deprecated Use {@link HttpHeaderUtil#setKeepAlive(HttpMessage, boolean)} instead.
+     *
      * Sets the value of the {@code "Connection"} header depending on the
      * protocol version of the specified message.  This getMethod sets or removes
      * the {@code "Connection"} header depending on what the default keep alive
@@ -666,49 +615,48 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      *     </ul></li>
      * </ul>
      */
+    @Deprecated
     public static void setKeepAlive(HttpMessage message, boolean keepAlive) {
-        HttpHeaders h = message.headers();
-        if (message.protocolVersion().isKeepAliveDefault()) {
-            if (keepAlive) {
-                h.remove(CONNECTION_ENTITY);
-            } else {
-                h.set(CONNECTION_ENTITY, CLOSE_ENTITY);
-            }
-        } else {
-            if (keepAlive) {
-                h.set(CONNECTION_ENTITY, KEEP_ALIVE_ENTITY);
-            } else {
-                h.remove(CONNECTION_ENTITY);
-            }
-        }
+        HttpHeaderUtil.setKeepAlive(message, keepAlive);
     }
 
     /**
+     * @deprecated Use {@link #get(CharSequence)} instead.
+     *
      * @see {@link #getHeader(HttpMessage, CharSequence)}
      */
+    @Deprecated
     public static String getHeader(HttpMessage message, String name) {
         return message.headers().get(name);
     }
 
     /**
+     * @deprecated Use {@link #get(CharSequence)} instead.
+     *
      * Returns the header value with the specified header name.  If there are
      * more than one header value for the specified header name, the first
      * value is returned.
      *
      * @return the header value or {@code null} if there is no such header
      */
+    @Deprecated
     public static String getHeader(HttpMessage message, CharSequence name) {
         return message.headers().get(name);
     }
 
     /**
+     * @deprecated Use {@link #get(CharSequence, String)} instead.
+     *
      * @see {@link #getHeader(HttpMessage, CharSequence, String)}
      */
+    @Deprecated
     public static String getHeader(HttpMessage message, String name, String defaultValue) {
-        return getHeader(message, (CharSequence) name, defaultValue);
+        return message.headers().get(name, defaultValue);
     }
 
     /**
+     * @deprecated Use {@link #get(CharSequence, String)} instead.
+     *
      * Returns the header value with the specified header name.  If there are
      * more than one header value for the specified header name, the first
      * value is returned.
@@ -716,22 +664,24 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * @return the header value or the {@code defaultValue} if there is no such
      *         header
      */
+    @Deprecated
     public static String getHeader(HttpMessage message, CharSequence name, String defaultValue) {
-        String value = message.headers().get(name);
-        if (value == null) {
-            return defaultValue;
-        }
-        return value;
+        return message.headers().get(name, defaultValue);
     }
 
     /**
+     * @deprecated Use {@link #set(CharSequence, Object)} instead.
+     *
      * @see {@link #setHeader(HttpMessage, CharSequence, Object)}
      */
+    @Deprecated
     public static void setHeader(HttpMessage message, String name, Object value) {
         message.headers().set(name, value);
     }
 
     /**
+     * @deprecated Use {@link #set(CharSequence, Object)} instead.
+     *
      * Sets a new header with the specified name and value.  If there is an
      * existing header with the same name, the existing header is removed.
      * If the specified value is not a {@link String}, it is converted into a
@@ -739,19 +689,24 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * and {@link Calendar} which are formatted to the date format defined in
      * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>.
      */
+    @Deprecated
     public static void setHeader(HttpMessage message, CharSequence name, Object value) {
         message.headers().set(name, value);
     }
 
     /**
+     * @deprecated Use {@link #set(CharSequence, Iterable)} instead.
      *
      * @see {@link #setHeader(HttpMessage, CharSequence, Iterable)}
      */
+    @Deprecated
     public static void setHeader(HttpMessage message, String name, Iterable<?> values) {
         message.headers().set(name, values);
     }
 
     /**
+     * @deprecated Use {@link #set(CharSequence, Iterable)} instead.
+     *
      * Sets a new header with the specified name and values.  If there is an
      * existing header with the same name, the existing header is removed.
      * This getMethod can be represented approximately as the following code:
@@ -765,57 +720,78 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * }
      * </pre>
      */
+    @Deprecated
     public static void setHeader(HttpMessage message, CharSequence name, Iterable<?> values) {
         message.headers().set(name, values);
     }
 
     /**
+     * @deprecated Use {@link #add(CharSequence, Object)} instead.
+     *
      * @see {@link #addHeader(HttpMessage, CharSequence, Object)}
      */
+    @Deprecated
     public static void addHeader(HttpMessage message, String name, Object value) {
         message.headers().add(name, value);
     }
 
     /**
+     * @deprecated Use {@link #add(CharSequence, Object)} instead.
+     *
      * Adds a new header with the specified name and value.
      * If the specified value is not a {@link String}, it is converted into a
      * {@link String} by {@link Object#toString()}, except for {@link Date}
      * and {@link Calendar} which are formatted to the date format defined in
      * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>.
      */
+    @Deprecated
     public static void addHeader(HttpMessage message, CharSequence name, Object value) {
         message.headers().add(name, value);
     }
 
     /**
+     * @deprecated Use {@link #remove(CharSequence)} instead.
+     *
      * @see {@link #removeHeader(HttpMessage, CharSequence)}
      */
+    @Deprecated
     public static void removeHeader(HttpMessage message, String name) {
         message.headers().remove(name);
     }
 
     /**
+     * @deprecated Use {@link #remove(CharSequence)} instead.
+     *
      * Removes the header with the specified name.
      */
+    @Deprecated
     public static void removeHeader(HttpMessage message, CharSequence name) {
         message.headers().remove(name);
     }
 
     /**
+     * @deprecated Use {@link #clear()} instead.
+     *
      * Removes all headers from the specified message.
      */
+    @Deprecated
     public static void clearHeaders(HttpMessage message) {
         message.headers().clear();
     }
 
     /**
+     * @deprecated Use {@link #getInt(CharSequence)} instead.
+     *
      * @see {@link #getIntHeader(HttpMessage, CharSequence)}
      */
+    @Deprecated
     public static int getIntHeader(HttpMessage message, String name) {
         return getIntHeader(message, (CharSequence) name);
     }
 
     /**
+     * @deprecated Use {@link #getInt(CharSequence)} instead.
+     *
      * Returns the integer header value with the specified header name.  If
      * there are more than one header value for the specified header name, the
      * first value is returned.
@@ -824,8 +800,9 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * @throws NumberFormatException
      *         if there is no such header or the header value is not a number
      */
+    @Deprecated
     public static int getIntHeader(HttpMessage message, CharSequence name) {
-        String value = getHeader(message, name);
+        String value = message.headers().get(name);
         if (value == null) {
             throw new NumberFormatException("header not found: " + name);
         }
@@ -833,13 +810,18 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
+     * @deprecated Use {@link #getInt(CharSequence, int)} instead.
+     *
      * @see {@link #getIntHeader(HttpMessage, CharSequence, int)}
      */
+    @Deprecated
     public static int getIntHeader(HttpMessage message, String name, int defaultValue) {
-        return getIntHeader(message, (CharSequence) name, defaultValue);
+        return message.headers().getInt(name, defaultValue);
     }
 
     /**
+     * @deprecated Use {@link #getInt(CharSequence, int)} instead.
+     *
      * Returns the integer header value with the specified header name.  If
      * there are more than one header value for the specified header name, the
      * first value is returned.
@@ -847,72 +829,86 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * @return the header value or the {@code defaultValue} if there is no such
      *         header or the header value is not a number
      */
+    @Deprecated
     public static int getIntHeader(HttpMessage message, CharSequence name, int defaultValue) {
-        String value = getHeader(message, name);
-        if (value == null) {
-            return defaultValue;
-        }
-
-        try {
-            return Integer.parseInt(value);
-        } catch (NumberFormatException ignored) {
-            return defaultValue;
-        }
+        return message.headers().getInt(name, defaultValue);
     }
 
     /**
+     * @deprecated Use {@link #setInt(CharSequence, int)} instead.
+     *
      * @see {@link #setIntHeader(HttpMessage, CharSequence, int)}
      */
+    @Deprecated
     public static void setIntHeader(HttpMessage message, String name, int value) {
-        message.headers().set(name, value);
+        message.headers().setInt(name, value);
     }
 
     /**
+     * @deprecated Use {@link #setInt(CharSequence, int)} instead.
+     *
      * Sets a new integer header with the specified name and value.  If there
      * is an existing header with the same name, the existing header is removed.
      */
+    @Deprecated
     public static void setIntHeader(HttpMessage message, CharSequence name, int value) {
-        message.headers().set(name, value);
+        message.headers().setInt(name, value);
     }
 
     /**
+     * @deprecated Use {@link #set(CharSequence, Iterable)} instead.
+     *
      * @see {@link #setIntHeader(HttpMessage, CharSequence, Iterable)}
      */
+    @Deprecated
     public static void setIntHeader(HttpMessage message, String name, Iterable<Integer> values) {
         message.headers().set(name, values);
     }
 
     /**
+     * @deprecated Use {@link #set(CharSequence, Iterable)} instead.
+     *
      * Sets a new integer header with the specified name and values.  If there
      * is an existing header with the same name, the existing header is removed.
      */
+    @Deprecated
     public static void setIntHeader(HttpMessage message, CharSequence name, Iterable<Integer> values) {
         message.headers().set(name, values);
     }
 
     /**
+     * @deprecated Use {@link #add(CharSequence, Iterable)} instead.
      *
      * @see {@link #addIntHeader(HttpMessage, CharSequence, int)}
      */
+    @Deprecated
     public static void addIntHeader(HttpMessage message, String name, int value) {
         message.headers().add(name, value);
     }
 
     /**
+     * @deprecated Use {@link #addInt(CharSequence, int)} instead.
+     *
      * Adds a new integer header with the specified name and value.
      */
+    @Deprecated
     public static void addIntHeader(HttpMessage message, CharSequence name, int value) {
-        message.headers().add(name, value);
+        message.headers().addInt(name, value);
     }
 
     /**
+     * @deprecated Use {@link #getDate(CharSequence)} instead.
+     *
      * @see {@link #getDateHeader(HttpMessage, CharSequence)}
      */
+    @Deprecated
     public static Date getDateHeader(HttpMessage message, String name) throws ParseException {
         return getDateHeader(message, (CharSequence) name);
     }
 
     /**
+     * @deprecated Use {@link #getDate(CharSequence)} instead.
+     *
      * Returns the date header value with the specified header name.  If
      * there are more than one header value for the specified header name, the
      * first value is returned.
@@ -921,8 +917,9 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * @throws ParseException
      *         if there is no such header or the header value is not a formatted date
      */
+    @Deprecated
     public static Date getDateHeader(HttpMessage message, CharSequence name) throws ParseException {
-        String value = getHeader(message, name);
+        String value = message.headers().get(name);
         if (value == null) {
             throw new ParseException("header not found: " + name, 0);
         }
@@ -930,13 +927,18 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
+     * @deprecated Use {@link #getDate(CharSequence, Date)} instead.
+     *
      * @see {@link #getDateHeader(HttpMessage, CharSequence, Date)}
      */
+    @Deprecated
     public static Date getDateHeader(HttpMessage message, String name, Date defaultValue) {
-        return getDateHeader(message, (CharSequence) name, defaultValue);
+        return message.headers().getDate(name, defaultValue);
     }
 
     /**
+     * @deprecated Use {@link #getDate(CharSequence, Date)} instead.
+     *
      * Returns the date header value with the specified header name.  If
      * there are more than one header value for the specified header name, the
      * first value is returned.
@@ -944,32 +946,30 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * @return the header value or the {@code defaultValue} if there is no such
      *         header or the header value is not a formatted date
      */
+    @Deprecated
     public static Date getDateHeader(HttpMessage message, CharSequence name, Date defaultValue) {
-        final String value = getHeader(message, name);
-        if (value == null) {
-            return defaultValue;
-        }
-
-        try {
-            return HttpHeaderDateFormat.get().parse(value);
-        } catch (ParseException ignored) {
-            return defaultValue;
-        }
+        return message.headers().getDate(name, defaultValue);
     }
 
     /**
+     * @deprecated Use {@link #set(CharSequence, Object)} instead.
+     *
      * @see {@link #setDateHeader(HttpMessage, CharSequence, Date)}
      */
+    @Deprecated
     public static void setDateHeader(HttpMessage message, String name, Date value) {
         setDateHeader(message, (CharSequence) name, value);
     }
 
     /**
+     * @deprecated Use {@link #set(CharSequence, Object)} instead.
+     *
      * Sets a new date header with the specified name and value.  If there
      * is an existing header with the same name, the existing header is removed.
      * The specified value is formatted as defined in
      * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>
      */
+    @Deprecated
     public static void setDateHeader(HttpMessage message, CharSequence name, Date value) {
         if (value != null) {
             message.headers().set(name, HttpHeaderDateFormat.get().format(value));
@@ -979,39 +979,53 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
+     * @deprecated Use {@link #set(CharSequence, Iterable)} instead.
+     *
      * @see {@link #setDateHeader(HttpMessage, CharSequence, Iterable)}
      */
+    @Deprecated
     public static void setDateHeader(HttpMessage message, String name, Iterable<Date> values) {
         message.headers().set(name, values);
     }
 
     /**
+     * @deprecated Use {@link #set(CharSequence, Iterable)} instead.
+     *
      * Sets a new date header with the specified name and values.  If there
      * is an existing header with the same name, the existing header is removed.
      * The specified values are formatted as defined in
      * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>
      */
+    @Deprecated
     public static void setDateHeader(HttpMessage message, CharSequence name, Iterable<Date> values) {
         message.headers().set(name, values);
     }
 
     /**
+     * @deprecated Use {@link #add(CharSequence, Object)} instead.
+     *
      * @see {@link #addDateHeader(HttpMessage, CharSequence, Date)}
      */
+    @Deprecated
     public static void addDateHeader(HttpMessage message, String name, Date value) {
         message.headers().add(name, value);
     }
 
     /**
+     * @deprecated Use {@link #add(CharSequence, Object)} instead.
+     *
      * Adds a new date header with the specified name and value.  The specified
      * value is formatted as defined in
      * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>
      */
+    @Deprecated
     public static void addDateHeader(HttpMessage message, CharSequence name, Date value) {
         message.headers().add(name, value);
     }
 
     /**
+     * @deprecated Use {@link HttpHeaderUtil#getContentLength(HttpMessage)} instead.
+     *
      * Returns the length of the content.  Please note that this value is
      * not retrieved from {@link HttpContent#content()} but from the
      * {@code "Content-Length"} header, and thus they are independent from each
@@ -1023,24 +1037,14 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      *         if the message does not have the {@code "Content-Length"} header
      *         or its value is not a number
      */
+    @Deprecated
     public static long getContentLength(HttpMessage message) {
-        String value = getHeader(message, CONTENT_LENGTH_ENTITY);
-        if (value != null) {
-            return Long.parseLong(value);
-        }
-
-        // We know the content length if it's a Web Socket message even if
-        // Content-Length header is missing.
-        long webSocketContentLength = getWebSocketContentLength(message);
-        if (webSocketContentLength >= 0) {
-            return webSocketContentLength;
-        }
-
-        // Otherwise we don't.
-        throw new NumberFormatException("header not found: " + Names.CONTENT_LENGTH);
+        return HttpHeaderUtil.getContentLength(message);
     }
 
     /**
+     * @deprecated Use {@link HttpHeaderUtil#getContentLength(HttpMessage, long)} instead.
+     *
      * Returns the length of the content.  Please note that this value is
      * not retrieved from {@link HttpContent#content()} but from the
      * {@code "Content-Length"} header, and thus they are independent from each
@@ -1050,208 +1054,167 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      *         not have the {@code "Content-Length"} header or its value is not
      *         a number
      */
+    @Deprecated
     public static long getContentLength(HttpMessage message, long defaultValue) {
-        String contentLength = message.headers().get(CONTENT_LENGTH_ENTITY);
-        if (contentLength != null) {
-            try {
-                return Long.parseLong(contentLength);
-            } catch (NumberFormatException ignored) {
-                return defaultValue;
-            }
-        }
-
-        // We know the content length if it's a Web Socket message even if
-        // Content-Length header is missing.
-        long webSocketContentLength = getWebSocketContentLength(message);
-        if (webSocketContentLength >= 0) {
-            return webSocketContentLength;
-        }
-
-        // Otherwise we don't.
-        return defaultValue;
+        return HttpHeaderUtil.getContentLength(message, defaultValue);
     }
 
     /**
-     * Returns the content length of the specified web socket message.  If the
-     * specified message is not a web socket message, {@code -1} is returned.
+     * @deprecated Use {@link HttpHeaderUtil#setContentLength(HttpMessage, long)} instead.
      */
-    private static int getWebSocketContentLength(HttpMessage message) {
-        // WebSockset messages have constant content-lengths.
-        HttpHeaders h = message.headers();
-        if (message instanceof HttpRequest) {
-            HttpRequest req = (HttpRequest) message;
-            if (HttpMethod.GET.equals(req.method()) &&
-                h.contains(SEC_WEBSOCKET_KEY1_ENTITY) &&
-                h.contains(SEC_WEBSOCKET_KEY2_ENTITY)) {
-                return 8;
-            }
-        } else if (message instanceof HttpResponse) {
-            HttpResponse res = (HttpResponse) message;
-            if (res.status().code() == 101 &&
-                h.contains(SEC_WEBSOCKET_ORIGIN_ENTITY) &&
-                h.contains(SEC_WEBSOCKET_LOCATION_ENTITY)) {
-                return 16;
-            }
-        }
-
-        // Not a web socket message
-        return -1;
-    }
-
-    /**
-     * Sets the {@code "Content-Length"} header.
-     */
+    @Deprecated
     public static void setContentLength(HttpMessage message, long length) {
-        message.headers().set(CONTENT_LENGTH_ENTITY, length);
+        HttpHeaderUtil.setContentLength(message, length);
     }
 
     /**
+     * @deprecated Use {@link #get(CharSequence)} instead.
+     *
      * Returns the value of the {@code "Host"} header.
      */
+    @Deprecated
     public static String getHost(HttpMessage message) {
-        return message.headers().get(HOST_ENTITY);
+        return message.headers().get(HttpHeaderNames.HOST);
     }
 
     /**
+     * @deprecated Use {@link #get(CharSequence, String)} instead.
+     *
      * Returns the value of the {@code "Host"} header.  If there is no such
      * header, the {@code defaultValue} is returned.
      */
+    @Deprecated
     public static String getHost(HttpMessage message, String defaultValue) {
-        return getHeader(message, HOST_ENTITY, defaultValue);
+        return message.headers().get(HttpHeaderNames.HOST, defaultValue);
     }
 
     /**
+     * @deprecated Use {@link #set(CharSequence, Object)} instead.
+     *
      * @see {@link #setHost(HttpMessage, CharSequence)}
      */
+    @Deprecated
     public static void setHost(HttpMessage message, String value) {
-        message.headers().set(HOST_ENTITY, value);
+        message.headers().set(HttpHeaderNames.HOST, value);
     }
 
     /**
+     * @deprecated Use {@link #set(CharSequence, Object)} instead.
+     *
      * Sets the {@code "Host"} header.
      */
+    @Deprecated
     public static void setHost(HttpMessage message, CharSequence value) {
-        message.headers().set(HOST_ENTITY, value);
+        message.headers().set(HttpHeaderNames.HOST, value);
     }
 
     /**
+     * @deprecated Use {@link #getDate(CharSequence)} instead.
+     *
      * Returns the value of the {@code "Date"} header.
      *
      * @throws ParseException
      *         if there is no such header or the header value is not a formatted date
      */
+    @Deprecated
     public static Date getDate(HttpMessage message) throws ParseException {
-        return getDateHeader(message, DATE_ENTITY);
+        return getDateHeader(message, HttpHeaderNames.DATE);
     }
 
     /**
+     * @deprecated Use {@link #getDate(CharSequence, Date)} instead.
+     *
      * Returns the value of the {@code "Date"} header. If there is no such
      * header or the header is not a formatted date, the {@code defaultValue}
      * is returned.
      */
+    @Deprecated
     public static Date getDate(HttpMessage message, Date defaultValue) {
-        return getDateHeader(message, DATE_ENTITY, defaultValue);
+        return message.headers().getDate(HttpHeaderNames.DATE, defaultValue);
     }
 
     /**
+     * @deprecated Use {@link #set(CharSequence, Object)} instead.
+     *
      * Sets the {@code "Date"} header.
      */
+    @Deprecated
     public static void setDate(HttpMessage message, Date value) {
-        if (value != null) {
-            message.headers().set(DATE_ENTITY, HttpHeaderDateFormat.get().format(value));
-        } else {
-            message.headers().set(DATE_ENTITY, null);
-        }
+        message.headers().set(HttpHeaderNames.DATE, value);
     }
 
     /**
+     * @deprecated Use {@link HttpHeaderUtil#is100ContinueExpected(HttpMessage)} instead.
+     *
      * Returns {@code true} if and only if the specified message contains the
      * {@code "Expect: 100-continue"} header.
      */
+    @Deprecated
     public static boolean is100ContinueExpected(HttpMessage message) {
-        // Expect: 100-continue is for requests only.
-        if (!(message instanceof HttpRequest)) {
-            return false;
-        }
-
-        // It works only on HTTP/1.1 or later.
-        if (message.protocolVersion().compareTo(HttpVersion.HTTP_1_1) < 0) {
-            return false;
-        }
-
-        // In most cases, there will be one or zero 'Expect' header.
-        String value = message.headers().get(EXPECT_ENTITY);
-        if (value == null) {
-            return false;
-        }
-        if (AsciiString.equalsIgnoreCase(CONTINUE_ENTITY, value)) {
-            return true;
-        }
-
-        // Multiple 'Expect' headers.  Search through them.
-        return message.headers().contains(EXPECT_ENTITY, CONTINUE_ENTITY, true);
+        return HttpHeaderUtil.is100ContinueExpected(message);
     }
 
     /**
+     * @deprecated Use {@link HttpHeaderUtil#set100ContinueExpected(HttpMessage, boolean)} instead.
+     *
      * Sets the {@code "Expect: 100-continue"} header to the specified message.
      * If there is any existing {@code "Expect"} header, they are replaced with
      * the new one.
      */
+    @Deprecated
     public static void set100ContinueExpected(HttpMessage message) {
-        set100ContinueExpected(message, true);
+        HttpHeaderUtil.set100ContinueExpected(message, true);
     }
 
     /**
+     * @deprecated Use {@link HttpHeaderUtil#set100ContinueExpected(HttpMessage, boolean)} instead.
+     *
      * Sets or removes the {@code "Expect: 100-continue"} header to / from the
      * specified message.  If the specified {@code value} is {@code true},
      * the {@code "Expect: 100-continue"} header is set and all other previous
      * {@code "Expect"} headers are removed.  Otherwise, all {@code "Expect"}
      * headers are removed completely.
      */
+    @Deprecated
     public static void set100ContinueExpected(HttpMessage message, boolean set) {
-        if (set) {
-            message.headers().set(EXPECT_ENTITY, CONTINUE_ENTITY);
-        } else {
-            message.headers().remove(EXPECT_ENTITY);
-        }
+        HttpHeaderUtil.set100ContinueExpected(message, set);
     }
 
     /**
+     * @deprecated Use {@link HttpHeaderUtil#isTransferEncodingChunked(HttpMessage)} instead.
+     *
      * Checks to see if the transfer encoding in a specified {@link HttpMessage} is chunked
      *
      * @param message The message to check
      * @return True if transfer encoding is chunked, otherwise false
      */
+    @Deprecated
     public static boolean isTransferEncodingChunked(HttpMessage message) {
-        return message.headers().contains(TRANSFER_ENCODING_ENTITY, CHUNKED_ENTITY, true);
+        return HttpHeaderUtil.isTransferEncodingChunked(message);
     }
 
+    /**
+     * @deprecated Use {@link HttpHeaderUtil#setTransferEncodingChunked(HttpMessage, boolean)} instead.
+     */
+    @Deprecated
     public static void removeTransferEncodingChunked(HttpMessage m) {
-        List<String> values = m.headers().getAll(TRANSFER_ENCODING_ENTITY);
-        if (values.isEmpty()) {
-            return;
-        }
-        Iterator<String> valuesIt = values.iterator();
-        while (valuesIt.hasNext()) {
-            String value = valuesIt.next();
-            if (AsciiString.equalsIgnoreCase(value, CHUNKED_ENTITY)) {
-                valuesIt.remove();
-            }
-        }
-        if (values.isEmpty()) {
-            m.headers().remove(TRANSFER_ENCODING_ENTITY);
-        } else {
-            m.headers().set(TRANSFER_ENCODING_ENTITY, values);
-        }
+        HttpHeaderUtil.setTransferEncodingChunked(m, false);
     }
 
+    /**
+     * @deprecated Use {@link HttpHeaderUtil#setTransferEncodingChunked(HttpMessage, boolean)} instead.
+     */
+    @Deprecated
     public static void setTransferEncodingChunked(HttpMessage m) {
-        addHeader(m, TRANSFER_ENCODING_ENTITY, CHUNKED_ENTITY);
-        removeHeader(m, CONTENT_LENGTH_ENTITY);
+        HttpHeaderUtil.setTransferEncodingChunked(m, true);
     }
 
+    /**
+     * @deprecated Use {@link HttpHeaderUtil#isContentLengthSet(HttpMessage)} instead.
+     */
+    @Deprecated
     public static boolean isContentLengthSet(HttpMessage m) {
-        return m.headers().contains(CONTENT_LENGTH_ENTITY);
+        return HttpHeaderUtil.isContentLengthSet(m);
     }
 
     /**
@@ -1297,9 +1260,12 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
+     * @deprecated Use {@link AsciiString} instead.
+     *
      * Create a new {@link CharSequence} which is optimized for reuse as {@link HttpHeaders} name or value.
      * So if you have a Header name or value that you want to reuse you should make use of this.
      */
+    @Deprecated
     public static CharSequence newEntity(String name) {
         if (name == null) {
             throw new NullPointerException("name");
@@ -1324,6 +1290,63 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     public String get(CharSequence name) {
         return get(name.toString());
     }
+
+    /**
+     * Returns the value of a header with the specified name.  If there are
+     * more than one values for the specified name, the first value is returned.
+     *
+     * @param name The name of the header to search
+     * @return The first header value or {@code defaultValue} if there is no such header
+     */
+    public String get(CharSequence name, String defaultValue) {
+        String value = get(name);
+        if (value == null) {
+            return defaultValue;
+        }
+        return value;
+    }
+
+    /**
+     * Returns the integer value of a header with the specified name. If there are more than one values for the
+     * specified name, the first value is returned.
+     *
+     * @param name the name of the header to search
+     * @return the first header value if the header is found and its value is an integer. {@code null} if there's no
+     *         such header or its value is not an integer.
+     */
+    public abstract Integer getInt(CharSequence name);
+
+    /**
+     * Returns the integer value of a header with the specified name. If there are more than one values for the
+     * specified name, the first value is returned.
+     *
+     * @param name the name of the header to search
+     * @param defaultValue the default value
+     * @return the first header value if the header is found and its value is an integer. {@code defaultValue} if
+     *         there's no such header or its value is not an integer.
+     */
+    public abstract int getInt(CharSequence name, int defaultValue);
+
+    /**
+     * Returns the date value of a header with the specified name. If there are more than one values for the
+     * specified name, the first value is returned.
+     *
+     * @param name the name of the header to search
+     * @return the first header value if the header is found and its value is a date. {@code null} if there's no
+     *         such header or its value is not a date.
+     */
+    public abstract Date getDate(CharSequence name);
+
+    /**
+     * Returns the date value of a header with the specified name. If there are more than one values for the
+     * specified name, the first value is returned.
+     *
+     * @param name the name of the header to search
+     * @param defaultValue the default value
+     * @return the first header value if the header is found and its value is a date. {@code defaultValue} if
+     *         there's no such header or its value is not a date.
+     */
+    public abstract Date getDate(CharSequence name, Date defaultValue);
 
     /**
      * @see {@link #getAll(CharSequence)}
@@ -1439,6 +1462,14 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
+     * Add the {@code name} to {@code value}.
+     * @param name The name to modify
+     * @param value The value
+     * @return {@code this}
+     */
+    public abstract HttpHeaders addInt(CharSequence name, int value);
+
+    /**
      * @see {@link #set(CharSequence, Object)}
      */
     public abstract HttpHeaders set(String name, Object value);
@@ -1510,6 +1541,14 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
+     * Set the {@code name} to {@code value}. This will remove all previous values associated with {@code name}.
+     * @param name The name to modify
+     * @param value The value
+     * @return {@code this}
+     */
+    public abstract HttpHeaders setInt(CharSequence name, int value);
+
+    /**
      * @see {@link #remove(CharSequence)}
      */
     public abstract HttpHeaders remove(String name);
@@ -1542,7 +1581,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
 
         for (String v: values) {
             if (ignoreCase) {
-                if (AsciiString.equalsIgnoreCase(v, value)) {
+                if (v.equalsIgnoreCase(value)) {
                     return true;
                 }
             } else {

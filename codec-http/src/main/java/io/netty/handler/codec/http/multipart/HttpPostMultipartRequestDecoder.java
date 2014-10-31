@@ -16,10 +16,10 @@
 package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadNoBackArrayException;
@@ -29,6 +29,7 @@ import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.EndOfDataDec
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.ErrorDataDecoderException;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.MultiPartStatus;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.NotEnoughDataDecoderException;
+import io.netty.util.CharsetUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -182,7 +183,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         this.factory = factory;
         // Fill default values
 
-        setMultipart(this.request.headers().get(HttpHeaders.Names.CONTENT_TYPE));
+        setMultipart(this.request.headers().get(HttpHeaderNames.CONTENT_TYPE));
         if (request instanceof HttpContent) {
             // Offer automatically if the given request is als type of HttpContent
             // See #1089
@@ -490,7 +491,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         case FIELD: {
             // Now get value according to Content-Type and Charset
             Charset localCharset = null;
-            Attribute charsetAttribute = currentFieldAttributes.get(HttpHeaders.Values.CHARSET);
+            Attribute charsetAttribute = currentFieldAttributes.get(HttpHeaderValues.CHARSET);
             if (charsetAttribute != null) {
                 try {
                     localCharset = Charset.forName(charsetAttribute.getValue());
@@ -498,7 +499,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                     throw new ErrorDataDecoderException(e);
                 }
             }
-            Attribute nameAttribute = currentFieldAttributes.get(HttpPostBodyUtil.NAME);
+            Attribute nameAttribute = currentFieldAttributes.get(HttpHeaderValues.NAME);
             if (currentAttribute == null) {
                 try {
                     currentAttribute = factory.createAttribute(request,
@@ -662,13 +663,13 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                 return null;
             }
             String[] contents = splitMultipartHeader(newline);
-            if (contents[0].equalsIgnoreCase(HttpPostBodyUtil.CONTENT_DISPOSITION)) {
+            if (HttpHeaderNames.CONTENT_DISPOSITION.equalsIgnoreCase(contents[0])) {
                 boolean checkSecondArg;
                 if (currentStatus == MultiPartStatus.DISPOSITION) {
-                    checkSecondArg = contents[1].equalsIgnoreCase(HttpPostBodyUtil.FORM_DATA);
+                    checkSecondArg = HttpHeaderValues.FORM_DATA.equalsIgnoreCase(contents[1]);
                 } else {
-                    checkSecondArg = contents[1].equalsIgnoreCase(HttpPostBodyUtil.ATTACHMENT)
-                            || contents[1].equalsIgnoreCase(HttpPostBodyUtil.FILE);
+                    checkSecondArg = HttpHeaderValues.ATTACHMENT.equalsIgnoreCase(contents[1])
+                            || HttpHeaderValues.FILE.equalsIgnoreCase(contents[1]);
                 }
                 if (checkSecondArg) {
                     // read next values and store them in the map as Attribute
@@ -680,7 +681,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                             String value = values[1];
 
                             // See http://www.w3.org/Protocols/rfc2616/rfc2616-sec19.html
-                            if (HttpPostBodyUtil.FILENAME.equals(name)) {
+                            if (HttpHeaderValues.FILENAME.contentEquals(name)) {
                                 // filename value is quoted string so strip them
                                 value = value.substring(1, value.length() - 1);
                             } else {
@@ -696,31 +697,31 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                         currentFieldAttributes.put(attribute.getName(), attribute);
                     }
                 }
-            } else if (AsciiString.equalsIgnoreCase(contents[0], HttpHeaders.Names.CONTENT_TRANSFER_ENCODING)) {
+            } else if (HttpHeaderNames.CONTENT_TRANSFER_ENCODING.equalsIgnoreCase(contents[0])) {
                 Attribute attribute;
                 try {
-                    attribute = factory.createAttribute(request, HttpHeaders.Names.CONTENT_TRANSFER_ENCODING.toString(),
+                    attribute = factory.createAttribute(request, HttpHeaderNames.CONTENT_TRANSFER_ENCODING.toString(),
                             cleanString(contents[1]));
                 } catch (NullPointerException e) {
                     throw new ErrorDataDecoderException(e);
                 } catch (IllegalArgumentException e) {
                     throw new ErrorDataDecoderException(e);
                 }
-                currentFieldAttributes.put(HttpHeaders.Names.CONTENT_TRANSFER_ENCODING, attribute);
-            } else if (AsciiString.equalsIgnoreCase(contents[0], HttpHeaders.Names.CONTENT_LENGTH)) {
+                currentFieldAttributes.put(HttpHeaderNames.CONTENT_TRANSFER_ENCODING, attribute);
+            } else if (HttpHeaderNames.CONTENT_LENGTH.equalsIgnoreCase(contents[0])) {
                 Attribute attribute;
                 try {
-                    attribute = factory.createAttribute(request, HttpHeaders.Names.CONTENT_LENGTH.toString(),
+                    attribute = factory.createAttribute(request, HttpHeaderNames.CONTENT_LENGTH.toString(),
                             cleanString(contents[1]));
                 } catch (NullPointerException e) {
                     throw new ErrorDataDecoderException(e);
                 } catch (IllegalArgumentException e) {
                     throw new ErrorDataDecoderException(e);
                 }
-                currentFieldAttributes.put(HttpHeaders.Names.CONTENT_LENGTH, attribute);
-            } else if (AsciiString.equalsIgnoreCase(contents[0], HttpHeaders.Names.CONTENT_TYPE)) {
+                currentFieldAttributes.put(HttpHeaderNames.CONTENT_LENGTH, attribute);
+            } else if (HttpHeaderNames.CONTENT_TYPE.equalsIgnoreCase(contents[0])) {
                 // Take care of possible "multipart/mixed"
-                if (contents[1].equalsIgnoreCase(HttpPostBodyUtil.MULTIPART_MIXED)) {
+                if (HttpHeaderValues.MULTIPART_MIXED.equalsIgnoreCase(contents[1])) {
                     if (currentStatus == MultiPartStatus.DISPOSITION) {
                         String values = StringUtil.substringAfter(contents[2], '=');
                         multipartMixedBoundary = "--" + values;
@@ -731,18 +732,18 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                     }
                 } else {
                     for (int i = 1; i < contents.length; i++) {
-                        if (contents[i].toLowerCase().startsWith(HttpHeaders.Values.CHARSET)) {
+                        if (contents[i].toLowerCase().startsWith(HttpHeaderValues.CHARSET.toString())) {
                             String values = StringUtil.substringAfter(contents[i], '=');
                             Attribute attribute;
                             try {
-                                attribute = factory.createAttribute(request, HttpHeaders.Values.CHARSET,
+                                attribute = factory.createAttribute(request, HttpHeaderValues.CHARSET.toString(),
                                         cleanString(values));
                             } catch (NullPointerException e) {
                                 throw new ErrorDataDecoderException(e);
                             } catch (IllegalArgumentException e) {
                                 throw new ErrorDataDecoderException(e);
                             }
-                            currentFieldAttributes.put(HttpHeaders.Values.CHARSET, attribute);
+                            currentFieldAttributes.put(HttpHeaderValues.CHARSET, attribute);
                         } else {
                             Attribute attribute;
                             try {
@@ -762,7 +763,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             }
         }
         // Is it a FileUpload
-        Attribute filenameAttribute = currentFieldAttributes.get(HttpPostBodyUtil.FILENAME);
+        Attribute filenameAttribute = currentFieldAttributes.get(HttpHeaderValues.FILENAME);
         if (currentStatus == MultiPartStatus.DISPOSITION) {
             if (filenameAttribute != null) {
                 // FileUpload
@@ -799,7 +800,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
     protected InterfaceHttpData getFileUpload(String delimiter) {
         // eventually restart from existing FileUpload
         // Now get value according to Content-Type and Charset
-        Attribute encoding = currentFieldAttributes.get(HttpHeaders.Names.CONTENT_TRANSFER_ENCODING);
+        Attribute encoding = currentFieldAttributes.get(HttpHeaderNames.CONTENT_TRANSFER_ENCODING);
         Charset localCharset = charset;
         // Default
         TransferEncodingMechanism mechanism = TransferEncodingMechanism.BIT7;
@@ -811,9 +812,9 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                 throw new ErrorDataDecoderException(e);
             }
             if (code.equals(HttpPostBodyUtil.TransferEncodingMechanism.BIT7.value())) {
-                localCharset = HttpPostBodyUtil.US_ASCII;
+                localCharset = CharsetUtil.US_ASCII;
             } else if (code.equals(HttpPostBodyUtil.TransferEncodingMechanism.BIT8.value())) {
-                localCharset = HttpPostBodyUtil.ISO_8859_1;
+                localCharset = CharsetUtil.ISO_8859_1;
                 mechanism = TransferEncodingMechanism.BIT8;
             } else if (code.equals(HttpPostBodyUtil.TransferEncodingMechanism.BINARY.value())) {
                 // no real charset, so let the default
@@ -822,7 +823,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                 throw new ErrorDataDecoderException("TransferEncoding Unknown: " + code);
             }
         }
-        Attribute charsetAttribute = currentFieldAttributes.get(HttpHeaders.Values.CHARSET);
+        Attribute charsetAttribute = currentFieldAttributes.get(HttpHeaderValues.CHARSET);
         if (charsetAttribute != null) {
             try {
                 localCharset = Charset.forName(charsetAttribute.getValue());
@@ -831,13 +832,13 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             }
         }
         if (currentFileUpload == null) {
-            Attribute filenameAttribute = currentFieldAttributes.get(HttpPostBodyUtil.FILENAME);
-            Attribute nameAttribute = currentFieldAttributes.get(HttpPostBodyUtil.NAME);
-            Attribute contentTypeAttribute = currentFieldAttributes.get(HttpHeaders.Names.CONTENT_TYPE);
+            Attribute filenameAttribute = currentFieldAttributes.get(HttpHeaderValues.FILENAME);
+            Attribute nameAttribute = currentFieldAttributes.get(HttpHeaderValues.NAME);
+            Attribute contentTypeAttribute = currentFieldAttributes.get(HttpHeaderNames.CONTENT_TYPE);
             if (contentTypeAttribute == null) {
                 throw new ErrorDataDecoderException("Content-Type is absent but required");
             }
-            Attribute lengthAttribute = currentFieldAttributes.get(HttpHeaders.Names.CONTENT_LENGTH);
+            Attribute lengthAttribute = currentFieldAttributes.get(HttpHeaderNames.CONTENT_LENGTH);
             long size;
             try {
                 size = lengthAttribute != null ? Long.parseLong(lengthAttribute.getValue()) : 0L;
@@ -933,11 +934,11 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      * Mixed mode
      */
     private void cleanMixedAttributes() {
-        currentFieldAttributes.remove(HttpHeaders.Values.CHARSET);
-        currentFieldAttributes.remove(HttpHeaders.Names.CONTENT_LENGTH);
-        currentFieldAttributes.remove(HttpHeaders.Names.CONTENT_TRANSFER_ENCODING);
-        currentFieldAttributes.remove(HttpHeaders.Names.CONTENT_TYPE);
-        currentFieldAttributes.remove(HttpPostBodyUtil.FILENAME);
+        currentFieldAttributes.remove(HttpHeaderValues.CHARSET);
+        currentFieldAttributes.remove(HttpHeaderNames.CONTENT_LENGTH);
+        currentFieldAttributes.remove(HttpHeaderNames.CONTENT_TRANSFER_ENCODING);
+        currentFieldAttributes.remove(HttpHeaderNames.CONTENT_TYPE);
+        currentFieldAttributes.remove(HttpHeaderValues.FILENAME);
     }
 
     /**

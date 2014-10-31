@@ -24,6 +24,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestDecoder;
@@ -35,7 +36,6 @@ import org.junit.Test;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
-import static io.netty.handler.codec.http.HttpHeaders.Values.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 import static org.junit.Assert.*;
@@ -95,7 +95,7 @@ public class WebSocketServerProtocolHandlerTest {
                 .uri("/test")
                 .key(null)
                 .connection("Upgrade")
-                .upgrade(WEBSOCKET.toLowerCase().toString())
+                .upgrade(HttpHeaderValues.WEBSOCKET)
                 .version13()
                 .build();
 

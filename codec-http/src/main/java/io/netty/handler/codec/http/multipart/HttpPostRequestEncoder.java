@@ -17,13 +17,15 @@ package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderUtil;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
@@ -502,14 +504,14 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
             internal.addValue("--" + multipartDataBoundary + "\r\n");
             // content-disposition: form-data; name="field1"
             Attribute attribute = (Attribute) data;
-            internal.addValue(HttpPostBodyUtil.CONTENT_DISPOSITION + ": " + HttpPostBodyUtil.FORM_DATA + "; "
-                    + HttpPostBodyUtil.NAME + "=\"" + attribute.getName() + "\"\r\n");
+            internal.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": " + HttpHeaderValues.FORM_DATA + "; "
+                    + HttpHeaderValues.NAME + "=\"" + attribute.getName() + "\"\r\n");
             Charset localcharset = attribute.getCharset();
             if (localcharset != null) {
                 // Content-Type: text/plain; charset=charset
-                internal.addValue(HttpHeaders.Names.CONTENT_TYPE + ": " +
+                internal.addValue(HttpHeaderNames.CONTENT_TYPE + ": " +
                         HttpPostBodyUtil.DEFAULT_TEXT_CONTENT_TYPE + "; " +
-                        HttpHeaders.Values.CHARSET + '='
+                        HttpHeaderValues.CHARSET + '='
                         + localcharset + "\r\n");
             }
             // CRLF between body header and data
@@ -584,20 +586,20 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
                     replacement.append(multipartDataBoundary);
                     replacement.append("\r\n");
 
-                    replacement.append(HttpPostBodyUtil.CONTENT_DISPOSITION);
+                    replacement.append(HttpHeaderNames.CONTENT_DISPOSITION);
                     replacement.append(": ");
-                    replacement.append(HttpPostBodyUtil.FORM_DATA);
+                    replacement.append(HttpHeaderValues.FORM_DATA);
                     replacement.append("; ");
-                    replacement.append(HttpPostBodyUtil.NAME);
+                    replacement.append(HttpHeaderValues.NAME);
                     replacement.append("=\"");
                     replacement.append(fileUpload.getName());
                     replacement.append("\"\r\n");
 
-                    replacement.append(HttpHeaders.Names.CONTENT_TYPE);
+                    replacement.append(HttpHeaderNames.CONTENT_TYPE);
                     replacement.append(": ");
-                    replacement.append(HttpPostBodyUtil.MULTIPART_MIXED);
+                    replacement.append(HttpHeaderValues.MULTIPART_MIXED);
                     replacement.append("; ");
-                    replacement.append(HttpHeaders.Values.BOUNDARY);
+                    replacement.append(HttpHeaderValues.BOUNDARY);
                     replacement.append('=');
                     replacement.append(multipartMixedBoundary);
                     replacement.append("\r\n\r\n");
@@ -606,11 +608,11 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
                     replacement.append(multipartMixedBoundary);
                     replacement.append("\r\n");
 
-                    replacement.append(HttpPostBodyUtil.CONTENT_DISPOSITION);
+                    replacement.append(HttpHeaderNames.CONTENT_DISPOSITION);
                     replacement.append(": ");
-                    replacement.append(HttpPostBodyUtil.ATTACHMENT);
+                    replacement.append(HttpHeaderValues.ATTACHMENT);
                     replacement.append("; ");
-                    replacement.append(HttpPostBodyUtil.FILENAME);
+                    replacement.append(HttpHeaderValues.FILENAME);
                     replacement.append("=\"");
                     replacement.append(fileUpload.getFilename());
                     replacement.append("\"\r\n");
@@ -642,27 +644,27 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
                 // Data to multipart list
                 internal.addValue("--" + multipartMixedBoundary + "\r\n");
                 // Content-Disposition: attachment; filename="file1.txt"
-                internal.addValue(HttpPostBodyUtil.CONTENT_DISPOSITION + ": " + HttpPostBodyUtil.ATTACHMENT + "; "
-                        + HttpPostBodyUtil.FILENAME + "=\"" + fileUpload.getFilename() + "\"\r\n");
+                internal.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": " + HttpHeaderValues.ATTACHMENT + "; "
+                        + HttpHeaderValues.FILENAME + "=\"" + fileUpload.getFilename() + "\"\r\n");
             } else {
                 internal.addValue("--" + multipartDataBoundary + "\r\n");
                 // Content-Disposition: form-data; name="files";
                 // filename="file1.txt"
-                internal.addValue(HttpPostBodyUtil.CONTENT_DISPOSITION + ": " + HttpPostBodyUtil.FORM_DATA + "; "
-                        + HttpPostBodyUtil.NAME + "=\"" + fileUpload.getName() + "\"; "
-                        + HttpPostBodyUtil.FILENAME + "=\"" + fileUpload.getFilename() + "\"\r\n");
+                internal.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": " + HttpHeaderValues.FORM_DATA + "; "
+                        + HttpHeaderValues.NAME + "=\"" + fileUpload.getName() + "\"; "
+                        + HttpHeaderValues.FILENAME + "=\"" + fileUpload.getFilename() + "\"\r\n");
             }
             // Content-Type: image/gif
             // Content-Type: text/plain; charset=ISO-8859-1
             // Content-Transfer-Encoding: binary
-            internal.addValue(HttpHeaders.Names.CONTENT_TYPE + ": " + fileUpload.getContentType());
+            internal.addValue(HttpHeaderNames.CONTENT_TYPE + ": " + fileUpload.getContentType());
             String contentTransferEncoding = fileUpload.getContentTransferEncoding();
             if (contentTransferEncoding != null
                     && contentTransferEncoding.equals(HttpPostBodyUtil.TransferEncodingMechanism.BINARY.value())) {
-                internal.addValue("\r\n" + HttpHeaders.Names.CONTENT_TRANSFER_ENCODING + ": "
+                internal.addValue("\r\n" + HttpHeaderNames.CONTENT_TRANSFER_ENCODING + ": "
                         + HttpPostBodyUtil.TransferEncodingMechanism.BINARY.value() + "\r\n\r\n");
             } else if (fileUpload.getCharset() != null) {
-                internal.addValue("; " + HttpHeaders.Values.CHARSET + '=' + fileUpload.getCharset() + "\r\n\r\n");
+                internal.addValue("; " + HttpHeaderValues.CHARSET + '=' + fileUpload.getCharset() + "\r\n\r\n");
             } else {
                 internal.addValue("\r\n\r\n");
             }
@@ -708,28 +710,28 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         }
 
         HttpHeaders headers = request.headers();
-        List<String> contentTypes = headers.getAll(HttpHeaders.Names.CONTENT_TYPE);
-        List<String> transferEncoding = headers.getAll(HttpHeaders.Names.TRANSFER_ENCODING);
+        List<String> contentTypes = headers.getAll(HttpHeaderNames.CONTENT_TYPE);
+        List<String> transferEncoding = headers.getAll(HttpHeaderNames.TRANSFER_ENCODING);
         if (contentTypes != null) {
-            headers.remove(HttpHeaders.Names.CONTENT_TYPE);
+            headers.remove(HttpHeaderNames.CONTENT_TYPE);
             for (String contentType : contentTypes) {
                 // "multipart/form-data; boundary=--89421926422648"
                 String lowercased = contentType.toLowerCase();
-                if (lowercased.startsWith(HttpHeaders.Values.MULTIPART_FORM_DATA) ||
-                        lowercased.startsWith(HttpHeaders.Values.APPLICATION_X_WWW_FORM_URLENCODED.toString())) {
+                if (lowercased.startsWith(HttpHeaderValues.MULTIPART_FORM_DATA.toString()) ||
+                        lowercased.startsWith(HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED.toString())) {
                     // ignore
                 } else {
-                    headers.add(HttpHeaders.Names.CONTENT_TYPE, contentType);
+                    headers.add(HttpHeaderNames.CONTENT_TYPE, contentType);
                 }
             }
         }
         if (isMultipart) {
-            String value = HttpHeaders.Values.MULTIPART_FORM_DATA + "; " + HttpHeaders.Values.BOUNDARY + '='
+            String value = HttpHeaderValues.MULTIPART_FORM_DATA + "; " + HttpHeaderValues.BOUNDARY + '='
                     + multipartDataBoundary;
-            headers.add(HttpHeaders.Names.CONTENT_TYPE, value);
+            headers.add(HttpHeaderNames.CONTENT_TYPE, value);
         } else {
             // Not multipart
-            headers.add(HttpHeaders.Names.CONTENT_TYPE, HttpHeaders.Values.APPLICATION_X_WWW_FORM_URLENCODED);
+            headers.add(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED);
         }
         // Now consider size for chunk or not
         long realSize = globalBodySize;
@@ -739,20 +741,20 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
             realSize -= 1; // last '&' removed
             iterator = multipartHttpDatas.listIterator();
         }
-        headers.set(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(realSize));
+        headers.set(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(realSize));
         if (realSize > HttpPostBodyUtil.chunkSize || isMultipart) {
             isChunked = true;
             if (transferEncoding != null) {
-                headers.remove(HttpHeaders.Names.TRANSFER_ENCODING);
+                headers.remove(HttpHeaderNames.TRANSFER_ENCODING);
                 for (CharSequence v : transferEncoding) {
-                    if (AsciiString.equalsIgnoreCase(v, HttpHeaders.Values.CHUNKED)) {
+                    if (HttpHeaderValues.CHUNKED.equalsIgnoreCase(v)) {
                         // ignore
                     } else {
-                        headers.add(HttpHeaders.Names.TRANSFER_ENCODING, v);
+                        headers.add(HttpHeaderNames.TRANSFER_ENCODING, v);
                     }
                 }
             }
-            HttpHeaders.setTransferEncodingChunked(request);
+            HttpHeaderUtil.setTransferEncodingChunked(request, true);
 
             // wrap to hide the possible content
             return new WrappedHttpRequest(request);
