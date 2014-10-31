@@ -15,10 +15,9 @@
  */
 package io.netty.handler.ssl;
 
+import javax.net.ssl.SSLEngine;
 import java.util.List;
 import java.util.Set;
-
-import javax.net.ssl.SSLEngine;
 
 /**
  * JDK extension methods to support {@link ApplicationProtocolNegotiator}
@@ -27,7 +26,7 @@ public interface JdkApplicationProtocolNegotiator extends ApplicationProtocolNeg
     /**
      * Abstract factory pattern for wrapping an {@link SSLEngine} object. This is useful for NPN/APLN JDK support.
      */
-    public interface SslEngineWrapperFactory {
+    interface SslEngineWrapperFactory {
         /**
          * Abstract factory pattern for wrapping an {@link SSLEngine} object. This is useful for NPN/APLN support.
          *
@@ -48,7 +47,7 @@ public interface JdkApplicationProtocolNegotiator extends ApplicationProtocolNeg
      * {@link ProtocolSelector#unsupported()} OR {@link ProtocolSelector#select(List)} will be called for each SSL
      * handshake.
      */
-    public interface ProtocolSelector {
+    interface ProtocolSelector {
         /**
          * Callback invoked to let the application know that the peer does not support this
          * {@link ApplicationProtocolNegotiator}.
@@ -72,7 +71,7 @@ public interface JdkApplicationProtocolNegotiator extends ApplicationProtocolNeg
      * {@link ProtocolSelectionListener#unsupported()} OR the {@link ProtocolSelectionListener#selected(String)} method
      * will be called for each SSL handshake.
      */
-    public interface ProtocolSelectionListener {
+    interface ProtocolSelectionListener {
         /**
          * Callback invoked to let the application know that the peer does not support this
          * {@link ApplicationProtocolNegotiator}.
@@ -93,7 +92,7 @@ public interface JdkApplicationProtocolNegotiator extends ApplicationProtocolNeg
     /**
      * Factory interface for {@link ProtocolSelector} objects.
      */
-    public interface ProtocolSelectorFactory {
+    interface ProtocolSelectorFactory {
         /**
          * Generate a new instance of {@link ProtocolSelector}.
          * @param engine The {@link SSLEngine} that the returned {@link ProtocolSelector} will be used to create an
@@ -107,7 +106,7 @@ public interface JdkApplicationProtocolNegotiator extends ApplicationProtocolNeg
     /**
      * Factory interface for {@link ProtocolSelectionListener} objects.
      */
-    public interface ProtocolSelectionListenerFactory {
+    interface ProtocolSelectionListenerFactory {
         /**
          * Generate a new instance of {@link ProtocolSelectionListener}.
          * @param engine The {@link SSLEngine} that the returned {@link ProtocolSelectionListener} will be used to

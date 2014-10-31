@@ -15,6 +15,7 @@
  */
 package io.netty.handler.ssl;
 
+import javax.net.ssl.SSLEngine;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
