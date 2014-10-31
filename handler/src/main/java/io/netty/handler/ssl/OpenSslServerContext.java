@@ -15,22 +15,21 @@
  */
 package io.netty.handler.ssl;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.apache.tomcat.jni.Pool;
+import org.apache.tomcat.jni.SSL;
+import org.apache.tomcat.jni.SSLContext;
 
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLException;
-
-import org.apache.tomcat.jni.Pool;
-import org.apache.tomcat.jni.SSL;
-import org.apache.tomcat.jni.SSLContext;
+import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * A server-side {@link SslContext} which uses OpenSSL's SSL/TLS implementation.
@@ -293,6 +292,7 @@ public final class OpenSslServerContext extends SslContext {
         return sessionTimeout;
     }
 
+    @Override
     public ApplicationProtocolNegotiator applicationProtocolNegotiator() {
         return apn;
     }
@@ -359,7 +359,7 @@ public final class OpenSslServerContext extends SslContext {
     }
 
     /**
-     * Translate a {@link ApplicationProtocolConfiguration} object to a
+     * Translate a {@link ApplicationProtocolConfig} object to a
      * {@link OpenSslApplicationProtocolNegotiator} object.
      * @param config The configuration which defines the translation
      * @param isServer {@code true} if a server {@code false} otherwise.
