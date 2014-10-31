@@ -31,7 +31,6 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.File;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -602,9 +601,7 @@ public abstract class SslContext {
     static ApplicationProtocolConfig toApplicationProtocolConfig(Iterable<String> nextProtocols) {
         ApplicationProtocolConfig apn;
         if (nextProtocols == null) {
-            apn = new ApplicationProtocolConfig(
-                    Protocol.NONE, SelectorFailureBehavior.CHOOSE_MY_LAST_PROTOCOL,
-                    SelectedListenerFailureBehavior.ACCEPT, Collections.<String>emptyList());
+            apn = ApplicationProtocolConfig.DISABLED;
         } else {
             apn = new ApplicationProtocolConfig(
                     Protocol.NPN_AND_ALPN, SelectorFailureBehavior.CHOOSE_MY_LAST_PROTOCOL,
