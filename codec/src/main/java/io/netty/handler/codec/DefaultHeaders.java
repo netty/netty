@@ -14,7 +14,6 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.util.collection.CollectionUtils;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.concurrent.FastThreadLocal;
@@ -1147,7 +1146,7 @@ public class DefaultHeaders<T> implements Headers<T> {
         // because we want to force the keyComparator to be used for all comparisons
         List<T> namesList = namesList();
         List<T> otherNamesList = h2.namesList();
-        if (!CollectionUtils.equals(namesList, otherNamesList, keyComparator)) {
+        if (!equals(namesList, otherNamesList, keyComparator)) {
             return false;
         }
 
@@ -1156,11 +1155,36 @@ public class DefaultHeaders<T> implements Headers<T> {
         Set<T> names = new TreeSet<T>(keyComparator);
         names.addAll(namesList);
         for (T name : names) {
-            if (!CollectionUtils.equals(getAll(name), h2.getAll(name), valueComparator)) {
+            if (!equals(getAll(name), h2.getAll(name), valueComparator)) {
                 return false;
             }
         }
 
+        return true;
+    }
+
+    /**
+     * Compare two lists using the {@code comparator} for all comparisons (not using the equals() operator)
+     * @param lhs Left hand side
+     * @param rhs Right hand side
+     * @param comparator Comparator which will be used for all comparisons (equals() on objects will not be used)
+     * @return True if {@code lhs} == {@code rhs} according to {@code comparator}. False otherwise.
+     */
+    private static <T> boolean equals(List<T> lhs, List<T> rhs, Comparator<? super T> comparator) {
+        final int lhsSize = lhs.size();
+        if (lhsSize != rhs.size()) {
+            return false;
+        }
+
+        // Don't use a TreeSet to do the comparison.  We want to force the comparator
+        // to be used instead of the object's equals()
+        Collections.sort(lhs, comparator);
+        Collections.sort(rhs, comparator);
+        for (int i = 0; i < lhsSize; ++i) {
+            if (comparator.compare(lhs.get(i), rhs.get(i)) != 0) {
+                return false;
+            }
+        }
         return true;
     }
 
