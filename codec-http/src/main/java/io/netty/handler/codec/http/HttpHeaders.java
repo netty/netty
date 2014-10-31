@@ -56,12 +56,12 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         }
 
         @Override
-        public Date getDate(CharSequence name) {
+        public Long getTimeMillis(CharSequence name) {
             return null;
         }
 
         @Override
-        public Date getDate(CharSequence name, Date defaultValue) {
+        public long getTimeMillis(CharSequence name, long defaultValue) {
             return defaultValue;
         }
 
@@ -897,7 +897,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-     * @deprecated Use {@link #getDate(CharSequence)} instead.
+     * @deprecated Use {@link #getTimeMillis(CharSequence)} instead.
      *
      * @see {@link #getDateHeader(HttpMessage, CharSequence)}
      */
@@ -907,7 +907,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-     * @deprecated Use {@link #getDate(CharSequence)} instead.
+     * @deprecated Use {@link #getTimeMillis(CharSequence)} instead.
      *
      * Returns the date header value with the specified header name.  If
      * there are more than one header value for the specified header name, the
@@ -927,17 +927,17 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-     * @deprecated Use {@link #getDate(CharSequence, Date)} instead.
+     * @deprecated Use {@link #getTimeMillis(CharSequence, long)} instead.
      *
      * @see {@link #getDateHeader(HttpMessage, CharSequence, Date)}
      */
     @Deprecated
     public static Date getDateHeader(HttpMessage message, String name, Date defaultValue) {
-        return message.headers().getDate(name, defaultValue);
+        return getDateHeader(message, (CharSequence) name, defaultValue);
     }
 
     /**
-     * @deprecated Use {@link #getDate(CharSequence, Date)} instead.
+     * @deprecated Use {@link #getTimeMillis(CharSequence, long)} instead.
      *
      * Returns the date header value with the specified header name.  If
      * there are more than one header value for the specified header name, the
@@ -948,7 +948,16 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      */
     @Deprecated
     public static Date getDateHeader(HttpMessage message, CharSequence name, Date defaultValue) {
-        return message.headers().getDate(name, defaultValue);
+        final String value = getHeader(message, name);
+        if (value == null) {
+            return defaultValue;
+        }
+
+        try {
+            return HttpHeaderDateFormat.get().parse(value);
+        } catch (ParseException ignored) {
+            return defaultValue;
+        }
     }
 
     /**
@@ -1109,7 +1118,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-     * @deprecated Use {@link #getDate(CharSequence)} instead.
+     * @deprecated Use {@link #getTimeMillis(CharSequence)} instead.
      *
      * Returns the value of the {@code "Date"} header.
      *
@@ -1122,7 +1131,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-     * @deprecated Use {@link #getDate(CharSequence, Date)} instead.
+     * @deprecated Use {@link #getTimeMillis(CharSequence, long)} instead.
      *
      * Returns the value of the {@code "Date"} header. If there is no such
      * header or the header is not a formatted date, the {@code defaultValue}
@@ -1130,7 +1139,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      */
     @Deprecated
     public static Date getDate(HttpMessage message, Date defaultValue) {
-        return message.headers().getDate(HttpHeaderNames.DATE, defaultValue);
+        return getDateHeader(message, HttpHeaderNames.DATE, defaultValue);
     }
 
     /**
@@ -1335,7 +1344,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * @return the first header value if the header is found and its value is a date. {@code null} if there's no
      *         such header or its value is not a date.
      */
-    public abstract Date getDate(CharSequence name);
+    public abstract Long getTimeMillis(CharSequence name);
 
     /**
      * Returns the date value of a header with the specified name. If there are more than one values for the
@@ -1346,7 +1355,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * @return the first header value if the header is found and its value is a date. {@code defaultValue} if
      *         there's no such header or its value is not a date.
      */
-    public abstract Date getDate(CharSequence name, Date defaultValue);
+    public abstract long getTimeMillis(CharSequence name, long defaultValue);
 
     /**
      * @see {@link #getAll(CharSequence)}

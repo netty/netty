@@ -22,7 +22,6 @@ import io.netty.handler.codec.DefaultTextHeaders;
 import io.netty.handler.codec.DefaultTextHeaders.DefaultTextValueTypeConverter;
 import io.netty.handler.codec.TextHeaders;
 
-import java.text.ParseException;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
@@ -373,22 +372,13 @@ public class DefaultHttpHeaders extends HttpHeaders {
     }
 
     @Override
-    public Date getDate(CharSequence name) {
-        return getDate(name, null);
+    public Long getTimeMillis(CharSequence name) {
+        return headers.getTimeMillis(name);
     }
 
     @Override
-    public Date getDate(CharSequence name, Date defaultValue) {
-        String value = get(name);
-        if (value == null) {
-            return defaultValue;
-        }
-
-        try {
-            return HttpHeaderDateFormat.get().parse(value);
-        } catch (ParseException ignored) {
-            return defaultValue;
-        }
+    public long getTimeMillis(CharSequence name, long defaultValue) {
+        return headers.getTimeMillis(name, defaultValue);
     }
 
     @Override
