@@ -24,7 +24,8 @@ import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -62,8 +63,8 @@ public class HttpPostRequestDecoderTest {
                 "http://localhost");
 
         req.setDecoderResult(DecoderResult.SUCCESS);
-        req.headers().add(HttpHeaders.Names.CONTENT_TYPE, contentTypeValue);
-        req.headers().add(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
+        req.headers().add(HttpHeaderNames.CONTENT_TYPE, contentTypeValue);
+        req.headers().add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
 
         // Force to use memory-based data.
         final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
@@ -106,8 +107,8 @@ public class HttpPostRequestDecoderTest {
                 "http://localhost");
 
         req.setDecoderResult(DecoderResult.SUCCESS);
-        req.headers().add(HttpHeaders.Names.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
-        req.headers().add(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
+        req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+        req.headers().add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
 
         // Force to use memory-based data.
         final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
@@ -150,8 +151,8 @@ public class HttpPostRequestDecoderTest {
             final DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
                     "http://localhost");
             req.setDecoderResult(DecoderResult.SUCCESS);
-            req.headers().add(HttpHeaders.Names.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
-            req.headers().add(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
+            req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+            req.headers().add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
             final String body =
                     "--" + boundary + "\r\n" +
                             "Content-Disposition: form-data; name=\"file" + i + "\"\r\n" +
@@ -185,8 +186,8 @@ public class HttpPostRequestDecoderTest {
                 "http://localhost");
 
         req.setDecoderResult(DecoderResult.SUCCESS);
-        req.headers().add(HttpHeaders.Names.CONTENT_TYPE, "multipart/form-data; boundary=\"" + boundary + '"');
-        req.headers().add(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
+        req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=\"" + boundary + '"');
+        req.headers().add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
 
         // Force to use memory-based data.
         final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
@@ -218,10 +219,10 @@ public class HttpPostRequestDecoderTest {
         DefaultHttpRequest aRequest = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
                                                              HttpMethod.POST,
                                                              "http://localhost");
-        aRequest.headers().set(HttpHeaders.Names.CONTENT_TYPE,
+        aRequest.headers().set(HttpHeaderNames.CONTENT_TYPE,
                                "multipart/form-data; boundary=" + boundary);
-        aRequest.headers().set(HttpHeaders.Names.TRANSFER_ENCODING,
-                               HttpHeaders.Values.CHUNKED);
+        aRequest.headers().set(HttpHeaderNames.TRANSFER_ENCODING,
+                               HttpHeaderValues.CHUNKED);
 
         HttpPostRequestDecoder aDecoder = new HttpPostRequestDecoder(aMemFactory, aRequest);
 

@@ -22,11 +22,12 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.ssl.SslHandler;
 
-import static io.netty.handler.codec.http.HttpHeaders.*;
+import static io.netty.handler.codec.http.HttpHeaderUtil.*;
 import static io.netty.handler.codec.http.HttpMethod.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
@@ -101,7 +102,6 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
             // SSL in use so use Secure WebSockets
             protocol = "wss";
         }
-        return protocol + "://" + req.headers().get(Names.HOST) + path;
+        return protocol + "://" + req.headers().get(HttpHeaderNames.HOST) + path;
     }
-
 }

@@ -79,7 +79,7 @@ public abstract class RtspObjectDecoder extends HttpObjectDecoder {
         if (empty) {
             return true;
         }
-        if (!msg.headers().contains(RtspHeaders.Names.CONTENT_LENGTH)) {
+        if (!msg.headers().contains(RtspHeaderNames.CONTENT_LENGTH)) {
             return true;
         }
         return empty;

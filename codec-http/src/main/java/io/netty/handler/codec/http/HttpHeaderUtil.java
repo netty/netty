@@ -17,9 +17,6 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.AsciiString;
-import io.netty.handler.codec.http.HttpHeaders.Names;
-import io.netty.handler.codec.http.HttpHeaders.Values;
 
 import java.util.Iterator;
 import java.util.List;
@@ -33,15 +30,15 @@ public final class HttpHeaderUtil {
      * {@link HttpVersion#isKeepAliveDefault()}.
      */
     public static boolean isKeepAlive(HttpMessage message) {
-        CharSequence connection = message.headers().get(Names.CONNECTION);
-        if (connection != null && AsciiString.equalsIgnoreCase(Values.CLOSE, connection)) {
+        CharSequence connection = message.headers().get(HttpHeaderNames.CONNECTION);
+        if (connection != null && HttpHeaderValues.CLOSE.equalsIgnoreCase(connection)) {
             return false;
         }
 
         if (message.protocolVersion().isKeepAliveDefault()) {
-            return !AsciiString.equalsIgnoreCase(Values.CLOSE, connection);
+            return !HttpHeaderValues.CLOSE.equalsIgnoreCase(connection);
         } else {
-            return AsciiString.equalsIgnoreCase(Values.KEEP_ALIVE, connection);
+            return HttpHeaderValues.KEEP_ALIVE.equalsIgnoreCase(connection);
         }
     }
 
@@ -68,15 +65,15 @@ public final class HttpHeaderUtil {
         HttpHeaders h = message.headers();
         if (message.protocolVersion().isKeepAliveDefault()) {
             if (keepAlive) {
-                h.remove(Names.CONNECTION);
+                h.remove(HttpHeaderNames.CONNECTION);
             } else {
-                h.set(Names.CONNECTION, Values.CLOSE);
+                h.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
             }
         } else {
             if (keepAlive) {
-                h.set(Names.CONNECTION, Values.KEEP_ALIVE);
+                h.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
             } else {
-                h.remove(Names.CONNECTION);
+                h.remove(HttpHeaderNames.CONNECTION);
             }
         }
     }
@@ -94,7 +91,7 @@ public final class HttpHeaderUtil {
      *         or its value is not a number
      */
     public static long getContentLength(HttpMessage message) {
-        String value = message.headers().get(Names.CONTENT_LENGTH);
+        String value = message.headers().get(HttpHeaderNames.CONTENT_LENGTH);
         if (value != null) {
             return Long.parseLong(value);
         }
@@ -107,7 +104,7 @@ public final class HttpHeaderUtil {
         }
 
         // Otherwise we don't.
-        throw new NumberFormatException("header not found: " + Names.CONTENT_LENGTH);
+        throw new NumberFormatException("header not found: " + HttpHeaderNames.CONTENT_LENGTH);
     }
 
     /**
@@ -121,7 +118,7 @@ public final class HttpHeaderUtil {
      *         a number
      */
     public static long getContentLength(HttpMessage message, long defaultValue) {
-        String value = message.headers().get(Names.CONTENT_LENGTH);
+        String value = message.headers().get(HttpHeaderNames.CONTENT_LENGTH);
         if (value != null) {
             return Long.parseLong(value);
         }
@@ -147,15 +144,15 @@ public final class HttpHeaderUtil {
         if (message instanceof HttpRequest) {
             HttpRequest req = (HttpRequest) message;
             if (HttpMethod.GET.equals(req.method()) &&
-                    h.contains(Names.SEC_WEBSOCKET_KEY1) &&
-                    h.contains(Names.SEC_WEBSOCKET_KEY2)) {
+                    h.contains(HttpHeaderNames.SEC_WEBSOCKET_KEY1) &&
+                    h.contains(HttpHeaderNames.SEC_WEBSOCKET_KEY2)) {
                 return 8;
             }
         } else if (message instanceof HttpResponse) {
             HttpResponse res = (HttpResponse) message;
             if (res.status().code() == 101 &&
-                    h.contains(Names.SEC_WEBSOCKET_ORIGIN) &&
-                    h.contains(Names.SEC_WEBSOCKET_LOCATION)) {
+                    h.contains(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN) &&
+                    h.contains(HttpHeaderNames.SEC_WEBSOCKET_LOCATION)) {
                 return 16;
             }
         }
@@ -168,11 +165,11 @@ public final class HttpHeaderUtil {
      * Sets the {@code "Content-Length"} header.
      */
     public static void setContentLength(HttpMessage message, long length) {
-        message.headers().set(Names.CONTENT_LENGTH, length);
+        message.headers().set(HttpHeaderNames.CONTENT_LENGTH, length);
     }
 
     public static boolean isContentLengthSet(HttpMessage m) {
-        return m.headers().contains(Names.CONTENT_LENGTH);
+        return m.headers().contains(HttpHeaderNames.CONTENT_LENGTH);
     }
 
     /**
@@ -191,16 +188,16 @@ public final class HttpHeaderUtil {
         }
 
         // In most cases, there will be one or zero 'Expect' header.
-        CharSequence value = message.headers().get(Names.EXPECT);
+        CharSequence value = message.headers().get(HttpHeaderNames.EXPECT);
         if (value == null) {
             return false;
         }
-        if (AsciiString.equalsIgnoreCase(Values.CONTINUE, value)) {
+        if (HttpHeaderValues.CONTINUE.equalsIgnoreCase(value)) {
             return true;
         }
 
         // Multiple 'Expect' headers.  Search through them.
-        return message.headers().contains(Names.EXPECT, Values.CONTINUE, true);
+        return message.headers().contains(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE, true);
     }
 
     /**
@@ -212,9 +209,9 @@ public final class HttpHeaderUtil {
      */
     public static void set100ContinueExpected(HttpMessage message, boolean expected) {
         if (expected) {
-            message.headers().set(Names.EXPECT, Values.CONTINUE);
+            message.headers().set(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE);
         } else {
-            message.headers().remove(Names.EXPECT);
+            message.headers().remove(HttpHeaderNames.EXPECT);
         }
     }
 
@@ -225,29 +222,29 @@ public final class HttpHeaderUtil {
      * @return True if transfer encoding is chunked, otherwise false
      */
     public static boolean isTransferEncodingChunked(HttpMessage message) {
-        return message.headers().contains(Names.TRANSFER_ENCODING, Values.CHUNKED, true);
+        return message.headers().contains(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED, true);
     }
 
     public static void setTransferEncodingChunked(HttpMessage m, boolean chunked) {
         if (chunked) {
-            m.headers().add(Names.TRANSFER_ENCODING, Values.CHUNKED);
-            m.headers().remove(Names.CONTENT_LENGTH);
+            m.headers().add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
+            m.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
         } else {
-            List<String> values = m.headers().getAll(Names.TRANSFER_ENCODING);
+            List<String> values = m.headers().getAll(HttpHeaderNames.TRANSFER_ENCODING);
             if (values.isEmpty()) {
                 return;
             }
             Iterator<String> valuesIt = values.iterator();
             while (valuesIt.hasNext()) {
                 CharSequence value = valuesIt.next();
-                if (AsciiString.equalsIgnoreCase(value, Values.CHUNKED)) {
+                if (HttpHeaderValues.CHUNKED.equalsIgnoreCase(value)) {
                     valuesIt.remove();
                 }
             }
             if (values.isEmpty()) {
-                m.headers().remove(Names.TRANSFER_ENCODING);
+                m.headers().remove(HttpHeaderNames.TRANSFER_ENCODING);
             } else {
-                m.headers().set(Names.TRANSFER_ENCODING, values);
+                m.headers().set(HttpHeaderNames.TRANSFER_ENCODING, values);
             }
         }
     }

@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBufProcessor;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
@@ -384,7 +383,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<State> {
 
         // Handle the last unfinished message.
         if (message != null) {
-            boolean chunked = HttpHeaders.isTransferEncodingChunked(message);
+            boolean chunked = HttpHeaderUtil.isTransferEncodingChunked(message);
             if (state() == State.READ_VARIABLE_LENGTH_CONTENT && !in.isReadable() && !chunked) {
                 // End of connection.
                 out.add(LastHttpContent.EMPTY_LAST_CONTENT);
@@ -422,7 +421,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<State> {
             //     - https://github.com/netty/netty/issues/222
             if (code >= 100 && code < 200) {
                 // One exception: Hixie 76 websocket handshake response
-                return !(code == 101 && !res.headers().contains(HttpHeaders.Names.SEC_WEBSOCKET_ACCEPT));
+                return !(code == 101 && !res.headers().contains(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT));
             }
 
             switch (code) {
@@ -529,9 +528,9 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<State> {
         State nextState;
 
         if (isContentAlwaysEmpty(message)) {
-            HttpHeaders.removeTransferEncodingChunked(message);
+            HttpHeaderUtil.setTransferEncodingChunked(message, false);
             nextState = State.SKIP_CONTROL_CHARS;
-        } else if (HttpHeaders.isTransferEncodingChunked(message)) {
+        } else if (HttpHeaderUtil.isTransferEncodingChunked(message)) {
             nextState = State.READ_CHUNK_SIZE;
         } else if (contentLength() >= 0) {
             nextState = State.READ_FIXED_LENGTH_CONTENT;
@@ -543,7 +542,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<State> {
 
     private long contentLength() {
         if (contentLength == Long.MIN_VALUE) {
-            contentLength = HttpHeaders.getContentLength(message, -1);
+            contentLength = HttpHeaderUtil.getContentLength(message, -1);
         }
         return contentLength;
     }
@@ -571,9 +570,9 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<State> {
                 } else {
                     splitHeader(line);
                     CharSequence headerName = name;
-                    if (!AsciiString.equalsIgnoreCase(headerName, HttpHeaders.Names.CONTENT_LENGTH) &&
-                        !AsciiString.equalsIgnoreCase(headerName, HttpHeaders.Names.TRANSFER_ENCODING) &&
-                        !AsciiString.equalsIgnoreCase(headerName, HttpHeaders.Names.TRAILER)) {
+                    if (!HttpHeaderNames.CONTENT_LENGTH.equalsIgnoreCase(headerName) &&
+                        !HttpHeaderNames.TRANSFER_ENCODING.equalsIgnoreCase(headerName) &&
+                        !HttpHeaderNames.TRAILER.equalsIgnoreCase(headerName)) {
                         trailer.trailingHeaders().add(headerName, value);
                     }
                     lastHeader = name;

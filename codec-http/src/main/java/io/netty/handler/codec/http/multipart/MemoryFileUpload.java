@@ -17,7 +17,8 @@ package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelException;
-import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -119,12 +120,12 @@ public class MemoryFileUpload extends AbstractMemoryHttpData implements FileUplo
 
     @Override
     public String toString() {
-        return HttpPostBodyUtil.CONTENT_DISPOSITION + ": " +
-            HttpPostBodyUtil.FORM_DATA + "; " + HttpPostBodyUtil.NAME + "=\"" + getName() +
-            "\"; " + HttpPostBodyUtil.FILENAME + "=\"" + filename + "\"\r\n" +
-            HttpHeaders.Names.CONTENT_TYPE + ": " + contentType +
-            (getCharset() != null? "; " + HttpHeaders.Values.CHARSET + '=' + getCharset() + "\r\n" : "\r\n") +
-            HttpHeaders.Names.CONTENT_LENGTH + ": " + length() + "\r\n" +
+        return HttpHeaderNames.CONTENT_DISPOSITION + ": " +
+               HttpHeaderValues.FORM_DATA + "; " + HttpHeaderValues.NAME + "=\"" + getName() +
+            "\"; " + HttpHeaderValues.FILENAME + "=\"" + filename + "\"\r\n" +
+            HttpHeaderNames.CONTENT_TYPE + ": " + contentType +
+            (getCharset() != null? "; " + HttpHeaderValues.CHARSET + '=' + getCharset() + "\r\n" : "\r\n") +
+            HttpHeaderNames.CONTENT_LENGTH + ": " + length() + "\r\n" +
             "Completed: " + isCompleted() +
             "\r\nIsInMemory: " + isInMemory();
     }

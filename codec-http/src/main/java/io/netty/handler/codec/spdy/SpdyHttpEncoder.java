@@ -21,6 +21,7 @@ import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpObject;
@@ -209,9 +210,9 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
             throws Exception {
         // Get the Stream-ID, Associated-To-Stream-ID, Priority, URL, and scheme from the headers
         final HttpHeaders httpHeaders = httpMessage.headers();
-        int streamID = HttpHeaders.getIntHeader(httpMessage, Names.STREAM_ID);
-        int associatedToStreamId = HttpHeaders.getIntHeader(httpMessage, Names.ASSOCIATED_TO_STREAM_ID, 0);
-        byte priority = (byte) HttpHeaders.getIntHeader(httpMessage, Names.PRIORITY, 0);
+        int streamID = httpMessage.headers().getInt(Names.STREAM_ID);
+        int associatedToStreamId = httpMessage.headers().getInt(Names.ASSOCIATED_TO_STREAM_ID, 0);
+        byte priority = (byte) httpMessage.headers().getInt(Names.PRIORITY, 0);
         String URL = httpHeaders.get(Names.URL);
         String scheme = httpHeaders.get(Names.SCHEME);
         httpHeaders.remove(Names.STREAM_ID);
@@ -222,10 +223,10 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
 
         // The Connection, Keep-Alive, Proxy-Connection, and Transfer-Encoding
         // headers are not valid and MUST not be sent.
-        httpHeaders.remove(HttpHeaders.Names.CONNECTION);
+        httpHeaders.remove(HttpHeaderNames.CONNECTION);
         httpHeaders.remove("Keep-Alive");
         httpHeaders.remove("Proxy-Connection");
-        httpHeaders.remove(HttpHeaders.Names.TRANSFER_ENCODING);
+        httpHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 
         SpdySynStreamFrame spdySynStreamFrame =
                 new DefaultSpdySynStreamFrame(streamID, associatedToStreamId, priority);
@@ -248,8 +249,8 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
 
         // Replace the HTTP host header with the SPDY host header
         if (spdyVersion >= 3) {
-            String host = HttpHeaders.getHost(httpMessage);
-            httpHeaders.remove(HttpHeaders.Names.HOST);
+            String host = httpMessage.headers().get(HttpHeaderNames.HOST);
+            httpHeaders.remove(HttpHeaderNames.HOST);
             frameHeaders.set(HOST, host);
         }
 
@@ -273,15 +274,15 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
             throws Exception {
         // Get the Stream-ID from the headers
         final HttpHeaders httpHeaders = httpResponse.headers();
-        int streamID = HttpHeaders.getIntHeader(httpResponse, Names.STREAM_ID);
+        int streamID = httpResponse.headers().getInt(Names.STREAM_ID);
         httpHeaders.remove(Names.STREAM_ID);
 
         // The Connection, Keep-Alive, Proxy-Connection, and Transfer-Encoding
         // headers are not valid and MUST not be sent.
-        httpHeaders.remove(HttpHeaders.Names.CONNECTION);
+        httpHeaders.remove(HttpHeaderNames.CONNECTION);
         httpHeaders.remove("Keep-Alive");
         httpHeaders.remove("Proxy-Connection");
-        httpHeaders.remove(HttpHeaders.Names.TRANSFER_ENCODING);
+        httpHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 
         SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamID);
         SpdyHeaders frameHeaders = spdySynReplyFrame.headers();

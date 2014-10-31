@@ -18,9 +18,9 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpHeaders.Names;
-import io.netty.handler.codec.http.HttpHeaders.Values;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.CharsetUtil;
 
@@ -33,8 +33,6 @@ import static io.netty.handler.codec.http.HttpVersion.*;
  * </p>
  */
 public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
-
-    private static final CharSequence WEBSOCKET = Values.WEBSOCKET.toLowerCase();
 
     public static final String WEBSOCKET_13_ACCEPT_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
@@ -126,7 +124,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
             res.headers().add(headers);
         }
 
-        CharSequence key = req.headers().get(Names.SEC_WEBSOCKET_KEY);
+        CharSequence key = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
         if (key == null) {
             throw new WebSocketHandshakeException("not a WebSocket request: missing key");
         }
@@ -138,10 +136,10 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
             logger.debug("WebSocket version 13 server handshake key: {}, response: {}", key, accept);
         }
 
-        res.headers().add(Names.UPGRADE, WEBSOCKET);
-        res.headers().add(Names.CONNECTION, Names.UPGRADE);
-        res.headers().add(Names.SEC_WEBSOCKET_ACCEPT, accept);
-        String subprotocols = req.headers().get(Names.SEC_WEBSOCKET_PROTOCOL);
+        res.headers().add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET);
+        res.headers().add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
+        res.headers().add(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT, accept);
+        String subprotocols = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
         if (subprotocols != null) {
             String selectedSubprotocol = selectSubprotocol(subprotocols);
             if (selectedSubprotocol == null) {
@@ -149,7 +147,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
                     logger.debug("Requested subprotocol(s) not supported: {}", subprotocols);
                 }
             } else {
-                res.headers().add(Names.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
+                res.headers().add(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
             }
         }
         return res;

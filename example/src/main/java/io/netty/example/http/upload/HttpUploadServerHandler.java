@@ -26,7 +26,9 @@ import io.netty.handler.codec.http.CookieDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderUtil;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
@@ -59,7 +61,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static io.netty.buffer.Unpooled.*;
-import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 
 public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObject> {
 
@@ -113,14 +114,14 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
             responseContent.append("\r\n\r\n");
 
             // new getMethod
-            for (Entry<CharSequence, CharSequence> entry : request.headers()) {
+            for (Entry<String, String> entry : request.headers()) {
                 responseContent.append("HEADER: " + entry.getKey() + '=' + entry.getValue() + "\r\n");
             }
             responseContent.append("\r\n\r\n");
 
             // new getMethod
             Set<Cookie> cookies;
-            String value = request.headers().getAndConvert(COOKIE);
+            String value = request.headers().get(HttpHeaderNames.COOKIE);
             if (value == null) {
                 cookies = Collections.emptySet();
             } else {
@@ -158,7 +159,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
                 return;
             }
 
-            readingChunks = HttpHeaders.isTransferEncodingChunked(request);
+            readingChunks = HttpHeaderUtil.isTransferEncodingChunked(request);
             responseContent.append("Is Chunked: " + readingChunks + "\r\n");
             responseContent.append("IsMultipart: " + decoder.isMultipart() + "\r\n");
             if (readingChunks) {
@@ -287,23 +288,23 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
         responseContent.setLength(0);
 
         // Decide whether to close the connection or not.
-        boolean close = request.headers().contains(CONNECTION, HttpHeaders.Values.CLOSE, true)
+        boolean close = request.headers().contains(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE, true)
                 || request.protocolVersion().equals(HttpVersion.HTTP_1_0)
-                && !request.headers().contains(CONNECTION, HttpHeaders.Values.KEEP_ALIVE, true);
+                && !request.headers().contains(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE, true);
 
         // Build the response object.
         FullHttpResponse response = new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.OK, buf);
-        response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
+        response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=UTF-8");
 
         if (!close) {
             // There's no need to add 'Content-Length' header
             // if this is the last response.
-            response.headers().setInt(CONTENT_LENGTH, buf.readableBytes());
+            response.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, buf.readableBytes());
         }
 
         Set<Cookie> cookies;
-        String value = request.headers().getAndConvert(COOKIE);
+        String value = request.headers().get(HttpHeaderNames.COOKIE);
         if (value == null) {
             cookies = Collections.emptySet();
         } else {
@@ -312,7 +313,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
         if (!cookies.isEmpty()) {
             // Reset the cookies if necessary.
             for (Cookie cookie : cookies) {
-                response.headers().add(SET_COOKIE, ServerCookieEncoder.encode(cookie));
+                response.headers().add(HttpHeaderNames.SET_COOKIE, ServerCookieEncoder.encode(cookie));
             }
         }
         // Write the response.
@@ -400,8 +401,8 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
         FullHttpResponse response = new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.OK, buf);
 
-        response.headers().set(CONTENT_TYPE, "text/html; charset=UTF-8");
-        response.headers().setInt(CONTENT_LENGTH, buf.readableBytes());
+        response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=UTF-8");
+        response.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, buf.readableBytes());
 
         // Write the response.
         ctx.channel().writeAndFlush(response);
