@@ -14,18 +14,6 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_ENCODING;
-import static io.netty.handler.codec.http.HttpHeaders.Values.DEFLATE;
-import static io.netty.handler.codec.http.HttpHeaders.Values.GZIP;
-import static io.netty.handler.codec.http2.Http2TestUtil.as;
-import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -45,21 +33,25 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
-import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
-
-import java.net.InetSocketAddress;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+
+import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+
+import static io.netty.handler.codec.http2.Http2TestUtil.*;
+import static java.util.concurrent.TimeUnit.*;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 /**
  * Test for data decompression in the HTTP/2 codec.
@@ -84,8 +76,8 @@ public class DataCompressionHttp2Test {
     private Channel clientChannel;
     private volatile CountDownLatch serverLatch;
     private volatile CountDownLatch clientLatch;
-    private Http2TestUtil.FrameAdapter serverAdapter;
-    private Http2TestUtil.FrameAdapter clientAdapter;
+    private FrameAdapter serverAdapter;
+    private FrameAdapter clientAdapter;
     private Http2Connection serverConnection;
 
     @Before
@@ -102,9 +94,9 @@ public class DataCompressionHttp2Test {
             dataCapture = null;
         }
         serverChannel.close().sync();
-        Future<?> serverGroup = sb.group().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
-        Future<?> serverChildGroup = sb.childGroup().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
-        Future<?> clientGroup = cb.group().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+        Future<?> serverGroup = sb.group().shutdownGracefully(0, 0, MILLISECONDS);
+        Future<?> serverChildGroup = sb.childGroup().shutdownGracefully(0, 0, MILLISECONDS);
+        Future<?> clientGroup = cb.group().shutdownGracefully(0, 0, MILLISECONDS);
         serverGroup.sync();
         serverChildGroup.sync();
         clientGroup.sync();
@@ -117,10 +109,11 @@ public class DataCompressionHttp2Test {
     public void justHeadersNoData() throws Exception {
         bootstrapEnv(2, 1);
         final Http2Headers headers =
-                new DefaultHttp2Headers().method(GET).path(PATH).set(CONTENT_ENCODING, GZIP);
+                new DefaultHttp2Headers().method(GET).path(PATH)
+                                         .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
         // Required because the decompressor intercepts the onXXXRead events before
         // our {@link Http2TestUtil$FrameAdapter} does.
-        Http2TestUtil.FrameAdapter.getOrCreateStream(serverConnection, 3, false);
+        FrameAdapter.getOrCreateStream(serverConnection, 3, false);
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() {
@@ -141,10 +134,11 @@ public class DataCompressionHttp2Test {
         try {
             final ByteBuf encodedData = encodeData(data, encoder);
             final Http2Headers headers =
-                    new DefaultHttp2Headers().method(POST).path(PATH).set(CONTENT_ENCODING.toLowerCase(), GZIP);
+                    new DefaultHttp2Headers().method(POST).path(PATH)
+                                             .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
             // Required because the decompressor intercepts the onXXXRead events before
             // our {@link Http2TestUtil$FrameAdapter} does.
-            Http2TestUtil.FrameAdapter.getOrCreateStream(serverConnection, 3, false);
+            FrameAdapter.getOrCreateStream(serverConnection, 3, false);
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() {
@@ -175,10 +169,11 @@ public class DataCompressionHttp2Test {
         try {
             final ByteBuf encodedData = encodeData(data, encoder);
             final Http2Headers headers =
-                    new DefaultHttp2Headers().method(POST).path(PATH).set(CONTENT_ENCODING.toLowerCase(), GZIP);
+                    new DefaultHttp2Headers().method(POST).path(PATH)
+                                             .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
             // Required because the decompressor intercepts the onXXXRead events before
             // our {@link Http2TestUtil$FrameAdapter} does.
-            Http2TestUtil.FrameAdapter.getOrCreateStream(serverConnection, 3, false);
+            FrameAdapter.getOrCreateStream(serverConnection, 3, false);
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() {
@@ -212,10 +207,11 @@ public class DataCompressionHttp2Test {
             final ByteBuf encodedData1 = encodeData(data1, encoder);
             final ByteBuf encodedData2 = encodeData(data2, encoder);
             final Http2Headers headers =
-                    new DefaultHttp2Headers().method(POST).path(PATH).set(CONTENT_ENCODING.toLowerCase(), GZIP);
+                    new DefaultHttp2Headers().method(POST).path(PATH)
+                                             .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
             // Required because the decompressor intercepts the onXXXRead events before
             // our {@link Http2TestUtil$FrameAdapter} does.
-            Http2TestUtil.FrameAdapter.getOrCreateStream(serverConnection, 3, false);
+            FrameAdapter.getOrCreateStream(serverConnection, 3, false);
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() {
@@ -258,7 +254,7 @@ public class DataCompressionHttp2Test {
             final ByteBuf encodedData = encodeData(data, encoder);
             final Http2Headers headers =
                     new DefaultHttp2Headers().method(POST).path(PATH)
-                            .set(CONTENT_ENCODING.toLowerCase(), DEFLATE);
+                                             .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.DEFLATE);
             final Http2Settings settings = new Http2Settings();
             // Assume the compression operation will reduce the size by at least 10 bytes
             settings.initialWindowSize(BUFFER_SIZE - 10);
@@ -273,7 +269,7 @@ public class DataCompressionHttp2Test {
 
             // Required because the decompressor intercepts the onXXXRead events before
             // our {@link Http2TestUtil$FrameAdapter} does.
-            Http2TestUtil.FrameAdapter.getOrCreateStream(serverConnection, 3, false);
+            FrameAdapter.getOrCreateStream(serverConnection, 3, false);
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() {
@@ -336,18 +332,20 @@ public class DataCompressionHttp2Test {
         frameWriter = new DefaultHttp2FrameWriter();
         serverConnection = new DefaultHttp2Connection(true);
 
+        final CountDownLatch latch = new CountDownLatch(1);
         sb.group(new NioEventLoopGroup(), new NioEventLoopGroup());
         sb.channel(NioServerSocketChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                serverAdapter = new Http2TestUtil.FrameAdapter(serverConnection,
+                serverAdapter = new FrameAdapter(serverConnection,
                                 new DelegatingDecompressorFrameListener(serverConnection, serverListener),
                                 serverLatch);
                 p.addLast("reader", serverAdapter);
                 p.addLast(Http2CodecUtil.ignoreSettingsHandler());
                 serverConnectedChannel = ch;
+                latch.countDown();
             }
         });
 
@@ -357,7 +355,7 @@ public class DataCompressionHttp2Test {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                clientAdapter = new Http2TestUtil.FrameAdapter(clientListener, clientLatch);
+                clientAdapter = new FrameAdapter(clientListener, clientLatch);
                 p.addLast("reader", clientAdapter);
                 p.addLast(Http2CodecUtil.ignoreSettingsHandler());
             }
@@ -369,6 +367,8 @@ public class DataCompressionHttp2Test {
         ChannelFuture ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
         clientChannel = ccf.channel();
+
+        assertTrue(latch.await(5, SECONDS));
     }
 
     private void awaitClient() throws Exception {

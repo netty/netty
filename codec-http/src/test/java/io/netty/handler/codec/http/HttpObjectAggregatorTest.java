@@ -22,7 +22,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResultProvider;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.util.CharsetUtil;
 import org.easymock.EasyMock;
 import org.junit.Test;
@@ -119,7 +118,7 @@ public class HttpObjectAggregatorTest {
 
         FullHttpResponse response = embedder.readOutbound();
         assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
-        assertEquals("0", response.headers().get(Names.CONTENT_LENGTH));
+        assertEquals("0", response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
         assertFalse(embedder.isOpen());
 
         try {
@@ -166,7 +165,7 @@ public class HttpObjectAggregatorTest {
         // The agregator should respond with '413 Request Entity Too Large.'
         FullHttpResponse response = embedder.readOutbound();
         assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
-        assertEquals("0", response.headers().get(Names.CONTENT_LENGTH));
+        assertEquals("0", response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
 
         // An ill-behaving client could continue to send data without a respect, and such data should be discarded.
         assertFalse(embedder.writeInbound(chunk1));
@@ -206,7 +205,7 @@ public class HttpObjectAggregatorTest {
 
         FullHttpResponse response = embedder.readOutbound();
         assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
-        assertEquals("0", response.headers().get(Names.CONTENT_LENGTH));
+        assertEquals("0", response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
 
         // Keep-alive is on by default in HTTP/1.1, so the connection should be still alive.
         assertTrue(embedder.isOpen());
@@ -242,7 +241,7 @@ public class HttpObjectAggregatorTest {
         // The agregator should respond with '413 Request Entity Too Large.'
         FullHttpResponse response = embedder.readOutbound();
         assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
-        assertEquals("0", response.headers().get(Names.CONTENT_LENGTH));
+        assertEquals("0", response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
 
         // An ill-behaving client could continue to send data without a respect, and such data should be discarded.
         assertFalse(embedder.writeInbound(chunk1));
@@ -276,7 +275,7 @@ public class HttpObjectAggregatorTest {
         assertFalse(embedder.writeInbound(message));
         HttpResponse response = embedder.readOutbound();
         assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
-        assertEquals("0", response.headers().get(Names.CONTENT_LENGTH));
+        assertEquals("0", response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
 
         if (serverShouldCloseConnection(message)) {
             assertFalse(embedder.isOpen());

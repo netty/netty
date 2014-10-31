@@ -15,7 +15,8 @@
  */
 package io.netty.handler.codec.http.websocketx.extensions;
 
-import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.util.internal.StringUtil;
 
@@ -40,8 +41,8 @@ public final class WebSocketExtensionUtil {
         if (httpMessage == null) {
             throw new NullPointerException("httpMessage");
         }
-        return httpMessage.headers().contains(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.UPGRADE, true) &&
-                httpMessage.headers().contains(HttpHeaders.Names.UPGRADE, HttpHeaders.Values.WEBSOCKET, true);
+        return httpMessage.headers().contains(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true) &&
+                httpMessage.headers().contains(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET, true);
     }
 
     public static List<WebSocketExtensionData> extractExtensions(String extensionHeader) {
@@ -62,7 +63,7 @@ public final class WebSocketExtensionUtil {
                         }
                     }
                 } else {
-                    parameters = Collections.<String, String>emptyMap();
+                    parameters = Collections.emptyMap();
                 }
                 extensions.add(new WebSocketExtensionData(name, parameters));
             }

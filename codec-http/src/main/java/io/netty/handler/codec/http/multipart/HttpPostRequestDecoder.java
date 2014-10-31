@@ -18,7 +18,8 @@ package io.netty.handler.codec.http.multipart;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.internal.StringUtil;
 
@@ -139,8 +140,8 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
      * @return True if the request is a Multipart request
      */
     public static boolean isMultipart(HttpRequest request) {
-        if (request.headers().contains(HttpHeaders.Names.CONTENT_TYPE)) {
-            return getMultipartDataBoundary(request.headers().getAndConvert(HttpHeaders.Names.CONTENT_TYPE)) != null;
+        if (request.headers().contains(HttpHeaderNames.CONTENT_TYPE)) {
+            return getMultipartDataBoundary(request.headers().getAndConvert(HttpHeaderNames.CONTENT_TYPE)) != null;
         } else {
             return false;
         }
@@ -155,15 +156,15 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
         // Check if Post using "multipart/form-data; boundary=--89421926422648 [; charset=xxx]"
         String[] headerContentType = splitHeaderContentType(contentType);
         if (headerContentType[0].toLowerCase().startsWith(
-                HttpHeaders.Values.MULTIPART_FORM_DATA.toString())) {
+                HttpHeaderValues.MULTIPART_FORM_DATA.toString())) {
             int mrank;
             int crank;
             if (headerContentType[1].toLowerCase().startsWith(
-                    HttpHeaders.Values.BOUNDARY.toString())) {
+                    HttpHeaderValues.BOUNDARY.toString())) {
                 mrank = 1;
                 crank = 2;
             } else if (headerContentType[2].toLowerCase().startsWith(
-                    HttpHeaders.Values.BOUNDARY.toString())) {
+                    HttpHeaderValues.BOUNDARY.toString())) {
                 mrank = 2;
                 crank = 1;
             } else {
@@ -181,7 +182,7 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
                 }
             }
             if (headerContentType[crank].toLowerCase().startsWith(
-                    HttpHeaders.Values.CHARSET.toString())) {
+                    HttpHeaderValues.CHARSET.toString())) {
                 String charset = StringUtil.substringAfter(headerContentType[crank], '=');
                 if (charset != null) {
                     return new String[] {"--" + boundary, charset};

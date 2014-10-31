@@ -17,13 +17,13 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 
-import static io.netty.handler.codec.http.HttpHeaders.Values.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 
 public class WebSocketRequestBuilder {
@@ -48,33 +48,57 @@ public class WebSocketRequestBuilder {
         return this;
     }
 
-    public WebSocketRequestBuilder uri(String uri) {
-        this.uri = uri;
+    public WebSocketRequestBuilder uri(CharSequence uri) {
+        if (uri == null) {
+            this.uri = null;
+        } else {
+            this.uri = uri.toString();
+        }
         return this;
     }
 
-    public WebSocketRequestBuilder host(String host) {
-        this.host = host;
+    public WebSocketRequestBuilder host(CharSequence host) {
+        if (host == null) {
+            this.host = null;
+        } else {
+            this.host = host.toString();
+        }
         return this;
     }
 
-    public WebSocketRequestBuilder upgrade(String upgrade) {
-        this.upgrade = upgrade;
+    public WebSocketRequestBuilder upgrade(CharSequence upgrade) {
+        if (upgrade == null) {
+            this.upgrade = null;
+        } else {
+            this.upgrade = upgrade.toString();
+        }
         return this;
     }
 
-    public WebSocketRequestBuilder connection(String connection) {
-        this.connection = connection;
+    public WebSocketRequestBuilder connection(CharSequence connection) {
+        if (connection == null) {
+            this.connection = null;
+        } else {
+            this.connection = connection.toString();
+        }
         return this;
     }
 
-    public WebSocketRequestBuilder key(String key) {
-        this.key = key;
+    public WebSocketRequestBuilder key(CharSequence key) {
+        if (key == null) {
+            this.key = null;
+        } else {
+            this.key = key.toString();
+        }
         return this;
     }
 
-    public WebSocketRequestBuilder origin(String origin) {
-        this.origin = origin;
+    public WebSocketRequestBuilder origin(CharSequence origin) {
+        if (origin == null) {
+            this.origin = null;
+        } else {
+            this.origin = origin.toString();
+        }
         return this;
     }
 
@@ -102,32 +126,33 @@ public class WebSocketRequestBuilder {
         HttpHeaders headers = req.headers();
 
         if (host != null) {
-            headers.set(Names.HOST, host);
+            headers.set(HttpHeaderNames.HOST, host);
         }
         if (upgrade != null) {
-            headers.set(Names.UPGRADE, upgrade);
+            headers.set(HttpHeaderNames.UPGRADE, upgrade);
         }
         if (connection != null) {
-            headers.set(Names.CONNECTION, connection);
+            headers.set(HttpHeaderNames.CONNECTION, connection);
         }
         if (key != null) {
-            headers.set(Names.SEC_WEBSOCKET_KEY, key);
+            headers.set(HttpHeaderNames.SEC_WEBSOCKET_KEY, key);
         }
         if (origin != null) {
-            headers.set(Names.SEC_WEBSOCKET_ORIGIN, origin);
+            headers.set(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN, origin);
         }
         if (version != null) {
-            headers.set(Names.SEC_WEBSOCKET_VERSION, version.toHttpHeaderValue());
+            headers.set(HttpHeaderNames.SEC_WEBSOCKET_VERSION, version.toHttpHeaderValue());
         }
         return req;
     }
 
     public static HttpRequest sucessful() {
-        return new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
+        return new WebSocketRequestBuilder()
+                .httpVersion(HTTP_1_1)
                 .method(HttpMethod.GET)
                 .uri("/test")
                 .host("server.example.com")
-                .upgrade(WEBSOCKET.toString().toLowerCase())
+                .upgrade(HttpHeaderValues.WEBSOCKET)
                 .key("dGhlIHNhbXBsZSBub25jZQ==")
                 .origin("http://example.com")
                 .version13()

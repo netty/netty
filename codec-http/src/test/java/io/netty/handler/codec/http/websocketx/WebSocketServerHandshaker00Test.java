@@ -19,7 +19,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpHeaders.Names;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
@@ -32,7 +33,6 @@ import io.netty.util.ReferenceCountUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
-import static io.netty.handler.codec.http.HttpHeaders.Values.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 
 public class WebSocketServerHandshaker00Test {
@@ -54,13 +54,13 @@ public class WebSocketServerHandshaker00Test {
         FullHttpRequest req = ReferenceCountUtil.releaseLater(new DefaultFullHttpRequest(
                 HTTP_1_1, HttpMethod.GET, "/chat", Unpooled.copiedBuffer("^n:ds[4U", CharsetUtil.US_ASCII)));
 
-        req.headers().set(Names.HOST, "server.example.com");
-        req.headers().set(Names.UPGRADE, WEBSOCKET.toString().toLowerCase());
-        req.headers().set(Names.CONNECTION, "Upgrade");
-        req.headers().set(Names.ORIGIN, "http://example.com");
-        req.headers().set(Names.SEC_WEBSOCKET_KEY1, "4 @1  46546xW%0l 1 5");
-        req.headers().set(Names.SEC_WEBSOCKET_KEY2, "12998 5 Y3 1  .P00");
-        req.headers().set(Names.SEC_WEBSOCKET_PROTOCOL, "chat, superchat");
+        req.headers().set(HttpHeaderNames.HOST, "server.example.com");
+        req.headers().set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET);
+        req.headers().set(HttpHeaderNames.CONNECTION, "Upgrade");
+        req.headers().set(HttpHeaderNames.ORIGIN, "http://example.com");
+        req.headers().set(HttpHeaderNames.SEC_WEBSOCKET_KEY1, "4 @1  46546xW%0l 1 5");
+        req.headers().set(HttpHeaderNames.SEC_WEBSOCKET_KEY2, "12998 5 Y3 1  .P00");
+        req.headers().set(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, "chat, superchat");
 
         if (subProtocol) {
             new WebSocketServerHandshaker00(
@@ -74,12 +74,12 @@ public class WebSocketServerHandshaker00Test {
         ch2.writeInbound(ch.readOutbound());
         HttpResponse res = ch2.readInbound();
 
-        Assert.assertEquals("ws://example.com/chat", res.headers().get(Names.SEC_WEBSOCKET_LOCATION));
+        Assert.assertEquals("ws://example.com/chat", res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_LOCATION));
 
         if (subProtocol) {
-            Assert.assertEquals("chat", res.headers().get(Names.SEC_WEBSOCKET_PROTOCOL));
+            Assert.assertEquals("chat", res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL));
         } else {
-            Assert.assertNull(res.headers().get(Names.SEC_WEBSOCKET_PROTOCOL));
+            Assert.assertNull(res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL));
         }
         LastHttpContent content = ch2.readInbound();
 

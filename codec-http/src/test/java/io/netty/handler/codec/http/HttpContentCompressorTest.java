@@ -19,8 +19,6 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.ZlibWrapper;
-import io.netty.handler.codec.http.HttpHeaders.Names;
-import io.netty.handler.codec.http.HttpHeaders.Values;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
@@ -110,7 +108,7 @@ public class HttpContentCompressorTest {
         ch.writeInbound(newRequest());
 
         HttpResponse res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        res.headers().set(Names.TRANSFER_ENCODING, Values.CHUNKED);
+        res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
         ch.writeOutbound(res);
 
         assertEncodedResponse(ch);
@@ -151,7 +149,7 @@ public class HttpContentCompressorTest {
         ch.writeInbound(newRequest());
 
         HttpResponse res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        res.headers().set(Names.TRANSFER_ENCODING, Values.CHUNKED);
+        res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
         ch.writeOutbound(res);
 
         assertEncodedResponse(ch);
@@ -197,7 +195,7 @@ public class HttpContentCompressorTest {
         FullHttpResponse res = new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
                 Unpooled.copiedBuffer("Hello, World", CharsetUtil.US_ASCII));
-        res.headers().setInt(Names.CONTENT_LENGTH, res.content().readableBytes());
+        res.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, res.content().readableBytes());
         ch.writeOutbound(res);
 
         assertEncodedResponse(ch);
@@ -262,10 +260,10 @@ public class HttpContentCompressorTest {
         assertThat(o, is(instanceOf(FullHttpResponse.class)));
 
         res = (FullHttpResponse) o;
-        assertThat(res.headers().get(Names.TRANSFER_ENCODING), is(nullValue()));
+        assertThat(res.headers().get(HttpHeaderNames.TRANSFER_ENCODING), is(nullValue()));
 
         // Content encoding shouldn't be modified.
-        assertThat(res.headers().get(Names.CONTENT_ENCODING), is(nullValue()));
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is(nullValue()));
         assertThat(res.content().readableBytes(), is(0));
         assertThat(res.content().toString(CharsetUtil.US_ASCII), is(""));
         res.release();
@@ -287,10 +285,10 @@ public class HttpContentCompressorTest {
         assertThat(o, is(instanceOf(FullHttpResponse.class)));
 
         res = (FullHttpResponse) o;
-        assertThat(res.headers().get(Names.TRANSFER_ENCODING), is(nullValue()));
+        assertThat(res.headers().get(HttpHeaderNames.TRANSFER_ENCODING), is(nullValue()));
 
         // Content encoding shouldn't be modified.
-        assertThat(res.headers().get(Names.CONTENT_ENCODING), is(nullValue()));
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is(nullValue()));
         assertThat(res.content().readableBytes(), is(0));
         assertThat(res.content().toString(CharsetUtil.US_ASCII), is(""));
         assertEquals("Netty", res.trailingHeaders().get("X-Test"));
@@ -299,7 +297,7 @@ public class HttpContentCompressorTest {
 
     private static FullHttpRequest newRequest() {
         FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
-        req.headers().set(Names.ACCEPT_ENCODING, "gzip");
+        req.headers().set(HttpHeaderNames.ACCEPT_ENCODING, "gzip");
         return req;
     }
 
@@ -309,8 +307,8 @@ public class HttpContentCompressorTest {
 
         HttpResponse res = (HttpResponse) o;
         assertThat(res, is(not(instanceOf(HttpContent.class))));
-        assertThat(res.headers().getAndConvert(Names.TRANSFER_ENCODING), is("chunked"));
-        assertThat(res.headers().get(Names.CONTENT_LENGTH), is(nullValue()));
-        assertThat(res.headers().getAndConvert(Names.CONTENT_ENCODING), is("gzip"));
+        assertThat(res.headers().getAndConvert(HttpHeaderNames.TRANSFER_ENCODING), is("chunked"));
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH), is(nullValue()));
+        assertThat(res.headers().getAndConvert(HttpHeaderNames.CONTENT_ENCODING), is("gzip"));
     }
 }

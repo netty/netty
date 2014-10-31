@@ -20,8 +20,6 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.MessageToMessageCodec;
-import io.netty.handler.codec.http.HttpHeaders.Names;
-import io.netty.handler.codec.http.HttpHeaders.Values;
 import io.netty.util.ReferenceCountUtil;
 
 import java.util.ArrayDeque;
@@ -71,9 +69,9 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     @Override
     protected void decode(ChannelHandlerContext ctx, HttpRequest msg, List<Object> out)
             throws Exception {
-        CharSequence acceptedEncoding = msg.headers().get(HttpHeaders.Names.ACCEPT_ENCODING);
+        CharSequence acceptedEncoding = msg.headers().get(HttpHeaderNames.ACCEPT_ENCODING);
         if (acceptedEncoding == null) {
-            acceptedEncoding = HttpHeaders.Values.IDENTITY;
+            acceptedEncoding = HttpHeaderValues.IDENTITY;
         }
         acceptEncodingQueue.add(acceptedEncoding);
         out.add(ReferenceCountUtil.retain(msg));
@@ -133,11 +131,11 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
 
                 // Encode the content and remove or replace the existing headers
                 // so that the message looks like a decoded message.
-                res.headers().set(Names.CONTENT_ENCODING, result.targetContentEncoding());
+                res.headers().set(HttpHeaderNames.CONTENT_ENCODING, result.targetContentEncoding());
 
                 // Make the response chunked to simplify content transformation.
-                res.headers().remove(Names.CONTENT_LENGTH);
-                res.headers().set(Names.TRANSFER_ENCODING, Values.CHUNKED);
+                res.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
+                res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
 
                 // Output the rewritten response.
                 if (isFull) {

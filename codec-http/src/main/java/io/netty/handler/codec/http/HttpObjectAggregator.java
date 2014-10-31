@@ -58,7 +58,7 @@ public class HttpObjectAggregator
             HttpVersion.HTTP_1_1, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, Unpooled.EMPTY_BUFFER);
 
     static {
-        TOO_LARGE.headers().setInt(HttpHeaders.Names.CONTENT_LENGTH, 0);
+        TOO_LARGE.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
     }
 
     /**
@@ -142,7 +142,7 @@ public class HttpObjectAggregator
     protected void finishAggregation(FullHttpMessage aggregated) throws Exception {
         // Set the 'Content-Length' header.
         aggregated.headers().set(
-                HttpHeaders.Names.CONTENT_LENGTH,
+                HttpHeaderNames.CONTENT_LENGTH,
                 String.valueOf(aggregated.content().readableBytes()));
     }
 
