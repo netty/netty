@@ -16,13 +16,25 @@
 
 package io.netty.handler.ssl;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import javax.crypto.Cipher;
+import javax.crypto.EncryptedPrivateKeyInfo;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLSessionContext;
+import javax.net.ssl.TrustManagerFactory;
+import javax.security.auth.x500.X500Principal;
 import java.io.File;
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
@@ -48,18 +60,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import javax.crypto.Cipher;
-import javax.crypto.EncryptedPrivateKeyInfo;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.PBEKeySpec;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLSessionContext;
-import javax.net.ssl.TrustManagerFactory;
-import javax.security.auth.x500.X500Principal;
+import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * An {@link SslContext} which uses JDK's SSL/TLS implementation.
@@ -141,8 +142,7 @@ public abstract class JdkSslContext extends SslContext {
     }
 
     private static void addIfSupported(Set<String> supported, List<String> enabled, String... names) {
-        for (int i = 0; i < names.length; ++i) {
-            String n = names[i];
+        for (String n: names) {
             if (supported.contains(n)) {
                 enabled.add(n);
             }
@@ -224,7 +224,7 @@ public abstract class JdkSslContext extends SslContext {
     }
 
     /**
-     * Translate a {@link ApplicationProtocolConfiguration} object to a {@link JdkApplicationProtocolNegotiator} object.
+     * Translate a {@link ApplicationProtocolConfig} object to a {@link JdkApplicationProtocolNegotiator} object.
      * @param config The configuration which defines the translation
      * @param isServer {@code true} if a server {@code false} otherwise.
      * @return The results of the translation
@@ -336,7 +336,7 @@ public abstract class JdkSslContext extends SslContext {
         byte[] encodedKey = new byte[encodedKeyBuf.readableBytes()];
         encodedKeyBuf.readBytes(encodedKey).release();
 
-        char[] keyPasswordChars = keyPassword == null ? new char[0] : keyPassword.toCharArray();
+        char[] keyPasswordChars = keyPassword == null ? EmptyArrays.EMPTY_CHARS : keyPassword.toCharArray();
         PKCS8EncodedKeySpec encodedKeySpec = generateKeySpec(keyPasswordChars, encodedKey);
 
         PrivateKey key;
