@@ -15,18 +15,23 @@
  */
 package io.netty.handler.ssl;
 
-import static io.netty.handler.ssl.ApplicationProtocolUtil.toList;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
+import javax.net.ssl.SSLEngine;
 import java.util.Collections;
 import java.util.List;
 
-import javax.net.ssl.SSLEngine;
+import static io.netty.handler.ssl.ApplicationProtocolUtil.*;
+import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * Provides an {@link SSLEngine} agnostic way to configure a {@link ApplicationProtocolNegotiator}.
  */
 public final class ApplicationProtocolConfig {
+
+    /**
+     * The configuration that disables application protocol negotiation.
+     */
+    public static final ApplicationProtocolConfig DISABLED = new ApplicationProtocolConfig();
+
     private final List<String> supportedProtocols;
     private final Protocol protocol;
     private final SelectorFailureBehavior selectorBehavior;
@@ -63,12 +68,27 @@ public final class ApplicationProtocolConfig {
      * @param selectedBehavior How the peer being notified of the selected protocol should behave.
      * @param supportedProtocols The order of iteration determines the preference of support for protocols.
      */
-    private ApplicationProtocolConfig(Protocol protocol, SelectorFailureBehavior selectorBehavior,
+    private ApplicationProtocolConfig(
+            Protocol protocol, SelectorFailureBehavior selectorBehavior,
             SelectedListenerFailureBehavior selectedBehavior, List<String> supportedProtocols) {
         this.supportedProtocols = Collections.unmodifiableList(checkNotNull(supportedProtocols, "supportedProtocols"));
         this.protocol = checkNotNull(protocol, "protocol");
         this.selectorBehavior = checkNotNull(selectorBehavior, "selectorBehavior");
         this.selectedBehavior = checkNotNull(selectedBehavior, "selectedBehavior");
+
+        if (protocol == Protocol.NONE) {
+            throw new IllegalArgumentException("protocol (" + Protocol.NONE + ") must not be " + Protocol.NONE + '.');
+        }
+    }
+
+    /**
+     * A special constructor that is used to instantiate {@link #DISABLED}.
+     */
+    private ApplicationProtocolConfig() {
+        supportedProtocols = Collections.emptyList();
+        protocol = Protocol.NONE;
+        selectorBehavior = SelectorFailureBehavior.CHOOSE_MY_LAST_PROTOCOL;
+        selectedBehavior = SelectedListenerFailureBehavior.ACCEPT;
     }
 
     /**
