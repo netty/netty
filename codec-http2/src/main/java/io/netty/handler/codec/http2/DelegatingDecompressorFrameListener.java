@@ -30,6 +30,16 @@ import io.netty.handler.codec.http.HttpHeaderValues;
  * stream.
  */
 public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecorator {
+
+    /**
+     * {@code "x-deflate"}
+     */
+    private static final AsciiString X_DEFLATE = new AsciiString("x-deflate");
+    /**
+     * {@code "x-gzip"}
+     */
+    private static final AsciiString X_GZIP = new AsciiString("x-gzip");
+
     private static final Http2ConnectionAdapter CLEAN_UP_LISTENER = new Http2ConnectionAdapter() {
         @Override
         public void streamRemoved(Http2Stream stream) {
@@ -121,11 +131,11 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
      */
     protected EmbeddedChannel newContentDecompressor(AsciiString contentEncoding) throws Http2Exception {
         if (HttpHeaderValues.GZIP.equalsIgnoreCase(contentEncoding) ||
-            HttpHeaderValues.X_GZIP.equalsIgnoreCase(contentEncoding)) {
+            X_GZIP.equalsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP));
         }
         if (HttpHeaderValues.DEFLATE.equalsIgnoreCase(contentEncoding) ||
-            HttpHeaderValues.X_DEFLATE.equalsIgnoreCase(contentEncoding)) {
+            X_DEFLATE.equalsIgnoreCase(contentEncoding)) {
             final ZlibWrapper wrapper = strict ? ZlibWrapper.ZLIB : ZlibWrapper.ZLIB_OR_NONE;
             // To be strict, 'deflate' means ZLIB, but some servers were not implemented correctly.
             return new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(wrapper));

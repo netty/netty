@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 
@@ -25,6 +26,15 @@ import io.netty.handler.codec.compression.ZlibWrapper;
  * handler modifies the message, please refer to {@link HttpContentDecoder}.
  */
 public class HttpContentDecompressor extends HttpContentDecoder {
+
+    /**
+     * {@code "x-deflate"}
+     */
+    private static final AsciiString X_DEFLATE = new AsciiString("x-deflate");
+    /**
+     * {@code "x-gzip"}
+     */
+    private static final AsciiString X_GZIP = new AsciiString("x-gzip");
 
     private final boolean strict;
 
@@ -48,11 +58,11 @@ public class HttpContentDecompressor extends HttpContentDecoder {
     @Override
     protected EmbeddedChannel newContentDecoder(String contentEncoding) throws Exception {
         if (HttpHeaderValues.GZIP.equalsIgnoreCase(contentEncoding) ||
-            HttpHeaderValues.X_GZIP.equalsIgnoreCase(contentEncoding)) {
+            X_GZIP.equalsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP));
         }
         if (HttpHeaderValues.DEFLATE.equalsIgnoreCase(contentEncoding) ||
-            HttpHeaderValues.X_DEFLATE.equalsIgnoreCase(contentEncoding)) {
+            X_DEFLATE.equalsIgnoreCase(contentEncoding)) {
             final ZlibWrapper wrapper = strict ? ZlibWrapper.ZLIB : ZlibWrapper.ZLIB_OR_NONE;
             // To be strict, 'deflate' means ZLIB, but some servers were not implemented correctly.
             return new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(wrapper));

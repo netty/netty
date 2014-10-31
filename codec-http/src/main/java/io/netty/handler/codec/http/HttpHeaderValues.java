@@ -188,14 +188,6 @@ public final class HttpHeaderValues {
      * {@code "websocket"}
      */
     public static final AsciiString WEBSOCKET = new AsciiString("websocket");
-    /**
-     * {@code "x-deflate"}
-     */
-    public static final AsciiString X_DEFLATE = new AsciiString("x-deflate");
-    /**
-     * {@code "x-gzip"}
-     */
-    public static final AsciiString X_GZIP = new AsciiString("x-gzip");
 
     private HttpHeaderValues() { }
 }
