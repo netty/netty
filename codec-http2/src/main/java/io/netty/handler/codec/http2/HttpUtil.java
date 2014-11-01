@@ -14,6 +14,7 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.BinaryHeaders;
 import io.netty.handler.codec.TextHeaders.EntryVisitor;
@@ -210,8 +211,12 @@ public final class HttpUtil {
                     throws Http2Exception {
         // HTTP/2 does not define a way to carry the version identifier that is
         // included in the HTTP/1.1 request line.
-        FullHttpRequest msg = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.valueOf(http2Headers.method()
-                        .toString()), http2Headers.path().toString(), validateHttpHeaders);
+        final AsciiString method = checkNotNull(http2Headers.method(),
+                "method header cannot be null in conversion to HTTP/1.x");
+        final AsciiString path = checkNotNull(http2Headers.path(),
+                "path header cannot be null in conversion to HTTP/1.x");
+        FullHttpRequest msg = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.valueOf(method
+                        .toString()), path.toString(), validateHttpHeaders);
         addHttp2ToHttpHeaders(streamId, http2Headers, msg, false);
         return msg;
     }
@@ -235,7 +240,8 @@ public final class HttpUtil {
         } catch (Http2Exception ex) {
             throw ex;
         } catch (Exception ex) {
-            PlatformDependent.throwException(ex);
+            throw new Http2StreamException(streamId, Http2Error.PROTOCOL_ERROR,
+                    "HTTP/2 to HTTP/1.x headers conversion error", ex);
         }
 
         headers.remove(HttpHeaderNames.TRANSFER_ENCODING);
