@@ -206,21 +206,25 @@ public class DefaultHttp2ConnectionEncoderTest {
 
     @Test
     public void headersWriteForUnknownStreamShouldCreateStream() throws Exception {
+        int streamId = 5;
+        when(stream.id()).thenReturn(streamId);
         mockFutureAddListener(true);
-        when(local.createStream(eq(5), eq(false))).thenReturn(stream);
-        encoder.writeHeaders(ctx, 5, EmptyHttp2Headers.INSTANCE, 0, false, promise);
-        verify(local).createStream(eq(5), eq(false));
-        verify(writer).writeHeaders(eq(ctx), eq(5), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+        when(local.createStream(eq(streamId), eq(false))).thenReturn(stream);
+        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false, promise);
+        verify(local).createStream(eq(streamId), eq(false));
+        verify(writer).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false), eq(promise));
     }
 
     @Test
     public void headersWriteShouldCreateHalfClosedStream() throws Exception {
+        int streamId = 5;
+        when(stream.id()).thenReturn(5);
         mockFutureAddListener(true);
-        when(local.createStream(eq(5), eq(true))).thenReturn(stream);
-        encoder.writeHeaders(ctx, 5, EmptyHttp2Headers.INSTANCE, 0, true, promise);
-        verify(local).createStream(eq(5), eq(true));
-        verify(writer).writeHeaders(eq(ctx), eq(5), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+        when(local.createStream(eq(streamId), eq(true))).thenReturn(stream);
+        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, true, promise);
+        verify(local).createStream(eq(streamId), eq(true));
+        verify(writer).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true), eq(promise));
     }
 

@@ -228,7 +228,7 @@ public class Http2ConnectionRoundtripTest {
             @Override
             public void run() {
                 http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0,
-                        false, newPromise());
+                        true, newPromise());
                 http2Client.encoder().writeHeaders(ctx(), Integer.MAX_VALUE + 1, headers, 0, (short) 16, false, 0,
                         true, newPromise());
             }

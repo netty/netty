@@ -205,7 +205,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     @Override
     public ChannelFuture lastWriteForStream(int streamId) {
         OutboundFlowState state = state(streamId);
-        return state != null ? state.lastWrite : null;
+        return state != null ? state.lastNewFrame() : null;
     }
 
     private static OutboundFlowState state(Http2Stream stream) {
@@ -389,7 +389,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         private int pendingBytes;
         private int priorityBytes;
         private int allocatedPriorityBytes;
-        private ChannelFuture lastWrite;
+        private ChannelFuture lastNewFrame;
 
         private OutboundFlowState(Http2Stream stream) {
             this.stream = stream;
@@ -416,6 +416,13 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             // node.
             incrementPriorityBytes(streamableBytes() - previouslyStreamable);
             return window;
+        }
+
+        /**
+         * Returns the future for the last new frame created for this stream.
+         */
+        ChannelFuture lastNewFrame() {
+            return lastNewFrame;
         }
 
         /**
@@ -468,7 +475,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
          */
         private Frame newFrame(ChannelPromise promise, ByteBuf data, int padding, boolean endStream) {
             // Store this as the future for the most recent write attempt.
-            lastWrite = promise;
+            lastNewFrame = promise;
             return new Frame(new ChannelPromiseAggregator(promise), data, padding, endStream);
         }
 

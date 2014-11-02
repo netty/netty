@@ -259,6 +259,15 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             return promise.setFailure(e);
         }
 
+        if (lastDataWrite == null) {
+            // No previous DATA frames to keep in sync with, just send it now.
+            return writeHeaders(ctx, stream, headers, streamDependency, weight, exclusive, padding,
+                    endOfStream, promise);
+        }
+
+        // There were previous DATA frames sent.  We need to send the HEADERS only after the most
+        // recent DATA frame to keep them in sync...
+
         // Wrap the original promise in an aggregate which will complete the original promise
         // once the headers are written.
         final ChannelPromiseAggregator aggregatePromise = new ChannelPromiseAggregator(promise);
@@ -267,7 +276,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
         // Only write the HEADERS frame after the previous DATA frame has been written.
         final Http2Stream theStream = stream;
-        lastDataWrite = lastDataWrite != null ? lastDataWrite : ctx.newSucceededFuture();
         lastDataWrite.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
@@ -277,19 +285,33 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                     return;
                 }
 
-                frameWriter.writeHeaders(ctx, streamId, headers, streamDependency, weight,
-                                exclusive, padding, endOfStream, innerPromise);
-                ctx.flush();
-
-                // If the headers are the end of the stream, close it now.
-                if (endOfStream) {
-                    theStream.endOfStreamSent();
-                    lifecycleManager.closeLocalSide(theStream, innerPromise);
-                }
+                // Perform the write.
+                writeHeaders(ctx, theStream, headers, streamDependency, weight, exclusive, padding,
+                        endOfStream, innerPromise);
             }
         });
 
         return promise;
+    }
+
+    /**
+     * Writes the given {@link Http2Headers} to the remote endpoint and updates stream state if appropriate.
+     */
+    private ChannelFuture writeHeaders(ChannelHandlerContext ctx, Http2Stream stream,
+            Http2Headers headers, int streamDependency, short weight, boolean exclusive,
+            int padding, boolean endOfStream, ChannelPromise promise) {
+        ChannelFuture future =
+                frameWriter.writeHeaders(ctx, stream.id(), headers, streamDependency, weight,
+                        exclusive, padding, endOfStream, promise);
+        ctx.flush();
+
+        // If the headers are the end of the stream, close it now.
+        if (endOfStream) {
+            stream.endOfStreamSent();
+            lifecycleManager.closeLocalSide(stream, promise);
+        }
+
+        return future;
     }
 
     @Override
