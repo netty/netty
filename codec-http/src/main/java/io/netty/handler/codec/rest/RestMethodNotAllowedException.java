@@ -21,11 +21,6 @@ package io.netty.handler.codec.rest;
 public class RestMethodNotAllowedException extends Exception {
     private static final long serialVersionUID = -6975338060895642894L;
 
-    public RestMethodNotAllowedException(String message, Throwable cause,
-            boolean enableSuppression, boolean writableStackTrace) {
-        super(message, cause, enableSuppression, writableStackTrace);
-    }
-
     public RestMethodNotAllowedException(String message, Throwable cause) {
         super(message, cause);
     }
