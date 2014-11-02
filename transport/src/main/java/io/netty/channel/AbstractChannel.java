@@ -183,6 +183,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
+        logger.info("bind : {}", this.pipeline().names());
+        logger.info("bind channel : {}", this);
         return pipeline.bind(localAddress, promise);
     }
 
@@ -213,6 +215,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public Channel read() {
+        logger.info("channel read : {}", this);
         pipeline.read();
         return this;
     }
@@ -420,6 +423,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     postRegisterTask.run();
                 }
                 if (isActive()) {
+                    logger.info("channel active : {}", pipeline.names());
                     pipeline.fireChannelActive();
                 }
             } catch (Throwable t) {

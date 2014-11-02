@@ -178,6 +178,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
             public void initChannel(Channel ch) throws Exception {
+                System.out.println("ServerBootstrap initChannel : " + ch.getClass());
                 ch.pipeline().addLast(new ServerBootstrapAcceptor(
                         currentChildGroup, currentChildHandler, currentChildOptions, currentChildAttrs));
             }
@@ -228,6 +229,9 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
         @SuppressWarnings("unchecked")
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
             Channel child = (Channel) msg;
+
+            logger.info("ServerBootstrapAcceptor pipeline : {}", child.pipeline().names());
+            logger.info("channel class : {}", child.getClass());
 
             child.pipeline().addLast(childHandler);
 

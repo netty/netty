@@ -23,13 +23,15 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Echoes back any received data from a client.
  */
 public class EchoServer {
+
+    private static Logger logger = LoggerFactory.getLogger(EchoServer.class);
 
     private final int port;
 
@@ -41,15 +43,21 @@ public class EchoServer {
         // Configure the server.
         EventLoopGroup bossGroup = new NioEventLoopGroup();
         EventLoopGroup workerGroup = new NioEventLoopGroup();
+
+        logger.debug("configure the server");
+
         try {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
-             .channel(NioServerSocketChannel.class)
+             .channel(NioServerSocketChannel.class)     // 初始化一个BootstrapChannelFactory，AbstractBootstrap.initAndRegister方法中调用该ChannelFactory，创建一个新的Channel
              .option(ChannelOption.SO_BACKLOG, 100)
-             .handler(new LoggingHandler(LogLevel.INFO))
+//             .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new ChannelInitializer<SocketChannel>() {
                  @Override
                  public void initChannel(SocketChannel ch) throws Exception {
+                     System.out.println("echo server channel : " + ch.getClass());
+                     System.out.println("echo server channel pipeline: " + ch.pipeline().getClass());
+
                      ch.pipeline().addLast(
                              //new LoggingHandler(LogLevel.INFO),
                              new EchoServerHandler());
@@ -69,12 +77,18 @@ public class EchoServer {
     }
 
     public static void main(String[] args) throws Exception {
+
+        logger.error("hello");
+
         int port;
         if (args.length > 0) {
             port = Integer.parseInt(args[0]);
         } else {
             port = 8080;
         }
+
         new EchoServer(port).run();
+
+
     }
 }

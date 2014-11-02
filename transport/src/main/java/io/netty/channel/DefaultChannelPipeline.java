@@ -744,6 +744,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline fireChannelActive() {
+        logger.info("fire channel active : {}", this);
+        logger.info("channel : {}", this.channel);
         head.fireChannelActive();
 
         if (channel.config().isAutoRead()) {
@@ -992,6 +994,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         public void bind(
                 ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise)
                 throws Exception {
+            logger.info("bind : {}", this);
             unsafe.bind(localAddress, promise);
         }
 

@@ -43,6 +43,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
 
     private static ServerSocketChannel newSocket() {
+        logger.info("new socket channel");
         try {
             return ServerSocketChannel.open();
         } catch (IOException e) {
@@ -98,6 +99,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
 
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
+        logger.info("doBind : {}", this);
         javaChannel().socket().bind(localAddress, config.getBacklog());
     }
 

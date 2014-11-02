@@ -67,8 +67,10 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
         boolean removed = false;
         boolean success = false;
         try {
+            logger.info("ChannelInitializer, channelhandlercontext class : " + ctx.getClass());
             initChannel((C) ctx.channel());
             ctx.pipeline().remove(this);
+            logger.info("ChannelInitializer, channelhander class : "  + this.getClass());
             removed = true;
             ctx.fireChannelRegistered();
             success = true;

@@ -19,12 +19,15 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
 
-import static io.netty.channel.DefaultChannelPipeline.*;
-
 final class DefaultChannelHandlerContext extends DefaultAttributeMap implements ChannelHandlerContext {
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelHandlerContext.class);
+
 
     volatile DefaultChannelHandlerContext next;
     volatile DefaultChannelHandlerContext prev;
@@ -168,7 +171,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelHandlerContext fireChannelRegistered() {
+
+        logger.info("pipeline names : {}", this.pipeline().names());
+
         final DefaultChannelHandlerContext next = findContextInbound();
+
+        logger.info("find next in bound : {}", next.name());
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             next.invokeChannelRegistered();
@@ -234,6 +242,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     private void invokeChannelActive() {
+
+        logger.info("pipeline names : {}", this.pipeline.names());
         try {
             ((ChannelInboundHandler) handler()).channelActive(this);
         } catch (Throwable t) {
@@ -844,6 +854,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     private DefaultChannelHandlerContext findContextOutbound() {
+        logger.info("current context : {}", this.name());
         DefaultChannelHandlerContext ctx = this;
         do {
             ctx = ctx.prev;

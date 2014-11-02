@@ -15,6 +15,9 @@
  */
 package io.netty.channel;
 
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+
 /**
  * Abstract base class for {@link ChannelInboundHandler} implementations which provide
  * implementations of all of their methods.
@@ -31,6 +34,9 @@ package io.netty.channel;
  */
 public class ChannelInboundHandlerAdapter extends ChannelHandlerAdapter implements ChannelInboundHandler {
 
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelInboundHandlerAdapter.class);
+
+
     /**
      * Calls {@link ChannelHandlerContext#fireChannelRegistered()} to forward
      * to the next {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
@@ -39,6 +45,7 @@ public class ChannelInboundHandlerAdapter extends ChannelHandlerAdapter implemen
      */
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+        logger.info("channel registered : {}",  ctx.name());
         ctx.fireChannelRegistered();
     }
 
