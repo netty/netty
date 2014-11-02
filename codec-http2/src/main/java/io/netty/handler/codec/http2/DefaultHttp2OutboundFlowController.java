@@ -18,8 +18,7 @@ package io.netty.handler.codec.http2;
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
-import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
-import static io.netty.handler.codec.http2.Http2Exception.format;
+import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.protocolError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
@@ -486,7 +485,8 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                 if (frame == null) {
                     break;
                 }
-                frame.writeError(format(STREAM_CLOSED, "Stream closed before write could take place"));
+                frame.writeError(Http2StreamException.format(stream.id(), INTERNAL_ERROR,
+                        "Stream closed before write could take place"));
             }
         }
 
