@@ -74,7 +74,7 @@ public class RestConfiguration {
     }
 
     /**
-     * @param restPrivateKey the possible private key to use (not passed to the wire but used in signature) 
+     * @param restPrivateKey the possible private key to use (not passed to the wire but used in signature)
      */
     public void setRestPrivateKey(String restPrivateKey) {
         this.restPrivateKey = restPrivateKey;

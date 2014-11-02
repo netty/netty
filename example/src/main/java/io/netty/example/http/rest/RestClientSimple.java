@@ -56,7 +56,7 @@ public class RestClientSimple {
     private final HttpHeaders headers;
     private String baseUri = "/";
 
-    public RestClientSimple(String baseUri, int nbclient, long timeout, ChannelInitializer<SocketChannel> Initializer) {
+    public RestClientSimple(String baseUri, int nbclient, long timeout, ChannelInitializer<SocketChannel> initializer) {
         if (baseUri != null) {
             this.baseUri = baseUri;
         }
@@ -72,7 +72,7 @@ public class RestClientSimple {
         bootstrap.option(ChannelOption.SO_RCVBUF, 1048576);
         bootstrap.option(ChannelOption.SO_SNDBUF, 1048576);
         // Configure the pipeline factory.
-        bootstrap.handler(Initializer);
+        bootstrap.handler(initializer);
         // will ignore real request
         HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, baseUri);
         headers = request.headers();
@@ -271,8 +271,8 @@ public class RestClientSimple {
     public static void main(String[] args) {
         if (args.length < 4) {
             System.err.println("Need more arguments: http://host:port/uri method user sign|nosign [body]\n" +
-            		"http://127.0.0.1:8080/test/subtest?try=two POST usertest nosign\b" +
-            		"http://127.0.0.1:8081/test/subtest?try=two POST usertest sign");
+                    "http://127.0.0.1:8080/test/subtest?try=two POST usertest nosign\b" +
+                    "http://127.0.0.1:8081/test/subtest?try=two POST usertest sign");
             return;
         }
         String uri = args[0];
@@ -337,7 +337,7 @@ public class RestClientSimple {
         if (argument.getPromise().isSuccess()) {
             System.out.println("Response: " + argument.responseBody());
         } else {
-            System.err.println(argument.status().reasonPhrase()+" = "+argument.responseBody());
+            System.err.println(argument.status().reasonPhrase() + " = " + argument.responseBody());
             client.closeAll();
             return;
         }
@@ -345,8 +345,8 @@ public class RestClientSimple {
         // Send global OPTIONS request
         RestArgument argument2 = null;
         if (sign) {
-            argument2 = client.sendQuery(hmac, RestExampleCommon.ALGO, channel, HttpMethod.OPTIONS, host, null, user, null,
-                    null);
+            argument2 = client.sendQuery(hmac, RestExampleCommon.ALGO, channel, HttpMethod.OPTIONS, host, null,
+                    user, null, null);
         } else {
             argument2 = client.sendQuery(channel, HttpMethod.OPTIONS, host, null, user, null, null);
         }
@@ -360,7 +360,7 @@ public class RestClientSimple {
         if (argument2.getPromise().isSuccess()) {
             System.out.println("Response: " + argument2.responseBody());
         } else {
-            System.err.println(argument2.status().reasonPhrase()+" = "+argument2.responseBody());
+            System.err.println(argument2.status().reasonPhrase() + " = " + argument2.responseBody());
         }
         channel.close();
         client.closeAll();

@@ -41,7 +41,7 @@ public abstract class RestMethodHandler {
     final RestConfiguration restConfiguration;
 
     /**
-     * @param path associated base Path, 
+     * @param path associated base Path,
      *          name associated with this Method Handler (to enable some HashMap or Enum classification)
      * @param isBodyDecodable Is this method Handler using a standard decodable Body using HttpPostRequestDecoder
      * @param config the associated configuration
@@ -89,7 +89,6 @@ public abstract class RestMethodHandler {
     }
 
     /**
-     * 
      * @return True if the Method is valid for this Handler
      */
     public boolean isMethodIncluded(HttpMethod method) {
@@ -101,25 +100,29 @@ public abstract class RestMethodHandler {
      *
      * @throws RestForbiddenRequestException
      */
-    public abstract void checkHandlerSessionCorrectness(RestHandler handler, RestArgument arguments) throws RestForbiddenRequestException;
+    public abstract void checkHandlerSessionCorrectness(RestHandler handler, RestArgument arguments)
+            throws RestForbiddenRequestException;
 
     /**
      * Handle a new Http Uploaded Attribute from BODY (only call if isBodyDecodable is True)
      * @throws RestIncorrectRequestException
      */
-    public abstract void setAttribute(RestHandler handler, Attribute data, RestArgument arguments) throws RestIncorrectRequestException;
+    public abstract void setAttribute(RestHandler handler, Attribute data, RestArgument arguments)
+            throws RestIncorrectRequestException;
 
     /**
      * Handle a new Http Uploaded File from BODY (only call if isBodyDecodable is True)
      * @throws RestIncorrectRequestException
      */
-    public abstract void setFileUpload(RestHandler handler, FileUpload data, RestArgument arguments) throws RestIncorrectRequestException;
+    public abstract void setFileUpload(RestHandler handler, FileUpload data, RestArgument arguments)
+            throws RestIncorrectRequestException;
 
     /**
      * Handle data from BODY (supposedly a Json or whatever) (only call if isBodyDecodable is False)
      * @throws RestIncorrectRequestException
      */
-    public abstract void setBody(RestHandler handler, ByteBuf body, RestArgument arguments) throws RestIncorrectRequestException;
+    public abstract void setBody(RestHandler handler, ByteBuf body, RestArgument arguments)
+            throws RestIncorrectRequestException;
 
     /**
      * Called when all Data were passed to the handler (after all setAttribute, setFileUpload or setBody)
@@ -127,13 +130,13 @@ public abstract class RestMethodHandler {
      * @param arguments
      * @throws RestIncorrectRequestException
      * @throws RestInvalidAuthenticationException
-     * @throws RestNotFoundArgumentException 
+     * @throws RestNotFoundArgumentException
      */
-    public abstract void endParsingRequest(RestHandler handler, RestArgument arguments) 
+    public abstract void endParsingRequest(RestHandler handler, RestArgument arguments)
             throws RestIncorrectRequestException, RestInvalidAuthenticationException, RestNotFoundArgumentException;
 
     /**
-     * Called when an exception occurs 
+     * Called when an exception occurs
      * @param handler
      * @param arguments
      * @param exception

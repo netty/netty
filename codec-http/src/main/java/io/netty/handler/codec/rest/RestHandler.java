@@ -64,8 +64,6 @@ public class RestHandler extends SimpleChannelInboundHandler<HttpObject> {
      * Initialize the HttpDataFactory support if needed by any RestMethodHandler (isBodyDecodable == True)
      * @param minSize minimum size for the HttpDataFactory (if used); -1 means no disk usage
      * @param tempPath system temp directory, could be null
-     * @throws IOException 
-     * @throws CryptoException 
      */
     public static void initialize(long minSize, String tempPath) {
         if (factory != null) {
@@ -114,12 +112,12 @@ public class RestHandler extends SimpleChannelInboundHandler<HttpObject> {
     /**
      * Arguments received and to be sent (responseBody())
      */
-    RestArgument arguments = null;
+    RestArgument arguments;
 
     /**
      * Cumulative chunks
      */
-    ByteBuf cumulativeBody = null;
+    ByteBuf cumulativeBody;
 
     public RestHandler(RestConfiguration config) {
         super(HttpObject.class);
@@ -164,7 +162,8 @@ public class RestHandler extends SimpleChannelInboundHandler<HttpObject> {
      * @param channelHandlerContext
      * @throws RestInvalidAuthenticationException
      */
-    protected void checkConnection(ChannelHandlerContext channelHandlerContext) throws RestInvalidAuthenticationException {
+    protected void checkConnection(ChannelHandlerContext channelHandlerContext)
+            throws RestInvalidAuthenticationException {
         // NOOP
     }
 
@@ -191,7 +190,8 @@ public class RestHandler extends SimpleChannelInboundHandler<HttpObject> {
      * @throws RestMethodNotAllowedException
      * @throws RestForbiddenRequestException
      */
-    protected RestMethodHandler getAssociatedHandler() throws RestMethodNotAllowedException, RestForbiddenRequestException {
+    protected RestMethodHandler getAssociatedHandler()
+            throws RestMethodNotAllowedException, RestForbiddenRequestException {
         HttpMethod method = arguments.method();
         String uri = arguments.basePath();
         boolean restFound = false;
@@ -207,7 +207,7 @@ public class RestHandler extends SimpleChannelInboundHandler<HttpObject> {
             // use Options default handler
             restFound = true;
         }
-        if (! restFound){
+        if (! restFound) {
             throw new RestMethodNotAllowedException("No valid method found for that URI: " + uri + " and " + method);
         }
         return handler;

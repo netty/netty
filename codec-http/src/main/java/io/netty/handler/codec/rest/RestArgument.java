@@ -395,6 +395,7 @@ public class RestArgument {
     public static Date iso8601ToDate(String isodate) {
         return DatatypeConverter.parseDateTime(isodate).getTime();
     }
+
     /**
      * The encoder is completed with extra necessary URI part containing ARG_X_AUTH_TIMESTAMP &
      * ARG_X_AUTH_KEY (for client side)
@@ -410,8 +411,8 @@ public class RestArgument {
             String user) throws RestInvalidAuthenticationException {
         return getBaseAuthent(configuration.hmacSha(), configuration.hmacAlgorithm(),
                 encoder, user, configuration.restPrivateKey());
-        
     }
+
     /**
      * The encoder is completed with extra necessary URI part containing ARG_X_AUTH_TIMESTAMP &
      * ARG_X_AUTH_KEY (for client side)
@@ -464,6 +465,7 @@ public class RestArgument {
     public void checkTime(RestConfiguration configuration) throws RestInvalidAuthenticationException {
         checkTime(configuration.restTimeLimit());
     }
+
     /**
      * Check Time only (no signature)
      *

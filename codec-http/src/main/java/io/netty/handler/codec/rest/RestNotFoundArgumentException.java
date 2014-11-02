@@ -25,20 +25,21 @@ public class RestNotFoundArgumentException extends Exception {
     public RestNotFoundArgumentException() {
     }
 
-    public RestNotFoundArgumentException(String arg0) {
-        super(arg0);
+    public RestNotFoundArgumentException(String message) {
+        super(message);
     }
 
-    public RestNotFoundArgumentException(Throwable arg0) {
-        super(arg0);
+    public RestNotFoundArgumentException(Throwable cause) {
+        super(cause);
     }
 
-    public RestNotFoundArgumentException(String arg0, Throwable arg1) {
-        super(arg0, arg1);
+    public RestNotFoundArgumentException(String message, Throwable cause) {
+        super(message, cause);
     }
 
-    public RestNotFoundArgumentException(String arg0, Throwable arg1, boolean arg2, boolean arg3) {
-        super(arg0, arg1, arg2, arg3);
+    public RestNotFoundArgumentException(String message, Throwable cause, boolean enableSuppression,
+            boolean writableStackTrace) {
+        super(message, cause, enableSuppression, writableStackTrace);
     }
 
 }

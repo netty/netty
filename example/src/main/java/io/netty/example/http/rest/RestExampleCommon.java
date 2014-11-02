@@ -33,11 +33,14 @@ import javax.xml.bind.DatatypeConverter;
 /**
  * Global configuration for both Client and Server REST example
  */
-public class RestExampleCommon {
-    public final static String ALGO = "HmacSHA256";
-    public final static String EXAMPLESHAKEY = "DD31A8BB42CF2A2F05EE1F43B8695241";
-    public final static String EXAMPLESECRET = "secret";
-    public final static int KEY_SIZE = 128;
+public final class RestExampleCommon {
+    private RestExampleCommon() {
+    }
+
+    public static final String ALGO = "HmacSHA256";
+    public static final String EXAMPLESHAKEY = "DD31A8BB42CF2A2F05EE1F43B8695241";
+    public static final String EXAMPLESECRET = "secret";
+    public static final int KEY_SIZE = 128;
     // Build configuration with/wo sign
     // Build handlers with actions/methods (simply respond ok if correctly called)
     public static RestConfiguration config;
