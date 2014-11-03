@@ -291,5 +291,16 @@ public final class OpenSslServerContext extends OpenSslContext {
         public int getSessionCacheSize() {
             return (int) SSLContext.getSessionCacheSize(context);
         }
+
+        @Override
+        public void setSessionCacheEnabled(boolean enabled) {
+            long mode = enabled ? SSL.SSL_SESS_CACHE_SERVER : SSL.SSL_SESS_CACHE_OFF;
+            SSLContext.setSessionCacheMode(context, mode);
+        }
+
+        @Override
+        public boolean isSessionCacheEnabled() {
+            return SSLContext.getSessionCacheMode(context) == SSL.SSL_SESS_CACHE_SERVER;
+        }
     }
 }

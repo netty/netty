@@ -214,5 +214,15 @@ public final class OpenSslClientContext extends OpenSslContext {
         public int getSessionCacheSize() {
             return 0;
         }
+
+        @Override
+        public void setSessionCacheEnabled(boolean enabled) {
+            // ignored
+        }
+
+        @Override
+        public boolean isSessionCacheEnabled() {
+            return false;
+        }
     }
 }
