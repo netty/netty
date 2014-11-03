@@ -105,6 +105,12 @@ public class EmptyBinaryHeaders extends EmptyHeaders<AsciiString> implements Bin
     }
 
     @Override
+    public BinaryHeaders addTimeMillis(AsciiString name, long value) {
+        super.addTimeMillis(name, value);
+        return this;
+    }
+
+    @Override
     public BinaryHeaders add(BinaryHeaders headers) {
         super.add(headers);
         return this;
@@ -191,6 +197,12 @@ public class EmptyBinaryHeaders extends EmptyHeaders<AsciiString> implements Bin
     @Override
     public BinaryHeaders setDouble(AsciiString name, double value) {
         super.setDouble(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders setTimeMillis(AsciiString name, long value) {
+        super.setTimeMillis(name, value);
         return this;
     }
 

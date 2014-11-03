@@ -106,6 +106,12 @@ public class DefaultStompHeaders extends DefaultTextHeaders implements StompHead
     }
 
     @Override
+    public StompHeaders addTimeMillis(CharSequence name, long value) {
+        super.addTimeMillis(name, value);
+        return this;
+    }
+
+    @Override
     public StompHeaders add(TextHeaders headers) {
         super.add(headers);
         return this;
@@ -192,6 +198,12 @@ public class DefaultStompHeaders extends DefaultTextHeaders implements StompHead
     @Override
     public StompHeaders setDouble(CharSequence name, double value) {
         super.setDouble(name, value);
+        return this;
+    }
+
+    @Override
+    public StompHeaders setTimeMillis(CharSequence name, long value) {
+        super.setTimeMillis(name, value);
         return this;
     }
 
