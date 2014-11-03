@@ -99,6 +99,9 @@ public interface SpdyHeaders extends TextHeaders {
     SpdyHeaders addDouble(CharSequence name, double value);
 
     @Override
+    SpdyHeaders addTimeMillis(CharSequence name, long value);
+
+    @Override
     SpdyHeaders add(TextHeaders headers);
 
     @Override
@@ -133,6 +136,9 @@ public interface SpdyHeaders extends TextHeaders {
 
     @Override
     SpdyHeaders setDouble(CharSequence name, double value);
+
+    @Override
+    SpdyHeaders setTimeMillis(CharSequence name, long value);
 
     @Override
     SpdyHeaders setObject(CharSequence name, Object value);
