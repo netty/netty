@@ -60,6 +60,17 @@ public abstract class OpenSslSessionContext implements SSLSessionContext {
     }
 
     /**
+     * If {@code true} caching of SSL sessions is enable, if {@code false} disabled.
+     * Will return the previous setting.
+     */
+    public abstract boolean setSessionCacheEnabled(boolean enabled);
+
+    /**
+     * Return {@code true} if caching of SSL sessions is enable, {@code false} otherwise.
+     */
+    public abstract boolean isSessionCacheEnabled();
+
+    /**
      * Returns the stats of this context.
      */
     public OpenSslSessionStats stats() {
