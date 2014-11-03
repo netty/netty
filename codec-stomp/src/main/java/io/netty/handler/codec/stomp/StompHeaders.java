@@ -87,6 +87,9 @@ public interface StompHeaders extends TextHeaders {
     StompHeaders addDouble(CharSequence name, double value);
 
     @Override
+    StompHeaders addTimeMillis(CharSequence name, long value);
+
+    @Override
     StompHeaders add(TextHeaders headers);
 
     @Override
@@ -130,6 +133,9 @@ public interface StompHeaders extends TextHeaders {
 
     @Override
     StompHeaders setDouble(CharSequence name, double value);
+
+    @Override
+    StompHeaders setTimeMillis(CharSequence name, long value);
 
     @Override
     StompHeaders set(TextHeaders headers);

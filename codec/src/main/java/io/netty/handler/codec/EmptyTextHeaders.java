@@ -115,6 +115,12 @@ public class EmptyTextHeaders extends EmptyConvertibleHeaders<CharSequence, Stri
     }
 
     @Override
+    public TextHeaders addTimeMillis(CharSequence name, long value) {
+        super.addTimeMillis(name, value);
+        return this;
+    }
+
+    @Override
     public TextHeaders add(TextHeaders headers) {
         super.add(headers);
         return this;
@@ -201,6 +207,12 @@ public class EmptyTextHeaders extends EmptyConvertibleHeaders<CharSequence, Stri
     @Override
     public TextHeaders setDouble(CharSequence name, double value) {
         super.setDouble(name, value);
+        return this;
+    }
+
+    @Override
+    public TextHeaders setTimeMillis(CharSequence name, long value) {
+        super.setTimeMillis(name, value);
         return this;
     }
 

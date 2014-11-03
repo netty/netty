@@ -120,6 +120,11 @@ public class DefaultTextHeaders extends DefaultConvertibleHeaders<CharSequence, 
         }
 
         @Override
+        public AsciiString convertTimeMillis(long value) {
+            return new AsciiString(String.valueOf(value));
+        }
+
+        @Override
         public long convertToTimeMillis(CharSequence value) {
             try {
                 return HeaderDateFormat.get().parse(value.toString());
@@ -269,6 +274,12 @@ public class DefaultTextHeaders extends DefaultConvertibleHeaders<CharSequence, 
     }
 
     @Override
+    public TextHeaders addTimeMillis(CharSequence name, long value) {
+        super.addTimeMillis(name, value);
+        return this;
+    }
+
+    @Override
     public TextHeaders add(TextHeaders headers) {
         super.add(headers);
         return this;
@@ -355,6 +366,12 @@ public class DefaultTextHeaders extends DefaultConvertibleHeaders<CharSequence, 
     @Override
     public TextHeaders setDouble(CharSequence name, double value) {
         super.setDouble(name, value);
+        return this;
+    }
+
+    @Override
+    public TextHeaders setTimeMillis(CharSequence name, long value) {
+        super.setTimeMillis(name, value);
         return this;
     }
 

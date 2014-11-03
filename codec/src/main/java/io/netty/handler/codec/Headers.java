@@ -78,6 +78,8 @@ public interface Headers<T> extends Iterable<Map.Entry<T, T>> {
 
         long convertToLong(T value);
 
+        T convertTimeMillis(long value);
+
         long convertToTimeMillis(T value);
 
         T convertFloat(float value);
@@ -631,6 +633,15 @@ public interface Headers<T> extends Iterable<Map.Entry<T, T>> {
      *
      * @param name the header name
      * @param value the header value
+     * @return {@code true} if it contains it {@code false} otherwise
+     */
+    boolean containsTimeMillis(T name, long value);
+
+    /**
+     * Returns {@code true} if a header with the name and value exists.
+     *
+     * @param name the header name
+     * @param value the header value
      * @param comparator The comparator to use when comparing {@code name} and {@code value} to entries in this map
      * @return {@code true} if it contains it {@code false} otherwise
      */
@@ -858,6 +869,14 @@ public interface Headers<T> extends Iterable<Map.Entry<T, T>> {
     Headers<T> addDouble(T name, double value);
 
     /**
+     * Add the {@code name} to {@code value}.
+     * @param name The name to modify
+     * @param value The value
+     * @return {@code this}
+     */
+    Headers<T> addTimeMillis(T name, long value);
+
+    /**
      * Adds all header entries of the specified {@code headers}.
      *
      * @return {@code this}
@@ -1033,6 +1052,14 @@ public interface Headers<T> extends Iterable<Map.Entry<T, T>> {
      * @return {@code this}
      */
     Headers<T> setDouble(T name, double value);
+
+    /**
+     * Set the {@code name} to {@code value}. This will remove all previous values associated with {@code name}.
+     * @param name The name to modify
+     * @param value The value
+     * @return {@code this}
+     */
+    Headers<T> setTimeMillis(T name, long value);
 
     /**
      * Cleans the current header entries and copies all header entries of the specified {@code headers}.

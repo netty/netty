@@ -293,6 +293,11 @@ public class EmptyHeaders<T> implements Headers<T> {
     }
 
     @Override
+    public boolean containsTimeMillis(T name, long value) {
+        return false;
+    }
+
+    @Override
     public boolean contains(T name, T value, Comparator<? super T> comparator) {
         return false;
     }
@@ -405,6 +410,11 @@ public class EmptyHeaders<T> implements Headers<T> {
     }
 
     @Override
+    public Headers<T> addTimeMillis(T name, long value) {
+        throw new UnsupportedOperationException("read only");
+    }
+
+    @Override
     public Headers<T> add(Headers<T> headers) {
         throw new UnsupportedOperationException("read only");
     }
@@ -476,6 +486,11 @@ public class EmptyHeaders<T> implements Headers<T> {
 
     @Override
     public Headers<T> setDouble(T name, double value) {
+        throw new UnsupportedOperationException("read only");
+    }
+
+    @Override
+    public Headers<T> setTimeMillis(T name, long value) {
         throw new UnsupportedOperationException("read only");
     }
 

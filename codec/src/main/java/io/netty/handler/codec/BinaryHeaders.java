@@ -76,6 +76,9 @@ public interface BinaryHeaders extends Headers<AsciiString> {
     @Override
     BinaryHeaders addDouble(AsciiString name, double value);
 
+    @Override
+    BinaryHeaders addTimeMillis(AsciiString name, long value);
+
     /**
      * See {@link Headers#add(Headers)}
      */
@@ -122,6 +125,9 @@ public interface BinaryHeaders extends Headers<AsciiString> {
 
     @Override
     BinaryHeaders setDouble(AsciiString name, double value);
+
+    @Override
+    BinaryHeaders setTimeMillis(AsciiString name, long value);
 
     /**
      * See {@link Headers#set(Headers)}
