@@ -59,6 +59,10 @@ public abstract class OpenSslSessionContext implements SSLSessionContext {
         SSLContext.setSessionTicketKeys(context, keys);
     }
 
+    public abstract boolean setSessionCacheEnabled(boolean enabled);
+
+    public abstract boolean isSessionCacheEnabled();
+
     /**
      * Returns the stats of this context.
      */
