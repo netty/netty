@@ -95,6 +95,9 @@ public interface TextHeaders extends ConvertibleHeaders<CharSequence, String> {
     @Override
     TextHeaders addDouble(CharSequence name, double value);
 
+    @Override
+    TextHeaders addTimeMillis(CharSequence name, long value);
+
     /**
      * See {@link Headers#add(Headers)}
      */
@@ -141,6 +144,9 @@ public interface TextHeaders extends ConvertibleHeaders<CharSequence, String> {
 
     @Override
     TextHeaders setDouble(CharSequence name, double value);
+
+    @Override
+    TextHeaders setTimeMillis(CharSequence name, long value);
 
     /**
      * See {@link Headers#set(Headers)}

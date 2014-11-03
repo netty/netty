@@ -379,6 +379,11 @@ public class DefaultHeaders<T> implements Headers<T> {
     }
 
     @Override
+    public boolean containsTimeMillis(T name, long value) {
+        return contains(name, valueConverter.convertTimeMillis(checkNotNull(value, "value")));
+    }
+
+    @Override
     public boolean contains(T name, T value, Comparator<? super T> comparator) {
         return contains(name, value, comparator, comparator);
     }
@@ -551,6 +556,11 @@ public class DefaultHeaders<T> implements Headers<T> {
     }
 
     @Override
+    public Headers<T> addTimeMillis(T name, long value) {
+        return add(name, valueConverter.convertTimeMillis(value));
+    }
+
+    @Override
     public Headers<T> addChar(T name, char value) {
         return add(name, valueConverter.convertChar(value));
     }
@@ -688,6 +698,11 @@ public class DefaultHeaders<T> implements Headers<T> {
     @Override
     public Headers<T> setDouble(T name, double value) {
         return set(name, valueConverter.convertDouble(value));
+    }
+
+    @Override
+    public Headers<T> setTimeMillis(T name, long value) {
+        return set(name, valueConverter.convertTimeMillis(value));
     }
 
     @Override

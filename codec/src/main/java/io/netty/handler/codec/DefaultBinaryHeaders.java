@@ -82,6 +82,11 @@ public class DefaultBinaryHeaders extends DefaultHeaders<AsciiString> implements
         }
 
         @Override
+        public AsciiString convertTimeMillis(long value) {
+            return new AsciiString(String.valueOf(value));
+        }
+
+        @Override
         public long convertToTimeMillis(AsciiString value) {
             try {
                 return HeaderDateFormat.get().parse(value.toString());
@@ -240,6 +245,12 @@ public class DefaultBinaryHeaders extends DefaultHeaders<AsciiString> implements
     }
 
     @Override
+    public BinaryHeaders addTimeMillis(AsciiString name, long value) {
+        super.addTimeMillis(name, value);
+        return this;
+    }
+
+    @Override
     public BinaryHeaders add(BinaryHeaders headers) {
         super.add(headers);
         return this;
@@ -326,6 +337,12 @@ public class DefaultBinaryHeaders extends DefaultHeaders<AsciiString> implements
     @Override
     public BinaryHeaders setDouble(AsciiString name, double value) {
         super.setDouble(name, value);
+        return this;
+    }
+
+    @Override
+    public BinaryHeaders setTimeMillis(AsciiString name, long value) {
+        super.setTimeMillis(name, value);
         return this;
     }
 
