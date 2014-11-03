@@ -28,7 +28,7 @@
   <packaging>bundle</packaging>
   <version>3.9.6.Final-SNAPSHOT</version>
 
-  <name>The Netty Project</name>
+  <name>Netty</name>
   <url>http://netty.io/</url>
   <description>
     The Netty project is an effort to provide an asynchronous event-driven
