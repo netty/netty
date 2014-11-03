@@ -55,7 +55,6 @@ public abstract class OpenSslContext extends SslContext {
     /** The OpenSSL SSL_CTX object */
     protected final long ctx;
     private final int mode;
-    private final OpenSslSessionStats stats;
 
     static {
         List<String> ciphers = new ArrayList<String>();
@@ -191,8 +190,6 @@ public abstract class OpenSslContext extends SslContext {
                 destroyPools();
             }
         }
-
-        stats = new OpenSslSessionStats(ctx);
     }
 
     @Override
@@ -226,6 +223,19 @@ public abstract class OpenSslContext extends SslContext {
     }
 
     /**
+     * Returns a new server-side {@link javax.net.ssl.SSLEngine} with the current configuration.
+     */
+    @Override
+    public final SSLEngine newEngine(ByteBufAllocator alloc) {
+        List<String> protos = applicationProtocolNegotiator().protocols();
+        if (protos.isEmpty()) {
+            return new OpenSslEngine(ctx, alloc, null, isClient(), sessionContext());
+        } else {
+            return new OpenSslEngine(ctx, alloc, protos.get(protos.size() - 1), isClient(), sessionContext());
+        }
+    }
+
+    /**
      * Returns the {@code SSL_CTX} object of this context.
      */
     public final long context() {
@@ -234,9 +244,11 @@ public abstract class OpenSslContext extends SslContext {
 
     /**
      * Returns the stats of this context.
+     * @deprecated use {@link #sessionContext#stats()}
      */
+    @Deprecated
     public final OpenSslSessionStats stats() {
-        return stats;
+        return sessionContext().stats();
     }
 
     @Override
@@ -254,13 +266,15 @@ public abstract class OpenSslContext extends SslContext {
 
     /**
      * Sets the SSL session ticket keys of this context.
+     * @deprecated use {@link OpenSslSessionContext#setTicketKeys(byte[])}
      */
+    @Deprecated
     public final void setTicketKeys(byte[] keys) {
-        if (keys == null) {
-            throw new NullPointerException("keys");
-        }
-        SSLContext.setSessionTicketKeys(ctx, keys);
+        sessionContext().setTicketKeys(keys);
     }
+
+    @Override
+    public abstract OpenSslSessionContext sessionContext();
 
     protected final void destroyPools() {
         // Guard against multiple destroyPools() calls triggered by construction exception and finalize() later
