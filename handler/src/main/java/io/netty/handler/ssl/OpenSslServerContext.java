@@ -16,7 +16,6 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -24,7 +23,6 @@ import org.apache.tomcat.jni.CertificateVerifier;
 import org.apache.tomcat.jni.SSL;
 import org.apache.tomcat.jni.SSLContext;
 
-import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
@@ -47,6 +45,8 @@ import static io.netty.util.internal.ObjectUtil.*;
  */
 public final class OpenSslServerContext extends OpenSslContext {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OpenSslServerContext.class);
+
+    private final OpenSslSessionContext sessionContext;
 
     /**
      * Creates a new instance.
@@ -247,6 +247,7 @@ public final class OpenSslServerContext extends OpenSslContext {
                     throw new SSLException("unable to setup trustmanager", e);
                 }
             }
+            sessionContext = new OpenSslServerSessionContext(ctx);
             success = true;
         } finally {
             if (!success) {
@@ -256,12 +257,39 @@ public final class OpenSslServerContext extends OpenSslContext {
     }
 
     @Override
-    public SSLEngine newEngine(ByteBufAllocator alloc) {
-        List<String> protos = applicationProtocolNegotiator().protocols();
-        if (protos.isEmpty()) {
-            return new OpenSslEngine(ctx, alloc, null, isClient());
-        } else {
-            return new OpenSslEngine(ctx, alloc, protos.get(protos.size() - 1), isClient());
+    public OpenSslSessionContext sessionContext() {
+        return sessionContext;
+    }
+
+    private static final class OpenSslServerSessionContext extends OpenSslSessionContext {
+        private OpenSslServerSessionContext(long context) {
+            super(context);
+        }
+
+        @Override
+        public void setSessionTimeout(int seconds) {
+            if (seconds < 0) {
+                throw new IllegalArgumentException();
+            }
+            SSLContext.setSessionCacheTimeout(context, seconds);
+        }
+
+        @Override
+        public int getSessionTimeout() {
+            return (int) SSLContext.getSessionCacheTimeout(context);
+        }
+
+        @Override
+        public void setSessionCacheSize(int size) {
+            if (size < 0) {
+                throw new IllegalArgumentException();
+            }
+            SSLContext.setSessionCacheSize(context, size);
+        }
+
+        @Override
+        public int getSessionCacheSize() {
+            return (int) SSLContext.getSessionCacheSize(context);
         }
     }
 }

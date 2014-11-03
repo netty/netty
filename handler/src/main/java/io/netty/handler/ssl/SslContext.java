@@ -31,6 +31,7 @@ import javax.crypto.spec.PBEKeySpec;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLSessionContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.File;
@@ -540,6 +541,11 @@ public abstract class SslContext {
      * @return a new {@link SSLEngine}
      */
     public abstract SSLEngine newEngine(ByteBufAllocator alloc, String peerHost, int peerPort);
+
+    /**
+     * Returns the {@link SSLSessionContext} object held by this context.
+     */
+    public abstract SSLSessionContext sessionContext();
 
     /**
      * Creates a new {@link SslHandler}.

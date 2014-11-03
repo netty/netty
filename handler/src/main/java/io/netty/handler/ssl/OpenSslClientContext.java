@@ -16,7 +16,6 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -24,7 +23,6 @@ import org.apache.tomcat.jni.CertificateVerifier;
 import org.apache.tomcat.jni.SSL;
 import org.apache.tomcat.jni.SSLContext;
 
-import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
@@ -37,13 +35,13 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.List;
 
 /**
  * A client-side {@link SslContext} which uses OpenSSL's SSL/TLS implementation.
  */
 public final class OpenSslClientContext extends OpenSslContext {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OpenSslClientContext.class);
+    private final OpenSslSessionContext sessionContext;
 
     /**
      * Creates a new instance.
@@ -151,6 +149,7 @@ public final class OpenSslClientContext extends OpenSslContext {
                     throw new SSLException("unable to setup trustmanager", e);
                 }
             }
+            sessionContext = new OpenSslClientSessionContext(ctx);
             success = true;
         } finally {
             if (!success) {
@@ -182,12 +181,38 @@ public final class OpenSslClientContext extends OpenSslContext {
     }
 
     @Override
-    public SSLEngine newEngine(ByteBufAllocator alloc) {
-        List<String> protos = applicationProtocolNegotiator().protocols();
-        if (protos.isEmpty()) {
-            return new OpenSslEngine(ctx, alloc, null, isClient());
-        } else {
-            return new OpenSslEngine(ctx, alloc, protos.get(protos.size() - 1), isClient());
+    public OpenSslSessionContext sessionContext() {
+        return sessionContext;
+    }
+
+    // No cache is currently supported for client side mode.
+    private static final class OpenSslClientSessionContext extends OpenSslSessionContext {
+        private OpenSslClientSessionContext(long context) {
+            super(context);
+        }
+
+        @Override
+        public void setSessionTimeout(int seconds) {
+            if (seconds < 0) {
+                throw new IllegalArgumentException();
+            }
+        }
+
+        @Override
+        public int getSessionTimeout() {
+            return 0;
+        }
+
+        @Override
+        public void setSessionCacheSize(int size)  {
+            if (size < 0) {
+                throw new IllegalArgumentException();
+            }
+        }
+
+        @Override
+        public int getSessionCacheSize() {
+            return 0;
         }
     }
 }
