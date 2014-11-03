@@ -129,6 +129,7 @@ public final class OpenSslEngine extends SSLEngine {
     private final boolean clientMode;
     private final ByteBufAllocator alloc;
     private final String fallbackApplicationProtocol;
+    private final OpenSslSessionContext sessionContext;
 
     @SuppressWarnings("unused")
     private volatile SSLSession session;
@@ -141,7 +142,7 @@ public final class OpenSslEngine extends SSLEngine {
      */
     @Deprecated
     public OpenSslEngine(long sslCtx, ByteBufAllocator alloc, String fallbackApplicationProtocol) {
-        this(sslCtx, alloc, fallbackApplicationProtocol, false);
+        this(sslCtx, alloc, fallbackApplicationProtocol, false, null);
     }
 
     /**
@@ -150,9 +151,10 @@ public final class OpenSslEngine extends SSLEngine {
      * @param sslCtx an OpenSSL {@code SSL_CTX} object
      * @param alloc the {@link ByteBufAllocator} that will be used by this engine
      * @param clientMode {@code true} if this is used for clients, {@code false} otherwise
+     * @param sessionContext the {@link OpenSslSessionContext} this {@link SSLEngine} belongs to.
      */
     OpenSslEngine(long sslCtx, ByteBufAllocator alloc, String fallbackApplicationProtocol,
-                  boolean clientMode) {
+                  boolean clientMode, OpenSslSessionContext sessionContext) {
         OpenSsl.ensureAvailability();
         if (sslCtx == 0) {
             throw new NullPointerException("sslContext");
@@ -166,6 +168,7 @@ public final class OpenSslEngine extends SSLEngine {
         networkBIO = SSL.makeNetworkBIO(ssl);
         this.fallbackApplicationProtocol = fallbackApplicationProtocol;
         this.clientMode = clientMode;
+        this.sessionContext = sessionContext;
     }
 
     /**
@@ -717,7 +720,7 @@ public final class OpenSslEngine extends SSLEngine {
 
                 @Override
                 public SSLSessionContext getSessionContext() {
-                    return null;
+                    return sessionContext;
                 }
 
                 @Override
