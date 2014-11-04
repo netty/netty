@@ -87,7 +87,7 @@ public class HttpResponseDecoder extends HttpObjectDecoder {
 
     /**
      * Creates a new instance with the default
-     * {@code maxInitialLineLength (4096}}, {@code maxHeaderSize (8192)}, and
+     * {@code maxInitialLineLength (4096)}, {@code maxHeaderSize (8192)}, and
      * {@code maxChunkSize (8192)}.
      */
     public HttpResponseDecoder() {
