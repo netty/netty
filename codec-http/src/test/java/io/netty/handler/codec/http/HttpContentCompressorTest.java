@@ -230,12 +230,7 @@ public class HttpContentCompressorTest {
 
         ch.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT);
         HttpContent chunk = (HttpContent) ch.readOutbound();
-        assertThat(ByteBufUtil.hexDump(chunk.content()), is("1f8b0800000000000000"));
-        chunk.release();
-
-        chunk = (HttpContent) ch.readOutbound();
-        assertThat(ByteBufUtil.hexDump(chunk.content()), is("03000000000000000000"));
-        assertThat(chunk, is(instanceOf(HttpContent.class)));
+        assertThat(ByteBufUtil.hexDump(chunk.content()), is("1f8b080000000000000003000000000000000000"));
         chunk.release();
 
         chunk = (HttpContent) ch.readOutbound();
