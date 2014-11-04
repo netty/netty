@@ -177,7 +177,11 @@ public class JdkZlibEncoder extends OneToOneStrictEncoder implements LifeCycleAw
         }
 
         ChannelBuffer uncompressed = (ChannelBuffer) msg;
-        byte[] in = new byte[uncompressed.readableBytes()];
+        final int readableBytes = uncompressed.readableBytes();
+        if (readableBytes == 0) {
+            return msg;
+        }
+        byte[] in = new byte[readableBytes];
         uncompressed.readBytes(in);
 
         int sizeEstimate = (int) Math.ceil(in.length * 1.001) + 12;

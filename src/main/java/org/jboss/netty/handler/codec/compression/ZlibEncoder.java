@@ -266,7 +266,11 @@ public class ZlibEncoder extends OneToOneStrictEncoder implements LifeCycleAware
             try {
                 // Configure input.
                 ChannelBuffer uncompressed = (ChannelBuffer) msg;
-                byte[] in = new byte[uncompressed.readableBytes()];
+                final int readableBytes = uncompressed.readableBytes();
+                if (readableBytes == 0) {
+                    return msg;
+                }
+                byte[] in = new byte[readableBytes];
                 uncompressed.readBytes(in);
                 z.next_in = in;
                 z.next_in_index = 0;
