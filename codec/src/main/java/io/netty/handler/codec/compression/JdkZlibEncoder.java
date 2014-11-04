@@ -195,6 +195,10 @@ public class JdkZlibEncoder extends ZlibEncoder {
         }
 
         int len = uncompressed.readableBytes();
+        if (len == 0) {
+            return;
+        }
+
         int offset;
         byte[] inAry;
         if (uncompressed.hasArray()) {
