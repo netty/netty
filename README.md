@@ -1,4 +1,5 @@
 # Netty Project
+[![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/netty/netty?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 Netty is an asynchronous event-driven network application framework for rapid development of maintainable high performance protocol servers & clients.
 
