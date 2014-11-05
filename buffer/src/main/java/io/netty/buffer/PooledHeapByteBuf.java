@@ -277,6 +277,7 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
 
     @Override
     public byte[] array() {
+        ensureAccessible();
         return memory;
     }
 

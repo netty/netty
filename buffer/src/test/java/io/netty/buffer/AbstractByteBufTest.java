@@ -2430,6 +2430,32 @@ public abstract class AbstractByteBufTest {
         releasedBuffer().nioBuffers(0, 1);
     }
 
+    @Test
+    public void testArrayAfterRelease() {
+        ByteBuf buf = releasedBuffer();
+        if (buf.hasArray()) {
+            try {
+                buf.array();
+                fail();
+            } catch (IllegalReferenceCountException e) {
+                // expected
+            }
+        }
+    }
+
+    @Test
+    public void testMemoryAddressAfterRelease() {
+        ByteBuf buf = releasedBuffer();
+        if (buf.hasMemoryAddress()) {
+            try {
+                buf.memoryAddress();
+                fail();
+            } catch (IllegalReferenceCountException e) {
+                // expected
+            }
+        }
+    }
+
     // Test-case trying to reproduce:
     // https://github.com/netty/netty/issues/2843
     @Test

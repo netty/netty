@@ -375,6 +375,7 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     @Override
     public long memoryAddress() {
+        ensureAccessible();
         return memoryAddress;
     }
 

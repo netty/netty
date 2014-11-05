@@ -211,6 +211,7 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
 
     @Override
     public long memoryAddress() {
+        ensureAccessible();
         return memoryAddress;
     }
 
