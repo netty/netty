@@ -221,6 +221,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         private FlowState inboundFlow;
         private FlowState outboundFlow;
         private EmbeddedChannel decompressor;
+        private EmbeddedChannel compressor;
         private Object data;
 
         DefaultStream(int id) {
@@ -308,6 +309,19 @@ public class DefaultHttp2Connection implements Http2Connection {
         @Override
         public EmbeddedChannel decompressor() {
             return decompressor;
+        }
+
+        @Override
+        public void compressor(EmbeddedChannel compressor) {
+            if (this.compressor != null && compressor != null) {
+                throw new IllegalStateException("compressor can not be reassigned");
+            }
+            this.compressor = compressor;
+        }
+
+        @Override
+        public EmbeddedChannel compressor() {
+            return compressor;
         }
 
         @Override

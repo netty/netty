@@ -77,6 +77,10 @@ public final class HttpHeaderValues {
      */
     public static final AsciiString DEFLATE = new AsciiString("deflate");
     /**
+     * {@code "x-deflate"}
+     */
+    public static final AsciiString X_DEFLATE = new AsciiString("x-deflate");
+    /**
      * {@code "file"}
      * See {@link HttpHeaderNames#CONTENT_DISPOSITION}
      */
@@ -95,6 +99,10 @@ public final class HttpHeaderValues {
      * {@code "gzip"}
      */
     public static final AsciiString GZIP = new AsciiString("gzip");
+    /**
+     * {@code "x-gzip"}
+     */
+    public static final AsciiString X_GZIP = new AsciiString("x-gzip");
     /**
      * {@code "identity"}
      */

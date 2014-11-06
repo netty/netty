@@ -154,6 +154,16 @@ public interface Http2Stream {
     EmbeddedChannel decompressor();
 
     /**
+     * Associate an object responsible for compressing data frames for this stream
+     */
+    void compressor(EmbeddedChannel decompressor);
+
+    /**
+     * Get the object capable of compressing data frames for this stream
+     */
+    EmbeddedChannel compressor();
+
+    /**
      * Gets the in-bound flow control state for this stream.
      */
     FlowState inboundFlow();
