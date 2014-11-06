@@ -35,6 +35,7 @@ import io.netty.handler.codec.compression.ZlibWrapper;
 
 /**
  * A HTTP2 encoder that will compress data frames according to the {@code content-encoding} header for each stream.
+ * The compression provided by this class will be applied to the data for the entire stream.
  */
 public class CompressorHttp2ConnectionEncoder extends DefaultHttp2ConnectionEncoder {
     private static final Http2ConnectionAdapter CLEAN_UP_LISTENER = new Http2ConnectionAdapter() {
