@@ -73,6 +73,11 @@ public class CompressorHttp2ConnectionEncoder extends DefaultHttp2ConnectionEnco
             this.memLevel = memLevel;
             return this;
         }
+
+        @Override
+        public CompressorHttp2ConnectionEncoder build() {
+            return new CompressorHttp2ConnectionEncoder(this);
+        }
     }
 
     protected CompressorHttp2ConnectionEncoder(Builder builder) {
@@ -99,6 +104,7 @@ public class CompressorHttp2ConnectionEncoder extends DefaultHttp2ConnectionEnco
         final Http2Stream stream = connection().stream(streamId);
         final EmbeddedChannel compressor = stream == null ? null : stream.compressor();
         if (compressor == null) {
+            // The compressor may be null if no compatible encoding type was found in this stream's headers
             return super.writeData(ctx, streamId, data, padding, endOfStream, promise);
         }
 
@@ -113,22 +119,23 @@ public class CompressorHttp2ConnectionEncoder extends DefaultHttp2ConnectionEnco
                 // END_STREAM is not set and the assumption is data is still forthcoming.
                 promise.setSuccess();
                 return promise;
-            } else {
-                ChannelPromiseAggregator aggregator = new ChannelPromiseAggregator(promise);
-                for (;;) {
-                    final ByteBuf nextBuf = nextReadableBuf(compressor);
-                    ChannelPromise newPromise = ctx.newPromise();
-                    aggregator.add(newPromise);
-                    if (nextBuf == null) {
-                        super.writeData(ctx, streamId, buf, padding, endOfStream, newPromise);
-                        break;
-                    }
-
-                    super.writeData(ctx, streamId, data, padding, false, newPromise);
-                    buf = nextBuf;
-                }
-                return promise;
             }
+
+            ChannelPromiseAggregator aggregator = new ChannelPromiseAggregator(promise);
+            for (;;) {
+                final ByteBuf nextBuf = nextReadableBuf(compressor);
+                final boolean endOfStreamForBuf = nextBuf == null ? endOfStream : false;
+                ChannelPromise newPromise = ctx.newPromise();
+                aggregator.add(newPromise);
+
+                super.writeData(ctx, streamId, buf, padding, endOfStreamForBuf, newPromise);
+                if (nextBuf == null) {
+                    break;
+                }
+
+                buf = nextBuf;
+            }
+            return promise;
         } finally {
             if (endOfStream) {
                 cleanup(stream, compressor);
@@ -163,12 +170,10 @@ public class CompressorHttp2ConnectionEncoder extends DefaultHttp2ConnectionEnco
      */
     protected EmbeddedChannel newContentCompressor(AsciiString contentEncoding) throws Http2Exception {
         if (GZIP.equalsIgnoreCase(contentEncoding) || X_GZIP.equalsIgnoreCase(contentEncoding)) {
-            return new EmbeddedChannel(ZlibCodecFactory.newZlibEncoder(ZlibWrapper.GZIP, compressionLevel, windowBits,
-                    memLevel));
+            return newCompressionChannel(ZlibWrapper.GZIP);
         }
         if (DEFLATE.equalsIgnoreCase(contentEncoding) || X_DEFLATE.equalsIgnoreCase(contentEncoding)) {
-            return new EmbeddedChannel(ZlibCodecFactory.newZlibEncoder(ZlibWrapper.ZLIB, compressionLevel, windowBits,
-                    memLevel));
+            return newCompressionChannel(ZlibWrapper.ZLIB);
         }
         // 'identity' or unsupported
         return null;
@@ -184,6 +189,15 @@ public class CompressorHttp2ConnectionEncoder extends DefaultHttp2ConnectionEnco
      */
     protected AsciiString getTargetContentEncoding(AsciiString contentEncoding) throws Http2Exception {
         return contentEncoding;
+    }
+
+    /**
+     * Generate a new instance of an {@link EmbeddedChannel} capable of compressing data
+     * @param wrapper Defines what type of encoder should be used
+     */
+    private EmbeddedChannel newCompressionChannel(ZlibWrapper wrapper) {
+        return new EmbeddedChannel(ZlibCodecFactory.newZlibEncoder(wrapper, compressionLevel, windowBits,
+                memLevel));
     }
 
     /**

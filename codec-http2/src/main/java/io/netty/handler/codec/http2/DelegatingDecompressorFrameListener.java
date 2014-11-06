@@ -67,6 +67,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         final Http2Stream stream = connection.stream(streamId);
         final EmbeddedChannel decompressor = stream == null ? null : stream.decompressor();
         if (decompressor == null) {
+            // The decompressor may be null if no compatible encoding type was found in this stream's headers
             listener.onDataRead(ctx, streamId, data, padding, endOfStream);
             return;
         }
@@ -85,12 +86,13 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
             } else {
                 for (;;) {
                     final ByteBuf nextBuf = nextReadableBuf(decompressor);
+                    final boolean endOfStreamForBuf = nextBuf == null ? endOfStream : false;
+
+                    listener.onDataRead(ctx, streamId, buf, padding, endOfStreamForBuf);
                     if (nextBuf == null) {
-                        listener.onDataRead(ctx, streamId, buf, padding, endOfStream);
                         break;
                     }
 
-                    listener.onDataRead(ctx, streamId, buf, padding, false);
                     buf = nextBuf;
                 }
             }
@@ -191,6 +193,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         } else if (endOfStream) {
             cleanup(stream, decompressor);
         }
+
         if (decompressor != null) {
             // The content length will be for the compressed data. Since we will decompress the data
             // this content-length will not be correct. Instead of queuing messages or delaying sending
