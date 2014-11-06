@@ -40,7 +40,7 @@ public class Http2SettingsHandler extends SimpleChannelInboundHandler<Http2Setti
      * handshake to complete.
      *
      * @param timeout Time to wait
-     * @param Units for {@code timeout}
+     * @param unit {@link TimeUnit} for {@code timeout}
      * @throws Exception if timeout or other failure occurs
      */
     public void awaitSettings(long timeout, TimeUnit unit) throws Exception {
