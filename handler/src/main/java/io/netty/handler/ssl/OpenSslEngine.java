@@ -1004,9 +1004,13 @@ public final class OpenSslEngine extends SSLEngine {
                 handshakeFinished = true;
                 String c = SSL.getCipherForSSL(ssl);
                 if (c != null) {
-                    // OpenSSL returns the ciphers seperated by '-' but the JDK SSLEngine does by '_', so replace '-'
-                    // with '_' to match the behaviour.
-                    cipher = CIPHER_REPLACE_PATTERN.matcher(c).replaceAll("_");
+                    // Map returned cipher
+                    String mappedCipher = OpenSsl.jdkSslCipher(c);
+                    if (mappedCipher == null) {
+                        // No mapping found, replace - with _
+                        mappedCipher = CIPHER_REPLACE_PATTERN.matcher(c).replaceAll("-");
+                    }
+                    cipher = mappedCipher;
                 }
                 String applicationProtocol = SSL.getNextProtoNegotiated(ssl);
                 if (applicationProtocol == null) {
