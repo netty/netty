@@ -703,7 +703,6 @@ public final class OpenSslEngine extends SSLEngine {
         if (session == null) {
             session = new SSLSession() {
                 // SSLSession implementation seems to not need to be thread-safe so no need for volatile etc.
-                private byte[] id;
                 private X509Certificate[] x509PeerCerts;
 
                 // lazy init for memory reasons
@@ -711,9 +710,11 @@ public final class OpenSslEngine extends SSLEngine {
 
                 @Override
                 public byte[] getId() {
-                    // these are lazy created to reduce memory overhead but cached for performance reasons.
+                    // We don't cache that to keep memory usage to a minimum.
+                    byte[] id = SSL.getSessionId(ssl);
                     if (id == null) {
-                        id = String.valueOf(ssl).getBytes();
+                        // The id should never be null, if it was null then the SESSION itself was not valid.
+                        throw new IllegalStateException("SSL session ID not available");
                     }
                     return id;
                 }
