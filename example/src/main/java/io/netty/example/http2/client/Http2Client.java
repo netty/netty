@@ -32,6 +32,7 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.CharsetUtil;
@@ -60,7 +61,7 @@ public final class Http2Client {
         // Configure SSL.
         final SslContext sslCtx;
         if (SSL) {
-            sslCtx = SslContext.newClientContext(
+            sslCtx = SslContext.newClientContext(SslProvider.JDK,
                     null, InsecureTrustManagerFactory.INSTANCE,
                     Http2SecurityUtil.CIPHERS,
                     /* NOTE: the following filter may not include all ciphers required by the HTTP/2 specification

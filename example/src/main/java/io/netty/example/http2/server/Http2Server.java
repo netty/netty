@@ -31,6 +31,7 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
@@ -48,7 +49,7 @@ public final class Http2Server {
         final SslContext sslCtx;
         if (SSL) {
             SelfSignedCertificate ssc = new SelfSignedCertificate();
-            sslCtx = SslContext.newServerContext(
+            sslCtx = SslContext.newServerContext(SslProvider.JDK,
                     ssc.certificate(), ssc.privateKey(), null,
                     Http2SecurityUtil.CIPHERS,
                     /* NOTE: the following filter may not include all ciphers required by the HTTP/2 specification
