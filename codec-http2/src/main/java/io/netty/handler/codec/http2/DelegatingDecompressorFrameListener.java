@@ -14,6 +14,13 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_ENCODING;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
+import static io.netty.handler.codec.http.HttpHeaderValues.DEFLATE;
+import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
+import static io.netty.handler.codec.http.HttpHeaderValues.IDENTITY;
+import static io.netty.handler.codec.http.HttpHeaderValues.X_DEFLATE;
+import static io.netty.handler.codec.http.HttpHeaderValues.X_GZIP;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -22,24 +29,12 @@ import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderValues;
 
 /**
  * A HTTP2 frame listener that will decompress data frames according to the {@code content-encoding} header for each
  * stream.
  */
 public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecorator {
-
-    /**
-     * {@code "x-deflate"}
-     */
-    private static final AsciiString X_DEFLATE = new AsciiString("x-deflate");
-    /**
-     * {@code "x-gzip"}
-     */
-    private static final AsciiString X_GZIP = new AsciiString("x-gzip");
-
     private static final Http2ConnectionAdapter CLEAN_UP_LISTENER = new Http2ConnectionAdapter() {
         @Override
         public void streamRemoved(Http2Stream stream) {
@@ -130,11 +125,11 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
      * @throws Http2Exception If the specified encoding is not not supported and warrants an exception
      */
     protected EmbeddedChannel newContentDecompressor(AsciiString contentEncoding) throws Http2Exception {
-        if (HttpHeaderValues.GZIP.equalsIgnoreCase(contentEncoding) ||
+        if (GZIP.equalsIgnoreCase(contentEncoding) ||
             X_GZIP.equalsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP));
         }
-        if (HttpHeaderValues.DEFLATE.equalsIgnoreCase(contentEncoding) ||
+        if (DEFLATE.equalsIgnoreCase(contentEncoding) ||
             X_DEFLATE.equalsIgnoreCase(contentEncoding)) {
             final ZlibWrapper wrapper = strict ? ZlibWrapper.ZLIB : ZlibWrapper.ZLIB_OR_NONE;
             // To be strict, 'deflate' means ZLIB, but some servers were not implemented correctly.
@@ -154,7 +149,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
      */
     protected AsciiString getTargetContentEncoding(@SuppressWarnings("UnusedParameters") AsciiString contentEncoding)
                     throws Http2Exception {
-        return HttpHeaderValues.IDENTITY;
+        return IDENTITY;
     }
 
     /**
@@ -176,9 +171,9 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         if (decompressor == null) {
             if (!endOfStream) {
                 // Determine the content encoding.
-                AsciiString contentEncoding = headers.get(HttpHeaderNames.CONTENT_ENCODING);
+                AsciiString contentEncoding = headers.get(CONTENT_ENCODING);
                 if (contentEncoding == null) {
-                    contentEncoding = HttpHeaderValues.IDENTITY;
+                    contentEncoding = IDENTITY;
                 }
                 decompressor = newContentDecompressor(contentEncoding);
                 if (decompressor != null) {
@@ -186,10 +181,10 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
                     // Decode the content and remove or replace the existing headers
                     // so that the message looks like a decoded message.
                     AsciiString targetContentEncoding = getTargetContentEncoding(contentEncoding);
-                    if (HttpHeaderValues.IDENTITY.equalsIgnoreCase(targetContentEncoding)) {
-                        headers.remove(HttpHeaderNames.CONTENT_ENCODING);
+                    if (IDENTITY.equalsIgnoreCase(targetContentEncoding)) {
+                        headers.remove(CONTENT_ENCODING);
                     } else {
-                        headers.set(HttpHeaderNames.CONTENT_ENCODING, targetContentEncoding);
+                        headers.set(CONTENT_ENCODING, targetContentEncoding);
                     }
                 }
             }
@@ -200,7 +195,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
             // The content length will be for the compressed data. Since we will decompress the data
             // this content-length will not be correct. Instead of queuing messages or delaying sending
             // header frames...just remove the content-length header
-            headers.remove(HttpHeaderNames.CONTENT_LENGTH);
+            headers.remove(CONTENT_LENGTH);
         }
     }
 
