@@ -46,7 +46,7 @@ import static io.netty.util.internal.ObjectUtil.*;
 public final class OpenSslServerContext extends OpenSslContext {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OpenSslServerContext.class);
 
-    private final OpenSslSessionContext sessionContext;
+    private final OpenSslServerSessionContext sessionContext;
 
     /**
      * Creates a new instance.
@@ -285,50 +285,7 @@ public final class OpenSslServerContext extends OpenSslContext {
     }
 
     @Override
-    public OpenSslSessionContext sessionContext() {
+    public OpenSslServerSessionContext sessionContext() {
         return sessionContext;
-    }
-
-    private static final class OpenSslServerSessionContext extends OpenSslSessionContext {
-        private OpenSslServerSessionContext(long context) {
-            super(context);
-        }
-
-        @Override
-        public void setSessionTimeout(int seconds) {
-            if (seconds < 0) {
-                throw new IllegalArgumentException();
-            }
-            SSLContext.setSessionCacheTimeout(context, seconds);
-        }
-
-        @Override
-        public int getSessionTimeout() {
-            return (int) SSLContext.getSessionCacheTimeout(context);
-        }
-
-        @Override
-        public void setSessionCacheSize(int size) {
-            if (size < 0) {
-                throw new IllegalArgumentException();
-            }
-            SSLContext.setSessionCacheSize(context, size);
-        }
-
-        @Override
-        public int getSessionCacheSize() {
-            return (int) SSLContext.getSessionCacheSize(context);
-        }
-
-        @Override
-        public void setSessionCacheEnabled(boolean enabled) {
-            long mode = enabled ? SSL.SSL_SESS_CACHE_SERVER : SSL.SSL_SESS_CACHE_OFF;
-            SSLContext.setSessionCacheMode(context, mode);
-        }
-
-        @Override
-        public boolean isSessionCacheEnabled() {
-            return SSLContext.getSessionCacheMode(context) == SSL.SSL_SESS_CACHE_SERVER;
-        }
     }
 }
