@@ -652,17 +652,46 @@ public final class OpenSslEngine extends SSLEngine {
 
     @Override
     public String[] getSupportedCipherSuites() {
-        return EmptyArrays.EMPTY_STRINGS;
+        return OpenSsl.supportedCiphers();
     }
 
     @Override
     public String[] getEnabledCipherSuites() {
-        return EmptyArrays.EMPTY_STRINGS;
+        String[] enabled = SSL.getCiphers(ssl);
+        if (enabled == null) {
+            return EmptyArrays.EMPTY_STRINGS;
+        } else {
+            for (int i = 0; i < enabled.length; i++) {
+                String c = enabled[i];
+                String mapped = OpenSsl.jdkSslCipher(c);
+                if (mapped != null) {
+                    enabled[i] = mapped;
+                }
+            }
+            return enabled;
+        }
     }
 
     @Override
-    public void setEnabledCipherSuites(String[] strings) {
-        throw new UnsupportedOperationException();
+    public void setEnabledCipherSuites(String[] ciphers) {
+        if (ciphers == null) {
+            throw new IllegalArgumentException();
+        }
+
+        String[] mappedCiphers = new String[ciphers.length];
+        for (int i = 0; i < ciphers.length; i++) {
+            String c = ciphers[i];
+            String mapped = OpenSsl.cipherIfSupported(ciphers[i]);
+            if (mapped == null) {
+                throw new IllegalArgumentException("CipherSuite " + c + " not supported.");
+            }
+            mappedCiphers[i] = mapped;
+        }
+        try {
+            SSL.setCipherSuites(ssl, OpenSsl.ciphers(mappedCiphers));
+        } catch (Exception e) {
+            throw new IllegalStateException("Error during enable ciphersuites", e);
+        }
     }
 
     @Override
