@@ -317,12 +317,12 @@ public abstract class OpenSslContext extends SslContext {
             return OpenSslDefaultApplicationProtocolNegotiator.INSTANCE;
         }
 
-        switch(config.protocol()) {
+        switch (config.protocol()) {
             case NONE:
                 return OpenSslDefaultApplicationProtocolNegotiator.INSTANCE;
             case NPN:
                 if (isServer) {
-                    switch(config.selectedListenerFailureBehavior()) {
+                    switch (config.selectedListenerFailureBehavior()) {
                         case CHOOSE_MY_LAST_PROTOCOL:
                             return new OpenSslNpnApplicationProtocolNegotiator(config.supportedProtocols());
                         default:
