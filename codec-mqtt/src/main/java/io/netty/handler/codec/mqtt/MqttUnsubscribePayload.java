@@ -40,10 +40,10 @@ public class MqttUnsubscribePayload {
     public String toString() {
         StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append('[');
         for (int i = 0; i < topics.size() - 1; i++) {
-            builder.append("topicName = " + topics.get(i)).append(", ");
+            builder.append("topicName = ").append(topics.get(i)).append(", ");
         }
-        builder.append("topicName = " + topics.get(topics.size() - 1));
-        builder.append(']');
+        builder.append("topicName = ").append(topics.get(topics.size() - 1))
+               .append(']');
         return builder.toString();
     }
 }

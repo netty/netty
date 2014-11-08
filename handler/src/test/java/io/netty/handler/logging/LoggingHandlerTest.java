@@ -302,10 +302,10 @@ public class LoggingHandlerTest {
 
         @Override
         public void appendTo(StringBuffer buffer) {
-            buffer.append("matchesLog(");
-            buffer.append("expected: \"" + expected);
-            buffer.append("\", got: \"" + actualMsg);
-            buffer.append("\")");
+            buffer.append("matchesLog(")
+                  .append("expected: \"").append(expected)
+                  .append("\", got: \"").append(actualMsg)
+                  .append("\")");
         }
     }
 

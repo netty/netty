@@ -149,13 +149,13 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
     protected StringBuilder toStringBuilder() {
         StringBuilder buf = super.toStringBuilder();
         buf.setCharAt(buf.length() - 1, ',');
-        buf.append(" id: ");
-        buf.append(id);
-        buf.append(", deadline: ");
-        buf.append(deadlineNanos);
-        buf.append(", period: ");
-        buf.append(periodNanos);
-        buf.append(')');
-        return buf;
+
+        return buf.append(" id: ")
+                  .append(id)
+                  .append(", deadline: ")
+                  .append(deadlineNanos)
+                  .append(", period: ")
+                  .append(periodNanos)
+                  .append(')');
     }
 }
