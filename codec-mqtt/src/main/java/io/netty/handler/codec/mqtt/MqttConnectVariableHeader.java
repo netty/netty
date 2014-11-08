@@ -92,16 +92,17 @@ public class MqttConnectVariableHeader {
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append('[');
-        builder.append("name=").append(name);
-        builder.append(", version=").append(version);
-        builder.append(", hasUserName=").append(hasUserName);
-        builder.append(", hasPassword=").append(hasPassword);
-        builder.append(", isWillRetain=").append(isWillRetain);
-        builder.append(", isWillFlag=").append(isWillFlag);
-        builder.append(", isCleanSession=").append(isCleanSession);
-        builder.append(", keepAliveTimeSeconds=").append(keepAliveTimeSeconds);
-        builder.append(']');
-        return builder.toString();
+        return new StringBuilder(StringUtil.simpleClassName(this))
+            .append('[')
+            .append("name=").append(name)
+            .append(", version=").append(version)
+            .append(", hasUserName=").append(hasUserName)
+            .append(", hasPassword=").append(hasPassword)
+            .append(", isWillRetain=").append(isWillRetain)
+            .append(", isWillFlag=").append(isWillFlag)
+            .append(", isCleanSession=").append(isCleanSession)
+            .append(", keepAliveTimeSeconds=").append(keepAliveTimeSeconds)
+            .append(']')
+            .toString();
     }
 }

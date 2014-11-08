@@ -39,6 +39,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Provides utility methods and constants for the HTTP/2 to HTTP conversion
@@ -80,6 +81,12 @@ public final class HttpUtil {
      * in <a href="http://tools.ietf.org/html/draft-ietf-httpbis-http2-14#section-8.1.">HTTP/2 Spec Message Flow</a>
      */
     public static final HttpResponseStatus OUT_OF_MESSAGE_SEQUENCE_RETURN_CODE = HttpResponseStatus.OK;
+
+    /**
+     * This pattern will use to avoid compile it each time it is used
+     * when we need to replace some part of authority.
+     */
+    private static final Pattern AUTHORITY_REPLACEMENT_PATTERN = Pattern.compile("^.*@");
 
     private HttpUtil() {
     }
@@ -269,7 +276,7 @@ public final class HttpUtil {
                 // The authority MUST NOT include the deprecated "userinfo" subcomponent
                 value = hostUri.getAuthority();
                 if (value != null) {
-                    out.authority(new AsciiString(value.replaceFirst("^.*@", "")));
+                    out.authority(new AsciiString(AUTHORITY_REPLACEMENT_PATTERN.matcher(value).replaceFirst("")));
                 }
                 value = hostUri.getScheme();
                 if (value != null) {
