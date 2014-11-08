@@ -604,7 +604,7 @@ public class DefaultHttp2Connection implements Http2Connection {
     /**
      * Allows a correlation to be made between a stream and its old parent before a parent change occurs
      */
-    private final class ParentChangedEvent {
+    private static final class ParentChangedEvent {
         private final Http2Stream stream;
         private final Http2Stream oldParent;
 

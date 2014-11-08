@@ -79,14 +79,14 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append(StringUtil.simpleClassName(this));
-        buf.append("(version: ");
-        buf.append(protocolVersion().text());
-        buf.append(", keepAlive: ");
-        buf.append(HttpHeaderUtil.isKeepAlive(this));
-        buf.append(')');
-        buf.append(StringUtil.NEWLINE);
+        StringBuilder buf = new StringBuilder()
+            .append(StringUtil.simpleClassName(this))
+            .append("(version: ")
+            .append(protocolVersion().text())
+            .append(", keepAlive: ")
+            .append(HttpHeaderUtil.isKeepAlive(this))
+            .append(')')
+            .append(StringUtil.NEWLINE);
         appendHeaders(buf);
 
         // Remove the last newline.
@@ -109,10 +109,10 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
 
     void appendHeaders(StringBuilder buf, HttpHeaders headers) {
         for (Map.Entry<CharSequence, CharSequence> e: headers) {
-            buf.append(e.getKey());
-            buf.append(": ");
-            buf.append(e.getValue());
-            buf.append(StringUtil.NEWLINE);
+            buf.append(e.getKey())
+               .append(": ")
+               .append(e.getValue())
+               .append(StringUtil.NEWLINE);
         }
     }
 }

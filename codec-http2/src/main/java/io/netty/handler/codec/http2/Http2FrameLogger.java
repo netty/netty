@@ -115,11 +115,12 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
 
     private void log(Direction direction, String format, Object... args) {
         if (logger.isEnabled(level)) {
-            StringBuilder b = new StringBuilder("\n----------------");
-            b.append(direction.name());
-            b.append("--------------------\n");
-            b.append(String.format(format, args));
-            b.append("\n------------------------------------");
+            StringBuilder b = new StringBuilder(200);
+            b.append("\n----------------")
+             .append(direction.name())
+             .append("--------------------\n")
+             .append(String.format(format, args))
+             .append("\n------------------------------------");
             logger.log(level, b.toString());
         }
     }

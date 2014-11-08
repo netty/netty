@@ -806,10 +806,10 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     protected StringBuilder toStringBuilder() {
-        StringBuilder buf = new StringBuilder(64);
-        buf.append(StringUtil.simpleClassName(this));
-        buf.append('@');
-        buf.append(Integer.toHexString(hashCode()));
+        StringBuilder buf = new StringBuilder(64)
+            .append(StringUtil.simpleClassName(this))
+            .append('@')
+            .append(Integer.toHexString(hashCode()));
 
         Object result = this.result;
         if (result == SUCCESS) {
@@ -817,9 +817,9 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         } else if (result == UNCANCELLABLE) {
             buf.append("(uncancellable)");
         } else if (result instanceof CauseHolder) {
-            buf.append("(failure(");
-            buf.append(((CauseHolder) result).cause);
-            buf.append(')');
+            buf.append("(failure(")
+               .append(((CauseHolder) result).cause)
+               .append(')');
         } else {
             buf.append("(incomplete)");
         }
