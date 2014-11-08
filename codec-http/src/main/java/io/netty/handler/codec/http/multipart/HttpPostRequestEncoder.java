@@ -49,7 +49,6 @@ import static io.netty.buffer.Unpooled.*;
  * This encoder will help to encode Request for a FORM as POST.
  */
 public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
-
     /**
      * Different modes to use to encode form data.
      */
@@ -560,42 +559,43 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
                     globalBodySize -= pastAttribute.size();
                     StringBuilder replacement = new StringBuilder(
                             139 + multipartDataBoundary.length() + multipartMixedBoundary.length() * 2 +
+
                                     fileUpload.getFilename().length() + fileUpload.getName().length());
 
-                    replacement.append("--");
-                    replacement.append(multipartDataBoundary);
-                    replacement.append("\r\n");
+                    replacement.append("--")
+                    .append(multipartDataBoundary)
+                    .append("\r\n")
 
-                    replacement.append(HttpPostBodyUtil.CONTENT_DISPOSITION);
-                    replacement.append(": ");
-                    replacement.append(HttpPostBodyUtil.FORM_DATA);
-                    replacement.append("; ");
-                    replacement.append(HttpPostBodyUtil.NAME);
-                    replacement.append("=\"");
-                    replacement.append(fileUpload.getName());
-                    replacement.append("\"\r\n");
+                    .append(HttpPostBodyUtil.CONTENT_DISPOSITION)
+                    .append(": ")
+                    .append(HttpPostBodyUtil.FORM_DATA)
+                    .append("; ")
+                    .append(HttpPostBodyUtil.NAME)
+                    .append("=\"")
+                    .append(fileUpload.getName())
+                    .append("\"\r\n")
 
-                    replacement.append(HttpHeaders.Names.CONTENT_TYPE);
-                    replacement.append(": ");
-                    replacement.append(HttpPostBodyUtil.MULTIPART_MIXED);
-                    replacement.append("; ");
-                    replacement.append(HttpHeaders.Values.BOUNDARY);
-                    replacement.append('=');
-                    replacement.append(multipartMixedBoundary);
-                    replacement.append("\r\n\r\n");
+                    .append(HttpHeaders.Names.CONTENT_TYPE)
+                    .append(": ")
+                    .append(HttpPostBodyUtil.MULTIPART_MIXED)
+                    .append("; ")
+                    .append(HttpHeaders.Values.BOUNDARY)
+                    .append('=')
+                    .append(multipartMixedBoundary)
+                    .append("\r\n\r\n")
 
-                    replacement.append("--");
-                    replacement.append(multipartMixedBoundary);
-                    replacement.append("\r\n");
+                    .append("--")
+                    .append(multipartMixedBoundary)
+                    .append("\r\n")
 
-                    replacement.append(HttpPostBodyUtil.CONTENT_DISPOSITION);
-                    replacement.append(": ");
-                    replacement.append(HttpPostBodyUtil.ATTACHMENT);
-                    replacement.append("; ");
-                    replacement.append(HttpPostBodyUtil.FILENAME);
-                    replacement.append("=\"");
-                    replacement.append(fileUpload.getFilename());
-                    replacement.append("\"\r\n");
+                    .append(HttpPostBodyUtil.CONTENT_DISPOSITION)
+                    .append(": ")
+                    .append(HttpPostBodyUtil.ATTACHMENT)
+                    .append("; ")
+                    .append(HttpPostBodyUtil.FILENAME)
+                    .append("=\"")
+                    .append(fileUpload.getFilename())
+                    .append("\"\r\n");
 
                     pastAttribute.setValue(replacement.toString(), 1);
                     pastAttribute.setValue("", 2);

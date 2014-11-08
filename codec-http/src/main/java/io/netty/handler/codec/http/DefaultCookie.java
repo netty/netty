@@ -19,8 +19,6 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.TreeSet;
 
-
-
 /**
  * The default {@link Cookie} implementation.
  */
@@ -308,26 +306,26 @@ public class DefaultCookie implements Cookie {
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append(getName());
-        buf.append('=');
-        buf.append(getValue());
+        StringBuilder buf = new StringBuilder()
+        .append(getName())
+        .append('=')
+        .append(getValue());
         if (getDomain() != null) {
-            buf.append(", domain=");
-            buf.append(getDomain());
+            buf.append(", domain=")
+            .append(getDomain());
         }
         if (getPath() != null) {
-            buf.append(", path=");
-            buf.append(getPath());
+            buf.append(", path=")
+            .append(getPath());
         }
         if (getComment() != null) {
-            buf.append(", comment=");
-            buf.append(getComment());
+            buf.append(", comment=")
+            .append(getComment());
         }
         if (getMaxAge() >= 0) {
-            buf.append(", maxAge=");
-            buf.append(getMaxAge());
-            buf.append('s');
+            buf.append(", maxAge=")
+            .append(getMaxAge())
+            .append('s');
         }
         if (isSecure()) {
             buf.append(", secure");

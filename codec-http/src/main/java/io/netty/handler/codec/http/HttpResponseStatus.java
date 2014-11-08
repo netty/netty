@@ -541,11 +541,11 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder(reasonPhrase.length() + 5);
-        buf.append(code);
-        buf.append(' ');
-        buf.append(reasonPhrase);
-        return buf.toString();
+        return new StringBuilder(reasonPhrase.length() + 5)
+            .append(code)
+            .append(' ')
+            .append(reasonPhrase)
+            .toString();
     }
 
     void encode(ByteBuf buf) {

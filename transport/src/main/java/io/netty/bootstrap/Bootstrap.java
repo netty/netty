@@ -224,10 +224,10 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
 
         StringBuilder buf = new StringBuilder(super.toString());
         buf.setLength(buf.length() - 1);
-        buf.append(", remoteAddress: ");
-        buf.append(remoteAddress);
-        buf.append(')');
 
-        return buf.toString();
+        return buf.append(", remoteAddress: ")
+                  .append(remoteAddress)
+                  .append(')')
+                  .toString();
     }
 }

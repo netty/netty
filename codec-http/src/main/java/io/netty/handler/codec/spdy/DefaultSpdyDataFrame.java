@@ -121,16 +121,16 @@ public class DefaultSpdyDataFrame extends DefaultSpdyStreamFrame implements Spdy
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append(StringUtil.simpleClassName(this));
-        buf.append("(last: ");
-        buf.append(isLast());
-        buf.append(')');
-        buf.append(StringUtil.NEWLINE);
-        buf.append("--> Stream-ID = ");
-        buf.append(streamId());
-        buf.append(StringUtil.NEWLINE);
-        buf.append("--> Size = ");
+        StringBuilder buf = new StringBuilder()
+            .append(StringUtil.simpleClassName(this))
+            .append("(last: ")
+            .append(isLast())
+            .append(')')
+            .append(StringUtil.NEWLINE)
+            .append("--> Stream-ID = ")
+            .append(streamId())
+            .append(StringUtil.NEWLINE)
+            .append("--> Size = ");
         if (refCnt() == 0) {
             buf.append("(freed)");
         } else {

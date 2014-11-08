@@ -701,20 +701,20 @@ final class DefaultChannelPipeline implements ChannelPipeline {
      */
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append(StringUtil.simpleClassName(this));
-        buf.append('{');
+        StringBuilder buf = new StringBuilder()
+            .append(StringUtil.simpleClassName(this))
+            .append('{');
         AbstractChannelHandlerContext ctx = head.next;
         for (;;) {
             if (ctx == tail) {
                 break;
             }
 
-            buf.append('(');
-            buf.append(ctx.name());
-            buf.append(" = ");
-            buf.append(ctx.handler().getClass().getName());
-            buf.append(')');
+            buf.append('(')
+               .append(ctx.name())
+               .append(" = ")
+               .append(ctx.handler().getClass().getName())
+               .append(')');
 
             ctx = ctx.next;
             if (ctx == tail) {

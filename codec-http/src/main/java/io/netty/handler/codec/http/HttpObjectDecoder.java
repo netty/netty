@@ -521,9 +521,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 char firstChar = line.charAt(0);
                 if (name != null && (firstChar == ' ' || firstChar == '\t')) {
                     StringBuilder buf = new StringBuilder(value.length() + line.length() + 1);
-                    buf.append(value);
-                    buf.append(' ');
-                    buf.append(line.toString().trim());
+                    buf.append(value)
+                       .append(' ')
+                       .append(line.toString().trim());
                     value = buf.toString();
                 } else {
                     if (name != null) {
@@ -589,8 +589,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                         String lineTrimmed = line.toString().trim();
                         CharSequence currentLastPos = current.get(lastPos);
                         StringBuilder b = new StringBuilder(currentLastPos.length() + lineTrimmed.length());
-                        b.append(currentLastPos);
-                        b.append(lineTrimmed);
+                        b.append(currentLastPos)
+                         .append(lineTrimmed);
                         current.set(lastPos, b.toString());
                     } else {
                         // Content-Length, Transfer-Encoding, or Trailer

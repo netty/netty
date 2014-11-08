@@ -239,7 +239,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             throw new Error(e);
         }
 
-        if (!uri.startsWith("/")) {
+        if (uri.isEmpty() || uri.charAt(0) != '/') {
             return null;
         }
 
@@ -250,7 +250,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         // You will have to do something serious in the production environment.
         if (uri.contains(File.separator + '.') ||
             uri.contains('.' + File.separator) ||
-            uri.startsWith(".") || uri.endsWith(".") ||
+            uri.charAt(0) == '.' || uri.charAt(uri.length() - 1) == '.' ||
             INSECURE_URI.matcher(uri).matches()) {
             return null;
         }
@@ -265,21 +265,20 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK);
         response.headers().set(CONTENT_TYPE, "text/html; charset=UTF-8");
 
-        StringBuilder buf = new StringBuilder();
         String dirPath = dir.getPath();
+        StringBuilder buf = new StringBuilder()
+            .append("<!DOCTYPE html>\r\n")
+            .append("<html><head><title>")
+            .append("Listing of: ")
+            .append(dirPath)
+            .append("</title></head><body>\r\n")
 
-        buf.append("<!DOCTYPE html>\r\n");
-        buf.append("<html><head><title>");
-        buf.append("Listing of: ");
-        buf.append(dirPath);
-        buf.append("</title></head><body>\r\n");
+            .append("<h3>Listing of: ")
+            .append(dirPath)
+            .append("</h3>\r\n")
 
-        buf.append("<h3>Listing of: ");
-        buf.append(dirPath);
-        buf.append("</h3>\r\n");
-
-        buf.append("<ul>");
-        buf.append("<li><a href=\"../\">..</a></li>\r\n");
+            .append("<ul>")
+            .append("<li><a href=\"../\">..</a></li>\r\n");
 
         for (File f: dir.listFiles()) {
             if (f.isHidden() || !f.canRead()) {
@@ -291,11 +290,11 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
                 continue;
             }
 
-            buf.append("<li><a href=\"");
-            buf.append(name);
-            buf.append("\">");
-            buf.append(name);
-            buf.append("</a></li>\r\n");
+            buf.append("<li><a href=\"")
+               .append(name)
+               .append("\">")
+               .append(name)
+               .append("</a></li>\r\n");
         }
 
         buf.append("</ul></body></html>\r\n");

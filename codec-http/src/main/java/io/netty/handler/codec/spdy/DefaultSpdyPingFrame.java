@@ -46,11 +46,11 @@ public class DefaultSpdyPingFrame implements SpdyPingFrame {
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append(StringUtil.simpleClassName(this));
-        buf.append(StringUtil.NEWLINE);
-        buf.append("--> ID = ");
-        buf.append(id());
-        return buf.toString();
+        return new StringBuilder()
+            .append(StringUtil.simpleClassName(this))
+            .append(StringUtil.NEWLINE)
+            .append("--> ID = ")
+            .append(id())
+            .toString();
     }
 }

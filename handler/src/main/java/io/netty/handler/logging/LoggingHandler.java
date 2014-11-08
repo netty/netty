@@ -170,11 +170,11 @@ public class LoggingHandler extends ChannelDuplexHandler {
 
     protected String format(ChannelHandlerContext ctx, String message) {
         String chStr = ctx.channel().toString();
-        StringBuilder buf = new StringBuilder(chStr.length() + message.length() + 1);
-        buf.append(chStr);
-        buf.append(' ');
-        buf.append(message);
-        return buf.toString();
+        return new StringBuilder(chStr.length() + message.length() + 1)
+        .append(chStr)
+        .append(' ')
+        .append(message)
+        .toString();
     }
 
     @Override
@@ -319,10 +319,10 @@ public class LoggingHandler extends ChannelDuplexHandler {
     protected String formatByteBuf(String eventName, ByteBuf buf) {
         int length = buf.readableBytes();
         int rows = length / 16 + (length % 15 == 0? 0 : 1) + 4;
-        StringBuilder dump = new StringBuilder(rows * 80 + eventName.length() + 16);
+        StringBuilder dump = new StringBuilder(rows * 80 + eventName.length() + 16)
 
-        dump.append(eventName).append('(').append(length).append('B').append(')');
-        dump.append(
+        .append(eventName).append('(').append(length).append('B').append(')')
+        .append(
                 NEWLINE + "         +-------------------------------------------------+" +
                         NEWLINE + "         |  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f |" +
                         NEWLINE + "+--------+-------------------------------------------------+----------------+");
@@ -335,9 +335,9 @@ public class LoggingHandler extends ChannelDuplexHandler {
             int relIdx = i - startIndex;
             int relIdxMod16 = relIdx & 15;
             if (relIdxMod16 == 0) {
-                dump.append(NEWLINE);
-                dump.append(Long.toHexString(relIdx & 0xFFFFFFFFL | 0x100000000L));
-                dump.setCharAt(dump.length() - 9, '|');
+                dump.append(NEWLINE)
+                .append(Long.toHexString(relIdx & 0xFFFFFFFFL | 0x100000000L))
+                .setCharAt(dump.length() - 9, '|');
                 dump.append('|');
             }
             dump.append(BYTE2HEX[buf.getUnsignedByte(i)]);
@@ -352,13 +352,13 @@ public class LoggingHandler extends ChannelDuplexHandler {
 
         if ((i - startIndex & 15) != 0) {
             int remainder = length & 15;
-            dump.append(HEXPADDING[remainder]);
-            dump.append(" |");
+            dump.append(HEXPADDING[remainder])
+            .append(" |");
             for (int j = i - remainder; j < i; j ++) {
                 dump.append(BYTE2CHAR[buf.getUnsignedByte(j)]);
             }
-            dump.append(BYTEPADDING[remainder]);
-            dump.append('|');
+            dump.append(BYTEPADDING[remainder])
+            .append('|');
         }
 
         dump.append(
@@ -384,3 +384,4 @@ public class LoggingHandler extends ChannelDuplexHandler {
         return formatByteBuf(eventName, msg.content());
     }
 }
+
