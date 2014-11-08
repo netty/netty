@@ -365,18 +365,16 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
             msg = "";
         }
 
-        StringBuilder buf = new StringBuilder(128 + msg.length());
-
-        buf.append(protocol());
-        buf.append(", ");
-        buf.append(authScheme());
-        buf.append(", ");
-        buf.append(proxyAddress);
-        buf.append(" => ");
-        buf.append(destinationAddress);
-        if (msg.length() > 0) {
-            buf.append(", ");
-            buf.append(msg);
+        StringBuilder buf = new StringBuilder(128 + msg.length())
+            .append(protocol())
+            .append(", ")
+            .append(authScheme())
+            .append(", ")
+            .append(proxyAddress)
+            .append(" => ")
+            .append(destinationAddress);
+        if (!msg.isEmpty()) {
+            buf.append(", ").append(msg);
         }
 
         return buf.toString();

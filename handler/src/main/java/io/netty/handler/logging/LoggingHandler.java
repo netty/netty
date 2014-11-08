@@ -310,11 +310,11 @@ public class LoggingHandler extends ChannelDuplexHandler {
      */
     protected String format(ChannelHandlerContext ctx, String eventName) {
         String chStr = ctx.channel().toString();
-        StringBuilder buf = new StringBuilder(chStr.length() + 1 + eventName.length());
-        buf.append(chStr);
-        buf.append(' ');
-        buf.append(eventName);
-        return buf.toString();
+        return new StringBuilder(chStr.length() + 1 + eventName.length())
+            .append(chStr)
+            .append(' ')
+            .append(eventName)
+            .toString();
     }
 
     /**
@@ -393,8 +393,8 @@ public class LoggingHandler extends ChannelDuplexHandler {
             StringBuilder buf = new StringBuilder(
                     chStr.length() + 1 + eventName.length() + 2 + msgStr.length() + 2 + 10 + 1 + 2 + rows * 80);
 
-            buf.append(chStr).append(' ').append(eventName).append(": ");
-            buf.append(msgStr).append(", ").append(length).append('B');
+            buf.append(chStr).append(' ').append(eventName).append(": ")
+               .append(msgStr).append(", ").append(length).append('B');
             appendHexDump(buf, content);
 
             return buf.toString();

@@ -111,12 +111,12 @@ public class DefaultTextHeaders extends DefaultConvertibleHeaders<CharSequence, 
 
         @Override
         public int convertToInt(CharSequence value) {
-            return Integer.valueOf(value.toString());
+            return Integer.parseInt(value.toString());
         }
 
         @Override
         public long convertToLong(CharSequence value) {
-            return Long.valueOf(value.toString());
+            return Long.parseLong(value.toString());
         }
 
         @Override

@@ -353,28 +353,28 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 dstAddr = localAddr;
             }
 
-            StringBuilder buf = new StringBuilder(96);
-            buf.append("[id: 0x");
-            buf.append(id.asShortText());
-            buf.append(", ");
-            buf.append(srcAddr);
-            buf.append(active? " => " : " :> ");
-            buf.append(dstAddr);
-            buf.append(']');
+            StringBuilder buf = new StringBuilder(96)
+                .append("[id: 0x")
+                .append(id.asShortText())
+                .append(", ")
+                .append(srcAddr)
+                .append(active? " => " : " :> ")
+                .append(dstAddr)
+                .append(']');
             strVal = buf.toString();
         } else if (localAddr != null) {
-            StringBuilder buf = new StringBuilder(64);
-            buf.append("[id: 0x");
-            buf.append(id.asShortText());
-            buf.append(", ");
-            buf.append(localAddr);
-            buf.append(']');
+            StringBuilder buf = new StringBuilder(64)
+                .append("[id: 0x")
+                .append(id.asShortText())
+                .append(", ")
+                .append(localAddr)
+                .append(']');
             strVal = buf.toString();
         } else {
-            StringBuilder buf = new StringBuilder(16);
-            buf.append("[id: 0x");
-            buf.append(id.asShortText());
-            buf.append(']');
+            StringBuilder buf = new StringBuilder(16)
+                .append("[id: 0x")
+                .append(id.asShortText())
+                .append(']');
             strVal = buf.toString();
         }
 

@@ -416,16 +416,16 @@ final class PoolChunk<T> {
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append("Chunk(");
-        buf.append(Integer.toHexString(System.identityHashCode(this)));
-        buf.append(": ");
-        buf.append(usage());
-        buf.append("%, ");
-        buf.append(chunkSize - freeBytes);
-        buf.append('/');
-        buf.append(chunkSize);
-        buf.append(')');
-        return buf.toString();
+        return new StringBuilder()
+            .append("Chunk(")
+            .append(Integer.toHexString(System.identityHashCode(this)))
+            .append(": ")
+            .append(usage())
+            .append("%, ")
+            .append(chunkSize - freeBytes)
+            .append('/')
+            .append(chunkSize)
+            .append(')')
+            .toString();
     }
 }

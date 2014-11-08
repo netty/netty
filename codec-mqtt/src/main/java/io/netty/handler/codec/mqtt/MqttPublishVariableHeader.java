@@ -41,10 +41,11 @@ public class MqttPublishVariableHeader {
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append('[');
-        builder.append("topicName=").append(topicName);
-        builder.append(", messageId=").append(messageId);
-        builder.append(']');
-        return builder.toString();
+        return new StringBuilder(StringUtil.simpleClassName(this))
+            .append('[')
+            .append("topicName=").append(topicName)
+            .append(", messageId=").append(messageId)
+            .append(']')
+            .toString();
     }
 }

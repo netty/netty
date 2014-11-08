@@ -60,9 +60,9 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
                     if (uri.lastIndexOf(SLASH, index) <= startIndex) {
                         int len = uri.length();
                         StringBuilder sb = new StringBuilder(len + 1);
-                        sb.append(uri, 0, index);
-                        sb.append(SLASH);
-                        sb.append(uri, index, len);
+                        sb.append(uri, 0, index)
+                          .append(SLASH)
+                          .append(uri, index, len);
                         uri = sb.toString();
                     }
                 }

@@ -69,12 +69,11 @@ public class DecoderResult {
             }
 
             String cause = cause().toString();
-            StringBuilder buf = new StringBuilder(cause.length() + 17);
-            buf.append("failure(");
-            buf.append(cause);
-            buf.append(')');
-
-            return buf.toString();
+            return new StringBuilder(cause.length() + 17)
+                .append("failure(")
+                .append(cause)
+                .append(')')
+                .toString();
         } else {
             return "unfinished";
         }
