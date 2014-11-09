@@ -177,7 +177,7 @@ public final class Http2Settings extends IntObjectHashMap<Long> {
         return value.intValue();
     }
 
-    private void verifyStandardSetting(int key, Long value) {
+    private static void verifyStandardSetting(int key, Long value) {
         checkNotNull(value, "value");
         switch (key) {
             case SETTINGS_HEADER_TABLE_SIZE:
@@ -215,6 +215,8 @@ public final class Http2Settings extends IntObjectHashMap<Long> {
                             + value);
                 }
                 break;
+            default:
+                throw new IllegalArgumentException("key");
         }
     }
 

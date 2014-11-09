@@ -23,7 +23,6 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_FRAME_SIZ
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTING_ENTRY_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isMaxFrameSizeValid;
 import static io.netty.handler.codec.http2.Http2CodecUtil.readUnsignedInt;
-import static io.netty.handler.codec.http2.Http2Error.FRAME_SIZE_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.protocolError;
 import static io.netty.handler.codec.http2.Http2FrameTypes.CONTINUATION;
 import static io.netty.handler.codec.http2.Http2FrameTypes.DATA;
@@ -87,7 +86,8 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
     @Override
     public void maxFrameSize(int max) throws Http2Exception {
         if (!isMaxFrameSizeValid(max)) {
-            Http2Exception.format(FRAME_SIZE_ERROR, "Invalid MAX_FRAME_SIZE specified in sent settings: %d", max);
+            Http2Exception.format(Http2Error.FRAME_SIZE_ERROR,
+                    "Invalid MAX_FRAME_SIZE specified in sent settings: %d", max);
         }
         maxFrameSize = max;
     }
@@ -560,8 +560,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                 listener);
     }
 
-    private void readUnknownFrame(ChannelHandlerContext ctx, ByteBuf payload, Http2FrameListener listener)
-            throws Http2Exception {
+    private void readUnknownFrame(ChannelHandlerContext ctx, ByteBuf payload, Http2FrameListener listener) {
         payload = payload.readSlice(payload.readableBytes());
         listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
     }

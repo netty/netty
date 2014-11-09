@@ -19,8 +19,7 @@ import static io.netty.handler.codec.http2.Http2TestUtil.as;
 import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.times;
@@ -243,8 +242,8 @@ public class DataCompressionHttp2Test {
             assertEquals(data1, dataCapture.get(0));
             assertEquals(data2, dataCapture.get(1));
             List<Boolean> endStreamCapture = endStreamCaptor.getAllValues();
-            assertEquals(false, endStreamCapture.get(0));
-            assertEquals(true, endStreamCapture.get(1));
+            assertFalse(endStreamCapture.get(0));
+            assertTrue(endStreamCapture.get(1));
         } finally {
             data1.release();
             data2.release();

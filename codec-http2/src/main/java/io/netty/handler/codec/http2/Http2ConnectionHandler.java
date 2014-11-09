@@ -213,6 +213,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      * @param stream the stream to be half closed.
      * @param future If closing, the future after which to close the channel.
      */
+    @Override
     public void closeLocalSide(Http2Stream stream, ChannelFuture future) {
         switch (stream.state()) {
             case HALF_CLOSED_LOCAL:
@@ -232,6 +233,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      * @param stream the stream to be half closed.
      * @param future If closing, the future after which to close the channel.
      */
+    @Override
     public void closeRemoteSide(Http2Stream stream, ChannelFuture future) {
         switch (stream.state()) {
             case HALF_CLOSED_REMOTE:
@@ -310,6 +312,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     /**
      * Writes a {@code RST_STREAM} frame to the remote endpoint and updates the connection state appropriately.
      */
+    @Override
     public ChannelFuture writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
             ChannelPromise promise) {
         Http2Stream stream = connection().stream(streamId);
@@ -327,6 +330,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     /**
      * Sends a {@code GO_AWAY} frame to the remote endpoint and updates the connection state appropriately.
      */
+    @Override
     public ChannelFuture writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData,
             ChannelPromise promise) {
         Http2Connection connection = connection();

@@ -167,7 +167,7 @@ public class DefaultHttp2InboundFlowControllerTest {
         return buffer;
     }
 
-    private void verifyWindowUpdateSent(int streamId, int windowSizeIncrement) throws Http2Exception {
+    private void verifyWindowUpdateSent(int streamId, int windowSizeIncrement) {
         verify(frameWriter).writeWindowUpdate(eq(ctx), eq(streamId), eq(windowSizeIncrement), eq(promise));
     }
 
@@ -175,7 +175,7 @@ public class DefaultHttp2InboundFlowControllerTest {
         verify(frameWriter, never()).writeWindowUpdate(eq(ctx), eq(streamId), anyInt(), eq(promise));
     }
 
-    private void verifyWindowUpdateNotSent() throws Http2Exception {
+    private void verifyWindowUpdateNotSent() {
         verify(frameWriter, never()).writeWindowUpdate(any(ChannelHandlerContext.class), anyInt(), anyInt(),
                 any(ChannelPromise.class));
     }

@@ -21,14 +21,14 @@ import io.netty.channel.ChannelPromise;
 
 
 /**
- * Handler for outbound traffic on behalf of {@link Http2ConectionHandler}.
+ * Handler for outbound HTTP/2 traffic.
  */
 public interface Http2ConnectionEncoder extends Http2FrameWriter, Http2OutboundFlowController {
 
     /**
      * Builder for new instances of {@link Http2ConnectionEncoder}.
      */
-    public interface Builder {
+    interface Builder {
 
         /**
          * Sets the {@link Http2Connection} to be used when building the encoder.
@@ -36,7 +36,7 @@ public interface Http2ConnectionEncoder extends Http2FrameWriter, Http2OutboundF
         Builder connection(Http2Connection connection);
 
         /**
-         * Sets the {@link LifecycleManager} to be used when building the encoder.
+         * Sets the {@link Http2LifecycleManager} to be used when building the encoder.
          */
         Builder lifecycleManager(Http2LifecycleManager lifecycleManager);
 

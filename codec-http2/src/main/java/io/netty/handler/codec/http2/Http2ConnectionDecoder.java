@@ -31,7 +31,7 @@ public interface Http2ConnectionDecoder extends Closeable {
     /**
      * Builder for new instances of {@link Http2ConnectionDecoder}.
      */
-    public interface Builder {
+    interface Builder {
 
         /**
          * Sets the {@link Http2Connection} to be used when building the decoder.
@@ -39,7 +39,7 @@ public interface Http2ConnectionDecoder extends Closeable {
         Builder connection(Http2Connection connection);
 
         /**
-         * Sets the {@link LifecycleManager} to be used when building the decoder.
+         * Sets the {@link Http2LifecycleManager} to be used when building the decoder.
          */
         Builder lifecycleManager(Http2LifecycleManager lifecycleManager);
 

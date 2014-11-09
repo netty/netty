@@ -33,7 +33,6 @@ import io.netty.handler.codec.http2.Http2Stream.State;
 import java.util.Arrays;
 import java.util.List;
 
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -304,7 +303,7 @@ public class DefaultHttp2ConnectionTest {
         reset(clientListener);
         streamD.setPriority(streamD.parent().id(), newWeight, false);
         verify(clientListener).onWeightChanged(eq(streamD), eq(oldWeight));
-        Assert.assertEquals(streamD.weight(), newWeight);
+        assertEquals(streamD.weight(), newWeight);
         verify(clientListener, never()).priorityTreeParentChanging(any(Http2Stream.class),
                         any(Http2Stream.class));
         verify(clientListener, never()).priorityTreeParentChanged(any(Http2Stream.class),
@@ -533,34 +532,34 @@ public class DefaultHttp2ConnectionTest {
     }
 
     private void verifyParentChanging(List<Http2Stream> expectedArg1, List<Http2Stream> expectedArg2) {
-        Assert.assertTrue(expectedArg1.size() == expectedArg2.size());
+        assertTrue(expectedArg1.size() == expectedArg2.size());
         ArgumentCaptor<Http2Stream> arg1Captor = ArgumentCaptor.forClass(Http2Stream.class);
         ArgumentCaptor<Http2Stream> arg2Captor = ArgumentCaptor.forClass(Http2Stream.class);
         verify(clientListener, times(expectedArg1.size())).priorityTreeParentChanging(arg1Captor.capture(),
                         arg2Captor.capture());
         List<Http2Stream> capturedArg1 = arg1Captor.getAllValues();
         List<Http2Stream> capturedArg2 = arg2Captor.getAllValues();
-        Assert.assertTrue(capturedArg1.size() == capturedArg2.size());
-        Assert.assertTrue(capturedArg1.size() == expectedArg1.size());
+        assertTrue(capturedArg1.size() == capturedArg2.size());
+        assertTrue(capturedArg1.size() == expectedArg1.size());
         for (int i = 0; i < capturedArg1.size(); ++i) {
-            Assert.assertEquals(expectedArg1.get(i), capturedArg1.get(i));
-            Assert.assertEquals(expectedArg2.get(i), capturedArg2.get(i));
+            assertEquals(expectedArg1.get(i), capturedArg1.get(i));
+            assertEquals(expectedArg2.get(i), capturedArg2.get(i));
         }
     }
 
     private void verifyParentsChanged(List<Http2Stream> expectedArg1, List<Http2Stream> expectedArg2) {
-        Assert.assertTrue(expectedArg1.size() == expectedArg2.size());
+        assertTrue(expectedArg1.size() == expectedArg2.size());
         ArgumentCaptor<Http2Stream> arg1Captor = ArgumentCaptor.forClass(Http2Stream.class);
         ArgumentCaptor<Http2Stream> arg2Captor = ArgumentCaptor.forClass(Http2Stream.class);
         verify(clientListener, times(expectedArg1.size())).priorityTreeParentChanged(arg1Captor.capture(),
                         arg2Captor.capture());
         List<Http2Stream> capturedArg1 = arg1Captor.getAllValues();
         List<Http2Stream> capturedArg2 = arg2Captor.getAllValues();
-        Assert.assertTrue(capturedArg1.size() == capturedArg2.size());
-        Assert.assertTrue(capturedArg1.size() == expectedArg1.size());
+        assertTrue(capturedArg1.size() == capturedArg2.size());
+        assertTrue(capturedArg1.size() == expectedArg1.size());
         for (int i = 0; i < capturedArg1.size(); ++i) {
-            Assert.assertEquals(expectedArg1.get(i), capturedArg1.get(i));
-            Assert.assertEquals(expectedArg2.get(i), capturedArg2.get(i));
+            assertEquals(expectedArg1.get(i), capturedArg1.get(i));
+            assertEquals(expectedArg2.get(i), capturedArg2.get(i));
         }
     }
 

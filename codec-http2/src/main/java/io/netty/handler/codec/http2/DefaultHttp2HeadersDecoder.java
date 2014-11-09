@@ -99,7 +99,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
         @Override
         public void maxHeaderTableSize(int max) throws Http2Exception {
             if (max < 0) {
-                throw Http2Exception.protocolError("Header Table Size must be non-negative but was %d", max);
+                throw protocolError("Header Table Size must be non-negative but was %d", max);
             }
             try {
                 decoder.setMaxHeaderTableSize(max);

@@ -86,7 +86,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
             } else {
                 for (;;) {
                     final ByteBuf nextBuf = nextReadableBuf(decompressor);
-                    final boolean endOfStreamForBuf = nextBuf == null ? endOfStream : false;
+                    final boolean endOfStreamForBuf = nextBuf == null && endOfStream;
 
                     listener.onDataRead(ctx, streamId, buf, padding, endOfStreamForBuf);
                     if (nextBuf == null) {

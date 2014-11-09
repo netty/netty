@@ -133,8 +133,7 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
             final Http2Settings decodedSettings = new Http2Settings();
             frameReader.readFrame(ctx, frame, new Http2FrameAdapter() {
                 @Override
-                public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings)
-                        throws Http2Exception {
+                public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) {
                     decodedSettings.copyFrom(settings);
                 }
             });

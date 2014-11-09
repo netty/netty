@@ -90,7 +90,7 @@ public class Http2HeaderBlockIOTest {
         assertEquals(in, out);
     }
 
-    private Http2Headers headers() {
+    private static Http2Headers headers() {
         return new DefaultHttp2Headers().method(as("GET")).scheme(as("https"))
         .authority(as("example.org")).path(as("/some/path/resource2"))
                 .add(as("accept"), as("image/png")).add(as("cache-control"), as("no-cache"))

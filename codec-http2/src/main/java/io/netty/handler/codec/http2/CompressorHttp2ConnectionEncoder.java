@@ -92,9 +92,9 @@ public class CompressorHttp2ConnectionEncoder extends DefaultHttp2ConnectionEnco
         if (builder.memLevel < 1 || builder.memLevel > 9) {
             throw new IllegalArgumentException("memLevel: " + builder.memLevel + " (expected: 1-9)");
         }
-        this.compressionLevel = builder.compressionLevel;
-        this.windowBits = builder.windowBits;
-        this.memLevel = builder.memLevel;
+        compressionLevel = builder.compressionLevel;
+        windowBits = builder.windowBits;
+        memLevel = builder.memLevel;
 
         connection().addListener(CLEAN_UP_LISTENER);
     }
@@ -125,7 +125,7 @@ public class CompressorHttp2ConnectionEncoder extends DefaultHttp2ConnectionEnco
             ChannelPromiseAggregator aggregator = new ChannelPromiseAggregator(promise);
             for (;;) {
                 final ByteBuf nextBuf = nextReadableBuf(compressor);
-                final boolean endOfStreamForBuf = nextBuf == null ? endOfStream : false;
+                final boolean endOfStreamForBuf = nextBuf == null && endOfStream;
                 ChannelPromise newPromise = ctx.newPromise();
                 aggregator.add(newPromise);
 
@@ -252,7 +252,7 @@ public class CompressorHttp2ConnectionEncoder extends DefaultHttp2ConnectionEnco
      * Release remaining content from {@link EmbeddedChannel} and remove the compressor from the {@link Http2Stream}.
      *
      * @param stream The stream for which {@code compressor} is the compressor for
-     * @param decompressor The compressor for {@code stream}
+     * @param compressor The compressor for {@code stream}
      */
     private static void cleanup(Http2Stream stream, EmbeddedChannel compressor) {
         if (compressor.finish()) {
@@ -270,7 +270,7 @@ public class CompressorHttp2ConnectionEncoder extends DefaultHttp2ConnectionEnco
     /**
      * Read the next compressed {@link ByteBuf} from the {@link EmbeddedChannel} or {@code null} if one does not exist.
      *
-     * @param decompressor The channel to read from
+     * @param compressor The channel to read from
      * @return The next decoded {@link ByteBuf} from the {@link EmbeddedChannel} or {@code null} if one does not exist
      */
     private static ByteBuf nextReadableBuf(EmbeddedChannel compressor) {
