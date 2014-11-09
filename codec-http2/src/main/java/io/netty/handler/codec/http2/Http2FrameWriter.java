@@ -31,7 +31,7 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
     /**
      * Configuration specific to {@link Http2FrameWriter}
      */
-    public interface Configuration {
+    interface Configuration {
         /**
          * Get the {@link Http2HeaderTable} for this {@link Http2FrameWriter}
          */

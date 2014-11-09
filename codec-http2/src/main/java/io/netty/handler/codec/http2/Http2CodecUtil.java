@@ -32,7 +32,7 @@ public final class Http2CodecUtil {
 
     private static final byte[] CONNECTION_PREFACE = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes(UTF_8);
     private static final byte[] EMPTY_PING = new byte[8];
-    private static IgnoreSettingsHandler ignoreSettingsHandler = new IgnoreSettingsHandler();
+    private static final IgnoreSettingsHandler IGNORE_SETTINGS_HANDLER = new IgnoreSettingsHandler();
 
     public static final int CONNECTION_STREAM_ID = 0;
     public static final int HTTP_UPGRADE_STREAM_ID = 1;
@@ -48,8 +48,8 @@ public final class Http2CodecUtil {
     public static final int SETTING_ENTRY_LENGTH = 6;
     public static final int PRIORITY_ENTRY_LENGTH = 5;
     public static final int INT_FIELD_LENGTH = 4;
-    public static final short MAX_WEIGHT = (short) 256;
-    public static final short MIN_WEIGHT = (short) 1;
+    public static final short MAX_WEIGHT = 256;
+    public static final short MIN_WEIGHT = 1;
 
     public static final int SETTINGS_HEADER_TABLE_SIZE = 1;
     public static final int SETTINGS_ENABLE_PUSH = 2;
@@ -124,7 +124,7 @@ public final class Http2CodecUtil {
      * settings frames directly.
      */
     public static ChannelHandler ignoreSettingsHandler() {
-        return ignoreSettingsHandler;
+        return IGNORE_SETTINGS_HANDLER;
     }
 
     /**

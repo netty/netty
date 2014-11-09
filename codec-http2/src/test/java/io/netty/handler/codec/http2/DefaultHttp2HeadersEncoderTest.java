@@ -54,7 +54,7 @@ public class DefaultHttp2HeadersEncoderTest {
         encoder.encodeHeaders(headers, Unpooled.buffer());
     }
 
-    private Http2Headers headers() {
+    private static Http2Headers headers() {
         return new DefaultHttp2Headers().method(as("GET")).add(as("a"), as("1"))
                 .add(as("a"), as("2"));
     }

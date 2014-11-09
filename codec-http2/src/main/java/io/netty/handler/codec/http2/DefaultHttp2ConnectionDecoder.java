@@ -101,12 +101,12 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     }
 
     protected DefaultHttp2ConnectionDecoder(Builder builder) {
-        this.connection = checkNotNull(builder.connection, "connection");
-        this.frameReader = checkNotNull(builder.frameReader, "frameReader");
-        this.lifecycleManager = checkNotNull(builder.lifecycleManager, "lifecycleManager");
-        this.encoder = checkNotNull(builder.encoder, "encoder");
-        this.inboundFlow = checkNotNull(builder.inboundFlow, "inboundFlow");
-        this.listener = checkNotNull(builder.listener, "listener");
+        connection = checkNotNull(builder.connection, "connection");
+        frameReader = checkNotNull(builder.frameReader, "frameReader");
+        lifecycleManager = checkNotNull(builder.lifecycleManager, "lifecycleManager");
+        encoder = checkNotNull(builder.encoder, "encoder");
+        inboundFlow = checkNotNull(builder.inboundFlow, "inboundFlow");
+        listener = checkNotNull(builder.listener, "listener");
     }
 
     @Override

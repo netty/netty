@@ -394,7 +394,7 @@ public class Http2FrameRoundtripTest {
         return ctx().newPromise();
     }
 
-    private Http2Headers headers() {
+    private static Http2Headers headers() {
         return new DefaultHttp2Headers().method(as("GET")).scheme(as("https"))
                 .authority(as("example.org")).path(as("/some/path/resource2")).add(randomString(), randomString());
     }

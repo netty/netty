@@ -150,7 +150,7 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
     }
 
     private InboundFlowState state(Http2Stream stream) {
-        return stream != null? (InboundFlowState) stream.inboundFlow() : null;
+        return stream != null ? (InboundFlowState) stream.inboundFlow() : null;
     }
 
     /**

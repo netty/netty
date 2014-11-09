@@ -20,6 +20,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGH
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotSame;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
@@ -151,7 +152,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
 
             // Now write another and verify that the last write is updated.
             ChannelFuture future2 = controller.writeData(ctx, STREAM_A, data, 0, false, promise2);
-            assertTrue(future1 != future2);
+            assertNotSame(future1, future2);
             assertEquals(future2, controller.lastWriteForStream(STREAM_A));
         } finally {
             manualSafeRelease(data);
@@ -656,7 +657,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
             assertEquals(0, window(CONNECTION_STREAM_ID));
             assertEquals(0, window(STREAM_A));
             assertEquals(DEFAULT_WINDOW_SIZE - 5, window(STREAM_B), 2);
-            assertEquals((2 * DEFAULT_WINDOW_SIZE) - 5, window(STREAM_C) + window(STREAM_D), 5);
+            assertEquals(2 * DEFAULT_WINDOW_SIZE - 5, window(STREAM_C) + window(STREAM_D), 5);
 
             final ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
 
@@ -769,7 +770,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
             assertEquals(0, window(CONNECTION_STREAM_ID));
             assertEquals(DEFAULT_WINDOW_SIZE - 5, window(STREAM_A));
             assertEquals(0, window(STREAM_B));
-            assertEquals((2 * DEFAULT_WINDOW_SIZE) - 5, window(STREAM_C) + window(STREAM_D));
+            assertEquals(2 * DEFAULT_WINDOW_SIZE - 5, window(STREAM_C) + window(STREAM_D));
 
             final ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
 
@@ -1287,7 +1288,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
         return sum;
     }
 
-    private void send(int streamId, ByteBuf data, int padding) throws Http2Exception {
+    private void send(int streamId, ByteBuf data, int padding) {
         ChannelFuture future = controller.writeData(ctx, streamId, data, padding, false, promise);
         assertEquals(future, controller.lastWriteForStream(streamId));
     }

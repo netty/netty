@@ -417,7 +417,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             weight(weight);
 
             if (newParent != parent() || exclusive) {
-                List<ParentChangedEvent> events = null;
+                List<ParentChangedEvent> events;
                 if (newParent.isDescendantOf(this)) {
                     events = new ArrayList<ParentChangedEvent>(2 + (exclusive ? newParent.numChildren(): 0));
                     parent.takeChild(newParent, false, events);
@@ -605,15 +605,15 @@ public class DefaultHttp2Connection implements Http2Connection {
      * Allows a correlation to be made between a stream and its old parent before a parent change occurs
      */
     private final class ParentChangedEvent {
-        private Http2Stream stream;
-        private Http2Stream oldParent;
+        private final Http2Stream stream;
+        private final Http2Stream oldParent;
 
         /**
          * Create a new instance
          * @param stream The stream who has had a parent change
          * @param oldParent The previous parent
          */
-        public ParentChangedEvent(Http2Stream stream, Http2Stream oldParent) {
+        ParentChangedEvent(Http2Stream stream, Http2Stream oldParent) {
             this.stream = stream;
             this.oldParent = oldParent;
         }

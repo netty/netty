@@ -18,8 +18,10 @@ package io.netty.handler.codec.http2;
 import static io.netty.handler.codec.http2.Http2TestUtil.as;
 import static io.netty.handler.codec.http2.Http2TestUtil.randomString;
 import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
+import static io.netty.handler.codec.http2.Http2TestUtil.FrameCountDown;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -57,7 +59,6 @@ import java.io.ByteArrayOutputStream;
 import java.net.InetSocketAddress;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.After;
 import org.junit.Before;
@@ -83,7 +84,7 @@ public class Http2ConnectionRoundtripTest {
     private Bootstrap cb;
     private Channel serverChannel;
     private Channel clientChannel;
-    private Http2TestUtil.FrameCountDown serverFrameCountDown;
+    private FrameCountDown serverFrameCountDown;
     private CountDownLatch requestLatch;
     private CountDownLatch dataLatch;
     private CountDownLatch trailersLatch;
@@ -98,9 +99,9 @@ public class Http2ConnectionRoundtripTest {
     @After
     public void teardown() throws Exception {
         serverChannel.close().sync();
-        Future<?> serverGroup = sb.group().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
-        Future<?> serverChildGroup = sb.childGroup().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
-        Future<?> clientGroup = cb.group().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+        Future<?> serverGroup = sb.group().shutdownGracefully(0, 0, MILLISECONDS);
+        Future<?> serverChildGroup = sb.childGroup().shutdownGracefully(0, 0, MILLISECONDS);
+        Future<?> clientGroup = cb.group().shutdownGracefully(0, 0, MILLISECONDS);
         serverGroup.sync();
         serverChildGroup.sync();
         clientGroup.sync();
@@ -130,7 +131,7 @@ public class Http2ConnectionRoundtripTest {
         });
 
         // Wait for the server to create the stream.
-        assertTrue(requestLatch.await(5, TimeUnit.SECONDS));
+        assertTrue(requestLatch.await(5, SECONDS));
 
         // Add a handler that will immediately throw an exception.
         clientChannel.pipeline().addFirst(new ChannelHandlerAdapter() {
@@ -141,7 +142,7 @@ public class Http2ConnectionRoundtripTest {
         });
 
         // Wait for the close to occur.
-        assertTrue(closeLatch.await(5, TimeUnit.SECONDS));
+        assertTrue(closeLatch.await(5, SECONDS));
         assertFalse(clientChannel.isOpen());
     }
 
@@ -173,10 +174,10 @@ public class Http2ConnectionRoundtripTest {
         });
 
         // Wait for the server to create the stream.
-        assertTrue(requestLatch.await(5, TimeUnit.SECONDS));
+        assertTrue(requestLatch.await(5, SECONDS));
 
         // Wait for the close to occur.
-        assertTrue(closeLatch.await(5, TimeUnit.SECONDS));
+        assertTrue(closeLatch.await(5, SECONDS));
         assertFalse(clientChannel.isOpen());
     }
 
@@ -204,7 +205,7 @@ public class Http2ConnectionRoundtripTest {
         });
 
         // Wait for the server to create the stream.
-        assertTrue(requestLatch.await(5, TimeUnit.SECONDS));
+        assertTrue(requestLatch.await(5, SECONDS));
 
         // Add a handler that will immediately throw an exception.
         clientChannel.pipeline().addFirst(new ChannelHandlerAdapter() {
@@ -215,7 +216,7 @@ public class Http2ConnectionRoundtripTest {
         });
 
         // The close should NOT occur.
-        assertFalse(closeLatch.await(5, TimeUnit.SECONDS));
+        assertFalse(closeLatch.await(5, SECONDS));
         assertTrue(clientChannel.isOpen());
     }
 
@@ -236,7 +237,7 @@ public class Http2ConnectionRoundtripTest {
         });
 
         // Wait for the server to create the stream.
-        assertTrue(requestLatch.await(5, TimeUnit.SECONDS));
+        assertTrue(requestLatch.await(5, SECONDS));
         verify(serverListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(0),
                 eq(Http2Error.PROTOCOL_ERROR.code()), any(ByteBuf.class));
     }
@@ -282,7 +283,7 @@ public class Http2ConnectionRoundtripTest {
             });
 
             // Wait for the trailers to be received.
-            assertTrue(trailersLatch.await(5, TimeUnit.SECONDS));
+            assertTrue(trailersLatch.await(5, SECONDS));
 
             // Verify that headers and trailers were received.
             verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(headers), eq(0),
@@ -400,7 +401,7 @@ public class Http2ConnectionRoundtripTest {
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
                 serverFrameCountDown =
-                        new Http2TestUtil.FrameCountDown(serverListener, requestLatch, dataLatch,
+                        new FrameCountDown(serverListener, requestLatch, dataLatch,
                                 trailersLatch);
                 p.addLast(new Http2ConnectionHandler(true, serverFrameCountDown));
                 p.addLast(Http2CodecUtil.ignoreSettingsHandler());
@@ -435,7 +436,7 @@ public class Http2ConnectionRoundtripTest {
         return ctx().newPromise();
     }
 
-    private Http2Headers dummyHeaders() {
+    private static Http2Headers dummyHeaders() {
         return new DefaultHttp2Headers().method(as("GET")).scheme(as("https"))
         .authority(as("example.org")).path(as("/some/path/resource2")).add(randomString(), randomString());
     }

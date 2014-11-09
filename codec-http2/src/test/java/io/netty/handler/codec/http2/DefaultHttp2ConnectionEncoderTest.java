@@ -314,7 +314,7 @@ public class DefaultHttp2ConnectionEncoderTest {
     @Test
     public void rstStreamWriteShouldCloseStream() throws Exception {
         encoder.writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
-        verify(lifecycleManager).writeRstStream(eq(ctx), eq(STREAM_ID), eq((long) PROTOCOL_ERROR.code()), eq(promise));
+        verify(lifecycleManager).writeRstStream(eq(ctx), eq(STREAM_ID), eq(PROTOCOL_ERROR.code()), eq(promise));
     }
 
     @Test

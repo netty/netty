@@ -551,7 +551,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                 this.padding = padding;
                 this.endStream = endStream;
                 this.promiseAggregator = promiseAggregator;
-                this.promise = ctx.newPromise();
+                promise = ctx.newPromise();
                 promiseAggregator.add(promise);
             }
 
@@ -599,7 +599,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                 final Http2FrameSizePolicy frameSizePolicy = frameWriter.configuration().frameSizePolicy();
                 do {
                     int bytesToWrite = size();
-                    int frameBytes = Math.min(bytesToWrite, frameSizePolicy.maxFrameSize());
+                    int frameBytes = min(bytesToWrite, frameSizePolicy.maxFrameSize());
                     if (frameBytes == bytesToWrite) {
                         // All the bytes fit into a single HTTP/2 frame, just send it all.
                         try {
