@@ -64,6 +64,7 @@ if [[ -z "$EXAMPLE" ]] || [[ -z "$EXAMPLE_CLASS" ]] || [[ $# -ne 0 ]]; then
   echo "  Usage: $0 [-D<name>[=<value>] ...] <example-name>" >&2
   echo "Example: $0 -Dport=8443 -Dssl http-server" >&2
   echo "         $0 -Dhost=127.0.0.1 -Dport=8009 echo-client" >&2
+  echo "         $0 -DlogLevel=debug -Dhost=127.0.0.1 -Dport=8009 echo-client" >&2
   echo >&2
   echo "Available examples:" >&2
   echo >&2
