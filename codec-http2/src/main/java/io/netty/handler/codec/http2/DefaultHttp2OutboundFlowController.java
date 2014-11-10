@@ -258,7 +258,12 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         // Recursively write as many of the total writable bytes as possible.
         Http2Stream connectionStream = connection.connectionStream();
         int totalAllowance = state(connectionStream).priorityBytes();
-        writeAllowedBytes(connectionStream, totalAllowance);
+        int connectionWindowBefore = state(connectionStream).window();
+        int bytesWritten = writeAllowedBytes(connectionStream, totalAllowance);
+        System.err.println(String.format(
+                "NM: writePendingBytes: totalAllowance=%d, bytesWritten=%d, "
+                        + "connectionWindowBefore=%d, connectionWindowAfter=%d", totalAllowance,
+                bytesWritten, connectionWindowBefore, state(connectionStream).window()));
 
         // Optimization: only flush once for all written frames. If it's null, there are no
         // data frames to send anyway.
@@ -271,8 +276,9 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
      *
      * @param allowance an allowed number of bytes that may be written to the streams in this
      *            subtree
+     * @return the number of bytes written for this subtree.
      */
-    private void writeAllowedBytes(Http2Stream stream, int allowance) {
+    private int writeAllowedBytes(Http2Stream stream, int allowance) {
         // Write the allowed bytes for this node. If not all of the allowance was used,
         // restore what's left so that it can be propagated to future nodes.
         OutboundFlowState state = state(stream);
@@ -281,7 +287,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
 
         if (allowance <= 0 || stream.isLeaf()) {
             // Nothing left to do in this sub tree.
-            return;
+            return bytesWritten;
         }
 
         // Clip the remaining connection flow control window by the allowance.
@@ -297,9 +303,9 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                 OutboundFlowState childState = state(child);
                 // Initialize the allocated bytes for this stream.
                 childState.resetAllocatedPriorityBytes();
-                writeAllowedBytes(child, childState.priorityBytes());
+                bytesWritten += writeAllowedBytes(child, childState.priorityBytes());
             }
-            return;
+            return bytesWritten;
         }
 
         // Copy and sort the children of this node. They are sorted in ascending order the total
@@ -341,20 +347,20 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             if (head >= tail) {
                 break;
             }
-            Http2Stream next = childStreams.get(head);
-            OutboundFlowState nextState = state(next);
+            Http2Stream child = childStreams.get(head);
+            OutboundFlowState childState = state(child);
             if (firstPass) {
                 // The first pass through the list, initialize the allocated bytes for each stream.
-                nextState.resetAllocatedPriorityBytes();
+                childState.resetAllocatedPriorityBytes();
             }
-            int weight = next.weight();
+            int weight = child.weight();
 
             // Determine the value (in bytes) of a single unit of weight.
             double dataToWeightRatio = min(unallocatedBytes, remainingWindow) / (double) remainingWeight;
-            unallocatedBytes -= nextState.unallocatedPriorityBytes();
+            unallocatedBytes -= childState.unallocatedPriorityBytes();
             remainingWeight -= weight;
 
-            if (dataToWeightRatio > 0.0 && nextState.unallocatedPriorityBytes() > 0) {
+            if (dataToWeightRatio > 0.0 && childState.unallocatedPriorityBytes() > 0) {
 
                 // Determine the portion of the current writable data that is assigned to this
                 // node.
@@ -362,32 +368,33 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
 
                 // Clip the chunk allocated by the total amount of unallocated data remaining in
                 // the node.
-                int allocatedChunk = min(writableChunk, nextState.unallocatedPriorityBytes());
+                int allocatedChunk = min(writableChunk, childState.unallocatedPriorityBytes());
 
                 // Update the remaining connection window size.
                 remainingWindow -= allocatedChunk;
 
                 // Mark these bytes as allocated.
-                nextState.allocatePriorityBytes(allocatedChunk);
-                if (nextState.unallocatedPriorityBytes() > 0) {
+                childState.allocatePriorityBytes(allocatedChunk);
+                if (childState.unallocatedPriorityBytes() > 0) {
                     // There is still data remaining for this stream. Add it back to the queue
                     // for the next pass.
-                    unallocatedBytesForNextPass += nextState.unallocatedPriorityBytes();
+                    unallocatedBytesForNextPass += childState.unallocatedPriorityBytes();
                     remainingWeightForNextPass += weight;
-                    childStreams.set(nextTail++, next);
+                    childStreams.set(nextTail++, child);
                     continue;
                 }
             }
 
-            if (nextState.allocatedPriorityBytes() > 0) {
+            if (childState.allocatedPriorityBytes() > 0) {
                 // Write the allocated data for this stream.
-                writeAllowedBytes(next, nextState.allocatedPriorityBytes());
+                bytesWritten += writeAllowedBytes(child, childState.allocatedPriorityBytes());
 
                 // We're done with this node. Remark all bytes as unallocated for future
                 // invocations.
-                nextState.allocatePriorityBytes(0);
+                childState.allocatePriorityBytes(0);
             }
         }
+        return bytesWritten;
     }
 
     /**
