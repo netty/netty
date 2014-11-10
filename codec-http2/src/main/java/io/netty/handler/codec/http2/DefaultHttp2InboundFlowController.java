@@ -50,8 +50,7 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
     private int maxConnectionWindowSize = DEFAULT_MAX_CONNECTION_WINDOW_SIZE;
     private int initialWindowSize = DEFAULT_WINDOW_SIZE;
 
-    public DefaultHttp2InboundFlowController(Http2Connection connection,
-            Http2FrameWriter frameWriter) {
+    public DefaultHttp2InboundFlowController(Http2Connection connection, Http2FrameWriter frameWriter) {
         this.connection = checkNotNull(connection, "connection");
         this.frameWriter = checkNotNull(frameWriter, "frameWriter");
 
@@ -236,7 +235,14 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
         int initialWindowSize() {
             int maxWindowSize = initialWindowSize;
             if (streamId == CONNECTION_STREAM_ID) {
-                int numStreams = Math.max(1, connection.numActiveStreams());
+                // Determine the maximum number of streams that we can allow without integer overflow
+                // of maxWindowSize * numStreams. Also take care to avoid division by zero when
+                // maxWindowSize == 0.
+                int maxNumStreams = Integer.MAX_VALUE;
+                if (maxWindowSize > 0) {
+                    maxNumStreams /= maxWindowSize;
+                }
+                int numStreams = Math.min(maxNumStreams, Math.max(1, connection.numActiveStreams()));
                 maxWindowSize = Math.min(maxConnectionWindowSize, maxWindowSize * numStreams);
             }
             return maxWindowSize;
