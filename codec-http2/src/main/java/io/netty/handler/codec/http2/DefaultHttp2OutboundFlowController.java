@@ -289,8 +289,6 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         if (unallocatedBytes <= remainingWindow) {
             for (Http2Stream child : stream.children()) {
                 OutboundFlowState childState = state(child);
-                // Initialize the allocated bytes for this stream.
-                childState.resetAllocatedPriorityBytes();
                 bytesWritten += writeAllowedBytes(child, childState.priorityBytes());
             }
             return bytesWritten;
@@ -318,17 +316,12 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         int remainingWeightForNextPass = 0;
 
         // Outer loop: repeatedly iterate over the remaining children until all possible bytes have been distributed.
-        for (int numPasses = 0, tail = childStreams.size(); tail > 0; ++numPasses) {
+        for (int tail = childStreams.size(); tail > 0;) {
             // Inner loop: iterate across all remaining children, distributing bytes among them based
             // on their weights.
             for (int head = 0; head < tail; ++head) {
                 Http2Stream child = childStreams.get(head);
                 OutboundFlowState childState = state(child);
-                if (numPasses == 0) {
-                    // The first pass through the list, initialize the allocated bytes for each
-                    // stream.
-                    childState.resetAllocatedPriorityBytes();
-                }
                 int weight = child.weight();
 
                 // Determine the value (in bytes) of a single unit of weight.
@@ -357,6 +350,9 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                 } else {
                     // We're done with the allocation for this stream. Write the allocated bytes.
                     bytesWritten += writeAllowedBytes(child, childState.allocatedPriorityBytes());
+
+                    // Reset the allocated bytes for future invocations.
+                    childState.resetAllocatedPriorityBytes();
                 }
             }
 
