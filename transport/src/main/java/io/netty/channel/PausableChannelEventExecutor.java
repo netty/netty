@@ -200,7 +200,7 @@ abstract class PausableChannelEventExecutor implements PausableEventExecutor, Ch
     @Override
     @Deprecated
     public void shutdown() {
-        unwrap().terminationFuture();
+        unwrap().shutdown();
     }
 
     @Override
