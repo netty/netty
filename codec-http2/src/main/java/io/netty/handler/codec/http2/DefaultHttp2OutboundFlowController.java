@@ -138,16 +138,23 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             // Update the connection window and write any pending frames for all streams.
             int prevWindow = connectionState().window();
             connectionState().incrementStreamWindow(delta);
-            System.err.println(String.format("%d, NM: receiving WINDOW_UPDATE for stream %d, delta=%d, prev=%d, new=%d",
-                    System.currentTimeMillis(), streamId, delta, prevWindow, connectionState().window()));
+            /*
+             * TODO: System.err.println(String.format(
+             * "%d, NM: receiving WINDOW_UPDATE for stream %d, delta=%d, prev=%d, new=%d",
+             * System.currentTimeMillis(), streamId, delta, prevWindow,
+             * connectionState().window()));
+             */
             writePendingBytes();
         } else {
             // Update the stream window and write any pending frames for the stream.
             OutboundFlowState state = stateOrFail(streamId);
             int prevWindow = state.window();
             state.incrementStreamWindow(delta);
-            System.err.println(String.format("%d, NM: receiving WINDOW_UPDATE for stream %d, delta=%d, prev=%d, new=%d",
-                    System.currentTimeMillis(), streamId, delta, prevWindow, state.window()));
+            /*
+             * TODO: System.err.println(String.format(
+             * "%d, NM: receiving WINDOW_UPDATE for stream %d, delta=%d, prev=%d, new=%d",
+             * System.currentTimeMillis(), streamId, delta, prevWindow, state.window()));
+             */
             if (state.writeBytes(state.writableWindow()) > 0) {
                 flush();
             }
@@ -328,46 +335,32 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         int nextTail = 0;
         int unallocatedBytesForNextPass = 0;
         int remainingWeightForNextPass = 0;
-        boolean firstPass = true;
-        for (int head = 0, tail = childStreams.size();; ++head) {
-            if (head >= tail) {
-                // We've reached the end of one pass through the child streams. Reset the totals based on
-                // the streams that were re-added to the list since they still have data available.
-                firstPass = false;
-                unallocatedBytes = unallocatedBytesForNextPass;
-                remainingWeight = remainingWeightForNextPass;
-                unallocatedBytesForNextPass = 0;
-                remainingWeightForNextPass = 0;
-                head = 0;
-                tail = nextTail;
-                nextTail = 0;
-            }
+        int numPasses = 0;
+        int numStreamsWritten = 0;
+        // Outer loop: repeatedly iterate over the remaining children until all possible bytes have been distributed.
+        for (int tail = childStreams.size(); tail > 0; ++numPasses) {
+            // Inner loop: iterate across all remaining children, distributing bytes among them based
+            // on their weights.
+            for (int head = 0; head < tail; ++head) {
+                Http2Stream child = childStreams.get(head);
+                OutboundFlowState childState = state(child);
+                if (numPasses == 0) {
+                    // The first pass through the list, initialize the allocated bytes for each
+                    // stream.
+                    childState.resetAllocatedPriorityBytes();
+                }
+                int weight = child.weight();
 
-            // Get the next state, or break if nothing to do.
-            if (head >= tail) {
-                break;
-            }
-            Http2Stream child = childStreams.get(head);
-            OutboundFlowState childState = state(child);
-            if (firstPass) {
-                // The first pass through the list, initialize the allocated bytes for each stream.
-                childState.resetAllocatedPriorityBytes();
-            }
-            int weight = child.weight();
+                // Determine the value (in bytes) of a single unit of weight.
+                double dataToWeightRatio =
+                        min(unallocatedBytes, remainingWindow) / (double) remainingWeight;
+                unallocatedBytes -= childState.unallocatedPriorityBytes();
+                remainingWeight -= weight;
 
-            // Determine the value (in bytes) of a single unit of weight.
-            double dataToWeightRatio = min(unallocatedBytes, remainingWindow) / (double) remainingWeight;
-            unallocatedBytes -= childState.unallocatedPriorityBytes();
-            remainingWeight -= weight;
-
-            if (dataToWeightRatio > 0.0 && childState.unallocatedPriorityBytes() > 0) {
-
-                // Determine the portion of the current writable data that is assigned to this
-                // node.
+                // Determine the portion of the current writable data that is assigned to this stream.
                 int writableChunk = (int) (weight * dataToWeightRatio);
 
-                // Clip the chunk allocated by the total amount of unallocated data remaining in
-                // the node.
+                // Clip the chunk allocated by the total amount of unallocated data remaining in the stream.
                 int allocatedChunk = min(writableChunk, childState.unallocatedPriorityBytes());
 
                 // Update the remaining connection window size.
@@ -375,25 +368,33 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
 
                 // Mark these bytes as allocated.
                 childState.allocatePriorityBytes(allocatedChunk);
-                if (childState.unallocatedPriorityBytes() > 0) {
-                    // There is still data remaining for this stream. Add it back to the queue
-                    // for the next pass.
+
+                if (allocatedChunk > 0 && childState.unallocatedPriorityBytes() > 0) {
+                    // There is still more data to be processed for this stream - add it to the next pass.
                     unallocatedBytesForNextPass += childState.unallocatedPriorityBytes();
                     remainingWeightForNextPass += weight;
                     childStreams.set(nextTail++, child);
-                    continue;
+                } else {
+                    // We're done with the allocation for this stream. Write the allocated bytes.
+                    bytesWritten += writeAllowedBytes(child, childState.allocatedPriorityBytes());
+                    if (childState.allocatedPriorityBytes() > 0) {
+                        numStreamsWritten++;
+                    }
                 }
             }
 
-            if (childState.allocatedPriorityBytes() > 0) {
-                // Write the allocated data for this stream.
-                bytesWritten += writeAllowedBytes(child, childState.allocatedPriorityBytes());
-
-                // We're done with this node. Remark all bytes as unallocated for future
-                // invocations.
-                childState.allocatePriorityBytes(0);
-            }
+            // Reset the totals based on the streams that were re-added to the list since they still
+            // have data available.
+            unallocatedBytes = unallocatedBytesForNextPass;
+            remainingWeight = remainingWeightForNextPass;
+            unallocatedBytesForNextPass = 0;
+            remainingWeightForNextPass = 0;
+            tail = nextTail;
+            nextTail = 0;
         }
+        System.err.println(String.format(
+                "NM: writeAllowedBytes, numPasses=%d, numStreamsWritten=%d", numPasses,
+                numStreamsWritten));
         return bytesWritten;
     }
 
@@ -659,11 +660,11 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                         }
                         frameWriter.writeData(ctx, stream.id(), data, padding, endStream, promise);
                         decrementPendingBytes(bytesToWrite);
-                        System.err.println(String.format(
+                        /* TODO: System.err.println(String.format(
                                 "%d, NM: sending DATA for stream %d, bytes=%d, pending=%d, "
                                         + "window[prev=%d, new=%d], connection[prev=%d, new=%d]",
                                 System.currentTimeMillis(), stream.id(), bytesToWrite, pendingBytes, prevStreamWindow,
-                                window(), prevConnectionWindow, connectionState().window()));
+                                window(), prevConnectionWindow, connectionState().window()));*/
                         if (enqueued) {
                             // It's enqueued - remove it from the head of the pending write queue.
                             pendingWriteQueue.remove();
