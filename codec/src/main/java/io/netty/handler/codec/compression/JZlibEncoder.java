@@ -288,11 +288,6 @@ public class JZlibEncoder extends ZlibEncoder {
             return;
         }
 
-        int inputLength = in.readableBytes();
-        if (inputLength == 0) {
-            return;
-        }
-
         try {
             // Configure input.
             boolean inHasArray = in.hasArray();
