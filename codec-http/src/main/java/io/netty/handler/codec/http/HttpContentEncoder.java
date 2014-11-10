@@ -114,6 +114,18 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                     }
                 }
 
+                /*
+                 * per rfc2616 4.3 Message Body
+                 * All 1xx (informational), 204 (no content), and 304 (not modified) responses MUST NOT include a
+                 * message-body. All other responses do include a message-body, although it MAY be of zero length.
+                 */
+                if (isPassthru(res)) {
+                    out.add(res);
+                    // Pass through all following contents.
+                    state = State.PASS_THROUGH;
+                    break;
+                }
+
                 // Prepare to encode the content.
                 final Result result = beginEncode(res, acceptEncoding);
 
@@ -174,6 +186,15 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                 break;
             }
         }
+    }
+
+    private static boolean isPassthru(final HttpResponse res) {
+        final int code = res.status().code();
+        if (code < 200 || code == 204 || code == 304) {
+            return true;
+        }
+
+        return false;
     }
 
     private static void ensureHeaders(HttpObject msg) {
