@@ -24,11 +24,11 @@ import javax.security.cert.X509Certificate;
 import java.security.Principal;
 import java.security.cert.Certificate;
 
-final class JettySslSession implements SSLSession {
+final class JdkSslSession implements SSLSession {
     private final SSLEngine engine;
     private volatile String applicationProtocol;
 
-    JettySslSession(SSLEngine engine) {
+    JdkSslSession(SSLEngine engine) {
         this.engine = engine;
     }
 

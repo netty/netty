@@ -14,6 +14,7 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.BinaryHeaders;
 import io.netty.handler.codec.TextHeaders.EntryVisitor;
@@ -22,6 +23,7 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderUtil;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
@@ -49,11 +51,11 @@ public final class HttpUtil {
     private static final Set<CharSequence> HTTP_TO_HTTP2_HEADER_BLACKLIST = new HashSet<CharSequence>() {
         private static final long serialVersionUID = -5678614530214167043L;
         {
-            add(HttpHeaders.Names.CONNECTION);
-            add(HttpHeaders.Names.KEEP_ALIVE);
-            add(HttpHeaders.Names.PROXY_CONNECTION);
-            add(HttpHeaders.Names.TRANSFER_ENCODING);
-            add(HttpHeaders.Names.HOST);
+            add(HttpHeaderNames.CONNECTION);
+            add(HttpHeaderNames.KEEP_ALIVE);
+            add(HttpHeaderNames.PROXY_CONNECTION);
+            add(HttpHeaderNames.TRANSFER_ENCODING);
+            add(HttpHeaderNames.HOST);
             add(ExtensionHeaderNames.STREAM_ID.text());
             add(ExtensionHeaderNames.AUTHORITY.text());
             add(ExtensionHeaderNames.SCHEME.text());
@@ -139,7 +141,7 @@ public final class HttpUtil {
 
         private final AsciiString text;
 
-        private ExtensionHeaderNames(String text) {
+        ExtensionHeaderNames(String text) {
             this.text = new AsciiString(text);
         }
 
@@ -156,7 +158,7 @@ public final class HttpUtil {
      * @throws Http2Exception If there is a problem translating from HTTP/2 to HTTP/1.x
      */
     public static HttpResponseStatus parseStatus(AsciiString status) throws Http2Exception {
-        HttpResponseStatus result = null;
+        HttpResponseStatus result;
         try {
             result = HttpResponseStatus.parseLine(status);
             if (result == HttpResponseStatus.SWITCHING_PROTOCOLS) {
@@ -164,7 +166,7 @@ public final class HttpUtil {
             }
         } catch (Http2Exception e) {
             throw e;
-        } catch (Exception e) {
+        } catch (Exception ignored) {
             throw Http2Exception.protocolError(
                             "Unrecognized HTTP status code '%s' encountered in translation to HTTP/1.x", status);
         }
@@ -181,7 +183,7 @@ public final class HttpUtil {
      *        <li>{@code false} not to validate HTTP headers in the http-codec</li>
      *        </ul>
      * @return A new response object which represents headers/data
-     * @throws Http2Exception see {@link #addHttp2ToHttpHeaders(int, Http2Headers, FullHttpMessage, Map)}
+     * @throws Http2Exception see {@link #addHttp2ToHttpHeaders(int, Http2Headers, FullHttpMessage, boolean)}
      */
     public static FullHttpResponse toHttpResponse(int streamId, Http2Headers http2Headers, boolean validateHttpHeaders)
                     throws Http2Exception {
@@ -203,14 +205,18 @@ public final class HttpUtil {
      *        <li>{@code false} not to validate HTTP headers in the http-codec</li>
      *        </ul>
      * @return A new request object which represents headers/data
-     * @throws Http2Exception see {@link #addHttp2ToHttpHeaders(int, Http2Headers, FullHttpMessage, Map)}
+     * @throws Http2Exception see {@link #addHttp2ToHttpHeaders(int, Http2Headers, FullHttpMessage, boolean)}
      */
     public static FullHttpRequest toHttpRequest(int streamId, Http2Headers http2Headers, boolean validateHttpHeaders)
                     throws Http2Exception {
         // HTTP/2 does not define a way to carry the version identifier that is
         // included in the HTTP/1.1 request line.
-        FullHttpRequest msg = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.valueOf(http2Headers.method()
-                        .toString()), http2Headers.path().toString(), validateHttpHeaders);
+        final AsciiString method = checkNotNull(http2Headers.method(),
+                "method header cannot be null in conversion to HTTP/1.x");
+        final AsciiString path = checkNotNull(http2Headers.path(),
+                "path header cannot be null in conversion to HTTP/1.x");
+        FullHttpRequest msg = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.valueOf(method
+                        .toString()), path.toString(), validateHttpHeaders);
         addHttp2ToHttpHeaders(streamId, http2Headers, msg, false);
         return msg;
     }
@@ -234,11 +240,12 @@ public final class HttpUtil {
         } catch (Http2Exception ex) {
             throw ex;
         } catch (Exception ex) {
-            PlatformDependent.throwException(ex);
+            throw new Http2StreamException(streamId, Http2Error.PROTOCOL_ERROR,
+                    "HTTP/2 to HTTP/1.x headers conversion error", ex);
         }
 
-        headers.remove(HttpHeaders.Names.TRANSFER_ENCODING);
-        headers.remove(HttpHeaders.Names.TRAILER);
+        headers.remove(HttpHeaderNames.TRANSFER_ENCODING);
+        headers.remove(HttpHeaderNames.TRAILER);
         if (!addToTrailer) {
             headers.setInt(ExtensionHeaderNames.STREAM_ID.text(), streamId);
             HttpHeaderUtil.setKeepAlive(destinationMessage, true);
@@ -256,7 +263,7 @@ public final class HttpUtil {
             out.path(new AsciiString(request.uri()));
             out.method(new AsciiString(request.method().toString()));
 
-            String value = inHeaders.getAndConvert(HttpHeaders.Names.HOST);
+            String value = inHeaders.getAndConvert(HttpHeaderNames.HOST);
             if (value != null) {
                 URI hostUri = URI.create(value);
                 // The authority MUST NOT include the deprecated "userinfo" subcomponent
@@ -336,7 +343,7 @@ public final class HttpUtil {
          * @param request if {@code true}, translates headers using the request translation map. Otherwise uses the
          *        response translation map.
          */
-        public Http2ToHttpHeaderTranslator(HttpHeaders output, boolean request) {
+        Http2ToHttpHeaderTranslator(HttpHeaders output, boolean request) {
             this.output = output;
             translations = request ? REQUEST_HEADER_TRANSLATIONS : RESPONSE_HEADER_TRANSLATIONS;
         }

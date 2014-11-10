@@ -21,6 +21,7 @@ import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpObject;
@@ -222,10 +223,10 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
 
         // The Connection, Keep-Alive, Proxy-Connection, and Transfer-Encoding
         // headers are not valid and MUST not be sent.
-        httpHeaders.remove(HttpHeaders.Names.CONNECTION);
-        httpHeaders.remove(HttpHeaders.Names.KEEP_ALIVE);
-        httpHeaders.remove(HttpHeaders.Names.PROXY_CONNECTION);
-        httpHeaders.remove(HttpHeaders.Names.TRANSFER_ENCODING);
+        httpHeaders.remove(HttpHeaderNames.CONNECTION);
+        httpHeaders.remove(HttpHeaderNames.KEEP_ALIVE);
+        httpHeaders.remove(HttpHeaderNames.PROXY_CONNECTION);
+        httpHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 
         SpdySynStreamFrame spdySynStreamFrame =
                 new DefaultSpdySynStreamFrame(streamID, associatedToStreamId, priority);
@@ -248,8 +249,8 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
 
         // Replace the HTTP host header with the SPDY host header
         if (spdyVersion >= 3) {
-            CharSequence host = httpHeaders.get(HttpHeaders.Names.HOST);
-            httpHeaders.remove(HttpHeaders.Names.HOST);
+            CharSequence host = httpHeaders.get(HttpHeaderNames.HOST);
+            httpHeaders.remove(HttpHeaderNames.HOST);
             frameHeaders.set(HOST, host);
         }
 
@@ -278,10 +279,10 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
 
         // The Connection, Keep-Alive, Proxy-Connection, and Transfer-Encoding
         // headers are not valid and MUST not be sent.
-        httpHeaders.remove(HttpHeaders.Names.CONNECTION);
-        httpHeaders.remove(HttpHeaders.Names.KEEP_ALIVE);
-        httpHeaders.remove(HttpHeaders.Names.PROXY_CONNECTION);
-        httpHeaders.remove(HttpHeaders.Names.TRANSFER_ENCODING);
+        httpHeaders.remove(HttpHeaderNames.CONNECTION);
+        httpHeaders.remove(HttpHeaderNames.KEEP_ALIVE);
+        httpHeaders.remove(HttpHeaderNames.PROXY_CONNECTION);
+        httpHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 
         SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamID);
         SpdyHeaders frameHeaders = spdySynReplyFrame.headers();

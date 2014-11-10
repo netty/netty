@@ -25,7 +25,7 @@ import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpClientCodec;
-import io.netty.handler.codec.http.HttpHeaders.Names;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -127,11 +127,11 @@ public final class HttpProxyHandler extends ProxyHandler {
         SocketAddress proxyAddress = proxyAddress();
         if (proxyAddress instanceof InetSocketAddress) {
             InetSocketAddress hostAddr = (InetSocketAddress) proxyAddress;
-            req.headers().set(Names.HOST, hostAddr.getHostString() + ':' + hostAddr.getPort());
+            req.headers().set(HttpHeaderNames.HOST, hostAddr.getHostString() + ':' + hostAddr.getPort());
         }
 
         if (authorization != null) {
-            req.headers().set(Names.AUTHORIZATION, authorization);
+            req.headers().set(HttpHeaderNames.AUTHORIZATION, authorization);
         }
 
         return req;

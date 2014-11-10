@@ -24,8 +24,8 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderUtil;
-import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
@@ -342,7 +342,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
         // Replace the SPDY host header with the HTTP host header
         CharSequence host = headers.get(HOST);
         headers.remove(HOST);
-        req.headers().set(HttpHeaders.Names.HOST, host);
+        req.headers().set(HttpHeaderNames.HOST, host);
 
         for (Map.Entry<CharSequence, CharSequence> e: requestFrame.headers()) {
             req.headers().add(e.getKey(), e.getValue());
@@ -352,7 +352,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
         HttpHeaderUtil.setKeepAlive(req, true);
 
         // Transfer-Encoding header is not valid
-        req.headers().remove(HttpHeaders.Names.TRANSFER_ENCODING);
+        req.headers().remove(HttpHeaderNames.TRANSFER_ENCODING);
 
         return req;
     }
@@ -376,8 +376,8 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
         HttpHeaderUtil.setKeepAlive(res, true);
 
         // Transfer-Encoding header is not valid
-        res.headers().remove(HttpHeaders.Names.TRANSFER_ENCODING);
-        res.headers().remove(HttpHeaders.Names.TRAILER);
+        res.headers().remove(HttpHeaderNames.TRANSFER_ENCODING);
+        res.headers().remove(HttpHeaderNames.TRAILER);
 
         return res;
     }

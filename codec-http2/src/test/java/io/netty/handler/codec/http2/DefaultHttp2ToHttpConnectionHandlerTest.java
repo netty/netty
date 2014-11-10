@@ -14,23 +14,6 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http.HttpMethod.GET;
-import static io.netty.handler.codec.http.HttpMethod.POST;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static io.netty.handler.codec.http2.Http2CodecUtil.ignoreSettingsHandler;
-import static io.netty.handler.codec.http2.Http2TestUtil.as;
-import static io.netty.util.CharsetUtil.UTF_8;
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyShort;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -46,18 +29,11 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
-
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -65,6 +41,21 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+
+import static io.netty.handler.codec.http.HttpMethod.*;
+import static io.netty.handler.codec.http.HttpVersion.*;
+import static io.netty.handler.codec.http2.Http2CodecUtil.*;
+import static io.netty.handler.codec.http2.Http2TestUtil.*;
+import static io.netty.util.CharsetUtil.*;
+import static java.util.concurrent.TimeUnit.*;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 /**
  * Testing the {@link Http2ToHttpConnectionHandler} for {@link FullHttpRequest} objects into HTTP/2 frames
@@ -82,7 +73,7 @@ public class DefaultHttp2ToHttpConnectionHandlerTest {
     private Channel serverChannel;
     private Channel clientChannel;
     private volatile CountDownLatch requestLatch;
-    private Http2TestUtil.FrameCountDown serverFrameCountDown;
+    private FrameCountDown serverFrameCountDown;
 
     @Before
     public void setup() throws Exception {
@@ -92,9 +83,9 @@ public class DefaultHttp2ToHttpConnectionHandlerTest {
     @After
     public void teardown() throws Exception {
         serverChannel.close().sync();
-        Future<?> serverGroup = sb.group().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
-        Future<?> serverChildGroup = sb.childGroup().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
-        Future<?> clientGroup = cb.group().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+        Future<?> serverGroup = sb.group().shutdownGracefully(0, 0, MILLISECONDS);
+        Future<?> serverChildGroup = sb.childGroup().shutdownGracefully(0, 0, MILLISECONDS);
+        Future<?> clientGroup = cb.group().shutdownGracefully(0, 0, MILLISECONDS);
         serverGroup.sync();
         serverChildGroup.sync();
         clientGroup.sync();
@@ -107,7 +98,7 @@ public class DefaultHttp2ToHttpConnectionHandlerTest {
         try {
             final HttpHeaders httpHeaders = request.headers();
             httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
-            httpHeaders.set(HttpHeaders.Names.HOST,
+            httpHeaders.set(HttpHeaderNames.HOST,
                     "http://my-user_name@www.example.org:5555/example");
             httpHeaders.set(HttpUtil.ExtensionHeaderNames.AUTHORITY.text(), "www.example.org:5555");
             httpHeaders.set(HttpUtil.ExtensionHeaderNames.SCHEME.text(), "http");
@@ -153,7 +144,7 @@ public class DefaultHttp2ToHttpConnectionHandlerTest {
         try {
             final HttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, "/example", data.retain());
             final HttpHeaders httpHeaders = request.headers();
-            httpHeaders.set(HttpHeaders.Names.HOST, "http://your_user-name123@www.example.org:5555/example");
+            httpHeaders.set(HttpHeaderNames.HOST, "http://your_user-name123@www.example.org:5555/example");
             httpHeaders.add("foo", "goo");
             httpHeaders.add("foo", "goo2");
             httpHeaders.add("foo2", "goo2");
@@ -193,7 +184,7 @@ public class DefaultHttp2ToHttpConnectionHandlerTest {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                serverFrameCountDown = new Http2TestUtil.FrameCountDown(serverListener, requestLatch);
+                serverFrameCountDown = new FrameCountDown(serverListener, requestLatch);
                 p.addLast(new Http2ToHttpConnectionHandler(true, serverFrameCountDown));
                 p.addLast(ignoreSettingsHandler());
             }

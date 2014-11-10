@@ -22,6 +22,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelPromiseAggregator;
 
 import java.util.ArrayDeque;
 
@@ -197,16 +198,23 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     }
 
     @Override
+    public ChannelFuture lastWriteForStream(int streamId) {
+        return outboundFlow.lastWriteForStream(streamId);
+    }
+
+    @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
             boolean endStream, ChannelPromise promise) {
         return writeHeaders(ctx, streamId, headers, 0, DEFAULT_PRIORITY_WEIGHT, false, padding, endStream, promise);
     }
 
     @Override
-    public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-            int streamDependency, short weight, boolean exclusive, int padding, boolean endOfStream,
-            ChannelPromise promise) {
+    public ChannelFuture writeHeaders(final ChannelHandlerContext ctx, final int streamId,
+            final Http2Headers headers, final int streamDependency, final short weight,
+            final boolean exclusive, final int padding, final boolean endOfStream,
+            final ChannelPromise promise) {
         Http2Stream stream = connection.stream(streamId);
+        ChannelFuture lastDataWrite = lastWriteForStream(streamId);
         try {
             if (connection.isGoAway()) {
                 throw protocolError("Sending headers after connection going away.");
@@ -238,6 +246,12 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                                 "Stream %d in unexpected state: %s", stream.id(), stream.state()));
                 }
             }
+
+            if (lastDataWrite != null && !endOfStream) {
+                throw new IllegalStateException(
+                        "Sending non-trailing headers after data has been sent for stream: "
+                                + streamId);
+            }
         } catch (Throwable e) {
             if (e instanceof Http2NoMoreStreamIdsException) {
                 lifecycleManager.onException(ctx, e);
@@ -245,8 +259,49 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             return promise.setFailure(e);
         }
 
+        if (lastDataWrite == null) {
+            // No previous DATA frames to keep in sync with, just send it now.
+            return writeHeaders(ctx, stream, headers, streamDependency, weight, exclusive, padding,
+                    endOfStream, promise);
+        }
+
+        // There were previous DATA frames sent.  We need to send the HEADERS only after the most
+        // recent DATA frame to keep them in sync...
+
+        // Wrap the original promise in an aggregate which will complete the original promise
+        // once the headers are written.
+        final ChannelPromiseAggregator aggregatePromise = new ChannelPromiseAggregator(promise);
+        final ChannelPromise innerPromise = ctx.newPromise();
+        aggregatePromise.add(innerPromise);
+
+        // Only write the HEADERS frame after the previous DATA frame has been written.
+        final Http2Stream theStream = stream;
+        lastDataWrite.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                if (!future.isSuccess()) {
+                    // The DATA write failed, also fail this write.
+                    innerPromise.setFailure(future.cause());
+                    return;
+                }
+
+                // Perform the write.
+                writeHeaders(ctx, theStream, headers, streamDependency, weight, exclusive, padding,
+                        endOfStream, innerPromise);
+            }
+        });
+
+        return promise;
+    }
+
+    /**
+     * Writes the given {@link Http2Headers} to the remote endpoint and updates stream state if appropriate.
+     */
+    private ChannelFuture writeHeaders(ChannelHandlerContext ctx, Http2Stream stream,
+            Http2Headers headers, int streamDependency, short weight, boolean exclusive,
+            int padding, boolean endOfStream, ChannelPromise promise) {
         ChannelFuture future =
-                frameWriter.writeHeaders(ctx, streamId, headers, streamDependency, weight,
+                frameWriter.writeHeaders(ctx, stream.id(), headers, streamDependency, weight,
                         exclusive, padding, endOfStream, promise);
         ctx.flush();
 

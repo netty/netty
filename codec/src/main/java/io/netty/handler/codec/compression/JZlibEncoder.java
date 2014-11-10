@@ -279,6 +279,12 @@ public class JZlibEncoder extends ZlibEncoder {
     @Override
     protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
         if (finished) {
+            out.writeBytes(in);
+            return;
+        }
+
+        int inputLength = in.readableBytes();
+        if (inputLength == 0) {
             return;
         }
 

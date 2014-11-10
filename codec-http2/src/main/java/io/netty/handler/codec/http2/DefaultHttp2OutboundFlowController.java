@@ -18,8 +18,7 @@ package io.netty.handler.codec.http2;
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
-import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
-import static io.netty.handler.codec.http2.Http2Exception.format;
+import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.protocolError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
@@ -147,8 +146,9 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             // Update the stream window and write any pending frames for the stream.
             OutboundFlowState state = stateOrFail(streamId);
             state.incrementStreamWindow(delta);
-            state.writeBytes(state.writableWindow());
-            flush();
+            if (state.writeBytes(state.writableWindow()) > 0) {
+                flush();
+            }
         }
     }
 
@@ -202,8 +202,14 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         return promise;
     }
 
+    @Override
+    public ChannelFuture lastWriteForStream(int streamId) {
+        OutboundFlowState state = state(streamId);
+        return state != null ? state.lastNewFrame() : null;
+    }
+
     private static OutboundFlowState state(Http2Stream stream) {
-        return (OutboundFlowState) stream.outboundFlow();
+        return stream != null ? (OutboundFlowState) stream.outboundFlow() : null;
     }
 
     private OutboundFlowState connectionState() {
@@ -383,6 +389,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         private int pendingBytes;
         private int priorityBytes;
         private int allocatedPriorityBytes;
+        private ChannelFuture lastNewFrame;
 
         private OutboundFlowState(Http2Stream stream) {
             this.stream = stream;
@@ -409,6 +416,13 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             // node.
             incrementPriorityBytes(streamableBytes() - previouslyStreamable);
             return window;
+        }
+
+        /**
+         * Returns the future for the last new frame created for this stream.
+         */
+        ChannelFuture lastNewFrame() {
+            return lastNewFrame;
         }
 
         /**
@@ -460,6 +474,8 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
          * Creates a new frame with the given values but does not add it to the pending queue.
          */
         private Frame newFrame(ChannelPromise promise, ByteBuf data, int padding, boolean endStream) {
+            // Store this as the future for the most recent write attempt.
+            lastNewFrame = promise;
             return new Frame(new ChannelPromiseAggregator(promise), data, padding, endStream);
         }
 
@@ -486,7 +502,8 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                 if (frame == null) {
                     break;
                 }
-                frame.writeError(format(STREAM_CLOSED, "Stream closed before write could take place"));
+                frame.writeError(Http2StreamException.format(stream.id(), INTERNAL_ERROR,
+                        "Stream closed before write could take place"));
             }
         }
 
@@ -508,7 +525,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                     // Window size is large enough to send entire data frame
                     bytesWritten += pendingWrite.size();
                     pendingWrite.write();
-                } else if (maxBytes == 0) {
+                } else if (maxBytes <= 0) {
                     // No data from the current frame can be written - we're done.
                     // We purposely check this after first testing the size of the
                     // pending frame to properly handle zero-length frame.

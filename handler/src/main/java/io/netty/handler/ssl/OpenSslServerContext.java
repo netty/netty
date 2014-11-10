@@ -29,6 +29,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import static io.netty.util.internal.ObjectUtil.*;
+
 /**
  * A server-side {@link SslContext} which uses OpenSSL's SSL/TLS implementation.
  */
@@ -65,7 +67,7 @@ public final class OpenSslServerContext extends SslContext {
     private final List<String> unmodifiableCiphers = Collections.unmodifiableList(ciphers);
     private final long sessionCacheSize;
     private final long sessionTimeout;
-    private final List<String> protocols;
+    private final OpenSslApplicationProtocolNegotiator apn;
 
     /** The OpenSSL SSL_CTX object */
     private final long ctx;
@@ -90,7 +92,7 @@ public final class OpenSslServerContext extends SslContext {
      *                    {@code null} if it's not password-protected.
      */
     public OpenSslServerContext(File certChainFile, File keyFile, String keyPassword) throws SSLException {
-        this(certChainFile, keyFile, keyPassword, null, null, 0, 0);
+        this(certChainFile, keyFile, keyPassword, null, OpenSslDefaultApplicationProtocolNegotiator.INSTANCE, 0, 0);
     }
 
     /**
@@ -102,8 +104,7 @@ public final class OpenSslServerContext extends SslContext {
      *                    {@code null} if it's not password-protected.
      * @param ciphers the cipher suites to enable, in the order of preference.
      *                {@code null} to use the default cipher suites.
-     * @param nextProtocols the application layer protocols to accept, in the order of preference.
-     *                      {@code null} to disable TLS NPN/ALPN extension.
+     * @param apn Provides a means to configure parameters related to application protocol negotiation.
      * @param sessionCacheSize the size of the cache used for storing SSL session objects.
      *                         {@code 0} to use the default value.
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
@@ -111,20 +112,39 @@ public final class OpenSslServerContext extends SslContext {
      */
     public OpenSslServerContext(
             File certChainFile, File keyFile, String keyPassword,
-            Iterable<String> ciphers, Iterable<String> nextProtocols,
+            Iterable<String> ciphers, ApplicationProtocolConfig apn,
+            long sessionCacheSize, long sessionTimeout) throws SSLException {
+        this(certChainFile, keyFile, keyPassword, ciphers, toNegotiator(apn, false), sessionCacheSize, sessionTimeout);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param certChainFile an X.509 certificate chain file in PEM format
+     * @param keyFile a PKCS#8 private key file in PEM format
+     * @param keyPassword the password of the {@code keyFile}.
+     *                    {@code null} if it's not password-protected.
+     * @param ciphers the cipher suites to enable, in the order of preference.
+     *                {@code null} to use the default cipher suites.
+     * @param apn Application protocol negotiator.
+     * @param sessionCacheSize the size of the cache used for storing SSL session objects.
+     *                         {@code 0} to use the default value.
+     * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
+     *                       {@code 0} to use the default value.
+     */
+    public OpenSslServerContext(
+            File certChainFile, File keyFile, String keyPassword,
+            Iterable<String> ciphers, OpenSslApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
 
         OpenSsl.ensureAvailability();
 
-        if (certChainFile == null) {
-            throw new NullPointerException("certChainFile");
-        }
+        checkNotNull(certChainFile, "certChainFile");
         if (!certChainFile.isFile()) {
             throw new IllegalArgumentException("certChainFile is not a file: " + certChainFile);
         }
-        if (keyFile == null) {
-            throw new NullPointerException("keyPath");
-        }
+        checkNotNull(keyFile, "keyFile");
+        this.apn = checkNotNull(apn, "apn");
         if (!keyFile.isFile()) {
             throw new IllegalArgumentException("keyPath is not a file: " + keyFile);
         }
@@ -135,8 +155,6 @@ public final class OpenSslServerContext extends SslContext {
         if (keyPassword == null) {
             keyPassword = "";
         }
-
-        protocols = translateProtocols(nextProtocols);
 
         for (String c: ciphers) {
             if (c == null) {
@@ -209,6 +227,7 @@ public final class OpenSslServerContext extends SslContext {
                 }
 
                 /* Set next protocols for next protocol negotiation extension, if specified */
+                List<String> protocols = apn.protocols();
                 if (!protocols.isEmpty()) {
                     // Convert the protocol list into a comma-separated string.
                     StringBuilder nextProtocolBuf = new StringBuilder();
@@ -274,8 +293,8 @@ public final class OpenSslServerContext extends SslContext {
     }
 
     @Override
-    public List<String> nextProtocols() {
-        return protocols;
+    public ApplicationProtocolNegotiator applicationProtocolNegotiator() {
+        return apn;
     }
 
     /**
@@ -297,6 +316,7 @@ public final class OpenSslServerContext extends SslContext {
      */
     @Override
     public SSLEngine newEngine(ByteBufAllocator alloc) {
+        List<String> protocols = apn.protocols();
         if (protocols.isEmpty()) {
             return new OpenSslEngine(ctx, alloc, null);
         } else {
@@ -335,6 +355,40 @@ public final class OpenSslServerContext extends SslContext {
     private void destroyPools() {
         if (aprPool != 0) {
             Pool.destroy(aprPool);
+        }
+    }
+
+    /**
+     * Translate a {@link ApplicationProtocolConfig} object to a
+     * {@link OpenSslApplicationProtocolNegotiator} object.
+     * @param config The configuration which defines the translation
+     * @param isServer {@code true} if a server {@code false} otherwise.
+     * @return The results of the translation
+     */
+    private static OpenSslApplicationProtocolNegotiator toNegotiator(ApplicationProtocolConfig config,
+            boolean isServer) {
+        if (config == null) {
+            return OpenSslDefaultApplicationProtocolNegotiator.INSTANCE;
+        }
+
+        switch(config.protocol()) {
+        case NONE:
+            return OpenSslDefaultApplicationProtocolNegotiator.INSTANCE;
+        case NPN:
+            if (isServer) {
+                switch(config.selectedListenerFailureBehavior()) {
+                case CHOOSE_MY_LAST_PROTOCOL:
+                    return new OpenSslNpnApplicationProtocolNegotiator(config.supportedProtocols());
+                default:
+                    throw new UnsupportedOperationException(new StringBuilder("OpenSSL provider does not support ")
+                    .append(config.selectedListenerFailureBehavior()).append(" behavior").toString());
+                }
+            } else {
+                throw new UnsupportedOperationException("OpenSSL provider does not support client mode");
+            }
+        default:
+            throw new UnsupportedOperationException(new StringBuilder("OpenSSL provider does not support ")
+            .append(config.protocol()).append(" protocol").toString());
         }
     }
 }

@@ -14,13 +14,13 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_ENCODING;
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_LENGTH;
-import static io.netty.handler.codec.http.HttpHeaders.Values.DEFLATE;
-import static io.netty.handler.codec.http.HttpHeaders.Values.GZIP;
-import static io.netty.handler.codec.http.HttpHeaders.Values.IDENTITY;
-import static io.netty.handler.codec.http.HttpHeaders.Values.XDEFLATE;
-import static io.netty.handler.codec.http.HttpHeaders.Values.XGZIP;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_ENCODING;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
+import static io.netty.handler.codec.http.HttpHeaderValues.DEFLATE;
+import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
+import static io.netty.handler.codec.http.HttpHeaderValues.IDENTITY;
+import static io.netty.handler.codec.http.HttpHeaderValues.X_DEFLATE;
+import static io.netty.handler.codec.http.HttpHeaderValues.X_GZIP;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -32,7 +32,7 @@ import io.netty.handler.codec.compression.ZlibWrapper;
 
 /**
  * A HTTP2 frame listener that will decompress data frames according to the {@code content-encoding} header for each
- * stream.
+ * stream. The decompression provided by this class will be applied to the data for the entire stream.
  */
 public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecorator {
     private static final Http2ConnectionAdapter CLEAN_UP_LISTENER = new Http2ConnectionAdapter() {
@@ -67,6 +67,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         final Http2Stream stream = connection.stream(streamId);
         final EmbeddedChannel decompressor = stream == null ? null : stream.decompressor();
         if (decompressor == null) {
+            // The decompressor may be null if no compatible encoding type was found in this stream's headers
             listener.onDataRead(ctx, streamId, data, padding, endOfStream);
             return;
         }
@@ -85,12 +86,13 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
             } else {
                 for (;;) {
                     final ByteBuf nextBuf = nextReadableBuf(decompressor);
+                    final boolean endOfStreamForBuf = nextBuf == null ? endOfStream : false;
+
+                    listener.onDataRead(ctx, streamId, buf, padding, endOfStreamForBuf);
                     if (nextBuf == null) {
-                        listener.onDataRead(ctx, streamId, buf, padding, endOfStream);
                         break;
-                    } else {
-                        listener.onDataRead(ctx, streamId, buf, padding, false);
                     }
+
                     buf = nextBuf;
                 }
             }
@@ -125,10 +127,12 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
      * @throws Http2Exception If the specified encoding is not not supported and warrants an exception
      */
     protected EmbeddedChannel newContentDecompressor(AsciiString contentEncoding) throws Http2Exception {
-        if (GZIP.equalsIgnoreCase(contentEncoding) || XGZIP.equalsIgnoreCase(contentEncoding)) {
+        if (GZIP.equalsIgnoreCase(contentEncoding) ||
+            X_GZIP.equalsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP));
         }
-        if (DEFLATE.equalsIgnoreCase(contentEncoding) || XDEFLATE.equalsIgnoreCase(contentEncoding)) {
+        if (DEFLATE.equalsIgnoreCase(contentEncoding) ||
+            X_DEFLATE.equalsIgnoreCase(contentEncoding)) {
             final ZlibWrapper wrapper = strict ? ZlibWrapper.ZLIB : ZlibWrapper.ZLIB_OR_NONE;
             // To be strict, 'deflate' means ZLIB, but some servers were not implemented correctly.
             return new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(wrapper));
@@ -189,6 +193,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         } else if (endOfStream) {
             cleanup(stream, decompressor);
         }
+
         if (decompressor != null) {
             // The content length will be for the compressed data. Since we will decompress the data
             // this content-length will not be correct. Instead of queuing messages or delaying sending

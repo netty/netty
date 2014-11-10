@@ -16,7 +16,6 @@
 package io.netty.handler.ssl;
 
 import java.nio.ByteBuffer;
-import java.util.List;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -25,25 +24,22 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSession;
 
-class JettySslEngine extends SSLEngine {
-    protected final SSLEngine engine;
-    protected final JettySslSession session;
+class JdkSslEngine extends SSLEngine {
+    private final SSLEngine engine;
+    private final JdkSslSession session;
 
-    JettySslEngine(SSLEngine engine, final List<String> nextProtocols, boolean server) {
-        if (nextProtocols == null) {
-            throw new NullPointerException("nextProtocols");
-        }
-        if (nextProtocols.isEmpty()) {
-            throw new IllegalArgumentException("nextProtocols can not be empty");
-        }
-
+    JdkSslEngine(SSLEngine engine) {
         this.engine = engine;
-        session = new JettySslSession(engine);
+        session = new JdkSslSession(engine);
     }
 
     @Override
-    public JettySslSession getSession() {
+    public JdkSslSession getSession() {
         return session;
+    }
+
+    public SSLEngine getWrappedEngine() {
+        return engine;
     }
 
     @Override

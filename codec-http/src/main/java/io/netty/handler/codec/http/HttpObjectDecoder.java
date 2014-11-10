@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBufProcessor;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
@@ -422,7 +421,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<State> {
             //     - https://github.com/netty/netty/issues/222
             if (code >= 100 && code < 200) {
                 // One exception: Hixie 76 websocket handshake response
-                return !(code == 101 && !res.headers().contains(HttpHeaders.Names.SEC_WEBSOCKET_ACCEPT));
+                return !(code == 101 && !res.headers().contains(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT));
             }
 
             switch (code) {
@@ -571,9 +570,9 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<State> {
                 } else {
                     splitHeader(line);
                     CharSequence headerName = name;
-                    if (!AsciiString.equalsIgnoreCase(headerName, HttpHeaders.Names.CONTENT_LENGTH) &&
-                        !AsciiString.equalsIgnoreCase(headerName, HttpHeaders.Names.TRANSFER_ENCODING) &&
-                        !AsciiString.equalsIgnoreCase(headerName, HttpHeaders.Names.TRAILER)) {
+                    if (!HttpHeaderNames.CONTENT_LENGTH.equalsIgnoreCase(headerName) &&
+                        !HttpHeaderNames.TRANSFER_ENCODING.equalsIgnoreCase(headerName) &&
+                        !HttpHeaderNames.TRAILER.equalsIgnoreCase(headerName)) {
                         trailer.trailingHeaders().add(headerName, value);
                     }
                     lastHeader = name;

@@ -262,15 +262,22 @@ final class Http2TestUtil {
         private final Http2FrameListener listener;
         private final CountDownLatch messageLatch;
         private final CountDownLatch dataLatch;
+        private final CountDownLatch trailersLatch;
 
         public FrameCountDown(Http2FrameListener listener, CountDownLatch messageLatch) {
             this(listener, messageLatch, null);
         }
 
         public FrameCountDown(Http2FrameListener listener, CountDownLatch messageLatch, CountDownLatch dataLatch) {
+            this(listener, messageLatch, dataLatch, null);
+        }
+
+        public FrameCountDown(Http2FrameListener listener, CountDownLatch messageLatch,
+                CountDownLatch dataLatch, CountDownLatch trailersLatch) {
             this.listener = listener;
             this.messageLatch = messageLatch;
             this.dataLatch = dataLatch;
+            this.trailersLatch = trailersLatch;
         }
 
         @Override
@@ -291,6 +298,9 @@ final class Http2TestUtil {
                 boolean endStream) throws Http2Exception {
             listener.onHeadersRead(ctx, streamId, headers, padding, endStream);
             messageLatch.countDown();
+            if (trailersLatch != null && endStream) {
+                trailersLatch.countDown();
+            }
         }
 
         @Override
@@ -298,6 +308,9 @@ final class Http2TestUtil {
                 short weight, boolean exclusive, int padding, boolean endStream) throws Http2Exception {
             listener.onHeadersRead(ctx, streamId, headers, streamDependency, weight, exclusive, padding, endStream);
             messageLatch.countDown();
+            if (trailersLatch != null && endStream) {
+                trailersLatch.countDown();
+            }
         }
 
         @Override
