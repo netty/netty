@@ -318,6 +318,52 @@ public class DefaultHttp2OutboundFlowControllerTest {
     }
 
     @Test
+    public void successiveSendsShouldNotInteract() throws Http2Exception {
+        // Collapse the connection window to force queueing.
+        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, -window(CONNECTION_STREAM_ID));
+        assertEquals(0, window(CONNECTION_STREAM_ID));
+
+        ByteBuf data = dummyData(5, 5);
+        ByteBuf dataOnly = data.slice(0, 5);
+        try {
+            // Queue data for stream A and allow most of it to be written.
+            send(STREAM_A, dataOnly.slice(), 5);
+            verifyNoWrite(STREAM_A);
+            verifyNoWrite(STREAM_B);
+            controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, 8);
+            ArgumentCaptor<ByteBuf> argument = ArgumentCaptor.forClass(ByteBuf.class);
+            captureWrite(STREAM_A, argument, 3, false);
+            ByteBuf writtenBuf = argument.getValue();
+            assertEquals(dataOnly, writtenBuf);
+            assertEquals(65527, window(STREAM_A));
+            assertEquals(0, window(CONNECTION_STREAM_ID));
+
+            resetFrameWriter();
+
+            // Queue data for stream B and allow the rest of A and all of B to be written.
+            send(STREAM_B, dataOnly.slice(), 5);
+            verifyNoWrite(STREAM_A);
+            verifyNoWrite(STREAM_B);
+            controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, 12);
+            assertEquals(0, window(CONNECTION_STREAM_ID));
+
+            // Verify the rest of A is written.
+            captureWrite(STREAM_A, argument, 2, false);
+            writtenBuf = argument.getValue();
+            assertEquals(Unpooled.EMPTY_BUFFER, writtenBuf);
+            assertEquals(65525, window(STREAM_A));
+
+            argument = ArgumentCaptor.forClass(ByteBuf.class);
+            captureWrite(STREAM_B, argument, 5, false);
+            writtenBuf = argument.getValue();
+            assertEquals(dataOnly, writtenBuf);
+            assertEquals(65525, window(STREAM_B));
+        } finally {
+            manualSafeRelease(data);
+        }
+    }
+
+    @Test
     public void negativeWindowShouldNotThrowException() throws Http2Exception {
         final int initWindow = 20;
         final int secondWindowSize = 10;

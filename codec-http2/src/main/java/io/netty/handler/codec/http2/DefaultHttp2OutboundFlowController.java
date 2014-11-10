@@ -134,18 +134,20 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
 
     @Override
     public void updateOutboundWindowSize(int streamId, int delta) throws Http2Exception {
-        if (delta <= 0) {
-            throw new IllegalArgumentException("delta must be > 0");
-        }
-
         if (streamId == CONNECTION_STREAM_ID) {
             // Update the connection window and write any pending frames for all streams.
+            int prevWindow = connectionState().window();
             connectionState().incrementStreamWindow(delta);
+            System.err.println(String.format("%d, NM: receiving WINDOW_UPDATE for stream %d, delta=%d, prev=%d, new=%d",
+                    System.currentTimeMillis(), streamId, delta, prevWindow, connectionState().window()));
             writePendingBytes();
         } else {
             // Update the stream window and write any pending frames for the stream.
             OutboundFlowState state = stateOrFail(streamId);
+            int prevWindow = state.window();
             state.incrementStreamWindow(delta);
+            System.err.println(String.format("%d, NM: receiving WINDOW_UPDATE for stream %d, delta=%d, prev=%d, new=%d",
+                    System.currentTimeMillis(), streamId, delta, prevWindow, state.window()));
             if (state.writeBytes(state.writableWindow()) > 0) {
                 flush();
             }
@@ -264,11 +266,11 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     }
 
     /**
-     * Recursively traverses the priority tree rooted at the given node. Attempts to write the allowed bytes for the
-     * streams in this sub tree based on their weighted priorities.
+     * Recursively traverses the priority tree rooted at the given node. Attempts to write the
+     * allowed bytes for the streams in this sub tree based on their weighted priorities.
      *
-     * @param allowance
-     *            an allowed number of bytes that may be written to the streams in this subtree
+     * @param allowance an allowed number of bytes that may be written to the streams in this
+     *            subtree
      */
     private void writeAllowedBytes(Http2Stream stream, int allowance) throws Http2Exception {
         // Write the allowed bytes for this node. If not all of the allowance was used,
@@ -292,7 +294,10 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         // and skip the priority algorithm.
         if (unallocatedBytes <= remainingWindow) {
             for (Http2Stream child : stream.children()) {
-                writeAllowedBytes(child, state(child).unallocatedPriorityBytes());
+                OutboundFlowState childState = state(child);
+                // Initialize the allocated bytes for this stream.
+                childState.resetAllocatedPriorityBytes();
+                writeAllowedBytes(child, childState.priorityBytes());
             }
             return;
         }
@@ -303,8 +308,8 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         // increases in value as the list is iterated. This means that with this node ordering,
         // the most bytes will be written to those nodes with the largest aggregate number of
         // bytes and the highest priority.
-        List<Http2Stream> states = new ArrayList<Http2Stream>(stream.children());
-        Collections.sort(states, DATA_WEIGHT);
+        List<Http2Stream> childStreams = new ArrayList<Http2Stream>(stream.children());
+        Collections.sort(childStreams, DATA_WEIGHT);
 
         // Iterate over the children and spread the remaining bytes across them as is appropriate
         // based on the weights. This algorithm loops over all of the children more than once,
@@ -317,10 +322,12 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         int nextTail = 0;
         int unallocatedBytesForNextPass = 0;
         int remainingWeightForNextPass = 0;
-        for (int head = 0, tail = states.size();; ++head) {
+        boolean firstPass = true;
+        for (int head = 0, tail = childStreams.size();; ++head) {
             if (head >= tail) {
-                // We've reached the end one pass of the nodes. Reset the totals based on
-                // the nodes that were re-added to the deque since they still have data available.
+                // We've reached the end of one pass through the child streams. Reset the totals based on
+                // the streams that were re-added to the list since they still have data available.
+                firstPass = false;
                 unallocatedBytes = unallocatedBytesForNextPass;
                 remainingWeight = remainingWeightForNextPass;
                 unallocatedBytesForNextPass = 0;
@@ -334,8 +341,12 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             if (head >= tail) {
                 break;
             }
-            Http2Stream next = states.get(head);
+            Http2Stream next = childStreams.get(head);
             OutboundFlowState nextState = state(next);
+            if (firstPass) {
+                // The first pass through the list, initialize the allocated bytes for each stream.
+                nextState.resetAllocatedPriorityBytes();
+            }
             int weight = next.weight();
 
             // Determine the value (in bytes) of a single unit of weight.
@@ -363,7 +374,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                     // for the next pass.
                     unallocatedBytesForNextPass += nextState.unallocatedPriorityBytes();
                     remainingWeightForNextPass += weight;
-                    states.set(nextTail++, next);
+                    childStreams.set(nextTail++, next);
                     continue;
                 }
             }
@@ -414,7 +425,8 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
 
             // Update this branch of the priority tree if the streamable bytes have changed for this
             // node.
-            incrementPriorityBytes(streamableBytes() - previouslyStreamable);
+            int priorityDelta = streamableBytes() - previouslyStreamable;
+            incrementPriorityBytes(priorityDelta);
             return window;
         }
 
@@ -447,6 +459,13 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
          */
         int priorityBytes() {
             return priorityBytes;
+        }
+
+        /**
+         * Resets the number of bytes allocated to this stream by the priority algorithm.
+         */
+        private void resetAllocatedPriorityBytes() {
+            allocatedPriorityBytes = 0;
         }
 
         /**
@@ -622,10 +641,17 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                     int frameBytes = Math.min(bytesToWrite, frameSizePolicy.maxFrameSize());
                     if (frameBytes == bytesToWrite) {
                         // All the bytes fit into a single HTTP/2 frame, just send it all.
+                        int prevConnectionWindow = connectionState().window();
+                        int prevStreamWindow = window();
                         connectionState().incrementStreamWindow(-bytesToWrite);
                         incrementStreamWindow(-bytesToWrite);
                         frameWriter.writeData(ctx, stream.id(), data, padding, endStream, promise);
                         decrementPendingBytes(bytesToWrite);
+                        System.err.println(String.format(
+                                "%d, NM: sending DATA for stream %d, bytes=%d, pending=%d, "
+                                        + "window[prev=%d, new=%d], connection[prev=%d, new=%d]",
+                                System.currentTimeMillis(), stream.id(), bytesToWrite, pendingBytes, prevStreamWindow,
+                                window(), prevConnectionWindow, connectionState().window()));
                         if (enqueued) {
                             // It's enqueued - remove it from the head of the pending write queue.
                             pendingWriteQueue.remove();

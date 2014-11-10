@@ -114,6 +114,13 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
         int dataLength = data.readableBytes() + padding;
         boolean windowUpdateSent = false;
         try {
+            int prevConnectionWindow = connectionState().window();
+            int prevStreamWindow = stateOrFail(streamId).window();
+            System.err.println(String.format(
+                    "%d, NM: receiving DATA for stream %d, bytes=%d, "
+                            + "window[prev=%d, new=%d], connection[prev=%d, new=%d]", System.currentTimeMillis(),
+                    streamId, dataLength, prevStreamWindow,
+                    prevStreamWindow - dataLength, prevConnectionWindow, prevConnectionWindow - dataLength));
             // Apply the connection-level flow control.
             windowUpdateSent = applyConnectionFlowControl(ctx, dataLength);
 
@@ -289,10 +296,14 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
          * endpoint.
          */
         void updateWindow(ChannelHandlerContext ctx) throws Http2Exception {
+            int prevWindow = window;
             // Expand the window for this stream back to the size of the initial window.
             int deltaWindowSize = initialWindowSize - window;
             addAndGet(deltaWindowSize);
 
+            System.err.println(String.format("%d, NM: sending WINDOW_UPDATE for stream %d, delta=%d, prev=%d, new=%d",
+                    System.currentTimeMillis(),
+                    streamId, deltaWindowSize, prevWindow, window));
             // Send a window update for the stream/connection.
             frameWriter.writeWindowUpdate(ctx, streamId, deltaWindowSize, ctx.newPromise());
         }
