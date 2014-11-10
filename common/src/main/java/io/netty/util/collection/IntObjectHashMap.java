@@ -227,7 +227,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
             @Override
             public Iterator<V> iterator() {
                 return new Iterator<V>() {
-                    Iterator<Entry<V>> iter = IntObjectHashMap.this.iterator();
+                    final Iterator<Entry<V>> iter = IntObjectHashMap.this.iterator();
                     @Override
                     public boolean hasNext() {
                         return iter.hasNext();
