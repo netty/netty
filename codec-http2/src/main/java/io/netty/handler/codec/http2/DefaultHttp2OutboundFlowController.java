@@ -25,9 +25,9 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.ChannelPromiseAggregator;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -469,10 +469,10 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         /**
          * Creates a new frame with the given values but does not add it to the pending queue.
          */
-        private Frame newFrame(ChannelPromise promise, ByteBuf data, int padding, boolean endStream) {
+        private Frame newFrame(final ChannelPromise promise, ByteBuf data, int padding, boolean endStream) {
             // Store this as the future for the most recent write attempt.
             lastNewFrame = promise;
-            return new Frame(new ChannelPromiseAggregator(promise), data, padding, endStream);
+            return new Frame(new SimplePromiseAggregator(promise), data, padding, endStream);
         }
 
         /**
@@ -557,12 +557,12 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         private final class Frame {
             final ByteBuf data;
             final boolean endStream;
-            final ChannelPromiseAggregator promiseAggregator;
+            final SimplePromiseAggregator promiseAggregator;
             final ChannelPromise promise;
             int padding;
             boolean enqueued;
 
-            Frame(ChannelPromiseAggregator promiseAggregator, ByteBuf data, int padding,
+            Frame(SimplePromiseAggregator promiseAggregator, ByteBuf data, int padding,
                     boolean endStream) {
                 this.data = data;
                 this.padding = padding;
@@ -687,6 +687,35 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                     incrementPendingBytes(-bytes);
                 }
             }
+        }
+    }
+
+    /**
+     * Lightweight promise aggregator.
+     */
+    private class SimplePromiseAggregator {
+        final ChannelPromise promise;
+        int awaiting;
+        final ChannelFutureListener listener = new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                if (!future.isSuccess()) {
+                    promise.tryFailure(future.cause());
+                } else {
+                    if (--awaiting == 0) {
+                        promise.trySuccess();
+                    }
+                }
+            }
+        };
+
+        SimplePromiseAggregator(ChannelPromise promise) {
+            this.promise = promise;
+        }
+
+        void add(ChannelPromise promise) {
+            awaiting++;
+            promise.addListener(listener);
         }
     }
 }

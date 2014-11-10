@@ -309,7 +309,7 @@ public class Http2ConnectionRoundtripTest {
         final ByteBuf data = randomBytes(length);
         final String dataAsHex = ByteBufUtil.hexDump(data);
         final ByteBuf pingData = Unpooled.copiedBuffer(pingMsg, UTF_8);
-        final int numStreams = 500;
+        final int numStreams = 200;
 
         // Collect all the ping buffers as we receive them at the server.
         final String[] receivedPings = new String[numStreams];
@@ -365,7 +365,7 @@ public class Http2ConnectionRoundtripTest {
                 }
             });
             // Wait for all frames to be received.
-            assertTrue(trailersLatch.await(30, SECONDS));
+            assertTrue(trailersLatch.await(60, SECONDS));
             verify(serverListener, times(numStreams)).onHeadersRead(any(ChannelHandlerContext.class), anyInt(),
                     eq(headers), eq(0), eq((short) 16), eq(false), eq(0), eq(false));
             verify(serverListener, times(numStreams)).onHeadersRead(any(ChannelHandlerContext.class), anyInt(),

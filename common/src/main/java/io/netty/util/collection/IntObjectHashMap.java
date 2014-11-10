@@ -237,6 +237,11 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
                     public V next() {
                         return iter.next().value();
                     }
+
+                    @Override
+                    public void remove() {
+                        throw new UnsupportedOperationException();
+                    }
                 };
             }
 
