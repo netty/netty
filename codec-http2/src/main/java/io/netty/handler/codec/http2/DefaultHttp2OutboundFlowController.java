@@ -272,7 +272,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
      * @param allowance an allowed number of bytes that may be written to the streams in this
      *            subtree
      */
-    private void writeAllowedBytes(Http2Stream stream, int allowance) throws Http2Exception {
+    private void writeAllowedBytes(Http2Stream stream, int allowance) {
         // Write the allowed bytes for this node. If not all of the allowance was used,
         // restore what's left so that it can be propagated to future nodes.
         OutboundFlowState state = state(stream);
@@ -531,7 +531,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
          * the number of pending writes available, or because a frame does not support splitting on arbitrary
          * boundaries.
          */
-        private int writeBytes(int bytes) throws Http2Exception {
+        private int writeBytes(int bytes) {
             int bytesWritten = 0;
             if (!stream.localSideOpen()) {
                 return bytesWritten;
@@ -632,7 +632,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
              * <p>
              * Note: this does not flush the {@link ChannelHandlerContext}.
              */
-            void write() throws Http2Exception {
+            void write() {
                 // Using a do/while loop because if the buffer is empty we still need to call
                 // the writer once to send the empty frame.
                 final Http2FrameSizePolicy frameSizePolicy = frameWriter.configuration().frameSizePolicy();
@@ -643,8 +643,13 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                         // All the bytes fit into a single HTTP/2 frame, just send it all.
                         int prevConnectionWindow = connectionState().window();
                         int prevStreamWindow = window();
-                        connectionState().incrementStreamWindow(-bytesToWrite);
-                        incrementStreamWindow(-bytesToWrite);
+                        try {
+                            connectionState().incrementStreamWindow(-bytesToWrite);
+                            incrementStreamWindow(-bytesToWrite);
+                        } catch (Http2Exception e) {
+                            // Should never get here since we're decrementing.
+                            throw new AssertionError("Invalid window state when writing frame: " + e.getMessage());
+                        }
                         frameWriter.writeData(ctx, stream.id(), data, padding, endStream, promise);
                         decrementPendingBytes(bytesToWrite);
                         System.err.println(String.format(
