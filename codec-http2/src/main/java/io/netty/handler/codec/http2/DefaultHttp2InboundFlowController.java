@@ -66,7 +66,7 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
         });
     }
 
-    public DefaultHttp2InboundFlowController maxConnectionWindowSize(int maxConnectionWindowSize) {
+    public DefaultHttp2InboundFlowController setMaxConnectionWindowSize(int maxConnectionWindowSize) {
         if (maxConnectionWindowSize <= 0) {
             throw new IllegalArgumentException("maxConnectionWindowSize must be > 0");
         }

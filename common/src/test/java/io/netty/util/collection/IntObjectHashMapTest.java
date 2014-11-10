@@ -24,6 +24,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Random;
@@ -280,8 +281,8 @@ public class IntObjectHashMapTest {
         map.put(4, new Value("v4"));
         map.remove(4);
 
-        Value[] values = map.values(Value.class);
-        assertEquals(3, values.length);
+        Collection<Value> values = map.values();
+        assertEquals(3, values.size());
 
         Set<Value> expected = new HashSet<Value>();
         expected.add(v1);

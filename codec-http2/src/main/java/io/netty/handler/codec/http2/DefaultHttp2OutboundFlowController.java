@@ -325,8 +325,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                 int weight = child.weight();
 
                 // Determine the value (in bytes) of a single unit of weight.
-                double dataToWeightRatio =
-                        min(unallocatedBytes, remainingWindow) / (double) remainingWeight;
+                double dataToWeightRatio = min(unallocatedBytes, remainingWindow) / (double) remainingWeight;
                 unallocatedBytes -= childState.unallocatedPriorityBytes();
                 remainingWeight -= weight;
 

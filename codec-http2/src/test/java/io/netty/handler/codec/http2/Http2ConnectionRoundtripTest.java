@@ -324,8 +324,7 @@ public class Http2ConnectionRoundtripTest {
         }).when(serverListener).onPingRead(any(ChannelHandlerContext.class), any(ByteBuf.class));
 
         // Collect all the data buffers as we receive them at the server.
-        int streamArraySize = 3 + (numStreams * 2);
-        final StringBuilder[] receivedData = new StringBuilder[streamArraySize];
+        final StringBuilder[] receivedData = new StringBuilder[numStreams];
         doAnswer(new Answer<Integer>() {
             @Override
             public Integer answer(InvocationOnMock in) throws Throwable {
@@ -334,10 +333,11 @@ public class Http2ConnectionRoundtripTest {
                 int padding = (Integer) in.getArguments()[3];
                 int processedBytes = buf.readableBytes() + padding;
 
-                StringBuilder builder = receivedData[streamId];
+                int streamIndex = (streamId - 3) / 2;
+                StringBuilder builder = receivedData[streamIndex];
                 if (builder == null) {
                     builder = new StringBuilder(dataAsHex.length());
-                    receivedData[streamId] = builder;
+                    receivedData[streamIndex] = builder;
                 }
                 builder.append(ByteBufUtil.hexDump(buf));
                 return processedBytes;
@@ -365,7 +365,7 @@ public class Http2ConnectionRoundtripTest {
                 }
             });
             // Wait for all frames to be received.
-            assertTrue(trailersLatch.await(60, SECONDS));
+            assertTrue(trailersLatch.await(30, SECONDS));
             verify(serverListener, times(numStreams)).onHeadersRead(any(ChannelHandlerContext.class), anyInt(),
                     eq(headers), eq(0), eq((short) 16), eq(false), eq(0), eq(false));
             verify(serverListener, times(numStreams)).onHeadersRead(any(ChannelHandlerContext.class), anyInt(),
@@ -374,8 +374,8 @@ public class Http2ConnectionRoundtripTest {
                     any(ByteBuf.class));
             verify(serverListener, never()).onDataRead(any(ChannelHandlerContext.class),
                     anyInt(), any(ByteBuf.class), eq(0), eq(true));
-            for (int index = 3; index < streamArraySize; index += 2) {
-                assertEquals(dataAsHex, receivedData[index].toString());
+            for (StringBuilder builder : receivedData) {
+                assertEquals(dataAsHex, builder.toString());
             }
             for (String receivedPing : receivedPings) {
                 assertEquals(pingMsg, receivedPing);

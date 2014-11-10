@@ -35,7 +35,6 @@ import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -388,8 +387,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public final Collection<? extends Http2Stream> children() {
-            DefaultStream[] childrenArray = children.values(DefaultStream.class);
-            return Arrays.asList(childrenArray);
+            return children.values();
         }
 
         @Override
@@ -421,10 +419,10 @@ public class DefaultHttp2Connection implements Http2Connection {
             if (newParent != parent() || exclusive) {
                 List<ParentChangedEvent> events = null;
                 if (newParent.isDescendantOf(this)) {
-                    events = new ArrayList<ParentChangedEvent>(2 + (exclusive ? newParent.children().size() : 0));
+                    events = new ArrayList<ParentChangedEvent>(2 + (exclusive ? newParent.numChildren(): 0));
                     parent.takeChild(newParent, false, events);
                 } else {
-                    events = new ArrayList<ParentChangedEvent>(1 + (exclusive ? newParent.children().size() : 0));
+                    events = new ArrayList<ParentChangedEvent>(1 + (exclusive ? newParent.numChildren() : 0));
                 }
                 newParent.takeChild(this, exclusive, events);
                 notifyParentChanged(events);
@@ -563,7 +561,7 @@ public class DefaultHttp2Connection implements Http2Connection {
                 // move any previous children to the child node, becoming grand children
                 // of this node.
                 if (!children.isEmpty()) {
-                    for (DefaultStream grandchild : removeAllChildren().values(DefaultStream.class)) {
+                    for (DefaultStream grandchild : removeAllChildren().values()) {
                         child.takeChild(grandchild, false, events);
                     }
                 }
@@ -590,7 +588,7 @@ public class DefaultHttp2Connection implements Http2Connection {
                 totalChildWeights -= child.weight();
 
                 // Move up any grand children to be directly dependent on this node.
-                for (DefaultStream grandchild : child.children.values(DefaultStream.class)) {
+                for (DefaultStream grandchild : child.children.values()) {
                     takeChild(grandchild, false, events);
                 }
 
