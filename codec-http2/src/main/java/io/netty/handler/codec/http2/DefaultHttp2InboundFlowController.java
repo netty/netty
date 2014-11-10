@@ -34,6 +34,12 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
     public static final double DEFAULT_WINDOW_UPDATE_RATIO = 0.5;
 
     /**
+     * The default maximum connection size used as a limit when the number of active streams is
+     * large. Set to 2 MiB.
+     */
+    public static final int DEFAULT_MAX_CONNECTION_WINDOW_SIZE = 1048576 * 2;
+
+    /**
      * A value for the window update ratio to be use in order to disable window updates for
      * a stream (i.e. {@code 0}).
      */
@@ -41,6 +47,7 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
 
     private final Http2Connection connection;
     private final Http2FrameWriter frameWriter;
+    private int maxConnectionWindowSize = DEFAULT_MAX_CONNECTION_WINDOW_SIZE;
     private int initialWindowSize = DEFAULT_WINDOW_SIZE;
 
     public DefaultHttp2InboundFlowController(Http2Connection connection, Http2FrameWriter frameWriter) {
@@ -57,6 +64,14 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
                 stream.inboundFlow(new InboundFlowState(stream.id()));
             }
         });
+    }
+
+    public DefaultHttp2InboundFlowController setMaxConnectionWindowSize(int maxConnectionWindowSize) {
+        if (maxConnectionWindowSize <= 0) {
+            throw new IllegalArgumentException("maxConnectionWindowSize must be > 0");
+        }
+        this.maxConnectionWindowSize = maxConnectionWindowSize;
+        return this;
     }
 
     @Override
@@ -114,7 +129,6 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
         int dataLength = data.readableBytes() + padding;
         boolean windowUpdateSent = false;
         try {
-            // Apply the connection-level flow control.
             windowUpdateSent = applyConnectionFlowControl(ctx, dataLength);
 
             // Apply the stream-level flow control.
@@ -215,6 +229,25 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
         }
 
         /**
+         * Returns the initial size of this window.
+         */
+        int initialWindowSize() {
+            int maxWindowSize = initialWindowSize;
+            if (streamId == CONNECTION_STREAM_ID) {
+                // Determine the maximum number of streams that we can allow without integer overflow
+                // of maxWindowSize * numStreams. Also take care to avoid division by zero when
+                // maxWindowSize == 0.
+                int maxNumStreams = Integer.MAX_VALUE;
+                if (maxWindowSize > 0) {
+                    maxNumStreams /= maxWindowSize;
+                }
+                int numStreams = Math.min(maxNumStreams, Math.max(1, connection.numActiveStreams()));
+                maxWindowSize = Math.min(maxConnectionWindowSize, maxWindowSize * numStreams);
+            }
+            return maxWindowSize;
+        }
+
+        /**
          * Updates the flow control window for this stream if it is appropriate.
          *
          * @return {@code} true if a {@code WINDOW_UPDATE} frame was sent.
@@ -224,7 +257,7 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
                 return false;
             }
 
-            int threshold = (int) (initialWindowSize * windowUpdateRatio);
+            int threshold = (int) (initialWindowSize() * windowUpdateRatio);
             if (window <= threshold) {
                 updateWindow(ctx);
                 return true;
@@ -290,10 +323,8 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
          */
         void updateWindow(ChannelHandlerContext ctx) throws Http2Exception {
             // Expand the window for this stream back to the size of the initial window.
-            int deltaWindowSize = initialWindowSize - window;
+            int deltaWindowSize = initialWindowSize() - window;
             addAndGet(deltaWindowSize);
-
-            // Send a window update for the stream/connection.
             frameWriter.writeWindowUpdate(ctx, streamId, deltaWindowSize, ctx.newPromise());
         }
     }

@@ -22,7 +22,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.ChannelPromiseAggregator;
 
 import java.util.ArrayDeque;
 
@@ -268,12 +267,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         // There were previous DATA frames sent.  We need to send the HEADERS only after the most
         // recent DATA frame to keep them in sync...
 
-        // Wrap the original promise in an aggregate which will complete the original promise
-        // once the headers are written.
-        final ChannelPromiseAggregator aggregatePromise = new ChannelPromiseAggregator(promise);
-        final ChannelPromise innerPromise = ctx.newPromise();
-        aggregatePromise.add(innerPromise);
-
         // Only write the HEADERS frame after the previous DATA frame has been written.
         final Http2Stream theStream = stream;
         lastDataWrite.addListener(new ChannelFutureListener() {
@@ -281,13 +274,13 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (!future.isSuccess()) {
                     // The DATA write failed, also fail this write.
-                    innerPromise.setFailure(future.cause());
+                    promise.setFailure(future.cause());
                     return;
                 }
 
                 // Perform the write.
                 writeHeaders(ctx, theStream, headers, streamDependency, weight, exclusive, padding,
-                        endOfStream, innerPromise);
+                        endOfStream, promise);
             }
         });
 

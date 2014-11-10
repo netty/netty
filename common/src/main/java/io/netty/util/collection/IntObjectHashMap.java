@@ -15,8 +15,9 @@
 
 package io.netty.util.collection;
 
-import java.lang.reflect.Array;
+import java.util.AbstractCollection;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -221,16 +222,34 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
     }
 
     @Override
-    public V[] values(Class<V> clazz) {
-        @SuppressWarnings("unchecked")
-        V[] outValues = (V[]) Array.newInstance(clazz, size());
-        int targetIx = 0;
-        for (int i = 0; i < values.length; ++i) {
-            if (values[i] != null) {
-                outValues[targetIx++] = values[i];
+    public Collection<V> values() {
+        return new AbstractCollection<V>() {
+            @Override
+            public Iterator<V> iterator() {
+                return new Iterator<V>() {
+                    final Iterator<Entry<V>> iter = IntObjectHashMap.this.iterator();
+                    @Override
+                    public boolean hasNext() {
+                        return iter.hasNext();
+                    }
+
+                    @Override
+                    public V next() {
+                        return iter.next().value();
+                    }
+
+                    @Override
+                    public void remove() {
+                        throw new UnsupportedOperationException();
+                    }
+                };
             }
-        }
-        return outValues;
+
+            @Override
+            public int size() {
+                return size;
+            }
+        };
     }
 
     @Override
