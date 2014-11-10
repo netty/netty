@@ -136,25 +136,12 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     public void updateOutboundWindowSize(int streamId, int delta) throws Http2Exception {
         if (streamId == CONNECTION_STREAM_ID) {
             // Update the connection window and write any pending frames for all streams.
-            int prevWindow = connectionState().window();
             connectionState().incrementStreamWindow(delta);
-            /*
-             * TODO: System.err.println(String.format(
-             * "%d, NM: receiving WINDOW_UPDATE for stream %d, delta=%d, prev=%d, new=%d",
-             * System.currentTimeMillis(), streamId, delta, prevWindow,
-             * connectionState().window()));
-             */
             writePendingBytes();
         } else {
             // Update the stream window and write any pending frames for the stream.
             OutboundFlowState state = stateOrFail(streamId);
-            int prevWindow = state.window();
             state.incrementStreamWindow(delta);
-            /*
-             * TODO: System.err.println(String.format(
-             * "%d, NM: receiving WINDOW_UPDATE for stream %d, delta=%d, prev=%d, new=%d",
-             * System.currentTimeMillis(), streamId, delta, prevWindow, state.window()));
-             */
             if (state.writeBytes(state.writableWindow()) > 0) {
                 flush();
             }
@@ -264,13 +251,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
 
         // Recursively write as many of the total writable bytes as possible.
         Http2Stream connectionStream = connection.connectionStream();
-        int totalAllowance = state(connectionStream).priorityBytes();
-        int connectionWindowBefore = state(connectionStream).window();
-        int bytesWritten = writeAllowedBytes(connectionStream, totalAllowance);
-        System.err.println(String.format(
-                "NM: writePendingBytes: totalAllowance=%d, bytesWritten=%d, "
-                        + "connectionWindowBefore=%d, connectionWindowAfter=%d", totalAllowance,
-                bytesWritten, connectionWindowBefore, state(connectionStream).window()));
+        writeAllowedBytes(connectionStream, state(connectionStream).priorityBytes());
 
         // Optimization: only flush once for all written frames. If it's null, there are no
         // data frames to send anyway.
@@ -335,10 +316,9 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         int nextTail = 0;
         int unallocatedBytesForNextPass = 0;
         int remainingWeightForNextPass = 0;
-        int numPasses = 0;
-        int numStreamsWritten = 0;
+
         // Outer loop: repeatedly iterate over the remaining children until all possible bytes have been distributed.
-        for (int tail = childStreams.size(); tail > 0; ++numPasses) {
+        for (int numPasses = 0, tail = childStreams.size(); tail > 0; ++numPasses) {
             // Inner loop: iterate across all remaining children, distributing bytes among them based
             // on their weights.
             for (int head = 0; head < tail; ++head) {
@@ -377,9 +357,6 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                 } else {
                     // We're done with the allocation for this stream. Write the allocated bytes.
                     bytesWritten += writeAllowedBytes(child, childState.allocatedPriorityBytes());
-                    if (childState.allocatedPriorityBytes() > 0) {
-                        numStreamsWritten++;
-                    }
                 }
             }
 
@@ -392,9 +369,6 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             tail = nextTail;
             nextTail = 0;
         }
-        System.err.println(String.format(
-                "NM: writeAllowedBytes, numPasses=%d, numStreamsWritten=%d", numPasses,
-                numStreamsWritten));
         return bytesWritten;
     }
 
@@ -649,8 +623,6 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                     int frameBytes = Math.min(bytesToWrite, frameSizePolicy.maxFrameSize());
                     if (frameBytes == bytesToWrite) {
                         // All the bytes fit into a single HTTP/2 frame, just send it all.
-                        int prevConnectionWindow = connectionState().window();
-                        int prevStreamWindow = window();
                         try {
                             connectionState().incrementStreamWindow(-bytesToWrite);
                             incrementStreamWindow(-bytesToWrite);
@@ -660,11 +632,6 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                         }
                         frameWriter.writeData(ctx, stream.id(), data, padding, endStream, promise);
                         decrementPendingBytes(bytesToWrite);
-                        /* TODO: System.err.println(String.format(
-                                "%d, NM: sending DATA for stream %d, bytes=%d, pending=%d, "
-                                        + "window[prev=%d, new=%d], connection[prev=%d, new=%d]",
-                                System.currentTimeMillis(), stream.id(), bytesToWrite, pendingBytes, prevStreamWindow,
-                                window(), prevConnectionWindow, connectionState().window()));*/
                         if (enqueued) {
                             // It's enqueued - remove it from the head of the pending write queue.
                             pendingWriteQueue.remove();
@@ -698,8 +665,6 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
              * @return the partial frame.
              */
             Frame split(int maxBytes) {
-                // TODO: Should padding be spread across chunks or only at the end?
-
                 // The requested maxBytes should always be less than the size of this frame.
                 assert maxBytes < size() : "Attempting to split a frame for the full size.";
 

@@ -34,6 +34,12 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
     public static final double DEFAULT_WINDOW_UPDATE_RATIO = 0.5;
 
     /**
+     * The default maximum connection size used as a limit when the number of active streams is
+     * large. Set to 2 MiB.
+     */
+    public static final int DEFAULT_MAX_CONNECTION_WINDOW_SIZE = 1048576 * 2;
+
+    /**
      * A value for the window update ratio to be use in order to disable window updates for
      * a stream (i.e. {@code 0}).
      */
@@ -41,9 +47,11 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
 
     private final Http2Connection connection;
     private final Http2FrameWriter frameWriter;
+    private int maxConnectionWindowSize = DEFAULT_MAX_CONNECTION_WINDOW_SIZE;
     private int initialWindowSize = DEFAULT_WINDOW_SIZE;
 
-    public DefaultHttp2InboundFlowController(Http2Connection connection, Http2FrameWriter frameWriter) {
+    public DefaultHttp2InboundFlowController(Http2Connection connection,
+            Http2FrameWriter frameWriter) {
         this.connection = checkNotNull(connection, "connection");
         this.frameWriter = checkNotNull(frameWriter, "frameWriter");
 
@@ -57,6 +65,14 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
                 stream.inboundFlow(new InboundFlowState(stream.id()));
             }
         });
+    }
+
+    public DefaultHttp2InboundFlowController maxConnectionWindowSize(int maxConnectionWindowSize) {
+        if (maxConnectionWindowSize <= 0) {
+            throw new IllegalArgumentException("maxConnectionWindowSize must be > 0");
+        }
+        this.maxConnectionWindowSize = maxConnectionWindowSize;
+        return this;
     }
 
     @Override
@@ -114,13 +130,6 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
         int dataLength = data.readableBytes() + padding;
         boolean windowUpdateSent = false;
         try {
-            int prevConnectionWindow = connectionState().window();
-            int prevStreamWindow = stateOrFail(streamId).window();
-            /*TODO: System.err.println(String.format(
-                    "%d, NM: receiving DATA for stream %d, bytes=%d, "
-                            + "window[prev=%d, new=%d], connection[prev=%d, new=%d]", System.currentTimeMillis(),
-                    streamId, dataLength, prevStreamWindow,
-                    prevStreamWindow - dataLength, prevConnectionWindow, prevConnectionWindow - dataLength));*/
             // Apply the connection-level flow control.
             windowUpdateSent = applyConnectionFlowControl(ctx, dataLength);
 
@@ -222,6 +231,18 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
         }
 
         /**
+         * Returns the initial size of this window.
+         */
+        int initialWindowSize() {
+            int maxWindowSize = initialWindowSize;
+            if (streamId == CONNECTION_STREAM_ID) {
+                int numStreams = Math.max(1, connection.numActiveStreams());
+                maxWindowSize = Math.min(maxConnectionWindowSize, maxWindowSize * numStreams);
+            }
+            return maxWindowSize;
+        }
+
+        /**
          * Updates the flow control window for this stream if it is appropriate.
          *
          * @return {@code} true if a {@code WINDOW_UPDATE} frame was sent.
@@ -231,7 +252,7 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
                 return false;
             }
 
-            int threshold = (int) (initialWindowSize * windowUpdateRatio);
+            int threshold = (int) (initialWindowSize() * windowUpdateRatio);
             if (window <= threshold) {
                 updateWindow(ctx);
                 return true;
@@ -296,16 +317,10 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
          * endpoint.
          */
         void updateWindow(ChannelHandlerContext ctx) throws Http2Exception {
-            int prevWindow = window;
             // Expand the window for this stream back to the size of the initial window.
-            int deltaWindowSize = initialWindowSize - window;
+            int deltaWindowSize = initialWindowSize() - window;
             addAndGet(deltaWindowSize);
 
-            /*
-             * TODO: System.err.println(String.format(
-             * "%d, NM: sending WINDOW_UPDATE for stream %d, delta=%d, prev=%d, new=%d",
-             * System.currentTimeMillis(), streamId, deltaWindowSize, prevWindow, window));
-             */
             // Send a window update for the stream/connection.
             frameWriter.writeWindowUpdate(ctx, streamId, deltaWindowSize, ctx.newPromise());
         }
