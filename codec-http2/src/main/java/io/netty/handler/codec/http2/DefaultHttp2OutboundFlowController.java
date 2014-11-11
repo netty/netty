@@ -35,6 +35,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Basic implementation of {@link Http2OutboundFlowController}.
@@ -718,14 +719,14 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
      */
     private class SimplePromiseAggregator {
         final ChannelPromise promise;
-        int awaiting;
+        final AtomicInteger awaiting = new AtomicInteger();
         final ChannelFutureListener listener = new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (!future.isSuccess()) {
                     promise.tryFailure(future.cause());
                 } else {
-                    if (--awaiting == 0) {
+                    if (awaiting.decrementAndGet() == 0) {
                         promise.trySuccess();
                     }
                 }
@@ -737,7 +738,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         }
 
         void add(ChannelPromise promise) {
-            awaiting++;
+            awaiting.incrementAndGet();
             promise.addListener(listener);
         }
     }
