@@ -19,6 +19,15 @@ import io.netty.handler.codec.BinaryHeaders;
 import io.netty.handler.codec.DefaultBinaryHeaders;
 
 public class DefaultHttp2Headers extends DefaultBinaryHeaders implements Http2Headers {
+
+    public DefaultHttp2Headers() {
+        this(true);
+    }
+
+    public DefaultHttp2Headers(boolean forceKeyToLower) {
+        super(forceKeyToLower);
+    }
+
     @Override
     public Http2Headers add(AsciiString name, AsciiString value) {
         super.add(name, value);
