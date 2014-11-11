@@ -35,9 +35,9 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
 
     /**
      * The default maximum connection size used as a limit when the number of active streams is
-     * large. Set to 1 MiB.
+     * large. Set to 2 MiB.
      */
-    public static final int DEFAULT_MAX_CONNECTION_WINDOW_SIZE = 1048576;
+    public static final int DEFAULT_MAX_CONNECTION_WINDOW_SIZE = 1048576 * 2;
 
     /**
      * A value for the window update ratio to be use in order to disable window updates for

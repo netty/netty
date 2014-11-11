@@ -1039,16 +1039,16 @@ public class DefaultHttp2OutboundFlowControllerTest {
 
             OutboundFlowState state = state(stream0);
             assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_A, STREAM_B, STREAM_C, STREAM_D)),
-                    state.priorityBytes());
+                    state.streamableBytesForTree());
             state = state(streamA);
             assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_A, STREAM_C, STREAM_D)),
-                    state.priorityBytes());
+                    state.streamableBytesForTree());
             state = state(streamB);
-            assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B)), state.priorityBytes());
+            assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B)), state.streamableBytesForTree());
             state = state(streamC);
-            assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_C)), state.priorityBytes());
+            assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_C)), state.streamableBytesForTree());
             state = state(streamD);
-            assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_D)), state.priorityBytes());
+            assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_D)), state.streamableBytesForTree());
         } finally {
             manualSafeRelease(bufs);
         }
@@ -1109,17 +1109,17 @@ public class DefaultHttp2OutboundFlowControllerTest {
             streamB.setPriority(STREAM_A, DEFAULT_PRIORITY_WEIGHT, true);
             OutboundFlowState state = state(stream0);
             assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_A, STREAM_B, STREAM_C, STREAM_D)),
-                    state.priorityBytes());
+                    state.streamableBytesForTree());
             state = state(streamA);
             assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_A, STREAM_B, STREAM_C, STREAM_D)),
-                    state.priorityBytes());
+                    state.streamableBytesForTree());
             state = state(streamB);
             assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B, STREAM_C, STREAM_D)),
-                    state.priorityBytes());
+                    state.streamableBytesForTree());
             state = state(streamC);
-            assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_C)), state.priorityBytes());
+            assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_C)), state.streamableBytesForTree());
             state = state(streamD);
-            assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_D)), state.priorityBytes());
+            assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_D)), state.streamableBytesForTree());
         } finally {
             manualSafeRelease(bufs);
         }
@@ -1188,19 +1188,19 @@ public class DefaultHttp2OutboundFlowControllerTest {
             assertEquals(
                     calculateStreamSizeSum(streamSizes,
                             Arrays.asList(STREAM_A, STREAM_B, STREAM_C, STREAM_D, STREAM_E)),
-                    state.priorityBytes());
+                    state.streamableBytesForTree());
             state = state(streamA);
             assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_A, STREAM_E, STREAM_C, STREAM_D)),
-                    state.priorityBytes());
+                    state.streamableBytesForTree());
             state = state(streamB);
-            assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B)), state.priorityBytes());
+            assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B)), state.streamableBytesForTree());
             state = state(streamC);
-            assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_C)), state.priorityBytes());
+            assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_C)), state.streamableBytesForTree());
             state = state(streamD);
-            assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_D)), state.priorityBytes());
+            assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_D)), state.streamableBytesForTree());
             state = state(streamE);
             assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_E, STREAM_C, STREAM_D)),
-                    state.priorityBytes());
+                    state.streamableBytesForTree());
         } finally {
             manualSafeRelease(bufs);
         }
@@ -1258,15 +1258,15 @@ public class DefaultHttp2OutboundFlowControllerTest {
 
             OutboundFlowState state = state(stream0);
             assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B, STREAM_C, STREAM_D)),
-                    state.priorityBytes());
+                    state.streamableBytesForTree());
             state = state(streamA);
-            assertEquals(0, state.priorityBytes());
+            assertEquals(0, state.streamableBytesForTree());
             state = state(streamB);
-            assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B)), state.priorityBytes());
+            assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B)), state.streamableBytesForTree());
             state = state(streamC);
-            assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_C)), state.priorityBytes());
+            assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_C)), state.streamableBytesForTree());
             state = state(streamD);
-            assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_D)), state.priorityBytes());
+            assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_D)), state.streamableBytesForTree());
         } finally {
             manualSafeRelease(bufs);
         }
