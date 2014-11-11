@@ -309,7 +309,7 @@ public class Http2ConnectionRoundtripTest {
         final ByteBuf data = randomBytes(length);
         final String dataAsHex = ByteBufUtil.hexDump(data);
         final ByteBuf pingData = Unpooled.copiedBuffer(pingMsg, UTF_8);
-        final int numStreams = 20;
+        final int numStreams = 200;
 
         // Collect all the ping buffers as we receive them at the server.
         final String[] receivedPings = new String[numStreams];
@@ -346,24 +346,25 @@ public class Http2ConnectionRoundtripTest {
                 any(ByteBuf.class), anyInt(), anyBoolean());
         try {
             bootstrapEnv(numStreams * length, numStreams * 4, numStreams);
-            runInChannel(clientChannel, new Http2Runnable() {
-                @Override
-                public void run() {
-                    // Send a bunch of data on each stream.
-                    int upperLimit = 3 + 2 * numStreams;
-                    for (int streamId = 3; streamId < upperLimit; streamId += 2) {
-                        http2Client.encoder().writeHeaders(ctx(), streamId, headers, 0,
-                                (short) 16, false, 0, false, newPromise());
+            int upperLimit = 3 + 2 * numStreams;
+            for (int ix = 3; ix < upperLimit; ix += 2) {
+                final int streamId = ix;
+                runInChannel(clientChannel, new Http2Runnable() {
+                    @Override
+                    public void run() {
+                        // Send a bunch of data on each stream.
+                        http2Client.encoder().writeHeaders(ctx(), streamId, headers, 0, (short) 16,
+                                false, 0, false, newPromise());
                         http2Client.encoder().writePing(ctx(), false, pingData.slice().retain(),
                                 newPromise());
-                        http2Client.encoder().writeData(ctx(), streamId, data.slice().retain(),
-                                0, false, newPromise());
+                        http2Client.encoder().writeData(ctx(), streamId, data.slice().retain(), 0,
+                                false, newPromise());
                         // Write trailers.
-                        http2Client.encoder().writeHeaders(ctx(), streamId, headers, 0,
-                                (short) 16, false, 0, true, newPromise());
+                        http2Client.encoder().writeHeaders(ctx(), streamId, headers, 0, (short) 16,
+                                false, 0, true, newPromise());
                     }
-                }
-            });
+                });
+            }
             // Wait for all frames to be received.
             assertTrue(trailersLatch.await(60, SECONDS));
             verify(serverListener, times(numStreams)).onHeadersRead(any(ChannelHandlerContext.class), anyInt(),

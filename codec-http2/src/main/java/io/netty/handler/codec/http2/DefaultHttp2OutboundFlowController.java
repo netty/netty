@@ -273,6 +273,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
      * @return the number of bytes written for this subtree.
      */
     private int writeAllowedBytes(Http2Stream stream, int allowance) {
+        System.err.println(String.format("%d, NM: ENTERING writeAllowedBytes", System.currentTimeMillis()));
         // Write the allowed bytes for this node. If not all of the allowance was used,
         // restore what's left so that it can be propagated to future nodes.
         OutboundFlowState state = state(stream);
@@ -320,7 +321,8 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         int nextTail = 0;
         int unallocatedBytesForNextPass = 0;
         int remainingWeightForNextPass = 0;
-
+        int numPasses = 0;
+        int numStreamsWritten = 0;
         // Outer loop: repeatedly iterate over the remaining children until all possible bytes have been distributed.
         for (int tail = childStreams.size(); tail > 0;) {
             // Inner loop: iterate across all remaining children, distributing bytes among them based
@@ -356,6 +358,10 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                     // We're done with the allocation for this stream. Write the allocated bytes.
                     bytesWritten += writeAllowedBytes(child, childState.allocatedPriorityBytes());
 
+                    if (childState.allocatedPriorityBytes() > 0) {
+                        numStreamsWritten++;
+                    }
+
                     // Reset the allocated bytes for future invocations.
                     childState.resetAllocatedPriorityBytes();
                 }
@@ -369,7 +375,11 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             remainingWeightForNextPass = 0;
             tail = nextTail;
             nextTail = 0;
+            numPasses++;
         }
+        System.err.println(String.format(
+                "%d, NM: LEAVING writeAllowedBytes, numPasses=%d, numStreamsWritten=%d",
+                System.currentTimeMillis(), numPasses, numStreamsWritten));
         return bytesWritten;
     }
 
