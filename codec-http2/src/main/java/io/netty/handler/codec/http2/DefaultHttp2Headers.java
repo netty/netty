@@ -20,10 +20,26 @@ import io.netty.handler.codec.DefaultBinaryHeaders;
 
 public class DefaultHttp2Headers extends DefaultBinaryHeaders implements Http2Headers {
 
+    /**
+     * Creates an instance that will convert all header names to lowercase.
+     */
     public DefaultHttp2Headers() {
         this(true);
     }
 
+    /**
+     * Creates an instance that can be configured to either do header field name conversion to
+     * lowercase, or not do any conversion at all.
+     * <p>
+     *
+     * <strong>Note</strong> that setting {@code forceKeyToLower} to {@code false} can violate the
+     * <a href="https://tools.ietf.org/html/draft-ietf-httpbis-http2-15#section-8.1.2">HTTP/2 specification</a>
+     * which specifies that a request or response containing an uppercase header field MUST be treated
+     * as malformed. Only set {@code forceKeyToLower} to {@code false} if you are explicitly using lowercase
+     * header field names and want to avoid the conversion to lowercase.
+     *
+     * @param forceKeyToLower if @{code false} no header name conversion will be performed
+     */
     public DefaultHttp2Headers(boolean forceKeyToLower) {
         super(forceKeyToLower);
     }
