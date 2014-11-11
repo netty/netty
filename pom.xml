@@ -253,6 +253,19 @@
     </dependency>
   </dependencies>
 
+  <profiles>
+    <profile>
+      <id>jdk8</id>
+      <activation>
+        <jdk>[1.8,)</jdk>
+      </activation>
+      <properties>
+        <!-- Our Javadoc has poor enough quality to fail the build thanks to JDK8 javadoc which got more strict. -->
+        <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
+      </properties>
+    </profile>
+  </profiles>
+
   <properties>
     <attach-distribution>false</attach-distribution>
     <jboss.marshalling.version>1.3.14.GA</jboss.marshalling.version>
