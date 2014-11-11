@@ -309,7 +309,7 @@ public class Http2ConnectionRoundtripTest {
         final ByteBuf data = randomBytes(length);
         final String dataAsHex = ByteBufUtil.hexDump(data);
         final ByteBuf pingData = Unpooled.copiedBuffer(pingMsg, UTF_8);
-        final int numStreams = 10;
+        final int numStreams = 20;
 
         // Collect all the ping buffers as we receive them at the server.
         final String[] receivedPings = new String[numStreams];
