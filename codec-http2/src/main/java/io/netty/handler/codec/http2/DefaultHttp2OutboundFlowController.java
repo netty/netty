@@ -136,12 +136,18 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     public void updateOutboundWindowSize(int streamId, int delta) throws Http2Exception {
         if (streamId == CONNECTION_STREAM_ID) {
             // Update the connection window and write any pending frames for all streams.
+            int prevWindow = connectionState().window();
             connectionState().incrementStreamWindow(delta);
+            System.err.println(String.format("%d, NM: receiving WINDOW_UPDATE for stream %d, delta=%d, prev=%d, new=%d",
+                    System.currentTimeMillis(), streamId, delta, prevWindow, connectionState().window()));
             writePendingBytes();
         } else {
             // Update the stream window and write any pending frames for the stream.
             OutboundFlowState state = stateOrFail(streamId);
+            int prevWindow = state.window();
             state.incrementStreamWindow(delta);
+            System.err.println(String.format("%d, NM: receiving WINDOW_UPDATE for stream %d, delta=%d, prev=%d, new=%d",
+                    System.currentTimeMillis(), streamId, delta, prevWindow, state.window()));
             if (state.writeBytes(state.writableWindow()) > 0) {
                 flush();
             }
@@ -618,6 +624,8 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                     int frameBytes = Math.min(bytesToWrite, frameSizePolicy.maxFrameSize());
                     if (frameBytes == bytesToWrite) {
                         // All the bytes fit into a single HTTP/2 frame, just send it all.
+                        int prevConnectionWindow = connectionState().window();
+                        int prevStreamWindow = window();
                         try {
                             connectionState().incrementStreamWindow(-bytesToWrite);
                             incrementStreamWindow(-bytesToWrite);
@@ -627,6 +635,11 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                         }
                         frameWriter.writeData(ctx, stream.id(), data, padding, endStream, promise);
                         decrementPendingBytes(bytesToWrite);
+                        System.err.println(String.format(
+                                "%d, NM: sending DATA for stream %d, bytes=%d, pending=%d, "
+                                        + "window[prev=%d, new=%d], connection[prev=%d, new=%d]",
+                                System.currentTimeMillis(), stream.id(), bytesToWrite, pendingBytes, prevStreamWindow,
+                                window(), prevConnectionWindow, connectionState().window()));
                         if (enqueued) {
                             // It's enqueued - remove it from the head of the pending write queue.
                             pendingWriteQueue.remove();
