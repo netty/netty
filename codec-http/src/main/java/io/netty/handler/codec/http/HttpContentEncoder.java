@@ -87,7 +87,12 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
 
                 final HttpResponse res = (HttpResponse) msg;
 
-                if (res.status().code() == 100) {
+                /*
+                 * per rfc2616 4.3 Message Body
+                 * All 1xx (informational), 204 (no content), and 304 (not modified) responses MUST NOT include a
+                 * message-body. All other responses do include a message-body, although it MAY be of zero length.
+                 */
+                if (isPassthru(res)) {
                     if (isFull) {
                         out.add(ReferenceCountUtil.retain(res));
                     } else {
@@ -110,18 +115,6 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                         out.add(ReferenceCountUtil.retain(res));
                         break;
                     }
-                }
-
-                /*
-                 * per rfc2616 4.3 Message Body
-                 * All 1xx (informational), 204 (no content), and 304 (not modified) responses MUST NOT include a
-                 * message-body. All other responses do include a message-body, although it MAY be of zero length.
-                 */
-                if (isPassthru(res)) {
-                    out.add(res);
-                    // Pass through all following contents.
-                    state = State.PASS_THROUGH;
-                    break;
                 }
 
                 // Prepare to encode the content.
@@ -186,13 +179,9 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         }
     }
 
-    private static boolean isPassthru(final HttpResponse res) {
+    private static boolean isPassthru(HttpResponse res) {
         final int code = res.status().code();
-        if (code < 200 || code == 204 || code == 304) {
-            return true;
-        }
-
-        return false;
+        return code < 200 || code == 204 || code == 304;
     }
 
     private static void ensureHeaders(HttpObject msg) {
