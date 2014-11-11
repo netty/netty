@@ -42,10 +42,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowController {
     /**
-     * A comparators that sorts priority nodes in ascending order by the amount of priority data available for its
+     * A comparators that sorts streams in ascending order by the amount of streamable bytes for its
      * subtree.
      */
-    private static final Comparator<Http2Stream> DATA_WEIGHT = new Comparator<Http2Stream>() {
+    private static final Comparator<Http2Stream> STREAMABLE_BYTES_ORDER = new Comparator<Http2Stream>() {
         @Override
         public int compare(Http2Stream o1, Http2Stream o2) {
             final long result = ((long) state(o1).streamableBytesForTree()) * o1.weight() -
@@ -275,7 +275,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         // Write out all of the allocated bytes. Just add any extra remaining with each write.
         for (Http2Stream stream : connection.activeStreams()) {
             OutboundFlowState state = state(stream);
-            int allocatedToStream = state.allocatedPriorityBytes();
+            int allocatedToStream = state.allocatedBytes();
             int writtenToStream = state.writeBytes(allocatedToStream + extra);
 
             // We may write more than was allocated if extra was > 0. In that case, decrement the
@@ -286,7 +286,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             }
 
             // Clear the allocated bytes for the next invocation.
-            state.resetAllocatedPriorityBytes();
+            state.resetAllocatedBytes();
         }
 
         // Optimization: only flush once for all written frames. If it's null, there are no
@@ -306,18 +306,18 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         // restore what's left so that it can be propagated to future nodes.
         OutboundFlowState state = state(stream);
         int allocated = Math.min(connectionWindow, Math.min(unallocated, state.streamableBytes()));
-        state.allocatePriorityBytes(allocated);
+        state.allocateBytes(allocated);
         unallocated -= allocated;
         connectionWindow -= allocated;
 
-        if (state.unallocatedPriorityBytes() <= 0 || connectionWindow <= 0 || stream.isLeaf()) {
+        if (state.unallocatedBytes() <= 0 || connectionWindow <= 0 || stream.isLeaf()) {
             // Nothing left to do in this sub tree.
             return allocated;
         }
 
         // Optimization. If the window is big enough to fit all the data. Just write everything
         // and skip the priority algorithm.
-        if (state.unallocatedPriorityBytes() <= connectionWindow) {
+        if (state.unallocatedBytes() <= connectionWindow) {
             for (Http2Stream child : stream.children()) {
                 int allocatedToChild = allocateBytes(child, state(child).streamableBytesForTree(), connectionWindow);
                 unallocated -= allocatedToChild;
@@ -328,7 +328,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         }
 
         List<Http2Stream> children = new ArrayList<Http2Stream>(stream.children());
-        Collections.sort(children, DATA_WEIGHT);
+        Collections.sort(children, STREAMABLE_BYTES_ORDER);
 
         // Iterate over the children and spread the remaining bytes across them as is appropriate
         // based on the weights.
@@ -393,9 +393,8 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         private final Http2Stream stream;
         private int window = initialWindowSize;
         private int pendingBytes;
-        //private int priorityBytes;
         private int streamableBytesForTree;
-        private int allocatedPriorityBytes;
+        private int allocatedBytes;
         private ChannelFuture lastNewFrame;
 
         private OutboundFlowState(Http2Stream stream) {
@@ -455,38 +454,31 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         }
 
         /**
-         * The aggregate total of all {@link #streamableBytes()} for subtree rooted at this node.
-         */
-        /*int priorityBytes() {
-            return priorityBytes;
-        }*/
-
-        /**
          * Resets the number of bytes allocated to this stream by the priority algorithm.
          */
-        private void resetAllocatedPriorityBytes() {
-            allocatedPriorityBytes = 0;
+        private void resetAllocatedBytes() {
+            allocatedBytes = 0;
         }
 
         /**
          * Used by the priority algorithm to allocate bytes to this stream.
          */
-        private void allocatePriorityBytes(int bytes) {
-            allocatedPriorityBytes += bytes;
+        private void allocateBytes(int bytes) {
+            allocatedBytes += bytes;
         }
 
         /**
          * Used by the priority algorithm to get the intermediate allocation of bytes to this stream.
          */
-        int allocatedPriorityBytes() {
-            return allocatedPriorityBytes;
+        int allocatedBytes() {
+            return allocatedBytes;
         }
 
         /**
          * Used by the priority algorithm to determine the number of writable bytes that have not yet been allocated.
          */
-        private int unallocatedPriorityBytes() {
-            return streamableBytesForTree - allocatedPriorityBytes;
+        private int unallocatedBytes() {
+            return streamableBytesForTree - allocatedBytes;
         }
 
         /**
@@ -563,16 +555,9 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         }
 
         /**
-         * Recursively increments the priority bytes for this branch in the priority tree starting at the current node.
+         * Recursively increments the streamable bytes for this branch in the priority tree starting
+         * at the current node.
          */
-        /*private void incrementPriorityBytes(int numBytes) {
-            if (numBytes != 0) {
-                priorityBytes += numBytes;
-                if (!stream.isRoot()) {
-                    state(stream.parent()).incrementPriorityBytes(numBytes);
-                }
-            }
-        }*/
         private void incrementStreamableBytesForTree(int numBytes) {
             if (numBytes != 0) {
                 streamableBytesForTree += numBytes;
@@ -621,8 +606,9 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             }
 
             /**
-             * Increments the number of pending bytes for this node. If there was any change to the number of bytes that
-             * fit into the stream window, then {@link #incrementPriorityBytes} to recursively update this branch of the
+             * Increments the number of pending bytes for this node. If there was any change to the
+             * number of bytes that fit into the stream window, then
+             * {@link #incrementStreamableBytesForTree} to recursively update this branch of the
              * priority tree.
              */
             private void incrementPendingBytes(int numBytes) {
@@ -630,7 +616,6 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                 pendingBytes += numBytes;
 
                 int delta = streamableBytes() - previouslyStreamable;
-                //incrementPriorityBytes(delta);
                 incrementStreamableBytesForTree(delta);
             }
 
