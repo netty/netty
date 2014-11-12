@@ -106,7 +106,7 @@ public class Http2ConnectionRoundtripTest {
         clientGroup.sync();
     }
 
-    //@Test
+    @Test
     public void http2ExceptionInPipelineShouldCloseConnection() throws Exception {
         bootstrapEnv(1, 1, 1);
 
@@ -145,7 +145,7 @@ public class Http2ConnectionRoundtripTest {
         assertFalse(clientChannel.isOpen());
     }
 
-    //@Test
+    @Test
     public void listenerExceptionShouldCloseConnection() throws Exception {
         final Http2Headers headers = dummyHeaders();
         doThrow(new RuntimeException("Fake Exception")).when(serverListener).onHeadersRead(
@@ -180,7 +180,7 @@ public class Http2ConnectionRoundtripTest {
         assertFalse(clientChannel.isOpen());
     }
 
-    //@Test
+    @Test
     public void nonHttp2ExceptionInPipelineShouldNotCloseConnection() throws Exception {
         bootstrapEnv(1, 1, 1);
 
@@ -219,7 +219,7 @@ public class Http2ConnectionRoundtripTest {
         assertTrue(clientChannel.isOpen());
     }
 
-    //@Test
+    @Test
     public void noMoreStreamIdsShouldSendGoAway() throws Exception {
         bootstrapEnv(1, 3, 1);
 
@@ -241,7 +241,7 @@ public class Http2ConnectionRoundtripTest {
                 eq(Http2Error.PROTOCOL_ERROR.code()), any(ByteBuf.class));
     }
 
-    //@Test
+    @Test
     public void flowControlProperlyChunksLargeMessage() throws Exception {
         final Http2Headers headers = dummyHeaders();
 
@@ -305,11 +305,11 @@ public class Http2ConnectionRoundtripTest {
     public void stressTest() throws Exception {
         final Http2Headers headers = dummyHeaders();
         final String pingMsg = "12345678";
-        int length = 102400; // 100 KiB
+        int length = 1000;
         final ByteBuf data = randomBytes(length);
         final String dataAsHex = ByteBufUtil.hexDump(data);
         final ByteBuf pingData = Unpooled.copiedBuffer(pingMsg, UTF_8);
-        final int numStreams = 20;
+        final int numStreams = 10;
 
         // Collect all the ping buffers as we receive them at the server.
         final String[] receivedPings = new String[numStreams];
@@ -346,12 +346,11 @@ public class Http2ConnectionRoundtripTest {
                 any(ByteBuf.class), anyInt(), anyBoolean());
         try {
             bootstrapEnv(numStreams * length, numStreams * 4, numStreams);
-            int upperLimit = 3 + 2 * numStreams;
-            for (int ix = 3; ix < upperLimit; ix += 2) {
-                final int streamId = ix;
-                runInChannel(clientChannel, new Http2Runnable() {
-                    @Override
-                    public void run() {
+            runInChannel(clientChannel, new Http2Runnable() {
+                @Override
+                public void run() {
+                    int upperLimit = 3 + 2 * numStreams;
+                    for (int streamId = 3; streamId < upperLimit; streamId += 2) {
                         // Send a bunch of data on each stream.
                         http2Client.encoder().writeHeaders(ctx(), streamId, headers, 0, (short) 16,
                                 false, 0, false, newPromise());
@@ -363,8 +362,8 @@ public class Http2ConnectionRoundtripTest {
                         http2Client.encoder().writeHeaders(ctx(), streamId, headers, 0, (short) 16,
                                 false, 0, true, newPromise());
                     }
-                });
-            }
+                }
+            });
             // Wait for all frames to be received.
             assertTrue(trailersLatch.await(60, SECONDS));
             verify(serverListener, times(numStreams)).onHeadersRead(any(ChannelHandlerContext.class), anyInt(),

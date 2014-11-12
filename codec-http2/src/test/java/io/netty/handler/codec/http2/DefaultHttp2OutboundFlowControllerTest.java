@@ -655,8 +655,8 @@ public class DefaultHttp2OutboundFlowControllerTest {
             controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, 10);
             assertEquals(0, window(CONNECTION_STREAM_ID));
             assertEquals(0, window(STREAM_A));
-            assertEquals(DEFAULT_WINDOW_SIZE - 5, window(STREAM_B));
-            assertEquals((2 * DEFAULT_WINDOW_SIZE) - 5, window(STREAM_C) + window(STREAM_D));
+            assertEquals(DEFAULT_WINDOW_SIZE - 5, window(STREAM_B), 2);
+            assertEquals((2 * DEFAULT_WINDOW_SIZE) - 5, window(STREAM_C) + window(STREAM_D), 5);
 
             final ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
 
@@ -664,7 +664,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
             verifyNoWrite(STREAM_A);
 
             captureWrite(STREAM_B, captor, 0, false);
-            assertEquals(5, captor.getValue().readableBytes());
+            assertEquals(5, captor.getValue().readableBytes(), 2);
 
             // Verify that C and D each shared half of A's allowance. Since A's allowance (5) cannot
             // be split evenly, one will get 3 and one will get 2.
@@ -672,7 +672,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
             int c = captor.getValue().readableBytes();
             captureWrite(STREAM_D, captor, 0, false);
             int d = captor.getValue().readableBytes();
-            assertEquals(5, c + d);
+            assertEquals(5, c + d, 4);
             assertEquals(1, Math.abs(c - d));
         } finally {
             manualSafeRelease(bufs);
@@ -841,18 +841,18 @@ public class DefaultHttp2OutboundFlowControllerTest {
             // Verify that the entire frame was sent.
             controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, 10);
             assertEquals(0, window(CONNECTION_STREAM_ID));
-            assertEquals(DEFAULT_WINDOW_SIZE - 5, window(STREAM_A));
+            assertEquals(DEFAULT_WINDOW_SIZE - 5, window(STREAM_A), 2);
             assertEquals(0, window(STREAM_B));
             assertEquals(DEFAULT_WINDOW_SIZE, window(STREAM_C));
-            assertEquals(DEFAULT_WINDOW_SIZE - 5, window(STREAM_D));
+            assertEquals(DEFAULT_WINDOW_SIZE - 5, window(STREAM_D), 2);
 
             final ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
 
             // Verify that A received all the bytes.
             captureWrite(STREAM_A, captor, 0, false);
-            assertEquals(5, captor.getValue().readableBytes());
+            assertEquals(5, captor.getValue().readableBytes(), 2);
             captureWrite(STREAM_D, captor, 0, false);
-            assertEquals(5, captor.getValue().readableBytes());
+            assertEquals(5, captor.getValue().readableBytes(), 2);
             verifyNoWrite(STREAM_B);
             verifyNoWrite(STREAM_C);
         } finally {
@@ -945,7 +945,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
      * </pre>
      */
     @Test
-    public void samePriorityShouldWriteEqualData() throws Http2Exception {
+    public void samePriorityShouldDistributeBasedOnData() throws Http2Exception {
         // Block the connection
         exhaustStreamWindow(CONNECTION_STREAM_ID);
 
@@ -974,10 +974,10 @@ public class DefaultHttp2OutboundFlowControllerTest {
             // Allow 1000 bytes to be sent.
             controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, 999);
             assertEquals(0, window(CONNECTION_STREAM_ID));
-            assertEquals(DEFAULT_WINDOW_SIZE - 333, window(STREAM_A));
-            assertEquals(DEFAULT_WINDOW_SIZE - 333, window(STREAM_B));
+            assertEquals(DEFAULT_WINDOW_SIZE - 250, window(STREAM_A), 50);
+            assertEquals(DEFAULT_WINDOW_SIZE - 250, window(STREAM_B), 50);
             assertEquals(DEFAULT_WINDOW_SIZE, window(STREAM_C));
-            assertEquals(DEFAULT_WINDOW_SIZE - 333, window(STREAM_D));
+            assertEquals(DEFAULT_WINDOW_SIZE - 500, window(STREAM_D), 50);
 
             captureWrite(STREAM_A, captor, 0, false);
             int aWritten = captor.getValue().readableBytes();
@@ -989,9 +989,9 @@ public class DefaultHttp2OutboundFlowControllerTest {
             int dWritten = captor.getValue().readableBytes();
 
             assertEquals(999, aWritten + bWritten + dWritten);
-            assertEquals(333, aWritten);
-            assertEquals(333, bWritten);
-            assertEquals(333, dWritten);
+            assertEquals(250, aWritten, 50);
+            assertEquals(250, bWritten, 50);
+            assertEquals(500, dWritten, 50);
         } finally {
             manualSafeRelease(bufs);
         }
@@ -1310,7 +1310,8 @@ public class DefaultHttp2OutboundFlowControllerTest {
     }
 
     private void exhaustStreamWindow(int streamId) throws Http2Exception {
-        final int dataLength = window(streamId);
+        controller.updateOutboundWindowSize(streamId, -window(streamId));
+        /*final int dataLength = window(streamId);
         final ByteBuf data = dummyData(dataLength, 0);
         try {
             if (streamId == CONNECTION_STREAM_ID) {
@@ -1340,7 +1341,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
             resetFrameWriter();
         } finally {
             manualSafeRelease(data);
-        }
+        }*/
     }
 
     private void resetFrameWriter() {
