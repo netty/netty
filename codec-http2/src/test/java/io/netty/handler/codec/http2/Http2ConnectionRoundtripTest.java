@@ -305,11 +305,11 @@ public class Http2ConnectionRoundtripTest {
     public void stressTest() throws Exception {
         final Http2Headers headers = dummyHeaders();
         final String pingMsg = "12345678";
-        int length = 1000;
+        int length = 10;
         final ByteBuf data = randomBytes(length);
         final String dataAsHex = ByteBufUtil.hexDump(data);
         final ByteBuf pingData = Unpooled.copiedBuffer(pingMsg, UTF_8);
-        final int numStreams = 10;
+        final int numStreams = 2000;
 
         // Collect all the ping buffers as we receive them at the server.
         final String[] receivedPings = new String[numStreams];
