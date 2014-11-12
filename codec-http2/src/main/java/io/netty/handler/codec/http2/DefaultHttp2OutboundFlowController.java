@@ -41,15 +41,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowController {
 
     /**
-     * A {@link Comparator} that sorts streams in ascending order by the product of weight and the
-     * amount of streamable bytes for their subtree.
+     * A {@link Comparator} that sorts streams in ascending order their scaled weight.
      */
-    private static final Comparator<Http2Stream> DATA_WEIGHT = new Comparator<Http2Stream>() {
+    private static final Comparator<Http2Stream> SCALED_WEIGHT = new Comparator<Http2Stream>() {
         @Override
         public int compare(Http2Stream o1, Http2Stream o2) {
-            final long result = ((long) state(o1).streamableBytesForTree()) * o1.weight() -
-                                ((long) state(o2).streamableBytesForTree()) * o2.weight();
-            return result > 0 ? 1 : (result < 0 ? -1 : 0);
+            return state(o1).scaledWeight() - state(o2).scaledWeight();
         }
     };
 
@@ -281,7 +278,6 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         OutboundFlowState state = state(stream);
         int written = Math.min(connectionWindow, Math.min(bytesToWrite, state.streamableBytes()));
         state.writeBytes(written);
-
         bytesToWrite -= written;
         connectionWindow -= written;
         int remainingInTree = state.streamableBytesForTree() - written;
@@ -302,17 +298,13 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             return written;
         }
 
-        // Copy and sort the children of this stream. They are sorted in ascending order the total
-        // streamable bytes for the subtree and the weight. The algorithm gives  preference of
-        // byte allocation to nodes that appear later in the list. This means that the most bytes
-        // will be written to those streams with the largest aggregate number of bytes and the
-        // highest priority.
         Http2Stream[] children = stream.children().toArray(new Http2Stream[0]);
-        Arrays.sort(children, DATA_WEIGHT);
 
         // Scale the weights of the children based on how much data each stream has to send.
-        int[] scaledWeights = new int[children.length];
-        int scaledTotalWeight = scaleChildWeights(children, stream, scaledWeights);
+        int scaledTotalWeight = scaleChildWeights(children, stream);
+
+        // Sort the children in ascending order by their scaled weight.
+        Arrays.sort(children, SCALED_WEIGHT);
 
         // Clip the total remaining bytes by the connection window.
         bytesToWrite = Math.min(bytesToWrite, connectionWindow);
@@ -325,7 +317,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
 
             // Determine the portion of the current writable data that is assigned to this
             // stream.
-            int scaledWeight = scaledWeights[index];
+            int scaledWeight = state(child).scaledWeight();
             int writableChunk = (int) Math.round(scaledWeight * bytesPerUnitOfWeight);
             writableChunk = Math.min(writableChunk, connectionWindow);
 
@@ -342,17 +334,14 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     }
 
     /**
-     * Scales the weights for the children based on the amount of data they have to send in their
-     * subtree.
+     * Calculates the scaled weights for the children based on the amount of data they have to send
+     * in their subtree.
      *
-     * @param children the children whose weights are to be scaled in the output array.
+     * @param children the children whose weights are to be scaled.
      * @param parent the parent stream of the given children.
-     * @param scaledWeights output array that receives the scaled weights for each child in the
-     *            collection. This array is indexed by the order in which the children appear in the
-     *            list.
-     * @return the total of all scaled weights in the output array.
+     * @return the total of the scaled weights for all children.
      */
-    private int scaleChildWeights(Http2Stream[] children, Http2Stream parent, int[] scaledWeights) {
+    private int scaleChildWeights(Http2Stream[] children, Http2Stream parent) {
         final int totalWeight = parent.totalChildWeights();
         final int totalStreamableBytes = state(parent).streamableBytesForTree();
         if (totalWeight <= 0 || totalStreamableBytes <= 0) {
@@ -363,11 +352,13 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         int totalScaledWeight = 0;
         for (int index = 0; index < children.length; ++index) {
             Http2Stream child = children[index];
-            int streamableBytes = state(child).streamableBytesForTree();
+            OutboundFlowState childState = state(child);
+            int streamableBytes = childState.streamableBytesForTree();
             double dataRatio = streamableBytes / (double) totalStreamableBytes;
             double weightRatio = child.weight() / (double) totalWeight;
-            scaledWeights[index] = Math.max(1, (int) (child.weight() * dataRatio * weightRatio));
-            totalScaledWeight += scaledWeights[index];
+            int scaledWeight = Math.max(1, (int) (child.weight() * dataRatio * weightRatio));
+            childState.scaledWeight(scaledWeight);
+            totalScaledWeight += scaledWeight;
         }
         return totalScaledWeight;
     }
@@ -382,6 +373,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         private int pendingBytes;
         private int streamableBytesForTree;
         private ChannelFuture lastNewFrame;
+        private int scaledWeight;
 
         private OutboundFlowState(Http2Stream stream) {
             this.stream = stream;
@@ -391,6 +383,14 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         @Override
         public int window() {
             return window;
+        }
+
+        private int scaledWeight() {
+            return scaledWeight;
+        }
+
+        private void scaledWeight(int scaledWeight) {
+            this.scaledWeight = scaledWeight;
         }
 
         /**
