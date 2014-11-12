@@ -443,45 +443,36 @@ public final class NetUtil {
         boolean doubleColon = false;
         int numberOfColons = 0;
         int numberOfPeriods = 0;
-        int numberOfPercent = 0;
         StringBuilder word = new StringBuilder();
         char c = 0;
         char prevChar;
-        int offset = 0; // offset for [] ip addresses
+        int startOffset = 0; // offset for [] ip addresses
+        int endOffset = ipAddress.length();
 
-        if (length < 2) {
+        if (endOffset < 2) {
             return false;
         }
 
-        for (int i = 0; i < length; i ++) {
+        // Strip []
+        if (ipAddress.charAt(0) == '[') {
+            if (ipAddress.charAt(endOffset - 1) != ']') {
+                return false; // must have a close ]
+            }
+
+            startOffset = 1;
+            endOffset --;
+        }
+
+        // Strip the interface name/index after the percent sign.
+        int percentIdx = ipAddress.indexOf('%', startOffset);
+        if (percentIdx >= 0) {
+            endOffset = percentIdx;
+        }
+
+        for (int i = startOffset; i < endOffset; i ++) {
             prevChar = c;
             c = ipAddress.charAt(i);
             switch (c) {
-
-                // case for an open bracket [x:x:x:...x]
-                case '[':
-                    if (i != 0) {
-                        return false; // must be first character
-                    }
-                    if (ipAddress.charAt(length - 1) != ']') {
-                        return false; // must have a close ]
-                    }
-                    offset = 1;
-                    if (length < 4) {
-                        return false;
-                    }
-                    break;
-
-                // case for a closed bracket at end of IP [x:x:x:...x]
-                case ']':
-                    if (i != length - 1) {
-                        return false; // must be last charcter
-                    }
-                    if (ipAddress.charAt(0) != '[') {
-                        return false; // must have a open [
-                    }
-                    break;
-
                 // case for the last 32-bits represented as IPv4 x:x:x:x:x:x:d.d.d.d
                 case '.':
                     numberOfPeriods ++;
@@ -496,8 +487,8 @@ public final class NetUtil {
                     }
                     // a special case ::1:2:3:4:5:d.d.d.d allows 7 colons with an
                     // IPv4 ending, otherwise 7 :'s is bad
-                    if (numberOfColons == 7 && ipAddress.charAt(offset) != ':' &&
-                        ipAddress.charAt(1 + offset) != ':') {
+                    if (numberOfColons == 7 && ipAddress.charAt(startOffset) != ':' &&
+                        ipAddress.charAt(1 + startOffset) != ':') {
                         return false;
                     }
                     word.delete(0, word.length());
@@ -507,7 +498,7 @@ public final class NetUtil {
                     // FIX "IP6 mechanism syntax #ip6-bad1"
                     // An IPV6 address cannot start with a single ":".
                     // Either it can starti with "::" or with a number.
-                    if (i == offset && (ipAddress.length() <= i || ipAddress.charAt(i + 1) != ':')) {
+                    if (i == startOffset && (ipAddress.length() <= i || ipAddress.charAt(i + 1) != ':')) {
                         return false;
                     }
                     // END FIX "IP6 mechanism syntax #ip6-bad1"
@@ -526,38 +517,13 @@ public final class NetUtil {
                     }
                     word.delete(0, word.length());
                     break;
-                case '%':
-                    if (numberOfColons == 0) {
-                        return false;
-                    }
-                    numberOfPercent ++;
-
-                    // validate that the stuff after the % is valid
-                    if (i + 1 >= length) {
-                        // in this case the percent is there but no number is
-                        // available
-                        return false;
-                    }
-                    try {
-                        if (Integer.parseInt(ipAddress.substring(i + 1)) < 0) {
-                            return false;
-                        }
-                    } catch (NumberFormatException e) {
-                        // right now we just support an integer after the % so if
-                        // this is not
-                        // what is there then return
-                        return false;
-                    }
-                    break;
 
                 default:
-                    if (numberOfPercent == 0) {
-                        if (word != null && word.length() > 3) {
-                            return false;
-                        }
-                        if (!isValidHexChar(c)) {
-                            return false;
-                        }
+                    if (word != null && word.length() > 3) {
+                        return false;
+                    }
+                    if (!isValidHexChar(c)) {
+                        return false;
                     }
                     word.append(c);
             }
@@ -579,11 +545,9 @@ public final class NetUtil {
             // If we have an empty word at the end, it means we ended in either
             // a : or a .
             // If we did not end in :: then this is invalid
-            if (numberOfPercent == 0) {
-                if (word.length() == 0 && ipAddress.charAt(length - 1 - offset) == ':' &&
-                    ipAddress.charAt(length - 2 - offset) != ':') {
-                    return false;
-                }
+            if (word.length() == 0 && ipAddress.charAt(length - 1 - startOffset) == ':' &&
+                ipAddress.charAt(length - 2 - startOffset) != ':') {
+                return false;
             }
         }
 
@@ -696,7 +660,7 @@ public final class NetUtil {
         int i = 0;
         int ipv6Seperators = 0;
         int ipv4Seperators = 0;
-        int tmp = 0;
+        int tmp;
         boolean needsShift = false;
         for (; i < ipLength; ++i) {
             final char c = ip.charAt(i);
