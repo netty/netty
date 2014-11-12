@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.AsciiString;
 import io.netty.util.CharsetUtil;
 
 import static io.netty.handler.codec.http.HttpConstants.*;
@@ -30,290 +31,286 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     /**
      * 100 Continue
      */
-    public static final HttpResponseStatus CONTINUE = new HttpResponseStatus(100, "Continue", true);
+    public static final HttpResponseStatus CONTINUE = httpResponseStatus(100, "Continue");
 
     /**
      * 101 Switching Protocols
      */
-    public static final HttpResponseStatus SWITCHING_PROTOCOLS =
-            new HttpResponseStatus(101, "Switching Protocols", true);
+    public static final HttpResponseStatus SWITCHING_PROTOCOLS = httpResponseStatus(101, "Switching Protocols");
 
     /**
      * 102 Processing (WebDAV, RFC2518)
      */
-    public static final HttpResponseStatus PROCESSING = new HttpResponseStatus(102, "Processing", true);
+    public static final HttpResponseStatus PROCESSING = httpResponseStatus(102, "Processing");
 
     /**
      * 200 OK
      */
-    public static final HttpResponseStatus OK = new HttpResponseStatus(200, "OK", true);
+    public static final HttpResponseStatus OK = httpResponseStatus(200, "OK");
 
     /**
      * 201 Created
      */
-    public static final HttpResponseStatus CREATED = new HttpResponseStatus(201, "Created", true);
+    public static final HttpResponseStatus CREATED = httpResponseStatus(201, "Created");
 
     /**
      * 202 Accepted
      */
-    public static final HttpResponseStatus ACCEPTED = new HttpResponseStatus(202, "Accepted", true);
+    public static final HttpResponseStatus ACCEPTED = httpResponseStatus(202, "Accepted");
 
     /**
      * 203 Non-Authoritative Information (since HTTP/1.1)
      */
     public static final HttpResponseStatus NON_AUTHORITATIVE_INFORMATION =
-            new HttpResponseStatus(203, "Non-Authoritative Information", true);
+            httpResponseStatus(203, "Non-Authoritative Information");
 
     /**
      * 204 No Content
      */
-    public static final HttpResponseStatus NO_CONTENT = new HttpResponseStatus(204, "No Content", true);
+    public static final HttpResponseStatus NO_CONTENT = httpResponseStatus(204, "No Content");
 
     /**
      * 205 Reset Content
      */
-    public static final HttpResponseStatus RESET_CONTENT = new HttpResponseStatus(205, "Reset Content", true);
+    public static final HttpResponseStatus RESET_CONTENT = httpResponseStatus(205, "Reset Content");
 
     /**
      * 206 Partial Content
      */
-    public static final HttpResponseStatus PARTIAL_CONTENT = new HttpResponseStatus(206, "Partial Content", true);
+    public static final HttpResponseStatus PARTIAL_CONTENT = httpResponseStatus(206, "Partial Content");
 
     /**
      * 207 Multi-Status (WebDAV, RFC2518)
      */
-    public static final HttpResponseStatus MULTI_STATUS = new HttpResponseStatus(207, "Multi-Status", true);
+    public static final HttpResponseStatus MULTI_STATUS = httpResponseStatus(207, "Multi-Status");
 
     /**
      * 300 Multiple Choices
      */
-    public static final HttpResponseStatus MULTIPLE_CHOICES = new HttpResponseStatus(300, "Multiple Choices", true);
+    public static final HttpResponseStatus MULTIPLE_CHOICES = httpResponseStatus(300, "Multiple Choices");
 
     /**
      * 301 Moved Permanently
      */
-    public static final HttpResponseStatus MOVED_PERMANENTLY = new HttpResponseStatus(301, "Moved Permanently", true);
+    public static final HttpResponseStatus MOVED_PERMANENTLY = httpResponseStatus(301, "Moved Permanently");
 
     /**
      * 302 Found
      */
-    public static final HttpResponseStatus FOUND = new HttpResponseStatus(302, "Found", true);
+    public static final HttpResponseStatus FOUND = httpResponseStatus(302, "Found");
 
     /**
      * 303 See Other (since HTTP/1.1)
      */
-    public static final HttpResponseStatus SEE_OTHER = new HttpResponseStatus(303, "See Other", true);
+    public static final HttpResponseStatus SEE_OTHER = httpResponseStatus(303, "See Other");
 
     /**
      * 304 Not Modified
      */
-    public static final HttpResponseStatus NOT_MODIFIED = new HttpResponseStatus(304, "Not Modified", true);
+    public static final HttpResponseStatus NOT_MODIFIED = httpResponseStatus(304, "Not Modified");
 
     /**
      * 305 Use Proxy (since HTTP/1.1)
      */
-    public static final HttpResponseStatus USE_PROXY = new HttpResponseStatus(305, "Use Proxy", true);
+    public static final HttpResponseStatus USE_PROXY = httpResponseStatus(305, "Use Proxy");
 
     /**
      * 307 Temporary Redirect (since HTTP/1.1)
      */
-    public static final HttpResponseStatus TEMPORARY_REDIRECT = new HttpResponseStatus(307, "Temporary Redirect", true);
+    public static final HttpResponseStatus TEMPORARY_REDIRECT = httpResponseStatus(307, "Temporary Redirect");
 
     /**
      * 400 Bad Request
      */
-    public static final HttpResponseStatus BAD_REQUEST = new HttpResponseStatus(400, "Bad Request", true);
+    public static final HttpResponseStatus BAD_REQUEST = httpResponseStatus(400, "Bad Request");
 
     /**
      * 401 Unauthorized
      */
-    public static final HttpResponseStatus UNAUTHORIZED = new HttpResponseStatus(401, "Unauthorized", true);
+    public static final HttpResponseStatus UNAUTHORIZED = httpResponseStatus(401, "Unauthorized");
 
     /**
      * 402 Payment Required
      */
-    public static final HttpResponseStatus PAYMENT_REQUIRED = new HttpResponseStatus(402, "Payment Required", true);
+    public static final HttpResponseStatus PAYMENT_REQUIRED = httpResponseStatus(402, "Payment Required");
 
     /**
      * 403 Forbidden
      */
-    public static final HttpResponseStatus FORBIDDEN = new HttpResponseStatus(403, "Forbidden", true);
+    public static final HttpResponseStatus FORBIDDEN = httpResponseStatus(403, "Forbidden");
 
     /**
      * 404 Not Found
      */
-    public static final HttpResponseStatus NOT_FOUND = new HttpResponseStatus(404, "Not Found", true);
+    public static final HttpResponseStatus NOT_FOUND = httpResponseStatus(404, "Not Found");
 
     /**
      * 405 Method Not Allowed
      */
-    public static final HttpResponseStatus METHOD_NOT_ALLOWED = new HttpResponseStatus(405, "Method Not Allowed", true);
+    public static final HttpResponseStatus METHOD_NOT_ALLOWED = httpResponseStatus(405, "Method Not Allowed");
 
     /**
      * 406 Not Acceptable
      */
-    public static final HttpResponseStatus NOT_ACCEPTABLE = new HttpResponseStatus(406, "Not Acceptable", true);
+    public static final HttpResponseStatus NOT_ACCEPTABLE = httpResponseStatus(406, "Not Acceptable");
 
     /**
      * 407 Proxy Authentication Required
      */
     public static final HttpResponseStatus PROXY_AUTHENTICATION_REQUIRED =
-            new HttpResponseStatus(407, "Proxy Authentication Required", true);
+            httpResponseStatus(407, "Proxy Authentication Required");
 
     /**
      * 408 Request Timeout
      */
-    public static final HttpResponseStatus REQUEST_TIMEOUT = new HttpResponseStatus(408, "Request Timeout", true);
+    public static final HttpResponseStatus REQUEST_TIMEOUT = httpResponseStatus(408, "Request Timeout");
 
     /**
      * 409 Conflict
      */
-    public static final HttpResponseStatus CONFLICT = new HttpResponseStatus(409, "Conflict", true);
+    public static final HttpResponseStatus CONFLICT = httpResponseStatus(409, "Conflict");
 
     /**
      * 410 Gone
      */
-    public static final HttpResponseStatus GONE = new HttpResponseStatus(410, "Gone", true);
+    public static final HttpResponseStatus GONE = httpResponseStatus(410, "Gone");
 
     /**
      * 411 Length Required
      */
-    public static final HttpResponseStatus LENGTH_REQUIRED = new HttpResponseStatus(411, "Length Required", true);
+    public static final HttpResponseStatus LENGTH_REQUIRED = httpResponseStatus(411, "Length Required");
 
     /**
      * 412 Precondition Failed
      */
-    public static final HttpResponseStatus PRECONDITION_FAILED =
-            new HttpResponseStatus(412, "Precondition Failed", true);
+    public static final HttpResponseStatus PRECONDITION_FAILED = httpResponseStatus(412, "Precondition Failed");
 
     /**
      * 413 Request Entity Too Large
      */
     public static final HttpResponseStatus REQUEST_ENTITY_TOO_LARGE =
-            new HttpResponseStatus(413, "Request Entity Too Large", true);
+            httpResponseStatus(413, "Request Entity Too Large");
 
     /**
      * 414 Request-URI Too Long
      */
-    public static final HttpResponseStatus REQUEST_URI_TOO_LONG =
-            new HttpResponseStatus(414, "Request-URI Too Long", true);
+    public static final HttpResponseStatus REQUEST_URI_TOO_LONG = httpResponseStatus(414, "Request-URI Too Long");
 
     /**
      * 415 Unsupported Media Type
      */
-    public static final HttpResponseStatus UNSUPPORTED_MEDIA_TYPE =
-            new HttpResponseStatus(415, "Unsupported Media Type", true);
+    public static final HttpResponseStatus UNSUPPORTED_MEDIA_TYPE = httpResponseStatus(415, "Unsupported Media Type");
 
     /**
      * 416 Requested Range Not Satisfiable
      */
     public static final HttpResponseStatus REQUESTED_RANGE_NOT_SATISFIABLE =
-            new HttpResponseStatus(416, "Requested Range Not Satisfiable", true);
+            httpResponseStatus(416, "Requested Range Not Satisfiable");
 
     /**
      * 417 Expectation Failed
      */
-    public static final HttpResponseStatus EXPECTATION_FAILED = new HttpResponseStatus(417, "Expectation Failed", true);
+    public static final HttpResponseStatus EXPECTATION_FAILED = httpResponseStatus(417, "Expectation Failed");
+
+    /**
+     * 421 Misdirected Request
+     *
+     * <a href="https://tools.ietf.org/html/draft-ietf-httpbis-http2-15#section-9.1.2">421 Status Code</a>
+     */
+    public static final HttpResponseStatus MISDIRECTED_REQUEST = httpResponseStatus(421, "Misdirected Request");
 
     /**
      * 422 Unprocessable Entity (WebDAV, RFC4918)
      */
-    public static final HttpResponseStatus UNPROCESSABLE_ENTITY =
-            new HttpResponseStatus(422, "Unprocessable Entity", true);
+    public static final HttpResponseStatus UNPROCESSABLE_ENTITY = httpResponseStatus(422, "Unprocessable Entity");
 
     /**
      * 423 Locked (WebDAV, RFC4918)
      */
-    public static final HttpResponseStatus LOCKED = new HttpResponseStatus(423, "Locked", true);
+    public static final HttpResponseStatus LOCKED = httpResponseStatus(423, "Locked");
 
     /**
      * 424 Failed Dependency (WebDAV, RFC4918)
      */
-    public static final HttpResponseStatus FAILED_DEPENDENCY = new HttpResponseStatus(424, "Failed Dependency", true);
+    public static final HttpResponseStatus FAILED_DEPENDENCY = httpResponseStatus(424, "Failed Dependency");
 
     /**
      * 425 Unordered Collection (WebDAV, RFC3648)
      */
-    public static final HttpResponseStatus UNORDERED_COLLECTION =
-            new HttpResponseStatus(425, "Unordered Collection", true);
+    public static final HttpResponseStatus UNORDERED_COLLECTION = httpResponseStatus(425, "Unordered Collection");
 
     /**
      * 426 Upgrade Required (RFC2817)
      */
-    public static final HttpResponseStatus UPGRADE_REQUIRED = new HttpResponseStatus(426, "Upgrade Required", true);
+    public static final HttpResponseStatus UPGRADE_REQUIRED = httpResponseStatus(426, "Upgrade Required");
 
     /**
      * 428 Precondition Required (RFC6585)
      */
-    public static final HttpResponseStatus PRECONDITION_REQUIRED =
-            new HttpResponseStatus(428, "Precondition Required", true);
+    public static final HttpResponseStatus PRECONDITION_REQUIRED = httpResponseStatus(428, "Precondition Required");
 
     /**
      * 429 Too Many Requests (RFC6585)
      */
-    public static final HttpResponseStatus TOO_MANY_REQUESTS = new HttpResponseStatus(429, "Too Many Requests", true);
+    public static final HttpResponseStatus TOO_MANY_REQUESTS = httpResponseStatus(429, "Too Many Requests");
 
     /**
      * 431 Request Header Fields Too Large (RFC6585)
      */
     public static final HttpResponseStatus REQUEST_HEADER_FIELDS_TOO_LARGE =
-            new HttpResponseStatus(431, "Request Header Fields Too Large", true);
+            httpResponseStatus(431, "Request Header Fields Too Large");
 
     /**
      * 500 Internal Server Error
      */
-    public static final HttpResponseStatus INTERNAL_SERVER_ERROR =
-            new HttpResponseStatus(500, "Internal Server Error", true);
+    public static final HttpResponseStatus INTERNAL_SERVER_ERROR = httpResponseStatus(500, "Internal Server Error");
 
     /**
      * 501 Not Implemented
      */
-    public static final HttpResponseStatus NOT_IMPLEMENTED = new HttpResponseStatus(501, "Not Implemented", true);
+    public static final HttpResponseStatus NOT_IMPLEMENTED = httpResponseStatus(501, "Not Implemented");
 
     /**
      * 502 Bad Gateway
      */
-    public static final HttpResponseStatus BAD_GATEWAY = new HttpResponseStatus(502, "Bad Gateway", true);
+    public static final HttpResponseStatus BAD_GATEWAY = httpResponseStatus(502, "Bad Gateway");
 
     /**
      * 503 Service Unavailable
      */
-    public static final HttpResponseStatus SERVICE_UNAVAILABLE =
-            new HttpResponseStatus(503, "Service Unavailable", true);
+    public static final HttpResponseStatus SERVICE_UNAVAILABLE = httpResponseStatus(503, "Service Unavailable");
 
     /**
      * 504 Gateway Timeout
      */
-    public static final HttpResponseStatus GATEWAY_TIMEOUT = new HttpResponseStatus(504, "Gateway Timeout", true);
+    public static final HttpResponseStatus GATEWAY_TIMEOUT = httpResponseStatus(504, "Gateway Timeout");
 
     /**
      * 505 HTTP Version Not Supported
      */
     public static final HttpResponseStatus HTTP_VERSION_NOT_SUPPORTED =
-            new HttpResponseStatus(505, "HTTP Version Not Supported", true);
+            httpResponseStatus(505, "HTTP Version Not Supported");
 
     /**
      * 506 Variant Also Negotiates (RFC2295)
      */
-    public static final HttpResponseStatus VARIANT_ALSO_NEGOTIATES =
-            new HttpResponseStatus(506, "Variant Also Negotiates", true);
+    public static final HttpResponseStatus VARIANT_ALSO_NEGOTIATES = httpResponseStatus(506, "Variant Also Negotiates");
 
     /**
      * 507 Insufficient Storage (WebDAV, RFC4918)
      */
-    public static final HttpResponseStatus INSUFFICIENT_STORAGE =
-            new HttpResponseStatus(507, "Insufficient Storage", true);
+    public static final HttpResponseStatus INSUFFICIENT_STORAGE = httpResponseStatus(507, "Insufficient Storage");
 
     /**
      * 510 Not Extended (RFC2774)
      */
-    public static final HttpResponseStatus NOT_EXTENDED = new HttpResponseStatus(510, "Not Extended", true);
+    public static final HttpResponseStatus NOT_EXTENDED = httpResponseStatus(510, "Not Extended");
 
     /**
      * 511 Network Authentication Required (RFC6585)
      */
     public static final HttpResponseStatus NETWORK_AUTHENTICATION_REQUIRED =
-            new HttpResponseStatus(511, "Network Authentication Required", true);
+            httpResponseStatus(511, "Network Authentication Required");
 
     /**
      * Returns the {@link HttpResponseStatus} represented by the specified code.
@@ -394,6 +391,8 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
             return REQUESTED_RANGE_NOT_SATISFIABLE;
         case 417:
             return EXPECTATION_FAILED;
+        case 421:
+            return MISDIRECTED_REQUEST;
         case 422:
             return UNPROCESSABLE_ENTITY;
         case 423:
@@ -484,6 +483,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     }
 
     private final int code;
+    private final AsciiString codeAsString;
 
     private final String reasonPhrase;
     private final byte[] bytes;
@@ -518,6 +518,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
         }
 
         this.code = code;
+        codeAsString = new AsciiString(Integer.toString(code));
         this.reasonPhrase = reasonPhrase;
         if (bytes) {
             this.bytes = (code + " " + reasonPhrase).getBytes(CharsetUtil.US_ASCII);
@@ -531,6 +532,13 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
      */
     public int code() {
         return code;
+    }
+
+    /**
+     * Returns the status code as {@link AsciiString}.
+     */
+    public AsciiString codeAsText() {
+        return codeAsString;
     }
 
     /**
@@ -591,5 +599,9 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
         } else {
             buf.writeBytes(bytes);
         }
+    }
+
+    private static HttpResponseStatus httpResponseStatus(int statusCode, String reasonPhrase) {
+        return new HttpResponseStatus(statusCode, reasonPhrase, true);
     }
 }
