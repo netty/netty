@@ -41,10 +41,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowController {
 
     /**
-     * A comparators that sorts streams in ascending order by the amount of streamable bytes for its
-     * subtree.
+     * A {@link Comparator} that sorts streams in ascending order by the product of weight and the
+     * amount of streamable bytes for their subtree.
      */
-    private static final Comparator<Http2Stream> STREAMABLE_BYTES_ORDER = new Comparator<Http2Stream>() {
+    private static final Comparator<Http2Stream> DATA_WEIGHT = new Comparator<Http2Stream>() {
         @Override
         public int compare(Http2Stream o1, Http2Stream o2) {
             final long result = ((long) state(o1).streamableBytesForTree()) * o1.weight() -
@@ -308,7 +308,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         // will be written to those streams with the largest aggregate number of bytes and the
         // highest priority.
         Http2Stream[] children = stream.children().toArray(new Http2Stream[0]);
-        Arrays.sort(children, STREAMABLE_BYTES_ORDER);
+        Arrays.sort(children, DATA_WEIGHT);
 
         // Scale the weights of the children based on how much data each stream has to send.
         int[] scaledWeights = new int[children.length];
@@ -363,14 +363,11 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         int totalScaledWeight = 0;
         for (int index = 0; index < children.length; ++index) {
             Http2Stream child = children[index];
-            if (child.localSideOpen()) {
-                int streamableBytes = state(child).streamableBytesForTree();
-                double dataRatio = streamableBytes / (double) totalStreamableBytes;
-                double weightRatio = child.weight() / (double) totalWeight;
-                scaledWeights[index] =
-                        Math.max(1, (int) (child.weight() * dataRatio * weightRatio));
-                totalScaledWeight += scaledWeights[index];
-            }
+            int streamableBytes = state(child).streamableBytesForTree();
+            double dataRatio = streamableBytes / (double) totalStreamableBytes;
+            double weightRatio = child.weight() / (double) totalWeight;
+            scaledWeights[index] = Math.max(1, (int) (child.weight() * dataRatio * weightRatio));
+            totalScaledWeight += scaledWeights[index];
         }
         return totalScaledWeight;
     }
@@ -461,7 +458,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         /**
          * Returns the the head of the pending queue, or {@code null} if empty.
          */
-        Frame peek() {
+        private Frame peek() {
             return pendingWriteQueue.peek();
         }
 
