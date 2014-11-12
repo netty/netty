@@ -62,7 +62,7 @@ public class NetUtilTest {
             "a.0.1.1",       null,
             ".0.1.1",        null,
             "...",           null);
-    
+
     private static final Map<String, String> validIpV6Hosts = new TestMap(
             "::ffff:5.6.7.8",                            "00000000000000000000ffff05060708",
             "fdf8:f53b:82e4::53",                        "fdf8f53b82e400000000000000000053",
