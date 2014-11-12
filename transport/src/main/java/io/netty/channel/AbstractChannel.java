@@ -378,6 +378,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         private ChannelOutboundBuffer outboundBuffer = new ChannelOutboundBuffer(AbstractChannel.this);
         private boolean inFlush0;
+        /** true if the channel has never been registered, false otherwise */
+        private boolean neverRegistered = true;
 
         @Override
         public final ChannelOutboundBuffer outboundBuffer() {
@@ -439,11 +441,15 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 if (!promise.setUncancellable() || !ensureOpen(promise)) {
                     return;
                 }
+                boolean firstRegistration = neverRegistered;
                 doRegister();
+                neverRegistered = false;
                 registered = true;
                 safeSetSuccess(promise);
                 pipeline.fireChannelRegistered();
-                if (isActive()) {
+                // Only fire a channelActive if the channel has never been registered. This prevents firing
+                // multiple channel actives if the channel is deregistered and re-registered.
+                if (firstRegistration && isActive()) {
                     pipeline.fireChannelActive();
                 }
             } catch (Throwable t) {
