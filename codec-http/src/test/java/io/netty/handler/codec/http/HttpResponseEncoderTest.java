@@ -36,13 +36,13 @@ public class HttpResponseEncoderTest {
     public void testLargeFileRegionChunked() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        response.headers().set(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
+        response.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
         assertTrue(channel.writeOutbound(response));
 
         ByteBuf buffer = channel.readOutbound();
 
-        assertEquals("HTTP/1.1 200 OK\r\n" + HttpHeaders.Names.TRANSFER_ENCODING + ": " +
-                HttpHeaders.Values.CHUNKED + "\r\n\r\n", buffer.toString(CharsetUtil.US_ASCII));
+        assertEquals("HTTP/1.1 200 OK\r\n" + HttpHeaderNames.TRANSFER_ENCODING + ": " +
+                HttpHeaderValues.CHUNKED + "\r\n\r\n", buffer.toString(CharsetUtil.US_ASCII));
         buffer.release();
         assertTrue(channel.writeOutbound(FILE_REGION));
         buffer = channel.readOutbound();

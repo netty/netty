@@ -18,18 +18,17 @@ package io.netty.handler.codec.http.multipart;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder.EncoderMode;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.StringUtil;
-
 import org.junit.Test;
 
 import java.io.File;
 import java.util.List;
 
+import static io.netty.handler.codec.http.HttpHeaderNames.*;
 import static org.junit.Assert.*;
 
 /** {@link HttpPostRequestEncoder} test case. */

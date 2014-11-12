@@ -26,7 +26,7 @@ import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaders.Names;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
@@ -86,7 +86,7 @@ final class HttpProxyServer extends ProxyServer {
 
         boolean authzSuccess = false;
         if (username != null) {
-            CharSequence authz = req.headers().get(Names.AUTHORIZATION);
+            CharSequence authz = req.headers().get(HttpHeaderNames.AUTHORIZATION);
             if (authz != null) {
                 ByteBuf authzBuf64 = Unpooled.copiedBuffer(authz, CharsetUtil.US_ASCII);
                 ByteBuf authzBuf = Base64.decode(authzBuf64);
@@ -113,7 +113,7 @@ final class HttpProxyServer extends ProxyServer {
             FullHttpResponse res;
             if (!authenticate(ctx, req)) {
                 res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.UNAUTHORIZED);
-                res.headers().setInt(Names.CONTENT_LENGTH, 0);
+                res.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
             } else {
                 res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
                 String uri = req.uri();
@@ -144,10 +144,10 @@ final class HttpProxyServer extends ProxyServer {
 
             if (!authenticate(ctx, req)) {
                 res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.UNAUTHORIZED);
-                res.headers().setInt(Names.CONTENT_LENGTH, 0);
+                res.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
             } else if (!req.uri().equals(destination.getHostString() + ':' + destination.getPort())) {
                 res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.FORBIDDEN);
-                res.headers().setInt(Names.CONTENT_LENGTH, 0);
+                res.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
             } else {
                 res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
                 sendGreeting = true;

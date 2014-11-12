@@ -14,11 +14,6 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_LENGTH;
-import static io.netty.handler.codec.http.HttpHeaders.Names.UPGRADE;
-import static io.netty.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -34,6 +29,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+
+import static io.netty.handler.codec.http.HttpResponseStatus.*;
+import static io.netty.handler.codec.http.HttpVersion.*;
 
 /**
  * A server-side handler that receives HTTP requests and optionally performs a protocol switch if
@@ -58,13 +56,13 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
     public interface UpgradeCodec {
         /**
          * Returns the name of the protocol supported by this codec, as indicated by the
-         * {@link HttpHeaders.Names#UPGRADE} header.
+         * {@link HttpHeaderNames#UPGRADE} header.
          */
         String protocol();
 
         /**
          * Gets all protocol-specific headers required by this protocol for a successful upgrade.
-         * Any supplied header will be required to appear in the {@link HttpHeaders.Names#CONNECTION} header as well.
+         * Any supplied header will be required to appear in the {@link HttpHeaderNames#CONNECTION} header as well.
          */
         Collection<String> requiredUpgradeHeaders();
 
@@ -82,7 +80,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
          * @param upgradeRequest the request that triggered the upgrade to this protocol. The
          *            upgraded protocol is responsible for sending the response.
          * @param upgradeResponse a 101 Switching Protocols response that is populated with the
-         *            {@link HttpHeaders.Names#CONNECTION} and {@link HttpHeaders.Names#UPGRADE} headers.
+         *            {@link HttpHeaderNames#CONNECTION} and {@link HttpHeaderNames#UPGRADE} headers.
          *            The protocol is required to send this before sending any other frames back to the client.
          *            The headers may be augmented as necessary by the protocol before sending.
          */
@@ -237,11 +235,11 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
      * Determines whether or not the message is an HTTP upgrade request.
      */
     private static boolean isUpgradeRequest(HttpObject msg) {
-        return msg instanceof HttpRequest && ((HttpRequest) msg).headers().get(UPGRADE) != null;
+        return msg instanceof HttpRequest && ((HttpRequest) msg).headers().get(HttpHeaderNames.UPGRADE) != null;
     }
 
     /**
-     * Attempts to upgrade to the protocol(s) identified by the {@link HttpHeaders.Names#UPGRADE} header (if provided
+     * Attempts to upgrade to the protocol(s) identified by the {@link HttpHeaderNames#UPGRADE} header (if provided
      * in the request).
      *
      * @param ctx the context for this handler.
@@ -250,7 +248,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
      */
     private boolean upgrade(final ChannelHandlerContext ctx, final FullHttpRequest request) {
         // Select the best protocol based on those requested in the UPGRADE header.
-        CharSequence upgradeHeader = request.headers().get(UPGRADE);
+        CharSequence upgradeHeader = request.headers().get(HttpHeaderNames.UPGRADE);
         final UpgradeCodec upgradeCodec = selectUpgradeCodec(upgradeHeader);
         if (upgradeCodec == null) {
             // None of the requested protocols are supported, don't upgrade.
@@ -258,7 +256,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
         }
 
         // Make sure the CONNECTION header is present.
-        CharSequence connectionHeader = request.headers().get(CONNECTION);
+        CharSequence connectionHeader = request.headers().get(HttpHeaderNames.CONNECTION);
         if (connectionHeader == null) {
             return false;
         }
@@ -266,7 +264,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
         // Make sure the CONNECTION header contains UPGRADE as well as all protocol-specific headers.
         Collection<String> requiredHeaders = upgradeCodec.requiredUpgradeHeaders();
         Set<CharSequence> values = splitHeader(connectionHeader);
-        if (!values.contains(UPGRADE) || !values.containsAll(requiredHeaders)) {
+        if (!values.contains(HttpHeaderNames.UPGRADE) || !values.containsAll(requiredHeaders)) {
             return false;
         }
 
@@ -336,9 +334,9 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
      */
     private static FullHttpResponse createUpgradeResponse(UpgradeCodec upgradeCodec) {
         DefaultFullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, SWITCHING_PROTOCOLS);
-        res.headers().add(CONNECTION, UPGRADE);
-        res.headers().add(UPGRADE, upgradeCodec.protocol());
-        res.headers().add(CONTENT_LENGTH, "0");
+        res.headers().add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
+        res.headers().add(HttpHeaderNames.UPGRADE, upgradeCodec.protocol());
+        res.headers().add(HttpHeaderNames.CONTENT_LENGTH, "0");
         return res;
     }
 

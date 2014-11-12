@@ -24,12 +24,13 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.spdy.SpdyOrHttpChooser.SelectedProtocol;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.ssl.ApplicationProtocolConfig;
+import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
+import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
+import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.handler.ssl.IdentityCipherSuiteFilter;
-import io.netty.handler.ssl.JettyNpnSslEngineWrapper;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-
-import java.util.Arrays;
 
 /**
  * A SPDY Server that responds to a GET request with a Hello World.
@@ -58,8 +59,12 @@ public final class SpdyServer {
         SelfSignedCertificate ssc = new SelfSignedCertificate();
         SslContext sslCtx = SslContext.newServerContext(
                 ssc.certificate(), ssc.privateKey(), null, null, IdentityCipherSuiteFilter.INSTANCE,
-                Arrays.asList(SelectedProtocol.SPDY_3_1.protocolName(), SelectedProtocol.HTTP_1_1.protocolName()),
-                JettyNpnSslEngineWrapper.instance(),
+                new ApplicationProtocolConfig(
+                        Protocol.NPN,
+                        SelectorFailureBehavior.FATAL_ALERT,
+                        SelectedListenerFailureBehavior.FATAL_ALERT,
+                        SelectedProtocol.SPDY_3_1.protocolName(),
+                        SelectedProtocol.HTTP_1_1.protocolName()),
                 0, 0);
 
         // Configure the server.

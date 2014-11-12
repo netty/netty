@@ -14,17 +14,18 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderUtil;
-import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+
+import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * This adapter provides just header/data events from the HTTP message flow defined
@@ -36,8 +37,9 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         public boolean mustSendImmediately(FullHttpMessage msg) {
             if (msg instanceof FullHttpResponse) {
                 return ((FullHttpResponse) msg).status().isInformational();
-            } else if (msg instanceof FullHttpRequest) {
-                return ((FullHttpRequest) msg).headers().contains(HttpHeaders.Names.EXPECT);
+            }
+            if (msg instanceof FullHttpRequest) {
+                return msg.headers().contains(HttpHeaderNames.EXPECT);
             }
             return false;
         }
@@ -46,7 +48,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         public FullHttpMessage copyIfNeeded(FullHttpMessage msg) {
             if (msg instanceof FullHttpRequest) {
                 FullHttpRequest copy = ((FullHttpRequest) msg).copy(null);
-                copy.headers().remove(HttpHeaders.Names.EXPECT);
+                copy.headers().remove(HttpHeaderNames.EXPECT);
                 return copy;
             }
             return null;
@@ -172,7 +174,6 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
      * <li>{@code true} to validate HTTP headers in the http-codec</li>
      * <li>{@code false} not to validate HTTP headers in the http-codec</li>
      * </ul>
-     * @return
      * @throws Http2Exception
      */
     protected FullHttpMessage newMessage(int streamId, Http2Headers headers, boolean validateHttpHeaders)
@@ -334,7 +335,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
          * with a 'Expect: 100-continue' header. The message will be sent immediately,
          * and the data will be queued and sent at the end of the stream.
          *
-         * @param msg The message which has just been sent due to {@link #mustSendImmediatley}
+         * @param msg The message which has just been sent due to {@link #mustSendImmediately(FullHttpMessage)}
          * @return A modified copy of the {@code msg} or {@code null} if a copy is not needed.
          */
         FullHttpMessage copyIfNeeded(FullHttpMessage msg);

@@ -17,19 +17,18 @@ package io.netty.handler.ssl;
 
 import java.util.List;
 
-import javax.net.ssl.SSLEngine;
-
 /**
- * Factory for not wrapping {@link SSLEngine} object and just returning it.
+ * Interface to support Application Protocol Negotiation.
+ * <p>
+ * Default implementations are provided for:
+ * <ul>
+ * <li><a href="https://technotes.googlecode.com/git/nextprotoneg.html">Next Protocol Negotiation</a></li>
+ * <li><a href="http://tools.ietf.org/html/rfc7301">Application-Layer Protocol Negotiation</a></li>
+ * </ul>
  */
-public final class DefaultSslWrapperFactory implements SslEngineWrapperFactory {
-    public static final DefaultSslWrapperFactory INSTANCE = new DefaultSslWrapperFactory();
-
-    private DefaultSslWrapperFactory() {
-    }
-
-    @Override
-    public SSLEngine wrapSslEngine(SSLEngine engine, List<String> protocols, boolean isServer) {
-        return engine;
-    }
+public interface ApplicationProtocolNegotiator {
+    /**
+     * Get the collection of application protocols supported by this application (in preference order).
+     */
+    List<String> protocols();
 }

@@ -45,7 +45,7 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
      * @param streamId The stream for which a response is expected
      * @param promise The promise object that will be used to wait/notify events
      * @return The previous object associated with {@code streamId}
-     * @see {@link io.netty.example.http2.client.HttpResponseHandler#awaitResponses awaitResponses}
+     * @see HttpResponseHandler#awaitResponses(long, TimeUnit)
      */
     public ChannelPromise put(int streamId, ChannelPromise promise) {
         return streamidPromiseMap.put(streamId, promise);
@@ -56,7 +56,7 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
      *
      * @param timeout Value of time to wait for each response
      * @param unit Units associated with {@code timeout}
-     * @see {@link io.netty.example.http2.client.HttpResponseHandler#put put}
+     * @see HttpResponseHandler#put(int, ChannelPromise)
      */
     public void awaitResponses(long timeout, TimeUnit unit) {
         Iterator<Entry<Integer, ChannelPromise>> itr = streamidPromiseMap.entrySet().iterator();

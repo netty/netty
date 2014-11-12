@@ -29,6 +29,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.DefaultHttp2OutboundFlowController.OutboundFlowState;
@@ -134,6 +135,24 @@ public class DefaultHttp2OutboundFlowControllerTest {
             send(STREAM_A, data.slice(0, 5), 5);
             verifyWrite(STREAM_A, data.slice(0, 5), 5);
             assertEquals(1, data.refCnt());
+        } finally {
+            manualSafeRelease(data);
+        }
+    }
+
+    @Test
+    public void lastWriteFutureShouldBeSaved() throws Http2Exception {
+        ChannelPromise promise2 = Mockito.mock(ChannelPromise.class);
+        final ByteBuf data = dummyData(5, 5);
+        try {
+            // Write one frame.
+            ChannelFuture future1 = controller.writeData(ctx, STREAM_A, data, 0, false, promise);
+            assertEquals(future1, controller.lastWriteForStream(STREAM_A));
+
+            // Now write another and verify that the last write is updated.
+            ChannelFuture future2 = controller.writeData(ctx, STREAM_A, data, 0, false, promise2);
+            assertTrue(future1 != future2);
+            assertEquals(future2, controller.lastWriteForStream(STREAM_A));
         } finally {
             manualSafeRelease(data);
         }
@@ -295,6 +314,55 @@ public class DefaultHttp2OutboundFlowControllerTest {
             assertEquals(1, data.refCnt());
         } finally {
             manualSafeRelease(data);
+        }
+    }
+
+    @Test
+    public void negativeWindowShouldNotThrowException() throws Http2Exception {
+        final int initWindow = 20;
+        final int secondWindowSize = 10;
+        controller.initialOutboundWindowSize(initWindow);
+        Http2Stream streamA = connection.stream(STREAM_A);
+
+        final ByteBuf data = dummyData(initWindow, 0);
+        final ByteBuf data2 = dummyData(5, 0);
+        try {
+            // Deplete the stream A window to 0
+            send(STREAM_A, data.slice(0, initWindow), 0);
+            verifyWrite(STREAM_A, data.slice(0, initWindow), 0);
+
+            // Make the window size for stream A negative
+            controller.initialOutboundWindowSize(initWindow - secondWindowSize);
+            assertEquals(-secondWindowSize, streamA.outboundFlow().window());
+
+            // Queue up a write. It should not be written now because the window is negative
+            resetFrameWriter();
+            send(STREAM_A, data2.slice(), 0);
+            verifyNoWrite(STREAM_A);
+
+            // Open the window size back up a bit (no send should happen)
+            controller.updateOutboundWindowSize(STREAM_A, 5);
+            assertEquals(-5, streamA.outboundFlow().window());
+            verifyNoWrite(STREAM_A);
+
+            // Open the window size back up a bit (no send should happen)
+            controller.updateOutboundWindowSize(STREAM_A, 5);
+            assertEquals(0, streamA.outboundFlow().window());
+            verifyNoWrite(STREAM_A);
+
+            // Open the window size back up and allow the write to happen
+            controller.updateOutboundWindowSize(STREAM_A, 5);
+            assertEquals(0, streamA.outboundFlow().window());
+
+            // Verify that the entire frame was sent.
+            ArgumentCaptor<ByteBuf> argument = ArgumentCaptor.forClass(ByteBuf.class);
+            captureWrite(STREAM_A, argument, 0, false);
+            final ByteBuf writtenBuf = argument.getValue();
+            assertEquals(data2, writtenBuf);
+            assertEquals(1, data2.refCnt());
+        } finally {
+            manualSafeRelease(data);
+            manualSafeRelease(data2);
         }
     }
 
@@ -1174,7 +1242,8 @@ public class DefaultHttp2OutboundFlowControllerTest {
     }
 
     private void send(int streamId, ByteBuf data, int padding) throws Http2Exception {
-        controller.writeData(ctx, streamId, data, padding, false, promise);
+        ChannelFuture future = controller.writeData(ctx, streamId, data, padding, false, promise);
+        assertEquals(future, controller.lastWriteForStream(streamId));
     }
 
     private void verifyWrite(int streamId, ByteBuf data, int padding) {
