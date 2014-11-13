@@ -251,7 +251,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         OutboundFlowState connectionState = state(connectionStream);
         int connectionWindow = Math.max(0, connectionState.window());
 
-        // Write the bytes for the entire priority tree.
+        // Allocate the bytes for the entire priority tree.
         allocateBytesForTree(connectionStream, connectionWindow);
 
         // Perform the write of the allocated bytes for each stream.
