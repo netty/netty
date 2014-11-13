@@ -43,18 +43,18 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     /**
      * A {@link Comparator} that sorts streams in ascending order the amount of streamable data.
      */
-    private static final Comparator<Http2Stream> DATA_ORDER = new Comparator<Http2Stream>() {
+    private static final Comparator<Http2Stream> WEIGHT_ORDER = new Comparator<Http2Stream>() {
         @Override
         public int compare(Http2Stream o1, Http2Stream o2) {
-            return state(o1).streamableBytesForTree() - state(o2).streamableBytesForTree();
+            return o2.weight() - o1.weight();
         }
     };
 
     private final Http2Connection connection;
     private final Http2FrameWriter frameWriter;
     private int initialWindowSize = DEFAULT_WINDOW_SIZE;
-    private boolean frameSent;
     private ChannelHandlerContext ctx;
+    private boolean frameSent;
 
     public DefaultHttp2OutboundFlowController(Http2Connection connection, Http2FrameWriter frameWriter) {
         this.connection = checkNotNull(connection, "connection");
@@ -140,15 +140,17 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             // Update the stream window and write any pending frames for the stream.
             OutboundFlowState state = stateOrFail(streamId);
             state.incrementStreamWindow(delta);
-            if (state.writeBytes(state.writableWindow()) > 0) {
+            frameSent = false;
+            state.writeBytes(state.writableWindow());
+            if (frameSent) {
                 flush();
             }
         }
     }
 
     @Override
-    public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
-            int padding, boolean endStream, ChannelPromise promise) {
+    public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
+            boolean endStream, ChannelPromise promise) {
         checkNotNull(ctx, "ctx");
         checkNotNull(promise, "promise");
         checkNotNull(data, "data");
@@ -203,7 +205,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     }
 
     private static OutboundFlowState state(Http2Stream stream) {
-        return stream != null ? (OutboundFlowState) stream.outboundFlow() : null;
+        return (OutboundFlowState) stream.outboundFlow();
     }
 
     private OutboundFlowState connectionState() {
@@ -211,7 +213,8 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     }
 
     private OutboundFlowState state(int streamId) {
-        return state(connection.stream(streamId));
+        Http2Stream stream = connection.stream(streamId);
+        return stream != null ? state(stream) : null;
     }
 
     /**
@@ -246,108 +249,111 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
      * Writes as many pending bytes as possible, according to stream priority.
      */
     private void writePendingBytes() throws Http2Exception {
-        frameSent = false;
         Http2Stream connectionStream = connection.connectionStream();
-        OutboundFlowState connectionState = state(connectionStream);
-        int connectionWindow = Math.max(0, connectionState.window());
+        int connectionWindow = state(connectionStream).window();
 
-        // Allocate the bytes for the entire priority tree.
-        allocateBytesForTree(connectionStream, connectionWindow);
-
-        // Perform the write of the allocated bytes for each stream.
-        for (Http2Stream stream : connection.activeStreams()) {
-            OutboundFlowState state = state(stream);
-            // The allocated bytes are for the entire sub-tree but the write will be limited
-            // by the number of pending bytes for the stream.
-            state.writeBytes(state.allocatedBytesForTree());
-            state.resetAllocatedBytesForTree();
-        }
-        connectionState.resetAllocatedBytesForTree();
-
-        // Only flush once for all written frames.
-        if (frameSent) {
-            flush();
+        if (connectionWindow > 0) {
+            frameSent = false;
+            writeChildren(connectionStream, connectionWindow);
+            for (Http2Stream stream : connection.activeStreams()) {
+                writeChildNode(state(stream));
+            }
+            if (frameSent) {
+                flush();
+            }
         }
     }
 
     /**
-     * Allocates as many bytes as possible for the given tree within the provided connection window.
-     *
-     * @param stream the tree for which the given bytes are to be allocated.
-     * @param connectionWindow the connection window that acts as an upper bound on the total number
-     *            of bytes that can be allocated for the tree.
-     * @return the total number of bytes actually allocated for this subtree.
+     * Write the children of {@code parent} in the priority tree. This will allocate bytes by stream weight.
+     * @param parent The parent of the nodes which will be written.
+     * @param connectionWindow The connection window this is available for use at this point in the tree.
+     * @return An object summarizing the write and allocation results.
      */
-    private int allocateBytesForTree(Http2Stream stream, int connectionWindow) {
-        OutboundFlowState state = state(stream);
-        connectionWindow = min(connectionWindow, state.unallocatedBytesForTree());
-
-        // Determine the amount of bytes to allocate for 'this' stream.
-        int streamable = Math.max(0, state.streamableBytes() - state.allocatedBytesForTree());
-        int totalAllocated = min(connectionWindow, streamable);
-
-        connectionWindow -= totalAllocated;
-        int remainingInTree = state.streamableBytesForTree() - totalAllocated;
-        if (stream.isLeaf() || remainingInTree <= 0 || connectionWindow <= 0) {
-            // Nothing left to do in this subtree.
-            state.allocateBytesForTree(totalAllocated);
-            return totalAllocated;
+    private int writeChildren(Http2Stream parent, int connectionWindow) {
+        OutboundFlowState state = state(parent);
+        if (state.streamableBytesForTree() <= 0) {
+            return 0;
         }
+        int bytesAllocated = 0;
 
-        // If the window is big enough to fit all the remaining data. Just write everything
-        // and skip the priority algorithm.
-        if (remainingInTree <= connectionWindow) {
-            for (Http2Stream child : stream.children()) {
-                int writtenToChild = allocateBytesForTree(child, connectionWindow);
-                totalAllocated += writtenToChild;
-                connectionWindow -= writtenToChild;
+        // If the number of streamable bytes for this tree will fit in the connection window
+        // then there is no need to prioritize the bytes...everyone sends what they have
+        if (state.streamableBytesForTree() <= connectionWindow) {
+            for (Http2Stream child : parent.children()) {
+                state = state(child);
+                int bytesForChild = state.streamableBytes();
+
+                if (bytesForChild > 0 || state.hasFrame()) {
+                    state.allocate(bytesForChild);
+                    writeChildNode(state);
+                    bytesAllocated += bytesForChild;
+                    connectionWindow -= bytesForChild;
+                }
+                int childBytesAllocated = writeChildren(child, connectionWindow);
+                bytesAllocated += childBytesAllocated;
+                connectionWindow -= childBytesAllocated;
             }
-            state.allocateBytesForTree(totalAllocated);
-            return totalAllocated;
+            return bytesAllocated;
         }
 
-        Http2Stream[] children = stream.children().toArray(new Http2Stream[0]);
-        Arrays.sort(children, DATA_ORDER);
-
-        // Clip the total remaining bytes by the connection window.
-        int totalWeight = stream.totalChildWeights();
-        int tail = children.length;
-        // Outer loop: continue until we've exhausted the connection window or allocated all bytes in the tree.
-        while (tail > 0 && connectionWindow > 0) {
-            int tailNextPass = 0;
-            int totalWeightNextPass = 0;
-
-            // Inner loop: allocate bytes to the children based on their weight.
-            for (int index = 0; index < tail && connectionWindow > 0; ++index) {
-                Http2Stream child = children[index];
-                OutboundFlowState childState = state(child);
-
-                // Determine the ratio of this stream to all children.
+        // This is the priority algorithm which will divide the available bytes based
+        // upon stream weight relative to its peers
+        Http2Stream[] children = parent.children().toArray(new Http2Stream[parent.numChildren()]);
+        Arrays.sort(children, WEIGHT_ORDER);
+        int totalWeight = parent.totalChildWeights();
+        for (int tail = children.length; tail > 0;) {
+            int head = 0;
+            int nextTail = 0;
+            int nextTotalWeight = 0;
+            int nextConnectionWindow = connectionWindow;
+            for (; head < tail && nextConnectionWindow > 0; ++head) {
+                Http2Stream child = children[head];
+                state = state(child);
                 int weight = child.weight();
                 double weightRatio = weight / (double) totalWeight;
 
-                int windowSlice = Math.max(1, (int) Math.round(connectionWindow * weightRatio));
+                int bytesForTree = Math.min(nextConnectionWindow, (int) Math.ceil(connectionWindow * weightRatio));
+                int bytesForChild = Math.min(state.streamableBytes(), bytesForTree);
 
-                // Allocate the bytes for this child.
-                int allocated = allocateBytesForTree(child, windowSlice);
+                if (bytesForChild > 0 || state.hasFrame()) {
+                    state.allocate(bytesForChild);
+                    bytesAllocated += bytesForChild;
+                    nextConnectionWindow -= bytesForChild;
+                    bytesForTree -= bytesForChild;
+                    // If this subtree still wants to send then re-insert into children list and re-consider for next
+                    // iteration. This is needed because we don't yet know if all the peers will be able to use
+                    // all of their "fair share" of the connection window, and if they don't use it then we should
+                    // divide their unused shared up for the peers who still want to send.
+                    if (state.streamableBytesForTree() - bytesForChild > 0) {
+                        children[nextTail++] = child;
+                        nextTotalWeight += weight;
+                    }
+                    if (state.streamableBytes() - bytesForChild == 0) {
+                        writeChildNode(state);
+                    }
+                }
 
-                totalAllocated += allocated;
-                connectionWindow -= allocated;
-                totalWeight -= weight;
-
-                if (childState.unallocatedBytesForTree() > 0) {
-                    // This stream still has more data, add it to the next pass.
-                    children[tailNextPass++] = child;
-                    totalWeightNextPass += weight;
+                if (bytesForTree > 0) {
+                    int childBytesAllocated = writeChildren(child, bytesForTree);
+                    bytesAllocated += childBytesAllocated;
+                    nextConnectionWindow -= childBytesAllocated;
                 }
             }
-
-            totalWeight = totalWeightNextPass;
-            tail = tailNextPass;
+            connectionWindow = nextConnectionWindow;
+            totalWeight = nextTotalWeight;
+            tail = nextTail;
         }
 
-        state.allocateBytesForTree(totalAllocated);
-        return totalAllocated;
+        return bytesAllocated;
+    }
+
+    /**
+     * Write bytes allocated to {@code state}
+     */
+    private static void writeChildNode(OutboundFlowState state) {
+        state.writeBytes(state.allocated());
+        state.resetAllocated();
     }
 
     /**
@@ -359,7 +365,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         private int window = initialWindowSize;
         private int pendingBytes;
         private int streamableBytesForTree;
-        private int allocatedBytesForTree;
+        private int allocated;
         private ChannelFuture lastNewFrame;
 
         private OutboundFlowState(Http2Stream stream) {
@@ -373,33 +379,24 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         }
 
         /**
-         * Increments the number of bytes allocated to this tree by the priority algorithm.
+         * Increment the number of bytes allocated to this stream by the priority algorithm
          */
-        private void allocateBytesForTree(int bytes) {
-            allocatedBytesForTree += bytes;
+        private void allocate(int bytes) {
+            allocated += bytes;
         }
 
         /**
-         * Gets the number of bytes that have been allocated to this tree by the priority algorithm.
+         * Gets the number of bytes that have been allocated to this stream by the priority algorithm.
          */
-        private int allocatedBytesForTree() {
-            return allocatedBytesForTree;
+        private int allocated() {
+            return allocated;
         }
 
         /**
-         * Gets the number of unallocated bytes (i.e. {@link #streamableBytesForTree()} -
-         * {@link #allocatedBytesForTree()}).
+         * Reset the number of bytes that have been allocated to this stream by the priority algorithm.
          */
-        private int unallocatedBytesForTree() {
-            return streamableBytesForTree - allocatedBytesForTree;
-        }
-
-        /**
-         * Resets the number of bytes allocated to this stream. This is called at the end of the priority
-         * algorithm for each stream to reset the count for the next invocation.
-         */
-        private void resetAllocatedBytesForTree() {
-            allocatedBytesForTree = 0;
+        private void resetAllocated() {
+            allocated = 0;
         }
 
         /**
@@ -413,8 +410,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             int previouslyStreamable = streamableBytes();
             window += delta;
 
-            // Update this branch of the priority tree if the streamable bytes have changed for this
-            // node.
+            // Update this branch of the priority tree if the streamable bytes have changed for this node.
             int streamableDelta = streamableBytes() - previouslyStreamable;
             incrementStreamableBytesForTree(streamableDelta);
             return window;
@@ -491,17 +487,17 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
          * boundaries.
          */
         private int writeBytes(int bytes) {
-            int bytesWritten = 0;
             if (!stream.localSideOpen()) {
-                return bytesWritten;
+                return 0;
             }
 
+            int bytesAttempted = 0;
             int maxBytes = min(bytes, writableWindow());
             while (hasFrame()) {
                 Frame pendingWrite = peek();
                 if (maxBytes >= pendingWrite.size()) {
                     // Window size is large enough to send entire data frame
-                    bytesWritten += pendingWrite.size();
+                    bytesAttempted += pendingWrite.size();
                     pendingWrite.write();
                 } else if (maxBytes <= 0) {
                     // No data from the current frame can be written - we're done.
@@ -511,19 +507,19 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                 } else {
                     // We can send a partial frame
                     Frame partialFrame = pendingWrite.split(maxBytes);
-                    bytesWritten += partialFrame.size();
+                    bytesAttempted += partialFrame.size();
                     partialFrame.write();
                 }
 
                 // Update the threshold.
-                maxBytes = min(bytes - bytesWritten, writableWindow());
+                maxBytes = min(bytes - bytesAttempted, writableWindow());
             }
-            return bytesWritten;
+            return bytesAttempted;
         }
 
         /**
-         * Recursively increments the streamable bytes for this branch in the priority tree starting
-         * at the current node.
+         * Recursively increments the streamable bytes for this branch in the priority tree starting at the current
+         * node.
          */
         private void incrementStreamableBytesForTree(int numBytes) {
             if (numBytes != 0) {
@@ -545,8 +541,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             int padding;
             boolean enqueued;
 
-            Frame(SimplePromiseAggregator promiseAggregator, ByteBuf data, int padding,
-                    boolean endStream) {
+            Frame(SimplePromiseAggregator promiseAggregator, ByteBuf data, int padding, boolean endStream) {
                 this.data = data;
                 this.padding = padding;
                 this.endStream = endStream;
@@ -573,10 +568,9 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             }
 
             /**
-             * Increments the number of pending bytes for this node. If there was any change to the
-             * number of bytes that fit into the stream window, then
-             * {@link #incrementStreamableBytesForTree} to recursively update this branch of the
-             * priority tree.
+             * Increments the number of pending bytes for this node. If there was any change to the number of bytes that
+             * fit into the stream window, then {@link #incrementStreamableBytesForTree} to recursively update this
+             * branch of the priority tree.
              */
             private void incrementPendingBytes(int numBytes) {
                 int previouslyStreamable = streamableBytes();
@@ -587,9 +581,8 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             }
 
             /**
-             * Writes the frame and decrements the stream and connection window sizes. If the frame
-             * is in the pending queue, the written bytes are removed from this branch of the
-             * priority tree.
+             * Writes the frame and decrements the stream and connection window sizes. If the frame is in the pending
+             * queue, the written bytes are removed from this branch of the priority tree.
              * <p>
              * Note: this does not flush the {@link ChannelHandlerContext}.
              */
@@ -636,12 +629,11 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             }
 
             /**
-             * Creates a new frame that is a view of this frame's data. The {@code maxBytes} are
-             * first split from the data buffer. If not all the requested bytes are available, the
-             * remaining bytes are then split from the padding (if available).
+             * Creates a new frame that is a view of this frame's data. The {@code maxBytes} are first split from the
+             * data buffer. If not all the requested bytes are available, the remaining bytes are then split from the
+             * padding (if available).
              *
-             * @param maxBytes
-             *            the maximum number of bytes that is allowed in the created frame.
+             * @param maxBytes the maximum number of bytes that is allowed in the created frame.
              * @return the partial frame.
              */
             Frame split(int maxBytes) {
