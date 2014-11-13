@@ -311,7 +311,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         int totalWeight = stream.totalChildWeights();
         int tail = children.length;
         // Outer loop: continue until we've exhausted the connection window or allocated all bytes in the tree.
-        while(tail > 0 && connectionWindow > 0) {
+        while (tail > 0 && connectionWindow > 0) {
             int tailNextPass = 0;
             int totalWeightNextPass = 0;
 
@@ -370,18 +370,31 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             return window;
         }
 
+        /**
+         * Increments the number of bytes allocated to this tree by the priority algorithm.
+         */
         private void allocate(int bytes) {
             allocated += bytes;
         }
 
+        /**
+         * Gets the number of bytes that have been allocated to this tree by the priority algorithm.
+         */
         private int allocated() {
             return allocated;
         }
 
+        /**
+         * Gets the number of unallocated bytes (i.e. {@link #streamableBytesForTree()} - {@link #allocated()}).
+         */
         private int unallocated() {
             return streamableBytesForTree - allocated;
         }
 
+        /**
+         * Clears the number of bytes allocated to this stream. This is called at the end of the priority
+         * algorithm for each stream to reset the count for the next invocation.
+         */
         private void clearAllocated() {
             allocated = 0;
         }
