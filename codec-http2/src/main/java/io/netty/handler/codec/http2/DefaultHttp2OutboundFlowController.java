@@ -257,10 +257,12 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         // Perform the write of the allocated bytes for each stream.
         for (Http2Stream stream : connection.activeStreams()) {
             OutboundFlowState state = state(stream);
-            state.writeBytes(state.allocated());
-            state.clearAllocated();
+            // The allocated bytes are for the entire sub-tree but the write will be limited
+            // by the number of pending bytes for the stream.
+            state.writeBytes(state.allocatedBytesForTree());
+            state.resetAllocatedBytesForTree();
         }
-        connectionState.clearAllocated();
+        connectionState.resetAllocatedBytesForTree();
 
         // Only flush once for all written frames.
         if (frameSent) {
@@ -278,17 +280,17 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
      */
     private int allocateBytesForTree(Http2Stream stream, int connectionWindow) {
         OutboundFlowState state = state(stream);
-        connectionWindow = min(connectionWindow, state.unallocated());
+        connectionWindow = min(connectionWindow, state.unallocatedBytesForTree());
 
         // Determine the amount of bytes to allocate for 'this' stream.
-        int streamable = Math.max(0, state.streamableBytes() - state.allocated());
+        int streamable = Math.max(0, state.streamableBytes() - state.allocatedBytesForTree());
         int totalAllocated = min(connectionWindow, streamable);
 
         connectionWindow -= totalAllocated;
         int remainingInTree = state.streamableBytesForTree() - totalAllocated;
         if (stream.isLeaf() || remainingInTree <= 0 || connectionWindow <= 0) {
             // Nothing left to do in this subtree.
-            state.allocate(totalAllocated);
+            state.allocateBytesForTree(totalAllocated);
             return totalAllocated;
         }
 
@@ -300,7 +302,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                 totalAllocated += writtenToChild;
                 connectionWindow -= writtenToChild;
             }
-            state.allocate(totalAllocated);
+            state.allocateBytesForTree(totalAllocated);
             return totalAllocated;
         }
 
@@ -333,7 +335,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                 connectionWindow -= allocated;
                 totalWeight -= weight;
 
-                if (childState.unallocated() > 0) {
+                if (childState.unallocatedBytesForTree() > 0) {
                     // This stream still has more data, add it to the next pass.
                     children[tailNextPass++] = child;
                     totalWeightNextPass += weight;
@@ -344,7 +346,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             tail = tailNextPass;
         }
 
-        state.allocate(totalAllocated);
+        state.allocateBytesForTree(totalAllocated);
         return totalAllocated;
     }
 
@@ -357,8 +359,8 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         private int window = initialWindowSize;
         private int pendingBytes;
         private int streamableBytesForTree;
+        private int allocatedBytesForTree;
         private ChannelFuture lastNewFrame;
-        private int allocated;
 
         private OutboundFlowState(Http2Stream stream) {
             this.stream = stream;
@@ -373,30 +375,31 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         /**
          * Increments the number of bytes allocated to this tree by the priority algorithm.
          */
-        private void allocate(int bytes) {
-            allocated += bytes;
+        private void allocateBytesForTree(int bytes) {
+            allocatedBytesForTree += bytes;
         }
 
         /**
          * Gets the number of bytes that have been allocated to this tree by the priority algorithm.
          */
-        private int allocated() {
-            return allocated;
+        private int allocatedBytesForTree() {
+            return allocatedBytesForTree;
         }
 
         /**
-         * Gets the number of unallocated bytes (i.e. {@link #streamableBytesForTree()} - {@link #allocated()}).
+         * Gets the number of unallocated bytes (i.e. {@link #streamableBytesForTree()} -
+         * {@link #allocatedBytesForTree()}).
          */
-        private int unallocated() {
-            return streamableBytesForTree - allocated;
+        private int unallocatedBytesForTree() {
+            return streamableBytesForTree - allocatedBytesForTree;
         }
 
         /**
-         * Clears the number of bytes allocated to this stream. This is called at the end of the priority
+         * Resets the number of bytes allocated to this stream. This is called at the end of the priority
          * algorithm for each stream to reset the count for the next invocation.
          */
-        private void clearAllocated() {
-            allocated = 0;
+        private void resetAllocatedBytesForTree() {
+            allocatedBytesForTree = 0;
         }
 
         /**
