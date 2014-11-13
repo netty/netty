@@ -24,8 +24,6 @@ import java.util.List;
  * Provides utilities related to security requirements specific to HTTP/2.
  */
 public final class Http2SecurityUtil {
-    private Http2SecurityUtil() { }
-
     /**
      * The following list is derived from <a
      * href="http://docs.oracle.com/javase/8/docs/technotes/guides/security/SunProviders.html">SunJSSE Supported
@@ -78,4 +76,6 @@ public final class Http2SecurityUtil {
         ciphers.addAll(CIPHERS_JAVA_DISABLED_DEFAULT);
         CIPHERS = Collections.unmodifiableList(ciphers);
     }
+
+    private Http2SecurityUtil() { }
 }

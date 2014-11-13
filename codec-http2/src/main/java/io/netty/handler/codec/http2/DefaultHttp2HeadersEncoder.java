@@ -107,7 +107,7 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
     }
 
     private void encodeHeader(AsciiString key, AsciiString value, OutputStream stream) throws IOException {
-        boolean sensitive = sensitiveHeaders.contains(key);
+        boolean sensitive = sensitiveHeaders.contains(key.toString());
         encoder.encodeHeader(stream, key.array(), value.array(), sensitive);
     }
 
@@ -118,7 +118,7 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
         @Override
         public void maxHeaderTableSize(int max) throws Http2Exception {
             if (max < 0) {
-                throw Http2Exception.protocolError("Header Table Size must be non-negative but was %d", max);
+                throw protocolError("Header Table Size must be non-negative but was %d", max);
             }
             try {
                 // No headers should be emitted. If they are, we throw.

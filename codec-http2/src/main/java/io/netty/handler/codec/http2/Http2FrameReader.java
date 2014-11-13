@@ -28,7 +28,7 @@ public interface Http2FrameReader extends Closeable {
     /**
      * Configuration specific to {@link Http2FrameReader}
      */
-    public interface Configuration {
+    interface Configuration {
         /**
          * Get the {@link Http2HeaderTable} for this {@link Http2FrameReader}
          */

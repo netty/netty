@@ -345,7 +345,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     public void rstStreamReadShouldCloseStream() throws Exception {
         decode().onRstStreamRead(ctx, STREAM_ID, PROTOCOL_ERROR.code());
         verify(lifecycleManager).closeStream(eq(stream), eq(future));
-        verify(listener).onRstStreamRead(eq(ctx), eq(STREAM_ID), eq((long) PROTOCOL_ERROR.code()));
+        verify(listener).onRstStreamRead(eq(ctx), eq(STREAM_ID), eq(PROTOCOL_ERROR.code()));
     }
 
     @Test

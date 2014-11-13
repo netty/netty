@@ -125,7 +125,7 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
      * @param msg The message containing the headers and trailing headers
      * @return The headers object which can be appended to or modified
      */
-    private HttpHeaders getActiveHeaders(FullHttpMessage msg) {
+    private static HttpHeaders getActiveHeaders(FullHttpMessage msg) {
         return msg.content().isReadable() ? msg.trailingHeaders() : msg.headers();
     }
 
@@ -159,7 +159,7 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
      * This will remove all headers which are related to priority tree events
      * @param headers The headers to remove the priority tree elements from
      */
-    private void removePriorityRelatedHeaders(HttpHeaders headers) {
+    private static void removePriorityRelatedHeaders(HttpHeaders headers) {
         headers.remove(HttpUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text());
         headers.remove(HttpUtil.ExtensionHeaderNames.STREAM_WEIGHT.text());
     }
@@ -181,7 +181,7 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
      * @param httpHeaders The HTTP headers to translate to HTTP/2
      * @param http2Headers The target HTTP/2 headers
      */
-    private void addHttpHeadersToHttp2Headers(HttpHeaders httpHeaders, final Http2Headers http2Headers) {
+    private static void addHttpHeadersToHttp2Headers(HttpHeaders httpHeaders, final Http2Headers http2Headers) {
         try {
             httpHeaders.forEachEntry(new EntryVisitor() {
                 @Override
@@ -239,7 +239,7 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
     @Override
     public void onWeightChanged(Http2Stream stream, short oldWeight) {
         FullHttpMessage msg = messageMap.get(stream.id());
-        HttpHeaders headers = null;
+        HttpHeaders headers;
         if (msg == null) {
             // msg may be null if a HTTP/2 frame event in received outside the HTTP message flow
             // For example a PRIORITY frame can be received in any state besides IDLE

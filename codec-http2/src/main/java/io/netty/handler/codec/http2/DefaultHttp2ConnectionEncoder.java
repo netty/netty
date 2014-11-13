@@ -86,10 +86,10 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     }
 
     protected DefaultHttp2ConnectionEncoder(Builder builder) {
-        this.frameWriter = checkNotNull(builder.frameWriter, "frameWriter");
-        this.connection = checkNotNull(builder.connection, "connection");
-        this.outboundFlow = checkNotNull(builder.outboundFlow, "outboundFlow");
-        this.lifecycleManager = checkNotNull(builder.lifecycleManager, "lifecycleManager");
+        frameWriter = checkNotNull(builder.frameWriter, "frameWriter");
+        connection = checkNotNull(builder.connection, "connection");
+        outboundFlow = checkNotNull(builder.outboundFlow, "outboundFlow");
+        lifecycleManager = checkNotNull(builder.lifecycleManager, "lifecycleManager");
     }
 
     @Override
@@ -252,10 +252,10 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                         "Sending non-trailing headers after data has been sent for stream: "
                                 + streamId);
             }
+        } catch (Http2NoMoreStreamIdsException e) {
+            lifecycleManager.onException(ctx, e);
+            return promise.setFailure(e);
         } catch (Throwable e) {
-            if (e instanceof Http2NoMoreStreamIdsException) {
-                lifecycleManager.onException(ctx, e);
-            }
             return promise.setFailure(e);
         }
 

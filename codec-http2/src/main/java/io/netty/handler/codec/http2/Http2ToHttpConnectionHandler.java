@@ -22,7 +22,7 @@ import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.HttpHeaders;
 
 /**
- * Light weight wrapper around {@link DelegatingHttp2ConnectionHandler} to provide HTTP/1.x objects to HTTP/2 frames
+ * Translates HTTP/1.x object writes into HTTP/2 frames
  * <p>
  * See {@link InboundHttp2ToHttpAdapter} to get translation from HTTP/2 frames to HTTP/1.x objects
  */

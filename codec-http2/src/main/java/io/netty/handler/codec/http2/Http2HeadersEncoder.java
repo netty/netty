@@ -24,7 +24,7 @@ public interface Http2HeadersEncoder {
     /**
      * Configuration related elements for the {@link Http2HeadersEncoder} interface
      */
-    public interface Configuration {
+    interface Configuration {
         /**
          * Access the Http2HeaderTable for this {@link Http2HeadersEncoder}
          */

@@ -47,9 +47,9 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     private static final Comparator<Http2Stream> DATA_WEIGHT = new Comparator<Http2Stream>() {
         @Override
         public int compare(Http2Stream o1, Http2Stream o2) {
-            final long result = ((long) state(o1).priorityBytes()) * o1.weight() -
-                                ((long) state(o2).priorityBytes()) * o2.weight();
-            return result > 0 ? 1 : (result < 0 ? -1 : 0);
+            final long result = (long) state(o1).priorityBytes() * o1.weight() -
+                                (long) state(o2).priorityBytes() * o2.weight();
+            return result > 0 ? 1 : result < 0 ? -1 : 0;
         }
     };
 
@@ -489,7 +489,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         /**
          * Returns the the head of the pending queue, or {@code null} if empty.
          */
-        Frame peek() {
+        private Frame peek() {
             return pendingWriteQueue.peek();
         }
 
@@ -572,7 +572,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                 this.padding = padding;
                 this.endStream = endStream;
                 this.promiseAggregator = promiseAggregator;
-                this.promise = ctx.newPromise();
+                promise = ctx.newPromise();
                 promiseAggregator.add(promise);
             }
 
@@ -619,7 +619,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                 final Http2FrameSizePolicy frameSizePolicy = frameWriter.configuration().frameSizePolicy();
                 do {
                     int bytesToWrite = size();
-                    int frameBytes = Math.min(bytesToWrite, frameSizePolicy.maxFrameSize());
+                    int frameBytes = min(bytesToWrite, frameSizePolicy.maxFrameSize());
                     if (frameBytes == bytesToWrite) {
                         // All the bytes fit into a single HTTP/2 frame, just send it all.
                         connectionState().incrementStreamWindow(-bytesToWrite);

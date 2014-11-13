@@ -15,6 +15,7 @@
 package io.netty.example.http2.server;
 
 import io.netty.channel.ChannelHandler;
+import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2OrHttpChooser;
 
 import javax.net.ssl.SSLEngine;
@@ -51,7 +52,7 @@ public class Http2OrHttpHandler extends Http2OrHttpChooser {
     }
 
     @Override
-    protected ChannelHandler createHttp2RequestHandler() {
+    protected Http2ConnectionHandler createHttp2RequestHandler() {
         return new HelloWorldHttp2Handler();
     }
 }

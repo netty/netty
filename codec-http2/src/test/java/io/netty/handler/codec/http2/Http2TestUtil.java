@@ -115,7 +115,7 @@ final class Http2TestUtil {
             if (connection != null) {
                 Http2Stream stream = connection.stream(streamId);
                 if (stream == null) {
-                    if ((connection.isServer() && streamId % 2 == 0) || (!connection.isServer() && streamId % 2 != 0)) {
+                    if (connection.isServer() && streamId % 2 == 0 || !connection.isServer() && streamId % 2 != 0) {
                         stream = connection.local().createStream(streamId, halfClosed);
                     } else {
                         stream = connection.remote().createStream(streamId, halfClosed);
@@ -264,15 +264,15 @@ final class Http2TestUtil {
         private final CountDownLatch dataLatch;
         private final CountDownLatch trailersLatch;
 
-        public FrameCountDown(Http2FrameListener listener, CountDownLatch messageLatch) {
+        FrameCountDown(Http2FrameListener listener, CountDownLatch messageLatch) {
             this(listener, messageLatch, null);
         }
 
-        public FrameCountDown(Http2FrameListener listener, CountDownLatch messageLatch, CountDownLatch dataLatch) {
+        FrameCountDown(Http2FrameListener listener, CountDownLatch messageLatch, CountDownLatch dataLatch) {
             this(listener, messageLatch, dataLatch, null);
         }
 
-        public FrameCountDown(Http2FrameListener listener, CountDownLatch messageLatch,
+        FrameCountDown(Http2FrameListener listener, CountDownLatch messageLatch,
                 CountDownLatch dataLatch, CountDownLatch trailersLatch) {
             this.listener = listener;
             this.messageLatch = messageLatch;

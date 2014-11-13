@@ -52,6 +52,9 @@ import io.netty.util.collection.IntObjectMap;
  * A {@link Http2FrameWriter} that supports all frame types defined by the HTTP/2 specification.
  */
 public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSizePolicy, Configuration {
+    private static final String STREAM_ID = "Stream ID";
+    private static final String STREAM_DEPENDENCY = "Stream Dependency";
+
     private final Http2HeadersEncoder headersEncoder;
     private int maxFrameSize;
 
@@ -99,7 +102,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
             int padding, boolean endStream, ChannelPromise promise) {
         try {
-            verifyStreamId(streamId, "Stream ID");
+            verifyStreamId(streamId, STREAM_ID);
             verifyPadding(padding);
 
             Http2Flags flags = new Http2Flags().paddingPresent(padding > 0).endOfStream(endStream);
@@ -145,14 +148,14 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     public ChannelFuture writePriority(ChannelHandlerContext ctx, int streamId,
             int streamDependency, short weight, boolean exclusive, ChannelPromise promise) {
         try {
-            verifyStreamId(streamId, "Stream ID");
-            verifyStreamId(streamDependency, "Stream Dependency");
+            verifyStreamId(streamId, STREAM_ID);
+            verifyStreamId(streamDependency, STREAM_DEPENDENCY);
             verifyWeight(weight);
 
             ByteBuf frame = ctx.alloc().buffer(FRAME_HEADER_LENGTH + PRIORITY_ENTRY_LENGTH);
             writeFrameHeader(frame, PRIORITY_ENTRY_LENGTH, PRIORITY,
                     new Http2Flags(), streamId);
-            long word1 = exclusive ? (0x80000000L | streamDependency) : streamDependency;
+            long word1 = exclusive ? 0x80000000L | streamDependency : streamDependency;
             writeUnsignedInt(word1, frame);
 
             // Adjust the weight so that it fits into a single byte on the wire.
@@ -167,7 +170,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     public ChannelFuture writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
             ChannelPromise promise) {
         try {
-            verifyStreamId(streamId, "Stream ID");
+            verifyStreamId(streamId, STREAM_ID);
             verifyErrorCode(errorCode);
 
             ByteBuf frame = ctx.alloc().buffer(FRAME_HEADER_LENGTH + INT_FIELD_LENGTH);
@@ -232,7 +235,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             int promisedStreamId, Http2Headers headers, int padding, ChannelPromise promise) {
         ByteBuf headerBlock = null;
         try {
-            verifyStreamId(streamId, "Stream ID");
+            verifyStreamId(streamId, STREAM_ID);
             verifyStreamId(promisedStreamId, "Promised Stream ID");
             verifyPadding(padding);
 
@@ -306,7 +309,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     public ChannelFuture writeWindowUpdate(ChannelHandlerContext ctx, int streamId,
             int windowSizeIncrement, ChannelPromise promise) {
         try {
-            verifyStreamOrConnectionId(streamId, "Stream ID");
+            verifyStreamOrConnectionId(streamId, STREAM_ID);
             verifyWindowSizeIncrement(windowSizeIncrement);
 
             ByteBuf frame = ctx.alloc().buffer(FRAME_HEADER_LENGTH + INT_FIELD_LENGTH);
@@ -323,7 +326,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     public ChannelFuture writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
             Http2Flags flags, ByteBuf payload, ChannelPromise promise) {
         try {
-            verifyStreamOrConnectionId(streamId, "Stream ID");
+            verifyStreamOrConnectionId(streamId, STREAM_ID);
             ByteBuf frame = ctx.alloc().buffer(FRAME_HEADER_LENGTH + payload.readableBytes());
             writeFrameHeader(frame, payload.readableBytes(), frameType, flags, streamId);
             frame.writeBytes(payload);
@@ -338,9 +341,9 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             boolean hasPriority, int streamDependency, short weight, boolean exclusive) {
         ByteBuf headerBlock = null;
         try {
-            verifyStreamId(streamId, "Stream ID");
+            verifyStreamId(streamId, STREAM_ID);
             if (hasPriority) {
-                verifyStreamOrConnectionId(streamDependency, "Stream Dependency");
+                verifyStreamOrConnectionId(streamDependency, STREAM_DEPENDENCY);
                 verifyPadding(padding);
                 verifyWeight(weight);
             }
