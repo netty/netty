@@ -82,6 +82,22 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
         config = new EpollSocketChannelConfig(this);
     }
 
+    /**
+     * Returns the {@code TCP_INFO} for the current socket. See <a href="http://linux.die.net/man/7/tcp">man 7 tcp</a>.
+     */
+    public EpollTcpInfo tcpInfo() {
+        return tcpInfo(new EpollTcpInfo());
+    }
+
+    /**
+     * Updates and returns the {@code TCP_INFO} for the current socket.
+     * See <a href="http://linux.die.net/man/7/tcp">man 7 tcp</a>.
+     */
+    public EpollTcpInfo tcpInfo(EpollTcpInfo info) {
+        Native.tcpInfo(fd, info);
+        return info;
+    }
+
     @Override
     protected AbstractEpollUnsafe newUnsafe() {
         return new EpollSocketUnsafe();
