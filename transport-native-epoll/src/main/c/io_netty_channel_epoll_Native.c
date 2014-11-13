@@ -1297,6 +1297,48 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_getTcpKeepCnt(JNIEnv* 
      return optval;
 }
 
+JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_tcpInfo0(JNIEnv* env, jclass clazz, jint fd, jintArray array) {
+     struct tcp_info tcp_info;
+     if (getOption(env, fd, SOL_TCP, TCP_INFO, &tcp_info, sizeof(tcp_info)) == -1) {
+         return;
+     }
+     unsigned int cArray[32];
+     cArray[0] = tcp_info.tcpi_state;
+     cArray[1] = tcp_info.tcpi_ca_state;
+     cArray[2] = tcp_info.tcpi_retransmits;
+     cArray[3] = tcp_info.tcpi_probes;
+     cArray[4] = tcp_info.tcpi_backoff;
+     cArray[5] = tcp_info.tcpi_options;
+     cArray[6] = tcp_info.tcpi_snd_wscale;
+     cArray[7] = tcp_info.tcpi_rcv_wscale;
+     cArray[8] = tcp_info.tcpi_rto;
+     cArray[9] = tcp_info.tcpi_ato;
+     cArray[10] = tcp_info.tcpi_snd_mss;
+     cArray[11] = tcp_info.tcpi_rcv_mss;
+     cArray[12] = tcp_info.tcpi_unacked;
+     cArray[13] = tcp_info.tcpi_sacked;
+     cArray[14] = tcp_info.tcpi_lost;
+     cArray[15] = tcp_info.tcpi_retrans;
+     cArray[16] = tcp_info.tcpi_fackets;
+     cArray[17] = tcp_info.tcpi_last_data_sent;
+     cArray[18] = tcp_info.tcpi_last_ack_sent;
+     cArray[19] = tcp_info.tcpi_last_data_recv;
+     cArray[20] = tcp_info.tcpi_last_ack_recv;
+     cArray[21] = tcp_info.tcpi_pmtu;
+     cArray[22] = tcp_info.tcpi_rcv_ssthresh;
+     cArray[23] = tcp_info.tcpi_rtt;
+     cArray[24] = tcp_info.tcpi_rttvar;
+     cArray[25] = tcp_info.tcpi_snd_ssthresh;
+     cArray[26] = tcp_info.tcpi_snd_cwnd;
+     cArray[27] = tcp_info.tcpi_advmss;
+     cArray[28] = tcp_info.tcpi_reordering;
+     cArray[29] = tcp_info.tcpi_rcv_rtt;
+     cArray[30] = tcp_info.tcpi_rcv_space;
+     cArray[31] = tcp_info.tcpi_total_retrans;
+
+     (*env)->SetIntArrayRegion(env, array, 0, 32, cArray);
+}
+
 JNIEXPORT jstring JNICALL Java_io_netty_channel_epoll_Native_kernelVersion(JNIEnv* env, jclass clazz) {
     struct utsname name;
 

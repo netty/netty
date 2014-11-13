@@ -505,6 +505,12 @@ final class Native {
     public static native void setTcpKeepIntvl(int fd, int seconds);
     public static native void setTcpKeepCnt(int fd, int probes);
 
+    public static void tcpInfo(int fd, EpollTcpInfo info) {
+        tcpInfo0(fd, info.info);
+    }
+
+    private static native void tcpInfo0(int fd, int[] array);
+
     private static NativeInetAddress toNativeInetAddress(InetAddress addr) {
         byte[] bytes = addr.getAddress();
         if (addr instanceof Inet6Address) {
