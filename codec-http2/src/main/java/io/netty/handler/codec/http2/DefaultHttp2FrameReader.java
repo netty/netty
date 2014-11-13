@@ -482,8 +482,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                 }
             }
             listener.onSettingsRead(ctx, settings);
-            // Provide an interface for non-listeners to capture settings
-            ctx.fireChannelRead(settings);
         }
     }
 
