@@ -60,6 +60,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
     protected final boolean validateHttpHeaders;
     private final ImmediateSendDetector sendDetector;
     protected final IntObjectMap<FullHttpMessage> messageMap;
+    private final boolean propagateSettings;
 
     /**
      * Creates a new instance
@@ -93,7 +94,44 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
     public static InboundHttp2ToHttpAdapter newInstance(Http2Connection connection, int maxContentLength,
                     boolean validateHttpHeaders) {
         InboundHttp2ToHttpAdapter instance = new InboundHttp2ToHttpAdapter(connection,
-                        maxContentLength, validateHttpHeaders);
+                        maxContentLength, validateHttpHeaders, false);
+        connection.addListener(instance);
+        return instance;
+    }
+
+    /**
+     * Creates a new instance which when a settings frame has been read will propagate the settings along
+     * the pipeline.
+     *
+     * @param connection The object which will provide connection notification events for the current connection
+     * @param maxContentLength the maximum length of the message content. If the length of the message content exceeds
+     *        this value, a {@link TooLongFrameException} will be raised.
+     * @throws NullPointerException If {@code connection} is null
+     * @throws IllegalArgumentException If {@code maxContentLength} is less than or equal to {@code 0}
+     */
+    public static InboundHttp2ToHttpAdapter withSettingsPropagation(Http2Connection connection, int maxContentLength) {
+        return withSettingsPropagation(connection, maxContentLength, true);
+    }
+
+    /**
+     * Creates a new instance which when a settings frame has been read will propagate the settings along
+     * the pipeline.
+     *
+     * @param connection The object which will provide connection notification events for the current connection
+     * @param maxContentLength the maximum length of the message content. If the length of the message content exceeds
+     *        this value, a {@link TooLongFrameException} will be raised.
+     * @param validateHttpHeaders
+     * <ul>
+     * <li>{@code true} to validate HTTP headers in the http-codec</li>
+     * <li>{@code false} not to validate HTTP headers in the http-codec</li>
+     * </ul>
+     * @throws NullPointerException If {@code connection} is null
+     * @throws IllegalArgumentException If {@code maxContentLength} is less than or equal to {@code 0}
+     */
+    public static InboundHttp2ToHttpAdapter withSettingsPropagation(Http2Connection connection, int maxContentLength,
+                                                        boolean validateHttpHeaders) {
+        InboundHttp2ToHttpAdapter instance = new InboundHttp2ToHttpAdapter(connection,
+                maxContentLength, validateHttpHeaders, true);
         connection.addListener(instance);
         return instance;
     }
@@ -108,7 +146,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
      * @throws IllegalArgumentException If {@code maxContentLength} is less than or equal to {@code 0}
      */
     protected InboundHttp2ToHttpAdapter(Http2Connection connection, int maxContentLength) {
-        this(connection, maxContentLength, true);
+        this(connection, maxContentLength, true, false);
     }
 
     /**
@@ -127,6 +165,27 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
      */
     protected InboundHttp2ToHttpAdapter(Http2Connection connection, int maxContentLength,
                     boolean validateHttpHeaders) {
+        this(connection, maxContentLength, validateHttpHeaders, false);
+    }
+
+    /**
+     * Creates a new instance
+     *
+     * @param connection The object which will provide connection notification events for the current connection
+     * @param maxContentLength the maximum length of the message content. If the length of the message content exceeds
+     *        this value, a {@link TooLongFrameException} will be raised.
+     * @param validateHttpHeaders
+     * <ul>
+     * <li>{@code true} to validate HTTP headers in the http-codec</li>
+     * <li>{@code false} not to validate HTTP headers in the http-codec</li>
+     * </ul>
+     * @param propagateSettings if {@code true} read settings will be passed along the pipeline. This can be useful
+     *                     to clients that need hold off sending data until they have received the settings.
+     * @throws NullPointerException If {@code connection} is null
+     * @throws IllegalArgumentException If {@code maxContentLength} is less than or equal to {@code 0}
+     */
+    protected InboundHttp2ToHttpAdapter(Http2Connection connection, int maxContentLength,
+                                        boolean validateHttpHeaders, boolean propagateSettings) {
         checkNotNull(connection, "connection");
         if (maxContentLength <= 0) {
             throw new IllegalArgumentException("maxContentLength must be a positive integer: " + maxContentLength);
@@ -134,6 +193,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         this.maxContentLength = maxContentLength;
         this.validateHttpHeaders = validateHttpHeaders;
         this.connection = connection;
+        this.propagateSettings = propagateSettings;
         sendDetector = DEFAULT_SEND_DETECTOR;
         messageMap = new IntObjectHashMap<FullHttpMessage>();
     }
@@ -315,6 +375,14 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         msg.headers().setInt(HttpUtil.ExtensionHeaderNames.STREAM_PROMISE_ID.text(), streamId);
 
         processHeadersEnd(ctx, promisedStreamId, msg, false);
+    }
+
+    @Override
+    public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) throws Http2Exception {
+        if (propagateSettings) {
+            // Provide an interface for non-listeners to capture settings
+            ctx.fireChannelRead(settings);
+        }
     }
 
     /**

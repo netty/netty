@@ -81,6 +81,45 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
     }
 
     /**
+     * Creates a new instance which when a settings frame has been read will propagate the settings along
+     * the pipeline.
+     *
+     * @param connection The object which will provide connection notification events for the current connection
+     * @param maxContentLength the maximum length of the message content. If the length of the message content exceeds
+     *        this value, a {@link TooLongFrameException} will be raised.
+     * @throws NullPointerException If {@code connection} is null
+     * @throws IllegalArgumentException If {@code maxContentLength} is less than or equal to {@code 0}
+     */
+    public static InboundHttp2ToHttpPriorityAdapter withSettingsPropagation(Http2Connection connection,
+                                                                            int maxContentLength) {
+        return withSettingsPropagation(connection, maxContentLength, true);
+    }
+
+    /**
+     * Creates a new instance which when a settings frame has been read will propagate the settings along
+     * the pipeline.
+     *
+     * @param connection The object which will provide connection notification events for the current connection
+     * @param maxContentLength the maximum length of the message content. If the length of the message content exceeds
+     *        this value, a {@link TooLongFrameException} will be raised.
+     * @param validateHttpHeaders
+     * <ul>
+     * <li>{@code true} to validate HTTP headers in the http-codec</li>
+     * <li>{@code false} not to validate HTTP headers in the http-codec</li>
+     * </ul>
+     * @throws NullPointerException If {@code connection} is null
+     * @throws IllegalArgumentException If {@code maxContentLength} is less than or equal to {@code 0}
+     */
+    public static InboundHttp2ToHttpPriorityAdapter withSettingsPropagation(Http2Connection connection,
+                                                                            int maxContentLength,
+                                                                            boolean validateHttpHeaders) {
+        InboundHttp2ToHttpPriorityAdapter instance = new InboundHttp2ToHttpPriorityAdapter(connection,
+                maxContentLength, validateHttpHeaders, true);
+        connection.addListener(instance);
+        return instance;
+    }
+
+    /**
      * Creates a new instance
      *
      * @param connection The object which will provide connection notification events for the current connection
@@ -90,8 +129,7 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
      * @throws IllegalArgumentException If {@code maxContentLength} is less than or equal to {@code 0}
      */
     private InboundHttp2ToHttpPriorityAdapter(Http2Connection connection, int maxContentLength) {
-        super(connection, maxContentLength);
-        outOfMessageFlowHeaders = new IntObjectHashMap<HttpHeaders>();
+        this(connection, maxContentLength, true, false);
     }
 
     /**
@@ -110,7 +148,26 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
      */
     private InboundHttp2ToHttpPriorityAdapter(Http2Connection connection, int maxContentLength,
                     boolean validateHttpHeaders) {
-        super(connection, maxContentLength, validateHttpHeaders);
+        this(connection, maxContentLength, validateHttpHeaders, false);
+    }
+
+    /**
+     * Creates a new instance
+     *
+     * @param connection The object which will provide connection notification events for the current connection
+     * @param maxContentLength the maximum length of the message content. If the length of the message content exceeds
+     *        this value, a {@link TooLongFrameException} will be raised.
+     * @param validateHttpHeaders
+     * <ul>
+     * <li>{@code true} to validate HTTP headers in the http-codec</li>
+     * <li>{@code false} not to validate HTTP headers in the http-codec</li>
+     * </ul>
+     * @throws NullPointerException If {@code connection} is null
+     * @throws IllegalArgumentException If {@code maxContentLength} is less than or equal to {@code 0}
+     */
+    private InboundHttp2ToHttpPriorityAdapter(Http2Connection connection, int maxContentLength,
+                                              boolean validateHttpHeaders, boolean propagateSettings) {
+        super(connection, maxContentLength, validateHttpHeaders, propagateSettings);
         outOfMessageFlowHeaders = new IntObjectHashMap<HttpHeaders>();
     }
 
