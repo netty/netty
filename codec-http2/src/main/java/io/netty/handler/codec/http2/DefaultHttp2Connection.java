@@ -217,8 +217,8 @@ public class DefaultHttp2Connection implements Http2Connection {
         private boolean resetReceived;
         private boolean endOfStreamSent;
         private boolean endOfStreamReceived;
-        private FlowState inboundFlow;
-        private FlowState outboundFlow;
+        private Http2InboundFlowState inboundFlow;
+        private Http2FlowState outboundFlow;
         private EmbeddedChannel decompressor;
         private EmbeddedChannel compressor;
         private Object data;
@@ -324,22 +324,22 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public FlowState inboundFlow() {
+        public Http2InboundFlowState inboundFlow() {
             return inboundFlow;
         }
 
         @Override
-        public void inboundFlow(FlowState state) {
+        public void inboundFlow(Http2InboundFlowState state) {
             inboundFlow = state;
         }
 
         @Override
-        public FlowState outboundFlow() {
+        public Http2FlowState outboundFlow() {
             return outboundFlow;
         }
 
         @Override
-        public void outboundFlow(FlowState state) {
+        public void outboundFlow(Http2FlowState state) {
             outboundFlow = state;
         }
 

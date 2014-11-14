@@ -198,8 +198,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     private final class FrameReadListener implements Http2FrameListener {
 
         @Override
-        public void onDataRead(final ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
-                boolean endOfStream) throws Http2Exception {
+        public int onDataRead(final ChannelHandlerContext ctx, int streamId, ByteBuf data,
+                int padding, boolean endOfStream) throws Http2Exception {
             verifyPrefaceReceived();
 
             // Check if we received a data frame for a stream which is half-closed
@@ -211,9 +211,9 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
             // We should ignore this frame if RST_STREAM was sent or if GO_AWAY was sent with a
             // lower stream ID.
-            boolean shouldIgnore = shouldIgnoreFrame(stream);
-
             boolean shouldApplyFlowControl = false;
+            int processedBytes = data.readableBytes() + padding;
+            boolean shouldIgnore = shouldIgnoreFrame(stream);
             Http2Exception error = null;
             switch (stream.state()) {
                 case OPEN:
@@ -240,26 +240,36 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                     break;
             }
 
-            // If we should apply flow control, do so now.
-            if (shouldApplyFlowControl) {
-                inboundFlow.onDataRead(ctx, streamId, data, padding, endOfStream);
-            }
+            try {
+                // If we should apply flow control, do so now.
+                if (shouldApplyFlowControl) {
+                    inboundFlow.applyFlowControl(ctx, streamId, data, padding, endOfStream);
+                }
 
-            // If we should ignore this frame, do so now.
-            if (shouldIgnore) {
-                return;
-            }
+                // If we should ignore this frame, do so now.
+                if (shouldIgnore) {
+                    return processedBytes;
+                }
 
-            // If the stream was in an invalid state to receive the frame, throw the error.
-            if (error != null) {
-                throw error;
-            }
+                // If the stream was in an invalid state to receive the frame, throw the error.
+                if (error != null) {
+                    throw error;
+                }
 
-            listener.onDataRead(ctx, streamId, data, padding, endOfStream);
+                // Call back the application and retrieve the number of bytes that have been
+                // immediately processed.
+                processedBytes = listener.onDataRead(ctx, streamId, data, padding, endOfStream);
+                return processedBytes;
+            } finally {
+                // If appropriate, returned the processed bytes to the flow controller.
+                if (shouldApplyFlowControl && processedBytes > 0) {
+                    stream.inboundFlow().returnProcessedBytes(ctx, processedBytes);
+                }
 
-            if (endOfStream) {
-                stream.endOfStreamReceived();
-                lifecycleManager.closeRemoteSide(stream, ctx.newSucceededFuture());
+                if (endOfStream) {
+                    stream.endOfStreamReceived();
+                    lifecycleManager.closeRemoteSide(stream, ctx.newSucceededFuture());
+                }
             }
         }
 

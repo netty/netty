@@ -252,7 +252,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
     }
 
     @Override
-    public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
+    public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
                     throws Http2Exception {
         FullHttpMessage msg = messageMap.get(streamId);
         if (msg == null) {
@@ -271,6 +271,9 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         if (endOfStream) {
             fireChannelRead(ctx, msg, streamId);
         }
+
+        // All bytes have been processed.
+        return dataReadableBytes + padding;
     }
 
     @Override
