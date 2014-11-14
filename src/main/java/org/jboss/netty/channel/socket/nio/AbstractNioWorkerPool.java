@@ -115,33 +115,12 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker>
     }
 
     /**
-     * Only here for backward compability and will be removed in later releases. Please use
-     * {@link #newWorker(Executor)}
-     *
-     *
-     * @param executor the {@link Executor} to use
-     * @return worker the new {@link Worker}
-     * @deprecated use {@link #newWorker(Executor)}
-     */
-    @Deprecated
-    protected E createWorker(Executor executor) {
-        throw new IllegalStateException("This will be removed. Override this and the newWorker(..) method!");
-    }
-
-    /**
      * Create a new {@link Worker} which uses the given {@link Executor} to service IO.
      *
-     * This method will be made abstract in further releases (once {@link #createWorker(Executor)}
-     * was removed).
-     *
-     *
      * @param executor the {@link Executor} to use
      * @return worker the new {@link Worker}
      */
-    @SuppressWarnings("deprecation")
-    protected E newWorker(Executor executor) {
-        return createWorker(executor);
-    }
+    protected abstract E newWorker(Executor executor);
 
     @SuppressWarnings("unchecked")
     public E nextWorker() {

@@ -55,7 +55,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -207,7 +206,6 @@ public class SslHandler extends FrameDecoder
     private volatile ChannelHandlerContext ctx;
     private final SSLEngine engine;
     private final SslBufferPool bufferPool;
-    private final Executor delegatedTaskExecutor;
     private final boolean startTls;
 
     private volatile boolean enableRenegotiation = true;
@@ -312,59 +310,13 @@ public class SslHandler extends FrameDecoder
      * @param handshakeTimeoutInMillis
      *        the time in milliseconds after whic the {@link #handshake()}  will be failed, and so the future notified
      */
-    @SuppressWarnings("deprecation")
-    public SslHandler(SSLEngine engine, SslBufferPool bufferPool, boolean startTls,
-                      Timer timer, long handshakeTimeoutInMillis) {
-        this(engine, bufferPool, startTls, ImmediateExecutor.INSTANCE, timer, handshakeTimeoutInMillis);
-    }
-
-    /**
-     * @deprecated Use {@link #SslHandler(SSLEngine)} instead.
-     */
-    @Deprecated
-    public SslHandler(SSLEngine engine, Executor delegatedTaskExecutor) {
-        this(engine, getDefaultBufferPool(), delegatedTaskExecutor);
-    }
-
-    /**
-     * @deprecated Use {@link #SslHandler(SSLEngine, boolean)} instead.
-     */
-    @Deprecated
-    public SslHandler(SSLEngine engine, SslBufferPool bufferPool, Executor delegatedTaskExecutor) {
-        this(engine, bufferPool, false, delegatedTaskExecutor);
-    }
-
-    /**
-     * @deprecated  Use {@link #SslHandler(SSLEngine, boolean)} instead.
-     */
-    @Deprecated
-    public SslHandler(SSLEngine engine, boolean startTls, Executor delegatedTaskExecutor) {
-        this(engine, getDefaultBufferPool(), startTls, delegatedTaskExecutor);
-    }
-
-    /**
-     * @deprecated Use {@link #SslHandler(SSLEngine, SslBufferPool, boolean)} instead.
-     */
-    @Deprecated
-    public SslHandler(SSLEngine engine, SslBufferPool bufferPool, boolean startTls, Executor delegatedTaskExecutor) {
-        this(engine, bufferPool, startTls, delegatedTaskExecutor, null, 0);
-    }
-
-    /**
-     * @deprecated Use {@link #SslHandler(SSLEngine engine, SslBufferPool bufferPool, boolean startTls, Timer timer,
-     *             long handshakeTimeoutInMillis)} instead.
-     */
-    @Deprecated
-    public SslHandler(SSLEngine engine, SslBufferPool bufferPool, boolean startTls, Executor delegatedTaskExecutor,
-                      Timer timer, long handshakeTimeoutInMillis) {
+    public SslHandler(SSLEngine engine, SslBufferPool bufferPool, boolean startTls, Timer timer,
+                      long handshakeTimeoutInMillis) {
         if (engine == null) {
             throw new NullPointerException("engine");
         }
         if (bufferPool == null) {
             throw new NullPointerException("bufferPool");
-        }
-        if (delegatedTaskExecutor == null) {
-            throw new NullPointerException("delegatedTaskExecutor");
         }
         if (timer == null && handshakeTimeoutInMillis > 0) {
             throw new IllegalArgumentException("No Timer was given but a handshakeTimeoutInMillis, need both or none");
@@ -372,7 +324,6 @@ public class SslHandler extends FrameDecoder
 
         this.engine = engine;
         this.bufferPool = bufferPool;
-        this.delegatedTaskExecutor = delegatedTaskExecutor;
         this.startTls = startTls;
         this.timer = timer;
         this.handshakeTimeoutInMillis = handshakeTimeoutInMillis;
@@ -464,14 +415,6 @@ public class SslHandler extends FrameDecoder
     }
 
     /**
-     * @deprecated Use {@link #handshake()} instead.
-     */
-    @Deprecated
-    public ChannelFuture handshake(@SuppressWarnings("unused") Channel channel) {
-        return handshake();
-    }
-
-    /**
      * Sends an SSL {@code close_notify} message to the specified channel and
      * destroys the underlying {@link SSLEngine}.
      */
@@ -488,14 +431,6 @@ public class SslHandler extends FrameDecoder
             }
             return failedFuture(channel, e);
         }
-    }
-
-    /**
-     * @deprecated Use {@link #close()} instead.
-     */
-    @Deprecated
-    public ChannelFuture close(@SuppressWarnings("unused") Channel channel) {
-        return close();
     }
 
     /**
@@ -1433,72 +1368,20 @@ public class SslHandler extends FrameDecoder
     }
 
     /**
-     * Fetches all delegated tasks from the {@link SSLEngine} and runs them via the {@link #delegatedTaskExecutor}.
-     * If the {@link #delegatedTaskExecutor} is {@link ImmediateExecutor}, just call {@link Runnable#run()} directly
-     * instead of using {@link Executor#execute(Runnable)}.  Otherwise, run the tasks via
-     * the {@link #delegatedTaskExecutor} and wait until the tasks are finished.
+     * Fetches all delegated tasks from the {@link SSLEngine} and runs them immediately.
      */
     private void runDelegatedTasks() {
-        if (delegatedTaskExecutor == ImmediateExecutor.INSTANCE) {
-            for (;;) {
-                final Runnable task;
-                synchronized (handshakeLock) {
-                    task = engine.getDelegatedTask();
-                }
-
-                if (task == null) {
-                    break;
-                }
-
-                delegatedTaskExecutor.execute(task);
-            }
-        } else {
-            final List<Runnable> tasks = new ArrayList<Runnable>(2);
-            for (;;) {
-                final Runnable task;
-                synchronized (handshakeLock) {
-                    task = engine.getDelegatedTask();
-                }
-
-                if (task == null) {
-                    break;
-                }
-
-                tasks.add(task);
+        for (;;) {
+            final Runnable task;
+            synchronized (handshakeLock) {
+                task = engine.getDelegatedTask();
             }
 
-            if (tasks.isEmpty()) {
-                return;
+            if (task == null) {
+                break;
             }
 
-            final CountDownLatch latch = new CountDownLatch(1);
-            delegatedTaskExecutor.execute(new Runnable() {
-                public void run() {
-                    try {
-                        for (Runnable task: tasks) {
-                            task.run();
-                        }
-                    } catch (Exception e) {
-                        fireExceptionCaught(ctx, e);
-                    } finally {
-                        latch.countDown();
-                    }
-                }
-            });
-
-            boolean interrupted = false;
-            while (latch.getCount() != 0) {
-                try {
-                    latch.await();
-                } catch (InterruptedException e) {
-                    // Interrupt later.
-                    interrupted = true;
-                }
-            }
-
-            if (interrupted) {
-                Thread.currentThread().interrupt();
-            }
+            task.run();
         }
     }
 

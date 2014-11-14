@@ -25,15 +25,6 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
  * Before returning SocksResponse decoder removes itself from pipeline.
  */
 public class SocksInitResponseDecoder extends ReplayingDecoder<SocksInitResponseDecoder.State> {
-    private static final String name = "SOCKS_INIT_RESPONSE_DECODER";
-
-    /**
-     * @deprecated Will be removed at the next minor version bump.
-     */
-    @Deprecated
-    public static String getName() {
-        return name;
-    }
 
     private SocksMessage.ProtocolVersion version;
     private SocksMessage.AuthScheme authScheme;

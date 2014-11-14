@@ -46,19 +46,6 @@ public class FailedChannelFuture extends CompleteChannelFuture {
         return false;
     }
 
-    @Deprecated
-    public ChannelFuture rethrowIfFailed() throws Exception {
-        if (cause instanceof Exception) {
-            throw (Exception) cause;
-        }
-
-        if (cause instanceof Error) {
-            throw (Error) cause;
-        }
-
-        throw new RuntimeException(cause);
-    }
-
     public ChannelFuture sync() throws InterruptedException {
         rethrow();
         return this;
