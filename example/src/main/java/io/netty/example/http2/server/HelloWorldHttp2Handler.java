@@ -95,11 +95,13 @@ public class HelloWorldHttp2Handler extends Http2ConnectionHandler {
          * If receive a frame with end-of-stream set, send a pre-canned response.
          */
         @Override
-        public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
+        public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
                 boolean endOfStream) throws Http2Exception {
+            int processed = data.readableBytes() + padding;
             if (endOfStream) {
                 sendResponse(ctx, streamId, data.retain());
             }
+            return processed;
         }
 
         /**
