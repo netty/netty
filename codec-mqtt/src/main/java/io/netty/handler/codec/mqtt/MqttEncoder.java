@@ -24,6 +24,8 @@ import io.netty.util.CharsetUtil;
 
 import java.util.List;
 
+import static io.netty.handler.codec.mqtt.MqttCodecUtil.*;
+
 /**
  * Encodes Mqtt messages into bytes following the protocl specification v3.1
  * as described here <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html">MQTTV3.1</a>
@@ -33,8 +35,6 @@ public class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
     public static final MqttEncoder DEFAUL_ENCODER = new MqttEncoder();
 
     private static final byte[] EMPTY = new byte[0];
-
-    private static final byte[] CONNECT_VARIABLE_HEADER_START = {0, 6, 'M', 'Q', 'I', 's', 'd', 'p'};
 
     @Override
     protected void encode(ChannelHandlerContext ctx, MqttMessage msg, List<Object> out) throws Exception {
@@ -91,18 +91,18 @@ public class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
     private static ByteBuf encodeConnectMessage(
             ByteBufAllocator byteBufAllocator,
             MqttConnectMessage message) {
-        int variableHeaderBufferSize = 12;
         int payloadBufferSize = 0;
 
         MqttFixedHeader mqttFixedHeader = message.fixedHeader();
         MqttConnectVariableHeader variableHeader = message.variableHeader();
         MqttConnectPayload payload = message.payload();
+        MqttVersion mqttVersion = MqttVersion.fromProtocolNameAndLevel(variableHeader.name(),
+                (byte) variableHeader.version());
 
         // Client id
         String clientIdentifier = payload.clientIdentifier();
-        if (!isValidClientIdentifier(clientIdentifier)) {
-            throw new IllegalArgumentException(
-                    "invalid clientIdentifier: " + clientIdentifier + " (expected: less than 23 chars long)");
+        if (!isValidClientId(mqttVersion, clientIdentifier)) {
+            throw new MqttIdentifierRejectedException("invalid clientIdentifier: " + clientIdentifier);
         }
         byte[] clientIdentifierBytes = encodeStringUtf8(clientIdentifier);
         payloadBufferSize += 2 + clientIdentifierBytes.length;
@@ -130,13 +130,16 @@ public class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         }
 
         // Fixed header
+        byte[] protocolNameBytes = mqttVersion.protocolNameBytes();
+        int variableHeaderBufferSize = 2 + protocolNameBytes.length + 4;
         int variablePartSize = variableHeaderBufferSize + payloadBufferSize;
         int fixedHeaderBufferSize = 1 + getVariableLengthInt(variablePartSize);
         ByteBuf buf = byteBufAllocator.buffer(fixedHeaderBufferSize + variablePartSize);
         buf.writeByte(getFixedHeaderByte1(mqttFixedHeader));
         writeVariableLengthInt(buf, variablePartSize);
 
-        buf.writeBytes(CONNECT_VARIABLE_HEADER_START);
+        buf.writeShort(protocolNameBytes.length);
+        buf.writeBytes(protocolNameBytes);
 
         buf.writeByte(variableHeader.version());
         buf.writeByte(getConnVariableHeaderFlag(variableHeader));
@@ -381,13 +384,5 @@ public class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
 
     private static byte[] encodeStringUtf8(String s) {
       return s.getBytes(CharsetUtil.UTF_8);
-    }
-
-    private static boolean isValidClientIdentifier(String clientIdentifier) {
-        if (clientIdentifier == null) {
-            return false;
-        }
-        int length = clientIdentifier.length();
-        return length >= 1 && length <= 23;
     }
 }
