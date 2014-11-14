@@ -133,7 +133,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                 int associatedToStreamId = spdySynStreamFrame.associatedStreamId();
 
                 // If a client receives a SYN_STREAM with an Associated-To-Stream-ID of 0
-                // it must reply with a RST_STREAM with error code INVALID_STREAM
+                // it must reply with a RST_STREAM with error code INVALID_STREAM.
                 if (associatedToStreamId == 0) {
                     SpdyRstStreamFrame spdyRstStreamFrame =
                         new DefaultSpdyRstStreamFrame(streamId, SpdyStreamStatus.INVALID_STREAM);
@@ -141,11 +141,10 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                     return;
                 }
 
-                String URL = SpdyHeaders.getUrl(spdyVersion, spdySynStreamFrame);
-
-                // If a client receives a SYN_STREAM without a 'url' header
-                // it must reply with a RST_STREAM with error code PROTOCOL_ERROR
-                if (URL == null) {
+                // If a client receives a SYN_STREAM with isLast set,
+                // reply with a RST_STREAM with error code PROTOCOL_ERROR
+                // (we only support pushed resources divided into two header blocks).
+                if (spdySynStreamFrame.isLast()) {
                     SpdyRstStreamFrame spdyRstStreamFrame =
                         new DefaultSpdyRstStreamFrame(streamId, SpdyStreamStatus.PROTOCOL_ERROR);
                     ctx.writeAndFlush(spdyRstStreamFrame);
@@ -162,22 +161,15 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                 }
 
                 try {
-                    FullHttpResponse httpResponseWithEntity =
-                            createHttpResponse(ctx, spdyVersion, spdySynStreamFrame, validateHeaders);
+                    FullHttpRequest httpRequestWithEntity = createHttpRequest(spdyVersion, spdySynStreamFrame);
 
-                    // Set the Stream-ID, Associated-To-Stream-ID, Priority, and URL as headers
-                    SpdyHttpHeaders.setStreamId(httpResponseWithEntity, streamId);
-                    SpdyHttpHeaders.setAssociatedToStreamId(httpResponseWithEntity, associatedToStreamId);
-                    SpdyHttpHeaders.setPriority(httpResponseWithEntity, spdySynStreamFrame.priority());
-                    SpdyHttpHeaders.setUrl(httpResponseWithEntity, URL);
+                    // Set the Stream-ID, Associated-To-Stream-ID, and Priority as headers
+                    SpdyHttpHeaders.setStreamId(httpRequestWithEntity, streamId);
+                    SpdyHttpHeaders.setAssociatedToStreamId(httpRequestWithEntity, associatedToStreamId);
+                    SpdyHttpHeaders.setPriority(httpRequestWithEntity, spdySynStreamFrame.priority());
 
-                    if (spdySynStreamFrame.isLast()) {
-                        HttpHeaders.setContentLength(httpResponseWithEntity, 0);
-                        out.add(httpResponseWithEntity);
-                    } else {
-                        // Response body will follow in a series of Data Frames
-                        putMessage(streamId, httpResponseWithEntity);
-                    }
+                    out.add(httpRequestWithEntity);
+
                 } catch (Exception e) {
                     SpdyRstStreamFrame spdyRstStreamFrame =
                         new DefaultSpdyRstStreamFrame(streamId, SpdyStreamStatus.PROTOCOL_ERROR);
@@ -265,8 +257,40 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
             int streamId = spdyHeadersFrame.streamId();
             FullHttpMessage fullHttpMessage = getMessage(streamId);
 
-            // If message is not in map discard HEADERS frame.
             if (fullHttpMessage == null) {
+                // HEADERS frames may initiate a pushed response
+                if (SpdyCodecUtil.isServerId(streamId)) {
+
+                    // If a client receives a HEADERS with a truncated header block,
+                    // reply with a RST_STREAM frame with error code INTERNAL_ERROR.
+                    if (spdyHeadersFrame.isTruncated()) {
+                        SpdyRstStreamFrame spdyRstStreamFrame =
+                            new DefaultSpdyRstStreamFrame(streamId, SpdyStreamStatus.INTERNAL_ERROR);
+                        ctx.writeAndFlush(spdyRstStreamFrame);
+                        return;
+                    }
+
+                    try {
+                        fullHttpMessage = createHttpResponse(ctx, spdyVersion, spdyHeadersFrame, validateHeaders);
+
+                        // Set the Stream-ID as a header
+                        SpdyHttpHeaders.setStreamId(fullHttpMessage, streamId);
+
+                        if (spdyHeadersFrame.isLast()) {
+                            HttpHeaders.setContentLength(fullHttpMessage, 0);
+                            out.add(fullHttpMessage);
+                        } else {
+                            // Response body will follow in a series of Data Frames
+                            putMessage(streamId, fullHttpMessage);
+                        }
+                    } catch (Exception e) {
+                        // If a client receives a SYN_REPLY without valid getStatus and version headers
+                        // the client must reply with a RST_STREAM frame indicating a PROTOCOL_ERROR
+                        SpdyRstStreamFrame spdyRstStreamFrame =
+                            new DefaultSpdyRstStreamFrame(streamId, SpdyStreamStatus.PROTOCOL_ERROR);
+                        ctx.writeAndFlush(spdyRstStreamFrame);
+                    }
+                }
                 return;
             }
 
