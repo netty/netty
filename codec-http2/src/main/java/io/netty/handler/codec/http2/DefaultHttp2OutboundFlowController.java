@@ -353,7 +353,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     /**
      * The outbound flow control state for a single stream.
      */
-    final class OutboundFlowState implements FlowState {
+    final class OutboundFlowState implements Http2FlowState {
         private final Queue<Frame> pendingWriteQueue;
         private final Http2Stream stream;
         private int window = initialWindowSize;

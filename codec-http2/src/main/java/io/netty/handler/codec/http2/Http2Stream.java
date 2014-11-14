@@ -166,22 +166,22 @@ public interface Http2Stream {
     /**
      * Gets the in-bound flow control state for this stream.
      */
-    FlowState inboundFlow();
+    Http2InboundFlowState inboundFlow();
 
     /**
      * Sets the in-bound flow control state for this stream.
      */
-    void inboundFlow(FlowState state);
+    void inboundFlow(Http2InboundFlowState state);
 
     /**
      * Gets the out-bound flow control window for this stream.
      */
-    FlowState outboundFlow();
+    Http2FlowState outboundFlow();
 
     /**
      * Sets the out-bound flow control window for this stream.
      */
-    void outboundFlow(FlowState state);
+    void outboundFlow(Http2FlowState state);
 
     /**
      * Updates an priority for this stream. Calling this method may affect the straucture of the

@@ -17,7 +17,7 @@ package io.netty.handler.codec.http2;
 /**
  * Base interface for flow-control state for a particular stream.
  */
-public interface FlowState {
+public interface Http2FlowState {
 
     /**
      * Returns the current remaining flow control window (in bytes) for the stream. Depending on the

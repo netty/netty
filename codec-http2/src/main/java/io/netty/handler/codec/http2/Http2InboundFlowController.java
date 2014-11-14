@@ -15,14 +15,30 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
+
 /**
  * Controls the inbound flow of data frames from the remote endpoint.
  */
-public interface Http2InboundFlowController extends Http2DataListener {
+public interface Http2InboundFlowController {
+
+    /**
+     * Applies inbound flow control to the given {@code DATA} frame.
+     *
+     * @param ctx the context from the handler where the frame was read.
+     * @param streamId the subject stream for the frame.
+     * @param data payload buffer for the frame.
+     * @param padding the number of padding bytes found at the end of the frame.
+     * @param endOfStream Indicates whether this is the last frame to be sent from the remote
+     *            endpoint for this stream.
+     */
+    void applyFlowControl(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
+            boolean endOfStream) throws Http2Exception;
 
     /**
      * Sets the initial inbound flow control window size and updates all stream window sizes by the
-     * delta. This is called as part of the processing for an outbound SETTINGS frame.
+     * delta.
      *
      * @param newWindowSize the new initial window size.
      * @throws Http2Exception thrown if any protocol-related error occurred.

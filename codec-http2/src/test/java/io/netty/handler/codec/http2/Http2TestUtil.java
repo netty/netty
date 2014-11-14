@@ -140,14 +140,15 @@ final class Http2TestUtil {
         protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
             reader.readFrame(ctx, in, new Http2FrameListener() {
                 @Override
-                public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
+                public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
                         boolean endOfStream) throws Http2Exception {
                     Http2Stream stream = getOrCreateStream(streamId, endOfStream);
-                    listener.onDataRead(ctx, streamId, data, padding, endOfStream);
+                    int processed = listener.onDataRead(ctx, streamId, data, padding, endOfStream);
                     if (endOfStream) {
                         closeStream(stream, true);
                     }
                     latch.countDown();
+                    return processed;
                 }
 
                 @Override
@@ -281,16 +282,17 @@ final class Http2TestUtil {
         }
 
         @Override
-        public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
+        public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
                 throws Http2Exception {
             int numBytes = data.readableBytes();
-            listener.onDataRead(ctx, streamId, data, padding, endOfStream);
+            int processed = listener.onDataRead(ctx, streamId, data, padding, endOfStream);
             messageLatch.countDown();
             if (dataLatch != null) {
                 for (int i = 0; i < numBytes; ++i) {
                     dataLatch.countDown();
                 }
             }
+            return processed;
         }
 
         @Override

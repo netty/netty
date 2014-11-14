@@ -23,8 +23,9 @@ import io.netty.channel.ChannelHandlerContext;
 public class Http2FrameAdapter implements Http2FrameListener {
 
     @Override
-    public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
+    public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
             boolean endOfStream) throws Http2Exception {
+        return data.readableBytes() + padding;
     }
 
     @Override

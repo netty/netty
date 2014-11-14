@@ -39,29 +39,33 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
      */
     public static final int DEFAULT_MAX_CONNECTION_WINDOW_SIZE = 1048576 * 2;
 
-    /**
-     * A value for the window update ratio to be use in order to disable window updates for
-     * a stream (i.e. {@code 0}).
-     */
-    public static final double WINDOW_UPDATE_OFF = 0.0;
-
     private final Http2Connection connection;
     private final Http2FrameWriter frameWriter;
+    private final double windowUpdateRatio;
     private int maxConnectionWindowSize = DEFAULT_MAX_CONNECTION_WINDOW_SIZE;
     private int initialWindowSize = DEFAULT_WINDOW_SIZE;
 
     public DefaultHttp2InboundFlowController(Http2Connection connection, Http2FrameWriter frameWriter) {
+        this(connection, frameWriter, DEFAULT_WINDOW_UPDATE_RATIO);
+    }
+
+    public DefaultHttp2InboundFlowController(Http2Connection connection,
+            Http2FrameWriter frameWriter, double windowUpdateRatio) {
         this.connection = checkNotNull(connection, "connection");
         this.frameWriter = checkNotNull(frameWriter, "frameWriter");
+        if (Double.compare(windowUpdateRatio, 0.0) <= 0 || Double.compare(windowUpdateRatio, 1.0) >= 0) {
+            throw new IllegalArgumentException("Invalid ratio: " + windowUpdateRatio);
+        }
+        this.windowUpdateRatio = windowUpdateRatio;
 
         // Add a flow state for the connection.
-        connection.connectionStream().inboundFlow(new InboundFlowState(CONNECTION_STREAM_ID));
+        connection.connectionStream().inboundFlow(new FlowState(CONNECTION_STREAM_ID));
 
         // Register for notification of new streams.
         connection.addListener(new Http2ConnectionAdapter() {
             @Override
             public void streamAdded(Http2Stream stream) {
-                stream.inboundFlow(new InboundFlowState(stream.id()));
+                stream.inboundFlow(new FlowState(stream.id()));
             }
         });
     }
@@ -80,7 +84,6 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
         initialWindowSize = newWindowSize;
 
         // Apply the delta to all of the windows.
-        connectionState().addAndGet(deltaWindowSize);
         for (Http2Stream stream : connection.activeStreams()) {
             state(stream).updatedInitialWindowSize(deltaWindowSize);
         }
@@ -91,73 +94,43 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
         return initialWindowSize;
     }
 
-    /**
-     * Sets the per-stream ratio used to control when window update is performed. The value
-     * specified is a ratio of the window size to the initial window size, below which a
-     * {@code WINDOW_UPDATE} should be sent to expand the window. If the given value is
-     * {@link #WINDOW_UPDATE_OFF} (i.e. {@code 0}) window updates will be disabled for the
-     * stream.
-     *
-     * @throws IllegalArgumentException if the stream does not exist or if the ratio value is
-     *             outside of the range 0 (inclusive) to 1 (exclusive).
-     */
-    public void setWindowUpdateRatio(ChannelHandlerContext ctx, int streamId, double ratio) {
-        if (ratio < WINDOW_UPDATE_OFF || ratio >= 1.0) {
-            throw new IllegalArgumentException("Invalid ratio: " + ratio);
-        }
-
-        InboundFlowState state = state(streamId);
-        if (state == null) {
-            throw new IllegalArgumentException("Stream does not exist: " + streamId);
-        }
-
-        // Set the ratio.
-        state.setWindowUpdateRatio(ratio);
-
-        // In the event of enabling window update, check to see if we need to update the window now.
-        try {
-            state.updateWindowIfAppropriate(ctx);
-        } catch (Http2Exception e) {
-            // Shouldn't happen since we only increase the window.
-            throw new RuntimeException(e);
-        }
-    }
-
     @Override
-    public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
-            throws Http2Exception {
+    public void applyFlowControl(ChannelHandlerContext ctx, int streamId, ByteBuf data,
+            int padding, boolean endOfStream) throws Http2Exception {
         int dataLength = data.readableBytes() + padding;
-        boolean windowUpdateSent = false;
-        try {
-            windowUpdateSent = applyConnectionFlowControl(ctx, dataLength);
+        int delta = -dataLength;
 
-            // Apply the stream-level flow control.
-            windowUpdateSent |= applyStreamFlowControl(ctx, streamId, dataLength, endOfStream);
-        } finally {
-            // Optimization: only flush once for any sent WINDOW_UPDATE frames.
-            if (windowUpdateSent) {
-                ctx.flush();
-            }
-        }
+        // Apply the connection-level flow control. Immediately return the bytes for the connection
+        // window so that data on this stream does not starve other stream.
+        FlowState connectionState = connectionState();
+        connectionState.addAndGet(delta);
+        connectionState.returnProcessedBytes(dataLength);
+        connectionState.updateWindowIfAppropriate(ctx);
+
+        // Apply the stream-level flow control, but do not return the bytes immediately.
+        FlowState state = stateOrFail(streamId);
+        state.endOfStream(endOfStream);
+        state.addAndGet(delta);
     }
 
-    private InboundFlowState connectionState() {
+    private FlowState connectionState() {
         return state(connection.connectionStream());
     }
 
-    private InboundFlowState state(int streamId) {
-        return state(connection.stream(streamId));
+    private FlowState state(int streamId) {
+        Http2Stream stream = connection.stream(streamId);
+        return stream != null ? state(stream) : null;
     }
 
-    private InboundFlowState state(Http2Stream stream) {
-        return stream != null ? (InboundFlowState) stream.inboundFlow() : null;
+    private FlowState state(Http2Stream stream) {
+        return (FlowState) stream.inboundFlow();
     }
 
     /**
      * Gets the window for the stream or raises a {@code PROTOCOL_ERROR} if not found.
      */
-    private InboundFlowState stateOrFail(int streamId) throws Http2Exception {
-        InboundFlowState state = state(streamId);
+    private FlowState stateOrFail(int streamId) throws Http2Exception {
+        FlowState state = state(streamId);
         if (state == null) {
             throw protocolError("Flow control window missing for stream: %d", streamId);
         }
@@ -165,51 +138,31 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
     }
 
     /**
-     * Apply connection-wide flow control to the incoming data frame.
-     *
-     * @return {@code true} if a {@code WINDOW_UPDATE} frame was sent for the connection.
-     */
-    private boolean applyConnectionFlowControl(ChannelHandlerContext ctx, int dataLength)
-            throws Http2Exception {
-        // Remove the data length from the available window size. Throw if the lower bound
-        // was exceeded.
-        InboundFlowState connectionState = connectionState();
-        connectionState.addAndGet(-dataLength);
-
-        // If appropriate, send a WINDOW_UPDATE frame to open the window.
-        return connectionState.updateWindowIfAppropriate(ctx);
-    }
-
-    /**
-     * Apply stream-based flow control to the incoming data frame.
-     *
-     * @return {@code true} if a {@code WINDOW_UPDATE} frame was sent for the stream.
-     */
-    private boolean applyStreamFlowControl(ChannelHandlerContext ctx, int streamId, int dataLength,
-            boolean endOfStream) throws Http2Exception {
-        // Remove the data length from the available window size. Throw if the lower bound
-        // was exceeded.
-        InboundFlowState state = stateOrFail(streamId);
-        state.addAndGet(-dataLength);
-        state.endOfStream(endOfStream);
-
-        // If appropriate, send a WINDOW_UPDATE frame to open the window.
-        return state.updateWindowIfAppropriate(ctx);
-    }
-
-    /**
      * Flow control window state for an individual stream.
      */
-    private final class InboundFlowState implements FlowState {
+    private final class FlowState implements Http2InboundFlowState {
         private final int streamId;
+
+        /**
+         * The actual flow control window that is decremented as soon as {@code DATA} arrives.
+         */
         private int window;
+
+        /**
+         * A view of {@link #window} that is used to determine when to send {@code WINDOW_UPDATE}
+         * frames. Decrementing this window for received {@code DATA} frames is delayed until the
+         * application has indicated that the data has been fully processed. This prevents sending
+         * a {@code WINDOW_UPDATE} until the number of processed bytes drops below the threshold.
+         */
+        private int processedWindow;
+
         private int lowerBound;
         private boolean endOfStream;
-        private double windowUpdateRatio = DEFAULT_WINDOW_UPDATE_RATIO;
 
-        InboundFlowState(int streamId) {
+        FlowState(int streamId) {
             this.streamId = streamId;
             window = initialWindowSize;
+            processedWindow = window;
         }
 
         @Override
@@ -219,13 +172,6 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
 
         void endOfStream(boolean endOfStream) {
             this.endOfStream = endOfStream;
-        }
-
-        /**
-         * Enables or disables window updates for this stream.
-         */
-        void setWindowUpdateRatio(double ratio) {
-            windowUpdateRatio = ratio;
         }
 
         /**
@@ -247,22 +193,44 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
             return maxWindowSize;
         }
 
+        @Override
+        public void returnProcessedBytes(ChannelHandlerContext ctx, int numBytes) throws Http2Exception {
+            if (streamId == CONNECTION_STREAM_ID) {
+                throw new UnsupportedOperationException("Returning bytes for the connection window is not supported");
+            }
+            checkNotNull(ctx, "ctx");
+            if (numBytes <= 0) {
+                throw new IllegalArgumentException("numBytes must be positive");
+            }
+
+            // Return the bytes processed and update the window.
+            returnProcessedBytes(numBytes);
+            updateWindowIfAppropriate(ctx);
+        }
+
         /**
          * Updates the flow control window for this stream if it is appropriate.
-         *
-         * @return {@code} true if a {@code WINDOW_UPDATE} frame was sent.
          */
-        boolean updateWindowIfAppropriate(ChannelHandlerContext ctx) throws Http2Exception {
-            if (windowUpdateRatio == WINDOW_UPDATE_OFF || endOfStream || initialWindowSize <= 0) {
-                return false;
+        void updateWindowIfAppropriate(ChannelHandlerContext ctx) {
+            if (endOfStream || initialWindowSize <= 0) {
+                return;
             }
 
             int threshold = (int) (initialWindowSize() * windowUpdateRatio);
-            if (window <= threshold) {
+            if (processedWindow <= threshold) {
                 updateWindow(ctx);
-                return true;
             }
-            return false;
+        }
+
+        /**
+         * Returns the processed bytes for this stream.
+         */
+        void returnProcessedBytes(int delta) {
+            if (processedWindow - delta < window) {
+                throw new IllegalArgumentException(
+                        "Attempting to return too many bytes for stream " + streamId);
+            }
+            processedWindow -= delta;
         }
 
         /**
@@ -284,7 +252,7 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
             // The value is bounded by the length that SETTINGS frame decrease the window.
             // This difference is stored for the connection when writing the SETTINGS frame
             // and is cleared once we send a WINDOW_UPDATE frame.
-            if (window < lowerBound) {
+            if (delta < 0 && window < lowerBound) {
                 if (streamId == CONNECTION_STREAM_ID) {
                     throw protocolError("Connection flow control window exceeded");
                 } else {
@@ -310,6 +278,7 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
                 throw flowControlError("Flow control window overflowed for stream: %d", streamId);
             }
             window += delta;
+            processedWindow += delta;
 
             if (delta < 0) {
                 lowerBound = delta;
@@ -321,11 +290,21 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
          * size back to the size of the initial window and sends a window update frame to the remote
          * endpoint.
          */
-        void updateWindow(ChannelHandlerContext ctx) throws Http2Exception {
+        void updateWindow(ChannelHandlerContext ctx) {
             // Expand the window for this stream back to the size of the initial window.
             int deltaWindowSize = initialWindowSize() - window;
-            addAndGet(deltaWindowSize);
+            processedWindow += deltaWindowSize;
+            try {
+                addAndGet(deltaWindowSize);
+            } catch (Http2Exception e) {
+                // This should never fail since we're adding.
+                throw new AssertionError("Caught exception while updating window with delta: "
+                        + deltaWindowSize);
+            }
+
+            // Send a window update for the stream/connection.
             frameWriter.writeWindowUpdate(ctx, streamId, deltaWindowSize, ctx.newPromise());
+            ctx.flush();
         }
     }
 }

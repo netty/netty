@@ -62,16 +62,18 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
     }
 
     @Override
-    public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
+    public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
                     throws Http2Exception {
         final Http2Stream stream = connection.stream(streamId);
         final EmbeddedChannel decompressor = stream == null ? null : stream.decompressor();
         if (decompressor == null) {
             // The decompressor may be null if no compatible encoding type was found in this stream's headers
-            listener.onDataRead(ctx, streamId, data, padding, endOfStream);
-            return;
+            return listener.onDataRead(ctx, streamId, data, padding, endOfStream);
         }
 
+        // When decompressing, always opt-out of application-level flow control.
+        // TODO: investigate how to apply application-level flow control when decompressing.
+        int processedBytes = data.readableBytes() + padding;
         try {
             // call retain here as it will call release after its written to the channel
             decompressor.writeInbound(data.retain());
@@ -96,6 +98,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
                     buf = nextBuf;
                 }
             }
+            return processedBytes;
         } finally {
             if (endOfStream) {
                 cleanup(stream, decompressor);

@@ -29,9 +29,9 @@ public class Http2FrameListenerDecorator implements Http2FrameListener {
     }
 
     @Override
-    public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
+    public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
             throws Http2Exception {
-        listener.onDataRead(ctx, streamId, data, padding, endOfStream);
+        return listener.onDataRead(ctx, streamId, data, padding, endOfStream);
     }
 
     @Override
