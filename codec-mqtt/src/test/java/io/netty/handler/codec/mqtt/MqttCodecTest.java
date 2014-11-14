@@ -30,7 +30,6 @@ import org.mockito.MockitoAnnotations;
 import java.util.LinkedList;
 import java.util.List;
 
-import static io.netty.handler.codec.mqtt.MqttVersion.*;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
@@ -45,7 +44,6 @@ public class MqttCodecTest {
     private static final String USER_NAME = "happy_user";
     private static final String PASSWORD = "123_or_no_pwd";
 
-    private static final int PROTOCOL_VERSION = 3;
     private static final int KEEP_ALIVE_SECONDS = 600;
 
     private static final ByteBufAllocator ALLOCATOR = new UnpooledByteBufAllocator(false);
@@ -65,8 +63,25 @@ public class MqttCodecTest {
     }
 
     @Test
-    public void testConnectMessage() throws Exception {
-        final MqttConnectMessage message = createConnectMessage();
+    public void testConnectMessageForMqtt31() throws Exception {
+        final MqttConnectMessage message = createConnectMessage(MqttVersion.MQTT_3_1);
+        ByteBuf byteBuf = MqttEncoder.doEncode(ALLOCATOR, message);
+
+        final List<Object> out = new LinkedList<Object>();
+        mqttDecoder.decode(ctx, byteBuf, out);
+
+        assertEquals("Expected one object bout got " + out.size(), 1, out.size());
+
+        final MqttConnectMessage decodedMessage = (MqttConnectMessage) out.get(0);
+
+        validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
+        vlidateConnectVariableHeader(message.variableHeader(), decodedMessage.variableHeader());
+        validateConnectPayload(message.payload(), decodedMessage.payload());
+    }
+
+    @Test
+    public void testConnectMessageForMqtt311() throws Exception {
+        final MqttConnectMessage message = createConnectMessage(MqttVersion.MQTT_3_1_1);
         ByteBuf byteBuf = MqttEncoder.doEncode(ALLOCATOR, message);
 
         final List<Object> out = new LinkedList<Object>();
@@ -250,13 +265,13 @@ public class MqttCodecTest {
         return new MqttMessage(mqttFixedHeader, mqttMessageIdVariableHeader);
     }
 
-    private static MqttConnectMessage createConnectMessage() {
+    private static MqttConnectMessage createConnectMessage(MqttVersion mqttVersion) {
         MqttFixedHeader mqttFixedHeader =
                 new MqttFixedHeader(MqttMessageType.CONNECT, false, MqttQoS.AT_MOST_ONCE, false, 0);
         MqttConnectVariableHeader mqttConnectVariableHeader =
                 new MqttConnectVariableHeader(
-                        PROTOCOL_NAME,
-                        PROTOCOL_VERSION,
+                        mqttVersion.protocolName(),
+                        mqttVersion.protocolLevel(),
                         true,
                         true,
                         true,

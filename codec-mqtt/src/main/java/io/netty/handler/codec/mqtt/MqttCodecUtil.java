@@ -38,9 +38,16 @@ final class MqttCodecUtil {
         return messageId != 0;
     }
 
-    static boolean isValidClientId(String clientId) {
-        return clientId != null && clientId.length() >= MIN_CLIENT_ID_LENGTH &&
-            clientId.length() <= MAX_CLIENT_ID_LENGTH;
+    static boolean isValidClientId(MqttVersion mqttVersion, String clientId) {
+        if (mqttVersion == MqttVersion.MQTT_3_1) {
+            return clientId != null && clientId.length() >= MIN_CLIENT_ID_LENGTH &&
+                clientId.length() <= MAX_CLIENT_ID_LENGTH;
+        } else if (mqttVersion == MqttVersion.MQTT_3_1_1) {
+            // In 3.1.3.1 Client Identifier of MQTT 3.1.1 specification, The Server MAY allow ClientId’s
+            // that contain more than 23 encoded bytes. And, The Server MAY allow zero-length ClientId.
+            return clientId != null;
+        }
+        throw new IllegalArgumentException(mqttVersion + " is unknown mqtt version");
     }
 
     static MqttFixedHeader validateFixedHeader(MqttFixedHeader mqttFixedHeader) {
