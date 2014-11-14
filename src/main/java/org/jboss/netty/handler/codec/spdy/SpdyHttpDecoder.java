@@ -108,22 +108,22 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                 int associatedToStreamId = spdySynStreamFrame.getAssociatedToStreamId();
 
                 // If a client receives a SYN_STREAM with an Associated-To-Stream-ID of 0
-                // it must reply with a RST_STREAM with error code INVALID_STREAM
+                // it must reply with a RST_STREAM with error code INVALID_STREAM.
                 if (associatedToStreamId == 0) {
                     SpdyRstStreamFrame spdyRstStreamFrame =
                         new DefaultSpdyRstStreamFrame(streamId, SpdyStreamStatus.INVALID_STREAM);
                     Channels.write(ctx, Channels.future(channel), spdyRstStreamFrame);
+                    return null;
                 }
 
-                String URL = SpdyHeaders.getUrl(spdyVersion, spdySynStreamFrame);
-                SpdyHeaders.removeUrl(spdyVersion, spdySynStreamFrame);
-
-                // If a client receives a SYN_STREAM without a 'url' header
-                // it must reply with a RST_STREAM with error code PROTOCOL_ERROR
-                if (URL == null) {
+                // If a client receives a SYN_STREAM with isLast set,
+                // reply with a RST_STREAM with error code PROTOCOL_ERROR
+                // (we only support pushed resources divided into two header blocks).
+                if (spdySynStreamFrame.isLast()) {
                     SpdyRstStreamFrame spdyRstStreamFrame =
                         new DefaultSpdyRstStreamFrame(streamId, SpdyStreamStatus.PROTOCOL_ERROR);
                     Channels.write(ctx, Channels.future(channel), spdyRstStreamFrame);
+                    return null;
                 }
 
                 // If a client receives a response with a truncated header block,
@@ -132,24 +132,19 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                     SpdyRstStreamFrame spdyRstStreamFrame =
                             new DefaultSpdyRstStreamFrame(streamId, SpdyStreamStatus.INTERNAL_ERROR);
                     Channels.write(ctx, Channels.future(channel), spdyRstStreamFrame);
+                    return null;
                 }
 
                 try {
-                    HttpResponse httpResponse = createHttpResponse(spdyVersion, spdySynStreamFrame);
+                    HttpRequest httpRequest = createHttpRequest(spdyVersion, spdySynStreamFrame);
 
-                    // Set the Stream-ID, Associated-To-Stream-ID, Priority, and URL as headers
-                    SpdyHttpHeaders.setStreamId(httpResponse, streamId);
-                    SpdyHttpHeaders.setAssociatedToStreamId(httpResponse, associatedToStreamId);
-                    SpdyHttpHeaders.setPriority(httpResponse, spdySynStreamFrame.getPriority());
-                    SpdyHttpHeaders.setUrl(httpResponse, URL);
+                    // Set the Stream-ID, Associated-To-Stream-ID, and Priority as headers
+                    SpdyHttpHeaders.setStreamId(httpRequest, streamId);
+                    SpdyHttpHeaders.setAssociatedToStreamId(httpRequest, associatedToStreamId);
+                    SpdyHttpHeaders.setPriority(httpRequest, spdySynStreamFrame.getPriority());
 
-                    if (spdySynStreamFrame.isLast()) {
-                        HttpHeaders.setContentLength(httpResponse, 0);
-                        return httpResponse;
-                    } else {
-                        // Response body will follow in a series of Data Frames
-                        putMessage(streamId, httpResponse);
-                    }
+                    return httpRequest;
+
                 } catch (Exception e) {
                     SpdyRstStreamFrame spdyRstStreamFrame =
                         new DefaultSpdyRstStreamFrame(streamId, SpdyStreamStatus.PROTOCOL_ERROR);
@@ -168,6 +163,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                             HttpResponseStatus.REQUEST_HEADER_FIELDS_TOO_LARGE);
                     SpdyHeaders.setVersion(spdyVersion, spdySynReplyFrame, HttpVersion.HTTP_1_0);
                     Channels.write(ctx, Channels.future(channel), spdySynReplyFrame);
+                    return null;
                 }
 
                 try {
@@ -205,6 +201,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                 SpdyRstStreamFrame spdyRstStreamFrame =
                         new DefaultSpdyRstStreamFrame(streamId, SpdyStreamStatus.INTERNAL_ERROR);
                 Channels.write(ctx, Channels.future(channel), spdyRstStreamFrame);
+                return null;
             }
 
             try {
@@ -234,8 +231,41 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
             int streamId = spdyHeadersFrame.getStreamId();
             HttpMessage httpMessage = getMessage(streamId);
 
-            // If message is not in map discard HEADERS frame.
             if (httpMessage == null) {
+                // HEADERS frames may initiate a pushed response
+                if (isServerId(streamId)) {
+
+                    // If a client receives a HEADERS with a truncated header block,
+                    // reply with a RST_STREAM frame with error code INTERNAL_ERROR.
+                    if (spdyHeadersFrame.isTruncated()) {
+                        SpdyRstStreamFrame spdyRstStreamFrame =
+                            new DefaultSpdyRstStreamFrame(streamId, SpdyStreamStatus.INTERNAL_ERROR);
+                        Channels.write(ctx, Channels.future(channel), spdyRstStreamFrame);
+                        return null;
+                    }
+
+                    try {
+                        httpMessage = createHttpResponse(spdyVersion, spdyHeadersFrame);
+
+                        // Set the Stream-ID as a header
+                        SpdyHttpHeaders.setStreamId(httpMessage, streamId);
+
+                        if (spdyHeadersFrame.isLast()) {
+                            HttpHeaders.setContentLength(httpMessage, 0);
+                            return httpMessage;
+                        } else {
+                            // Response body will follow in a series of Data Frames
+                            putMessage(streamId, httpMessage);
+                        }
+                    } catch (Exception e) {
+                        // If a client receives a HEADERS without valid status and version headers
+                        // the client must reply with a RST_STREAM frame indicating a PROTOCOL_ERROR
+                        SpdyRstStreamFrame spdyRstStreamFrame =
+                            new DefaultSpdyRstStreamFrame(streamId, SpdyStreamStatus.PROTOCOL_ERROR);
+                        Channels.write(ctx, Channels.future(channel), spdyRstStreamFrame);
+                        return null;
+                    }
+                }
                 return null;
             }
 
