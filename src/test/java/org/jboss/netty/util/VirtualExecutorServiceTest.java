@@ -15,7 +15,7 @@
  */
 package org.jboss.netty.util;
 
-import static junit.framework.Assert.*;
+import static org.junit.Assert.*;
 import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;

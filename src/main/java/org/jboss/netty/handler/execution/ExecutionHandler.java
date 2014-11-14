@@ -121,16 +121,6 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
     }
 
     /**
-     * Use {@link #ExecutionHandler(Executor, boolean, boolean)}
-     *
-     * {@link Deprecated}
-     */
-    @Deprecated
-    public ExecutionHandler(Executor executor, boolean handleDownstream) {
-        this(executor, handleDownstream, true);
-    }
-
-    /**
      * Creates a new instance with the specified {@link Executor}.
      * Specify an {@link OrderedMemoryAwareThreadPoolExecutor} if unsure.
      */

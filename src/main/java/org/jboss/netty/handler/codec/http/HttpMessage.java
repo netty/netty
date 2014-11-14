@@ -33,36 +33,6 @@ import org.jboss.netty.buffer.ChannelBuffers;
 public interface HttpMessage {
 
     /**
-     * @deprecated Use {@link HttpMessage#headers()} instead.
-     */
-    @Deprecated
-    String getHeader(String name);
-
-    /**
-     * @deprecated Use {@link HttpMessage#headers()} instead.
-     */
-    @Deprecated
-    List<String> getHeaders(String name);
-
-    /**
-     * @deprecated Use {@link HttpMessage#headers()} instead.
-     */
-    @Deprecated
-    List<Map.Entry<String, String>> getHeaders();
-
-    /**
-     * @deprecated Use {@link HttpMessage#headers()} instead.
-     */
-    @Deprecated
-    boolean containsHeader(String name);
-
-    /**
-     * Returns the {@link Set} of all header names that this message contains.
-     */
-    @Deprecated
-    Set<String> getHeaderNames();
-
-    /**
      * Returns the protocol version of this message.
      */
     HttpVersion getProtocolVersion();
@@ -89,36 +59,6 @@ public interface HttpMessage {
      * the content of this message will be set to {@link ChannelBuffers#EMPTY_BUFFER}.
      */
     void setContent(ChannelBuffer content);
-
-    /**
-     * @deprecated Use {@link HttpMessage#headers()} instead.
-     */
-    @Deprecated
-    void addHeader(String name, Object value);
-
-    /**
-     * @deprecated Use {@link HttpMessage#headers()} instead.
-     */
-    @Deprecated
-    void setHeader(String name, Object value);
-
-    /**
-     * @deprecated Use {@link HttpMessage#headers()} instead.
-     */
-    @Deprecated
-    void setHeader(String name, Iterable<?> values);
-
-    /**
-     * @deprecated Use {@link HttpMessage#headers()} instead.
-     */
-    @Deprecated
-    void removeHeader(String name);
-
-    /**
-     * @deprecated Use {@link HttpMessage#headers()} instead.
-     */
-    @Deprecated
-    void clearHeaders();
 
     /**
      * Returns {@code true} if and only if this message does not have any

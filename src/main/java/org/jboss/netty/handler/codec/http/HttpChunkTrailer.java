@@ -30,66 +30,6 @@ public interface HttpChunkTrailer extends HttpChunk {
     boolean isLast();
 
     /**
-     * @deprecated Use {@link HttpChunkTrailer#trailingHeaders()} instead.
-     */
-    @Deprecated
-    String getHeader(String name);
-
-    /**
-     * @deprecated Use {@link HttpChunkTrailer#trailingHeaders()} instead.
-     */
-    @Deprecated
-    List<String> getHeaders(String name);
-
-    /**
-     * @deprecated Use {@link HttpChunkTrailer#trailingHeaders()} instead.
-     */
-    @Deprecated
-    List<Map.Entry<String, String>> getHeaders();
-
-    /**
-     * @deprecated Use {@link HttpChunkTrailer#trailingHeaders()} instead.
-     */
-    @Deprecated
-    boolean containsHeader(String name);
-
-    /**
-     * @deprecated Use {@link HttpChunkTrailer#trailingHeaders()} instead.
-     */
-    @Deprecated
-    Set<String> getHeaderNames();
-
-    /**
-     * @deprecated Use {@link HttpChunkTrailer#trailingHeaders()} instead.
-     */
-    @Deprecated
-    void addHeader(String name, Object value);
-
-    /**
-     * @deprecated Use {@link HttpChunkTrailer#trailingHeaders()} instead.
-     */
-    @Deprecated
-    void setHeader(String name, Object value);
-
-    /**
-     * @deprecated Use {@link HttpChunkTrailer#trailingHeaders()} instead.
-     */
-    @Deprecated
-    void setHeader(String name, Iterable<?> values);
-
-    /**
-     * @deprecated Use {@link HttpChunkTrailer#trailingHeaders()} instead.
-     */
-    @Deprecated
-    void removeHeader(String name);
-
-    /**
-     * @deprecated Use {@link HttpChunkTrailer#trailingHeaders()} instead.
-     */
-    @Deprecated
-    void clearHeaders();
-
-    /**
      * Returns the trialing headers of this trailer.
      */
     HttpHeaders trailingHeaders();

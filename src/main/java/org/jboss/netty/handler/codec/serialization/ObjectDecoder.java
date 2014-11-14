@@ -46,37 +46,10 @@ public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
      * {@code 1048576} bytes, a {@link StreamCorruptedException} will be
      * raised.
      *
-     * @deprecated use {@link #ObjectDecoder(ClassResolver)}
-     */
-    @Deprecated
-    public ObjectDecoder() {
-        this(1048576);
-    }
-
-    /**
-     * Creates a new decoder whose maximum object size is {@code 1048576}
-     * bytes.  If the size of the received object is greater than
-     * {@code 1048576} bytes, a {@link StreamCorruptedException} will be
-     * raised.
-     *
      * @param classResolver  the {@link ClassResolver} to use for this decoder
      */
     public ObjectDecoder(ClassResolver classResolver) {
         this(1048576, classResolver);
-    }
-
-    /**
-     * Creates a new decoder with the specified maximum object size.
-     *
-     * @param maxObjectSize  the maximum byte length of the serialized object.
-     *                       if the length of the received object is greater
-     *                       than this value, {@link StreamCorruptedException}
-     *                       will be raised.
-     * @deprecated           use {@link #ObjectDecoder(int, ClassResolver)}
-     */
-    @Deprecated
-    public ObjectDecoder(int maxObjectSize) {
-        this(maxObjectSize, ClassResolvers.weakCachingResolver(null));
     }
 
     /**
@@ -95,22 +68,6 @@ public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
             throw new NullPointerException("classResolver");
         }
         this.classResolver = classResolver;
-    }
-
-    /**
-     * Create a new decoder with the specified maximum object size and the {@link ClassLoader}
-     * wrapped in {@link ClassResolvers#weakCachingResolver(ClassLoader)}.
-     *
-     * @param maxObjectSize  the maximum byte length of the serialized object.
-     *                       if the length of the received object is greater
-     *                       than this value, {@link StreamCorruptedException}
-     *                       will be raised.
-     * @param classLoader    the the classloader to use
-     * @deprecated           use {@link #ObjectDecoder(int, ClassResolver)}
-     */
-    @Deprecated
-    public ObjectDecoder(int maxObjectSize, ClassLoader classLoader) {
-        this(maxObjectSize, ClassResolvers.weakCachingResolver(classLoader));
     }
 
     @Override
