@@ -79,13 +79,18 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         checkNotNull(decoderBuilder, "decoderBuilder");
         checkNotNull(encoderBuilder, "encoderBuilder");
 
+        if (encoderBuilder.lifecycleManager() != decoderBuilder.lifecycleManager()) {
+            throw new IllegalArgumentException("Encoder and Decoder must share a lifecycle manager");
+        } else if (encoderBuilder.lifecycleManager() == null) {
+            encoderBuilder.lifecycleManager(this);
+            decoderBuilder.lifecycleManager(this);
+        }
+
         // Build the encoder.
-        encoderBuilder.lifecycleManager(this);
         encoder = checkNotNull(encoderBuilder.build(), "encoder");
 
         // Build the decoder.
         decoderBuilder.encoder(encoder);
-        decoderBuilder.lifecycleManager(this);
         decoder = checkNotNull(decoderBuilder.build(), "decoder");
 
         // Verify that the encoder and decoder use the same connection.
@@ -146,8 +151,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        // The channel just became active - send the connection preface to the remote
-        // endpoint.
+        // The channel just became active - send the connection preface to the remote endpoint.
         sendPreface(ctx);
         super.channelActive(ctx);
     }
@@ -166,7 +170,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-     // Avoid NotYetConnectedException
+        // Avoid NotYetConnectedException
         if (!ctx.channel().isActive()) {
             ctx.close(promise);
             return;

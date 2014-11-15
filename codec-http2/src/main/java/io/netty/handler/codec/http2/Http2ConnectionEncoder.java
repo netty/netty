@@ -41,6 +41,11 @@ public interface Http2ConnectionEncoder extends Http2FrameWriter, Http2OutboundF
         Builder lifecycleManager(Http2LifecycleManager lifecycleManager);
 
         /**
+         * Gets the {@link Http2LifecycleManager} to be used when building the encoder.
+         */
+        Http2LifecycleManager lifecycleManager();
+
+        /**
          * Sets the {@link Http2FrameWriter} to be used when building the encoder.
          */
         Builder frameWriter(Http2FrameWriter frameWriter);

@@ -61,6 +61,11 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         }
 
         @Override
+        public Http2LifecycleManager lifecycleManager() {
+            return lifecycleManager;
+        }
+
+        @Override
         public Builder frameWriter(
                 Http2FrameWriter frameWriter) {
             this.frameWriter = frameWriter;

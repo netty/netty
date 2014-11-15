@@ -67,6 +67,11 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         }
 
         @Override
+        public Http2LifecycleManager lifecycleManager() {
+            return lifecycleManager;
+        }
+
+        @Override
         public Builder inboundFlow(Http2InboundFlowController inboundFlow) {
             this.inboundFlow = inboundFlow;
             return this;
@@ -193,7 +198,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     }
 
     private static int unprocessedBytes(Http2Stream stream) {
-        return stream.inboundFlow().unProcessedBytes();
+        return stream.garbageCollector().unProcessedBytes();
     }
 
     /**
@@ -284,7 +289,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             } finally {
                 // If appropriate, returned the processed bytes to the flow controller.
                 if (shouldApplyFlowControl && bytesToReturn > 0) {
-                    stream.inboundFlow().returnProcessedBytes(ctx, bytesToReturn);
+                    stream.garbageCollector().returnProcessedBytes(ctx, bytesToReturn);
                 }
 
                 if (endOfStream) {

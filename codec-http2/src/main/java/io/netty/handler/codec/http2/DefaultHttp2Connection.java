@@ -29,7 +29,6 @@ import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http2.Http2StreamRemovalPolicy.Action;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
@@ -37,9 +36,11 @@ import io.netty.util.collection.IntObjectMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -217,14 +218,14 @@ public class DefaultHttp2Connection implements Http2Connection {
         private boolean resetReceived;
         private boolean endOfStreamSent;
         private boolean endOfStreamReceived;
-        private Http2InboundFlowState inboundFlow;
+        private Http2FlowState inboundFlow;
         private Http2FlowState outboundFlow;
-        private EmbeddedChannel decompressor;
-        private EmbeddedChannel compressor;
-        private Object data;
+        private Http2FlowControlWindowManager garbageCollector;
+        private PropertyMap data;
 
         DefaultStream(int id) {
             this.id = id;
+            data = new LazyPropertyMap(this);
         }
 
         @Override
@@ -287,49 +288,27 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public void data(Object data) {
-            this.data = data;
-        }
-
-        @SuppressWarnings("unchecked")
-        @Override
-        public <T> T data() {
-            return (T) data;
+        public Object setProperty(Object key, Object value) {
+            return data.put(key, value);
         }
 
         @Override
-        public void decompressor(EmbeddedChannel decompressor) {
-            if (this.decompressor != null && decompressor != null) {
-                throw new IllegalStateException("decompressor can not be reassigned");
-            }
-            this.decompressor = decompressor;
+        public <V> V getProperty(Object key) {
+            return data.get(key);
         }
 
         @Override
-        public EmbeddedChannel decompressor() {
-            return decompressor;
+        public <V> V removeProperty(Object key) {
+            return data.remove(key);
         }
 
         @Override
-        public void compressor(EmbeddedChannel compressor) {
-            if (this.compressor != null && compressor != null) {
-                throw new IllegalStateException("compressor can not be reassigned");
-            }
-            this.compressor = compressor;
-        }
-
-        @Override
-        public EmbeddedChannel compressor() {
-            return compressor;
-        }
-
-        @Override
-        public Http2InboundFlowState inboundFlow() {
+        public Http2FlowState inboundFlow() {
             return inboundFlow;
         }
 
         @Override
-        public void inboundFlow(Http2InboundFlowState state) {
+        public void inboundFlow(Http2FlowState state) {
             inboundFlow = state;
         }
 
@@ -341,6 +320,16 @@ public class DefaultHttp2Connection implements Http2Connection {
         @Override
         public void outboundFlow(Http2FlowState state) {
             outboundFlow = state;
+        }
+
+        @Override
+        public Http2FlowControlWindowManager garbageCollector() {
+            return garbageCollector;
+        }
+
+        @Override
+        public void garbageCollector(Http2FlowControlWindowManager collector) {
+            garbageCollector = collector;
         }
 
         @Override
@@ -597,6 +586,75 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
     }
 
+    /**
+     * Allows the data map to be lazily initialized for {@link DefaultStream}.
+     */
+    private interface PropertyMap {
+        Object put(Object key, Object value);
+
+        <V> V get(Object key);
+
+        <V> V remove(Object key);
+    }
+
+    /**
+     * Provides actual {@link HashMap} functionality for {@link DefaultStream}'s application data.
+     */
+    private static final class DefaultProperyMap implements PropertyMap {
+        private final Map<Object, Object> data;
+
+        DefaultProperyMap(int initialSize) {
+            data = new HashMap<Object, Object>(initialSize);
+        }
+
+        @Override
+        public Object put(Object key, Object value) {
+            return data.put(key, value);
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public <V> V get(Object key) {
+            return (V) data.get(key);
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public <V> V remove(Object key) {
+            return (V) data.remove(key);
+        }
+    }
+
+    /**
+     * Provides the lazy initialization for the {@link DefaultStream} data map.
+     */
+    private static final class LazyPropertyMap implements PropertyMap {
+        private static final int DEFAULT_INITIAL_SIZE = 4;
+        private final DefaultStream stream;
+
+        LazyPropertyMap(DefaultStream stream) {
+            this.stream = stream;
+        }
+
+        @Override
+        public Object put(Object key, Object value) {
+            stream.data = new DefaultProperyMap(DEFAULT_INITIAL_SIZE);
+            return stream.data.put(key, value);
+        }
+
+        @Override
+        public <V> V get(Object key) {
+            stream.data = new DefaultProperyMap(DEFAULT_INITIAL_SIZE);
+            return stream.data.get(key);
+        }
+
+        @Override
+        public <V> V remove(Object key) {
+            stream.data = new DefaultProperyMap(DEFAULT_INITIAL_SIZE);
+            return stream.data.remove(key);
+        }
+    }
+
     private static IntObjectMap<DefaultStream> newChildMap() {
         return new IntObjectHashMap<DefaultStream>(4);
     }
@@ -604,7 +662,7 @@ public class DefaultHttp2Connection implements Http2Connection {
     /**
      * Allows a correlation to be made between a stream and its old parent before a parent change occurs
      */
-    private final class ParentChangedEvent {
+    private static final class ParentChangedEvent {
         private final Http2Stream stream;
         private final Http2Stream oldParent;
 
