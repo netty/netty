@@ -105,7 +105,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     private Http2ConnectionEncoder encoder;
 
     @Mock
-    private Http2InboundFlowState inFlowState;
+    private Http2FlowControlWindowManager inFlowState;
 
     @Mock
     private Http2LifecycleManager lifecycleManager;
@@ -119,7 +119,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         when(channel.isActive()).thenReturn(true);
         when(stream.id()).thenReturn(STREAM_ID);
         when(stream.state()).thenReturn(OPEN);
-        when(stream.inboundFlow()).thenReturn(inFlowState);
+        when(stream.garbageCollector()).thenReturn(inFlowState);
         when(pushStream.id()).thenReturn(PUSH_STREAM_ID);
         when(connection.activeStreams()).thenReturn(Collections.singletonList(stream));
         when(connection.stream(STREAM_ID)).thenReturn(stream);

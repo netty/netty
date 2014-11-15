@@ -17,11 +17,9 @@ package io.netty.handler.codec.http2;
 import io.netty.channel.ChannelHandlerContext;
 
 /**
- * The inbound flow control state for a stream. This object is created and managed by the
- * {@link Http2InboundFlowController}.
+ * Allows data to be returned to the flow control window.
  */
-public interface Http2InboundFlowState extends Http2FlowState {
-
+public interface Http2FlowControlWindowManager {
     /**
      * Used by applications that participate in application-level inbound flow control. Allows the
      * application to return a number of bytes that has been processed and thereby enabling the
@@ -38,4 +36,9 @@ public interface Http2InboundFlowState extends Http2FlowState {
      * The number of bytes that are outstanding and have not yet been returned to the flow controller.
      */
     int unProcessedBytes();
+
+    /**
+     * Get the stream that is being managed
+     */
+    Http2Stream stream();
 }

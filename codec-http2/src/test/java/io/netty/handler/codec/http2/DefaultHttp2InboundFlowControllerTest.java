@@ -219,7 +219,7 @@ public class DefaultHttp2InboundFlowControllerTest {
     }
 
     private void returnProcessedBytes(int streamId, int processedBytes) throws Http2Exception {
-        connection.requireStream(streamId).inboundFlow().returnProcessedBytes(ctx, processedBytes);
+        connection.requireStream(streamId).garbageCollector().returnProcessedBytes(ctx, processedBytes);
     }
 
     private void verifyWindowUpdateSent(int streamId, int windowSizeIncrement) throws Http2Exception {

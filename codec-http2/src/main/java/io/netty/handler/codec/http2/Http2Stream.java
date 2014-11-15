@@ -15,8 +15,6 @@
 
 package io.netty.handler.codec.http2;
 
-import io.netty.channel.embedded.EmbeddedChannel;
-
 import java.util.Collection;
 
 /**
@@ -135,43 +133,29 @@ public interface Http2Stream {
 
     /**
      * Associates the application-defined data with this stream.
+     * @return The value that was previously associated with {@code key}, or {@code null} if there was none.
      */
-    void data(Object data);
+    Object setProperty(Object key, Object value);
 
     /**
      * Returns application-defined data if any was associated with this stream.
      */
-    <T> T data();
+    <V> V getProperty(Object key);
 
     /**
-     * Associate an object responsible for decompressing data frames for this stream
+     * Returns and removes application-defined data if any was associated with this stream.
      */
-    void decompressor(EmbeddedChannel decompressor);
-
-    /**
-     * Get the object capable of decompressing data frames for this stream
-     */
-    EmbeddedChannel decompressor();
-
-    /**
-     * Associate an object responsible for compressing data frames for this stream
-     */
-    void compressor(EmbeddedChannel decompressor);
-
-    /**
-     * Get the object capable of compressing data frames for this stream
-     */
-    EmbeddedChannel compressor();
+    <V> V removeProperty(Object key);
 
     /**
      * Gets the in-bound flow control state for this stream.
      */
-    Http2InboundFlowState inboundFlow();
+    Http2FlowState inboundFlow();
 
     /**
      * Sets the in-bound flow control state for this stream.
      */
-    void inboundFlow(Http2InboundFlowState state);
+    void inboundFlow(Http2FlowState state);
 
     /**
      * Gets the out-bound flow control window for this stream.
@@ -182,6 +166,16 @@ public interface Http2Stream {
      * Sets the out-bound flow control window for this stream.
      */
     void outboundFlow(Http2FlowState state);
+
+    /**
+     * Gets the interface which allows bytes to be returned to the flow controller
+     */
+    Http2FlowControlWindowManager garbageCollector();
+
+    /**
+     * Sets the interface which allows bytes to be returned to the flow controller
+     */
+    void garbageCollector(Http2FlowControlWindowManager collector);
 
     /**
      * Updates an priority for this stream. Calling this method may affect the straucture of the
