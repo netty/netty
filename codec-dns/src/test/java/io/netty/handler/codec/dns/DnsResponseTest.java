@@ -98,7 +98,7 @@ public class DnsResponseTest {
     public void readMalormedResponseTest() throws Exception {
         EmbeddedChannel embedder = new EmbeddedChannel(new DnsResponseDecoder());
         ByteBuf packet = embedder.alloc().buffer(512).writeBytes(malformedLoopPacket);
-        exception.expect(CorruptedFrameException.class);
+        exception.expect(DnsDecoderException.class);
         embedder.writeInbound(new DatagramPacket(packet, null, new InetSocketAddress(0)));
     }
 }

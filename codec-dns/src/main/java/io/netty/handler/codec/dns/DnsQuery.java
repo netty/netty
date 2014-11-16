@@ -16,12 +16,13 @@
 package io.netty.handler.codec.dns;
 
 import java.net.InetSocketAddress;
+import java.util.Iterator;
 
 /**
  * A DNS query packet which is sent to a server to receive a DNS response packet
  * with information answering a DnsQuery's questions.
  */
-public class DnsQuery extends DnsMessage {
+public class DnsQuery extends DnsMessage implements Iterable<DnsQuestion> {
 
     private final InetSocketAddress recipient;
 
@@ -44,7 +45,7 @@ public class DnsQuery extends DnsMessage {
     }
 
     @Override
-    public DnsQuery addAnswer(DnsResource answer) {
+    public DnsQuery addAnswer(DnsEntry answer) {
         super.addAnswer(answer);
         return this;
     }
@@ -56,13 +57,13 @@ public class DnsQuery extends DnsMessage {
     }
 
     @Override
-    public DnsQuery addAuthorityResource(DnsResource resource) {
+    public DnsQuery addAuthorityResource(DnsEntry resource) {
         super.addAuthorityResource(resource);
         return this;
     }
 
     @Override
-    public DnsQuery addAdditionalResource(DnsResource resource) {
+    public DnsQuery addAdditionalResource(DnsEntry resource) {
         super.addAdditionalResource(resource);
         return this;
     }
@@ -99,5 +100,30 @@ public class DnsQuery extends DnsMessage {
     @Override
     protected DnsQueryHeader newHeader(int id) {
         return new DnsQueryHeader(this, id);
+    }
+
+    @Override
+    public Iterator<DnsQuestion> iterator() {
+        return questions().iterator();
+    }
+
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(DnsResponse.class.getSimpleName()).append('@').append(
+                System.identityHashCode(this)).append('{');
+        sb.append("header=").append(header()).append(", answers=[");
+        for (DnsEntry ans : answers()) {
+            sb.append(ans).append(" ");
+        }
+        sb.append("], authorities=[");
+        for (DnsEntry ans : authorityResources()) {
+            sb.append(ans).append(" ");
+        }
+        sb.append("], additional=[");
+        for (DnsEntry ans : additionalResources()) {
+            sb.append(ans).append(" ");
+        }
+        sb.append("], recipient=").append(recipient);
+        return sb.append('}').toString();
     }
 }

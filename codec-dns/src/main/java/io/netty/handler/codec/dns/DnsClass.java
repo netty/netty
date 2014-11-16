@@ -85,7 +85,7 @@ public final class DnsClass implements Comparable<DnsClass> {
      * Returns an instance of DnsClass for a custom type.
      *
      * @param clazz The class
-     * @param name The name
+     * @param name The namThe time to live of the resulting recorde
      */
     public static DnsClass valueOf(int clazz, String name) {
         return new DnsClass(clazz, name);

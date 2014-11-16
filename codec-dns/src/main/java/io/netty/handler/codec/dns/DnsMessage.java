@@ -21,6 +21,7 @@ import io.netty.util.ReferenceCountUtil;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * The message super-class which contains core information concerning DNS
@@ -28,10 +29,10 @@ import java.util.List;
  */
 public abstract class DnsMessage extends AbstractReferenceCounted {
 
-    private List<DnsQuestion> questions;
-    private List<DnsResource> answers;
-    private List<DnsResource> authority;
-    private List<DnsResource> additional;
+    private final List<DnsQuestion> questions = new CopyOnWriteArrayList<DnsQuestion>();
+    private final List<DnsEntry> answers = new CopyOnWriteArrayList<DnsEntry>();
+    private final List<DnsEntry> authority = new CopyOnWriteArrayList<DnsEntry>();
+    private final List<DnsEntry> additional = new CopyOnWriteArrayList<DnsEntry>();
 
     private final DnsHeader header;
 
@@ -48,42 +49,43 @@ public abstract class DnsMessage extends AbstractReferenceCounted {
     }
 
     /**
+     * Add multiple DNS questions to this message
+     *
+     * @param questions An iterable of dns questions
+     * @return this
+     */
+    public DnsMessage addQuestions(Iterable<DnsQuestion> questions) {
+        for (DnsQuestion q : questions) {
+            this.questions.add(q);
+        }
+        return this;
+    }
+
+    /**
      * Returns a list of all the questions in this message.
      */
     public List<DnsQuestion> questions() {
-        if (questions == null) {
-            return Collections.emptyList();
-        }
         return Collections.unmodifiableList(questions);
     }
 
     /**
      * Returns a list of all the answer resource records in this message.
      */
-    public List<DnsResource> answers() {
-        if (answers == null) {
-            return Collections.emptyList();
-        }
+    public List<DnsEntry> answers() {
         return Collections.unmodifiableList(answers);
     }
 
     /**
      * Returns a list of all the authority resource records in this message.
      */
-    public List<DnsResource> authorityResources() {
-        if (authority == null) {
-            return Collections.emptyList();
-        }
+    public List<DnsEntry> authorityResources() {
         return Collections.unmodifiableList(authority);
     }
 
     /**
      * Returns a list of all the additional resource records in this message.
      */
-    public List<DnsResource> additionalResources() {
-        if (additional == null) {
-            return Collections.emptyList();
-        }
+    public List<DnsEntry> additionalResources() {
         return Collections.unmodifiableList(additional);
     }
 
@@ -94,10 +96,7 @@ public abstract class DnsMessage extends AbstractReferenceCounted {
      *            the answer resource record to be added
      * @return the message to allow method chaining
      */
-    public DnsMessage addAnswer(DnsResource answer) {
-        if (answers == null) {
-            answers = new LinkedList<DnsResource>();
-        }
+    public DnsMessage addAnswer(DnsEntry answer) {
         answers.add(answer);
         return this;
     }
@@ -110,9 +109,6 @@ public abstract class DnsMessage extends AbstractReferenceCounted {
      * @return the message to allow method chaining
      */
     public DnsMessage addQuestion(DnsQuestion question) {
-        if (questions == null) {
-            questions = new LinkedList<DnsQuestion>();
-        }
         questions.add(question);
         return this;
     }
@@ -124,10 +120,7 @@ public abstract class DnsMessage extends AbstractReferenceCounted {
      *            the authority resource record to be added
      * @return the message to allow method chaining
      */
-    public DnsMessage addAuthorityResource(DnsResource resource) {
-        if (authority == null) {
-            authority = new LinkedList<DnsResource>();
-        }
+    public DnsMessage addAuthorityResource(DnsEntry resource) {
         authority.add(resource);
         return this;
     }
@@ -139,10 +132,7 @@ public abstract class DnsMessage extends AbstractReferenceCounted {
      *            the additional resource record to be added
      * @return the message to allow method chaining
      */
-    public DnsMessage addAdditionalResource(DnsResource resource) {
-        if (additional == null) {
-            additional = new LinkedList<DnsResource>();
-        }
+    public DnsMessage addAdditionalResource(DnsEntry resource) {
         additional.add(resource);
         return this;
     }

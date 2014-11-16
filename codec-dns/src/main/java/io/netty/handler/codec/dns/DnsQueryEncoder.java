@@ -20,10 +20,9 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.MessageToMessageEncoder;
+import static io.netty.handler.codec.dns.NameWriter.NAME_WRITER_KEY;
+import io.netty.util.Attribute;
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.StringUtil;
-
-import java.nio.charset.Charset;
 import java.util.List;
 
 /**
@@ -36,16 +35,28 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
 
     @Override
     protected void encode(ChannelHandlerContext ctx, DnsQuery query, List<Object> out) throws Exception {
+        out.add(encode(ctx, query));
+    }
+
+    public DatagramPacket encode(ChannelHandlerContext ctx, DnsQuery query) throws Exception {
         ByteBuf buf = ctx.alloc().buffer();
         encodeHeader(query.header(), buf);
-        List<DnsQuestion> questions = query.questions();
-        for (DnsQuestion question : questions) {
-            encodeQuestion(question, CharsetUtil.US_ASCII, buf);
+
+        // Get the NameWriter - it can be stateful if doing compression,
+        // so look it up, don't hold it as a field, so we can use @Sharable
+        Attribute<NameWriter> nw = ctx.attr(NAME_WRITER_KEY);
+        NameWriter nameWriter = nw.get();
+        if (nameWriter == null) {
+            nameWriter = NameWriter.DEFAULT;
         }
-        for (DnsResource resource: query.additionalResources()) {
-            encodeResource(resource, CharsetUtil.US_ASCII, buf);
+
+        for (DnsQuestion question : query) {
+            question.writeTo(nameWriter, buf, CharsetUtil.UTF_8);
         }
-        out.add(new DatagramPacket(buf, query.recipient(), null));
+        for (DnsEntry resource: query.additionalResources()) {
+            resource.writeTo(nameWriter, buf, CharsetUtil.US_ASCII);
+        }
+        return new DatagramPacket(buf, query.recipient(), null);
     }
 
     /**
@@ -68,49 +79,5 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
         buf.writeShort(0); // answerCount
         buf.writeShort(0); // authorityResourceCount
         buf.writeShort(header.additionalResourceCount());
-    }
-
-    /**
-     * Encodes the information in a {@link DnsQuestion} and writes it to the
-     * specified {@link ByteBuf}.
-     *
-     * @param question
-     *            the question being encoded
-     * @param charset
-     *            charset names are encoded in
-     * @param buf
-     *            the buffer the encoded data should be written to
-     */
-    private static void encodeQuestion(DnsQuestion question, Charset charset, ByteBuf buf) {
-        encodeName(question.name(), charset, buf);
-        buf.writeShort(question.type().intValue());
-        buf.writeShort(question.dnsClass().intValue());
-    }
-
-    private static void encodeResource(DnsResource resource, Charset charset, ByteBuf buf) {
-        encodeName(resource.name(), charset, buf);
-
-        buf.writeShort(resource.type().intValue());
-        buf.writeShort(resource.dnsClass().intValue());
-        buf.writeInt((int) resource.timeToLive());
-
-        ByteBuf content = resource.content();
-        int contentLen = content.readableBytes();
-
-        buf.writeShort(contentLen);
-        buf.writeBytes(content, content.readerIndex(), contentLen);
-    }
-
-    private static void encodeName(String name, Charset charset, ByteBuf buf) {
-        String[] parts = StringUtil.split(name, '.');
-        for (String part: parts) {
-            final int partLen = part.length();
-            if (partLen == 0) {
-                continue;
-            }
-            buf.writeByte(partLen);
-            buf.writeBytes(part.getBytes(charset));
-        }
-        buf.writeByte(0); // marks end of name field
     }
 }

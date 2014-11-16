@@ -191,4 +191,10 @@ public class DnsHeader {
         this.z = z;
         return this;
     }
+
+    @Override
+    public String toString() {
+        return "DnsHeader{recursionDesired=" + recursionDesired
+                + ", opcode=" + opcode + ", id=" + id + ", type=" + type + ", z=" + z + '}';
+    }
 }

@@ -31,3 +31,6 @@ bin/
 # JVM crash logs
 hs_err_pid*.log
 
+# NetBeans config file
+nb-configuration.xml
+

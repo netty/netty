@@ -16,25 +16,32 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
-import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.CharsetUtil;
-
 import java.util.List;
 
 /**
- * DnsResponseDecoder accepts {@link io.netty.channel.socket.DatagramPacket} and encodes to
- * {@link DnsResponse}. This class also contains methods for decoding parts of
- * DnsResponses such as questions and resource records.
+ * DnsResponseDecoder accepts {@link io.netty.channel.socket.DatagramPacket} and
+ * encodes to {@link DnsResponse}. This class also contains methods for decoding
+ * parts of DnsResponses such as questions and resource records.
  */
 @ChannelHandler.Sharable
 public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> {
 
+    public DnsResponseDecoder() {
+        super(DatagramPacket.class);
+    }
+
     @Override
-    protected void decode(ChannelHandlerContext ctx, DatagramPacket packet, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, DatagramPacket packet, List<Object> out) {
+        out.add(decode(ctx, packet));
+    }
+
+    public DnsResponse decode(ChannelHandlerContext ctx, DatagramPacket packet) {
         ByteBuf buf = packet.content();
 
         int id = buf.readUnsignedShort();
@@ -61,8 +68,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
         }
         if (header.responseCode() != DnsResponseCode.NOERROR) {
             // response code for error
-            out.add(response);
-            return;
+            return response;
         }
         boolean release = true;
         try {
@@ -75,8 +81,8 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
             for (int i = 0; i < additionals; i++) {
                 response.addAdditionalResource(decodeResource(buf));
             }
-            out.add(response);
             release = false;
+            return response;
         } finally {
             if (release) {
                 // We need to release te DnsResources in case of an Exception as we called retain() on the buffer.
@@ -87,11 +93,13 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
         }
     }
 
-    private static void releaseDnsResources(List<DnsResource> resources) {
+    private static void releaseDnsResources(List<DnsEntry> resources) {
         int size = resources.size();
         for (int i = 0; i < size; i++) {
-            DnsResource resource = resources.get(i);
-            resource.release();
+            DnsEntry resource = resources.get(i);
+            if (resource instanceof ByteBufHolder) {
+                ((ByteBufHolder) resource).release();
+            }
         }
     }
 
@@ -100,11 +108,10 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
      * name contains a pointer, the position of the buffer will be set to
      * directly after the pointer's index after the name has been read.
      *
-     * @param buf
-     *            the byte buffer containing the DNS packet
+     * @param buf the byte buffer containing the DNS packet
      * @return the domain name for an entry
      */
-    private static String readName(ByteBuf buf) {
+    static String readName(ByteBuf buf) {
         int position = -1;
         int checked = 0;
         int length = buf.writerIndex();
@@ -119,9 +126,13 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
                 // check for loops
                 checked += 2;
                 if (checked >= length) {
-                    throw new CorruptedFrameException("name contains a loop.");
+                    throw new DnsDecoderException(DnsResponseCode.FORMERROR,
+                            "Name contains a loop:" + name);
                 }
             } else {
+                if (len > 63) {
+                    throw new DnsDecoderException(DnsResponseCode.BADNAME, "Octet length " + len);
+                }
                 name.append(buf.toString(buf.readerIndex(), len, CharsetUtil.UTF_8)).append('.');
                 buf.skipBytes(len);
             }
@@ -132,6 +143,10 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
         if (name.length() == 0) {
             return "";
         }
+        if (name.length() > 253) {
+            // see http://blogs.msdn.com/b/oldnewthing/archive/2012/04/12/10292868.aspx for why
+            throw new DnsDecoderException(DnsResponseCode.BADNAME, "Name > 253 characters in length: " + name);
+        }
 
         return name.substring(0, name.length() - 1);
     }
@@ -139,8 +154,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
     /**
      * Decodes a question, given a DNS packet in a byte buffer.
      *
-     * @param buf
-     *            the byte buffer containing the DNS packet
+     * @param buf the byte buffer containing the DNS packet
      * @return a decoded {@link DnsQuestion}
      */
     private static DnsQuestion decodeQuestion(ByteBuf buf) {
@@ -153,20 +167,15 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
     /**
      * Decodes a resource record, given a DNS packet in a byte buffer.
      *
-     * @param buf
-     *            the byte buffer containing the DNS packet
+     * @param buf the byte buffer containing the DNS packet
      * @return a {@link DnsResource} record containing response data
      */
-    private static DnsResource decodeResource(ByteBuf buf) {
+    private DnsEntry decodeResource(ByteBuf buf) {
         String name = readName(buf);
         DnsType type = DnsType.valueOf(buf.readUnsignedShort());
         DnsClass aClass = DnsClass.valueOf(buf.readUnsignedShort());
         long ttl = buf.readUnsignedInt();
         int len = buf.readUnsignedShort();
-
-        int readerIndex = buf.readerIndex();
-        ByteBuf payload = buf.duplicate().setIndex(readerIndex, readerIndex + len).retain();
-        buf.readerIndex(readerIndex + len);
-        return new DnsResource(name, type, aClass, ttl, payload);
+        return type.decode(name, aClass, ttl, buf, len);
     }
 }

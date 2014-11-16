@@ -165,4 +165,13 @@ public final class DnsResponseHeader extends DnsHeader {
         super.setZ(z);
         return this;
     }
+
+    @Override
+    public String toString() {
+        return "DnsResponseHeader{recursionDesired=" + isRecursionDesired()
+                + ", opcode=" + opcode() + ", id=" + id() + ", type=" + type()
+                + ", z=" + z() + " authoritativeAnswer=" + authoritativeAnswer
+                + ", truncated=" + truncated + ", recursionAvailable=" + recursionAvailable
+                + ", responseCode=" + responseCode + '}';
+    }
 }

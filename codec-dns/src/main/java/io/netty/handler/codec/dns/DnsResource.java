@@ -17,6 +17,7 @@ package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import java.nio.charset.Charset;
 
 /**
  * Represents any resource record (answer, authority, or additional resource
@@ -30,28 +31,16 @@ public final class DnsResource extends DnsEntry implements ByteBufHolder {
     /**
      * Constructs a resource record.
      *
-     * @param name
-     *            the domain name
-     * @param type
-     *            the type of record being returned
-     * @param aClass
-     *            the class for this resource record
-     * @param ttl
-     *            the time to live after reading
-     * @param content
-     *            the data contained in this record
+     * @param name the domain name
+     * @param type the type of record being returned
+     * @param aClass the class for this resource record
+     * @param ttl the time to live after reading
+     * @param content the data contained in this record
      */
     public DnsResource(String name, DnsType type, DnsClass aClass, long ttl, ByteBuf content) {
-        super(name, type, aClass);
+        super(name, type, aClass, ttl);
         this.ttl = ttl;
         this.content = content;
-    }
-
-    /**
-     * Returns the time to live after reading for this resource record.
-     */
-    public long timeToLive() {
-        return ttl;
     }
 
     /**
@@ -115,5 +104,10 @@ public final class DnsResource extends DnsEntry implements ByteBufHolder {
     public DnsResource touch(Object hint) {
         content.touch(hint);
         return this;
+    }
+
+    @Override
+    public void writePayload(NameWriter nameWriter, ByteBuf into, Charset charset) {
+        into.writeBytes(content, content.readerIndex(), content.readableBytes());
     }
 }

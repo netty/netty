@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,7 +15,10 @@
  */
 package io.netty.handler.codec.dns;
 
+import io.netty.buffer.ByteBuf;
 import static io.netty.handler.codec.dns.DnsClass.IN;
+import io.netty.util.internal.StringUtil;
+import java.nio.charset.Charset;
 
 /**
  * The DNS question class which represents a question being sent to a server via
@@ -23,7 +26,10 @@ import static io.netty.handler.codec.dns.DnsClass.IN;
  * Usually a message contains a single question, and DNS servers often don't
  * support multiple questions in a single query.
  */
-public final class DnsQuestion extends DnsEntry {
+public final class DnsQuestion {
+    private final String name;
+    private final DnsType type;
+    private final DnsClass clazz;
 
     /**
      * Constructs a question with the default class IN (Internet).
@@ -50,23 +56,78 @@ public final class DnsQuestion extends DnsEntry {
      *            the class of a DNS record
      */
     public DnsQuestion(String name, DnsType type, DnsClass qClass) {
-        super(name, type, qClass);
-
+        if (name == null) {
+            throw new NullPointerException("Name null");
+        }
+        if (type == null) {
+            throw new NullPointerException("Type null");
+        }
+        if (qClass == null) {
+            throw new NullPointerException("DNS class null");
+        }
         if (name.isEmpty()) {
             throw new IllegalArgumentException("name must not be left blank.");
         }
+        this.name = name;
+        this.type = type;
+        this.clazz = qClass;
     }
 
-    @Override
-    public boolean equals(Object other) {
-        if (!(other instanceof DnsQuestion)) {
-            return false;
-        }
-        return super.equals(other);
+    public String name() {
+        return name;
+    }
+
+    public DnsClass dnsClass() {
+        return clazz;
+    }
+
+    public DnsType type() {
+        return type;
+    }
+
+    public void writeTo(NameWriter nameWriter, ByteBuf into, Charset charset) {
+        nameWriter.writeName(name(), into, charset);
+        into.writeShort(type().intValue());
+        into.writeShort(dnsClass().intValue());
     }
 
     @Override
     public int hashCode() {
-        return super.hashCode();
+        int hash = 7;
+        hash = 67 * hash + name.hashCode();
+        hash = 67 * hash + type.hashCode();
+        hash = 67 * hash + clazz.hashCode();
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) {
+            return true;
+        } else if (obj == null) {
+            return false;
+        } else if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final DnsQuestion other = (DnsQuestion) obj;
+        if ((this.name == null) ? (other.name != null) : !this.name.equals(other.name)) {
+            return false;
+        }
+        if (this.type != other.type && (this.type == null || !this.type.equals(other.type))) {
+            return false;
+        }
+        if (this.clazz != other.clazz && (this.clazz == null || !this.clazz.equals(other.clazz))) {
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public String toString() {
+        return new StringBuilder(128).append(StringUtil.simpleClassName(this))
+                .append("(name: ").append(name())
+                .append(", type: ").append(type())
+                .append(", class: ").append(dnsClass())
+                .append(')').toString();
     }
 }
