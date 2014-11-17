@@ -36,14 +36,20 @@ public final class PointerDnsRecord extends DnsEntry {
 
     public PointerDnsRecord(String name, DnsType type, DnsClass dnsClass, String hostName, long timeToLive) {
         super(name, type, dnsClass, timeToLive);
-        assert type == DnsType.PTR;
+        if (hostName == null) {
+            throw new NullPointerException("hostName");
+        }
         this.hostName = hostName;
     }
 
+    /**
+     * The host name this PTR record references.
+     */
     public String hostName() {
         return hostName;
     }
 
+    @Override
     public boolean equals(Object o) {
         return super.equals(o) && o instanceof PointerDnsRecord
                 && ((PointerDnsRecord) o).hostName.equals(hostName);

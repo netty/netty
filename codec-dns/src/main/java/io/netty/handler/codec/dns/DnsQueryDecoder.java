@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -23,7 +23,7 @@ import io.netty.util.CharsetUtil;
 import java.util.List;
 
 /**
- *
+ * Decodes {@link DnsQuery} objects from {#link DatagramPacket}s
  */
 public class DnsQueryDecoder extends MessageToMessageDecoder<DatagramPacket> {
 
@@ -36,7 +36,7 @@ public class DnsQueryDecoder extends MessageToMessageDecoder<DatagramPacket> {
         out.add(decode(ctx, msg));
     }
 
-    public DnsQuery decode(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+    public static DnsQuery decode(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
         ByteBuf buf = msg.content();
         int id = buf.readUnsignedShort();
         DnsQuery query = new DnsQuery(id, msg.sender());

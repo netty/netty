@@ -168,10 +168,26 @@ public final class DnsResponseHeader extends DnsHeader {
 
     @Override
     public String toString() {
-        return "DnsResponseHeader{recursionDesired=" + isRecursionDesired()
-                + ", opcode=" + opcode() + ", id=" + id() + ", type=" + type()
-                + ", z=" + z() + " authoritativeAnswer=" + authoritativeAnswer
-                + ", truncated=" + truncated + ", recursionAvailable=" + recursionAvailable
-                + ", responseCode=" + responseCode + '}';
+        return new StringBuilder(140)
+                .append("DnsResponseHeader{recursionDesired=")
+                .append(isRecursionDesired())
+                .append(", opcode=")
+                .append(opcode())
+                .append(", id=")
+                .append(id())
+                .append(", type=")
+                .append(type())
+                .append(", z=")
+                .append(z())
+                .append(" authoritativeAnswer=")
+                .append(authoritativeAnswer)
+                .append(", truncated=")
+                .append(truncated)
+                .append(", recursionAvailable=")
+                .append(recursionAvailable)
+                .append(", responseCode=")
+                .append(responseCode)
+                .append('}')
+                .toString();
     }
 }

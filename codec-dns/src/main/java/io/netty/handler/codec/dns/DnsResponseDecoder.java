@@ -144,7 +144,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
             return "";
         }
         if (name.length() > 253) {
-            // see http://blogs.msdn.com/b/oldnewthing/archive/2012/04/12/10292868.aspx for why
+            // See http://blogs.msdn.com/b/oldnewthing/archive/2012/04/12/10292868.aspx for why
             throw new DnsDecoderException(DnsResponseCode.BADNAME, "Name > 253 characters in length: " + name);
         }
 

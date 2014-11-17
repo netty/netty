@@ -57,13 +57,13 @@ public final class DnsQuestion {
      */
     public DnsQuestion(String name, DnsType type, DnsClass qClass) {
         if (name == null) {
-            throw new NullPointerException("Name null");
+            throw new NullPointerException("name");
         }
         if (type == null) {
-            throw new NullPointerException("Type null");
+            throw new NullPointerException("type");
         }
         if (qClass == null) {
-            throw new NullPointerException("DNS class null");
+            throw new NullPointerException("qClass");
         }
         if (name.isEmpty()) {
             throw new IllegalArgumentException("name must not be left blank.");
@@ -73,18 +73,34 @@ public final class DnsQuestion {
         this.clazz = qClass;
     }
 
+    /**
+     * The name this question is asking about
+     */
     public String name() {
         return name;
     }
 
+    /**
+     * The DNS class
+     */
     public DnsClass dnsClass() {
         return clazz;
     }
 
+    /**
+     * The type of this question, such as A or AAAA
+     */
     public DnsType type() {
         return type;
     }
 
+    /**
+     * Write this question into a {@link ByteBuf}
+     * @param nameWriter Object which writes names, possibly using DNS
+     * compression pointers
+     * @param into The buffer to write the bytes into
+     * @param charset The character set, typically UTF-8
+     */
     public void writeTo(NameWriter nameWriter, ByteBuf into, Charset charset) {
         nameWriter.writeName(name(), into, charset);
         into.writeShort(type().intValue());

@@ -336,13 +336,13 @@ public final class DnsType<RecordType extends DnsEntry> implements Comparable<Dn
 
     /**
      * Decode the <i>payload</i> of a record of this type into a record of type
-     * &lt;RecordType&gt;. The resulting object will be of DnsClass IN.
+     * &lt;RecordType&gt;. The resulting object will be of {@link DnsClass.IN}
      *
      * @param name The name for the resulting record
      * @param timeToLive The time to live of the resulting record
      * @param buf A buffer to read from
      * @param length The length of the payload in the buffer
-     * @return An object of type &lt;RecordType&gt; such as an Ipv4AddressRecord
+     * @return An object of type &lt;RecordType&gt; such as an {@link Ipv4AddressRecord}
      */
     public RecordType decode(String name, long timeToLive, ByteBuf buf, int length)
             throws DnsDecoderException {
@@ -358,7 +358,7 @@ public final class DnsType<RecordType extends DnsEntry> implements Comparable<Dn
      * @param timeToLive The time to live of the resulting record
      * @param buf A buffer to read from
      * @param length The length of the payload in the buffer
-     * @return An object of type &lt;RecordType&gt; such as an Ipv4AddressRecord
+     * @return An object of type &lt;RecordType&gt; such as an {@link Ipv4AddressRecord}
      */
     public RecordType decode(String name, DnsClass clazz, long timeToLive, ByteBuf buf,
             int length) throws DnsDecoderException {
@@ -369,6 +369,14 @@ public final class DnsType<RecordType extends DnsEntry> implements Comparable<Dn
         }
     }
 
+    /**
+     * Get the constant value of the code returned by a DNS response.
+     * If an unknown code is passed, will return a DnsType with the passed
+     * code and a name of "UNKNOWN".
+     *
+     * @param intValue The code
+     * @return The constant
+     */
     public static DnsType<?> valueOf(int intValue) {
         DnsType result = BY_TYPE.get(intValue);
         if (result == null) {
@@ -377,6 +385,13 @@ public final class DnsType<RecordType extends DnsEntry> implements Comparable<Dn
         return result;
     }
 
+    /**
+     * Look up a DnsType by its name according to the DNS spec
+     * @param name The name of a DNS record type as defined in one of the
+     * relevant RFCs
+     * @return A DnsType
+     * @throws IllegalArgumentException if the name is unknown
+     */
     public static DnsType<?> valueOf(String name) {
         DnsType result = BY_NAME.get(name);
         if (result == null) {
@@ -451,8 +466,29 @@ public final class DnsType<RecordType extends DnsEntry> implements Comparable<Dn
         return 0x00000000FFFFFFFFL & (long) val;
     }
 
+    /**
+     * Non-public interface for objects which can decode the payload
+     * of a received packet into the appropriate &lt;RecordType&gt;.
+     * @param <T> The record type
+     */
     interface Decoder<T extends DnsEntry> {
 
+        /**
+         * Decode the contents of a {@link ByteBuf}, using the passed
+         * name, type, time-to-live and class, along with the decoded
+         * payload to construct an {@link DnsEntry} of the appropriate
+         * type
+         * @param name The name this record asks or answers for
+         * @param type The type of record to be held by the resulting object
+         * @param clazz The DNS class
+         * @param timeToLive The length of time in seconds that the result
+         * should be considered current for
+         * @param buf The bytes to decode
+         * @param length The number of bytes from the current reader index
+         * of the buffer, which should be used when decodeing
+         * @return An object of the appropriate type
+         * @throws DnsDecoderException If the data is invalid in some way
+         */
         T decode(String name, DnsType<T> type, DnsClass clazz, long timeToLive, ByteBuf buf, int length)
                 throws DnsDecoderException;
     }

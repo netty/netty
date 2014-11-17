@@ -48,6 +48,10 @@ public abstract class DnsEntry {
         this.timeToLive = timeToLive;
     }
 
+    /**
+     * Number of seconds that a cache may retain this record
+     * @return A number of seconds for which this entry may be treated as current
+     */
     public final long timeToLive() {
         return timeToLive;
     }

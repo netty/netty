@@ -18,7 +18,7 @@ package io.netty.handler.codec.dns;
 import io.netty.handler.codec.DecoderException;
 
 /**
- * Exception which can be thrown during parsing of a DNS query or response,
+ * {@link DecoderException} which can be thrown during parsing of a DNS query or response,
  * which indicates the DNS error code that should be returned.
  */
 public class DnsDecoderException extends DecoderException {
@@ -26,22 +26,34 @@ public class DnsDecoderException extends DecoderException {
     private final DnsResponseCode code;
 
     DnsDecoderException(DnsResponseCode code) {
-        super(code.toString());
+        super(code == null ? "" : code.toString());
+        if (code == null) {
+            throw new NullPointerException("code");
+        }
         this.code = code;
     }
 
     DnsDecoderException(DnsResponseCode code, Throwable cause) {
-        super(code.toString(), cause);
+        super(code == null ? "" : code.toString(), cause);
+        if (code == null) {
+            throw new NullPointerException("code");
+        }
         this.code = code;
     }
 
     DnsDecoderException(DnsResponseCode code, String message, Throwable cause) {
         super(message, cause);
+        if (code == null) {
+            throw new NullPointerException("code");
+        }
         this.code = code;
     }
 
     DnsDecoderException(DnsResponseCode code, String message) {
         super(message);
+        if (code == null) {
+            throw new NullPointerException("code");
+        }
         this.code = code;
     }
 

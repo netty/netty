@@ -39,7 +39,9 @@ public final class MailExchangerDnsRecord extends DnsEntry {
     public MailExchangerDnsRecord(String name, DnsType type, DnsClass dnsClass, long ttl,
             int preference, String mailExchanger) {
         super(name, type, dnsClass, ttl);
-        assert type == DnsType.MX;
+        if (mailExchanger == null) {
+            throw new NullPointerException("mailExchanger");
+        }
         this.preference = preference;
         this.mailExchanger = mailExchanger;
     }

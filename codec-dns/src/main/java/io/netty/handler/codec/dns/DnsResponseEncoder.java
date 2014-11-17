@@ -44,20 +44,21 @@ public class DnsResponseEncoder extends MessageToMessageEncoder<DnsResponse> {
         super(DnsResponse.class);
     }
 
-    private void encodeQuestion(NameWriter nameWriter, DnsQuestion question, Charset charset, ByteBuf buf) {
-        nameWriter.writeName(question.name(), buf, charset);
-        buf.writeShort(question.type().intValue());
-        buf.writeShort(question.dnsClass().intValue());
-    }
-
-    private int flip(int flags, int index, boolean is) {
+    /**
+     * Flip the bit at position <code>index</code> on or off
+     * @param value The value to change
+     * @param index The bit-index
+     * @param on Whether or not the bit should be a 1
+     * @return The updated value
+     */
+    private static int flip(int value, int index, boolean on) {
         int i = 1 << index;
-        if (is) {
-            flags |= i;
+        if (on) {
+            value |= i;
         } else {
-            flags &= i ^ 0xFFFF;
+            value &= i ^ 0xFFFF;
         }
-        return flags;
+        return value;
     }
 
     public DatagramPacket encode(ChannelHandlerContext ctx, DnsResponse msg) {
@@ -87,7 +88,7 @@ public class DnsResponseEncoder extends MessageToMessageEncoder<DnsResponse> {
         }
 
         for (DnsQuestion q : msg.questions()) {
-            encodeQuestion(nameWriter, q, CharsetUtil.UTF_8, buf);
+            q.writeTo(nameWriter, buf, CharsetUtil.UTF_8);
         }
         if (h.responseCode() != DnsResponseCode.NOERROR) {
             DatagramPacket packet = new DatagramPacket(buf, msg.sender());

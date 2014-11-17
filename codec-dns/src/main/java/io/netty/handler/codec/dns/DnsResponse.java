@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.dns;
 
+import io.netty.util.internal.StringUtil;
 import java.net.InetSocketAddress;
 
 /**
@@ -46,6 +47,7 @@ public final class DnsResponse extends DnsMessage {
         return this;
     }
 
+    @Override
     public DnsResponse addQuestions(Iterable<DnsQuestion> questions) {
         super.addQuestions(questions);
         return this;
@@ -125,8 +127,8 @@ public final class DnsResponse extends DnsMessage {
     }
 
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(DnsResponse.class.getSimpleName()).append('@').append(
+        StringBuilder sb = new StringBuilder(80);
+        sb.append(StringUtil.simpleClassName(DnsResponse.class)).append('@').append(
                 System.identityHashCode(this)).append('{');
         sb.append("header=").append(header()).append(", answers=[");
         for (DnsEntry ans : answers()) {

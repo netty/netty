@@ -38,7 +38,14 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
         out.add(encode(ctx, query));
     }
 
-    public DatagramPacket encode(ChannelHandlerContext ctx, DnsQuery query) throws Exception {
+    /**
+     * Encode a DnsQuery into a {@link DatagramPacket}
+     * @param ctx The channel context
+     * @param query The query
+     * @return a {@link DatagramPacket}
+     * @throws Exception
+     */
+    public static DatagramPacket encode(ChannelHandlerContext ctx, DnsQuery query) {
         ByteBuf buf = ctx.alloc().buffer();
         encodeHeader(query.header(), buf);
 

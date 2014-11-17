@@ -66,18 +66,26 @@ public final class Ipv4AddressRecord extends DnsEntry {
 
     public Ipv4AddressRecord(String name, DnsType type, DnsClass dnsClass, long timeToLive, int address) {
         super(name, type, dnsClass, timeToLive);
-        assert DnsType.A.equals(type);
         this.address = address;
     }
 
+    /**
+     * Get the IP address as an integer.
+     */
     public int address() {
         return address;
     }
 
+    /**
+     * Get a string representation of the address.
+     */
     public String stringValue() {
         return addressToString(address());
     }
 
+    /**
+     * Get the address as an array of integers.
+     */
     public int[] addressParts() {
         return toInts(address());
     }

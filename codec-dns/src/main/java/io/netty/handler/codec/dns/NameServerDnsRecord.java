@@ -36,7 +36,9 @@ public final class NameServerDnsRecord extends DnsEntry {
 
     public NameServerDnsRecord(String name, DnsType type, DnsClass dnsClass, String nameserver, long ttl) {
         super(name, type, dnsClass, ttl);
-        assert type == DnsType.NS;
+        if (nameserver == null) {
+            throw new NullPointerException("nameserver");
+        }
         this.nameserver = nameserver;
     }
 
@@ -44,6 +46,7 @@ public final class NameServerDnsRecord extends DnsEntry {
         return nameserver;
     }
 
+    @Override
     public boolean equals(Object o) {
         return super.equals(o) && o instanceof MailExchangerDnsRecord
                 && ((NameServerDnsRecord) o).nameserver.equals(nameserver);

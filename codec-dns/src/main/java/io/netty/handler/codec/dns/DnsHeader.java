@@ -194,7 +194,10 @@ public class DnsHeader {
 
     @Override
     public String toString() {
-        return "DnsHeader{recursionDesired=" + recursionDesired
-                + ", opcode=" + opcode + ", id=" + id + ", type=" + type + ", z=" + z + '}';
+        return new StringBuilder(80).append("DnsHeader{recursionDesired=")
+                .append(recursionDesired).append(", opcode=")
+                .append(opcode).append(", id=").append(id)
+                .append(", type=").append(type).append(", z=")
+                .append(z).append('}').toString();
     }
 }
