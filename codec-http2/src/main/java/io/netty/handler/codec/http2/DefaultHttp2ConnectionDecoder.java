@@ -192,6 +192,10 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         frameReader.close();
     }
 
+    private static int unprocessedBytes(Http2Stream stream) {
+        return stream.inboundFlow().unProcessedBytes();
+    }
+
     /**
      * Handles all inbound frames from the network.
      */
@@ -212,7 +216,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             // We should ignore this frame if RST_STREAM was sent or if GO_AWAY was sent with a
             // lower stream ID.
             boolean shouldApplyFlowControl = false;
-            int processedBytes = data.readableBytes() + padding;
             boolean shouldIgnore = shouldIgnoreFrame(stream);
             Http2Exception error = null;
             switch (stream.state()) {
@@ -240,15 +243,19 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                     break;
             }
 
+            int bytesToReturn = data.readableBytes() + padding;
+            int unprocessedBytes = unprocessedBytes(stream);
             try {
                 // If we should apply flow control, do so now.
                 if (shouldApplyFlowControl) {
                     inboundFlow.applyFlowControl(ctx, streamId, data, padding, endOfStream);
+                    // Update the unprocessed bytes after flow control is applied.
+                    unprocessedBytes = unprocessedBytes(stream);
                 }
 
                 // If we should ignore this frame, do so now.
                 if (shouldIgnore) {
-                    return processedBytes;
+                    return bytesToReturn;
                 }
 
                 // If the stream was in an invalid state to receive the frame, throw the error.
@@ -258,12 +265,26 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
                 // Call back the application and retrieve the number of bytes that have been
                 // immediately processed.
-                processedBytes = listener.onDataRead(ctx, streamId, data, padding, endOfStream);
-                return processedBytes;
+                bytesToReturn = listener.onDataRead(ctx, streamId, data, padding, endOfStream);
+                return bytesToReturn;
+            } catch (Http2Exception e) {
+                // If an exception happened during delivery, the listener may have returned part
+                // of the bytes before the error occurred. If that's the case, subtract that from
+                // the total processed bytes so that we don't return too many bytes.
+                int delta = unprocessedBytes - unprocessedBytes(stream);
+                bytesToReturn -= delta;
+                throw e;
+            } catch (RuntimeException e) {
+                // If an exception happened during delivery, the listener may have returned part
+                // of the bytes before the error occurred. If that's the case, subtract that from
+                // the total processed bytes so that we don't return too many bytes.
+                int delta = unprocessedBytes - unprocessedBytes(stream);
+                bytesToReturn -= delta;
+                throw e;
             } finally {
                 // If appropriate, returned the processed bytes to the flow controller.
-                if (shouldApplyFlowControl && processedBytes > 0) {
-                    stream.inboundFlow().returnProcessedBytes(ctx, processedBytes);
+                if (shouldApplyFlowControl && bytesToReturn > 0) {
+                    stream.inboundFlow().returnProcessedBytes(ctx, bytesToReturn);
                 }
 
                 if (endOfStream) {

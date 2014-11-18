@@ -17,6 +17,7 @@ package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
+import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.flowControlError;
 import static io.netty.handler.codec.http2.Http2Exception.protocolError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -208,6 +209,11 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
             updateWindowIfAppropriate(ctx);
         }
 
+        @Override
+        public int unProcessedBytes() {
+            return processedWindow - window;
+        }
+
         /**
          * Updates the flow control window for this stream if it is appropriate.
          */
@@ -225,10 +231,15 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
         /**
          * Returns the processed bytes for this stream.
          */
-        void returnProcessedBytes(int delta) {
+        void returnProcessedBytes(int delta) throws Http2Exception {
             if (processedWindow - delta < window) {
-                throw new IllegalArgumentException(
-                        "Attempting to return too many bytes for stream " + streamId);
+                if (streamId == CONNECTION_STREAM_ID) {
+                    throw new Http2Exception(INTERNAL_ERROR,
+                            "Attempting to return too many bytes for connection");
+                } else {
+                    throw new Http2StreamException(streamId, INTERNAL_ERROR,
+                            "Attempting to return too many bytes for stream " + streamId);
+                }
             }
             processedWindow -= delta;
         }

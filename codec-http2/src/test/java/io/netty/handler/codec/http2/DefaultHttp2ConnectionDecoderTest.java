@@ -23,7 +23,9 @@ import static io.netty.handler.codec.http2.Http2Exception.protocolError;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.CharsetUtil.UTF_8;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
@@ -45,6 +47,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -230,6 +233,50 @@ public class DefaultHttp2ConnectionDecoderTest {
             verify(inboundFlow).applyFlowControl(eq(ctx), eq(STREAM_ID), eq(data), eq(10), eq(true));
             verify(lifecycleManager).closeRemoteSide(eq(stream), eq(future));
             verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(10), eq(true));
+        } finally {
+            data.release();
+        }
+    }
+
+    @Test
+    public void errorDuringDeliveryShouldReturnCorrectNumberOfBytes() throws Exception {
+        final ByteBuf data = dummyData();
+        final int padding = 10;
+        final AtomicInteger unprocessed = new AtomicInteger(data.readableBytes() + padding);
+        doAnswer(new Answer<Integer>() {
+            @Override
+            public Integer answer(InvocationOnMock in) throws Throwable {
+                return unprocessed.get();
+            }
+        }).when(inFlowState).unProcessedBytes();
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock in) throws Throwable {
+                int delta = (Integer) in.getArguments()[1];
+                int newValue = unprocessed.addAndGet(-delta);
+                if (newValue < 0) {
+                    throw new RuntimeException("Returned too many bytes");
+                }
+                return null;
+            }
+        }).when(inFlowState).returnProcessedBytes(eq(ctx), anyInt());
+        // When the listener callback is called, process a few bytes and then throw.
+        doAnswer(new Answer<Integer>() {
+            @Override
+            public Integer answer(InvocationOnMock in) throws Throwable {
+                inFlowState.returnProcessedBytes(ctx, 4);
+                throw new RuntimeException("Fake Exception");
+            }
+        }).when(listener).onDataRead(eq(ctx), eq(STREAM_ID), any(ByteBuf.class), eq(10), eq(true));
+        try {
+            decode().onDataRead(ctx, STREAM_ID, data, padding, true);
+            fail("Expected exception");
+        } catch (RuntimeException cause) {
+            verify(inboundFlow)
+                    .applyFlowControl(eq(ctx), eq(STREAM_ID), eq(data), eq(padding), eq(true));
+            verify(lifecycleManager).closeRemoteSide(eq(stream), eq(future));
+            verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(padding), eq(true));
+            assertEquals(0, inFlowState.unProcessedBytes());
         } finally {
             data.release();
         }
