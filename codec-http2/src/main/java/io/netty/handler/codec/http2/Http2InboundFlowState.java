@@ -33,4 +33,9 @@ public interface Http2InboundFlowState extends Http2FlowState {
      * @param numBytes the number of bytes to be returned to the flow control window.
      */
     void returnProcessedBytes(ChannelHandlerContext ctx, int numBytes) throws Http2Exception;
+
+    /**
+     * The number of bytes that are outstanding and have not yet been returned to the flow controller.
+     */
+    int unProcessedBytes();
 }
