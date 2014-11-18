@@ -126,8 +126,12 @@ public class InboundHttp2ToHttpAdapterTest {
                 p.addLast(
                         "reader",
                         new HttpAdapterFrameAdapter(connection,
-                                InboundHttp2ToHttpPriorityAdapter.withSettingsPropagation(connection,
-                                        maxContentLength, true), new CountDownLatch(10)));
+                                InboundHttp2ToHttpPriorityAdapter.forConnection(connection)
+                                        .maxContentLength(maxContentLength)
+                                        .validateHttpHeaders(true)
+                                        .propagateSettings(true)
+                                        .build(),
+                                        new CountDownLatch(10)));
                 serverDelegator = new HttpResponseDelegator(serverListener, serverLatch);
                 p.addLast(serverDelegator);
                 serverConnectedChannel = ch;
@@ -157,8 +161,11 @@ public class InboundHttp2ToHttpAdapterTest {
                 Http2Connection connection = new DefaultHttp2Connection(false);
                 p.addLast(
                         "reader",
-                        new HttpAdapterFrameAdapter(connection, InboundHttp2ToHttpPriorityAdapter.newInstance(
-                                connection, maxContentLength), new CountDownLatch(10)));
+                        new HttpAdapterFrameAdapter(connection,
+                                InboundHttp2ToHttpPriorityAdapter.forConnection(connection)
+                                .maxContentLength(maxContentLength)
+                                .build(),
+                                new CountDownLatch(10)));
                 clientDelegator = new HttpResponseDelegator(clientListener, clientLatch);
                 p.addLast(clientDelegator);
             }
@@ -682,7 +689,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 ctxClient().flush();
             }
         });
-        assertTrue(settingsLatch.await(1, SECONDS));
+        assertTrue(settingsLatch.await(3, SECONDS));
         ArgumentCaptor<Http2Settings> settingsCaptor = ArgumentCaptor.forClass(Http2Settings.class);
         verify(settingsListener).messageReceived(settingsCaptor.capture());
         assertEquals(settings, settingsCaptor.getValue());

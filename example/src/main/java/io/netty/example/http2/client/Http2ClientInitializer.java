@@ -71,7 +71,10 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
                 new DefaultHttp2InboundFlowController(connection, frameWriter),
                 new DefaultHttp2OutboundFlowController(connection, frameWriter),
                 new DelegatingDecompressorFrameListener(connection,
-                        InboundHttp2ToHttpAdapter.withSettingsPropagation(connection, maxContentLength)));
+                        InboundHttp2ToHttpAdapter.forConnection(connection)
+                                .maxContentLength(maxContentLength)
+                                .propagateSettings(true)
+                                .build()));
         responseHandler = new HttpResponseHandler();
         settingsHandler = new Http2SettingsHandler(ch.newPromise());
         if (sslCtx != null) {
