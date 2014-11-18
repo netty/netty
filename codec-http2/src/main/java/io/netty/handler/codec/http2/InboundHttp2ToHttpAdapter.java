@@ -69,22 +69,17 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
      * @return {@link Builder} the builder for the {@link InboundHttp2ToHttpAdapter}
      */
     public static Builder forConnection(Http2Connection connection) {
-        return new Builder(connection) {
-            @Override
-            protected InboundHttp2ToHttpAdapter newInstance(Builder builder) {
-                return new InboundHttp2ToHttpAdapter(this);
-            }
-        };
+        return new Builder(connection);
     }
 
-    public abstract static class Builder {
+    public static class Builder {
 
         private final Http2Connection connection;
         private int maxContentLength;
         private boolean validateHttpHeaders;
         private boolean propagateSettings;
 
-        protected Builder(Http2Connection connection) {
+        Builder(Http2Connection connection) {
             this.connection = connection;
         }
 
@@ -133,25 +128,18 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
          * @return {@link InboundHttp2ToHttpAdapter}
          */
         public InboundHttp2ToHttpAdapter build() {
-            checkNotNull(connection, "connection");
-            if (maxContentLength <= 0) {
-                throw new IllegalArgumentException("maxContentLength must be a positive integer: " + maxContentLength);
-            }
-            InboundHttp2ToHttpAdapter instance = newInstance(this);
+            InboundHttp2ToHttpAdapter instance = new InboundHttp2ToHttpAdapter(this);
             connection.addListener(instance);
             return instance;
         }
-
-        /**
-         * Allows subclasses to use the {@link Builder} to call their own classes constructor if needed.
-         *
-         * @param builder the {@link Builder} used to configure the {@link InboundHttp2ToHttpAdapter} instance
-         * @return {@link InboundHttp2ToHttpAdapter} a concrete instance that is a {@link InboundHttp2ToHttpAdapter}
-         */
-        protected abstract InboundHttp2ToHttpAdapter newInstance(Builder builder);
     }
 
     protected InboundHttp2ToHttpAdapter(Builder builder) {
+        checkNotNull(builder.connection, "connection");
+        if (builder.maxContentLength <= 0) {
+            throw new IllegalArgumentException("maxContentLength must be a positive integer: "
+                    + builder.maxContentLength);
+        }
         connection = builder.connection;
         maxContentLength = builder.maxContentLength;
         validateHttpHeaders = builder.validateHttpHeaders;

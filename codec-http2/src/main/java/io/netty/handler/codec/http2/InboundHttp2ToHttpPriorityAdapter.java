@@ -50,8 +50,10 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
     public static Builder forConnection(Http2Connection connection) {
         return new Builder(connection) {
             @Override
-            protected InboundHttp2ToHttpPriorityAdapter newInstance(Builder builder) {
-                return new InboundHttp2ToHttpPriorityAdapter(this);
+            public InboundHttp2ToHttpAdapter build() {
+                final InboundHttp2ToHttpPriorityAdapter instance = new InboundHttp2ToHttpPriorityAdapter(this);
+                instance.connection.addListener(instance);
+                return instance;
             }
         };
     }
