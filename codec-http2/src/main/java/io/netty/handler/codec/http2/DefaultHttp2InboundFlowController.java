@@ -17,6 +17,7 @@ package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
+import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.flowControlError;
 import static io.netty.handler.codec.http2.Http2Exception.protocolError;
@@ -274,9 +275,10 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
             // and is cleared once we send a WINDOW_UPDATE frame.
             if (delta < 0 && window < lowerBound) {
                 if (stream.id() == CONNECTION_STREAM_ID) {
-                    throw protocolError("Connection flow control window exceeded");
+                    throw flowControlError("Connection flow control window exceeded");
                 } else {
-                    throw flowControlError("Flow control window exceeded for stream: %d", stream.id());
+                    throw Http2StreamException.format(stream.id(), FLOW_CONTROL_ERROR,
+                            "Flow control window exceeded for stream: %d", stream.id());
                 }
             }
 
