@@ -125,7 +125,6 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         /**
          * Builds/creates a new {@link InboundHttp2ToHttpAdapter} instance using this builders current settings.
          *
-         * @return {@link InboundHttp2ToHttpAdapter}
          */
         public InboundHttp2ToHttpAdapter build() {
             InboundHttp2ToHttpAdapter instance = new InboundHttp2ToHttpAdapter(this);

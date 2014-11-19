@@ -45,7 +45,7 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
      * Creates a new {@link InboundHttp2ToHttpAdapter} builder for the specified {@link Http2Connection}.
      *
      * @param connection The object which will provide connection notification events for the current connection
-     * @return {@link Builder} the builder for the {@link InboundHttp2ToHttpAdapter}.
+     * @return {@link InboundHttp2ToHttpAdapter.Builder} the builder for the {@link InboundHttp2ToHttpAdapter}.
      */
     public static Builder forConnection(Http2Connection connection) {
         return new Builder(connection) {
