@@ -58,8 +58,17 @@ public final class Http2CodecUtil {
     public static final int SETTINGS_MAX_FRAME_SIZE = 5;
     public static final int SETTINGS_MAX_HEADER_LIST_SIZE = 6;
 
+    public static final long MAX_HEADER_TABLE_SIZE = MAX_UNSIGNED_INT;
+    public static final long MAX_CONCURRENT_STREAMS = MAX_UNSIGNED_INT;
+    public static final int MAX_INITIAL_WINDOW_SIZE = Integer.MAX_VALUE;
     public static final int MAX_FRAME_SIZE_LOWER_BOUND = 0x4000;
     public static final int MAX_FRAME_SIZE_UPPER_BOUND = 0xFFFFFF;
+    public static final long MAX_HEADER_LIST_SIZE = Long.MAX_VALUE;
+
+    public static final long MIN_HEADER_TABLE_SIZE = 0;
+    public static final long MIN_CONCURRENT_STREAMS = 0;
+    public static final long MIN_INITIAL_WINDOW_SIZE = 0;
+    public static final long MIN_HEADER_LIST_SIZE = 0;
 
     public static final int DEFAULT_WINDOW_SIZE = 65535;
     public static final boolean DEFAULT_ENABLE_PUSH = true;
