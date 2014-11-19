@@ -16,10 +16,12 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ThreadLocalRandom;
 import org.junit.Test;
 
@@ -27,6 +29,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.zip.DeflaterOutputStream;
+import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import static org.junit.Assert.*;
@@ -216,7 +219,7 @@ public abstract class ZlibTest {
     }
 
     // Test for https://github.com/netty/netty/issues/2572
-    private void testCompressLarge2(ZlibWrapper decoderWrapper, byte[] compressed, byte[] data) throws Exception {
+    private void testDecompressOnly(ZlibWrapper decoderWrapper, byte[] compressed, byte[] data) throws Exception {
         EmbeddedChannel chDecoder = new EmbeddedChannel(createDecoder(decoderWrapper));
         chDecoder.writeInbound(Unpooled.wrappedBuffer(compressed));
         assertTrue(chDecoder.finish());
@@ -252,7 +255,7 @@ public abstract class ZlibTest {
         testCompressNone(ZlibWrapper.ZLIB, ZlibWrapper.ZLIB);
         testCompressSmall(ZlibWrapper.ZLIB, ZlibWrapper.ZLIB);
         testCompressLarge(ZlibWrapper.ZLIB, ZlibWrapper.ZLIB);
-        testCompressLarge2(ZlibWrapper.ZLIB, deflate(BYTES_LARGE2), BYTES_LARGE2);
+        testDecompressOnly(ZlibWrapper.ZLIB, deflate(BYTES_LARGE2), BYTES_LARGE2);
     }
 
     @Test
@@ -267,7 +270,54 @@ public abstract class ZlibTest {
         testCompressNone(ZlibWrapper.GZIP, ZlibWrapper.GZIP);
         testCompressSmall(ZlibWrapper.GZIP, ZlibWrapper.GZIP);
         testCompressLarge(ZlibWrapper.GZIP, ZlibWrapper.GZIP);
-        testCompressLarge2(ZlibWrapper.GZIP, gzip(BYTES_LARGE2), BYTES_LARGE2);
+        testDecompressOnly(ZlibWrapper.GZIP, gzip(BYTES_LARGE2), BYTES_LARGE2);
+    }
+
+    @Test
+    public void testGZIPCompressOnly() throws Exception {
+        testGZIPCompressOnly0(null); // Do not write anything; just finish the stream.
+        testGZIPCompressOnly0(EmptyArrays.EMPTY_BYTES); // Write an empty array.
+        testGZIPCompressOnly0(BYTES_SMALL);
+        testGZIPCompressOnly0(BYTES_LARGE);
+    }
+
+    private void testGZIPCompressOnly0(byte[] data) throws IOException {
+        EmbeddedChannel chEncoder = new EmbeddedChannel(createEncoder(ZlibWrapper.GZIP));
+        if (data != null) {
+            chEncoder.writeOutbound(Unpooled.wrappedBuffer(data));
+        }
+        assertTrue(chEncoder.finish());
+
+        ByteBuf encoded = Unpooled.buffer();
+        for (;;) {
+            ByteBuf buf = (ByteBuf) chEncoder.readOutbound();
+            if (buf == null) {
+                break;
+            }
+            encoded.writeBytes(buf);
+            buf.release();
+        }
+
+        ByteBuf decoded = Unpooled.buffer();
+        GZIPInputStream stream = new GZIPInputStream(new ByteBufInputStream(encoded));
+        byte[] buf = new byte[8192];
+        for (;;) {
+            int readBytes = stream.read(buf);
+            if (readBytes < 0) {
+                break;
+            }
+            decoded.writeBytes(buf, 0, readBytes);
+        }
+        stream.close();
+
+        if (data != null) {
+            assertEquals(Unpooled.wrappedBuffer(data), decoded);
+        } else {
+            assertFalse(decoded.isReadable());
+        }
+
+        encoded.release();
+        decoded.release();
     }
 
     @Test
