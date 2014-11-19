@@ -91,7 +91,7 @@ public abstract class ZlibTest {
     protected abstract ZlibDecoder createDecoder(ZlibWrapper wrapper);
 
     @Test
-    public void testGZ() throws Exception {
+    public void testGZIP2() throws Exception {
         byte[] bytes = "message".getBytes(CharsetUtil.UTF_8);
         ByteBuf data = Unpooled.wrappedBuffer(bytes);
         ByteBuf deflatedData = Unpooled.wrappedBuffer(gzip(bytes));
