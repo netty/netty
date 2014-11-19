@@ -24,12 +24,13 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderUtil;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
-
 import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * This adapter provides just header/data events from the HTTP message flow defined
- * here <a href="http://tools.ietf.org/html/draft-ietf-httpbis-http2-14#section-8.1.">HTTP/2 Spec Message Flow</a>
+ * here <a href="http://tools.ietf.org/html/draft-ietf-httpbis-http2-14#section-8.1.">HTTP/2 Spec Message Flow</a>.
+ * <p>
+ * See {@link HttpToHttp2ConnectionHandler} to get translation from HTTP/1.x objects to HTTP/2 frames for writes.
  */
 public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
     private static final ImmediateSendDetector DEFAULT_SEND_DETECTOR = new ImmediateSendDetector() {
