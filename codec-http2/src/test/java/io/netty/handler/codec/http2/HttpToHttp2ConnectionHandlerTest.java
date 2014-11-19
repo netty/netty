@@ -58,9 +58,9 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Testing the {@link Http2ToHttpConnectionHandler} for {@link FullHttpRequest} objects into HTTP/2 frames
+ * Testing the {@link HttpToHttp2ConnectionHandler} for {@link FullHttpRequest} objects into HTTP/2 frames
  */
-public class DefaultHttp2ToHttpConnectionHandlerTest {
+public class HttpToHttp2ConnectionHandlerTest {
 
     @Mock
     private Http2FrameListener clientListener;
@@ -185,7 +185,7 @@ public class DefaultHttp2ToHttpConnectionHandlerTest {
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
                 serverFrameCountDown = new FrameCountDown(serverListener, requestLatch);
-                p.addLast(new Http2ToHttpConnectionHandler(true, serverFrameCountDown));
+                p.addLast(new HttpToHttp2ConnectionHandler(true, serverFrameCountDown));
                 p.addLast(ignoreSettingsHandler());
             }
         });
@@ -196,7 +196,7 @@ public class DefaultHttp2ToHttpConnectionHandlerTest {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                p.addLast(new Http2ToHttpConnectionHandler(false, clientListener));
+                p.addLast(new HttpToHttp2ConnectionHandler(false, clientListener));
                 p.addLast(ignoreSettingsHandler());
             }
         });

@@ -22,25 +22,25 @@ import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.HttpHeaders;
 
 /**
- * Translates HTTP/1.x object writes into HTTP/2 frames
+ * Translates HTTP/1.x object writes into HTTP/2 frames.
  * <p>
- * See {@link InboundHttp2ToHttpAdapter} to get translation from HTTP/2 frames to HTTP/1.x objects
+ * See {@link InboundHttp2ToHttpAdapter} to get translation from HTTP/2 frames to HTTP/1.x objects.
  */
-public class Http2ToHttpConnectionHandler extends Http2ConnectionHandler {
-    public Http2ToHttpConnectionHandler(boolean server, Http2FrameListener listener) {
+public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
+    public HttpToHttp2ConnectionHandler(boolean server, Http2FrameListener listener) {
         super(server, listener);
     }
 
-    public Http2ToHttpConnectionHandler(Http2Connection connection, Http2FrameListener listener) {
+    public HttpToHttp2ConnectionHandler(Http2Connection connection, Http2FrameListener listener) {
         super(connection, listener);
     }
 
-    public Http2ToHttpConnectionHandler(Http2Connection connection, Http2FrameReader frameReader,
+    public HttpToHttp2ConnectionHandler(Http2Connection connection, Http2FrameReader frameReader,
             Http2FrameWriter frameWriter, Http2FrameListener listener) {
         super(connection, frameReader, frameWriter, listener);
     }
 
-    public Http2ToHttpConnectionHandler(Http2Connection connection, Http2FrameReader frameReader,
+    public HttpToHttp2ConnectionHandler(Http2Connection connection, Http2FrameReader frameReader,
             Http2FrameWriter frameWriter, Http2InboundFlowController inboundFlow,
             Http2OutboundFlowController outboundFlow, Http2FrameListener listener) {
         super(connection, frameReader, frameWriter, inboundFlow, outboundFlow, listener);
