@@ -77,6 +77,14 @@ public abstract class DnsEntry {
         return dnsClass;
     }
 
+    /**
+     * Create a transformed DnsEntry with the passed time-to-live
+     * @param seconds The number of seconds
+     * @return A new DnsEntry identical to this one other than that it
+     * uses the passed time-to-live value
+     */
+    public abstract DnsEntry withTimeToLive(long seconds);
+
     @Override
     public int hashCode() {
         return (name.hashCode() * 31 + type.hashCode()) * 31 + dnsClass.hashCode();

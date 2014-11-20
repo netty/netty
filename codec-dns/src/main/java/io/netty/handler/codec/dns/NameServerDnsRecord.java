@@ -74,4 +74,9 @@ public final class NameServerDnsRecord extends DnsEntry {
     protected void writePayload(NameWriter nameWriter, ByteBuf into, Charset charset) {
         nameWriter.writeName(nameserver, into, charset);
     }
+
+    @Override
+    public NameServerDnsRecord withTimeToLive(long seconds) {
+        return new NameServerDnsRecord(name(), type(), dnsClass(), nameserver, seconds);
+    }
 }

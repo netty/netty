@@ -96,4 +96,9 @@ public final class MailExchangerDnsRecord extends DnsEntry {
         into.writeShort(preference);
         nameWriter.writeName(mailExchanger, into, charset);
     }
+
+    @Override
+    public MailExchangerDnsRecord withTimeToLive(long seconds) {
+        return new MailExchangerDnsRecord(name(), type(), dnsClass(), seconds, preference, mailExchanger);
+    }
 }

@@ -110,4 +110,9 @@ public final class DnsResource extends DnsEntry implements ByteBufHolder {
     public void writePayload(NameWriter nameWriter, ByteBuf into, Charset charset) {
         into.writeBytes(content, content.readerIndex(), content.readableBytes());
     }
+
+    @Override
+    public DnsResource withTimeToLive(long seconds) {
+        return new DnsResource(name(), type(), dnsClass(), seconds, content.duplicate());
+    }
 }

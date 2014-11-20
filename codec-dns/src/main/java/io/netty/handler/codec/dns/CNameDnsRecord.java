@@ -80,4 +80,9 @@ public final class CNameDnsRecord extends DnsEntry {
                 .append(", cname: ").append(cname())
                 .append(')').toString();
     }
+
+    @Override
+    public CNameDnsRecord withTimeToLive(long seconds) {
+        return new CNameDnsRecord(cname, type(), dnsClass(), seconds, cname);
+    }
 }

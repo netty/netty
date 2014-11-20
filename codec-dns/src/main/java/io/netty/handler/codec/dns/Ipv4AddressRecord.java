@@ -168,4 +168,9 @@ public final class Ipv4AddressRecord extends DnsEntry {
         }
         return val;
     }
+
+    @Override
+    public Ipv4AddressRecord withTimeToLive(long seconds) {
+        return new Ipv4AddressRecord(name(), type(), dnsClass(), seconds, address);
+    }
 }

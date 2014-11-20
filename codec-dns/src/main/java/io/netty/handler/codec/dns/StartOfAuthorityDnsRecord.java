@@ -174,4 +174,10 @@ public final class StartOfAuthorityDnsRecord extends DnsEntry {
                 .append(", minimumTimeToLive: ").append(minimumTimeToLive())
                 .append(')').toString();
     }
+
+    @Override
+    public StartOfAuthorityDnsRecord withTimeToLive(long seconds) {
+        return new StartOfAuthorityDnsRecord(name(), type(), dnsClass(), primaryNs, adminMailbox,
+                serialNumber, refreshInterval, retryInterval, expirationLimit, minimumTimeToLive, seconds);
+    }
 }

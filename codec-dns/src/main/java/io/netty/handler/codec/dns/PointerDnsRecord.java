@@ -77,4 +77,9 @@ public final class PointerDnsRecord extends DnsEntry {
     protected void writePayload(NameWriter nameWriter, ByteBuf into, Charset charset) {
         nameWriter.writeName(hostName, into, charset);
     }
+
+    @Override
+    public PointerDnsRecord withTimeToLive(long seconds) {
+        return new PointerDnsRecord(name(), type(), dnsClass(), hostName, seconds);
+    }
 }
