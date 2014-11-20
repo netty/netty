@@ -68,7 +68,7 @@ public final class HttpProxyHandler extends ProxyHandler {
         ByteBuf authz = Unpooled.copiedBuffer(username + ':' + password, CharsetUtil.UTF_8);
         ByteBuf authzBase64 = Base64.encode(authz, false);
 
-        authorization = new AsciiString(authzBase64.toString(CharsetUtil.US_ASCII));
+        authorization = new AsciiString("Basic " + authzBase64.toString(CharsetUtil.US_ASCII));
 
         authz.release();
         authzBase64.release();
@@ -131,7 +131,7 @@ public final class HttpProxyHandler extends ProxyHandler {
         }
 
         if (authorization != null) {
-            req.headers().set(HttpHeaderNames.AUTHORIZATION, authorization);
+            req.headers().set(HttpHeaderNames.PROXY_AUTHORIZATION, authorization);
         }
 
         return req;

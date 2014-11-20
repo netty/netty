@@ -35,6 +35,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.StringUtil;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -86,15 +87,18 @@ final class HttpProxyServer extends ProxyServer {
 
         boolean authzSuccess = false;
         if (username != null) {
-            CharSequence authz = req.headers().get(HttpHeaderNames.AUTHORIZATION);
+            CharSequence authz = req.headers().get(HttpHeaderNames.PROXY_AUTHORIZATION);
             if (authz != null) {
-                ByteBuf authzBuf64 = Unpooled.copiedBuffer(authz, CharsetUtil.US_ASCII);
+                String[] authzParts = StringUtil.split(authz.toString(), ' ', 2);
+                ByteBuf authzBuf64 = Unpooled.copiedBuffer(authzParts[1], CharsetUtil.US_ASCII);
                 ByteBuf authzBuf = Base64.decode(authzBuf64);
-                authz = authzBuf.toString(CharsetUtil.US_ASCII);
+
+                String expectedAuthz = username + ':' + password;
+                authzSuccess = "Basic".equals(authzParts[0]) &&
+                               expectedAuthz.equals(authzBuf.toString(CharsetUtil.US_ASCII));
+
                 authzBuf64.release();
                 authzBuf.release();
-                String expectedAuthz = username + ':' + password;
-                authzSuccess = expectedAuthz.equals(authz);
             }
         } else {
             authzSuccess = true;
