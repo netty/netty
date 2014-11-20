@@ -341,7 +341,6 @@ public class DataCompressionHttp2Test {
                 int processedBytes = buf.readableBytes() + padding;
 
                 buf.readBytes(serverOut, buf.readableBytes());
-                buf.release();
                 return processedBytes;
             }
         }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), anyInt(),

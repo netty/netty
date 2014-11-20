@@ -94,23 +94,30 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
             decompressor.incrementDecompressedByes(compressedBytes);
             processedBytes = compressedBytes;
         } else {
-            decompressor.incrementDecompressedByes(padding);
-            for (;;) {
-                ByteBuf nextBuf = nextReadableBuf(channel);
-                boolean decompressedEndOfStream = nextBuf == null && endOfStream;
-                if (decompressedEndOfStream && channel.finish()) {
-                    nextBuf = nextReadableBuf(channel);
-                    decompressedEndOfStream = nextBuf == null;
-                }
+            try {
+                decompressor.incrementDecompressedByes(padding);
+                for (;;) {
+                    ByteBuf nextBuf = nextReadableBuf(channel);
+                    boolean decompressedEndOfStream = nextBuf == null && endOfStream;
+                    if (decompressedEndOfStream && channel.finish()) {
+                        nextBuf = nextReadableBuf(channel);
+                        decompressedEndOfStream = nextBuf == null;
+                    }
 
-                decompressor.incrementDecompressedByes(buf.readableBytes());
-                processedBytes += listener.onDataRead(ctx, streamId, buf, padding, decompressedEndOfStream);
-                if (nextBuf == null) {
-                    break;
-                }
+                    decompressor.incrementDecompressedByes(buf.readableBytes());
+                    processedBytes += listener.onDataRead(ctx, streamId, buf, padding, decompressedEndOfStream);
+                    if (nextBuf == null) {
+                        break;
+                    }
 
-                padding = 0; // Padding is only communicated once on the first iteration
-                buf = nextBuf;
+                    padding = 0; // Padding is only communicated once on the first iteration
+                    buf.release();
+                    buf = nextBuf;
+                }
+            } finally {
+                if (buf != null) {
+                    buf.release();
+                }
             }
         }
 
