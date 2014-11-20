@@ -22,6 +22,7 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderUtil;
+import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import static io.netty.util.internal.ObjectUtil.*;
@@ -37,7 +38,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         @Override
         public boolean mustSendImmediately(FullHttpMessage msg) {
             if (msg instanceof FullHttpResponse) {
-                return ((FullHttpResponse) msg).status().isInformational();
+                return ((FullHttpResponse) msg).status().codeClass() == HttpStatusClass.INFORMATIONAL;
             }
             if (msg instanceof FullHttpRequest) {
                 return msg.headers().contains(HttpHeaderNames.EXPECT);
