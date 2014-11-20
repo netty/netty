@@ -435,25 +435,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
             return NETWORK_AUTHENTICATION_REQUIRED;
         }
 
-        final String reasonPhrase;
-
-        if (code < 100) {
-            reasonPhrase = "Unknown Status";
-        } else if (code < 200) {
-            reasonPhrase = "Informational";
-        } else if (code < 300) {
-            reasonPhrase = "Successful";
-        } else if (code < 400) {
-            reasonPhrase = "Redirection";
-        } else if (code < 500) {
-            reasonPhrase = "Client Error";
-        } else if (code < 600) {
-            reasonPhrase = "Server Error";
-        } else {
-            reasonPhrase = "Unknown Status";
-        }
-
-        return new HttpResponseStatus(code, reasonPhrase + " (" + code + ')');
+        return new HttpResponseStatus(code);
     }
 
     /**
@@ -488,13 +470,20 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
 
     private final int code;
     private final AsciiString codeAsText;
+    private HttpStatusClass codeClass;
 
     private final String reasonPhrase;
     private final byte[] bytes;
 
     /**
-     * Creates a new instance with the specified {@code code} and its
-     * {@code reasonPhrase}.
+     * Creates a new instance with the specified {@code code} and the auto-generated default reason phrase.
+     */
+    private HttpResponseStatus(int code) {
+        this(code, HttpStatusClass.valueOf(code).defaultReasonPhrase() + " (" + code + ')', false);
+    }
+
+    /**
+     * Creates a new instance with the specified {@code code} and its {@code reasonPhrase}.
      */
     public HttpResponseStatus(int code, String reasonPhrase) {
         this(code, reasonPhrase, false);
@@ -550,6 +539,17 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
      */
     public String reasonPhrase() {
         return reasonPhrase;
+    }
+
+    /**
+     * Returns the class of this {@link HttpResponseStatus}
+     */
+    public HttpStatusClass codeClass() {
+        HttpStatusClass type = this.codeClass;
+        if (type == null) {
+            this.codeClass = type = HttpStatusClass.valueOf(code);
+        }
+        return type;
     }
 
     @Override
