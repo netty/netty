@@ -28,7 +28,7 @@ public interface Http2FrameListener {
      *
      * @param ctx the context from the handler where the frame was read.
      * @param streamId the subject stream for the frame.
-     * @param data payload buffer for the frame. If this buffer will be released by the codec.
+     * @param data payload buffer for the frame. This buffer will be released by the codec.
      * @param padding the number of padding bytes found at the end of the frame.
      * @param endOfStream Indicates whether this is the last frame to be sent from the remote
      *            endpoint for this stream.
