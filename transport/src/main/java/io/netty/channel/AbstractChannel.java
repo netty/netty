@@ -617,13 +617,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
             this.outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
 
+            Throwable error = null;
             try {
                 doClose();
-                closeFuture.setClosed();
-                safeSetSuccess(promise);
             } catch (Throwable t) {
-                closeFuture.setClosed();
-                safeSetFailure(promise, t);
+                error = t;
             }
 
             // Fail all the queued messages
@@ -646,6 +644,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                             deregister(voidPromise());
                         }
                     });
+                }
+
+                // Now complete the closeFuture and promise.
+                closeFuture.setClosed();
+                if (error != null) {
+                    safeSetFailure(promise, error);
+                } else {
+                    safeSetSuccess(promise);
                 }
             }
         }
