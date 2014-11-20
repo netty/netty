@@ -71,7 +71,7 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
                 new DefaultHttp2InboundFlowController(connection, frameWriter),
                 new DefaultHttp2OutboundFlowController(connection, frameWriter),
                 new DelegatingDecompressorFrameListener(connection,
-                        InboundHttp2ToHttpAdapter.forConnection(connection)
+                        new InboundHttp2ToHttpAdapter.Builder(connection)
                                 .maxContentLength(maxContentLength)
                                 .propagateSettings(true)
                                 .build()));

@@ -62,16 +62,6 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
     protected final IntObjectMap<FullHttpMessage> messageMap;
     private final boolean propagateSettings;
 
-    /**
-     * Creates a new {@link InboundHttp2ToHttpAdapter} builder for the specified {@link Http2Connection}.
-     *
-     * @param connection The object which will provide connection notification events for the current connection
-     * @return {@link Builder} the builder for the {@link InboundHttp2ToHttpAdapter}
-     */
-    public static Builder forConnection(Http2Connection connection) {
-        return new Builder(connection);
-    }
-
     public static class Builder {
 
         private final Http2Connection connection;
@@ -79,7 +69,12 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         private boolean validateHttpHeaders;
         private boolean propagateSettings;
 
-        Builder(Http2Connection connection) {
+        /**
+         * Creates a new {@link InboundHttp2ToHttpAdapter} builder for the specified {@link Http2Connection}.
+         *
+         * @param connection The object which will provide connection notification events for the current connection
+         */
+        public Builder(Http2Connection connection) {
             this.connection = connection;
         }
 

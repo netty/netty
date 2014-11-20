@@ -41,21 +41,23 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
             HttpUtil.OUT_OF_MESSAGE_SEQUENCE_RETURN_CODE.toString());
     private final IntObjectMap<HttpHeaders> outOfMessageFlowHeaders;
 
-    /**
-     * Creates a new {@link InboundHttp2ToHttpAdapter} builder for the specified {@link Http2Connection}.
-     *
-     * @param connection The object which will provide connection notification events for the current connection
-     * @return {@link InboundHttp2ToHttpAdapter.Builder} the builder for the {@link InboundHttp2ToHttpAdapter}.
-     */
-    public static Builder forConnection(Http2Connection connection) {
-        return new Builder(connection) {
-            @Override
-            public InboundHttp2ToHttpAdapter build() {
-                final InboundHttp2ToHttpPriorityAdapter instance = new InboundHttp2ToHttpPriorityAdapter(this);
-                instance.connection.addListener(instance);
-                return instance;
-            }
-        };
+    public static class Builder extends InboundHttp2ToHttpAdapter.Builder {
+
+        /**
+         * Creates a new {@link InboundHttp2ToHttpPriorityAdapter} builder for the specified {@link Http2Connection}.
+         *
+         * @param connection The object which will provide connection notification events for the current connection
+         */
+        public Builder(Http2Connection connection) {
+            super(connection);
+        }
+
+        @Override
+        public InboundHttp2ToHttpPriorityAdapter build() {
+            final InboundHttp2ToHttpPriorityAdapter instance = new InboundHttp2ToHttpPriorityAdapter(this);
+            instance.connection.addListener(instance);
+            return instance;
+        }
     }
 
     private InboundHttp2ToHttpPriorityAdapter(Builder builder) {
