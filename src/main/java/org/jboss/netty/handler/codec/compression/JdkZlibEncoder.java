@@ -39,16 +39,13 @@ import java.util.zip.Deflater;
  */
 public class JdkZlibEncoder extends OneToOneStrictEncoder implements LifeCycleAwareChannelHandler {
 
-    private final byte[] out = new byte[8192];
+    private final ZlibWrapper wrapper;
     private final Deflater deflater;
     private final AtomicBoolean finished = new AtomicBoolean();
     private volatile ChannelHandlerContext ctx;
+    private byte[] out;
 
-    /*
-     * GZIP support
-     */
-    private final boolean gzip;
-    private final CRC32 crc = new CRC32();
+    private final CRC32 crc;
     private static final byte[] gzipHeader = {0x1f, (byte) 0x8b, Deflater.DEFLATED, 0, 0, 0, 0, 0, 0, 0};
     private boolean writeHeader = true;
 
@@ -112,8 +109,13 @@ public class JdkZlibEncoder extends OneToOneStrictEncoder implements LifeCycleAw
                     "allowed for compression.");
         }
 
-        gzip = wrapper == ZlibWrapper.GZIP;
+        this.wrapper = wrapper;
         deflater = new Deflater(compressionLevel, wrapper != ZlibWrapper.ZLIB);
+        if (wrapper == ZlibWrapper.GZIP) {
+            crc = new CRC32();
+        } else {
+            crc = null;
+        }
     }
 
     /**
@@ -153,7 +155,8 @@ public class JdkZlibEncoder extends OneToOneStrictEncoder implements LifeCycleAw
             throw new NullPointerException("dictionary");
         }
 
-        gzip = false;
+        wrapper = ZlibWrapper.ZLIB;
+        crc = null;
         deflater = new Deflater(compressionLevel);
         deflater.setDictionary(dictionary);
     }
@@ -164,6 +167,10 @@ public class JdkZlibEncoder extends OneToOneStrictEncoder implements LifeCycleAw
             throw new IllegalStateException("not added to a pipeline");
         }
         return finishEncode(ctx, null);
+    }
+
+    private boolean isGzip() {
+        return wrapper == ZlibWrapper.GZIP;
     }
 
     public boolean isClosed() {
@@ -180,11 +187,11 @@ public class JdkZlibEncoder extends OneToOneStrictEncoder implements LifeCycleAw
         byte[] in = new byte[uncompressed.readableBytes()];
         uncompressed.readBytes(in);
 
-        int sizeEstimate = (int) Math.ceil(in.length * 1.001) + 12;
+        int sizeEstimate = estimateCompressedSize(in.length);
         ChannelBuffer compressed = ChannelBuffers.dynamicBuffer(sizeEstimate, channel.getConfig().getBufferFactory());
 
         synchronized (deflater) {
-            if (gzip) {
+            if (isGzip()) {
                 crc.update(in);
                 if (writeHeader) {
                     compressed.writeBytes(gzipHeader);
@@ -194,12 +201,26 @@ public class JdkZlibEncoder extends OneToOneStrictEncoder implements LifeCycleAw
 
             deflater.setInput(in);
             while (!deflater.needsInput()) {
-                int numBytes = deflater.deflate(out, 0, out.length, Deflater.SYNC_FLUSH);
-                compressed.writeBytes(out, 0, numBytes);
+                deflate(compressed);
             }
         }
 
         return compressed;
+    }
+
+    private int estimateCompressedSize(int originalSize) {
+        int sizeEstimate = (int) Math.ceil(originalSize * 1.001) + 12;
+        if (writeHeader) {
+            switch (wrapper) {
+            case GZIP:
+                sizeEstimate += gzipHeader.length;
+                break;
+            case ZLIB:
+                sizeEstimate += 2; // first two magic bytes
+                break;
+            }
+        }
+        return sizeEstimate;
     }
 
     @Override
@@ -231,7 +252,8 @@ public class JdkZlibEncoder extends OneToOneStrictEncoder implements LifeCycleAw
             return future;
         }
 
-        ChannelBuffer footer = ChannelBuffers.dynamicBuffer(ctx.getChannel().getConfig().getBufferFactory());
+        final ChannelBuffer footer = ChannelBuffers.dynamicBuffer(ctx.getChannel().getConfig().getBufferFactory());
+        final boolean gzip = isGzip();
         synchronized (deflater) {
             if (gzip && writeHeader) {
                 // Write the GZIP header first if not written yet. (i.e. user wrote nothing.)
@@ -241,8 +263,7 @@ public class JdkZlibEncoder extends OneToOneStrictEncoder implements LifeCycleAw
 
             deflater.finish();
             while (!deflater.finished()) {
-                int numBytes = deflater.deflate(out, 0, out.length);
-                footer.writeBytes(out, 0, numBytes);
+                deflate(footer);
             }
             if (gzip) {
                 int crcValue = (int) crc.getValue();
@@ -273,6 +294,29 @@ public class JdkZlibEncoder extends OneToOneStrictEncoder implements LifeCycleAw
         }
 
         return future;
+    }
+
+    private void deflate(ChannelBuffer out) {
+        int numBytes;
+        if (out.hasArray()) {
+            do {
+                int writerIndex = out.writerIndex();
+                numBytes = deflater.deflate(
+                        out.array(), out.arrayOffset() + writerIndex, out.writableBytes(),
+                        Deflater.SYNC_FLUSH);
+                out.writerIndex(writerIndex + numBytes);
+            } while (numBytes > 0);
+        } else {
+            byte[] tmpOut = this.out;
+            if (tmpOut == null) {
+                tmpOut = this.out = new byte[8192];
+            }
+
+            do {
+                numBytes = deflater.deflate(tmpOut, 0, tmpOut.length, Deflater.SYNC_FLUSH);
+                out.writeBytes(tmpOut, 0, numBytes);
+            } while (numBytes > 0);
+        }
     }
 
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
