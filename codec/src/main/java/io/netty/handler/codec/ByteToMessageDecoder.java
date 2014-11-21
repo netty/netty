@@ -16,6 +16,7 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -67,13 +68,26 @@ import java.util.List;
  */
 public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter {
 
+    private final boolean useCompositeByteBuf;
+
     ByteBuf cumulation;
     private boolean singleDecode;
     private boolean decodeWasNull;
     private boolean first;
 
+    /**
+     * See {@link #ByteToMessageDecoder(boolean)}. Using {@code true} as default.
+     */
     protected ByteToMessageDecoder() {
+        this(true);
+    }
+
+    /**
+     * {@code true} if a {@link CompositeByteBuf} should be used to handle the remaining bytes.
+     */
+    protected ByteToMessageDecoder(boolean useCompositeByteBuf) {
         CodecUtil.ensureNotSharable(this);
+        this.useCompositeByteBuf = useCompositeByteBuf;
     }
 
     /**
@@ -151,19 +165,45 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 if (first) {
                     cumulation = data;
                 } else {
-                    if (cumulation.writerIndex() > cumulation.maxCapacity() - data.readableBytes()
-                            || cumulation.refCnt() > 1) {
-                        // Expand cumulation (by replace it) when either there is not more room in the buffer
-                        // or if the refCnt is greater then 1 which may happen when the user use slice().retain() or
-                        // duplicate().retain().
-                        //
-                        // See:
-                        // - https://github.com/netty/netty/issues/2327
-                        // - https://github.com/netty/netty/issues/1764
-                        expandCumulation(ctx, data.readableBytes());
+                    if (useCompositeByteBuf) {
+                        if (cumulation.refCnt() > 1) {
+                            // Expand cumulation (by replace it) when either there is not more room in the buffer
+                            // or if the refCnt is greater then 1 which may happen when the user use slice().retain() or
+                            // duplicate().retain().
+                            //
+                            // See:
+                            // - https://github.com/netty/netty/issues/2327
+                            // - https://github.com/netty/netty/issues/1764
+                            expandCumulation(ctx, data.readableBytes());
+                            cumulation.writeBytes(data);
+                            data.release();
+                        } else {
+                            CompositeByteBuf composite;
+                            if (cumulation instanceof CompositeByteBuf) {
+                                composite = (CompositeByteBuf) cumulation;
+                            } else {
+                                int readable = cumulation.readableBytes();
+                                composite = ctx.alloc().compositeBuffer();
+                                composite.addComponent(cumulation).writerIndex(readable);
+                                cumulation = composite;
+                            }
+                            composite.addComponent(data).writerIndex(composite.writerIndex() + data.readableBytes());
+                        }
+                    } else {
+                        if (cumulation.writerIndex() > cumulation.maxCapacity() - data.readableBytes()
+                                || cumulation.refCnt() > 1) {
+                            // Expand cumulation (by replace it) when either there is not more room in the buffer
+                            // or if the refCnt is greater then 1 which may happen when the user use slice().retain() or
+                            // duplicate().retain().
+                            //
+                            // See:
+                            // - https://github.com/netty/netty/issues/2327
+                            // - https://github.com/netty/netty/issues/1764
+                            expandCumulation(ctx, data.readableBytes());
+                        }
+                        cumulation.writeBytes(data);
+                        data.release();
                     }
-                    cumulation.writeBytes(data);
-                    data.release();
                 }
                 callDecode(ctx, cumulation, out);
             } catch (DecoderException e) {

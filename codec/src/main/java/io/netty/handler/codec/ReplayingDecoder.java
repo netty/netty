@@ -288,6 +288,18 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
     }
 
     /**
+     * Creates a new instance with the specified initial state.
+     */
+    protected ReplayingDecoder(S initialState, boolean useCompositeByteBuf) {
+        super(useCompositeByteBuf);
+        state = initialState;
+    }
+
+    /**
+     * {@code true} if a {@link io.netty.buffer.CompositeByteBuf} should be used to handle the remaining bytes.
+     */
+
+    /**
      * Stores the internal cumulative buffer's reader position.
      */
     protected void checkpoint() {
