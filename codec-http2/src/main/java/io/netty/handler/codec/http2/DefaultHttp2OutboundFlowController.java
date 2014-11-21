@@ -17,9 +17,11 @@ package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
-import static io.netty.handler.codec.http2.Http2Exception.protocolError;
+import static io.netty.handler.codec.http2.Http2Exception.streamError;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -224,7 +226,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     private OutboundFlowState stateOrFail(int streamId) throws Http2Exception {
         OutboundFlowState state = state(streamId);
         if (state == null) {
-            throw protocolError("Missing flow control window for stream: %d", streamId);
+            throw connectionError(PROTOCOL_ERROR, "Missing flow control window for stream: %d", streamId);
         }
         return state;
     }
@@ -404,8 +406,8 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
          */
         private int incrementStreamWindow(int delta) throws Http2Exception {
             if (delta > 0 && Integer.MAX_VALUE - delta < window) {
-                throw new Http2StreamException(stream.id(), FLOW_CONTROL_ERROR, "Window size overflow for stream: "
-                        + stream.id());
+                throw streamError(stream.id(), FLOW_CONTROL_ERROR,
+                        "Window size overflow for stream: %d", stream.id());
             }
             int previouslyStreamable = streamableBytes();
             window += delta;
@@ -476,7 +478,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                 if (frame == null) {
                     break;
                 }
-                frame.writeError(Http2StreamException.format(stream.id(), INTERNAL_ERROR,
+                frame.writeError(streamError(stream.id(), INTERNAL_ERROR,
                         "Stream closed before write could take place"));
             }
         }

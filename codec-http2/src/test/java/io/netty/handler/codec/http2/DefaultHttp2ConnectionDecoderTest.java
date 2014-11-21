@@ -19,7 +19,7 @@ import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.emptyPingBuf;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
-import static io.netty.handler.codec.http2.Http2Exception.protocolError;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.CharsetUtil.UTF_8;
@@ -183,7 +183,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         }
     }
 
-    @Test(expected = Http2StreamException.class)
+    @Test(expected = Http2Exception.class)
     public void dataReadForStreamInInvalidStateShouldThrow() throws Exception {
         // Throw an exception when checking stream state.
         when(stream.state()).thenReturn(Http2Stream.State.CLOSED);
@@ -371,7 +371,7 @@ public class DefaultHttp2ConnectionDecoderTest {
 
     @Test(expected = Http2Exception.class)
     public void windowUpdateReadForUnknownStreamShouldThrow() throws Exception {
-        when(connection.requireStream(5)).thenThrow(protocolError(""));
+        when(connection.requireStream(5)).thenThrow(connectionError(PROTOCOL_ERROR, ""));
         decode().onWindowUpdateRead(ctx, 5, 10);
     }
 
@@ -392,7 +392,7 @@ public class DefaultHttp2ConnectionDecoderTest {
 
     @Test(expected = Http2Exception.class)
     public void rstStreamReadForUnknownStreamShouldThrow() throws Exception {
-        when(connection.requireStream(5)).thenThrow(protocolError(""));
+        when(connection.requireStream(5)).thenThrow(connectionError(PROTOCOL_ERROR, ""));
         decode().onRstStreamRead(ctx, 5, PROTOCOL_ERROR.code());
     }
 

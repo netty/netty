@@ -14,6 +14,8 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import java.util.Map.Entry;
 
 import io.netty.channel.ChannelHandlerContext;
@@ -210,7 +212,7 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
         if (msg == null) {
             HttpHeaders httpHeaders = outOfMessageFlowHeaders.remove(streamId);
             if (httpHeaders == null) {
-                throw Http2Exception.protocolError("Priority Frame recieved for unknown stream id %d", streamId);
+                throw connectionError(PROTOCOL_ERROR, "Priority Frame recieved for unknown stream id %d", streamId);
             }
 
             Http2Headers http2Headers = new DefaultHttp2Headers();

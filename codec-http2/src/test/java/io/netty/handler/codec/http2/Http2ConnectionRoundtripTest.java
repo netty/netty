@@ -15,6 +15,7 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2TestUtil.as;
 import static io.netty.handler.codec.http2.Http2TestUtil.randomString;
 import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
@@ -137,7 +138,7 @@ public class Http2ConnectionRoundtripTest {
         clientChannel.pipeline().addFirst(new ChannelHandlerAdapter() {
             @Override
             public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-                throw Http2Exception.protocolError("Fake Exception");
+                throw Http2Exception.connectionError(PROTOCOL_ERROR, "Fake Exception");
             }
         });
 

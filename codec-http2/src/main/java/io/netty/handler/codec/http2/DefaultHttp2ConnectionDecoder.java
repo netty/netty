@@ -16,9 +16,10 @@ package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
-import static io.netty.handler.codec.http2.Http2Exception.protocolError;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
-import static io.netty.handler.codec.http2.Http2StreamException.streamClosedError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -160,7 +161,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         Http2FrameSizePolicy inboundFrameSizePolicy = config.frameSizePolicy();
         if (pushEnabled != null) {
             if (connection.isServer()) {
-                throw protocolError("Server sending SETTINGS frame with ENABLE_PUSH specified");
+                throw connectionError(PROTOCOL_ERROR, "Server sending SETTINGS frame with ENABLE_PUSH specified");
             }
             connection.local().allowPushTo(pushEnabled);
         }
@@ -234,16 +235,14 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                         shouldApplyFlowControl = true;
                     }
                     if (!shouldIgnore) {
-                        // Stream error.
-                        error = streamClosedError(stream.id(), "Stream %d in unexpected state: %s",
+                        error = streamError(stream.id(), STREAM_CLOSED, "Stream %d in unexpected state: %s",
                                 stream.id(), stream.state());
                     }
                     break;
                 default:
                     if (!shouldIgnore) {
-                        // Connection error.
-                        error = protocolError("Stream %d in unexpected state: %s", stream.id(),
-                            stream.state());
+                        error = streamError(stream.id(), PROTOCOL_ERROR,
+                                "Stream %d in unexpected state: %s", stream.id(), stream.state());
                     }
                     break;
             }
@@ -304,7 +303,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
          */
         private void verifyPrefaceReceived() throws Http2Exception {
             if (!prefaceReceived) {
-                throw protocolError("Received non-SETTINGS as first frame.");
+                throw connectionError(PROTOCOL_ERROR, "Received non-SETTINGS as first frame.");
             }
         }
 
@@ -345,11 +344,11 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                     case HALF_CLOSED_REMOTE:
                     case CLOSED:
                         // Stream error.
-                        throw streamClosedError(stream.id(), "Stream %d in unexpected state: %s",
+                        throw streamError(stream.id(), STREAM_CLOSED, "Stream %d in unexpected state: %s",
                                 stream.id(), stream.state());
                     default:
                         // Connection error.
-                        throw protocolError("Stream %d in unexpected state: %s", stream.id(),
+                        throw connectionError(PROTOCOL_ERROR, "Stream %d in unexpected state: %s", stream.id(),
                                 stream.state());
                 }
             }
@@ -373,8 +372,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
             Http2Stream stream = connection.requireStream(streamId);
             verifyGoAwayNotReceived();
-            verifyRstStreamNotReceived(stream);
-            if (stream.state() == CLOSED || shouldIgnoreFrame(stream)) {
+            if (shouldIgnoreFrame(stream)) {
                 // Ignore frames for any stream created after we sent a go-away.
                 return;
             }
@@ -426,7 +424,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             final Http2FrameSizePolicy frameSizePolicy = config.frameSizePolicy();
             if (pushEnabled != null) {
                 if (connection.isServer()) {
-                    throw protocolError("Server sending SETTINGS frame with ENABLE_PUSH specified");
+                    throw connectionError(PROTOCOL_ERROR, "Server sending SETTINGS frame with ENABLE_PUSH specified");
                 }
                 connection.local().allowPushTo(pushEnabled);
             }
@@ -578,7 +576,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         private void verifyGoAwayNotReceived() throws Http2Exception {
             if (connection.goAwayReceived()) {
                 // Connection error.
-                throw protocolError("Received frames after receiving GO_AWAY");
+                throw connectionError(PROTOCOL_ERROR, "Received frames after receiving GO_AWAY");
             }
         }
 
@@ -589,7 +587,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         private void verifyRstStreamNotReceived(Http2Stream stream) throws Http2Exception {
             if (stream != null && stream.isResetReceived()) {
                 // Stream error.
-                throw streamClosedError(stream.id(),
+                throw streamError(stream.id(), STREAM_CLOSED,
                         "Frame received after receiving RST_STREAM for stream: " + stream.id());
             }
         }

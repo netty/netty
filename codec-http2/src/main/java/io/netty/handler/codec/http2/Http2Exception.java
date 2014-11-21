@@ -15,12 +15,13 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
+
 /**
- * Exception thrown when an HTTP2 error was encountered.
+ * Exception thrown when an HTTP/2 error was encountered.
  */
 public class Http2Exception extends Exception {
-    private static final long serialVersionUID = -2292608019080068769L;
-
+    private static final long serialVersionUID = -6943456574080986447L;
     private final Http2Error error;
 
     public Http2Exception(Http2Error error) {
@@ -41,15 +42,114 @@ public class Http2Exception extends Exception {
         return error;
     }
 
-    public static Http2Exception format(Http2Error error, String fmt, Object... args) {
+    /**
+     * Use if an error has occurred which can not be isolated to a single stream, but instead applies
+     * to the entire connection.
+     * @param error The type of error as defined by the HTTP/2 specification.
+     * @param fmt String with the content and format for the additional debug data.
+     * @param args Objects which fit into the format defined by {@code fmt}.
+     * @return An exception which can be translated into a HTTP/2 error.
+     */
+    public static Http2Exception connectionError(Http2Error error, String fmt, Object... args) {
         return new Http2Exception(error, String.format(fmt, args));
     }
 
-    public static Http2Exception protocolError(String fmt, Object... args) {
-        return format(Http2Error.PROTOCOL_ERROR, fmt, args);
+    /**
+     * Use if an error has occurred which can not be isolated to a single stream, but instead applies
+     * to the entire connection.
+     * @param error The type of error as defined by the HTTP/2 specification.
+     * @param cause The object which caused the error.
+     * @param fmt String with the content and format for the additional debug data.
+     * @param args Objects which fit into the format defined by {@code fmt}.
+     * @return An exception which can be translated into a HTTP/2 error.
+     */
+    public static Http2Exception connectionError(Http2Error error, Throwable cause,
+            String fmt, Object... args) {
+        return new Http2Exception(error, String.format(fmt, args), cause);
     }
 
-    public static Http2Exception flowControlError(String fmt, Object... args) {
-        return format(Http2Error.FLOW_CONTROL_ERROR, fmt, args);
+    /**
+     * Use if an error which can be isolated to a single stream has occurred.  If the {@code id} is not
+     * {@link Http2CodecUtil#CONNECTION_STREAM_ID} then a {@link Http2Exception.StreamException} will be returned.
+     * Otherwise the error is considered a connection error and a {@link Http2Exception} is returned.
+     * @param id The stream id for which the error is isolated to.
+     * @param error The type of error as defined by the HTTP/2 specification.
+     * @param fmt String with the content and format for the additional debug data.
+     * @param args Objects which fit into the format defined by {@code fmt}.
+     * @return If the {@code id} is not
+     * {@link Http2CodecUtil#CONNECTION_STREAM_ID} then a {@link Http2Exception.StreamException} will be returned.
+     * Otherwise the error is considered a connection error and a {@link Http2Exception} is returned.
+     */
+    public static Http2Exception streamError(int id, Http2Error error, String fmt, Object... args) {
+        return CONNECTION_STREAM_ID == id ?
+                Http2Exception.connectionError(error, fmt, args) :
+                    new StreamException(id, error, String.format(fmt, args));
+    }
+
+    /**
+     * Use if an error which can be isolated to a single stream has occurred.  If the {@code id} is not
+     * {@link Http2CodecUtil#CONNECTION_STREAM_ID} then a {@link Http2Exception.StreamException} will be returned.
+     * Otherwise the error is considered a connection error and a {@link Http2Exception} is returned.
+     * @param id The stream id for which the error is isolated to.
+     * @param error The type of error as defined by the HTTP/2 specification.
+     * @param cause The object which caused the error.
+     * @param fmt String with the content and format for the additional debug data.
+     * @param args Objects which fit into the format defined by {@code fmt}.
+     * @return If the {@code id} is not
+     * {@link Http2CodecUtil#CONNECTION_STREAM_ID} then a {@link Http2Exception.StreamException} will be returned.
+     * Otherwise the error is considered a connection error and a {@link Http2Exception} is returned.
+     */
+    public static Http2Exception streamError(int id, Http2Error error, Throwable cause,
+            String fmt, Object... args) {
+        return CONNECTION_STREAM_ID == id ?
+                Http2Exception.connectionError(error, cause, fmt, args) :
+                    new StreamException(id, error, String.format(fmt, args), cause);
+    }
+
+    /**
+     * Check if an exception is isolated to a single stream or the entire connection.
+     * @param e The exception to check.
+     * @return {@code true} if {@code e} is an instance of {@link Http2Exception.StreamException}.
+     * {@code false} otherwise.
+     */
+    public static boolean isStreamError(Http2Exception e) {
+        return e instanceof StreamException;
+    }
+
+    /**
+     * Get the stream id associated with an exception.
+     * @param e The exception to get the stream id for.
+     * @return {@link Http2CodecUtil#CONNECTION_STREAM_ID} if {@code e} is a connection error.
+     * Otherwise the stream id associated with the stream error.
+     */
+    public static int streamId(Http2Exception e) {
+        return isStreamError(e) ? ((StreamException) e).streamId() : CONNECTION_STREAM_ID;
+    }
+
+    /**
+     * Represents an exception that can be isolated to a single stream (as opposed to the entire connection).
+     */
+    public static final class StreamException extends Http2Exception {
+        private static final long serialVersionUID = 462766352505067095L;
+        private final int streamId;
+
+        private StreamException(int streamId, Http2Error error, String message) {
+            super(error, message);
+            this.streamId = streamId;
+        }
+
+        private StreamException(int streamId, Http2Error error, String message, Throwable cause) {
+            super(error, message, cause);
+            this.streamId = streamId;
+        }
+
+        private StreamException(int streamId, Http2Error error) {
+            super(error);
+            this.streamId = streamId;
+        }
+
+        public int streamId() {
+            return streamId;
+        }
     }
 }

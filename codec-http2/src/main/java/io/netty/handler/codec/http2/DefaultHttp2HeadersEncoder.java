@@ -16,7 +16,10 @@
 package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_TABLE_SIZE;
-import static io.netty.handler.codec.http2.Http2Exception.protocolError;
+import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.handler.codec.AsciiString;
@@ -53,7 +56,7 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
         final OutputStream stream = new ByteBufOutputStream(buffer);
         try {
             if (headers.size() > headerTable.maxHeaderListSize()) {
-                throw protocolError("Number of headers (%d) exceeds maxHeaderListSize (%d)",
+                throw connectionError(PROTOCOL_ERROR, "Number of headers (%d) exceeds maxHeaderListSize (%d)",
                         headers.size(), headerTable.maxHeaderListSize());
             }
 
@@ -85,13 +88,13 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
                 }
             });
         } catch (Exception e) {
-            throw Http2Exception.format(Http2Error.COMPRESSION_ERROR, "Failed encoding headers block: %s",
+            throw connectionError(COMPRESSION_ERROR, "Failed encoding headers block: %s",
                             e.getMessage());
         } finally {
             try {
                 stream.close();
             } catch (IOException e) {
-                throw new Http2Exception(Http2Error.INTERNAL_ERROR, e.getMessage(), e);
+                throw new Http2Exception(INTERNAL_ERROR, e.getMessage(), e);
             }
         }
     }
@@ -118,15 +121,15 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
         @Override
         public void maxHeaderTableSize(int max) throws Http2Exception {
             if (max < 0) {
-                throw protocolError("Header Table Size must be non-negative but was %d", max);
+                throw connectionError(PROTOCOL_ERROR, "Header Table Size must be non-negative but was %d", max);
             }
             try {
                 // No headers should be emitted. If they are, we throw.
                 encoder.setMaxHeaderTableSize(tableSizeChangeOutput, max);
             } catch (IOException e) {
-                throw new Http2Exception(Http2Error.COMPRESSION_ERROR, e.getMessage(), e);
+                throw new Http2Exception(COMPRESSION_ERROR, e.getMessage(), e);
             } catch (Throwable t) {
-                throw new Http2Exception(Http2Error.PROTOCOL_ERROR, t.getMessage(), t);
+                throw new Http2Exception(PROTOCOL_ERROR, t.getMessage(), t);
             }
         }
 

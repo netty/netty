@@ -65,30 +65,32 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
         if (msg instanceof FullHttpMessage) {
             FullHttpMessage httpMsg = (FullHttpMessage) msg;
             boolean hasData = httpMsg.content().isReadable();
-
-            // Provide the user the opportunity to specify the streamId
-            int streamId = 0;
+            boolean httpMsgNeedRelease = true;
             try {
-                streamId = getStreamId(httpMsg.headers());
-            } catch (Exception e) {
-                httpMsg.release();
-                promise.setFailure(e);
-                return;
-            }
+                // Provide the user the opportunity to specify the streamId
+                int streamId = getStreamId(httpMsg.headers());
 
-            // Convert and write the headers.
-            Http2Headers http2Headers = HttpUtil.toHttp2Headers(httpMsg);
-            Http2ConnectionEncoder encoder = encoder();
+                // Convert and write the headers.
+                Http2Headers http2Headers = HttpUtil.toHttp2Headers(httpMsg);
+                Http2ConnectionEncoder encoder = encoder();
 
-            if (hasData) {
-                ChannelPromiseAggregator promiseAggregator = new ChannelPromiseAggregator(promise);
-                ChannelPromise headerPromise = ctx.newPromise();
-                ChannelPromise dataPromise = ctx.newPromise();
-                promiseAggregator.add(headerPromise, dataPromise);
-                encoder.writeHeaders(ctx, streamId, http2Headers, 0, false, headerPromise);
-                encoder.writeData(ctx, streamId, httpMsg.content(), 0, true, dataPromise);
-            } else {
-                encoder.writeHeaders(ctx, streamId, http2Headers, 0, true, promise);
+                if (hasData) {
+                    ChannelPromiseAggregator promiseAggregator = new ChannelPromiseAggregator(promise);
+                    ChannelPromise headerPromise = ctx.newPromise();
+                    ChannelPromise dataPromise = ctx.newPromise();
+                    promiseAggregator.add(headerPromise, dataPromise);
+                    encoder.writeHeaders(ctx, streamId, http2Headers, 0, false, headerPromise);
+                    httpMsgNeedRelease = false;
+                    encoder.writeData(ctx, streamId, httpMsg.content(), 0, true, dataPromise);
+                } else {
+                    encoder.writeHeaders(ctx, streamId, http2Headers, 0, true, promise);
+                }
+            } catch (Throwable t) {
+                promise.tryFailure(t);
+            } finally {
+                if (httpMsgNeedRelease) {
+                    httpMsg.release();
+                }
             }
         } else {
             ctx.write(msg, promise);

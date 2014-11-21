@@ -19,8 +19,9 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
-import static io.netty.handler.codec.http2.Http2Exception.flowControlError;
-import static io.netty.handler.codec.http2.Http2Exception.protocolError;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.streamError;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -139,7 +140,7 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
     private FlowState stateOrFail(int streamId) throws Http2Exception {
         FlowState state = state(streamId);
         if (state == null) {
-            throw protocolError("Flow control window missing for stream: %d", streamId);
+            throw connectionError(PROTOCOL_ERROR, "Flow control window missing for stream: %d", streamId);
         }
         return state;
     }
@@ -244,12 +245,8 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
          */
         void returnProcessedBytes(int delta) throws Http2Exception {
             if (processedWindow - delta < window) {
-                if (stream.id() == CONNECTION_STREAM_ID) {
-                    throw new Http2Exception(INTERNAL_ERROR,
-                            "Attempting to return too many bytes for connection");
-                }
-                throw new Http2StreamException(stream.id(), INTERNAL_ERROR,
-                        "Attempting to return too many bytes for stream " + stream.id());
+                throw streamError(stream.id(), INTERNAL_ERROR,
+                        "Attempting to return too many bytes for stream %d", stream.id());
             }
             processedWindow -= delta;
         }
@@ -275,9 +272,9 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
             // and is cleared once we send a WINDOW_UPDATE frame.
             if (delta < 0 && window < lowerBound) {
                 if (stream.id() == CONNECTION_STREAM_ID) {
-                    throw flowControlError("Connection flow control window exceeded");
+                    throw connectionError(FLOW_CONTROL_ERROR, "Connection flow control window exceeded");
                 } else {
-                    throw Http2StreamException.format(stream.id(), FLOW_CONTROL_ERROR,
+                    throw streamError(stream.id(), FLOW_CONTROL_ERROR,
                             "Flow control window exceeded for stream: %d", stream.id());
                 }
             }
@@ -295,9 +292,8 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
          * @throws Http2Exception thrown if integer overflow occurs on the window.
          */
         void updatedInitialWindowSize(int delta) throws Http2Exception {
-            if (delta > 0 && window > Integer.MAX_VALUE - delta) {
-                // Integer overflow.
-                throw flowControlError("Flow control window overflowed for stream: %d", stream.id());
+            if (delta > 0 && window > Integer.MAX_VALUE - delta) { // Integer overflow.
+                throw connectionError(PROTOCOL_ERROR, "Flow control window overflowed for stream: %d", stream.id());
             }
             window += delta;
             processedWindow += delta;

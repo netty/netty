@@ -14,6 +14,7 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_ENCODING;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaderValues.DEFLATE;
@@ -29,7 +30,6 @@ import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
-import io.netty.util.CharsetUtil;
 
 /**
  * A HTTP2 frame listener that will decompress data frames according to the {@code content-encoding} header for each
@@ -294,7 +294,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
                 throw e;
             } catch (Throwable t) {
                 stream.setProperty(Http2Decompressor.class, copy);
-                throw new Http2Exception(Http2Error.INTERNAL_ERROR,
+                throw new Http2Exception(INTERNAL_ERROR,
                         "Error while returning bytes to flow control window", t);
             }
         }

@@ -20,7 +20,8 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGH
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.immediateRemovalPolicy;
-import static io.netty.handler.codec.http2.Http2Exception.protocolError;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
@@ -116,7 +117,7 @@ public class DefaultHttp2Connection implements Http2Connection {
     public Http2Stream requireStream(int streamId) throws Http2Exception {
         Http2Stream stream = stream(streamId);
         if (stream == null) {
-            throw protocolError("Stream does not exist %d", streamId);
+            throw connectionError(PROTOCOL_ERROR, "Stream does not exist %d", streamId);
         }
         return stream;
     }
@@ -430,7 +431,7 @@ public class DefaultHttp2Connection implements Http2Connection {
                 state = HALF_CLOSED_LOCAL;
                 break;
             default:
-                throw protocolError("Attempting to open non-reserved stream for push");
+                throw connectionError(PROTOCOL_ERROR, "Attempting to open non-reserved stream for push");
             }
             activate(this);
             return this;
@@ -820,14 +821,15 @@ public class DefaultHttp2Connection implements Http2Connection {
         @Override
         public DefaultStream reservePushStream(int streamId, Http2Stream parent) throws Http2Exception {
             if (parent == null) {
-                throw protocolError("Parent stream missing");
+                throw connectionError(PROTOCOL_ERROR, "Parent stream missing");
             }
             if (isLocal() ? !parent.localSideOpen() : !parent.remoteSideOpen()) {
-                throw protocolError("Stream %d is not open for sending push promise", parent.id());
+                throw connectionError(PROTOCOL_ERROR, "Stream %d is not open for sending push promise", parent.id());
             }
             if (!opposite().allowPushTo()) {
-                throw protocolError("Server push not allowed to opposite endpoint.");
+                throw connectionError(PROTOCOL_ERROR, "Server push not allowed to opposite endpoint.");
             }
+            checkNewStreamAllowed(streamId);
 
             // Create and initialize the stream.
             DefaultStream stream = new DefaultStream(streamId);
@@ -915,11 +917,11 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         private void checkNewStreamAllowed(int streamId) throws Http2Exception {
             if (isGoAway()) {
-                throw protocolError("Cannot create a stream since the connection is going away");
+                throw connectionError(PROTOCOL_ERROR, "Cannot create a stream since the connection is going away");
             }
             verifyStreamId(streamId);
             if (!acceptingNewStreams()) {
-                throw protocolError("Maximum streams exceeded for this endpoint.");
+                throw connectionError(PROTOCOL_ERROR, "Maximum streams exceeded for this endpoint.");
             }
         }
 
@@ -928,11 +930,12 @@ public class DefaultHttp2Connection implements Http2Connection {
                 throw new Http2NoMoreStreamIdsException();
             }
             if (streamId < nextStreamId) {
-                throw protocolError("Request stream %d is behind the next expected stream %d", streamId, nextStreamId);
+                throw connectionError(PROTOCOL_ERROR, "Request stream %d is behind the next expected stream %d",
+                        streamId, nextStreamId);
             }
             if (!createdStreamId(streamId)) {
-                throw protocolError("Request stream %d is not correct for %s connection", streamId, server ? "server"
-                        : "client");
+                throw connectionError(PROTOCOL_ERROR, "Request stream %d is not correct for %s connection",
+                        streamId, server ? "server" : "client");
             }
         }
 
