@@ -114,5 +114,10 @@ public interface IntObjectMap<V> {
     /**
      * Gets the values contained in this map.
      */
+    V[] values(Class<V> clazz);
+
+    /**
+     * Gets the values contatins in this map as a {@link Collection}.
+     */
     Collection<V> values();
 }
