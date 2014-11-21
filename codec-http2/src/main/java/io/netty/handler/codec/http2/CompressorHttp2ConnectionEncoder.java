@@ -111,8 +111,8 @@ public class CompressorHttp2ConnectionEncoder extends DefaultHttp2ConnectionEnco
         }
 
         try {
-            // call retain here as it will call release after its written to the channel
-            channel.writeOutbound(data.retain());
+            // The channel will release the buffer after being written
+            channel.writeOutbound(data);
             ByteBuf buf = nextReadableBuf(channel);
             if (buf == null) {
                 if (endOfStream) {

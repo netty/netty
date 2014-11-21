@@ -150,7 +150,7 @@ public class DataCompressionHttp2Test {
                 @Override
                 public void run() {
                     clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
-                    clientEncoder.writeData(ctxClient(), 3, data, 0, true, newPromiseClient());
+                    clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true, newPromiseClient());
                     ctxClient().flush();
                 }
             });
@@ -179,7 +179,7 @@ public class DataCompressionHttp2Test {
                 @Override
                 public void run() {
                     clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
-                    clientEncoder.writeData(ctxClient(), 3, data, 0, true, newPromiseClient());
+                    clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true, newPromiseClient());
                     ctxClient().flush();
                 }
             });
@@ -210,8 +210,8 @@ public class DataCompressionHttp2Test {
                 @Override
                 public void run() {
                     clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
-                    clientEncoder.writeData(ctxClient(), 3, data1, 0, false, newPromiseClient());
-                    clientEncoder.writeData(ctxClient(), 3, data2, 0, true, newPromiseClient());
+                    clientEncoder.writeData(ctxClient(), 3, data1.retain(), 0, false, newPromiseClient());
+                    clientEncoder.writeData(ctxClient(), 3, data2.retain(), 0, true, newPromiseClient());
                     ctxClient().flush();
                 }
             });
@@ -258,7 +258,7 @@ public class DataCompressionHttp2Test {
                 public void run() {
                     clientEncoder.writeSettings(ctxClient(), settings, newPromiseClient());
                     clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
-                    clientEncoder.writeData(ctxClient(), 3, data, 0, true, newPromiseClient());
+                    clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true, newPromiseClient());
                     ctxClient().flush();
                 }
             });
@@ -302,7 +302,7 @@ public class DataCompressionHttp2Test {
                 public void run() {
                     clientEncoder.writeSettings(ctxClient(), settings, newPromiseClient());
                     clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
-                    clientEncoder.writeData(ctxClient(), 3, data, 0, true, newPromiseClient());
+                    clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true, newPromiseClient());
                     ctxClient().flush();
                 }
             });
