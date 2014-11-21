@@ -14,6 +14,7 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2Exception.isStreamError;
 import static io.netty.handler.codec.http2.Http2CodecUtil.getEmbeddedHttp2Exception;
 import static io.netty.handler.codec.http2.Http2TestUtil.as;
 import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
@@ -243,7 +244,7 @@ public class InboundHttp2ToHttpAdapterTest {
             }
         });
         awaitRequests();
-        assertTrue(serverException instanceof Http2StreamException);
+        assertTrue(isStreamError(serverException));
     }
 
     @Test

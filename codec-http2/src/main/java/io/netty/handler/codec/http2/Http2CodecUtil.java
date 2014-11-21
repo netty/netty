@@ -37,6 +37,8 @@ public final class Http2CodecUtil {
     public static final int CONNECTION_STREAM_ID = 0;
     public static final int HTTP_UPGRADE_STREAM_ID = 1;
     public static final String HTTP_UPGRADE_SETTINGS_HEADER = "HTTP2-Settings";
+    // Draft 15 is actually supported but because draft 15 and draft 14 are binary compatible draft 14 is advertised
+    // for interoperability with technologies that have not yet updated, or are also advertising the older draft.
     public static final String HTTP_UPGRADE_PROTOCOL_NAME = "h2c-14";
     public static final String TLS_UPGRADE_PROTOCOL_NAME = "h2-14";
 

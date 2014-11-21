@@ -14,6 +14,9 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.TooLongFrameException;
@@ -261,13 +264,13 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
                     throws Http2Exception {
         FullHttpMessage msg = messageMap.get(streamId);
         if (msg == null) {
-            throw Http2Exception.protocolError("Data Frame recieved for unknown stream id %d", streamId);
+            throw connectionError(PROTOCOL_ERROR, "Data Frame recieved for unknown stream id %d", streamId);
         }
 
         ByteBuf content = msg.content();
         final int dataReadableBytes = data.readableBytes();
         if (content.readableBytes() > maxContentLength - dataReadableBytes) {
-            throw Http2Exception.format(Http2Error.INTERNAL_ERROR,
+            throw connectionError(INTERNAL_ERROR,
                             "Content length exceeded max of %d for stream id %d", maxContentLength, streamId);
         }
 
@@ -313,7 +316,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         // A push promise should not be allowed to add headers to an existing stream
         FullHttpMessage msg = processHeadersBegin(ctx, promisedStreamId, headers, false, false, false);
         if (msg == null) {
-            throw Http2Exception.protocolError("Push Promise Frame recieved for pre-existing stream id %d",
+            throw connectionError(PROTOCOL_ERROR, "Push Promise Frame recieved for pre-existing stream id %d",
                             promisedStreamId);
         }
 

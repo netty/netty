@@ -17,8 +17,10 @@ package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_HEADER_SIZE;
+import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
-import static io.netty.handler.codec.http2.Http2Exception.protocolError;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.handler.codec.AsciiString;
@@ -71,7 +73,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
             }
 
             if (headers.size() > headerTable.maxHeaderListSize()) {
-                throw protocolError("Number of headers (%d) exceeds maxHeaderListSize (%d)",
+                throw connectionError(PROTOCOL_ERROR, "Number of headers (%d) exceeds maxHeaderListSize (%d)",
                         headers.size(), headerTable.maxHeaderListSize());
             }
 
@@ -82,12 +84,12 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
             // Default handler for any other types of errors that may have occurred. For example,
             // the the Header builder throws IllegalArgumentException if the key or value was invalid
             // for any reason (e.g. the key was an invalid pseudo-header).
-            throw new Http2Exception(Http2Error.PROTOCOL_ERROR, e.getMessage(), e);
+            throw new Http2Exception(PROTOCOL_ERROR, e.getMessage(), e);
         } finally {
             try {
                 in.close();
             } catch (IOException e) {
-                throw new Http2Exception(Http2Error.INTERNAL_ERROR, e.getMessage(), e);
+                throw new Http2Exception(INTERNAL_ERROR, e.getMessage(), e);
             }
         }
     }
@@ -99,12 +101,12 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
         @Override
         public void maxHeaderTableSize(int max) throws Http2Exception {
             if (max < 0) {
-                throw protocolError("Header Table Size must be non-negative but was %d", max);
+                throw connectionError(PROTOCOL_ERROR, "Header Table Size must be non-negative but was %d", max);
             }
             try {
                 decoder.setMaxHeaderTableSize(max);
             } catch (Throwable t) {
-                throw Http2Exception.format(Http2Error.PROTOCOL_ERROR, t.getMessage(), t);
+                throw connectionError(PROTOCOL_ERROR, t.getMessage(), t);
             }
         }
 
