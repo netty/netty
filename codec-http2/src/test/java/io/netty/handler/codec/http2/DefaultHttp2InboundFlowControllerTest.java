@@ -179,12 +179,14 @@ public class DefaultHttp2InboundFlowControllerTest {
         int data2 = window(STREAM_ID);
         applyFlowControl(STREAM_ID, data2, 0, false);
         returnProcessedBytes(STREAM_ID, data2);
-        verifyWindowUpdateSent(STREAM_ID, data1 + data2);
+        verifyWindowUpdateSent(STREAM_ID, data2);
         verifyWindowUpdateNotSent(CONNECTION_STREAM_ID);
-        assertEquals(DEFAULT_WINDOW_SIZE, window(STREAM_ID));
+        assertEquals(DEFAULT_WINDOW_SIZE - data1, window(STREAM_ID));
         assertEquals(DEFAULT_WINDOW_SIZE * 2 - data2 , window(CONNECTION_STREAM_ID));
 
         reset(frameWriter);
+        returnProcessedBytes(STREAM_ID, data1);
+        verifyWindowUpdateNotSent(STREAM_ID);
 
         // Read enough data to cause a WINDOW_UPDATE for both the stream and connection and
         // verify the new maximum of the connection window.
