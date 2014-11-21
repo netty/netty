@@ -14,12 +14,6 @@
  */
 package io.netty.util.collection;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-
 import org.junit.Before;
 import org.junit.Test;
 
@@ -29,6 +23,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
+
+import static org.junit.Assert.*;
 
 /**
  * Tests for {@link IntObjectHashMap}.
@@ -281,19 +277,28 @@ public class IntObjectHashMapTest {
         map.put(4, new Value("v4"));
         map.remove(4);
 
-        Collection<Value> values = map.values();
-        assertEquals(3, values.size());
-
+        // Ensure values() return all values.
         Set<Value> expected = new HashSet<Value>();
+        Set<Value> actual = new HashSet<Value>();
+
         expected.add(v1);
         expected.add(v2);
         expected.add(v3);
 
-        Set<Value> found = new HashSet<Value>();
-        for (Value value : values) {
-            assertTrue(found.add(value));
+        Value[] valueArray = map.values(Value.class);
+        assertEquals(3, valueArray.length);
+        for (Value value : valueArray) {
+            assertTrue(actual.add(value));
         }
-        assertEquals(expected, found);
+        assertEquals(expected, actual);
+        actual.clear();
+
+        Collection<Value> valueCollection = map.values();
+        assertEquals(3, valueCollection.size());
+        for (Value value : valueCollection) {
+            assertTrue(actual.add(value));
+        }
+        assertEquals(expected, actual);
     }
 
     @Test
@@ -319,14 +324,14 @@ public class IntObjectHashMapTest {
             map2.put(key, key);
         }
         assertEquals(map1.hashCode(), map2.hashCode());
-        assertTrue(map1.equals(map2));
+        assertEquals(map1, map2);
         // Remove one "middle" element, maps should now be non-equals.
         int[] keys = map1.keys();
         map2.remove(keys[50]);
         assertFalse(map1.equals(map2));
         // Put it back; will likely be in a different position, but maps will be equal again.
         map2.put(keys[50], map1.keys()[50]);
-        assertTrue(map1.equals(map2));
+        assertEquals(map1, map2);
         assertEquals(map1.hashCode(), map2.hashCode());
         // Make map2 have one extra element, will be non-equal.
         map2.put(1000, 1000);
@@ -340,7 +345,7 @@ public class IntObjectHashMapTest {
             map2.put(key, key);
         }
         assertEquals(map1.hashCode(), map2.hashCode());
-        assertTrue(map1.equals(map2));
+        assertEquals(map1, map2);
     }
 
     @Test

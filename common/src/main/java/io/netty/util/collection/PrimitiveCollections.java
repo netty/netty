@@ -107,6 +107,11 @@ public final class PrimitiveCollections {
         }
 
         @Override
+        public Object[] values(Class<Object> clazz) {
+            return EmptyArrays.EMPTY_OBJECTS;
+        }
+
+        @Override
         public Collection<Object> values() {
             return Collections.emptyList();
         }
@@ -183,6 +188,11 @@ public final class PrimitiveCollections {
         @Override
         public int[] keys() {
             return map.keys();
+        }
+
+        @Override
+        public V[] values(Class<V> clazz) {
+            return map.values(clazz);
         }
 
         @Override

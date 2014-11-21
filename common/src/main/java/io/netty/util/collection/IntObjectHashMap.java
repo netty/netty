@@ -15,6 +15,7 @@
 
 package io.netty.util.collection;
 
+import java.lang.reflect.Array;
 import java.util.AbstractCollection;
 import java.util.Arrays;
 import java.util.Collection;
@@ -51,6 +52,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
 
     private int[] keys;
     private V[] values;
+    private Collection<V> valueCollection;
     private int size;
 
     public IntObjectHashMap() {
@@ -78,7 +80,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
 
         // Allocate the arrays.
         keys = new int[capacity];
-        @SuppressWarnings({ "unchecked", })
+        @SuppressWarnings({ "unchecked", "SuspiciousArrayCast" })
         V[] temp = (V[]) new Object[capacity];
         values = temp;
 
@@ -190,9 +192,9 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
     @Override
     public boolean containsValue(V value) {
         V v = toInternal(value);
-        for (int i = 0; i < values.length; ++i) {
+        for (V value1 : values) {
             // The map supports null values; this will be matched as NULL_VALUE.equals(NULL_VALUE).
-            if (values[i] != null && values[i].equals(v)) {
+            if (value1 != null && value1.equals(v)) {
                 return true;
             }
         }
@@ -222,34 +224,52 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
     }
 
     @Override
+    public V[] values(Class<V> clazz) {
+        @SuppressWarnings("unchecked")
+        V[] outValues = (V[]) Array.newInstance(clazz, size());
+        int targetIx = 0;
+        for (V value : values) {
+            if (value != null) {
+                outValues[targetIx++] = value;
+            }
+        }
+        return outValues;
+    }
+
+    @Override
     public Collection<V> values() {
-        return new AbstractCollection<V>() {
-            @Override
-            public Iterator<V> iterator() {
-                return new Iterator<V>() {
-                    final Iterator<Entry<V>> iter = IntObjectHashMap.this.iterator();
-                    @Override
-                    public boolean hasNext() {
-                        return iter.hasNext();
-                    }
+        Collection<V> valueCollection = this.valueCollection;
+        if (valueCollection == null) {
+            this.valueCollection = valueCollection = new AbstractCollection<V>() {
+                @Override
+                public Iterator<V> iterator() {
+                    return new Iterator<V>() {
+                        final Iterator<Entry<V>> iter = IntObjectHashMap.this.iterator();
+                        @Override
+                        public boolean hasNext() {
+                            return iter.hasNext();
+                        }
 
-                    @Override
-                    public V next() {
-                        return iter.next().value();
-                    }
+                        @Override
+                        public V next() {
+                            return iter.next().value();
+                        }
 
-                    @Override
-                    public void remove() {
-                        throw new UnsupportedOperationException();
-                    }
-                };
-            }
+                        @Override
+                        public void remove() {
+                            throw new UnsupportedOperationException();
+                        }
+                    };
+                }
 
-            @Override
-            public int size() {
-                return size;
-            }
-        };
+                @Override
+                public int size() {
+                    return size;
+                }
+            };
+        }
+
+        return valueCollection;
     }
 
     @Override
@@ -258,7 +278,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
         // array, which may have different lengths for two maps of same size(), so the
         // capacity cannot be used as input for hashing but the size can.
         int hash = size;
-        for (int i = 0; i < keys.length; ++i) {
+        for (int key : keys) {
             // 0 can be a valid key or unused slot, but won't impact the hashcode in either case.
             // This way we can use a cheap loop without conditionals, or hard-to-unroll operations,
             // or the devastatingly bad memory locality of visiting value objects.
@@ -266,7 +286,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
             // of terms, only their values; since the map is an unordered collection and
             // entries can end up in different positions in different maps that have the same
             // elements, but with different history of puts/removes, due to conflicts.
-            hash ^= keys[i];
+            hash ^= key;
         }
         return hash;
     }
@@ -380,8 +400,8 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
         int nextFree = index;
         for (int i = probeNext(index); values[i] != null; i = probeNext(i)) {
             int bucket = hashIndex(keys[i]);
-            if ((i < bucket && (bucket <= nextFree || nextFree <= i))
-                    || (bucket <= nextFree && nextFree <= i)) {
+            if (i < bucket && (bucket <= nextFree || nextFree <= i) ||
+                bucket <= nextFree && nextFree <= i) {
                 // Move the displaced entry "back" to the first available position.
                 keys[nextFree] = keys[i];
                 values[nextFree] = values[i];
@@ -412,7 +432,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
         V[] oldVals = values;
 
         keys = new int[newCapacity];
-        @SuppressWarnings({ "unchecked" })
+        @SuppressWarnings({ "unchecked", "SuspiciousArrayCast" })
         V[] temp = (V[]) new Object[newCapacity];
         values = temp;
 
@@ -425,8 +445,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
                 // Inlined put(), but much simpler: we don't need to worry about
                 // duplicated keys, growing/rehashing, or failing to insert.
                 int oldKey = oldKeys[i];
-                int startIndex = hashIndex(oldKey);
-                int index = startIndex;
+                int index = hashIndex(oldKey);
 
                 for (;;) {
                     if (values[index] == null) {
