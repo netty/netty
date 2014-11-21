@@ -186,13 +186,18 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
 
         // Write the content.
         ChannelFuture sendFileFuture;
+        ChannelFuture lastContentFuture;
         if (ctx.pipeline().get(SslHandler.class) == null) {
             sendFileFuture =
                     ctx.write(new DefaultFileRegion(raf.getChannel(), 0, fileLength), ctx.newProgressivePromise());
+            // Write the end marker.
+            lastContentFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
         } else {
             sendFileFuture =
                     ctx.write(new HttpChunkedInput(new ChunkedFile(raf, 0, fileLength, 8192)),
                             ctx.newProgressivePromise());
+            // HttpChunkedInput will write the end marker (LastHttpContent) for us.
+            lastContentFuture = sendFileFuture;
         }
 
         sendFileFuture.addListener(new ChannelProgressiveFutureListener() {
@@ -210,9 +215,6 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
                 System.err.println(future.channel() + " Transfer complete.");
             }
         });
-
-        // Write the end marker
-        ChannelFuture lastContentFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 
         // Decide whether to close the connection or not.
         if (!HttpHeaders.isKeepAlive(request)) {
