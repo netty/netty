@@ -15,8 +15,9 @@
 
 package io.netty.util.collection;
 
-import java.lang.reflect.Array;
+import java.util.AbstractCollection;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -112,7 +113,8 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
                 values[index] = toInternal(value);
                 growSize();
                 return null;
-            } else if (keys[index] == key) {
+            }
+            if (keys[index] == key) {
                 // Found existing entry with this key, just replace the value.
                 V previousValue = values[index];
                 values[index] = toInternal(value);
@@ -220,16 +222,34 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
     }
 
     @Override
-    public V[] values(Class<V> clazz) {
-        @SuppressWarnings("unchecked")
-        V[] outValues = (V[]) Array.newInstance(clazz, size());
-        int targetIx = 0;
-        for (int i = 0; i < values.length; ++i) {
-            if (values[i] != null) {
-                outValues[targetIx++] = values[i];
+    public Collection<V> values() {
+        return new AbstractCollection<V>() {
+            @Override
+            public Iterator<V> iterator() {
+                return new Iterator<V>() {
+                    final Iterator<Entry<V>> iter = IntObjectHashMap.this.iterator();
+                    @Override
+                    public boolean hasNext() {
+                        return iter.hasNext();
+                    }
+
+                    @Override
+                    public V next() {
+                        return iter.next().value();
+                    }
+
+                    @Override
+                    public void remove() {
+                        throw new UnsupportedOperationException();
+                    }
+                };
             }
-        }
-        return outValues;
+
+            @Override
+            public int size() {
+                return size;
+            }
+        };
     }
 
     @Override
@@ -271,7 +291,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
                 Object otherValue = other.get(key);
                 if (value == NULL_VALUE) {
                     if (otherValue != null) {
-                      return false;
+                        return false;
                     }
                 } else if (!value.equals(otherValue)) {
                     return false;
@@ -361,7 +381,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
         for (int i = probeNext(index); values[i] != null; i = probeNext(i)) {
             int bucket = hashIndex(keys[i]);
             if ((i < bucket && (bucket <= nextFree || nextFree <= i))
-                    || (bucket <= nextFree && nextFree <= i)) {
+                || (bucket <= nextFree && nextFree <= i)) {
                 // Move the displaced entry "back" to the first available position.
                 keys[nextFree] = keys[i];
                 values[nextFree] = values[i];
@@ -498,9 +518,16 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
             V value = values[i];
             if (value != null) {
                 sb.append(sb.length() == 0 ? "{" : ", ");
-                sb.append(keys[i]).append('=').append(value == this ? "(this Map)" : value);
+                sb.append(keyToString(keys[i])).append('=').append(value == this ? "(this Map)" : value);
             }
         }
         return sb.append('}').toString();
+    }
+
+    /**
+     * Helper method called by {@link #toString()} in order to convert a single map key into a string.
+     */
+    protected String keyToString(int key) {
+        return Integer.toString(key);
     }
 }
