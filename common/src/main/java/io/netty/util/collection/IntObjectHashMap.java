@@ -191,10 +191,10 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
 
     @Override
     public boolean containsValue(V value) {
-        V v = toInternal(value);
-        for (V value1 : values) {
+        V v1 = toInternal(value);
+        for (V v2 : values) {
             // The map supports null values; this will be matched as NULL_VALUE.equals(NULL_VALUE).
-            if (value1 != null && value1.equals(v)) {
+            if (v2 != null && v2.equals(v1)) {
                 return true;
             }
         }
