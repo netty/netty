@@ -18,6 +18,7 @@ package io.netty.handler.ssl;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
@@ -166,6 +167,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private static final Pattern IGNORABLE_ERROR_MESSAGE = Pattern.compile(
             "^.*(?:connection.*(?:reset|closed|abort|broken)|broken.*pipe).*$", Pattern.CASE_INSENSITIVE);
 
+    /**
+     * Used in {@link #unwrapNonAppData(ChannelHandlerContext)} as input for
+     * {@link #unwrap(ChannelHandlerContext, ByteBuffer, int)}.  Using this static instance reduce object
+     * creation as {@link Unpooled#EMPTY_BUFFER#nioBuffer()} creates a new {@link ByteBuffer} everytime.
+     */
+    private static final ByteBuffer EMPTY_DIRECT_BYTEBUFFER = Unpooled.EMPTY_BUFFER.nioBuffer();
     private static final SSLException SSLENGINE_CLOSED = new SSLException("SSLEngine closed already");
     private static final SSLException HANDSHAKE_TIMED_OUT = new SSLException("handshake timed out");
     private static final ClosedChannelException CHANNEL_CLOSED = new ClosedChannelException();
@@ -180,6 +187,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private final SSLEngine engine;
     private final int maxPacketBufferSize;
     private final Executor delegatedTaskExecutor;
+
+    /**
+     * Used if {@link SSLEngine#wrap(ByteBuffer[], ByteBuffer)} should be called with a {@link ByteBuf} that is only
+     * backed by one {@link ByteBuffer} to reduce the object creation.
+     */
+    private final ByteBuffer[] singleWrapBuffer = new ByteBuffer[1];
 
     // BEGIN Platform-dependent flags
 
@@ -589,14 +602,33 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             throws SSLException {
         ByteBuf newDirectIn = null;
         try {
-            final ByteBuffer in0;
+            int readerIndex = in.readerIndex();
+            int readableBytes = in.readableBytes();
+
+            // We will call SslEngine.wrap(ByteBuffer[], ByteBuffer) to allow efficient handling of
+            // CompositeByteBuf without force an extra memory copy when CompositeByteBuffer.nioBuffer() is called.
+            final ByteBuffer[] in0;
             if (in.isDirect() || !wantsDirectBuffer) {
-                in0 = in.nioBuffer();
+                // As CompositeByteBuf.nioBufferCount() can be expensive (as it needs to check all composed ByteBuf
+                // to calculate the count) we will just assume a CompositeByteBuf contains more then 1 ByteBuf.
+                // The worst that can happen is that we allocate an extra ByteBuffer[] in CompositeByteBuf.nioBuffers()
+                // which is better then walking the composed ByteBuf in most cases.
+                if (!(in instanceof CompositeByteBuf) && in.nioBufferCount() == 1) {
+                    in0 = singleWrapBuffer;
+                    // We know its only backed by 1 ByteBuffer so use internalNioBuffer to keep object allocation
+                    // to a minimum.
+                    in0[0] = in.internalNioBuffer(readerIndex, readableBytes);
+                } else {
+                    in0 = in.nioBuffers();
+                }
             } else {
-                int readableBytes = in.readableBytes();
+                // We could even go further here and check if its a CompositeByteBuf and if so try to decompose it and
+                // only replace the ByteBuffer that are not direct. At the moment we just will replace the whole
+                // CompositeByteBuf to keep the complexity to a minimum
                 newDirectIn = alloc.directBuffer(readableBytes);
-                newDirectIn.writeBytes(in, in.readerIndex(), readableBytes);
-                in0 = newDirectIn.internalNioBuffer(0, readableBytes);
+                newDirectIn.writeBytes(in, readerIndex, readableBytes);
+                in0 = singleWrapBuffer;
+                in0[0] = newDirectIn.internalNioBuffer(0, readableBytes);
             }
 
             for (;;) {
@@ -614,6 +646,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 }
             }
         } finally {
+            // Null out to allow GC of ByteBuffer
+            singleWrapBuffer[0] = null;
+
             if (newDirectIn != null) {
                 newDirectIn.release();
             }
@@ -906,7 +941,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * Calls {@link SSLEngine#unwrap(ByteBuffer, ByteBuffer)} with an empty buffer to handle handshakes, etc.
      */
     private void unwrapNonAppData(ChannelHandlerContext ctx) throws SSLException {
-        unwrap(ctx, Unpooled.EMPTY_BUFFER.nioBuffer(), 0);
+        unwrap(ctx, EMPTY_DIRECT_BYTEBUFFER, 0);
     }
 
     /**
