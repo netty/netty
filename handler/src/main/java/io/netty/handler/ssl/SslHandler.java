@@ -434,7 +434,6 @@ public class SslHandler extends ByteToMessageDecoder {
                 }
 
                 SSLEngineResult result = wrap(alloc, engine, buf, out);
-
                 if (!buf.isReadable()) {
                     promise = pendingUnencryptedWrites.remove();
                 } else {
