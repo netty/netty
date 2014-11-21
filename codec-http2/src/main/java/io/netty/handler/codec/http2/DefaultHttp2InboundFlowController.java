@@ -314,7 +314,7 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
          */
         void updateWindow(ChannelHandlerContext ctx) {
             // Expand the window for this stream back to the size of the initial window.
-            int deltaWindowSize = initialWindowSize() - window;
+            int deltaWindowSize = initialWindowSize() - processedWindow;
             processedWindow += deltaWindowSize;
             try {
                 addAndGet(deltaWindowSize);
