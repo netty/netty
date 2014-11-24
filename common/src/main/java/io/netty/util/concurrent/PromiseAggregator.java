@@ -58,6 +58,7 @@ public class PromiseAggregator<V, F extends Future<V>> implements GenericFutureL
     /**
      * Add the given {@link Promise}s to the aggregator.
      */
+    @SafeVarargs
     public final PromiseAggregator<V, F> add(Promise<V>... promises) {
         if (promises == null) {
             throw new NullPointerException("promises");
