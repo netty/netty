@@ -86,7 +86,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     @Override
     public void maxFrameSize(int max) throws Http2Exception {
         if (!isMaxFrameSizeValid(max)) {
-            connectionError(FRAME_SIZE_ERROR, "Invalid MAX_FRAME_SIZE specified in sent settings: %d", max);
+            throw connectionError(FRAME_SIZE_ERROR, "Invalid MAX_FRAME_SIZE specified in sent settings: %d", max);
         }
         maxFrameSize = max;
     }
