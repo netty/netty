@@ -31,6 +31,7 @@ public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureLis
      *
      * @param promises  the {@link Promise}s to notify once this {@link GenericFutureListener} is notified.
      */
+    @SafeVarargs
     public PromiseNotifier(Promise<? super V>... promises) {
         if (promises == null) {
             throw new NullPointerException("promises");
