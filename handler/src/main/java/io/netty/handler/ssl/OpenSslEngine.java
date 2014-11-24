@@ -17,6 +17,7 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
@@ -120,6 +121,8 @@ public final class OpenSslEngine extends SSLEngine {
 
     private static final String INVALID_CIPHER = "SSL_NULL_WITH_NULL_NULL";
 
+    private static final long EMPTY_ADDR = Buffer.address(Unpooled.EMPTY_BUFFER.nioBuffer());
+
     // OpenSSL state
     private long ssl;
     private long networkBIO;
@@ -146,8 +149,6 @@ public final class OpenSslEngine extends SSLEngine {
     private boolean isInboundDone;
     private boolean isOutboundDone;
     private boolean engineClosed;
-
-    private int lastPrimingReadResult;
 
     private final boolean clientMode;
     private final ByteBufAllocator alloc;
@@ -252,7 +253,7 @@ public final class OpenSslEngine extends SSLEngine {
     }
 
     /**
-     * Write encrypted data to the OpenSSL network BIO
+     * Write encrypted data to the OpenSSL network BIO.
      */
     private int writeEncryptedData(final ByteBuffer src) {
         final int pos = src.position();
@@ -262,7 +263,6 @@ public final class OpenSslEngine extends SSLEngine {
             final int netWrote = SSL.writeToBIO(networkBIO, addr, len);
             if (netWrote >= 0) {
                 src.position(pos + netWrote);
-                lastPrimingReadResult = SSL.readFromSSL(ssl, addr, 0); // priming read
                 return netWrote;
             }
         } else {
@@ -275,7 +275,6 @@ public final class OpenSslEngine extends SSLEngine {
                 final int netWrote = SSL.writeToBIO(networkBIO, addr, len);
                 if (netWrote >= 0) {
                     src.position(pos + netWrote);
-                    lastPrimingReadResult = SSL.readFromSSL(ssl, addr, 0); // priming read
                     return netWrote;
                 } else {
                     src.position(pos);
@@ -285,7 +284,7 @@ public final class OpenSslEngine extends SSLEngine {
             }
         }
 
-        return 0;
+        return -1;
     }
 
     /**
@@ -464,9 +463,9 @@ public final class OpenSslEngine extends SSLEngine {
         return new SSLEngineResult(getEngineStatus(), getHandshakeStatus(), bytesConsumed, bytesProduced);
     }
 
-    @Override
     public synchronized SSLEngineResult unwrap(
-            final ByteBuffer src, final ByteBuffer[] dsts, final int offset, final int length) throws SSLException {
+            final ByteBuffer[] srcs, int srcsOffset, final int srcsLength,
+            final ByteBuffer[] dsts, final int dstsOffset, final int dstsLength) throws SSLException {
 
         // Check to make sure the engine has not been closed
         if (destroyed != 0) {
@@ -474,21 +473,26 @@ public final class OpenSslEngine extends SSLEngine {
         }
 
         // Throw requried runtime exceptions
-        if (src == null) {
-            throw new NullPointerException("src");
+        if (srcs == null) {
+            throw new NullPointerException("srcs");
+        }
+        if (srcsOffset >= srcs.length
+                || srcsOffset + srcsLength > srcs.length) {
+            throw new IndexOutOfBoundsException(
+                "offset: " + srcsOffset + ", length: " + srcsLength +
+                        " (expected: offset <= offset + length <= srcs.length (" + srcs.length + "))");
         }
         if (dsts == null) {
             throw new NullPointerException("dsts");
         }
-        if (offset >= dsts.length || offset + length > dsts.length) {
+        if (dstsOffset >= dsts.length || dstsOffset + dstsLength > dsts.length) {
             throw new IndexOutOfBoundsException(
-                    "offset: " + offset + ", length: " + length +
-                            " (expected: offset <= offset + length <= dsts.length (" + dsts.length + "))");
+                "offset: " + dstsOffset + ", length: " + dstsLength +
+                        " (expected: offset <= offset + length <= dsts.length (" + dsts.length + "))");
         }
-
         int capacity = 0;
-        final int endOffset = offset + length;
-        for (int i = offset; i < endOffset; i ++) {
+        final int endOffset = dstsOffset + dstsLength;
+        for (int i = dstsOffset; i < endOffset; i ++) {
             ByteBuffer dst = dsts[i];
             if (dst == null) {
                 throw new IllegalArgumentException();
@@ -511,8 +515,18 @@ public final class OpenSslEngine extends SSLEngine {
             return new SSLEngineResult(getEngineStatus(), NEED_WRAP, 0, 0);
         }
 
+        final int srcsEndOffset = srcsOffset + srcsLength;
+        int len = 0;
+        for (int i = srcsOffset; i < srcsEndOffset; i++) {
+            ByteBuffer src = srcs[i];
+            if (src == null) {
+                throw new IllegalArgumentException();
+            }
+            len += src.remaining();
+        }
+
         // protect against protocol overflow attack vector
-        if (src.remaining() > MAX_ENCRYPTED_PACKET_LENGTH) {
+        if (len > MAX_ENCRYPTED_PACKET_LENGTH) {
             isInboundDone = true;
             isOutboundDone = true;
             engineClosed = true;
@@ -521,12 +535,36 @@ public final class OpenSslEngine extends SSLEngine {
         }
 
         // Write encrypted data to network BIO
-        int bytesConsumed = 0;
-        lastPrimingReadResult = 0;
+        int bytesConsumed = -1;
+        int lastPrimingReadResult = 0;
         try {
-            bytesConsumed += writeEncryptedData(src);
+            while (srcsOffset < srcsEndOffset) {
+                ByteBuffer src = srcs[srcsOffset];
+                int remaining = src.remaining();
+                int written = writeEncryptedData(src);
+                if (written >= 0) {
+                    if (bytesConsumed == -1) {
+                        bytesConsumed = written;
+                    } else {
+                        bytesConsumed += written;
+                    }
+                    if (written == remaining) {
+                        srcsOffset ++;
+                    } else if (written == 0) {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
         } catch (Exception e) {
             throw new SSLException(e);
+        }
+        if (bytesConsumed >= 0) {
+            lastPrimingReadResult = SSL.readFromSSL(ssl, EMPTY_ADDR, 0); // priming read
+        } else {
+            // Reset to 0 as -1 is used to signal that nothing was written and no priming read needs to be done
+            bytesConsumed = 0;
         }
 
         // Check for OpenSSL errors caused by the priming read
@@ -554,7 +592,7 @@ public final class OpenSslEngine extends SSLEngine {
 
         // Write decrypted data to dsts buffers
         int bytesProduced = 0;
-        int idx = offset;
+        int idx = dstsOffset;
         while (idx < endOffset) {
             ByteBuffer dst = dsts[idx];
             if (!dst.hasRemaining()) {
@@ -593,6 +631,16 @@ public final class OpenSslEngine extends SSLEngine {
         }
 
         return new SSLEngineResult(getEngineStatus(), getHandshakeStatus(), bytesConsumed, bytesProduced);
+    }
+
+    public SSLEngineResult unwrap(final ByteBuffer[] srcs, final ByteBuffer[] dsts) throws SSLException {
+        return unwrap(srcs, 0, srcs.length, dsts, 0, dsts.length);
+    }
+
+    @Override
+    public SSLEngineResult unwrap(
+            final ByteBuffer src, final ByteBuffer[] dsts, final int offset, final int length) throws SSLException {
+        return unwrap(new ByteBuffer[] { src }, 0, 1, dsts, offset, length);
     }
 
     @Override
