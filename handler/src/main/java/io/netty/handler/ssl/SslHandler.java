@@ -181,6 +181,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private final int maxPacketBufferSize;
     private final Executor delegatedTaskExecutor;
 
+    // Used if SslEngine.wrap(...) and SSlEngine.unwrap(...) should be called with a ByteBuf that is only backed by one
+    // ByteBuffer to reduce the object creation.
+    private final ByteBuffer[] singleBuffer = new ByteBuffer[1];
+
     // BEGIN Platform-dependent flags
 
     /**
@@ -258,9 +262,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      */
     @Deprecated
     public SslHandler(SSLEngine engine, boolean startTls, Executor delegatedTaskExecutor) {
-        // As SslEngine.unwrap(....) only works with one ByteBuffer we should not try to use a CompositeByteBuf
+        // As JDK SslEngine.unwrap(....) only works with one ByteBuffer we should not try to use a CompositeByteBuf
         // at the first place to make it as fast as possible.
-        super(false);
+        // When using OpenSslEngine we can call OpenSslEngine.unwrap(ByteBuffer[]...) and so remove the need of
+        // memory copies for more performance.
+        super(engine instanceof OpenSslEngine);
         if (engine == null) {
             throw new NullPointerException("engine");
         }
@@ -810,7 +816,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws SSLException {
-
         final int startOffset = in.readerIndex();
         final int endOffset = in.writerIndex();
         int offset = startOffset;
@@ -874,9 +879,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             // See https://github.com/netty/netty/issues/1534
 
             in.skipBytes(totalLength);
-            final ByteBuffer inNetBuf = in.nioBuffer(startOffset, totalLength);
+            final ByteBuf inNetBuf = in.slice(startOffset, totalLength);
             unwrap(ctx, inNetBuf, totalLength);
-            assert !inNetBuf.hasRemaining() || engine.isInboundDone();
+            assert !inNetBuf.isReadable() || engine.isInboundDone();
         }
 
         if (nonSslRecord) {
@@ -908,24 +913,24 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * Calls {@link SSLEngine#unwrap(ByteBuffer, ByteBuffer)} with an empty buffer to handle handshakes, etc.
      */
     private void unwrapNonAppData(ChannelHandlerContext ctx) throws SSLException {
-        unwrap(ctx, Unpooled.EMPTY_BUFFER.nioBuffer(), 0);
+        unwrap(ctx, Unpooled.EMPTY_BUFFER, 0);
     }
 
     /**
      * Unwraps inbound SSL records.
      */
     private void unwrap(
-            ChannelHandlerContext ctx, ByteBuffer packet, int initialOutAppBufCapacity) throws SSLException {
+            ChannelHandlerContext ctx, ByteBuf packet, int initialOutAppBufCapacity) throws SSLException {
 
         // If SSLEngine expects a heap buffer for unwrapping, do the conversion.
-        final ByteBuffer oldPacket;
+        final ByteBuf oldPacket;
         final ByteBuf newPacket;
-        final int oldPos = packet.position();
+        final int readerIndex = packet.readerIndex();
         if (wantsInboundHeapBuffer && packet.isDirect()) {
-            newPacket = ctx.alloc().heapBuffer(packet.limit() - oldPos);
+            newPacket = ctx.alloc().heapBuffer(packet.readableBytes());
             newPacket.writeBytes(packet);
             oldPacket = packet;
-            packet = newPacket.nioBuffer();
+            packet = newPacket;
         } else {
             oldPacket = null;
             newPacket = null;
@@ -941,7 +946,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
                 final int produced = result.bytesProduced();
                 final int consumed = result.bytesConsumed();
-
                 if (status == Status.CLOSED) {
                     // notify about the CLOSED state of the SSLEngine. See #137
                     notifyClosure = true;
@@ -997,7 +1001,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             // If we converted packet into a heap buffer at the beginning of this method,
             // we should synchronize the position of the original buffer.
             if (newPacket != null) {
-                oldPacket.position(oldPos + packet.position());
+                oldPacket.readerIndex(readerIndex + packet.readerIndex());
                 newPacket.release();
             }
 
@@ -1009,25 +1013,83 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         }
     }
 
-    private static SSLEngineResult unwrap(SSLEngine engine, ByteBuffer in, ByteBuf out) throws SSLException {
-        int overflows = 0;
-        for (;;) {
-            ByteBuffer out0 = out.nioBuffer(out.writerIndex(), out.writableBytes());
-            SSLEngineResult result = engine.unwrap(in, out0);
-            out.writerIndex(out.writerIndex() + result.bytesProduced());
-            switch (result.getStatus()) {
-                case BUFFER_OVERFLOW:
-                    int max = engine.getSession().getApplicationBufferSize();
-                    switch (overflows ++) {
-                        case 0:
-                            out.ensureWritable(Math.min(max, in.remaining()));
+    private SSLEngineResult unwrap(SSLEngine engine, ByteBuf in, ByteBuf out) throws SSLException {
+        int nioBufferCount = in.nioBufferCount();
+        if (engine instanceof OpenSslEngine && nioBufferCount > 1) {
+            // If OpenSslEngine is in used its very likely the buffer is backed by more then one ByteBuffer. We can use
+            // a special unwrap method of OpenSslEngine that allows us to unwrap with multiple ByteBuffers as source.
+            OpenSslEngine opensslEngine = (OpenSslEngine) engine;
+            int overflows = 0;
+            ByteBuffer[] in0 = in.nioBuffers();
+            try {
+                for (;;) {
+                    int writerIndex = out.writerIndex();
+                    int writableBytes = out.writableBytes();
+                    ByteBuffer out0;
+                    if (out.nioBufferCount() == 1) {
+                        out0 = out.internalNioBuffer(writerIndex, writableBytes);
+                    } else {
+                        out0 = out.nioBuffer(writerIndex, writableBytes);
+                    }
+                    singleBuffer[0] = out0;
+                    SSLEngineResult result = opensslEngine.unwrap(in0, singleBuffer);
+                    in.skipBytes(result.bytesConsumed());
+                    out.writerIndex(out.writerIndex() + result.bytesProduced());
+                    switch (result.getStatus()) {
+                        case BUFFER_OVERFLOW:
+                            int max = engine.getSession().getApplicationBufferSize();
+                            switch (overflows++) {
+                                case 0:
+                                    out.ensureWritable(Math.min(max, in.readableBytes()));
+                                    break;
+                                default:
+                                    out.ensureWritable(max);
+                            }
                             break;
                         default:
-                            out.ensureWritable(max);
+                            return result;
                     }
-                    break;
-                default:
-                    return result;
+                }
+            } finally {
+                singleBuffer[0] = null;
+            }
+        } else {
+            int overflows = 0;
+            ByteBuffer in0;
+            if (nioBufferCount == 1) {
+                // Use internalNioBuffer to reduce object creation.
+                in0 = in.internalNioBuffer(in.readerIndex(), in.readableBytes());
+            } else {
+                // This should never be true as this is only the case when OpenSslEngine is used, anyway lets
+                // guard against it.
+                in0 = in.nioBuffer();
+            }
+            for (;;) {
+                int writerIndex = out.writerIndex();
+                int writableBytes = out.writableBytes();
+                ByteBuffer out0;
+                if (out.nioBufferCount() == 1) {
+                    out0 = out.internalNioBuffer(writerIndex, writableBytes);
+                } else {
+                    out0 = out.nioBuffer(writerIndex, writableBytes);
+                }
+                SSLEngineResult result = engine.unwrap(in0, out0);
+                in.skipBytes(result.bytesConsumed());
+                out.writerIndex(out.writerIndex() + result.bytesProduced());
+                switch (result.getStatus()) {
+                    case BUFFER_OVERFLOW:
+                        int max = engine.getSession().getApplicationBufferSize();
+                        switch (overflows ++) {
+                            case 0:
+                                out.ensureWritable(Math.min(max, in.readableBytes()));
+                                break;
+                            default:
+                                out.ensureWritable(max);
+                        }
+                        break;
+                    default:
+                        return result;
+                }
             }
         }
     }
