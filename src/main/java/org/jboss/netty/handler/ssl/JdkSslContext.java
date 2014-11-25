@@ -68,16 +68,18 @@ public abstract class JdkSslContext extends SslContext {
         addIfSupported(
                 supportedCiphers, ciphers,
                 // XXX: Make sure to sync this list with OpenSslEngineFactory.
-                "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", // since JDK 8
-                "TLS_ECDHE_RSA_WITH_RC4_128_SHA",
+                // GCM (Galois/Counter Mode) requires JDK 8.
+                "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
                 "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+                // AES256 requires JCE unlimited strength jurisdiction policy files.
                 "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
-                "TLS_RSA_WITH_AES_128_GCM_SHA256", // since JDK 8
-                "SSL_RSA_WITH_RC4_128_SHA",
-                "SSL_RSA_WITH_RC4_128_MD5",
+                // GCM (Galois/Counter Mode) requires JDK 8.
+                "TLS_RSA_WITH_AES_128_GCM_SHA256",
                 "TLS_RSA_WITH_AES_128_CBC_SHA",
+                // AES256 requires JCE unlimited strength jurisdiction policy files.
                 "TLS_RSA_WITH_AES_256_CBC_SHA",
-                "SSL_RSA_WITH_DES_CBC_SHA");
+                "SSL_RSA_WITH_DES_CBC_SHA",
+                "SSL_RSA_WITH_RC4_128_SHA");
 
         if (!ciphers.isEmpty()) {
             DEFAULT_CIPHERS = Collections.unmodifiableList(ciphers);
@@ -87,7 +89,7 @@ public abstract class JdkSslContext extends SslContext {
         }
 
         if (logger.isDebugEnabled()) {
-            logger.debug("Default protocols (JDK): " + PROTOCOLS);
+            logger.debug("Default protocols (JDK): " + Arrays.asList(PROTOCOLS));
             logger.debug("Default cipher suites (JDK): " + DEFAULT_CIPHERS);
         }
     }
