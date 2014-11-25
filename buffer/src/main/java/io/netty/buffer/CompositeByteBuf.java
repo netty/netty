@@ -45,6 +45,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     private final List<Component> components = new ArrayList<Component>();
     private final int maxNumComponents;
     private static final ByteBuffer FULL_BYTEBUFFER = (ByteBuffer) ByteBuffer.allocate(1).position(1);
+    private static final ByteBuffer EMPTY_BYTEBUFFER = ByteBuffer.allocateDirect(0);
 
     private boolean freed;
 
@@ -1137,7 +1138,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     public ByteBuffer[] nioBuffers(int index, int length) {
         checkIndex(index, length);
         if (length == 0) {
-            return EmptyArrays.EMPTY_BYTE_BUFFERS;
+            return new ByteBuffer[] { EMPTY_BYTEBUFFER };
         }
 
         List<ByteBuffer> buffers = new ArrayList<ByteBuffer>(components.size());

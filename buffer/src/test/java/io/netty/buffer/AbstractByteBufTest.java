@@ -2470,6 +2470,16 @@ public abstract class AbstractByteBufTest {
         testRefCnt0(true);
     }
 
+    @Test
+    public void testEmptyNioBuffers() throws Exception {
+        ByteBuf buffer = releaseLater(newBuffer(8));
+        buffer.clear();
+        assertFalse(buffer.isReadable());
+        ByteBuffer[] nioBuffers = buffer.nioBuffers();
+        assertEquals(1, nioBuffers.length);
+        assertFalse(nioBuffers[0].hasRemaining());
+    }
+
     private void testRefCnt0(final boolean parameter) throws Exception {
         for (int i = 0; i < 10; i++) {
             final CountDownLatch latch = new CountDownLatch(1);
