@@ -60,7 +60,7 @@ public final class PlatformDependent {
 
     private static final boolean IS_ANDROID = isAndroid0();
     private static final boolean IS_WINDOWS = isWindows0();
-    private static final boolean IS_ROOT = isRoot0();
+    private static volatile Boolean IS_ROOT;
 
     private static final int JAVA_VERSION = javaVersion0();
 
@@ -114,6 +114,13 @@ public final class PlatformDependent {
      * {@code false} if on Windows.
      */
     public static boolean isRoot() {
+        if (IS_ROOT == null) {
+            synchronized (PlatformDependent.class) {
+                if (IS_ROOT == null) {
+                    IS_ROOT = isRoot0();
+                }
+            }
+        }
         return IS_ROOT;
     }
 
