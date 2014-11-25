@@ -45,15 +45,13 @@ public final class OpenSslServerContext extends SslContext {
         Collections.addAll(
                 ciphers,
                 "ECDHE-RSA-AES128-GCM-SHA256",
-                "ECDHE-RSA-RC4-SHA",
                 "ECDHE-RSA-AES128-SHA",
                 "ECDHE-RSA-AES256-SHA",
                 "AES128-GCM-SHA256",
-                "RC4-SHA",
-                "RC4-MD5",
                 "AES128-SHA",
                 "AES256-SHA",
-                "DES-CBC3-SHA");
+                "DES-CBC3-SHA",
+                "RC4-SHA");
         DEFAULT_CIPHERS = Collections.unmodifiableList(ciphers);
 
         if (logger.isDebugEnabled()) {
