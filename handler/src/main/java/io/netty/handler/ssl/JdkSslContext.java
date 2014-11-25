@@ -115,18 +115,16 @@ public abstract class JdkSslContext extends SslContext {
                 // XXX: Make sure to sync this list with OpenSslEngineFactory.
                 // GCM (Galois/Counter Mode) requires JDK 8.
                 "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-                "TLS_ECDHE_RSA_WITH_RC4_128_SHA",
                 "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
                 // AES256 requires JCE unlimited strength jurisdiction policy files.
                 "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
                 // GCM (Galois/Counter Mode) requires JDK 8.
                 "TLS_RSA_WITH_AES_128_GCM_SHA256",
-                "SSL_RSA_WITH_RC4_128_SHA",
-                "SSL_RSA_WITH_RC4_128_MD5",
                 "TLS_RSA_WITH_AES_128_CBC_SHA",
                 // AES256 requires JCE unlimited strength jurisdiction policy files.
                 "TLS_RSA_WITH_AES_256_CBC_SHA",
-                "SSL_RSA_WITH_DES_CBC_SHA");
+                "SSL_RSA_WITH_DES_CBC_SHA",
+                "SSL_RSA_WITH_RC4_128_SHA");
 
         if (!ciphers.isEmpty()) {
             DEFAULT_CIPHERS = Collections.unmodifiableList(ciphers);
