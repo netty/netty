@@ -120,6 +120,8 @@ public final class OpenSslEngine extends SSLEngine {
     private static final AtomicReferenceFieldUpdater<OpenSslEngine, SSLSession> SESSION_UPDATER;
 
     private static final Pattern CIPHER_REPLACE_PATTERN = Pattern.compile("-");
+    private static final String INVALID_CIPHER = "SSL_NULL_WITH_NULL_NULL";
+
     // OpenSSL state
     private long ssl;
     private long networkBIO;
@@ -135,7 +137,7 @@ public final class OpenSslEngine extends SSLEngine {
 
     // Use an invalid cipherSuite until the handshake is completed
     // See http://docs.oracle.com/javase/7/docs/api/javax/net/ssl/SSLEngine.html#getSession()
-    private volatile String cipher = "SSL_NULL_WITH_NULL_NULL";
+    private volatile String cipher;
     private volatile String applicationProtocol;
 
     // We store this outside of the SslSession so we not need to create an instance during verifyCertificates(...)
@@ -991,14 +993,40 @@ public final class OpenSslEngine extends SSLEngine {
 
                 @Override
                 public String getCipherSuite() {
+                    if (!handshakeFinished) {
+                        return INVALID_CIPHER;
+                    }
+                    if (cipher == null) {
+                        String c = SSL.getCipherForSSL(ssl);
+                        if (c != null) {
+                            // Map returned cipher
+                            String mappedCipher = OpenSsl.jdkSslCipher(c);
+                            if (mappedCipher == null) {
+                                // No mapping found, replace - with _
+                                mappedCipher = CIPHER_REPLACE_PATTERN.matcher(c).replaceAll("-");
+                            }
+                            cipher = mappedCipher;
+                        }
+                    }
                     return cipher;
                 }
 
                 @Override
                 public String getProtocol() {
                     String applicationProtocol = OpenSslEngine.this.applicationProtocol;
-                    String version = SSL.getVersion(ssl);
                     if (applicationProtocol == null) {
+                        applicationProtocol = SSL.getNextProtoNegotiated(ssl);
+                        if (applicationProtocol == null) {
+                            applicationProtocol = fallbackApplicationProtocol;
+                        }
+                        if (applicationProtocol != null) {
+                            OpenSslEngine.this.applicationProtocol = applicationProtocol.replace(':', '_');
+                        } else {
+                            OpenSslEngine.this.applicationProtocol = "";
+                        }
+                    }
+                    String version = SSL.getVersion(ssl);
+                    if (applicationProtocol.isEmpty()) {
                         return version;
                     } else {
                         return version + ':' + applicationProtocol;
@@ -1120,25 +1148,6 @@ public final class OpenSslEngine extends SSLEngine {
             // Check to see if we have finished handshaking
             if (SSL.isInInit(ssl) == 0) {
                 handshakeFinished = true;
-                String c = SSL.getCipherForSSL(ssl);
-                if (c != null) {
-                    // Map returned cipher
-                    String mappedCipher = OpenSsl.jdkSslCipher(c);
-                    if (mappedCipher == null) {
-                        // No mapping found, replace - with _
-                        mappedCipher = CIPHER_REPLACE_PATTERN.matcher(c).replaceAll("-");
-                    }
-                    cipher = mappedCipher;
-                }
-                String applicationProtocol = SSL.getNextProtoNegotiated(ssl);
-                if (applicationProtocol == null) {
-                    applicationProtocol = fallbackApplicationProtocol;
-                }
-                if (applicationProtocol != null) {
-                    this.applicationProtocol = applicationProtocol.replace(':', '_');
-                } else {
-                    this.applicationProtocol = null;
-                }
                 return FINISHED;
             }
 
