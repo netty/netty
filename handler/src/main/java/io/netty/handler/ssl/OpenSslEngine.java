@@ -118,6 +118,8 @@ public final class OpenSslEngine extends SSLEngine {
     private static final AtomicIntegerFieldUpdater<OpenSslEngine> DESTROYED_UPDATER;
     private static final AtomicReferenceFieldUpdater<OpenSslEngine, SSLSession> SESSION_UPDATER;
 
+    private static final String INVALID_CIPHER = "SSL_NULL_WITH_NULL_NULL";
+
     // OpenSSL state
     private long ssl;
     private long networkBIO;
@@ -133,7 +135,7 @@ public final class OpenSslEngine extends SSLEngine {
 
     // Use an invalid cipherSuite until the handshake is completed
     // See http://docs.oracle.com/javase/7/docs/api/javax/net/ssl/SSLEngine.html#getSession()
-    private volatile String cipher = "SSL_NULL_WITH_NULL_NULL";
+    private volatile String cipher;
     private volatile String applicationProtocol;
 
     // We store this outside of the SslSession so we not need to create an instance during verifyCertificates(...)
@@ -1007,14 +1009,34 @@ public final class OpenSslEngine extends SSLEngine {
 
                 @Override
                 public String getCipherSuite() {
+                    if (!handshakeFinished) {
+                        return INVALID_CIPHER;
+                    }
+                    if (cipher == null) {
+                        String c = toJavaCipherSuite(SSL.getCipherForSSL(ssl));
+                        if (c != null) {
+                            cipher = c;
+                        }
+                    }
                     return cipher;
                 }
 
                 @Override
                 public String getProtocol() {
                     String applicationProtocol = OpenSslEngine.this.applicationProtocol;
-                    String version = SSL.getVersion(ssl);
                     if (applicationProtocol == null) {
+                        applicationProtocol = SSL.getNextProtoNegotiated(ssl);
+                        if (applicationProtocol == null) {
+                            applicationProtocol = fallbackApplicationProtocol;
+                        }
+                        if (applicationProtocol != null) {
+                            OpenSslEngine.this.applicationProtocol = applicationProtocol.replace(':', '_');
+                        } else {
+                            OpenSslEngine.this.applicationProtocol = "";
+                        }
+                    }
+                    String version = SSL.getVersion(ssl);
+                    if (applicationProtocol.isEmpty()) {
                         return version;
                     } else {
                         return version + ':' + applicationProtocol;
@@ -1136,28 +1158,6 @@ public final class OpenSslEngine extends SSLEngine {
             // Check to see if we have finished handshaking
             if (SSL.isInInit(ssl) == 0) {
                 handshakeFinished = true;
-                String c = SSL.getCipherForSSL(ssl);
-                if (c != null) {
-                    String protocol = toProtocolFamily(SSL.getVersion(ssl));
-                    String converted = CipherSuiteConverter.toJava(c, protocol);
-                    if (converted != null) {
-                        c = converted;
-                    } else {
-                        c = protocol + '_' + c.replace('-', '_');
-                    }
-                    // OpenSSL returns the ciphers seperated by '-' but the JDK SSLEngine does by '_', so replace '-'
-                    // with '_' to match the behaviour.
-                    cipher = c;
-                }
-                String applicationProtocol = SSL.getNextProtoNegotiated(ssl);
-                if (applicationProtocol == null) {
-                    applicationProtocol = fallbackApplicationProtocol;
-                }
-                if (applicationProtocol != null) {
-                    this.applicationProtocol = applicationProtocol.replace(':', '_');
-                } else {
-                    this.applicationProtocol = null;
-                }
                 return FINISHED;
             }
 
@@ -1181,9 +1181,27 @@ public final class OpenSslEngine extends SSLEngine {
     }
 
     /**
+     * Converts the specified OpenSSL cipher suite to the Java cipher suite.
+     */
+    private String toJavaCipherSuite(String openSslCipherSuite) {
+        if (openSslCipherSuite == null) {
+            return null;
+        }
+
+        String prefix = toJavaCipherSuitePrefix(SSL.getVersion(ssl));
+        String converted = CipherSuiteConverter.toJava(openSslCipherSuite, prefix);
+        if (converted != null) {
+            openSslCipherSuite = converted;
+        } else {
+            openSslCipherSuite = prefix + '_' + openSslCipherSuite.replace('-', '_');
+        }
+        return openSslCipherSuite;
+    }
+
+    /**
      * Converts the protocol version string returned by {@link SSL#getVersion(long)} to protocol family string.
      */
-    private static String toProtocolFamily(String protocolVersion) {
+    private static String toJavaCipherSuitePrefix(String protocolVersion) {
         final char c;
         if (protocolVersion == null || protocolVersion.length() == 0) {
             c = 0;
