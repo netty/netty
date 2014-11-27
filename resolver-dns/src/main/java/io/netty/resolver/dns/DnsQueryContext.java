@@ -17,6 +17,7 @@
 package io.netty.resolver.dns;
 
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.dns.DnsQuery;
@@ -138,26 +139,34 @@ final class DnsQueryContext {
     }
 
     private void sendQuery(final DnsQuery query, final InetSocketAddress nameServerAddr) {
-        parent.bindFuture.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                if (future.isSuccess()) {
-                    final ChannelFuture writeFuture = future.channel().writeAndFlush(query);
-                    if (writeFuture.isDone()) {
-                        onQueryWriteCompletion(writeFuture, nameServerAddr);
+        if (parent.bindFuture.isDone()) {
+            writeQuery(query, nameServerAddr);
+        } else {
+                parent.bindFuture.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    if (future.isSuccess()) {
+                        writeQuery(query, nameServerAddr);
                     } else {
-                        writeFuture.addListener(new ChannelFutureListener() {
-                            @Override
-                            public void operationComplete(ChannelFuture future) throws Exception {
-                                onQueryWriteCompletion(writeFuture, nameServerAddr);
-                            }
-                        });
+                        promise.tryFailure(future.cause());
                     }
-                } else {
-                    promise.tryFailure(future.cause());
+                 }
+            });
+        }
+    }
+
+    private void writeQuery(final DnsQuery query, final InetSocketAddress nameServerAddr) {
+        final ChannelFuture writeFuture = parent.ch.writeAndFlush(query);
+        if (writeFuture.isDone()) {
+            onQueryWriteCompletion(writeFuture, nameServerAddr);
+        } else {
+            writeFuture.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    onQueryWriteCompletion(writeFuture, nameServerAddr);
                 }
-            }
-        });
+            });
+        }
     }
 
     private void onQueryWriteCompletion(ChannelFuture writeFuture, final InetSocketAddress nameServerAddr) {
