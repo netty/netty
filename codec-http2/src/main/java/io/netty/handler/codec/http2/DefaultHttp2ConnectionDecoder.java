@@ -16,9 +16,10 @@ package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
-import static io.netty.handler.codec.http2.Http2Exception.protocolError;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
-import static io.netty.handler.codec.http2.Http2StreamException.streamClosedError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -64,6 +65,11 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         public Builder lifecycleManager(Http2LifecycleManager lifecycleManager) {
             this.lifecycleManager = lifecycleManager;
             return this;
+        }
+
+        @Override
+        public Http2LifecycleManager lifecycleManager() {
+            return lifecycleManager;
         }
 
         @Override
@@ -155,7 +161,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         Http2FrameSizePolicy inboundFrameSizePolicy = config.frameSizePolicy();
         if (pushEnabled != null) {
             if (connection.isServer()) {
-                throw protocolError("Server sending SETTINGS frame with ENABLE_PUSH specified");
+                throw connectionError(PROTOCOL_ERROR, "Server sending SETTINGS frame with ENABLE_PUSH specified");
             }
             connection.local().allowPushTo(pushEnabled);
         }
@@ -192,6 +198,10 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         frameReader.close();
     }
 
+    private static int unprocessedBytes(Http2Stream stream) {
+        return stream.garbageCollector().unProcessedBytes();
+    }
+
     /**
      * Handles all inbound frames from the network.
      */
@@ -212,7 +222,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             // We should ignore this frame if RST_STREAM was sent or if GO_AWAY was sent with a
             // lower stream ID.
             boolean shouldApplyFlowControl = false;
-            int processedBytes = data.readableBytes() + padding;
             boolean shouldIgnore = shouldIgnoreFrame(stream);
             Http2Exception error = null;
             switch (stream.state()) {
@@ -226,29 +235,31 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                         shouldApplyFlowControl = true;
                     }
                     if (!shouldIgnore) {
-                        // Stream error.
-                        error = streamClosedError(stream.id(), "Stream %d in unexpected state: %s",
+                        error = streamError(stream.id(), STREAM_CLOSED, "Stream %d in unexpected state: %s",
                                 stream.id(), stream.state());
                     }
                     break;
                 default:
                     if (!shouldIgnore) {
-                        // Connection error.
-                        error = protocolError("Stream %d in unexpected state: %s", stream.id(),
-                            stream.state());
+                        error = streamError(stream.id(), PROTOCOL_ERROR,
+                                "Stream %d in unexpected state: %s", stream.id(), stream.state());
                     }
                     break;
             }
 
+            int bytesToReturn = data.readableBytes() + padding;
+            int unprocessedBytes = unprocessedBytes(stream);
             try {
                 // If we should apply flow control, do so now.
                 if (shouldApplyFlowControl) {
                     inboundFlow.applyFlowControl(ctx, streamId, data, padding, endOfStream);
+                    // Update the unprocessed bytes after flow control is applied.
+                    unprocessedBytes = unprocessedBytes(stream);
                 }
 
                 // If we should ignore this frame, do so now.
                 if (shouldIgnore) {
-                    return processedBytes;
+                    return bytesToReturn;
                 }
 
                 // If the stream was in an invalid state to receive the frame, throw the error.
@@ -258,12 +269,26 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
                 // Call back the application and retrieve the number of bytes that have been
                 // immediately processed.
-                processedBytes = listener.onDataRead(ctx, streamId, data, padding, endOfStream);
-                return processedBytes;
+                bytesToReturn = listener.onDataRead(ctx, streamId, data, padding, endOfStream);
+                return bytesToReturn;
+            } catch (Http2Exception e) {
+                // If an exception happened during delivery, the listener may have returned part
+                // of the bytes before the error occurred. If that's the case, subtract that from
+                // the total processed bytes so that we don't return too many bytes.
+                int delta = unprocessedBytes - unprocessedBytes(stream);
+                bytesToReturn -= delta;
+                throw e;
+            } catch (RuntimeException e) {
+                // If an exception happened during delivery, the listener may have returned part
+                // of the bytes before the error occurred. If that's the case, subtract that from
+                // the total processed bytes so that we don't return too many bytes.
+                int delta = unprocessedBytes - unprocessedBytes(stream);
+                bytesToReturn -= delta;
+                throw e;
             } finally {
                 // If appropriate, returned the processed bytes to the flow controller.
-                if (shouldApplyFlowControl && processedBytes > 0) {
-                    stream.inboundFlow().returnProcessedBytes(ctx, processedBytes);
+                if (shouldApplyFlowControl && bytesToReturn > 0) {
+                    stream.garbageCollector().returnProcessedBytes(ctx, bytesToReturn);
                 }
 
                 if (endOfStream) {
@@ -278,7 +303,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
          */
         private void verifyPrefaceReceived() throws Http2Exception {
             if (!prefaceReceived) {
-                throw protocolError("Received non-SETTINGS as first frame.");
+                throw connectionError(PROTOCOL_ERROR, "Received non-SETTINGS as first frame.");
             }
         }
 
@@ -319,11 +344,11 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                     case HALF_CLOSED_REMOTE:
                     case CLOSED:
                         // Stream error.
-                        throw streamClosedError(stream.id(), "Stream %d in unexpected state: %s",
+                        throw streamError(stream.id(), STREAM_CLOSED, "Stream %d in unexpected state: %s",
                                 stream.id(), stream.state());
                     default:
                         // Connection error.
-                        throw protocolError("Stream %d in unexpected state: %s", stream.id(),
+                        throw connectionError(PROTOCOL_ERROR, "Stream %d in unexpected state: %s", stream.id(),
                                 stream.state());
                 }
             }
@@ -347,8 +372,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
             Http2Stream stream = connection.requireStream(streamId);
             verifyGoAwayNotReceived();
-            verifyRstStreamNotReceived(stream);
-            if (stream.state() == CLOSED || shouldIgnoreFrame(stream)) {
+            if (shouldIgnoreFrame(stream)) {
                 // Ignore frames for any stream created after we sent a go-away.
                 return;
             }
@@ -400,7 +424,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             final Http2FrameSizePolicy frameSizePolicy = config.frameSizePolicy();
             if (pushEnabled != null) {
                 if (connection.isServer()) {
-                    throw protocolError("Server sending SETTINGS frame with ENABLE_PUSH specified");
+                    throw connectionError(PROTOCOL_ERROR, "Server sending SETTINGS frame with ENABLE_PUSH specified");
                 }
                 connection.local().allowPushTo(pushEnabled);
             }
@@ -552,7 +576,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         private void verifyGoAwayNotReceived() throws Http2Exception {
             if (connection.goAwayReceived()) {
                 // Connection error.
-                throw protocolError("Received frames after receiving GO_AWAY");
+                throw connectionError(PROTOCOL_ERROR, "Received frames after receiving GO_AWAY");
             }
         }
 
@@ -563,7 +587,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         private void verifyRstStreamNotReceived(Http2Stream stream) throws Http2Exception {
             if (stream != null && stream.isResetReceived()) {
                 // Stream error.
-                throw streamClosedError(stream.id(),
+                throw streamError(stream.id(), STREAM_CLOSED,
                         "Frame received after receiving RST_STREAM for stream: " + stream.id());
             }
         }

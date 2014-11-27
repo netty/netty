@@ -591,17 +591,16 @@ public class HashedWheelTimer implements Timer {
             final long currentTime = System.nanoTime();
             long remaining = deadline - currentTime + timer.startTime;
 
-            StringBuilder buf = new StringBuilder(192);
-            buf.append(StringUtil.simpleClassName(this));
-            buf.append('(');
-
-            buf.append("deadline: ");
+            StringBuilder buf = new StringBuilder(192)
+               .append(StringUtil.simpleClassName(this))
+               .append('(')
+               .append("deadline: ");
             if (remaining > 0) {
-                buf.append(remaining);
-                buf.append(" ns later");
+                buf.append(remaining)
+                   .append(" ns later");
             } else if (remaining < 0) {
-                buf.append(-remaining);
-                buf.append(" ns ago");
+                buf.append(-remaining)
+                   .append(" ns ago");
             } else {
                 buf.append("now");
             }
@@ -610,10 +609,10 @@ public class HashedWheelTimer implements Timer {
                 buf.append(", cancelled");
             }
 
-            buf.append(", task: ");
-            buf.append(task());
-
-            return buf.append(')').toString();
+            return buf.append(", task: ")
+                      .append(task())
+                      .append(')')
+                      .toString();
         }
     }
 

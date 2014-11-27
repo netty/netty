@@ -1366,11 +1366,11 @@ public class DefaultHeaders<T> implements Headers<T> {
 
         @Override
         public String toString() {
-            StringBuilder b = new StringBuilder();
-            b.append(name);
-            b.append('=');
-            b.append(value);
-            return b.toString();
+            return new StringBuilder()
+                .append(name)
+                .append('=')
+                .append(value)
+                .toString();
         }
     }
 

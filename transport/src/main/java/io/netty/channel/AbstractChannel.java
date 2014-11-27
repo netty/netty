@@ -374,28 +374,28 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 dstAddr = localAddr;
             }
 
-            StringBuilder buf = new StringBuilder(96);
-            buf.append("[id: 0x");
-            buf.append(id.asShortText());
-            buf.append(", ");
-            buf.append(srcAddr);
-            buf.append(active? " => " : " :> ");
-            buf.append(dstAddr);
-            buf.append(']');
+            StringBuilder buf = new StringBuilder(96)
+                .append("[id: 0x")
+                .append(id.asShortText())
+                .append(", ")
+                .append(srcAddr)
+                .append(active? " => " : " :> ")
+                .append(dstAddr)
+                .append(']');
             strVal = buf.toString();
         } else if (localAddr != null) {
-            StringBuilder buf = new StringBuilder(64);
-            buf.append("[id: 0x");
-            buf.append(id.asShortText());
-            buf.append(", ");
-            buf.append(localAddr);
-            buf.append(']');
+            StringBuilder buf = new StringBuilder(64)
+                .append("[id: 0x")
+                .append(id.asShortText())
+                .append(", ")
+                .append(localAddr)
+                .append(']');
             strVal = buf.toString();
         } else {
-            StringBuilder buf = new StringBuilder(16);
-            buf.append("[id: 0x");
-            buf.append(id.asShortText());
-            buf.append(']');
+            StringBuilder buf = new StringBuilder(16)
+                .append("[id: 0x")
+                .append(id.asShortText())
+                .append(']');
             strVal = buf.toString();
         }
 
@@ -617,13 +617,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
             this.outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
 
+            Throwable error = null;
             try {
                 doClose();
-                closeFuture.setClosed();
-                safeSetSuccess(promise);
             } catch (Throwable t) {
-                closeFuture.setClosed();
-                safeSetFailure(promise, t);
+                error = t;
             }
 
             // Fail all the queued messages
@@ -646,6 +644,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                             deregister(voidPromise());
                         }
                     });
+                }
+
+                // Now complete the closeFuture and promise.
+                closeFuture.setClosed();
+                if (error != null) {
+                    safeSetFailure(promise, error);
+                } else {
+                    safeSetSuccess(promise);
                 }
             }
         }

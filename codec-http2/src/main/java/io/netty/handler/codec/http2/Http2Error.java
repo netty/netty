@@ -31,7 +31,8 @@ public enum Http2Error {
     COMPRESSION_ERROR(0x9),
     CONNECT_ERROR(0xA),
     ENHANCE_YOUR_CALM(0xB),
-    INADEQUATE_SECURITY(0xC);
+    INADEQUATE_SECURITY(0xC),
+    HTTP_1_1_REQUIRED(0xD);
 
     private final long code;
 

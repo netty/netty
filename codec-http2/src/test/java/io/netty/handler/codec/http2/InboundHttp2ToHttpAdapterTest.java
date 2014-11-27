@@ -14,6 +14,7 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2Exception.isStreamError;
 import static io.netty.handler.codec.http2.Http2CodecUtil.getEmbeddedHttp2Exception;
 import static io.netty.handler.codec.http2.Http2TestUtil.as;
 import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
@@ -82,6 +83,9 @@ public class InboundHttp2ToHttpAdapterTest {
     @Mock
     private HttpResponseListener clientListener;
 
+    @Mock
+    private HttpSettingsListener settingsListener;
+
     private Http2FrameWriter frameWriter;
     private ServerBootstrap sb;
     private Bootstrap cb;
@@ -90,9 +94,11 @@ public class InboundHttp2ToHttpAdapterTest {
     private Channel clientChannel;
     private volatile CountDownLatch serverLatch;
     private volatile CountDownLatch clientLatch;
+    private volatile CountDownLatch settingsLatch;
     private int maxContentLength;
     private HttpResponseDelegator serverDelegator;
     private HttpResponseDelegator clientDelegator;
+    private HttpSettingsDelegator settingsDelegator;
     private Http2Exception serverException;
 
     @Before
@@ -105,6 +111,7 @@ public class InboundHttp2ToHttpAdapterTest {
         maxContentLength = 1024;
         setServerLatch(1);
         setClientLatch(1);
+        setSettingsLatch(1);
         frameWriter = new DefaultHttp2FrameWriter();
 
         sb = new ServerBootstrap();
@@ -119,11 +126,18 @@ public class InboundHttp2ToHttpAdapterTest {
                 Http2Connection connection = new DefaultHttp2Connection(true);
                 p.addLast(
                         "reader",
-                        new HttpAdapterFrameAdapter(connection, InboundHttp2ToHttpPriorityAdapter.newInstance(
-                                connection, maxContentLength), new CountDownLatch(10)));
+                        new HttpAdapterFrameAdapter(connection,
+                                new InboundHttp2ToHttpPriorityAdapter.Builder(connection)
+                                        .maxContentLength(maxContentLength)
+                                        .validateHttpHeaders(true)
+                                        .propagateSettings(true)
+                                        .build(),
+                                        new CountDownLatch(10)));
                 serverDelegator = new HttpResponseDelegator(serverListener, serverLatch);
                 p.addLast(serverDelegator);
                 serverConnectedChannel = ch;
+                settingsDelegator = new HttpSettingsDelegator(settingsListener, settingsLatch);
+                p.addLast(settingsDelegator);
                 p.addLast(new ChannelHandlerAdapter() {
                     @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
@@ -148,8 +162,11 @@ public class InboundHttp2ToHttpAdapterTest {
                 Http2Connection connection = new DefaultHttp2Connection(false);
                 p.addLast(
                         "reader",
-                        new HttpAdapterFrameAdapter(connection, InboundHttp2ToHttpPriorityAdapter.newInstance(
-                                connection, maxContentLength), new CountDownLatch(10)));
+                        new HttpAdapterFrameAdapter(connection,
+                                new InboundHttp2ToHttpPriorityAdapter.Builder(connection)
+                                .maxContentLength(maxContentLength)
+                                .build(),
+                                new CountDownLatch(10)));
                 clientDelegator = new HttpResponseDelegator(clientListener, clientLatch);
                 p.addLast(clientDelegator);
             }
@@ -227,7 +244,7 @@ public class InboundHttp2ToHttpAdapterTest {
             }
         });
         awaitRequests();
-        assertTrue(serverException instanceof Http2StreamException);
+        assertTrue(isStreamError(serverException));
     }
 
     @Test
@@ -663,6 +680,22 @@ public class InboundHttp2ToHttpAdapterTest {
         }
     }
 
+    @Test
+    public void propagateSettings() throws Exception {
+        final Http2Settings settings = new Http2Settings().pushEnabled(true);
+        runInChannel(clientChannel, new Http2Runnable() {
+            @Override
+            public void run() {
+                frameWriter.writeSettings(ctxClient(), settings, newPromiseClient());
+                ctxClient().flush();
+            }
+        });
+        assertTrue(settingsLatch.await(3, SECONDS));
+        ArgumentCaptor<Http2Settings> settingsCaptor = ArgumentCaptor.forClass(Http2Settings.class);
+        verify(settingsListener).messageReceived(settingsCaptor.capture());
+        assertEquals(settings, settingsCaptor.getValue());
+    }
+
     private void cleanupCapturedRequests() {
         if (capturedRequests != null) {
             for (int i = 0; i < capturedRequests.size(); ++i) {
@@ -695,6 +728,13 @@ public class InboundHttp2ToHttpAdapterTest {
         }
     }
 
+    private void setSettingsLatch(int count) {
+        settingsLatch = new CountDownLatch(count);
+        if (settingsDelegator != null) {
+            settingsDelegator.latch(settingsLatch);
+        }
+    }
+
     private void awaitRequests() throws Exception {
         assertTrue(serverLatch.await(2, SECONDS));
     }
@@ -723,6 +763,10 @@ public class InboundHttp2ToHttpAdapterTest {
         void messageReceived(HttpObject obj);
     }
 
+    private interface HttpSettingsListener {
+        void messageReceived(Http2Settings settings);
+    }
+
     private static final class HttpResponseDelegator extends SimpleChannelInboundHandler<HttpObject> {
         private final HttpResponseListener listener;
         private volatile CountDownLatch latch;
@@ -736,6 +780,27 @@ public class InboundHttp2ToHttpAdapterTest {
         @Override
         protected void messageReceived(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
             listener.messageReceived(msg);
+            latch.countDown();
+        }
+
+        public void latch(CountDownLatch latch) {
+            this.latch = latch;
+        }
+    }
+
+    private static final class HttpSettingsDelegator extends SimpleChannelInboundHandler<Http2Settings> {
+        private final HttpSettingsListener listener;
+        private volatile CountDownLatch latch;
+
+        HttpSettingsDelegator(HttpSettingsListener listener, CountDownLatch latch) {
+            super(false);
+            this.listener = listener;
+            this.latch = latch;
+        }
+
+        @Override
+        protected void messageReceived(ChannelHandlerContext ctx, Http2Settings settings) throws Exception {
+            listener.messageReceived(settings);
             latch.countDown();
         }
 

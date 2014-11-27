@@ -191,11 +191,11 @@ public final class UnitHelp {
      * Display current OS/ARCH.
      */
     public static void logOsArch() {
-        final StringBuilder text = new StringBuilder(1024);
-        text.append("\n\t");
-        text.append(System.getProperty("os.name"));
-        text.append("\n\t");
-        text.append(System.getProperty("os.arch"));
+        final StringBuilder text = new StringBuilder(1024)
+            .append("\n\t")
+            .append(System.getProperty("os.name"))
+            .append("\n\t")
+            .append(System.getProperty("os.arch"));
         log.info("\n\t[os/arch]{}", text);
     }
 

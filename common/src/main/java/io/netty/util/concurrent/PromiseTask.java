@@ -129,9 +129,9 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
     protected StringBuilder toStringBuilder() {
         StringBuilder buf = super.toStringBuilder();
         buf.setCharAt(buf.length() - 1, ',');
-        buf.append(" task: ");
-        buf.append(task);
-        buf.append(')');
-        return buf;
+
+        return buf.append(" task: ")
+                  .append(task)
+                  .append(')');
     }
 }

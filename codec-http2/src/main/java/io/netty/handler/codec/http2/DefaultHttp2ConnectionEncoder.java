@@ -15,7 +15,8 @@
 package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2Exception.protocolError;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
@@ -58,6 +59,11 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                 Http2LifecycleManager lifecycleManager) {
             this.lifecycleManager = lifecycleManager;
             return this;
+        }
+
+        @Override
+        public Http2LifecycleManager lifecycleManager() {
+            return lifecycleManager;
         }
 
         @Override
@@ -109,7 +115,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         Http2FrameSizePolicy outboundFrameSizePolicy = config.frameSizePolicy();
         if (pushEnabled != null) {
             if (!connection.isServer()) {
-                throw protocolError("Client received SETTINGS frame with ENABLE_PUSH specified");
+                throw connectionError(PROTOCOL_ERROR, "Client received SETTINGS frame with ENABLE_PUSH specified");
             }
             connection.remote().allowPushTo(pushEnabled);
         }
@@ -216,7 +222,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         ChannelFuture lastDataWrite = lastWriteForStream(streamId);
         try {
             if (connection.isGoAway()) {
-                throw protocolError("Sending headers after connection going away.");
+                throw connectionError(PROTOCOL_ERROR, "Sending headers after connection going away.");
             }
 
             if (stream == null) {
@@ -312,7 +318,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             boolean exclusive, ChannelPromise promise) {
         try {
             if (connection.isGoAway()) {
-                throw protocolError("Sending priority after connection going away.");
+                throw connectionError(PROTOCOL_ERROR, "Sending priority after connection going away.");
             }
 
             // Update the priority on this stream.
@@ -374,12 +380,12 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         outstandingLocalSettingsQueue.add(settings);
         try {
             if (connection.isGoAway()) {
-                throw protocolError("Sending settings after connection going away.");
+                throw connectionError(PROTOCOL_ERROR, "Sending settings after connection going away.");
             }
 
             Boolean pushEnabled = settings.pushEnabled();
             if (pushEnabled != null && connection.isServer()) {
-                throw protocolError("Server sending SETTINGS frame with ENABLE_PUSH specified");
+                throw connectionError(PROTOCOL_ERROR, "Server sending SETTINGS frame with ENABLE_PUSH specified");
             }
         } catch (Throwable e) {
             return promise.setFailure(e);
@@ -400,7 +406,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             ChannelPromise promise) {
         if (connection.isGoAway()) {
             data.release();
-            return promise.setFailure(protocolError("Sending ping after connection going away."));
+            return promise.setFailure(connectionError(PROTOCOL_ERROR, "Sending ping after connection going away."));
         }
 
         ChannelFuture future = frameWriter.writePing(ctx, ack, data, promise);
@@ -413,7 +419,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             Http2Headers headers, int padding, ChannelPromise promise) {
         try {
             if (connection.isGoAway()) {
-                throw protocolError("Sending push promise after connection going away.");
+                throw connectionError(PROTOCOL_ERROR, "Sending push promise after connection going away.");
             }
 
             // Reserve the promised stream.

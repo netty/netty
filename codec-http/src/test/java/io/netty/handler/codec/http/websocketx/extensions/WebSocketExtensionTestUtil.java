@@ -79,7 +79,7 @@ public final class WebSocketExtensionTestUtil {
 
         @Override
         public void appendTo(StringBuffer buf) {
-            buf.append("WebSocketExtensionData with name=" + name);
+            buf.append("WebSocketExtensionData with name=").append(name);
         }
 
         @Override

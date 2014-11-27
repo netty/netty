@@ -17,9 +17,11 @@ package io.netty.handler.codec.http2;
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static io.netty.handler.codec.http2.Http2CodecUtil.getEmbeddedHttp2Exception;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
-import static io.netty.handler.codec.http2.Http2Exception.protocolError;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.handler.codec.http2.Http2Exception.isStreamError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
@@ -27,6 +29,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.http2.Http2Exception.StreamException;
 
 import java.util.Collection;
 import java.util.List;
@@ -79,13 +82,18 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         checkNotNull(decoderBuilder, "decoderBuilder");
         checkNotNull(encoderBuilder, "encoderBuilder");
 
+        if (encoderBuilder.lifecycleManager() != decoderBuilder.lifecycleManager()) {
+            throw new IllegalArgumentException("Encoder and Decoder must share a lifecycle manager");
+        } else if (encoderBuilder.lifecycleManager() == null) {
+            encoderBuilder.lifecycleManager(this);
+            decoderBuilder.lifecycleManager(this);
+        }
+
         // Build the encoder.
-        encoderBuilder.lifecycleManager(this);
         encoder = checkNotNull(encoderBuilder.build(), "encoder");
 
         // Build the decoder.
         decoderBuilder.encoder(encoder);
-        decoderBuilder.lifecycleManager(this);
         decoder = checkNotNull(decoderBuilder.build(), "decoder");
 
         // Verify that the encoder and decoder use the same connection.
@@ -115,10 +123,10 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      */
     public void onHttpClientUpgrade() throws Http2Exception {
         if (connection().isServer()) {
-            throw protocolError("Client-side HTTP upgrade requested for a server");
+            throw connectionError(PROTOCOL_ERROR, "Client-side HTTP upgrade requested for a server");
         }
         if (prefaceSent || decoder.prefaceReceived()) {
-            throw protocolError("HTTP upgrade must occur before HTTP/2 preface is sent or received");
+            throw connectionError(PROTOCOL_ERROR, "HTTP upgrade must occur before HTTP/2 preface is sent or received");
         }
 
         // Create a local stream used for the HTTP cleartext upgrade.
@@ -131,10 +139,10 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      */
     public void onHttpServerUpgrade(Http2Settings settings) throws Http2Exception {
         if (!connection().isServer()) {
-            throw protocolError("Server-side HTTP upgrade requested for a client");
+            throw connectionError(PROTOCOL_ERROR, "Server-side HTTP upgrade requested for a client");
         }
         if (prefaceSent || decoder.prefaceReceived()) {
-            throw protocolError("HTTP upgrade must occur before HTTP/2 preface is sent or received");
+            throw connectionError(PROTOCOL_ERROR, "HTTP upgrade must occur before HTTP/2 preface is sent or received");
         }
 
         // Apply the settings but no ACK is necessary.
@@ -146,8 +154,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        // The channel just became active - send the connection preface to the remote
-        // endpoint.
+        // The channel just became active - send the connection preface to the remote endpoint.
         sendPreface(ctx);
         super.channelActive(ctx);
     }
@@ -166,7 +173,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-     // Avoid NotYetConnectedException
+        // Avoid NotYetConnectedException
         if (!ctx.channel().isActive()) {
             ctx.close(promise);
             return;
@@ -270,8 +277,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     @Override
     public void onException(ChannelHandlerContext ctx, Throwable cause) {
         Http2Exception embedded = getEmbeddedHttp2Exception(cause);
-        if (embedded instanceof Http2StreamException) {
-            onStreamError(ctx, cause, (Http2StreamException) embedded);
+        if (isStreamError(embedded)) {
+            onStreamError(ctx, cause, (StreamException) embedded);
         } else {
             onConnectionError(ctx, cause, embedded);
         }
@@ -299,9 +306,9 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      *
      * @param ctx the channel context
      * @param cause the exception that was caught
-     * @param http2Ex the {@link Http2StreamException} that is embedded in the causality chain.
+     * @param http2Ex the {@link StreamException} that is embedded in the causality chain.
      */
-    protected void onStreamError(ChannelHandlerContext ctx, Throwable cause, Http2StreamException http2Ex) {
+    protected void onStreamError(ChannelHandlerContext ctx, Throwable cause, StreamException http2Ex) {
         writeRstStream(ctx, http2Ex.streamId(), http2Ex.error().code(), ctx.newPromise());
     }
 
@@ -433,7 +440,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
         // If the input so far doesn't match the preface, break the connection.
         if (bytesRead == 0 || !prefaceSlice.equals(sourceSlice)) {
-            throw protocolError("HTTP/2 client preface string missing or corrupt.");
+            throw connectionError(PROTOCOL_ERROR, "HTTP/2 client preface string missing or corrupt.");
         }
 
         if (!clientPrefaceString.isReadable()) {

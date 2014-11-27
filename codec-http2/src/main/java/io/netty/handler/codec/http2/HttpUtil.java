@@ -14,6 +14,9 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.BinaryHeaders;
@@ -31,7 +34,6 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.util.internal.PlatformDependent;
 
 import java.net.URI;
 import java.util.HashMap;
@@ -39,6 +41,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Provides utility methods and constants for the HTTP/2 to HTTP conversion
@@ -80,6 +83,12 @@ public final class HttpUtil {
      * in <a href="http://tools.ietf.org/html/draft-ietf-httpbis-http2-14#section-8.1.">HTTP/2 Spec Message Flow</a>
      */
     public static final HttpResponseStatus OUT_OF_MESSAGE_SEQUENCE_RETURN_CODE = HttpResponseStatus.OK;
+
+    /**
+     * This pattern will use to avoid compile it each time it is used
+     * when we need to replace some part of authority.
+     */
+    private static final Pattern AUTHORITY_REPLACEMENT_PATTERN = Pattern.compile("^.*@");
 
     private HttpUtil() {
     }
@@ -162,12 +171,12 @@ public final class HttpUtil {
         try {
             result = HttpResponseStatus.parseLine(status);
             if (result == HttpResponseStatus.SWITCHING_PROTOCOLS) {
-                throw Http2Exception.protocolError("Invalid HTTP/2 status code '%d'", result.code());
+                throw connectionError(PROTOCOL_ERROR, "Invalid HTTP/2 status code '%d'", result.code());
             }
         } catch (Http2Exception e) {
             throw e;
         } catch (Exception ignored) {
-            throw Http2Exception.protocolError(
+            throw connectionError(PROTOCOL_ERROR,
                             "Unrecognized HTTP status code '%s' encountered in translation to HTTP/1.x", status);
         }
         return result;
@@ -234,14 +243,13 @@ public final class HttpUtil {
                     FullHttpMessage destinationMessage, boolean addToTrailer) throws Http2Exception {
         HttpHeaders headers = addToTrailer ? destinationMessage.trailingHeaders() : destinationMessage.headers();
         boolean request = destinationMessage instanceof HttpRequest;
-        Http2ToHttpHeaderTranslator visitor = new Http2ToHttpHeaderTranslator(headers, request);
+        Http2ToHttpHeaderTranslator visitor = new Http2ToHttpHeaderTranslator(streamId, headers, request);
         try {
             sourceHeaders.forEachEntry(visitor);
         } catch (Http2Exception ex) {
             throw ex;
-        } catch (Exception ex) {
-            throw new Http2StreamException(streamId, Http2Error.PROTOCOL_ERROR,
-                    "HTTP/2 to HTTP/1.x headers conversion error", ex);
+        } catch (Throwable t) {
+            throw streamError(streamId, PROTOCOL_ERROR, t, "HTTP/2 to HTTP/1.x headers conversion error");
         }
 
         headers.remove(HttpHeaderNames.TRANSFER_ENCODING);
@@ -255,7 +263,7 @@ public final class HttpUtil {
     /**
      * Converts the given HTTP/1.x headers into HTTP/2 headers.
      */
-    public static Http2Headers toHttp2Headers(FullHttpMessage in) {
+    public static Http2Headers toHttp2Headers(FullHttpMessage in) throws Exception {
         final Http2Headers out = new DefaultHttp2Headers();
         HttpHeaders inHeaders = in.headers();
         if (in instanceof HttpRequest) {
@@ -269,7 +277,7 @@ public final class HttpUtil {
                 // The authority MUST NOT include the deprecated "userinfo" subcomponent
                 value = hostUri.getAuthority();
                 if (value != null) {
-                    out.authority(new AsciiString(value.replaceFirst("^.*@", "")));
+                    out.authority(new AsciiString(AUTHORITY_REPLACEMENT_PATTERN.matcher(value).replaceFirst("")));
                 }
                 value = hostUri.getScheme();
                 if (value != null) {
@@ -294,21 +302,17 @@ public final class HttpUtil {
         }
 
         // Add the HTTP headers which have not been consumed above
-        try {
-            inHeaders.forEachEntry(new EntryVisitor() {
-                @Override
-                public boolean visit(Entry<CharSequence, CharSequence> entry) throws Exception {
-                    final AsciiString aName = AsciiString.of(entry.getKey()).toLowerCase();
-                    if (!HTTP_TO_HTTP2_HEADER_BLACKLIST.contains(aName)) {
-                        AsciiString aValue = AsciiString.of(entry.getValue());
-                        out.add(aName, aValue);
-                    }
-                    return true;
+        inHeaders.forEachEntry(new EntryVisitor() {
+            @Override
+            public boolean visit(Entry<CharSequence, CharSequence> entry) throws Exception {
+                final AsciiString aName = AsciiString.of(entry.getKey()).toLowerCase();
+                if (!HTTP_TO_HTTP2_HEADER_BLACKLIST.contains(aName)) {
+                    AsciiString aValue = AsciiString.of(entry.getValue());
+                    out.add(aName, aValue);
                 }
-            });
-        } catch (Exception ex) {
-            PlatformDependent.throwException(ex);
-        }
+                return true;
+            }
+        });
         return out;
     }
 
@@ -333,6 +337,7 @@ public final class HttpUtil {
                             ExtensionHeaderNames.PATH.text());
         }
 
+        private final int streamId;
         private final HttpHeaders output;
         private final Map<AsciiString, AsciiString> translations;
 
@@ -343,7 +348,8 @@ public final class HttpUtil {
          * @param request if {@code true}, translates headers using the request translation map. Otherwise uses the
          *        response translation map.
          */
-        Http2ToHttpHeaderTranslator(HttpHeaders output, boolean request) {
+        Http2ToHttpHeaderTranslator(int streamId, HttpHeaders output, boolean request) {
+            this.streamId = streamId;
             this.output = output;
             translations = request ? REQUEST_HEADER_TRANSLATIONS : RESPONSE_HEADER_TRANSLATIONS;
         }
@@ -361,9 +367,8 @@ public final class HttpUtil {
                 // http://tools.ietf.org/html/draft-ietf-httpbis-http2-14#section-8.1.2.3
                 // All headers that start with ':' are only valid in HTTP/2 context
                 if (translatedName.isEmpty() || translatedName.charAt(0) == ':') {
-                    throw Http2Exception
-                                    .protocolError("Unknown HTTP/2 header '%s' encountered in translation to HTTP/1.x",
-                                                    translatedName);
+                    throw streamError(streamId, PROTOCOL_ERROR,
+                            "Invalid HTTP/2 header '%s' encountered in translation to HTTP/1.x", translatedName);
                 } else {
                     output.add(translatedName, value);
                 }

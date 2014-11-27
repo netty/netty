@@ -41,7 +41,7 @@ public class CompressorHttp2ConnectionEncoder extends DefaultHttp2ConnectionEnco
     private static final Http2ConnectionAdapter CLEAN_UP_LISTENER = new Http2ConnectionAdapter() {
         @Override
         public void streamRemoved(Http2Stream stream) {
-            final EmbeddedChannel compressor = stream.compressor();
+            final EmbeddedChannel compressor = stream.getProperty(CompressorHttp2ConnectionEncoder.class);
             if (compressor != null) {
                 cleanup(stream, compressor);
             }
@@ -103,19 +103,24 @@ public class CompressorHttp2ConnectionEncoder extends DefaultHttp2ConnectionEnco
     public ChannelFuture writeData(final ChannelHandlerContext ctx, final int streamId, ByteBuf data, int padding,
             final boolean endOfStream, ChannelPromise promise) {
         final Http2Stream stream = connection().stream(streamId);
-        final EmbeddedChannel compressor = stream == null ? null : stream.compressor();
-        if (compressor == null) {
+        final EmbeddedChannel channel = stream == null ? null :
+            (EmbeddedChannel) stream.getProperty(CompressorHttp2ConnectionEncoder.class);
+        if (channel == null) {
             // The compressor may be null if no compatible encoding type was found in this stream's headers
             return super.writeData(ctx, streamId, data, padding, endOfStream, promise);
         }
 
         try {
-            // call retain here as it will call release after its written to the channel
-            compressor.writeOutbound(data.retain());
-            ByteBuf buf = nextReadableBuf(compressor);
+            // The channel will release the buffer after being written
+            channel.writeOutbound(data);
+            ByteBuf buf = nextReadableBuf(channel);
             if (buf == null) {
                 if (endOfStream) {
-                    return super.writeData(ctx, streamId, Unpooled.EMPTY_BUFFER, padding, endOfStream, promise);
+                    if (channel.finish()) {
+                        buf = nextReadableBuf(channel);
+                    }
+                    return super.writeData(ctx, streamId, buf == null ? Unpooled.EMPTY_BUFFER : buf, padding,
+                            true, promise);
                 }
                 // END_STREAM is not set and the assumption is data is still forthcoming.
                 promise.setSuccess();
@@ -123,23 +128,39 @@ public class CompressorHttp2ConnectionEncoder extends DefaultHttp2ConnectionEnco
             }
 
             ChannelPromiseAggregator aggregator = new ChannelPromiseAggregator(promise);
+            ChannelPromise bufPromise = ctx.newPromise();
+            aggregator.add(bufPromise);
             for (;;) {
-                final ByteBuf nextBuf = nextReadableBuf(compressor);
-                final boolean endOfStreamForBuf = nextBuf == null && endOfStream;
-                ChannelPromise newPromise = ctx.newPromise();
-                aggregator.add(newPromise);
+                ByteBuf nextBuf = nextReadableBuf(channel);
+                boolean compressedEndOfStream = nextBuf == null && endOfStream;
+                if (compressedEndOfStream && channel.finish()) {
+                    nextBuf = nextReadableBuf(channel);
+                    compressedEndOfStream = nextBuf == null;
+                }
 
-                super.writeData(ctx, streamId, buf, padding, endOfStreamForBuf, newPromise);
+                final ChannelPromise nextPromise;
+                if (nextBuf != null) {
+                    // We have to add the nextPromise to the aggregator before doing the current write. This is so
+                    // completing the current write before the next write is done won't complete the aggregate promise
+                    nextPromise = ctx.newPromise();
+                    aggregator.add(nextPromise);
+                } else {
+                    nextPromise = null;
+                }
+
+                super.writeData(ctx, streamId, buf, padding, compressedEndOfStream, bufPromise);
                 if (nextBuf == null) {
                     break;
                 }
 
+                padding = 0; // Padding is only communicated once on the first iteration
                 buf = nextBuf;
+                bufPromise = nextPromise;
             }
             return promise;
         } finally {
             if (endOfStream) {
-                cleanup(stream, compressor);
+                cleanup(stream, channel);
             }
         }
     }
@@ -215,7 +236,7 @@ public class CompressorHttp2ConnectionEncoder extends DefaultHttp2ConnectionEnco
             return;
         }
 
-        EmbeddedChannel compressor = stream.compressor();
+        EmbeddedChannel compressor = stream.getProperty(CompressorHttp2ConnectionEncoder.class);
         if (compressor == null) {
             if (!endOfStream) {
                 AsciiString encoding = headers.get(CONTENT_ENCODING);
@@ -225,6 +246,7 @@ public class CompressorHttp2ConnectionEncoder extends DefaultHttp2ConnectionEnco
                 try {
                     compressor = newContentCompressor(encoding);
                     if (compressor != null) {
+                        stream.setProperty(CompressorHttp2ConnectionEncoder.class, compressor);
                         AsciiString targetContentEncoding = getTargetContentEncoding(encoding);
                         if (IDENTITY.equalsIgnoreCase(targetContentEncoding)) {
                             headers.remove(CONTENT_ENCODING);
@@ -261,10 +283,11 @@ public class CompressorHttp2ConnectionEncoder extends DefaultHttp2ConnectionEnco
                 if (buf == null) {
                     break;
                 }
+
                 buf.release();
             }
         }
-        stream.compressor(null);
+        stream.removeProperty(CompressorHttp2ConnectionEncoder.class);
     }
 
     /**

@@ -14,6 +14,9 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+
 /**
  * Provides common functionality for {@link Http2HeaderTable}
  */
@@ -22,7 +25,7 @@ class DefaultHttp2HeaderTableListSize {
 
     public void maxHeaderListSize(int max) throws Http2Exception {
         if (max < 0) {
-            throw Http2Exception.protocolError("Header List Size must be non-negative but was %d", max);
+            throw connectionError(PROTOCOL_ERROR, "Header List Size must be non-negative but was %d", max);
         }
         maxHeaderListSize = max;
     }

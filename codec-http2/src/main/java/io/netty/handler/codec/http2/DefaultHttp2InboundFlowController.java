@@ -17,8 +17,11 @@ package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
-import static io.netty.handler.codec.http2.Http2Exception.flowControlError;
-import static io.netty.handler.codec.http2.Http2Exception.protocolError;
+import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.streamError;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -59,13 +62,18 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
         this.windowUpdateRatio = windowUpdateRatio;
 
         // Add a flow state for the connection.
-        connection.connectionStream().inboundFlow(new FlowState(CONNECTION_STREAM_ID));
+        final Http2Stream connectionStream = connection.connectionStream();
+        final FlowState connectionFlowState = new FlowState(connectionStream);
+        connectionStream.inboundFlow(connectionFlowState);
+        connectionStream.garbageCollector(connectionFlowState);
 
         // Register for notification of new streams.
         connection.addListener(new Http2ConnectionAdapter() {
             @Override
             public void streamAdded(Http2Stream stream) {
-                stream.inboundFlow(new FlowState(stream.id()));
+                final FlowState flowState = new FlowState(stream);
+                stream.inboundFlow(flowState);
+                stream.garbageCollector(flowState);
             }
         });
     }
@@ -132,7 +140,7 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
     private FlowState stateOrFail(int streamId) throws Http2Exception {
         FlowState state = state(streamId);
         if (state == null) {
-            throw protocolError("Flow control window missing for stream: %d", streamId);
+            throw connectionError(PROTOCOL_ERROR, "Flow control window missing for stream: %d", streamId);
         }
         return state;
     }
@@ -140,8 +148,8 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
     /**
      * Flow control window state for an individual stream.
      */
-    private final class FlowState implements Http2InboundFlowState {
-        private final int streamId;
+    private final class FlowState implements Http2FlowState, Http2FlowControlWindowManager {
+        private final Http2Stream stream;
 
         /**
          * The actual flow control window that is decremented as soon as {@code DATA} arrives.
@@ -159,8 +167,8 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
         private int lowerBound;
         private boolean endOfStream;
 
-        FlowState(int streamId) {
-            this.streamId = streamId;
+        FlowState(Http2Stream stream) {
+            this.stream = stream;
             window = initialWindowSize;
             processedWindow = window;
         }
@@ -179,7 +187,7 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
          */
         int initialWindowSize() {
             int maxWindowSize = initialWindowSize;
-            if (streamId == CONNECTION_STREAM_ID) {
+            if (stream.id() == CONNECTION_STREAM_ID) {
                 // Determine the maximum number of streams that we can allow without integer overflow
                 // of maxWindowSize * numStreams. Also take care to avoid division by zero when
                 // maxWindowSize == 0.
@@ -195,7 +203,7 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
 
         @Override
         public void returnProcessedBytes(ChannelHandlerContext ctx, int numBytes) throws Http2Exception {
-            if (streamId == CONNECTION_STREAM_ID) {
+            if (stream.id() == CONNECTION_STREAM_ID) {
                 throw new UnsupportedOperationException("Returning bytes for the connection window is not supported");
             }
             checkNotNull(ctx, "ctx");
@@ -206,6 +214,16 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
             // Return the bytes processed and update the window.
             returnProcessedBytes(numBytes);
             updateWindowIfAppropriate(ctx);
+        }
+
+        @Override
+        public int unProcessedBytes() {
+            return processedWindow - window;
+        }
+
+        @Override
+        public Http2Stream stream() {
+            return stream;
         }
 
         /**
@@ -225,10 +243,10 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
         /**
          * Returns the processed bytes for this stream.
          */
-        void returnProcessedBytes(int delta) {
+        void returnProcessedBytes(int delta) throws Http2Exception {
             if (processedWindow - delta < window) {
-                throw new IllegalArgumentException(
-                        "Attempting to return too many bytes for stream " + streamId);
+                throw streamError(stream.id(), INTERNAL_ERROR,
+                        "Attempting to return too many bytes for stream %d", stream.id());
             }
             processedWindow -= delta;
         }
@@ -253,10 +271,11 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
             // This difference is stored for the connection when writing the SETTINGS frame
             // and is cleared once we send a WINDOW_UPDATE frame.
             if (delta < 0 && window < lowerBound) {
-                if (streamId == CONNECTION_STREAM_ID) {
-                    throw protocolError("Connection flow control window exceeded");
+                if (stream.id() == CONNECTION_STREAM_ID) {
+                    throw connectionError(FLOW_CONTROL_ERROR, "Connection flow control window exceeded");
                 } else {
-                    throw flowControlError("Flow control window exceeded for stream: %d", streamId);
+                    throw streamError(stream.id(), FLOW_CONTROL_ERROR,
+                            "Flow control window exceeded for stream: %d", stream.id());
                 }
             }
 
@@ -273,9 +292,8 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
          * @throws Http2Exception thrown if integer overflow occurs on the window.
          */
         void updatedInitialWindowSize(int delta) throws Http2Exception {
-            if (delta > 0 && window > Integer.MAX_VALUE - delta) {
-                // Integer overflow.
-                throw flowControlError("Flow control window overflowed for stream: %d", streamId);
+            if (delta > 0 && window > Integer.MAX_VALUE - delta) { // Integer overflow.
+                throw connectionError(PROTOCOL_ERROR, "Flow control window overflowed for stream: %d", stream.id());
             }
             window += delta;
             processedWindow += delta;
@@ -292,7 +310,7 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
          */
         void updateWindow(ChannelHandlerContext ctx) {
             // Expand the window for this stream back to the size of the initial window.
-            int deltaWindowSize = initialWindowSize() - window;
+            int deltaWindowSize = initialWindowSize() - processedWindow;
             processedWindow += deltaWindowSize;
             try {
                 addAndGet(deltaWindowSize);
@@ -303,7 +321,7 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
             }
 
             // Send a window update for the stream/connection.
-            frameWriter.writeWindowUpdate(ctx, streamId, deltaWindowSize, ctx.newPromise());
+            frameWriter.writeWindowUpdate(ctx, stream.id(), deltaWindowSize, ctx.newPromise());
             ctx.flush();
         }
     }

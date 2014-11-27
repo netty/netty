@@ -14,6 +14,8 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+
 /**
  * This exception is thrown when there are no more stream IDs available for the current connection
  */
@@ -22,10 +24,10 @@ public class Http2NoMoreStreamIdsException extends Http2Exception {
     private static final String ERROR_MESSAGE = "No more streams can be created on this connection";
 
     public Http2NoMoreStreamIdsException() {
-        super(Http2Error.PROTOCOL_ERROR, ERROR_MESSAGE);
+        super(PROTOCOL_ERROR, ERROR_MESSAGE);
     }
 
     public Http2NoMoreStreamIdsException(Throwable cause) {
-        super(Http2Error.PROTOCOL_ERROR, ERROR_MESSAGE, cause);
+        super(PROTOCOL_ERROR, ERROR_MESSAGE, cause);
     }
 }

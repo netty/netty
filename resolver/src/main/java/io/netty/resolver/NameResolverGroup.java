@@ -49,7 +49,7 @@ public abstract class NameResolverGroup<T extends SocketAddress> implements Clos
      * {@link #newResolver(EventExecutor)} so that the new resolver is reused on another
      * {@link #getResolver(EventExecutor)} call with the same {@link EventExecutor}.
      */
-    public NameResolver<T> getResolver(final EventExecutor executor) {
+    public NameResolver<T> getResolver(EventExecutor executor) {
         if (executor == null) {
             throw new NullPointerException("executor");
         }
@@ -58,6 +58,10 @@ public abstract class NameResolverGroup<T extends SocketAddress> implements Clos
             throw new IllegalStateException("executor not accepting a task");
         }
 
+        return getResolver0(executor.unwrap());
+    }
+
+    private NameResolver<T> getResolver0(final EventExecutor executor) {
         NameResolver<T> r;
         synchronized (resolvers) {
             r = resolvers.get(executor);

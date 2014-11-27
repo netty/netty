@@ -49,9 +49,6 @@ public final class Http2SecurityUtil {
 
     private static final List<String> CIPHERS_JAVA_NO_MOZILLA_INCREASED_SECURITY = Collections.unmodifiableList(Arrays
             .asList(
-            /* Java 6,7,8 */
-            "TLS_ECDHE_ECDSA_WITH_RC4_128_SHA", /* openssl = ECDHE-ECDSA-RC4-SHA */
-            "TLS_ECDH_ECDSA_WITH_RC4_128_SHA", /* openssl = ECDH-ECDSA-RC4-SHA */
             /* Java 8 */
             "TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384", /* openssl = ECDH-ECDSA-AES256-GCM-SHA384 */
             "TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384", /* openssl = ECDH-RSA-AES256-GCM-SHA384 */
@@ -64,9 +61,7 @@ public final class Http2SecurityUtil {
     private static final List<String> CIPHERS_JAVA_DISABLED_DEFAULT = Collections.unmodifiableList(Arrays.asList(
             /* Java 8 */
             "TLS_DH_anon_WITH_AES_256_GCM_SHA384", /* openssl = ADH-AES256-GCM-SHA384 */
-            "TLS_DH_anon_WITH_AES_128_GCM_SHA256", /* openssl = ADH-AES128-GCM-SHA256 */
-            /* Java 6,7,8 */
-            "TLS_ECDH_anon_WITH_RC4_128_SHA" /* openssl = AECDH-RC4-SHA */));
+            "TLS_DH_anon_WITH_AES_128_GCM_SHA256" /* openssl = ADH-AES128-GCM-SHA256 */));
 
     static {
         List<String> ciphers = new ArrayList<String>(CIPHERS_JAVA_MOZILLA_INCREASED_SECURITY.size()

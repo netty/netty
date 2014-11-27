@@ -14,6 +14,7 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_ENCODING;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaderValues.DEFLATE;
@@ -38,7 +39,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
     private static final Http2ConnectionAdapter CLEAN_UP_LISTENER = new Http2ConnectionAdapter() {
         @Override
         public void streamRemoved(Http2Stream stream) {
-            final EmbeddedChannel decompressor = stream.decompressor();
+            final Http2Decompressor decompressor = stream.getProperty(Http2Decompressor.class);
             if (decompressor != null) {
                 cleanup(stream, decompressor);
             }
@@ -63,47 +64,66 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
 
     @Override
     public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
-                    throws Http2Exception {
+            throws Http2Exception {
         final Http2Stream stream = connection.stream(streamId);
-        final EmbeddedChannel decompressor = stream == null ? null : stream.decompressor();
+        final Http2Decompressor decompressor = stream == null ? null :
+            (Http2Decompressor) stream.getProperty(Http2Decompressor.class);
         if (decompressor == null) {
             // The decompressor may be null if no compatible encoding type was found in this stream's headers
             return listener.onDataRead(ctx, streamId, data, padding, endOfStream);
         }
 
-        // When decompressing, always opt-out of application-level flow control.
-        // TODO: investigate how to apply application-level flow control when decompressing.
-        int processedBytes = data.readableBytes() + padding;
-        try {
-            // call retain here as it will call release after its written to the channel
-            decompressor.writeInbound(data.retain());
-            ByteBuf buf = nextReadableBuf(decompressor);
-            if (buf == null) {
-                if (endOfStream) {
-                    listener.onDataRead(ctx, streamId, Unpooled.EMPTY_BUFFER, padding, true);
-                }
-                // END_STREAM is not set and the data could not be decoded yet.
-                // The assumption has to be there will be more data frames to complete the decode.
-                // We don't have enough information here to know if this is an error.
-            } else {
+        final EmbeddedChannel channel = decompressor.decompressor();
+        final int compressedBytes = data.readableBytes() + padding;
+        int processedBytes = 0;
+        decompressor.incrementCompressedBytes(compressedBytes);
+        // call retain here as it will call release after its written to the channel
+        channel.writeInbound(data.retain());
+        ByteBuf buf = nextReadableBuf(channel);
+        if (buf == null && endOfStream && channel.finish()) {
+            buf = nextReadableBuf(channel);
+        }
+        if (buf == null) {
+            if (endOfStream) {
+                listener.onDataRead(ctx, streamId, Unpooled.EMPTY_BUFFER, padding, true);
+            }
+            // No new decompressed data was extracted from the compressed data. This means the application could not be
+            // provided with data and thus could not return how many bytes were processed. We will assume there is more
+            // data coming which will complete the decompression block. To allow for more data we return all bytes to
+            // the flow control window (so the peer can send more data).
+            decompressor.incrementDecompressedByes(compressedBytes);
+            processedBytes = compressedBytes;
+        } else {
+            try {
+                decompressor.incrementDecompressedByes(padding);
                 for (;;) {
-                    final ByteBuf nextBuf = nextReadableBuf(decompressor);
-                    final boolean endOfStreamForBuf = nextBuf == null && endOfStream;
+                    ByteBuf nextBuf = nextReadableBuf(channel);
+                    boolean decompressedEndOfStream = nextBuf == null && endOfStream;
+                    if (decompressedEndOfStream && channel.finish()) {
+                        nextBuf = nextReadableBuf(channel);
+                        decompressedEndOfStream = nextBuf == null;
+                    }
 
-                    listener.onDataRead(ctx, streamId, buf, padding, endOfStreamForBuf);
+                    decompressor.incrementDecompressedByes(buf.readableBytes());
+                    processedBytes += listener.onDataRead(ctx, streamId, buf, padding, decompressedEndOfStream);
                     if (nextBuf == null) {
                         break;
                     }
 
+                    padding = 0; // Padding is only communicated once on the first iteration
+                    buf.release();
                     buf = nextBuf;
                 }
-            }
-            return processedBytes;
-        } finally {
-            if (endOfStream) {
-                cleanup(stream, decompressor);
+            } finally {
+                if (buf != null) {
+                    buf.release();
+                }
             }
         }
+
+        decompressor.incrementProcessedBytes(processedBytes);
+        // The processed bytes will be translated to pre-decompressed byte amounts by DecompressorGarbageCollector
+        return processedBytes;
     }
 
     @Override
@@ -172,29 +192,27 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
             return;
         }
 
-        EmbeddedChannel decompressor = stream.decompressor();
-        if (decompressor == null) {
-            if (!endOfStream) {
-                // Determine the content encoding.
-                AsciiString contentEncoding = headers.get(CONTENT_ENCODING);
-                if (contentEncoding == null) {
-                    contentEncoding = IDENTITY;
-                }
-                decompressor = newContentDecompressor(contentEncoding);
-                if (decompressor != null) {
-                    stream.decompressor(decompressor);
-                    // Decode the content and remove or replace the existing headers
-                    // so that the message looks like a decoded message.
-                    AsciiString targetContentEncoding = getTargetContentEncoding(contentEncoding);
-                    if (IDENTITY.equalsIgnoreCase(targetContentEncoding)) {
-                        headers.remove(CONTENT_ENCODING);
-                    } else {
-                        headers.set(CONTENT_ENCODING, targetContentEncoding);
-                    }
+        Http2Decompressor decompressor = stream.getProperty(Http2Decompressor.class);
+        if (decompressor == null && !endOfStream) {
+            // Determine the content encoding.
+            AsciiString contentEncoding = headers.get(CONTENT_ENCODING);
+            if (contentEncoding == null) {
+                contentEncoding = IDENTITY;
+            }
+            final EmbeddedChannel channel = newContentDecompressor(contentEncoding);
+            if (channel != null) {
+                decompressor = new Http2Decompressor(channel);
+                stream.setProperty(Http2Decompressor.class, decompressor);
+                stream.garbageCollector(new DecompressorGarbageCollector(stream.garbageCollector()));
+                // Decode the content and remove or replace the existing headers
+                // so that the message looks like a decoded message.
+                AsciiString targetContentEncoding = getTargetContentEncoding(contentEncoding);
+                if (IDENTITY.equalsIgnoreCase(targetContentEncoding)) {
+                    headers.remove(CONTENT_ENCODING);
+                } else {
+                    headers.set(CONTENT_ENCODING, targetContentEncoding);
                 }
             }
-        } else if (endOfStream) {
-            cleanup(stream, decompressor);
         }
 
         if (decompressor != null) {
@@ -212,17 +230,22 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
      * @param stream The stream for which {@code decompressor} is the decompressor for
      * @param decompressor The decompressor for {@code stream}
      */
-    private static void cleanup(Http2Stream stream, EmbeddedChannel decompressor) {
-        if (decompressor.finish()) {
+    private static void cleanup(Http2Stream stream, Http2Decompressor decompressor) {
+        final EmbeddedChannel channel = decompressor.decompressor();
+        if (channel.finish()) {
             for (;;) {
-                final ByteBuf buf = decompressor.readInbound();
+                final ByteBuf buf = channel.readInbound();
                 if (buf == null) {
                     break;
                 }
                 buf.release();
             }
         }
-        stream.decompressor(null);
+        decompressor = stream.removeProperty(Http2Decompressor.class);
+        if (decompressor != null) {
+            DecompressorGarbageCollector gc = (DecompressorGarbageCollector) stream.garbageCollector();
+            stream.garbageCollector(gc.original());
+        }
     }
 
     /**
@@ -243,6 +266,130 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
                 continue;
             }
             return buf;
+        }
+    }
+
+    /**
+     * Garbage collector which translates post-decompression amounts the application knows about
+     * to pre-decompression amounts that flow control knows about.
+     */
+    private static final class DecompressorGarbageCollector implements Http2FlowControlWindowManager {
+        private final Http2FlowControlWindowManager original;
+
+        DecompressorGarbageCollector(Http2FlowControlWindowManager original) {
+            this.original = original;
+        }
+
+        @Override
+        public void returnProcessedBytes(ChannelHandlerContext ctx, int numBytes) throws Http2Exception {
+            final Http2Stream stream = stream();
+            final Http2Decompressor decompressor = stream.getProperty(Http2Decompressor.class);
+
+            // Make a copy before hand in case any exceptions occur we will roll back the state
+            Http2Decompressor copy = new Http2Decompressor(decompressor);
+            try {
+                original.returnProcessedBytes(ctx, decompressor.consumeProcessedBytes(numBytes));
+            } catch (Http2Exception e) {
+                stream.setProperty(Http2Decompressor.class, copy);
+                throw e;
+            } catch (Throwable t) {
+                stream.setProperty(Http2Decompressor.class, copy);
+                throw new Http2Exception(INTERNAL_ERROR,
+                        "Error while returning bytes to flow control window", t);
+            }
+        }
+
+        Http2FlowControlWindowManager original() {
+            return original;
+        }
+
+        @Override
+        public int unProcessedBytes() {
+            return original.unProcessedBytes();
+        }
+
+        @Override
+        public Http2Stream stream() {
+            return original.stream();
+        }
+    }
+
+    /**
+     * Provides the state for stream {@code DATA} frame decompression.
+     */
+    private static final class Http2Decompressor {
+        private final EmbeddedChannel decompressor;
+        private int processed;
+        private int compressed;
+        private int decompressed;
+
+        Http2Decompressor(Http2Decompressor rhs) {
+            this(rhs.decompressor);
+            processed = rhs.processed;
+            compressed = rhs.compressed;
+            decompressed = rhs.decompressed;
+        }
+
+        Http2Decompressor(EmbeddedChannel decompressor) {
+            this.decompressor = decompressor;
+        }
+
+        /**
+         * Responsible for taking compressed bytes in and producing decompressed bytes.
+         */
+        EmbeddedChannel decompressor() {
+            return decompressor;
+        }
+
+        /**
+         * Increment the number of decompressed bytes processed by the application.
+         */
+        void incrementProcessedBytes(int delta) {
+            if (processed + delta < 0) {
+                throw new IllegalArgumentException("processed bytes cannot be negative");
+            }
+            processed += delta;
+        }
+
+        /**
+         * Increment the number of bytes received prior to doing any decompression.
+         */
+        void incrementCompressedBytes(int delta) {
+            if (compressed + delta < 0) {
+                throw new IllegalArgumentException("compressed bytes cannot be negative");
+            }
+            compressed += delta;
+        }
+
+        /**
+         * Increment the number of bytes after the decompression process. Under normal circumstances this
+         * delta should not exceed {@link Http2Decompressor#processedBytes()}.
+         */
+        void incrementDecompressedByes(int delta) {
+            if (decompressed + delta < 0) {
+                throw new IllegalArgumentException("decompressed bytes cannot be negative");
+            }
+            decompressed += delta;
+        }
+
+        /**
+         * Decrements {@link Http2Decompressor#processedBytes()} by {@code processedBytes} and determines the ratio
+         * between {@code processedBytes} and {@link Http2Decompressor#decompressedBytes()}.
+         * This ratio is used to decrement {@link Http2Decompressor#decompressedBytes()} and
+         * {@link Http2Decompressor#compressedBytes()}.
+         * @param processedBytes The number of post-decompressed bytes that have been processed.
+         * @return The number of pre-decompressed bytes that have been consumed.
+         */
+        int consumeProcessedBytes(int processedBytes) {
+            // Consume the processed bytes first to verify that is is a valid amount
+            incrementProcessedBytes(-processedBytes);
+
+            double consumedRatio = processedBytes / (double) decompressed;
+            int consumedCompressed = Math.min(compressed, (int) Math.ceil(compressed * consumedRatio));
+            incrementDecompressedByes(-Math.min(decompressed, (int) Math.ceil(decompressed * consumedRatio)));
+            incrementCompressedBytes(-consumedCompressed);
+
+            return consumedCompressed;
         }
     }
 }

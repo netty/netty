@@ -309,27 +309,27 @@ public final class ResourceLeakDetector<T> {
                 array = lastRecords.toArray();
             }
 
-            StringBuilder buf = new StringBuilder(16384);
-            buf.append(NEWLINE);
-            buf.append("Recent access records: ");
-            buf.append(array.length);
-            buf.append(NEWLINE);
+            StringBuilder buf = new StringBuilder(16384)
+                .append(NEWLINE)
+                .append("Recent access records: ")
+                .append(array.length)
+                .append(NEWLINE);
 
             if (array.length > 0) {
                 for (int i = array.length - 1; i >= 0; i --) {
-                    buf.append('#');
-                    buf.append(i + 1);
-                    buf.append(':');
-                    buf.append(NEWLINE);
-                    buf.append(array[i]);
+                    buf.append('#')
+                       .append(i + 1)
+                       .append(':')
+                       .append(NEWLINE)
+                       .append(array[i]);
                 }
             }
 
-            buf.append("Created at:");
-            buf.append(NEWLINE);
-            buf.append(creationRecord);
-            buf.setLength(buf.length() - NEWLINE.length());
+            buf.append("Created at:")
+               .append(NEWLINE)
+               .append(creationRecord);
 
+            buf.setLength(buf.length() - NEWLINE.length());
             return buf.toString();
         }
     }

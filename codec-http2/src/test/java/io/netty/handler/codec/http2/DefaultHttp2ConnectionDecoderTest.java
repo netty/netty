@@ -19,11 +19,13 @@ import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.emptyPingBuf;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
-import static io.netty.handler.codec.http2.Http2Exception.protocolError;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.CharsetUtil.UTF_8;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
@@ -45,6 +47,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -102,7 +105,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     private Http2ConnectionEncoder encoder;
 
     @Mock
-    private Http2InboundFlowState inFlowState;
+    private Http2FlowControlWindowManager inFlowState;
 
     @Mock
     private Http2LifecycleManager lifecycleManager;
@@ -116,7 +119,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         when(channel.isActive()).thenReturn(true);
         when(stream.id()).thenReturn(STREAM_ID);
         when(stream.state()).thenReturn(OPEN);
-        when(stream.inboundFlow()).thenReturn(inFlowState);
+        when(stream.garbageCollector()).thenReturn(inFlowState);
         when(pushStream.id()).thenReturn(PUSH_STREAM_ID);
         when(connection.activeStreams()).thenReturn(Collections.singletonList(stream));
         when(connection.stream(STREAM_ID)).thenReturn(stream);
@@ -180,7 +183,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         }
     }
 
-    @Test(expected = Http2StreamException.class)
+    @Test(expected = Http2Exception.class)
     public void dataReadForStreamInInvalidStateShouldThrow() throws Exception {
         // Throw an exception when checking stream state.
         when(stream.state()).thenReturn(Http2Stream.State.CLOSED);
@@ -230,6 +233,50 @@ public class DefaultHttp2ConnectionDecoderTest {
             verify(inboundFlow).applyFlowControl(eq(ctx), eq(STREAM_ID), eq(data), eq(10), eq(true));
             verify(lifecycleManager).closeRemoteSide(eq(stream), eq(future));
             verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(10), eq(true));
+        } finally {
+            data.release();
+        }
+    }
+
+    @Test
+    public void errorDuringDeliveryShouldReturnCorrectNumberOfBytes() throws Exception {
+        final ByteBuf data = dummyData();
+        final int padding = 10;
+        final AtomicInteger unprocessed = new AtomicInteger(data.readableBytes() + padding);
+        doAnswer(new Answer<Integer>() {
+            @Override
+            public Integer answer(InvocationOnMock in) throws Throwable {
+                return unprocessed.get();
+            }
+        }).when(inFlowState).unProcessedBytes();
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock in) throws Throwable {
+                int delta = (Integer) in.getArguments()[1];
+                int newValue = unprocessed.addAndGet(-delta);
+                if (newValue < 0) {
+                    throw new RuntimeException("Returned too many bytes");
+                }
+                return null;
+            }
+        }).when(inFlowState).returnProcessedBytes(eq(ctx), anyInt());
+        // When the listener callback is called, process a few bytes and then throw.
+        doAnswer(new Answer<Integer>() {
+            @Override
+            public Integer answer(InvocationOnMock in) throws Throwable {
+                inFlowState.returnProcessedBytes(ctx, 4);
+                throw new RuntimeException("Fake Exception");
+            }
+        }).when(listener).onDataRead(eq(ctx), eq(STREAM_ID), any(ByteBuf.class), eq(10), eq(true));
+        try {
+            decode().onDataRead(ctx, STREAM_ID, data, padding, true);
+            fail("Expected exception");
+        } catch (RuntimeException cause) {
+            verify(inboundFlow)
+                    .applyFlowControl(eq(ctx), eq(STREAM_ID), eq(data), eq(padding), eq(true));
+            verify(lifecycleManager).closeRemoteSide(eq(stream), eq(future));
+            verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(padding), eq(true));
+            assertEquals(0, inFlowState.unProcessedBytes());
         } finally {
             data.release();
         }
@@ -324,7 +371,7 @@ public class DefaultHttp2ConnectionDecoderTest {
 
     @Test(expected = Http2Exception.class)
     public void windowUpdateReadForUnknownStreamShouldThrow() throws Exception {
-        when(connection.requireStream(5)).thenThrow(protocolError(""));
+        when(connection.requireStream(5)).thenThrow(connectionError(PROTOCOL_ERROR, ""));
         decode().onWindowUpdateRead(ctx, 5, 10);
     }
 
@@ -345,7 +392,7 @@ public class DefaultHttp2ConnectionDecoderTest {
 
     @Test(expected = Http2Exception.class)
     public void rstStreamReadForUnknownStreamShouldThrow() throws Exception {
-        when(connection.requireStream(5)).thenThrow(protocolError(""));
+        when(connection.requireStream(5)).thenThrow(connectionError(PROTOCOL_ERROR, ""));
         decode().onRstStreamRead(ctx, 5, PROTOCOL_ERROR.code());
     }
 
