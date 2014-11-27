@@ -17,7 +17,6 @@
 package io.netty.resolver.dns;
 
 import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.dns.DnsQuery;
@@ -142,7 +141,7 @@ final class DnsQueryContext {
         if (parent.bindFuture.isDone()) {
             writeQuery(query, nameServerAddr);
         } else {
-                parent.bindFuture.addListener(new ChannelFutureListener() {
+            parent.bindFuture.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
                     if (future.isSuccess()) {
