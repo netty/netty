@@ -62,7 +62,7 @@ import java.util.concurrent.TimeUnit;
  * // for 30 seconds.  The connection is closed when there is no inbound traffic
  * // for 60 seconds.
  *
- * public class MyChannelInitializer extends {@link ChannelInitializer}&lt{@link Channel}&gt {
+ * public class MyChannelInitializer extends {@link ChannelInitializer}&lt;{@link Channel}&gt; {
  *     {@code @Override}
  *     public void initChannel({@link Channel} channel) {
  *         channel.pipeline().addLast("idleStateHandler", new {@link IdleStateHandler}(60, 30, 0));

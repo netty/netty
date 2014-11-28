@@ -87,14 +87,14 @@ import java.nio.channels.Channels;
  * <pre>
  * public class FactorialHandler extends {@link ChannelInboundHandlerAdapter}&lt{@link Integer}&gt {
  *
- *   private final {@link AttributeKey}&lt{@link Integer}&gt counter =
- *           new {@link AttributeKey}&lt{@link Integer}&gt("counter");
+ *   private final {@link AttributeKey}&lt;{@link Integer}&gt; counter =
+ *           new {@link AttributeKey}&lt;{@link Integer}&gt;("counter");
  *
  *   // This handler will receive a sequence of increasing integers starting
  *   // from 1.
  *   {@code @Override}
  *   public void channelRead({@link ChannelHandlerContext} ctx, {@link Integer} integer) {
- *     {@link Attribute}&lt{@link Integer}&gt attr = ctx.getAttr(counter);
+ *     {@link Attribute}&lt;{@link Integer}&gt; attr = ctx.getAttr(counter);
  *     Integer a = ctx.getAttr(counter).get();
  *
  *     if (a == null) {
