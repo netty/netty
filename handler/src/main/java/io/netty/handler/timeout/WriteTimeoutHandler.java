@@ -36,7 +36,7 @@ import java.util.concurrent.TimeUnit;
  * // The connection is closed when there is no outbound traffic
  * // for 30 seconds.
  *
- * public class MyChannelInitializer extends {@link ChannelInitializer}&lt{@link Channel}&gt {
+ * public class MyChannelInitializer extends {@link ChannelInitializer}&lt;{@link Channel}&gt; {
  *     public void initChannel({@link Channel} channel) {
  *         channel.pipeline().addLast("writeTimeoutHandler", new {@link WriteTimeoutHandler}(30);
  *         channel.pipeline().addLast("myHandler", new MyHandler());
