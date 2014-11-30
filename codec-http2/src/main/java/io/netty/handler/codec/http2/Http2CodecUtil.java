@@ -69,7 +69,7 @@ public final class Http2CodecUtil {
 
     public static final long MIN_HEADER_TABLE_SIZE = 0;
     public static final long MIN_CONCURRENT_STREAMS = 0;
-    public static final long MIN_INITIAL_WINDOW_SIZE = 0;
+    public static final int MIN_INITIAL_WINDOW_SIZE = 0;
     public static final long MIN_HEADER_LIST_SIZE = 0;
 
     public static final int DEFAULT_WINDOW_SIZE = 65535;

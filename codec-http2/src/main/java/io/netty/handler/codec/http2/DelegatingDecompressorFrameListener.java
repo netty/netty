@@ -22,6 +22,7 @@ import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
 import static io.netty.handler.codec.http.HttpHeaderValues.IDENTITY;
 import static io.netty.handler.codec.http.HttpHeaderValues.X_DEFLATE;
 import static io.netty.handler.codec.http.HttpHeaderValues.X_GZIP;
+import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -77,53 +78,63 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         final int compressedBytes = data.readableBytes() + padding;
         int processedBytes = 0;
         decompressor.incrementCompressedBytes(compressedBytes);
-        // call retain here as it will call release after its written to the channel
-        channel.writeInbound(data.retain());
-        ByteBuf buf = nextReadableBuf(channel);
-        if (buf == null && endOfStream && channel.finish()) {
-            buf = nextReadableBuf(channel);
-        }
-        if (buf == null) {
-            if (endOfStream) {
-                listener.onDataRead(ctx, streamId, Unpooled.EMPTY_BUFFER, padding, true);
+        try {
+            // call retain here as it will call release after its written to the channel
+            channel.writeInbound(data.retain());
+            ByteBuf buf = nextReadableBuf(channel);
+            if (buf == null && endOfStream && channel.finish()) {
+                buf = nextReadableBuf(channel);
             }
-            // No new decompressed data was extracted from the compressed data. This means the application could not be
-            // provided with data and thus could not return how many bytes were processed. We will assume there is more
-            // data coming which will complete the decompression block. To allow for more data we return all bytes to
-            // the flow control window (so the peer can send more data).
-            decompressor.incrementDecompressedByes(compressedBytes);
-            processedBytes = compressedBytes;
-        } else {
-            try {
-                decompressor.incrementDecompressedByes(padding);
-                for (;;) {
-                    ByteBuf nextBuf = nextReadableBuf(channel);
-                    boolean decompressedEndOfStream = nextBuf == null && endOfStream;
-                    if (decompressedEndOfStream && channel.finish()) {
-                        nextBuf = nextReadableBuf(channel);
-                        decompressedEndOfStream = nextBuf == null;
-                    }
-
-                    decompressor.incrementDecompressedByes(buf.readableBytes());
-                    processedBytes += listener.onDataRead(ctx, streamId, buf, padding, decompressedEndOfStream);
-                    if (nextBuf == null) {
-                        break;
-                    }
-
-                    padding = 0; // Padding is only communicated once on the first iteration
-                    buf.release();
-                    buf = nextBuf;
+            if (buf == null) {
+                if (endOfStream) {
+                    listener.onDataRead(ctx, streamId, Unpooled.EMPTY_BUFFER, padding, true);
                 }
-            } finally {
-                if (buf != null) {
-                    buf.release();
+                // No new decompressed data was extracted from the compressed data. This means the application could
+                // not be provided with data and thus could not return how many bytes were processed. We will assume
+                // there is more data coming which will complete the decompression block. To allow for more data we
+                // return all bytes to the flow control window (so the peer can send more data).
+                decompressor.incrementDecompressedByes(compressedBytes);
+                processedBytes = compressedBytes;
+            } else {
+                try {
+                    decompressor.incrementDecompressedByes(padding);
+                    for (;;) {
+                        ByteBuf nextBuf = nextReadableBuf(channel);
+                        boolean decompressedEndOfStream = nextBuf == null && endOfStream;
+                        if (decompressedEndOfStream && channel.finish()) {
+                            nextBuf = nextReadableBuf(channel);
+                            decompressedEndOfStream = nextBuf == null;
+                        }
+
+                        decompressor.incrementDecompressedByes(buf.readableBytes());
+                        processedBytes += listener.onDataRead(ctx, streamId, buf, padding, decompressedEndOfStream);
+                        if (nextBuf == null) {
+                            break;
+                        }
+
+                        padding = 0; // Padding is only communicated once on the first iteration
+                        buf.release();
+                        buf = nextBuf;
+                    }
+                } finally {
+                    if (buf != null) {
+                        buf.release();
+                    }
                 }
             }
+            decompressor.incrementProcessedBytes(processedBytes);
+            // The processed bytes will be translated to pre-decompressed byte amounts by DecompressorGarbageCollector
+            return processedBytes;
+        } catch (Http2Exception e) {
+            // Consider all the bytes consumed because there was an error
+            decompressor.incrementProcessedBytes(compressedBytes);
+            throw e;
+        } catch (Throwable t) {
+            // Consider all the bytes consumed because there was an error
+            decompressor.incrementProcessedBytes(compressedBytes);
+            throw streamError(stream.id(), INTERNAL_ERROR, t,
+                    "Decompressor error detected while delegating data read on streamId %d", stream.id());
         }
-
-        decompressor.incrementProcessedBytes(processedBytes);
-        // The processed bytes will be translated to pre-decompressed byte amounts by DecompressorGarbageCollector
-        return processedBytes;
     }
 
     @Override

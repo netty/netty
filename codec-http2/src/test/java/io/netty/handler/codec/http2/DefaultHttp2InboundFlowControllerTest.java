@@ -57,6 +57,8 @@ public class DefaultHttp2InboundFlowControllerTest {
 
     private DefaultHttp2Connection connection;
 
+    private static float updateRatio = 0.5f;
+
     @Before
     public void setup() throws Http2Exception {
         MockitoAnnotations.initMocks(this);
@@ -64,7 +66,7 @@ public class DefaultHttp2InboundFlowControllerTest {
         when(ctx.newPromise()).thenReturn(promise);
 
         connection = new DefaultHttp2Connection(false);
-        controller = new DefaultHttp2InboundFlowController(connection, frameWriter);
+        controller = new DefaultHttp2InboundFlowController(connection, frameWriter, updateRatio);
 
         connection.local().createStream(STREAM_ID, false);
     }
@@ -77,16 +79,17 @@ public class DefaultHttp2InboundFlowControllerTest {
 
     @Test
     public void windowUpdateShouldSendOnceBytesReturned() throws Http2Exception {
-        int dataSize = DEFAULT_WINDOW_SIZE / 2 + 1;
+        int dataSize = (int) (DEFAULT_WINDOW_SIZE * updateRatio) + 1;
         applyFlowControl(STREAM_ID, dataSize, 0, false);
 
         // Return only a few bytes and verify that the WINDOW_UPDATE hasn't been sent.
         returnProcessedBytes(STREAM_ID, 10);
-        verifyWindowUpdateSent(CONNECTION_STREAM_ID, dataSize);
+        verifyWindowUpdateNotSent(CONNECTION_STREAM_ID);
 
         // Return the rest and verify the WINDOW_UPDATE is sent.
         returnProcessedBytes(STREAM_ID, dataSize - 10);
         verifyWindowUpdateSent(STREAM_ID, dataSize);
+        verifyWindowUpdateSent(CONNECTION_STREAM_ID, dataSize);
     }
 
     @Test(expected = Http2Exception.class)
@@ -97,22 +100,21 @@ public class DefaultHttp2InboundFlowControllerTest {
 
     @Test
     public void windowUpdateShouldNotBeSentAfterEndOfStream() throws Http2Exception {
-        int dataSize = DEFAULT_WINDOW_SIZE / 2 + 1;
-        int newWindow = DEFAULT_WINDOW_SIZE - dataSize;
-        int windowDelta = DEFAULT_WINDOW_SIZE - newWindow;
+        int dataSize = (int) (DEFAULT_WINDOW_SIZE * updateRatio) + 1;
 
         // Set end-of-stream on the frame, so no window update will be sent for the stream.
         applyFlowControl(STREAM_ID, dataSize, 0, true);
-        verifyWindowUpdateSent(CONNECTION_STREAM_ID, windowDelta);
+        verifyWindowUpdateNotSent(CONNECTION_STREAM_ID);
         verifyWindowUpdateNotSent(STREAM_ID);
 
         returnProcessedBytes(STREAM_ID, dataSize);
+        verifyWindowUpdateSent(CONNECTION_STREAM_ID, dataSize);
         verifyWindowUpdateNotSent(STREAM_ID);
     }
 
     @Test
     public void halfWindowRemainingShouldUpdateAllWindows() throws Http2Exception {
-        int dataSize = DEFAULT_WINDOW_SIZE / 2 + 1;
+        int dataSize = (int) (DEFAULT_WINDOW_SIZE * updateRatio) + 1;
         int initialWindowSize = DEFAULT_WINDOW_SIZE;
         int windowDelta = getWindowDelta(initialWindowSize, initialWindowSize, dataSize);
 
@@ -129,14 +131,14 @@ public class DefaultHttp2InboundFlowControllerTest {
         int initialWindowSize = DEFAULT_WINDOW_SIZE;
         applyFlowControl(STREAM_ID, initialWindowSize, 0, false);
         assertEquals(0, window(STREAM_ID));
-        assertEquals(DEFAULT_WINDOW_SIZE, window(CONNECTION_STREAM_ID));
+        assertEquals(0, window(CONNECTION_STREAM_ID));
         returnProcessedBytes(STREAM_ID, initialWindowSize);
         assertEquals(initialWindowSize, window(STREAM_ID));
         assertEquals(DEFAULT_WINDOW_SIZE, window(CONNECTION_STREAM_ID));
 
         // Update the initial window size to allow another frame.
         int newInitialWindowSize = 2 * initialWindowSize;
-        controller.initialInboundWindowSize(newInitialWindowSize);
+        controller.initialWindowSize(newInitialWindowSize);
         assertEquals(newInitialWindowSize, window(STREAM_ID));
         assertEquals(DEFAULT_WINDOW_SIZE, window(CONNECTION_STREAM_ID));
 
@@ -147,57 +149,102 @@ public class DefaultHttp2InboundFlowControllerTest {
         applyFlowControl(STREAM_ID, initialWindowSize, 0, false);
         returnProcessedBytes(STREAM_ID, initialWindowSize);
         int delta = newInitialWindowSize - initialWindowSize;
-        verifyWindowUpdateSent(CONNECTION_STREAM_ID, newInitialWindowSize);
         verifyWindowUpdateSent(STREAM_ID, delta);
+        verifyWindowUpdateSent(CONNECTION_STREAM_ID, delta);
     }
 
     @Test
-    public void connectionWindowShouldExpandWithNumberOfStreams() throws Http2Exception {
-        // Create another stream
+    public void connectionWindowShouldAdjustWithMultipleStreams() throws Http2Exception {
         int newStreamId = 3;
         connection.local().createStream(newStreamId, false);
 
-        assertEquals(DEFAULT_WINDOW_SIZE, window(STREAM_ID));
-        assertEquals(DEFAULT_WINDOW_SIZE, window(CONNECTION_STREAM_ID));
+        try {
+            assertEquals(DEFAULT_WINDOW_SIZE, window(STREAM_ID));
+            assertEquals(DEFAULT_WINDOW_SIZE, window(CONNECTION_STREAM_ID));
 
-        // Receive some data - this should cause the connection window to expand.
-        int data1 = 50;
-        int expectedMaxConnectionWindow = DEFAULT_WINDOW_SIZE * 2;
-        applyFlowControl(STREAM_ID, data1, 0, false);
-        verifyWindowUpdateNotSent(STREAM_ID);
-        verifyWindowUpdateSent(CONNECTION_STREAM_ID, DEFAULT_WINDOW_SIZE + data1);
-        assertEquals(DEFAULT_WINDOW_SIZE - data1, window(STREAM_ID));
-        assertEquals(expectedMaxConnectionWindow, window(CONNECTION_STREAM_ID));
+            // Test that both stream and connection window are updated (or not updated) together
+            int data1 = (int) (DEFAULT_WINDOW_SIZE * updateRatio) + 1;
+            applyFlowControl(STREAM_ID, data1, 0, false);
+            verifyWindowUpdateNotSent(STREAM_ID);
+            verifyWindowUpdateNotSent(CONNECTION_STREAM_ID);
+            assertEquals(DEFAULT_WINDOW_SIZE - data1, window(STREAM_ID));
+            assertEquals(DEFAULT_WINDOW_SIZE - data1, window(CONNECTION_STREAM_ID));
+            returnProcessedBytes(STREAM_ID, data1);
+            verifyWindowUpdateSent(STREAM_ID, data1);
+            verifyWindowUpdateSent(CONNECTION_STREAM_ID, data1);
 
+            reset(frameWriter);
+
+            // Create a scenario where data is depleted from multiple streams, but not enough data
+            // to generate a window update on those streams. The amount will be enough to generate
+            // a window update for the connection stream.
+            --data1;
+            int data2 = data1 >> 1;
+            applyFlowControl(STREAM_ID, data1, 0, false);
+            applyFlowControl(newStreamId, data1, 0, false);
+            verifyWindowUpdateNotSent(STREAM_ID);
+            verifyWindowUpdateNotSent(newStreamId);
+            verifyWindowUpdateNotSent(CONNECTION_STREAM_ID);
+            assertEquals(DEFAULT_WINDOW_SIZE - data1, window(STREAM_ID));
+            assertEquals(DEFAULT_WINDOW_SIZE - data1, window(newStreamId));
+            assertEquals(DEFAULT_WINDOW_SIZE - (data1 << 1), window(CONNECTION_STREAM_ID));
+            returnProcessedBytes(STREAM_ID, data1);
+            returnProcessedBytes(newStreamId, data2);
+            verifyWindowUpdateNotSent(STREAM_ID);
+            verifyWindowUpdateNotSent(newStreamId);
+            verifyWindowUpdateSent(CONNECTION_STREAM_ID, data1 + data2);
+            assertEquals(DEFAULT_WINDOW_SIZE - data1, window(STREAM_ID));
+            assertEquals(DEFAULT_WINDOW_SIZE - data1, window(newStreamId));
+            assertEquals(DEFAULT_WINDOW_SIZE - (data1 - data2), window(CONNECTION_STREAM_ID));
+        } finally {
+            connection.stream(newStreamId).close();
+        }
+    }
+
+    @Test
+    public void globalRatioShouldImpactStreams() throws Http2Exception {
+        float ratio = 0.6f;
+        controller.windowUpdateRatio(ratio);
+        testRatio(ratio, DEFAULT_WINDOW_SIZE << 1, 3, false);
+    }
+
+    @Test
+    public void streamlRatioShouldImpactStreams() throws Http2Exception {
+        float ratio = 0.6f;
+        testRatio(ratio, DEFAULT_WINDOW_SIZE << 1, 3, true);
+    }
+
+    private void testRatio(float ratio, int newDefaultWindowSize, int newStreamId, boolean setStreamRatio)
+            throws Http2Exception {
+        controller.initialStreamWindowSize(ctx, 0, newDefaultWindowSize);
+        connection.local().createStream(newStreamId, false);
+        if (setStreamRatio) {
+            controller.windowUpdateRatio(ctx, newStreamId, ratio);
+        }
+        controller.initialStreamWindowSize(ctx, newStreamId, newDefaultWindowSize);
         reset(frameWriter);
-
-        // Close the new stream.
-        connection.stream(newStreamId).close();
-
-        // Read more data and verify that the stream window refreshes but the
-        // connection window continues collapsing.
-        int data2 = window(STREAM_ID);
-        applyFlowControl(STREAM_ID, data2, 0, false);
-        returnProcessedBytes(STREAM_ID, data2);
-        verifyWindowUpdateSent(STREAM_ID, data2);
-        verifyWindowUpdateNotSent(CONNECTION_STREAM_ID);
-        assertEquals(DEFAULT_WINDOW_SIZE - data1, window(STREAM_ID));
-        assertEquals(DEFAULT_WINDOW_SIZE * 2 - data2 , window(CONNECTION_STREAM_ID));
-
-        reset(frameWriter);
-        returnProcessedBytes(STREAM_ID, data1);
-        verifyWindowUpdateNotSent(STREAM_ID);
-
-        // Read enough data to cause a WINDOW_UPDATE for both the stream and connection and
-        // verify the new maximum of the connection window.
-        int data3 = window(STREAM_ID);
-        applyFlowControl(STREAM_ID, data3, 0, false);
-        returnProcessedBytes(STREAM_ID, data3);
-        verifyWindowUpdateSent(STREAM_ID, DEFAULT_WINDOW_SIZE);
-        verifyWindowUpdateSent(CONNECTION_STREAM_ID, DEFAULT_WINDOW_SIZE
-                - (DEFAULT_WINDOW_SIZE * 2 - (data2 + data3)));
-        assertEquals(DEFAULT_WINDOW_SIZE, window(STREAM_ID));
-        assertEquals(DEFAULT_WINDOW_SIZE, window(CONNECTION_STREAM_ID));
+        try {
+            int data1 = (int) (newDefaultWindowSize * ratio) + 1;
+            int data2 = (int) (DEFAULT_WINDOW_SIZE * updateRatio) >> 1;
+            applyFlowControl(STREAM_ID, data2, 0, false);
+            applyFlowControl(newStreamId, data1, 0, false);
+            verifyWindowUpdateNotSent(STREAM_ID);
+            verifyWindowUpdateNotSent(newStreamId);
+            verifyWindowUpdateNotSent(CONNECTION_STREAM_ID);
+            assertEquals(DEFAULT_WINDOW_SIZE - data2, window(STREAM_ID));
+            assertEquals(newDefaultWindowSize - data1, window(newStreamId));
+            assertEquals(newDefaultWindowSize - data2 - data1, window(CONNECTION_STREAM_ID));
+            returnProcessedBytes(STREAM_ID, data2);
+            returnProcessedBytes(newStreamId, data1);
+            verifyWindowUpdateNotSent(STREAM_ID);
+            verifyWindowUpdateSent(newStreamId, data1);
+            verifyWindowUpdateSent(CONNECTION_STREAM_ID, data1 + data2);
+            assertEquals(DEFAULT_WINDOW_SIZE - data2, window(STREAM_ID));
+            assertEquals(newDefaultWindowSize, window(newStreamId));
+            assertEquals(newDefaultWindowSize, window(CONNECTION_STREAM_ID));
+        } finally {
+            connection.stream(newStreamId).close();
+        }
     }
 
     private static int getWindowDelta(int initialSize, int windowSize, int dataSize) {
