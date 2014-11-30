@@ -71,6 +71,7 @@ import org.mockito.stubbing.Answer;
  * Testing the {@link HttpToHttp2ConnectionHandler} for {@link FullHttpRequest} objects into HTTP/2 frames
  */
 public class HttpToHttp2ConnectionHandlerTest {
+    private static final int WAIT_TIME_SECONDS = 5;
 
     @Mock
     private Http2FrameListener clientListener;
@@ -122,9 +123,9 @@ public class HttpToHttp2ConnectionHandlerTest {
         ChannelPromise writePromise = newPromise();
         ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
 
-        writePromise.awaitUninterruptibly(2, SECONDS);
+        assertTrue(writePromise.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
         assertTrue(writePromise.isSuccess());
-        writeFuture.awaitUninterruptibly(2, SECONDS);
+        assertTrue(writeFuture.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
         assertTrue(writeFuture.isSuccess());
         awaitRequests();
         verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(5),
@@ -162,9 +163,9 @@ public class HttpToHttp2ConnectionHandlerTest {
         ChannelPromise writePromise = newPromise();
         ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
 
-        writePromise.awaitUninterruptibly(2, SECONDS);
+        assertTrue(writePromise.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
         assertTrue(writePromise.isSuccess());
-        writeFuture.awaitUninterruptibly(2, SECONDS);
+        assertTrue(writeFuture.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
         assertTrue(writeFuture.isSuccess());
         awaitRequests();
         verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(http2Headers), eq(0),
@@ -214,7 +215,7 @@ public class HttpToHttp2ConnectionHandlerTest {
     }
 
     private void awaitRequests() throws Exception {
-        assertTrue(requestLatch.await(2, SECONDS));
+        assertTrue(requestLatch.await(WAIT_TIME_SECONDS, SECONDS));
     }
 
     private ChannelHandlerContext ctx() {

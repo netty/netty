@@ -398,7 +398,9 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
     @Override
     public ChannelFuture writeSettingsAck(ChannelHandlerContext ctx, ChannelPromise promise) {
-        return frameWriter.writeSettingsAck(ctx, promise);
+        ChannelFuture future = frameWriter.writeSettingsAck(ctx, promise);
+        ctx.flush();
+        return future;
     }
 
     @Override
@@ -446,13 +448,8 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     @Override
     public ChannelFuture writeWindowUpdate(ChannelHandlerContext ctx, int streamId, int windowSizeIncrement,
             ChannelPromise promise) {
-        if (streamId > 0) {
-            Http2Stream stream = connection().stream(streamId);
-            if (stream != null && stream.isResetSent()) {
-                throw new IllegalStateException("Sending data after sending RST_STREAM.");
-            }
-        }
-        return frameWriter.writeWindowUpdate(ctx, streamId, windowSizeIncrement, promise);
+        return promise.setFailure(new UnsupportedOperationException("Use the Http2[Inbound|Outbound]FlowController" +
+                " objects to control window sizes"));
     }
 
     @Override

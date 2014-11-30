@@ -141,7 +141,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         Http2FrameReader.Configuration config = frameReader.configuration();
         Http2HeaderTable headerTable = config.headerTable();
         Http2FrameSizePolicy frameSizePolicy = config.frameSizePolicy();
-        settings.initialWindowSize(inboundFlow.initialInboundWindowSize());
+        settings.initialWindowSize(inboundFlow.initialWindowSize());
         settings.maxConcurrentStreams(connection.remote().maxStreams());
         settings.headerTableSize(headerTable.maxHeaderTableSize());
         settings.maxFrameSize(frameSizePolicy.maxFrameSize());
@@ -189,7 +189,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
         Integer initialWindowSize = settings.initialWindowSize();
         if (initialWindowSize != null) {
-            inboundFlow.initialInboundWindowSize(initialWindowSize);
+            inboundFlow.initialWindowSize(initialWindowSize);
         }
     }
 
@@ -452,7 +452,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
             Integer initialWindowSize = settings.initialWindowSize();
             if (initialWindowSize != null) {
-                inboundFlow.initialInboundWindowSize(initialWindowSize);
+                inboundFlow.initialWindowSize(initialWindowSize);
             }
         }
 
@@ -462,7 +462,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
             // Acknowledge receipt of the settings.
             encoder.writeSettingsAck(ctx, ctx.newPromise());
-            ctx.flush();
 
             // We've received at least one non-ack settings frame from the remote endpoint.
             prefaceReceived = true;

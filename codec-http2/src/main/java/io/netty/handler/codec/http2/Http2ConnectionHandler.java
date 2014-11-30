@@ -17,9 +17,9 @@ package io.netty.handler.codec.http2;
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static io.netty.handler.codec.http2.Http2CodecUtil.getEmbeddedHttp2Exception;
-import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.isStreamError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -29,6 +29,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
 
 import java.util.Collection;
@@ -279,6 +280,11 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         Http2Exception embedded = getEmbeddedHttp2Exception(cause);
         if (isStreamError(embedded)) {
             onStreamError(ctx, cause, (StreamException) embedded);
+        } else if (embedded instanceof CompositeStreamException) {
+            CompositeStreamException compositException = (CompositeStreamException) embedded;
+            for (StreamException streamException : compositException) {
+                onStreamError(ctx, cause, streamException);
+            }
         } else {
             onConnectionError(ctx, cause, embedded);
         }

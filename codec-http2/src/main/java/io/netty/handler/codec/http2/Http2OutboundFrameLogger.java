@@ -69,6 +69,7 @@ public class Http2OutboundFrameLogger implements Http2FrameWriter {
     @Override
     public ChannelFuture writeRstStream(ChannelHandlerContext ctx,
             int streamId, long errorCode, ChannelPromise promise) {
+        logger.logRstStream(OUTBOUND, streamId, errorCode);
         return writer.writeRstStream(ctx, streamId, errorCode, promise);
     }
 

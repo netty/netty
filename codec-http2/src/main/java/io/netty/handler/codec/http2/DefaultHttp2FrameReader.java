@@ -14,12 +14,14 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_INITIAL_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.FRAME_HEADER_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.INT_FIELD_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.PRIORITY_ENTRY_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_FRAME_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTING_ENTRY_LENGTH;
+import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.FRAME_SIZE_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isMaxFrameSizeValid;
@@ -485,10 +487,13 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                 try {
                     settings.put(id, value);
                 } catch (IllegalArgumentException e) {
-                    if (id == SETTINGS_MAX_FRAME_SIZE) {
-                        throw new Http2Exception(FRAME_SIZE_ERROR, e.getMessage(), e);
-                    } else {
-                        throw new Http2Exception(PROTOCOL_ERROR, e.getMessage(), e);
+                    switch(id) {
+                    case SETTINGS_MAX_FRAME_SIZE:
+                        throw connectionError(FRAME_SIZE_ERROR, e, e.getMessage());
+                    case SETTINGS_INITIAL_WINDOW_SIZE:
+                        throw connectionError(FLOW_CONTROL_ERROR, e, e.getMessage());
+                    default:
+                        throw connectionError(PROTOCOL_ERROR, e, e.getMessage());
                     }
                 }
             }

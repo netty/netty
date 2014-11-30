@@ -77,12 +77,10 @@ public class DataCompressionHttp2Test {
     @Mock
     private Http2FrameListener clientListener;
 
-    private Http2ConnectionEncoder serverEncoder;
     private Http2ConnectionEncoder clientEncoder;
     private ServerBootstrap sb;
     private Bootstrap cb;
     private Channel serverChannel;
-    private Channel serverConnectedChannel;
     private Channel clientChannel;
     private volatile CountDownLatch serverLatch;
     private volatile CountDownLatch clientLatch;
@@ -226,53 +224,7 @@ public class DataCompressionHttp2Test {
     }
 
     @Test
-    public void deflateEncodingSingleLargeMessageReducedWindow() throws Exception {
-        final int BUFFER_SIZE = 1 << 16;
-        bootstrapEnv(1, BUFFER_SIZE, 1);
-        final ByteBuf data = Unpooled.buffer(BUFFER_SIZE);
-        try {
-            for (int i = 0; i < data.capacity(); ++i) {
-                data.writeByte((byte) 'a');
-            }
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.DEFLATE);
-            final Http2Settings settings = new Http2Settings();
-
-            // Assume the compression operation will reduce the size by at least 10 bytes
-            settings.initialWindowSize(BUFFER_SIZE - 10);
-            runInChannel(serverConnectedChannel, new Http2Runnable() {
-                @Override
-                public void run() {
-                    serverEncoder.writeSettings(ctxServer(), settings, newPromiseServer());
-                    ctxServer().flush();
-                }
-            });
-            awaitClient();
-
-            // Required because the decompressor intercepts the onXXXRead events before
-            // our {@link Http2TestUtil$FrameAdapter} does.
-            Http2Stream stream = FrameAdapter.getOrCreateStream(serverConnection, 3, false);
-            FrameAdapter.getOrCreateStream(clientConnection, 3, false);
-            runInChannel(clientChannel, new Http2Runnable() {
-                @Override
-                public void run() {
-                    clientEncoder.writeSettings(ctxClient(), settings, newPromiseClient());
-                    clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
-                    clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true, newPromiseClient());
-                    ctxClient().flush();
-                }
-            });
-            awaitServer();
-            assertEquals(0, stream.garbageCollector().unProcessedBytes());
-            assertEquals(data.resetReaderIndex().toString(CharsetUtil.UTF_8),
-                    serverOut.toString(CharsetUtil.UTF_8.name()));
-        } finally {
-            data.release();
-        }
-    }
-
-    @Test
-    public void deflateEncodingMultipleWriteLargeMessageReducedWindow() throws Exception {
+    public void deflateEncodingWriteLargeMessage() throws Exception {
         final int BUFFER_SIZE = 1 << 12;
         final byte[] bytes = new byte[BUFFER_SIZE];
         new Random().nextBytes(bytes);
@@ -281,17 +233,6 @@ public class DataCompressionHttp2Test {
         try {
             final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
                     .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.DEFLATE);
-            final Http2Settings settings = new Http2Settings();
-
-            settings.initialWindowSize(BUFFER_SIZE / 2);
-            runInChannel(serverConnectedChannel, new Http2Runnable() {
-                @Override
-                public void run() {
-                    serverEncoder.writeSettings(ctxServer(), settings, newPromiseServer());
-                    ctxServer().flush();
-                }
-            });
-            awaitClient();
 
             // Required because the decompressor intercepts the onXXXRead events before
             // our {@link Http2TestUtil$FrameAdapter} does.
@@ -300,7 +241,6 @@ public class DataCompressionHttp2Test {
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() {
-                    clientEncoder.writeSettings(ctxClient(), settings, newPromiseClient());
                     clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
                     clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true, newPromiseClient());
                     ctxClient().flush();
@@ -362,8 +302,6 @@ public class DataCompressionHttp2Test {
                             .listener(new DelegatingDecompressorFrameListener(serverConnection, serverListener)),
                         new CompressorHttp2ConnectionEncoder.Builder().connection(serverConnection).frameWriter(writer)
                                 .outboundFlow(new DefaultHttp2OutboundFlowController(serverConnection, writer)));
-                serverEncoder = connectionHandler.encoder();
-                serverConnectedChannel = ch;
                 p.addLast(connectionHandler);
                 p.addLast(Http2CodecUtil.ignoreSettingsHandler());
                 serverChannelLatch.countDown();
@@ -401,10 +339,6 @@ public class DataCompressionHttp2Test {
         assertTrue(serverChannelLatch.await(5, SECONDS));
     }
 
-    private void awaitClient() throws Exception {
-        assertTrue(clientLatch.await(5, SECONDS));
-    }
-
     private void awaitServer() throws Exception {
         assertTrue(serverLatch.await(5, SECONDS));
         serverOut.flush();
@@ -416,13 +350,5 @@ public class DataCompressionHttp2Test {
 
     private ChannelPromise newPromiseClient() {
         return ctxClient().newPromise();
-    }
-
-    private ChannelHandlerContext ctxServer() {
-        return serverConnectedChannel.pipeline().firstContext();
-    }
-
-    private ChannelPromise newPromiseServer() {
-        return ctxServer().newPromise();
     }
 }

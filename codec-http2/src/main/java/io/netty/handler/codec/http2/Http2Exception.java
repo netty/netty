@@ -17,6 +17,10 @@ package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 /**
  * Exception thrown when an HTTP/2 error was encountered.
  */
@@ -150,6 +154,28 @@ public class Http2Exception extends Exception {
 
         public int streamId() {
             return streamId;
+        }
+    }
+
+    /**
+     * Provides the ability to handle multiple stream exceptions with one throw statement.
+     */
+    public static final class CompositeStreamException extends Http2Exception implements Iterable<StreamException> {
+        private static final long serialVersionUID = -434398146294199889L;
+        private final List<StreamException> exceptions;
+
+        public CompositeStreamException(Http2Error error, int initialCapacity) {
+            super(error);
+            exceptions = new ArrayList<StreamException>(initialCapacity);
+        }
+
+        public void add(StreamException e) {
+            exceptions.add(e);
+        }
+
+        @Override
+        public Iterator<StreamException> iterator() {
+            return exceptions.iterator();
         }
     }
 }
