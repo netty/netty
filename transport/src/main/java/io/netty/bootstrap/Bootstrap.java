@@ -58,6 +58,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
 
     private Bootstrap(Bootstrap bootstrap) {
         super(bootstrap);
+        resolver = bootstrap.resolver;
         remoteAddress = bootstrap.remoteAddress;
     }
 
