@@ -64,8 +64,8 @@ import java.util.List;
  * annotated with {@link @Sharable}.
  * <p>
  * Some methods such as {@link ByteBuf.readBytes(int)} will cause a memory leak if the returned buffer
- * is not released. Use derived buffers like {@link ByteBuf.readSlice(int)} to avoid leaking
- * memory.
+ * is not released or added to the <tt>out</tt> {@link List}. Use derived buffers like {@link ByteBuf.readSlice(int)}
+ * to avoid leaking memory.
  */
 public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
 
