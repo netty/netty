@@ -26,7 +26,7 @@ public class DnsDecoderException extends DecoderException {
     private final DnsResponseCode code;
 
     DnsDecoderException(DnsResponseCode code) {
-        super(code == null ? "" : code.toString());
+        super(code.toString());
         if (code == null) {
             throw new NullPointerException("code");
         }
@@ -34,7 +34,7 @@ public class DnsDecoderException extends DecoderException {
     }
 
     DnsDecoderException(DnsResponseCode code, Throwable cause) {
-        super(code == null ? "" : code.toString(), cause);
+        super(code.toString(), cause);
         if (code == null) {
             throw new NullPointerException("code");
         }

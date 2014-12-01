@@ -36,6 +36,14 @@ public class DnsQueryDecoder extends MessageToMessageDecoder<DatagramPacket> {
         out.add(decode(ctx, msg));
     }
 
+    /**
+     * Decode a DnsQuery from a DatagramPacket.
+     *
+     * @param ctx The channel context
+     * @param msg The message
+     * @return A DnsQuery
+     * @throws Exception If the data is invalid
+     */
     public static DnsQuery decode(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
         ByteBuf buf = msg.content();
         int id = buf.readUnsignedShort();

@@ -21,7 +21,7 @@ import java.net.Inet4Address;
 import java.nio.charset.Charset;
 
 /**
- * Represents an A record for an ipv4 address
+ * Represents an A record for an ipv4 address.
  */
 public final class Ipv4AddressRecord extends DnsEntry {
 
@@ -129,7 +129,7 @@ public final class Ipv4AddressRecord extends DnsEntry {
     }
 
     static String addressToString(int addr) {
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder(32);
         int[] ints = toInts(addr);
         for (int i = 0; i < ints.length; i++) {
             sb.append(ints[i]);
@@ -149,11 +149,11 @@ public final class Ipv4AddressRecord extends DnsEntry {
     }
 
     private static int parse(String ipv4address) {
-        String[] nums = ipv4address.split("\\.");
+        String[] nums = StringUtil.split(ipv4address, '.');
         if (nums.length != 4) {
             throw new IllegalArgumentException("Not an ipv4 address: " + ipv4address);
         }
-        int[] result = new int[nums.length];
+        int[] result = new int[4];
         for (int i = 0; i < nums.length; i++) {
             result[i] = Integer.parseInt(nums[i]);
         }

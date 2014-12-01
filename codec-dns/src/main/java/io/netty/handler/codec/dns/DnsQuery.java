@@ -109,7 +109,7 @@ public class DnsQuery extends DnsMessage implements Iterable<DnsQuestion> {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder(80);
+        StringBuilder sb = new StringBuilder(128);
         sb.append(DnsResponse.class.getSimpleName()).append('@').append(
                 System.identityHashCode(this)).append('{');
         sb.append("header=").append(header()).append(", answers=[");

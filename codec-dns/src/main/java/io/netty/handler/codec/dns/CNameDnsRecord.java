@@ -36,6 +36,9 @@ public final class CNameDnsRecord extends DnsEntry {
 
     public CNameDnsRecord(String name, DnsType type, DnsClass dnsClass, long timeToLive, String cname) {
         super(name, type, dnsClass, timeToLive);
+        if (cname == null) {
+            throw new NullPointerException("cname");
+        }
         this.cname = cname;
     }
 

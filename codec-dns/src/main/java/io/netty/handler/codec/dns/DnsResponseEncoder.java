@@ -23,7 +23,6 @@ import io.netty.handler.codec.MessageToMessageEncoder;
 import static io.netty.handler.codec.dns.NameWriter.NAME_WRITER_KEY;
 import io.netty.util.Attribute;
 import io.netty.util.CharsetUtil;
-import java.nio.charset.Charset;
 import java.util.List;
 
 /**
@@ -45,7 +44,8 @@ public class DnsResponseEncoder extends MessageToMessageEncoder<DnsResponse> {
     }
 
     /**
-     * Flip the bit at position <code>index</code> on or off
+     * Flip the bit at position <code>index</code> on or off.
+     *
      * @param value The value to change
      * @param index The bit-index
      * @param on Whether or not the bit should be a 1
@@ -61,7 +61,7 @@ public class DnsResponseEncoder extends MessageToMessageEncoder<DnsResponse> {
         return value;
     }
 
-    public DatagramPacket encode(ChannelHandlerContext ctx, DnsResponse msg) {
+    public static DatagramPacket encode(ChannelHandlerContext ctx, DnsResponse msg) {
         ByteBuf buf = ctx.alloc().buffer();
         buf.writeShort(msg.header().id());
         DnsResponseHeader h = msg.header();
@@ -87,6 +87,11 @@ public class DnsResponseEncoder extends MessageToMessageEncoder<DnsResponse> {
             nameWriter = NameWriter.DEFAULT;
         }
 
+        return createDatagramPacket(msg, nameWriter, buf, h);
+    }
+
+    private static DatagramPacket createDatagramPacket(DnsResponse msg, NameWriter nameWriter,
+            ByteBuf buf, DnsResponseHeader h) {
         for (DnsQuestion q : msg.questions()) {
             q.writeTo(nameWriter, buf, CharsetUtil.UTF_8);
         }

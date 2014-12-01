@@ -20,7 +20,6 @@ import io.netty.handler.codec.dns.server.DnsAnswerProvider;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.codec.dns.CNameDnsRecord;
@@ -33,7 +32,7 @@ import io.netty.handler.codec.dns.NameServerDnsRecord;
 import java.net.InetSocketAddress;
 
 /**
- * A demo DNS server that can answer one query, for git.timboudreau.com
+ * A demo DNS server that can answer one query, for exaple.netty.io.
  */
 public class DnsServer {
 
@@ -44,12 +43,12 @@ public class DnsServer {
         Bootstrap b = new Bootstrap();
         b.group(group)
                 .channel(NioDatagramChannel.class)
-//                .option(ChannelOption.SO_BROADCAST, true)
                 .handler(new DnsServerHandler(new AnswerProviderImpl()));
 
         Channel channel = b.bind(5753).sync().channel();
         System.out.println("Started demo DNS server");
         channel.closeFuture().await();
+        group.shutdownGracefully();
     }
 
     private static class AnswerProviderImpl implements DnsAnswerProvider {
@@ -74,10 +73,12 @@ public class DnsServer {
                 if ("git.timboudreau.com".equals(q.name())) {
                     found = true;
                     resp.addQuestion(q);
-                    resp.addAnswer(new CNameDnsRecord("git.timboudreau.com", 300, "timboudreau.com"));
-                    resp.addAnswer(new Ipv4AddressRecord("timboudreau.com", 300, "75.69.118.1"));
-                    resp.addAuthorityResource(new NameServerDnsRecord("timboudreau.com", "ns4145.dns.dyn.com", 8185));
-                    resp.addAdditionalResource(new Ipv4AddressRecord("ns4145.dns.dyn.com", 93492, "208.76.61.145"));
+                    resp.addAnswer(new CNameDnsRecord("example.netty.io", 300, "netty.io"));
+                    resp.addAnswer(new Ipv4AddressRecord("timboudreau.com", 300, "104.28.9.44"));
+                    resp.addAuthorityResource(new NameServerDnsRecord("netty.io",
+                            "theo.ns.cloudflare.com", 8185));
+                    resp.addAdditionalResource(new Ipv4AddressRecord("theo.ns.cloudflare.com",
+                            170923, "173.245.58.147"));
                     resp.header().setAuthoritativeAnswer(true);
                 }
             }
@@ -87,6 +88,11 @@ public class DnsServer {
                 resp.header().setAuthoritativeAnswer(false);
             }
             callback.withResponse(resp);
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            cause.printStackTrace();
         }
     }
 }

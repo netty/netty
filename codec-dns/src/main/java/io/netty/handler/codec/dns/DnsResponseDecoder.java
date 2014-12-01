@@ -25,9 +25,9 @@ import io.netty.util.CharsetUtil;
 import java.util.List;
 
 /**
- * DnsResponseDecoder accepts {@link io.netty.channel.socket.DatagramPacket} and
- * encodes to {@link DnsResponse}. This class also contains methods for decoding
- * parts of DnsResponses such as questions and resource records.
+ * DnsResponseDecoder accepts {@link DatagramPacket} and encodes to
+ * {@link DnsResponse}. This class also contains methods for decoding parts of
+ * {@link DnsResponse}s such as questions and resource records.
  */
 @ChannelHandler.Sharable
 public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> {
@@ -41,6 +41,13 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
         out.add(decode(ctx, packet));
     }
 
+    /**
+     * Decode a {@link DatagramPacket} into a DnsResponse.
+     *
+     * @param ctx The channel context
+     * @param packet The packet
+     * @return A DnsResponse
+     */
     public DnsResponse decode(ChannelHandlerContext ctx, DatagramPacket packet) {
         ByteBuf buf = packet.content();
 

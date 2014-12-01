@@ -336,7 +336,7 @@ public final class DnsType<RecordType extends DnsEntry> implements Comparable<Dn
 
     /**
      * Decode the <i>payload</i> of a record of this type into a record of type
-     * &lt;RecordType&gt;. The resulting object will be of {@link DnsClass.IN}
+     * &lt;RecordType&gt;. The resulting object will be of {@link DnsClass.IN}.
      *
      * @param name The name for the resulting record
      * @param timeToLive The time to live of the resulting record

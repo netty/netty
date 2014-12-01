@@ -20,15 +20,12 @@ import io.netty.handler.codec.dns.server.DnsAnswerProvider;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.example.dns.client.DnsClient;
 import io.netty.handler.codec.dns.DnsQuery;
 import io.netty.handler.codec.dns.DnsResponse;
-import io.netty.handler.codec.dns.DnsResponseCode;
-import java.net.InetSocketAddress;
 
 /**
  * A demo proxy DNS server that simply delegates to Google Public DNS. To be
@@ -38,7 +35,7 @@ public class ProxyDnsServer {
 
     public static void main(String[] ignored) throws InterruptedException {
 
-        NioEventLoopGroup group = new NioEventLoopGroup(8); // 4 threads
+        NioEventLoopGroup group = new NioEventLoopGroup(8); // 8 threads
 
         Bootstrap b = new Bootstrap();
         b.group(group)
@@ -48,6 +45,7 @@ public class ProxyDnsServer {
         Channel channel = b.bind(5753).sync().channel();
         System.out.println("Started demo proxy DNS server");
         channel.closeFuture().await();
+        group.shutdownGracefully();
     }
 
     private static class AnswerProviderImpl implements DnsAnswerProvider {
@@ -69,6 +67,11 @@ public class ProxyDnsServer {
                     responseSender.withResponse(ourResponse);
                 }
             });
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            cause.printStackTrace();
         }
     }
 }

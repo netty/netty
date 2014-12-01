@@ -194,7 +194,7 @@ public class DnsHeader {
 
     @Override
     public String toString() {
-        return new StringBuilder(80).append("DnsHeader{recursionDesired=")
+        return new StringBuilder(128).append("DnsHeader{recursionDesired=")
                 .append(recursionDesired).append(", opcode=")
                 .append(opcode).append(", id=").append(id)
                 .append(", type=").append(type).append(", z=")

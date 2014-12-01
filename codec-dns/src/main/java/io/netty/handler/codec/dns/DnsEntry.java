@@ -49,8 +49,10 @@ public abstract class DnsEntry {
     }
 
     /**
-     * Number of seconds that a cache may retain this record
-     * @return A number of seconds for which this entry may be treated as current
+     * Number of seconds that a cache may retain this record.
+     *
+     * @return A number of seconds for which this entry may be treated as
+     * current
      */
     public final long timeToLive() {
         return timeToLive;
@@ -78,10 +80,11 @@ public abstract class DnsEntry {
     }
 
     /**
-     * Create a transformed DnsEntry with the passed time-to-live
+     * Create a transformed DnsEntry with the passed time-to-live.
+     *
      * @param seconds The number of seconds
-     * @return A new DnsEntry identical to this one other than that it
-     * uses the passed time-to-live value
+     * @return A new DnsEntry identical to this one other than that it uses the
+     * passed time-to-live value
      */
     public abstract DnsEntry withTimeToLive(long seconds);
 
@@ -93,11 +96,11 @@ public abstract class DnsEntry {
     @Override
     public String toString() {
         return new StringBuilder(128).append(StringUtil.simpleClassName(this))
-                                     .append("(name: ").append(name)
-                                     .append(", type: ").append(type)
-                                     .append(", class: ").append(dnsClass)
-                                     .append(", ttl: ").append(timeToLive)
-                                     .append(')').toString();
+                .append("(name: ").append(name)
+                .append(", type: ").append(type)
+                .append(", class: ").append(dnsClass)
+                .append(", ttl: ").append(timeToLive)
+                .append(')').toString();
     }
 
     @Override
@@ -110,13 +113,14 @@ public abstract class DnsEntry {
         }
 
         DnsEntry that = (DnsEntry) o;
-        return type().intValue() == that.type().intValue() &&
-               dnsClass().intValue() == that.dnsClass().intValue() &&
-               name().equals(that.name()) && timeToLive() == that.timeToLive();
+        return timeToLive() == that.timeToLive()
+                && type().intValue() == that.type().intValue()
+                && dnsClass().intValue() == that.dnsClass().intValue()
+                && name().equals(that.name());
     }
 
     /**
-     * Write this dns entry into a buffer
+     * Write this dns entry into a buffer.
      *
      * @param nameWriter Writes names, possibly using pointers for compression
      * @param into The buffer to write into
@@ -149,8 +153,8 @@ public abstract class DnsEntry {
     }
 
     /**
-     * Write the <i>payload</i> of this DNS entry.  The format varies by
-     * type.
+     * Write the <i>payload</i> of this DNS entry. The format varies by type.
+     *
      * @param nameWriter A thing which will write names
      * @param into The buffer to write into
      * @param charset The character set to use

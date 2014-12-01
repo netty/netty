@@ -20,8 +20,8 @@ import io.netty.handler.codec.dns.DnsQuery;
 import io.netty.handler.codec.dns.DnsResponse;
 
 /**
- * Answers questions in response to DNS requests.  Used with DnsServerHandler
- * to produce answers.
+ * Answers questions in response to DNS requests. Used with DnsServerHandler to
+ * produce answers.
  */
 public interface DnsAnswerProvider {
 
@@ -35,8 +35,29 @@ public interface DnsAnswerProvider {
      */
     void respond(DnsQuery query, ChannelHandlerContext ctx, DnsResponseSender callback) throws Exception;
 
+    /**
+     * Called when the {@link DnsServerHandler} encounters an exception.
+     *
+     * @param ctx The context
+     * @param cause The exception
+     */
+    void exceptionCaught(ChannelHandlerContext ctx, Throwable cause);
+
+    /**
+     * Callback interface which you call with the response to a DNS query after
+     * it has been asynchronously computed (which could involve contacting a
+     * delegate DNS server or other activity which a synchronous API would not
+     * allow for cleanly).
+     */
     public interface DnsResponseSender {
 
+        /**
+         * Pass the response here.
+         *
+         * @param response The response
+         * @throws Exception If something goes wrong or if the response is
+         * invalid
+         */
         void withResponse(DnsResponse response) throws Exception;
     }
 }

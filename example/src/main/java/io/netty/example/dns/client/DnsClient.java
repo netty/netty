@@ -17,7 +17,6 @@ package io.netty.example.dns.client;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.DatagramPacket;
@@ -30,8 +29,6 @@ import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.DnsType;
 import java.net.InetSocketAddress;
 import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
@@ -51,7 +48,7 @@ public class DnsClient {
     // Map of Callbacks for IDs.  Note that in a production server you would
     // want to track when a callback was submitted, and discard callbacks
     // that have been waiting for an answer for too long - this will leak
-    // if the remote server does not respond at all
+    // if the remote server does not respond at all.
     private final ConcurrentMap<Integer, Callback> callbacks = new ConcurrentHashMap<Integer, Callback>();
     private final AtomicInteger ids = new AtomicInteger();
     private final Channel channel;
@@ -81,7 +78,7 @@ public class DnsClient {
     private int nextId() {
         // Note that sequentially incrementing IDs are not a good idea
         // in production, since guessable IDs can aid in DNS cache poisoning
-        // attacks
+        // attacks.
         return ids.getAndIncrement();
     }
 

@@ -39,7 +39,7 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
     }
 
     /**
-     * Encode a DnsQuery into a {@link DatagramPacket}
+     * Encode a {@link DnsQuery} into a {@link DatagramPacket}.
      * @param ctx The channel context
      * @param query The query
      * @return a {@link DatagramPacket}

@@ -93,8 +93,8 @@ public final class DnsResponse extends DnsMessage {
      * altering the ID or recipient of the other DnsResponse. Useful for proxy
      * servers.
      *
-     * @param other A DnsResponse which should be altered to contain the
-     * response resources of this one
+     * @param other A {@link DnsResponse} which should be altered to contain the
+     * response resources of this one.
      */
     public void copyInto(DnsResponse other) {
         for (DnsQuestion question : questions()) {
@@ -126,6 +126,7 @@ public final class DnsResponse extends DnsMessage {
         }
     }
 
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder(80);
         sb.append(StringUtil.simpleClassName(DnsResponse.class)).append('@').append(

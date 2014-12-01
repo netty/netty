@@ -27,6 +27,7 @@ import java.nio.charset.Charset;
  * support multiple questions in a single query.
  */
 public final class DnsQuestion {
+
     private final String name;
     private final DnsType type;
     private final DnsClass clazz;
@@ -34,11 +35,9 @@ public final class DnsQuestion {
     /**
      * Constructs a question with the default class IN (Internet).
      *
-     * @param name
-     *            the domain name being queried i.e. "www.example.com"
-     * @param type
-     *            the question type, which represents the type of
-     *            {@link DnsResource} record that should be returned
+     * @param name the domain name being queried i.e. "www.example.com"
+     * @param type the question type, which represents the type of
+     * {@link DnsResource} record that should be returned
      */
     public DnsQuestion(String name, DnsType type) {
         this(name, type, IN);
@@ -47,13 +46,10 @@ public final class DnsQuestion {
     /**
      * Constructs a question with the given class.
      *
-     * @param name
-     *            the domain name being queried i.e. "www.example.com"
-     * @param type
-     *            the question type, which represents the type of
-     *            {@link DnsResource} record that should be returned
-     * @param qClass
-     *            the class of a DNS record
+     * @param name the domain name being queried i.e. "www.example.com"
+     * @param type the question type, which represents the type of
+     * {@link DnsResource} record that should be returned
+     * @param qClass the class of a DNS record
      */
     public DnsQuestion(String name, DnsType type, DnsClass qClass) {
         if (name == null) {
@@ -95,7 +91,8 @@ public final class DnsQuestion {
     }
 
     /**
-     * Write this question into a {@link ByteBuf}
+     * Write this question into a {@link ByteBuf}.
+     *
      * @param nameWriter Object which writes names, possibly using DNS
      * compression pointers
      * @param into The buffer to write the bytes into
@@ -126,13 +123,13 @@ public final class DnsQuestion {
             return false;
         }
         final DnsQuestion other = (DnsQuestion) obj;
-        if ((this.name == null) ? (other.name != null) : !this.name.equals(other.name)) {
-            return false;
-        }
         if (this.type != other.type && (this.type == null || !this.type.equals(other.type))) {
             return false;
         }
         if (this.clazz != other.clazz && (this.clazz == null || !this.clazz.equals(other.clazz))) {
+            return false;
+        }
+        if ((this.name == null) ? (other.name != null) : !this.name.equals(other.name)) {
             return false;
         }
         return true;

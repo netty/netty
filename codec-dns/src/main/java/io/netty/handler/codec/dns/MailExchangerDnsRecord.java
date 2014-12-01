@@ -57,7 +57,7 @@ public final class MailExchangerDnsRecord extends DnsEntry {
     }
 
     /**
-     * The mail exchanger host this record refers to
+     * The mail exchanger host this record refers to.
      *
      * @return The mail exchange server name
      */
@@ -65,6 +65,7 @@ public final class MailExchangerDnsRecord extends DnsEntry {
         return mailExchanger;
     }
 
+    @Override
     public boolean equals(Object o) {
         return super.equals(o) && o instanceof MailExchangerDnsRecord
                 && ((MailExchangerDnsRecord) o).preference == preference

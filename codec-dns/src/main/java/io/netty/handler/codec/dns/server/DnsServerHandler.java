@@ -53,6 +53,9 @@ public class DnsServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 
     public DnsServerHandler(DnsAnswerProvider answerer) {
         super(DatagramPacket.class);
+        if (answerer == null) {
+            throw new NullPointerException("answerer");
+        }
         this.answerer = answerer;
     }
 
@@ -99,6 +102,6 @@ public class DnsServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        cause.printStackTrace();
+        answerer.exceptionCaught(ctx, cause);
     }
 }
