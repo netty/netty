@@ -39,8 +39,8 @@ public interface Http2InboundFlowController {
     /**
      * Sets the global inbound flow control window size and updates all stream window sizes by the delta.
      * <p>
-     * This method represents the window size in the {@code SETTINGS} frame and specifically the
-     * {@code SETTINGS_INITIAL_WINDOW_SIZE} field.
+     * This method is used to apply the {@code SETTINGS_INITIAL_WINDOW_SIZE} value for an
+     * outbound {@code SETTINGS} frame.
      * <p>
      * The connection stream windows will not be modified as a result of this call.
      * @param newWindowSize the new initial window size.
@@ -49,7 +49,7 @@ public interface Http2InboundFlowController {
     void initialWindowSize(int newWindowSize) throws Http2Exception;
 
     /**
-     * Gets the global inbound flow control window size.
+     * Gets the initial window size used as the basis for new stream flow control windows.
      */
     int initialWindowSize();
 

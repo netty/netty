@@ -25,6 +25,8 @@ import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
@@ -81,7 +83,10 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
         CompositeStreamException compositeException = null;
         for (Http2Stream stream : connection.activeStreams()) {
             try {
-                state(stream).incrementInitialStreamWindow(delta);
+                // Increment flow control window first so state will be consistent if overflow is detected
+                FlowState state = state(stream);
+                state.incrementFlowControlWindows(delta);
+                state.incrementInitialStreamWindow(delta);
             } catch (StreamException e) {
                 if (compositeException == null) {
                     compositeException = new CompositeStreamException(e.error(), DEFAULT_COMPOSITE_EXCEPTION_SIZE);
@@ -281,22 +286,16 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
         }
 
         /**
-         * Uniformly increment all windows (initial and dynamic flow control) for this stream.
-         * @param delta The amount to increase all windows by.
-         * @throws Http2Exception If any flow control boundaries are violated.
+         * Increment the initial window size for this stream.
+         * @param delta The amount to increase the initial window size by.
          */
-        void incrementInitialStreamWindow(int delta) throws Http2Exception {
-            // Ensure this delta will not cause the initial stream window to overflow
-            if (delta > 0) {
-                if (initialStreamWindowSize > MAX_INITIAL_WINDOW_SIZE - delta) {
-                    delta = MAX_INITIAL_WINDOW_SIZE - initialStreamWindowSize;
-                }
-            } else if (initialStreamWindowSize + delta < MIN_INITIAL_WINDOW_SIZE) {
-                delta = MIN_INITIAL_WINDOW_SIZE - initialStreamWindowSize;
-            }
+        void incrementInitialStreamWindow(int delta) {
+            // Clip the delta so that the resulting initialStreamWindowSize falls within the allowed range.
+            int newValue = (int) min(MAX_INITIAL_WINDOW_SIZE,
+                    max(MIN_INITIAL_WINDOW_SIZE, initialStreamWindowSize + (long) delta));
+            delta = newValue - initialStreamWindowSize;
 
             initialStreamWindowSize += delta;
-            incrementFlowControlWindows(delta);
         }
 
         /**
@@ -342,7 +341,7 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
          */
         void returnProcessedBytes(int delta) throws Http2Exception {
             if (processedWindow - delta < window) {
-                throw connectionError(INTERNAL_ERROR,
+                throw streamError(stream.id(), INTERNAL_ERROR,
                         "Attempting to return too many bytes for stream %d", stream.id());
             }
             processedWindow -= delta;
