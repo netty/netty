@@ -137,6 +137,7 @@ public class DomainNameMapping<V> implements Mapping<String, V> {
         return defaultValue;
     }
 
+    @Override
     public String toString() {
         return StringUtil.simpleClassName(this) + "(default: " + defaultValue + ", map: " + map + ')';
     }
