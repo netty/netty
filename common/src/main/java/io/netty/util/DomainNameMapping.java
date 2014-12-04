@@ -107,7 +107,6 @@ public class DomainNameMapping<V> implements Mapping<String, V> {
     private static String normalizeHostname(String hostname) {
         if (needsNormalization(hostname)) {
             hostname = IDN.toASCII(hostname, IDN.ALLOW_UNASSIGNED);
-
         }
         return hostname.toLowerCase(Locale.US);
     }
