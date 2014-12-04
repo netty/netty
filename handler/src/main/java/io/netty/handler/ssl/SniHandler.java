@@ -20,10 +20,13 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.CharsetUtil;
+import io.netty.util.DomainNameMapping;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.net.IDN;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * <p>Enables <a href="https://tools.ietf.org/html/rfc3546#section-3.1">SNI
@@ -37,11 +40,11 @@ public class SniHandler extends ByteToMessageDecoder {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(SniHandler.class);
 
-    private final DomainNameMapping mapping;
-    private String hostname;
+    private final DomainNameMapping<SslContext> mapping;
+
     private boolean handshaken;
-    private SslContext defaultContext;
-    private SslContext selectedContext;
+    private volatile String hostname;
+    private volatile SslContext selectedContext;
 
     /**
      * Create a SNI detection handler with configured {@link SslContext}
@@ -49,12 +52,13 @@ public class SniHandler extends ByteToMessageDecoder {
      *
      * @param mapping the mapping of domain name to {@link SslContext}
      */
-    public SniHandler(DomainNameMapping mapping) {
+    @SuppressWarnings("unchecked")
+    public SniHandler(DomainNameMapping<? extends SslContext> mapping) {
         if (mapping == null) {
             throw new NullPointerException("mapping");
         }
 
-        this.mapping = mapping;
+        this.mapping = (DomainNameMapping<SslContext>) mapping;
         handshaken = false;
     }
 
@@ -76,18 +80,13 @@ public class SniHandler extends ByteToMessageDecoder {
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         if (!handshaken && in.readableBytes() >= 5) {
             String hostname = sniHostNameFromHandshakeInfo(in);
-
             if (hostname != null) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Using hostname: {}", hostname);
-                }
-
-                // toASCII conversion and case normalization
-                this.hostname = DomainNameMapping.normalizeHostname(hostname);
+                hostname = IDN.toASCII(hostname, IDN.ALLOW_UNASSIGNED).toLowerCase(Locale.US);
             }
+            this.hostname = hostname;
 
             // the mapping will return default context when this.hostname is null
-            selectedContext = mapping.map(this.hostname);
+            selectedContext = mapping.map(hostname);
         }
 
         if (handshaken) {

@@ -19,16 +19,14 @@ package io.netty.handler.ssl;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderException;
+import io.netty.util.DomainNameMapping;
 import org.junit.Test;
 
 import javax.xml.bind.DatatypeConverter;
-
 import java.io.File;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
 
 public class SniHandlerTest {
 
@@ -45,15 +43,15 @@ public class SniHandlerTest {
         SslContext leanContext = makeSslContext();
         SslContext leanContext2 = makeSslContext();
 
-        DomainNameMapping mapping = new DomainNameMapping(nettyContext);
-        mapping.addContext("*.netty.io", nettyContext);
+        DomainNameMapping<SslContext> mapping = new DomainNameMapping<SslContext>(nettyContext);
+        mapping.add("*.netty.io", nettyContext);
 
         // input with custom cases
-        mapping.addContext("*.LEANCLOUD.CN", leanContext);
+        mapping.add("*.LEANCLOUD.CN", leanContext);
 
         // a hostname conflict with previous one, since we are using order-sensitive config, the engine won't
         // be used with the handler.
-        mapping.addContext("chat4.leancloud.cn", leanContext2);
+        mapping.add("chat4.leancloud.cn", leanContext2);
 
         SniHandler handler = new SniHandler(mapping);
         EmbeddedChannel ch = new EmbeddedChannel(handler);
@@ -89,21 +87,21 @@ public class SniHandlerTest {
         SslContext leanContext = makeSslContext();
         SslContext leanContext2 = makeSslContext();
 
-        DomainNameMapping mapping = new DomainNameMapping(nettyContext);
-        mapping.addContext("*.netty.io", nettyContext);
+        DomainNameMapping<SslContext> mapping = new DomainNameMapping<SslContext>(nettyContext);
+        mapping.add("*.netty.io", nettyContext);
 
         // input with custom cases
-        mapping.addContext("*.LEANCLOUD.CN", leanContext);
+        mapping.add("*.LEANCLOUD.CN", leanContext);
 
         // a hostname conflict with previous one, since we are using order-sensitive config, the engine won't
         // be used with the handler.
-        mapping.addContext("chat4.leancloud.cn", leanContext2);
+        mapping.add("chat4.leancloud.cn", leanContext2);
 
         SniHandler handler = new SniHandler(mapping);
         EmbeddedChannel ch = new EmbeddedChannel(handler);
 
         // invalid
-        byte[] message = new byte[] {22, 3, 1, 0, 0};
+        byte[] message = { 22, 3, 1, 0, 0 };
 
         try {
             // Push the handshake message.
@@ -116,5 +114,4 @@ public class SniHandlerTest {
         assertThat(handler.hostname(), nullValue());
         assertThat(handler.sslContext(), is(nettyContext));
     }
-
 }

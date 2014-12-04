@@ -16,12 +16,12 @@
 package io.netty.util;
 
 /**
- * An mapping which maintains a relationship from type of IN to type of OUT.
+ * Maintains the mapping from the objects of one type to the objects of the other type.
  */
 public interface Mapping<IN, OUT> {
 
     /**
-     * Returns mapped value of input.
+     * Returns mapped value of the specified input.
      */
     OUT map(IN input);
 }
