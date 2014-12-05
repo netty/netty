@@ -24,7 +24,6 @@ import io.netty.util.ResourceLeakHint;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.PausableEventExecutor;
-import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import java.net.SocketAddress;
@@ -249,35 +248,6 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         this.name = name;
         this.invoker = invoker;
         this.skipFlags = skipFlags;
-    }
-
-    /** Invocation initiated by {@link DefaultChannelPipeline#teardownAll()}}. */
-    void teardown() {
-        EventExecutor executor = executor();
-        if (executor.inEventLoop()) {
-            teardown0();
-        } else {
-            /**
-             * use unwrap(), because the executor will usually be a {@link PausableEventExecutor}
-             * that might not accept any new tasks.
-             */
-            executor().unwrap().execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    teardown0();
-                }
-            });
-        }
-    }
-
-    private void teardown0() {
-        AbstractChannelHandlerContext prev = this.prev;
-        if (prev != null) {
-            synchronized (pipeline) {
-                pipeline.remove0(this);
-            }
-            prev.teardown();
-        }
     }
 
     @Override
