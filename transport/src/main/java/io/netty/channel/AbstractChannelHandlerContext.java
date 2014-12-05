@@ -65,31 +65,6 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         this.outbound = outbound;
     }
 
-    /** Invocation initiated by {@link DefaultChannelPipeline#teardownAll()}}. */
-    void teardown() {
-        EventExecutor executor = executor();
-        if (executor.inEventLoop()) {
-            teardown0();
-        } else {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    teardown0();
-                }
-            });
-        }
-    }
-
-    private void teardown0() {
-        AbstractChannelHandlerContext prev = this.prev;
-        if (prev != null) {
-            synchronized (pipeline) {
-                pipeline.remove0(this);
-            }
-            prev.teardown();
-        }
-    }
-
     @Override
     public Channel channel() {
         return channel;
