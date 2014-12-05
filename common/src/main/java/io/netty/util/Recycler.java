@@ -199,7 +199,7 @@ public abstract class Recycler<T> {
 
         // transfer as many items as we can from this queue to the stack, returning true if any were transferred
         @SuppressWarnings("rawtypes")
-        boolean transfer(Stack<?> to) {
+        boolean transfer(Stack<?> dst) {
 
             Link head = this.head;
             if (head == null) {
@@ -213,53 +213,43 @@ public abstract class Recycler<T> {
                 this.head = head = head.next;
             }
 
-            final int start = head.readIndex;
-            final int count = head.get() - start;
-            if (count == 0) {
+            final int srcStart = head.readIndex;
+            int srcEnd = head.get();
+            final int srcSize = srcEnd - srcStart;
+            if (srcSize == 0) {
                 return false;
             }
 
-            final int end;
-            final int toSize = to.size;
-            final int toCapacity = to.elements.length;
-            if (toSize + count > toCapacity) {
-                int newCapacity = toCapacity;
-                int toMaxCapacity = to.maxCapacity;
-                do {
-                    newCapacity <<= 1;
-                } while (toSize + count < newCapacity && newCapacity < toMaxCapacity);
+            final int dstSize = dst.size;
+            final int expectedCapacity = dstSize + srcSize;
 
-                newCapacity = Math.min(newCapacity, toMaxCapacity);
-                if (newCapacity != toCapacity) {
-                    to.elements = Arrays.copyOf(to.elements, newCapacity);
-                }
-                end = start + newCapacity - toSize;
-            } else {
-                end = start + count;
+            if (expectedCapacity > dst.elements.length) {
+                final int actualCapacity = dst.increaseCapacity(expectedCapacity);
+                srcEnd = Math.min(srcStart + actualCapacity - dstSize, srcEnd);
             }
 
-            if (start != end) {
-                final DefaultHandle[] src = head.elements;
-                final DefaultHandle[] dst = to.elements;
-                int newToSize = toSize;
-                for (int i = start; i < end; i++) {
-                    DefaultHandle element = src[i];
+            if (srcStart != srcEnd) {
+                final DefaultHandle[] srcElems = head.elements;
+                final DefaultHandle[] dstElems = dst.elements;
+                int newDstSize = dstSize;
+                for (int i = srcStart; i < srcEnd; i++) {
+                    DefaultHandle element = srcElems[i];
                     if (element.recycleId == 0) {
                         element.recycleId = element.lastRecycledId;
                     } else if (element.recycleId != element.lastRecycledId) {
                         throw new IllegalStateException("recycled already");
                     }
-                    element.stack = to;
-                    dst[newToSize++] = element;
-                    src[i] = null;
+                    element.stack = dst;
+                    dstElems[newDstSize ++] = element;
+                    srcElems[i] = null;
                 }
-                to.size = newToSize;
+                dst.size = newDstSize;
 
-                if (end == LINK_CAPACITY && head.next != null) {
+                if (srcEnd == LINK_CAPACITY && head.next != null) {
                     this.head = head.next;
                 }
 
-                head.readIndex = end;
+                head.readIndex = srcEnd;
                 return true;
             } else {
                 // The destination stack is full already.
@@ -288,6 +278,21 @@ public abstract class Recycler<T> {
             this.thread = thread;
             this.maxCapacity = maxCapacity;
             elements = new DefaultHandle[Math.min(INITIAL_CAPACITY, maxCapacity)];
+        }
+
+        int increaseCapacity(int expectedCapacity) {
+            int newCapacity = elements.length;
+            int maxCapacity = this.maxCapacity;
+            do {
+                newCapacity <<= 1;
+            } while (newCapacity < expectedCapacity && newCapacity < maxCapacity);
+
+            newCapacity = Math.min(newCapacity, maxCapacity);
+            if (newCapacity != elements.length) {
+                elements = Arrays.copyOf(elements, newCapacity);
+            }
+
+            return newCapacity;
         }
 
         DefaultHandle pop() {
@@ -358,12 +363,10 @@ public abstract class Recycler<T> {
                 } else {
                     prev = cursor;
                 }
+
                 cursor = next;
 
-                if (success) {
-                    break;
-                }
-            } while (cursor != null);
+            } while (cursor != null && !success);
 
             this.prev = prev;
             this.cursor = cursor;
