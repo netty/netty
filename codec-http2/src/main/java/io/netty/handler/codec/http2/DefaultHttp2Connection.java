@@ -53,8 +53,8 @@ public class DefaultHttp2Connection implements Http2Connection {
     private final IntObjectMap<Http2Stream> streamMap = new IntObjectHashMap<Http2Stream>();
     private final ConnectionStream connectionStream = new ConnectionStream();
     private final Set<Http2Stream> activeStreams = new LinkedHashSet<Http2Stream>();
-    private final DefaultEndpoint localEndpoint;
-    private final DefaultEndpoint remoteEndpoint;
+    private final DefaultEndpoint<Http2LocalFlowController> localEndpoint;
+    private final DefaultEndpoint<Http2RemoteFlowController> remoteEndpoint;
     private final Http2StreamRemovalPolicy removalPolicy;
 
     /**
@@ -78,8 +78,8 @@ public class DefaultHttp2Connection implements Http2Connection {
     public DefaultHttp2Connection(boolean server, Http2StreamRemovalPolicy removalPolicy) {
 
         this.removalPolicy = checkNotNull(removalPolicy, "removalPolicy");
-        localEndpoint = new DefaultEndpoint(server);
-        remoteEndpoint = new DefaultEndpoint(!server);
+        localEndpoint = new DefaultEndpoint<Http2LocalFlowController>(server);
+        remoteEndpoint = new DefaultEndpoint<Http2RemoteFlowController>(!server);
 
         // Tell the removal policy how to remove a stream from this connection.
         removalPolicy.setAction(new Action() {
@@ -138,12 +138,12 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     @Override
-    public Endpoint local() {
+    public Endpoint<Http2LocalFlowController> local() {
         return localEndpoint;
     }
 
     @Override
-    public Endpoint remote() {
+    public Endpoint<Http2RemoteFlowController> remote() {
         return remoteEndpoint;
     }
 
@@ -219,9 +219,6 @@ public class DefaultHttp2Connection implements Http2Connection {
         private boolean resetReceived;
         private boolean endOfStreamSent;
         private boolean endOfStreamReceived;
-        private Http2FlowState inboundFlow;
-        private Http2FlowState outboundFlow;
-        private Http2FlowControlWindowManager garbageCollector;
         private PropertyMap data;
 
         DefaultStream(int id) {
@@ -301,36 +298,6 @@ public class DefaultHttp2Connection implements Http2Connection {
         @Override
         public <V> V removeProperty(Object key) {
             return data.remove(key);
-        }
-
-        @Override
-        public Http2FlowState inboundFlow() {
-            return inboundFlow;
-        }
-
-        @Override
-        public void inboundFlow(Http2FlowState state) {
-            inboundFlow = state;
-        }
-
-        @Override
-        public Http2FlowState outboundFlow() {
-            return outboundFlow;
-        }
-
-        @Override
-        public void outboundFlow(Http2FlowState state) {
-            outboundFlow = state;
-        }
-
-        @Override
-        public Http2FlowControlWindowManager garbageCollector() {
-            return garbageCollector;
-        }
-
-        @Override
-        public void garbageCollector(Http2FlowControlWindowManager collector) {
-            garbageCollector = collector;
         }
 
         @Override
@@ -511,7 +478,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             return state == HALF_CLOSED_REMOTE || state == OPEN || state == RESERVED_LOCAL;
         }
 
-        final DefaultEndpoint createdBy() {
+        final DefaultEndpoint<? extends Http2FlowController> createdBy() {
             return localEndpoint.createdStreamId(id) ? localEndpoint : remoteEndpoint;
         }
 
@@ -742,12 +709,13 @@ public class DefaultHttp2Connection implements Http2Connection {
     /**
      * Simple endpoint implementation.
      */
-    private final class DefaultEndpoint implements Endpoint {
+    private final class DefaultEndpoint<F extends Http2FlowController> implements Endpoint<F> {
         private final boolean server;
         private int nextStreamId;
         private int lastStreamCreated;
         private int lastKnownStream = -1;
         private boolean pushToAllowed = true;
+        private F flowController;
 
         /**
          * The maximum number of active streams allowed to be created by this endpoint.
@@ -911,7 +879,17 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public Endpoint opposite() {
+        public F flowController() {
+            return flowController;
+        }
+
+        @Override
+        public void flowController(F flowController) {
+            this.flowController = checkNotNull(flowController, "flowController");
+        }
+
+        @Override
+        public Endpoint<? extends Http2FlowController> opposite() {
             return isLocal() ? remoteEndpoint : localEndpoint;
         }
 

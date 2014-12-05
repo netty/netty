@@ -91,7 +91,7 @@ public interface Http2Connection {
     /**
      * A view of the connection from one endpoint (local or remote).
      */
-    interface Endpoint {
+    interface Endpoint<F extends Http2FlowController> {
 
         /**
          * Returns the next valid streamId for this endpoint. If negative, the stream IDs are
@@ -187,9 +187,19 @@ public interface Http2Connection {
         int lastKnownStream();
 
         /**
+         * Gets the flow controller for this endpoint.
+         */
+        F flowController();
+
+        /**
+         * Sets the flow controller for this endpoint.
+         */
+        void flowController(F flowController);
+
+        /**
          * Gets the {@link Endpoint} opposite this one.
          */
-        Endpoint opposite();
+        Endpoint<? extends Http2FlowController> opposite();
     }
 
     /**
@@ -237,7 +247,7 @@ public interface Http2Connection {
     /**
      * Gets a view of this connection from the local {@link Endpoint}.
      */
-    Endpoint local();
+    Endpoint<Http2LocalFlowController> local();
 
     /**
      * Creates a new stream initiated by the local endpoint. See {@link Endpoint#createStream(int, boolean)}.
@@ -247,7 +257,7 @@ public interface Http2Connection {
     /**
      * Gets a view of this connection from the remote {@link Endpoint}.
      */
-    Endpoint remote();
+    Endpoint<Http2RemoteFlowController> remote();
 
     /**
      * Creates a new stream initiated by the remote endpoint. See {@link Endpoint#createStream(int, boolean)}.

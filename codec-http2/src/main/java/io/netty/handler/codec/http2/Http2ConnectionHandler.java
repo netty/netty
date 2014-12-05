@@ -60,18 +60,10 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     public Http2ConnectionHandler(Http2Connection connection, Http2FrameReader frameReader,
             Http2FrameWriter frameWriter, Http2FrameListener listener) {
-        this(connection, frameReader, frameWriter, new DefaultHttp2InboundFlowController(
-                connection, frameWriter), new DefaultHttp2OutboundFlowController(connection,
-                frameWriter), listener);
-    }
-
-    public Http2ConnectionHandler(Http2Connection connection, Http2FrameReader frameReader,
-            Http2FrameWriter frameWriter, Http2InboundFlowController inboundFlow,
-            Http2OutboundFlowController outboundFlow, Http2FrameListener listener) {
         this(DefaultHttp2ConnectionDecoder.newBuilder().connection(connection)
-                .frameReader(frameReader).inboundFlow(inboundFlow).listener(listener),
+                .frameReader(frameReader).listener(listener),
              DefaultHttp2ConnectionEncoder.newBuilder().connection(connection)
-                .frameWriter(frameWriter).outboundFlow(outboundFlow));
+                .frameWriter(frameWriter));
     }
 
     /**
