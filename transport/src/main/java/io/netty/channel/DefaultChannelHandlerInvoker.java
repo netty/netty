@@ -408,7 +408,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
 
         private static final Recycler<WriteTask> RECYCLER = new Recycler<WriteTask>() {
             @Override
-            protected WriteTask newObject(Handle<WriteTask> handle) {
+            protected WriteTask newObject(Handle handle) {
                 return new WriteTask(handle);
             }
         };
@@ -423,7 +423,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
             return task;
         }
 
-        private WriteTask(Recycler.Handle<WriteTask> handle) {
+        private WriteTask(Recycler.Handle handle) {
             super(handle);
         }
 

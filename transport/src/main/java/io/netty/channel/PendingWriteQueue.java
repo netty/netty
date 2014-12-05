@@ -272,7 +272,7 @@ public final class PendingWriteQueue {
             next = null;
             msg = null;
             promise = null;
-            RECYCLER.recycle(this, handle);
+            handle.recycle();
         }
     }
 }

@@ -56,7 +56,7 @@ public class AbstractMicrobenchmark {
     }
 
     protected static final String[] JVM_ARGS = {
-        "-server", "-dsa", "-da", "-ea:io.netty...", "-Xms768m", "-Xmx768m",
+        "-server", "-dsa", "-da", "-Xms768m", "-Xmx768m",
         "-XX:MaxDirectMemorySize=768m", "-XX:+AggressiveOpts", "-XX:+UseBiasedLocking",
         "-XX:+UseFastAccessorMethods", "-XX:+UseStringCache", "-XX:+OptimizeStringConcat",
         "-XX:+HeapDumpOnOutOfMemoryError", "-Dio.netty.noResourceLeakDetection",

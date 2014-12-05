@@ -23,9 +23,8 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.lang.ref.WeakReference;
 import java.util.Arrays;
-import java.util.Map;
-import java.util.WeakHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Light-weight object pool based on a thread-local stack.
@@ -36,8 +35,6 @@ public abstract class Recycler<T> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Recycler.class);
 
-    private static final AtomicInteger ID_GENERATOR = new AtomicInteger(Integer.MIN_VALUE);
-    private static final int OWN_THREAD_ID = ID_GENERATOR.getAndIncrement();
     private static final int DEFAULT_MAX_CAPACITY;
     private static final int INITIAL_CAPACITY;
 
@@ -60,10 +57,10 @@ public abstract class Recycler<T> {
     }
 
     private final int maxCapacity;
-    private final FastThreadLocal<Stack<T>> threadLocal = new FastThreadLocal<Stack<T>>() {
+    private final FastThreadLocal<Stack> threadLocal = new FastThreadLocal<Stack>() {
         @Override
-        protected Stack<T> initialValue() {
-            return new Stack<T>(Recycler.this, Thread.currentThread(), maxCapacity);
+        protected Stack initialValue() {
+            return new Stack(Thread.currentThread(), maxCapacity);
         }
     };
 
@@ -75,288 +72,231 @@ public abstract class Recycler<T> {
         this.maxCapacity = Math.max(0, maxCapacity);
     }
 
+    /**
+     * Gets an instance from recycler's pool or a new instance if the pool is empty.
+     *
+     * @return An instance from pool or a new instance.
+     */
     @SuppressWarnings("unchecked")
     public final T get() {
-        Stack<T> stack = threadLocal.get();
-        DefaultHandle<T> handle = stack.pop();
+        // if current thread pool can't provide handlers, a new handle for a new element is constructed.
+        Stack stack = threadLocal.get();
+        Handle handle = stack.pop();
         if (handle == null) {
-            handle = stack.newHandle();
-            handle.value = newObject(handle);
+            handle = new Handle(stack, this);
         }
         return (T) handle.value;
     }
 
-    public final boolean recycle(T o, Handle<T> handle) {
-        DefaultHandle<T> h = (DefaultHandle<T>) handle;
-        if (h.stack.parent != this) {
-            return false;
-        }
-
-        h.recycle(o);
-        return true;
-    }
-
     final int threadLocalCapacity() {
-        return threadLocal.get().elements.length;
+        return threadLocal.get().syncHandles.length;
     }
 
-    protected abstract T newObject(Handle<T> handle);
+    protected abstract T newObject(Handle handle);
 
-    public interface Handle<T> {
-        void recycle(T object);
-    }
+    /**
+     * Object used to reference a pool and a value. A handle is bound only to a single thread because is bound to a
+     * single pool. It can be recycled safely from other threads.
+     */
+    public static final class Handle {
+        // Keeping a handle is not blocking the pool reference.
+        private final WeakReference<Stack> stackWeakRef;
+        // Value referenced by this handle.
+        private final Object value;
+        // Flag used to find if the current handle is in recycler's pool.
+        private final AtomicBoolean inPool;
 
-    static final class DefaultHandle<T> implements Handle<T> {
-        private int lastRecycledId;
-        private int recycleId;
-
-        private Stack<?> stack;
-        private Object value;
-
-        DefaultHandle(Stack<?> stack) {
-            this.stack = stack;
+        private Handle(Stack stack, Recycler<?> recycler) {
+            stackWeakRef = new WeakReference<Stack>(stack);
+            value = recycler.newObject(this);
+            inPool = new AtomicBoolean(false);
         }
 
-        @Override
-        public void recycle(Object object) {
-            if (object != value) {
-                throw new IllegalArgumentException("object does not belong to handle");
-            }
-            Thread thread = Thread.currentThread();
-            if (thread == stack.thread) {
-                stack.push(this);
-                return;
-            }
-            // we don't want to have a ref to the queue as the value in our weak map
-            // so we null it out; to ensure there are no races with restoring it later
-            // we impose a memory ordering here (no-op on x86)
-            Map<Stack<?>, WeakOrderQueue> delayedRecycled = DELAYED_RECYCLED.get();
-            WeakOrderQueue queue = delayedRecycled.get(stack);
-            if (queue == null) {
-                delayedRecycled.put(stack, queue = new WeakOrderQueue(stack, thread));
-            }
-            queue.add(this);
-        }
-    }
-
-    private static final FastThreadLocal<Map<Stack<?>, WeakOrderQueue>> DELAYED_RECYCLED =
-            new FastThreadLocal<Map<Stack<?>, WeakOrderQueue>>() {
-        @Override
-        protected Map<Stack<?>, WeakOrderQueue> initialValue() {
-            return new WeakHashMap<Stack<?>, WeakOrderQueue>();
-        }
-    };
-
-    // a queue that makes only moderate guarantees about visibility: items are seen in the correct order,
-    // but we aren't absolutely guaranteed to ever see anything at all, thereby keeping the queue cheap to maintain
-    private static final class WeakOrderQueue {
-        private static final int LINK_CAPACITY = 16;
-
-        // Let Link extend AtomicInteger for intrinsics. The Link itself will be used as writerIndex.
-        @SuppressWarnings("serial")
-        private static final class Link extends AtomicInteger {
-            private final DefaultHandle<?>[] elements = new DefaultHandle[LINK_CAPACITY];
-
-            private int readIndex;
-            private Link next;
-        }
-
-        // chain of data items
-        private Link head, tail;
-        // pointer to another queue of delayed items for the same stack
-        private WeakOrderQueue next;
-        private final WeakReference<Thread> owner;
-        private final int id = ID_GENERATOR.getAndIncrement();
-
-        WeakOrderQueue(Stack<?> stack, Thread thread) {
-            head = tail = new Link();
-            owner = new WeakReference<Thread>(thread);
-            synchronized (stack) {
-                next = stack.head;
-                stack.head = this;
-            }
-        }
-
-        void add(DefaultHandle<?> handle) {
-            handle.lastRecycledId = id;
-
-            Link tail = this.tail;
-            int writeIndex;
-            if ((writeIndex = tail.get()) == LINK_CAPACITY) {
-                this.tail = tail = tail.next = new Link();
-                writeIndex = tail.get();
-            }
-            tail.elements[writeIndex] = handle;
-            handle.stack = null;
-            // we lazy set to ensure that setting stack to null appears before we unnull it in the owning thread;
-            // this also means we guarantee visibility of an element in the queue if we see the index updated
-            tail.lazySet(writeIndex + 1);
-        }
-
-        boolean hasFinalData() {
-            return tail.readIndex != tail.get();
-        }
-
-        // transfer as many items as we can from this queue to the stack, returning true if any were transferred
-        @SuppressWarnings("rawtypes")
-        boolean transfer(Stack<?> to) {
-
-            Link head = this.head;
-            if (head == null) {
+        /**
+         * Recycles a handle to allow the value to be used again.
+         *
+         * @return {@code true} if the handle was recycled; {@code false} if the pool max capacity was reached or the
+         * pool is garbage collected.
+         */
+        public boolean recycle() {
+            Stack stack = stackWeakRef.get();
+            if (stack != null) {
+                return stack.push(this);
+            } else {
                 return false;
             }
+        }
 
-            if (head.readIndex == LINK_CAPACITY) {
-                if (head.next == null) {
+        /**
+         * Finds if the current handle can be recycled.
+         *
+         * @return {@code true} if the handle can be recycled.
+         */
+        public boolean canBeRecycled() {
+            return stackWeakRef.get() != null && inPool.get();
+        }
+    }
+
+    /**
+     * Pool used to keep handles for a single thread.
+     * <p/>
+     * This pool contains an array bounded by a maximum capacity, an array used in LIFO mode. This array is only
+     * accessed from owner thread in order to avoid synchronization.
+     * <p/>
+     * This pool also contains a non blocking thread-safe queue of handles. In this queue other threads can add handles
+     * owned by current pool. To avoid performance loss caused by adding/retrieving of a single handle a buffer class is
+     * used.
+     */
+    protected static final class Stack {
+        // Thread for which this pool was built.
+        private final Thread owner;
+        // Max capacity for the synchronized array.
+        private final int syncMaxCapacity;
+        // Array that is only used only from the owner thread.
+        private Handle[] syncHandles;
+        // Number of handles in the array that can be safely used by the owner thread.
+        private int syncSize;
+
+        // Queue that contains buffers pushed by other threads, buffers filled with recycled handles from other threads.
+        private final ConcurrentLinkedQueue<Buffer> queue;
+
+        // Other threads keep buffers in this pool.
+        // A thread != owner can recycle a handle and will firstly introduce it in its buffer; when the buffer is full
+        // it is added to the shared queue.
+        private final FastThreadLocal<Buffer> threadBuffer;
+
+        /**
+         * Constructor that receives the owner thread and the maximum capacity for the array of handles contained in
+         * this pool.
+         *
+         * @param owner The thread for which this pool was built.
+         * @param maxCapacity The maximum capacity for the array of handles.
+         */
+        private Stack(final Thread owner, final int maxCapacity) {
+            this.owner = owner;
+            syncMaxCapacity = maxCapacity;
+
+            syncHandles = new Handle[INITIAL_CAPACITY];
+            syncSize = 0;
+
+            queue = new ConcurrentLinkedQueue<Buffer>();
+
+            threadBuffer = new FastThreadLocal<Buffer>() {
+                @Override
+                protected Buffer initialValue() throws Exception {
+                    return new Buffer();
+                }
+            };
+        }
+
+        /**
+         * Extracts a handle from pool.
+         *
+         * @return A {@link Handle} extracted from current pool.
+         */
+        private Handle pop() {
+            // this method is only called from owner thread. Always Thread.currentThread() == this.owner
+
+            // first, we try to extract the handle from the array which does not require any synchronization because
+            // it is only accessed from a single thread, the owner thread.
+            // synchronized array = array used only from the owner thread
+            if (syncSize <= 0) {
+
+                // we try to extract a buffer full of handles added in the queue by other threads.
+                Buffer buffer = queue.poll();
+                if (buffer == null) {
+                    return null;
+                }
+
+                // we try to find out if the array can contain the extra handles from the buffer.
+                int freeSpace = syncHandles.length - syncSize;
+                if (freeSpace < Buffer.CAPACITY && syncHandles.length != syncMaxCapacity) {
+                    int newSize = Math.max(syncHandles.length << 1, syncSize + Buffer.CAPACITY);
+                    syncHandles = Arrays.copyOf(syncHandles, Math.min(newSize, syncMaxCapacity));
+                    freeSpace = syncHandles.length - syncSize;
+                }
+                int toBeCopied = Math.min(freeSpace, Buffer.CAPACITY);
+                if (toBeCopied > 0) {
+                    // we copy the handles from buffer to the safely owned array.
+                    System.arraycopy(buffer.handles, 0, syncHandles, syncSize, toBeCopied);
+                    syncSize += toBeCopied;
+                }
+            }
+
+            if (syncSize <= 0) {
+                return null;
+            }
+
+            // we can provide the handle from thread's array.
+            Handle handle = syncHandles[syncSize - 1];
+            syncSize--;
+            syncHandles[syncSize] = null;
+            // we mark the handle as ready to be recycled.
+            handle.inPool.lazySet(false);
+            return handle;
+        }
+
+        private boolean push(Handle handle) {
+            // this method is only called from an owned handle. Always handle.stackWeakRef.get() == this
+
+            // we check to see if another thread already recycled this handle.
+            if (!handle.inPool.compareAndSet(false, true)) {
+                throw new IllegalStateException("recycled already");
+            }
+
+            if (Thread.currentThread() == owner) {
+                if (syncSize == syncMaxCapacity) {
+                    // max capacity reached. we can't recycle.
                     return false;
                 }
-                this.head = head = head.next;
-            }
-
-            int start = head.readIndex;
-            int end = head.get();
-            if (start == end) {
-                return false;
-            }
-
-            int count = end - start;
-            if (to.size + count > to.elements.length) {
-                to.elements = Arrays.copyOf(to.elements, (to.size + count) * 2);
-            }
-
-            DefaultHandle[] src = head.elements;
-            DefaultHandle[] trg = to.elements;
-            int size = to.size;
-            while (start < end) {
-                DefaultHandle element = src[start];
-                if (element.recycleId == 0) {
-                    element.recycleId = element.lastRecycledId;
-                } else if (element.recycleId != element.lastRecycledId) {
-                    throw new IllegalStateException("recycled already");
+                if (syncSize == syncHandles.length) {
+                    syncHandles = Arrays.copyOf(syncHandles, Math.min(syncSize << 1, syncMaxCapacity));
                 }
-                element.stack = to;
-                trg[size++] = element;
-                src[start++] = null;
+                // we can add the element safely to the owned array (no synchronization required).
+                syncHandles[syncSize] = handle;
+                syncSize++;
+            } else {
+                // we obtain the buffer for the current thread.
+                Buffer buffer = threadBuffer.get();
+                // we add the handle to the buffer
+                if (!buffer.addHandle(handle)) {
+                    // max capacity reached; we add the buffer to the synchronized queue.
+                    queue.offer(buffer);
+                    // we set a new buffer for current thread.
+                    buffer = new Buffer();
+                    buffer.addHandle(handle);
+                    threadBuffer.set(buffer);
+                }
             }
-            to.size = size;
 
-            if (end == LINK_CAPACITY && head.next != null) {
-                this.head = head.next;
-            }
-
-            head.readIndex = end;
             return true;
         }
     }
 
-    static final class Stack<T> {
-
-        // we keep a queue of per-thread queues, which is appended to once only, each time a new thread other
-        // than the stack owner recycles: when we run out of items in our stack we iterate this collection
-        // to scavenge those that can be reused. this permits us to incur minimal thread synchronisation whilst
-        // still recycling all items.
-        final Recycler<T> parent;
-        final Thread thread;
-        private DefaultHandle<?>[] elements;
-        private final int maxCapacity;
+    /**
+     * Light-weight buffer for handles.
+     */
+    protected static final class Buffer {
+        // The number of handles that a thread will collect before adding them the queue shared by another thread.
+        private static final int CAPACITY = 8;
+        // Array where handles are collected.
+        private final Handle[] handles;
+        // Current number of handles collected.
         private int size;
 
-        private volatile WeakOrderQueue head;
-        private WeakOrderQueue cursor, prev;
-
-        Stack(Recycler<T> parent, Thread thread, int maxCapacity) {
-            this.parent = parent;
-            this.thread = thread;
-            this.maxCapacity = maxCapacity;
-            elements = new DefaultHandle[INITIAL_CAPACITY];
+        private Buffer() {
+            handles = new Handle[CAPACITY];
+            size = 0;
         }
 
-        @SuppressWarnings({ "unchecked", "rawtypes" })
-        DefaultHandle<T> pop() {
-            int size = this.size;
-            if (size == 0) {
-                if (!scavenge()) {
-                    return null;
-                }
-                size = this.size;
-            }
-            size --;
-            DefaultHandle ret = elements[size];
-            if (ret.lastRecycledId != ret.recycleId) {
-                throw new IllegalStateException("recycled multiple times");
-            }
-            ret.recycleId = 0;
-            ret.lastRecycledId = 0;
-            this.size = size;
-            return ret;
-        }
-
-        boolean scavenge() {
-            // continue an existing scavenge, if any
-            if (scavengeSome()) {
-                return true;
+        private boolean addHandle(Handle handle) {
+            if (size == CAPACITY) {
+                return false;
             }
 
-            // reset our scavenge cursor
-            prev = null;
-            cursor = head;
-            return false;
-        }
-
-        boolean scavengeSome() {
-            boolean success = false;
-            WeakOrderQueue cursor = this.cursor, prev = this.prev;
-            while (cursor != null) {
-                if (cursor.transfer(this)) {
-                    success = true;
-                    break;
-                }
-                WeakOrderQueue next = cursor.next;
-                if (cursor.owner.get() == null) {
-                    // if the thread associated with the queue is gone, unlink it, after
-                    // performing a volatile read to confirm there is no data left to collect
-                    // we never unlink the first queue, as we don't want to synchronize on updating the head
-                    if (cursor.hasFinalData()) {
-                        for (;;) {
-                            if (!cursor.transfer(this)) {
-                                break;
-                            }
-                        }
-                    }
-                    if (prev != null) {
-                        prev.next = next;
-                    }
-                } else {
-                    prev = cursor;
-                }
-                cursor = next;
-            }
-            this.prev = prev;
-            this.cursor = cursor;
-            return success;
-        }
-
-        void push(DefaultHandle<?> item) {
-            if ((item.recycleId | item.lastRecycledId) != 0) {
-                throw new IllegalStateException("recycled already");
-            }
-            item.recycleId = item.lastRecycledId = OWN_THREAD_ID;
-
-            int size = this.size;
-            if (size == maxCapacity) {
-                // Hit the maximum capacity - drop the possibly youngest object.
-                return;
-            }
-            if (size == elements.length) {
-                elements = Arrays.copyOf(elements, Math.min(size << 1, maxCapacity));
-            }
-
-            elements[size] = item;
-            this.size = size + 1;
-        }
-
-        DefaultHandle<T> newHandle() {
-            return new DefaultHandle<T>(this);
+            handles[size] = handle;
+            size++;
+            return true;
         }
     }
 }

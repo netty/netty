@@ -728,7 +728,7 @@ public final class ChannelOutboundBuffer {
             pendingSize = 0;
             count = -1;
             cancelled = false;
-            RECYCLER.recycle(this, handle);
+            handle.recycle();
         }
 
         Entry recycleAndGetNext() {
