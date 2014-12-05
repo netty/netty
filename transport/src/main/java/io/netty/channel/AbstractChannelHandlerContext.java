@@ -15,8 +15,6 @@
  */
 package io.netty.channel;
 
-import static io.netty.channel.DefaultChannelPipeline.logger;
-
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.Recycler;
@@ -28,6 +26,8 @@ import io.netty.util.internal.RecyclableMpscLinkedQueueNode;
 import io.netty.util.internal.StringUtil;
 
 import java.net.SocketAddress;
+
+import static io.netty.channel.DefaultChannelPipeline.*;
 
 abstract class AbstractChannelHandlerContext extends DefaultAttributeMap implements ChannelHandlerContext {
 
@@ -80,31 +80,6 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
 
         this.inbound = inbound;
         this.outbound = outbound;
-    }
-
-    /** Invocation initiated by {@link DefaultChannelPipeline#teardownAll()}}. */
-    void teardown() {
-        EventExecutor executor = executor();
-        if (executor.inEventLoop()) {
-            teardown0();
-        } else {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    teardown0();
-                }
-            });
-        }
-    }
-
-    private void teardown0() {
-        AbstractChannelHandlerContext prev = this.prev;
-        if (prev != null) {
-            synchronized (pipeline) {
-                pipeline.remove0(this);
-            }
-            prev.teardown();
-        }
     }
 
     @Override
