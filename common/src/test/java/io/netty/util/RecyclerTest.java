@@ -15,10 +15,13 @@
 */
 package io.netty.util;
 
-import java.util.Random;
-
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.Random;
+
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
 
 public class RecyclerTest {
 
@@ -95,6 +98,75 @@ public class RecyclerTest {
         }
 
         Assert.assertEquals(maxCapacity, recycler.threadLocalCapacity());
+    }
+
+    @Test
+    public void testRecycleAtDifferentThread() throws Exception {
+        final Recycler<HandledObject> recycler = new Recycler<HandledObject>(256) {
+            @Override
+            protected HandledObject newObject(
+                    Recycler.Handle<HandledObject> handle) {
+                return new HandledObject(handle);
+            }
+        };
+
+        final HandledObject o = recycler.get();
+        final Thread thread = new Thread() {
+            @Override
+            public void run() {
+                recycler.recycle(o, o.handle);
+            }
+        };
+        thread.start();
+        thread.join();
+
+        assertThat(recycler.get(), is(sameInstance(o)));
+    }
+
+    @Test
+    public void testMaxCapacityWithRecycleAtDifferentThread() throws Exception {
+        final int maxCapacity = 4; // Choose the number smaller than WeakOrderQueue.LINK_CAPACITY
+        final Recycler<HandledObject> recycler = new Recycler<HandledObject>(maxCapacity) {
+            @Override
+            protected HandledObject newObject(
+                    Recycler.Handle<HandledObject> handle) {
+                return new HandledObject(handle);
+            }
+        };
+
+        // Borrow 2 * maxCapacity objects.
+        // Return the half from the same thread.
+        // Return the other half from the different thread.
+
+        final HandledObject[] array = new HandledObject[maxCapacity * 3];
+        for (int i = 0; i < array.length; i ++) {
+            array[i] = recycler.get();
+        }
+
+        for (int i = 0; i < maxCapacity; i ++) {
+            recycler.recycle(array[i], array[i].handle);
+        }
+
+        final Thread thread = new Thread() {
+            @Override
+            public void run() {
+                for (int i = maxCapacity; i < array.length; i ++) {
+                    recycler.recycle(array[i], array[i].handle);
+                }
+            }
+        };
+        thread.start();
+        thread.join();
+
+        assertThat(recycler.threadLocalCapacity(), is(maxCapacity));
+        assertThat(recycler.threadLocalSize(), is(maxCapacity));
+
+        for (int i = 0; i < array.length; i ++) {
+            recycler.get();
+        }
+
+        assertThat(recycler.threadLocalCapacity(), is(maxCapacity));
+        assertThat(recycler.threadLocalSize(), is(0));
     }
 
     static final class HandledObject {
