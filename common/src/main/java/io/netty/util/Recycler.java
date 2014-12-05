@@ -100,6 +100,10 @@ public abstract class Recycler<T> {
         return threadLocal.get().elements.length;
     }
 
+    final int threadLocalSize() {
+        return threadLocal.get().size;
+    }
+
     protected abstract T newObject(Handle<T> handle);
 
     public interface Handle<T> {
@@ -213,39 +217,58 @@ public abstract class Recycler<T> {
                 this.head = head = head.next;
             }
 
-            int start = head.readIndex;
-            int end = head.get();
-            if (start == end) {
+            final int start = head.readIndex;
+            final int count = head.get() - start;
+            if (count == 0) {
                 return false;
             }
 
-            int count = end - start;
-            if (to.size + count > to.elements.length) {
-                to.elements = Arrays.copyOf(to.elements, (to.size + count) * 2);
-            }
+            final int end;
+            final int toSize = to.size;
+            final int toCapacity = to.elements.length;
+            if (toSize + count > toCapacity) {
+                int newCapacity = toCapacity;
+                int toMaxCapacity = to.maxCapacity;
+                do {
+                    newCapacity <<= 1;
+                } while (toSize + count < newCapacity && newCapacity < toMaxCapacity);
 
-            DefaultHandle[] src = head.elements;
-            DefaultHandle[] trg = to.elements;
-            int size = to.size;
-            while (start < end) {
-                DefaultHandle element = src[start];
-                if (element.recycleId == 0) {
-                    element.recycleId = element.lastRecycledId;
-                } else if (element.recycleId != element.lastRecycledId) {
-                    throw new IllegalStateException("recycled already");
+                newCapacity = Math.min(newCapacity, toMaxCapacity);
+                if (newCapacity != toCapacity) {
+                    to.elements = Arrays.copyOf(to.elements, newCapacity);
                 }
-                element.stack = to;
-                trg[size++] = element;
-                src[start++] = null;
-            }
-            to.size = size;
-
-            if (end == LINK_CAPACITY && head.next != null) {
-                this.head = head.next;
+                end = start + newCapacity - toSize;
+            } else {
+                end = start + count;
             }
 
-            head.readIndex = end;
-            return true;
+            if (start != end) {
+                final DefaultHandle[] src = head.elements;
+                final DefaultHandle[] dst = to.elements;
+                int newToSize = toSize;
+                for (int i = start; i < end; i++) {
+                    DefaultHandle element = src[i];
+                    if (element.recycleId == 0) {
+                        element.recycleId = element.lastRecycledId;
+                    } else if (element.recycleId != element.lastRecycledId) {
+                        throw new IllegalStateException("recycled already");
+                    }
+                    element.stack = to;
+                    dst[newToSize++] = element;
+                    src[i] = null;
+                }
+                to.size = newToSize;
+
+                if (end == LINK_CAPACITY && head.next != null) {
+                    this.head = head.next;
+                }
+
+                head.readIndex = end;
+                return true;
+            } else {
+                // The destination stack is full already.
+                return false;
+            }
         }
     }
 
@@ -268,7 +291,7 @@ public abstract class Recycler<T> {
             this.parent = parent;
             this.thread = thread;
             this.maxCapacity = maxCapacity;
-            elements = new DefaultHandle[INITIAL_CAPACITY];
+            elements = new DefaultHandle[Math.min(INITIAL_CAPACITY, maxCapacity)];
         }
 
         @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -304,21 +327,32 @@ public abstract class Recycler<T> {
         }
 
         boolean scavengeSome() {
+            WeakOrderQueue cursor = this.cursor;
+            if (cursor == null) {
+                cursor = head;
+                if (cursor == null) {
+                    return false;
+                }
+            }
+
             boolean success = false;
-            WeakOrderQueue cursor = this.cursor, prev = this.prev;
-            while (cursor != null) {
+            WeakOrderQueue prev = this.prev;
+            do {
                 if (cursor.transfer(this)) {
                     success = true;
                     break;
                 }
+
                 WeakOrderQueue next = cursor.next;
                 if (cursor.owner.get() == null) {
-                    // if the thread associated with the queue is gone, unlink it, after
-                    // performing a volatile read to confirm there is no data left to collect
-                    // we never unlink the first queue, as we don't want to synchronize on updating the head
+                    // If the thread associated with the queue is gone, unlink it, after
+                    // performing a volatile read to confirm there is no data left to collect.
+                    // We never unlink the first queue, as we don't want to synchronize on updating the head.
                     if (cursor.hasFinalData()) {
                         for (;;) {
-                            if (!cursor.transfer(this)) {
+                            if (cursor.transfer(this)) {
+                                success = true;
+                            } else {
                                 break;
                             }
                         }
@@ -330,7 +364,12 @@ public abstract class Recycler<T> {
                     prev = cursor;
                 }
                 cursor = next;
-            }
+
+                if (success) {
+                    break;
+                }
+            } while (cursor != null);
+
             this.prev = prev;
             this.cursor = cursor;
             return success;
@@ -343,7 +382,7 @@ public abstract class Recycler<T> {
             item.recycleId = item.lastRecycledId = OWN_THREAD_ID;
 
             int size = this.size;
-            if (size == maxCapacity) {
+            if (size >= maxCapacity) {
                 // Hit the maximum capacity - drop the possibly youngest object.
                 return;
             }
