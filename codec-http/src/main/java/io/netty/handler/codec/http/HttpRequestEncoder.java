@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.AsciiString;
 import io.netty.util.CharsetUtil;
 
 import static io.netty.handler.codec.http.HttpConstants.*;
@@ -36,7 +37,9 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
 
     @Override
     protected void encodeInitialLine(ByteBuf buf, HttpRequest request) throws Exception {
-        request.method().encode(buf);
+        AsciiString method = request.method().name();
+        buf.writeBytes(method.array(), method.arrayOffset(), method.length());
+
         buf.writeByte(SP);
 
         // Add / as absolute path if no is present.
