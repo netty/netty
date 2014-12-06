@@ -39,7 +39,6 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
     protected void encodeInitialLine(ByteBuf buf, HttpRequest request) throws Exception {
         AsciiString method = request.method().name();
         buf.writeBytes(method.array(), method.arrayOffset(), method.length());
-
         buf.writeByte(SP);
 
         // Add / as absolute path if no is present.
@@ -73,9 +72,10 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
         }
 
         buf.writeBytes(uri.getBytes(CharsetUtil.UTF_8));
-
         buf.writeByte(SP);
-        request.protocolVersion().encode(buf);
+
+        AsciiString version = request.protocolVersion().text();
+        buf.writeBytes(version.array(), version.arrayOffset(), version.length());
         buf.writeBytes(CRLF);
     }
 }

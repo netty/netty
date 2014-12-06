@@ -15,11 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.AsciiString;
-import io.netty.util.CharsetUtil;
-
-import static io.netty.handler.codec.http.HttpConstants.*;
 
 /**
  * The response code and its description of HTTP or its derived protocols, such as
@@ -472,8 +468,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     private final AsciiString codeAsText;
     private HttpStatusClass codeClass;
 
-    private final String reasonPhrase;
-    private final byte[] bytes;
+    private final AsciiString reasonPhrase;
 
     /**
      * Creates a new instance with the specified {@code code} and the auto-generated default reason phrase.
@@ -512,12 +507,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
 
         this.code = code;
         codeAsText = new AsciiString(Integer.toString(code));
-        this.reasonPhrase = reasonPhrase;
-        if (bytes) {
-            this.bytes = (code + " " + reasonPhrase).getBytes(CharsetUtil.US_ASCII);
-        } else {
-            this.bytes = null;
-        }
+        this.reasonPhrase = new AsciiString(reasonPhrase);
     }
 
     /**
@@ -537,7 +527,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     /**
      * Returns the reason phrase of this {@link HttpResponseStatus}.
      */
-    public String reasonPhrase() {
+    public AsciiString reasonPhrase() {
         return reasonPhrase;
     }
 
@@ -545,11 +535,11 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
      * Returns the class of this {@link HttpResponseStatus}
      */
     public HttpStatusClass codeClass() {
-        HttpStatusClass type = this.codeClass;
-        if (type == null) {
-            this.codeClass = type = HttpStatusClass.valueOf(code);
+        HttpStatusClass codeClass = this.codeClass;
+        if (codeClass == null) {
+            this.codeClass = codeClass = HttpStatusClass.valueOf(code);
         }
-        return type;
+        return codeClass;
     }
 
     @Override
@@ -586,15 +576,5 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
             .append(' ')
             .append(reasonPhrase)
             .toString();
-    }
-
-    void encode(ByteBuf buf) {
-        if (bytes == null) {
-            HttpHeaderUtil.encodeAscii0(String.valueOf(code()), buf);
-            buf.writeByte(SP);
-            HttpHeaderUtil.encodeAscii0(String.valueOf(reasonPhrase()), buf);
-        } else {
-            buf.writeBytes(bytes);
-        }
     }
 }

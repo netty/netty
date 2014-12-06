@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.AsciiString;
 
 import static io.netty.handler.codec.http.HttpConstants.*;
 
@@ -33,9 +34,16 @@ public class HttpResponseEncoder extends HttpObjectEncoder<HttpResponse> {
 
     @Override
     protected void encodeInitialLine(ByteBuf buf, HttpResponse response) throws Exception {
-        response.protocolVersion().encode(buf);
+        AsciiString version = response.protocolVersion().text();
+        buf.writeBytes(version.array(), version.arrayOffset(), version.length());
         buf.writeByte(SP);
-        response.status().encode(buf);
+
+        AsciiString code = response.status().codeAsText();
+        buf.writeBytes(code.array(), code.arrayOffset(), code.length());
+        buf.writeByte(SP);
+
+        AsciiString reasonPhrase = response.status().reasonPhrase();
+        buf.writeBytes(reasonPhrase.array(), reasonPhrase.arrayOffset(), reasonPhrase.length());
         buf.writeBytes(CRLF);
     }
 }
