@@ -642,12 +642,21 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
 
     @Override
     protected void doResolve(InetSocketAddress unresolvedAddress, Promise<InetSocketAddress> promise) throws Exception {
-        final String hostname = IDN.toASCII(unresolvedAddress.getHostString());
+        final String hostname = IDN.toASCII(hostname(unresolvedAddress));
         final int port = unresolvedAddress.getPort();
 
         final DnsNameResolverContext ctx = new DnsNameResolverContext(this, hostname, port, promise);
 
         ctx.resolve();
+    }
+
+    private static String hostname(InetSocketAddress addr) {
+        // InetSocketAddress.getHostString() is available since Java 7.
+        if (PlatformDependent.javaVersion() < 7) {
+            return addr.getHostName();
+        } else {
+            return addr.getHostString();
+        }
     }
 
     /**
