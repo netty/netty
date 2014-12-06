@@ -125,6 +125,11 @@ public class DefaultTextHeaders extends DefaultConvertibleHeaders<CharSequence, 
         }
 
         @Override
+        public AsciiString convertTimeMillis(long value) {
+            return new AsciiString(String.valueOf(value));
+        }
+
+        @Override
         public long convertToTimeMillis(CharSequence value) {
             try {
                 return HeaderDateFormat.get().parse(value.toString());
