@@ -43,8 +43,10 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
 
         Throwable exception = null;
         int localRead = 0;
+        int totalRead = 0;
         try {
             for (;;) {
+                // Perform a read.
                 localRead = doReadMessages(readBuf);
                 if (localRead == 0) {
                     break;
@@ -54,7 +56,17 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
                     break;
                 }
 
-                if (readBuf.size() >= maxMessagesPerRead || !config.isAutoRead()) {
+                // Notify with the received messages and clear the buffer.
+                int size = readBuf.size();
+                for (int i = 0; i < size; i ++) {
+                    pipeline.fireChannelRead(readBuf.get(i));
+                }
+                readBuf.clear();
+
+                // Do not read beyond maxMessagesPerRead.
+                // Do not continue reading if autoRead has been turned off.
+                totalRead += localRead;
+                if (totalRead >= maxMessagesPerRead || !config.isAutoRead()) {
                     break;
                 }
             }
@@ -62,11 +74,6 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
             exception = t;
         }
 
-        int size = readBuf.size();
-        for (int i = 0; i < size; i ++) {
-            pipeline.fireChannelRead(readBuf.get(i));
-        }
-        readBuf.clear();
         pipeline.fireChannelReadComplete();
 
         if (exception != null) {
