@@ -717,13 +717,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
     }
 
     private static void notifyOutboundHandlerException(Throwable cause, ChannelPromise promise) {
-        // only try to fail the promise if its not a VoidChannelPromise, as
-        // the VoidChannelPromise would also fire the cause through the pipeline
-        if (promise instanceof VoidChannelPromise) {
-            return;
-        }
-
-        if (!promise.tryFailure(cause)) {
+        if (!promise.tryFailure(cause) && !(promise instanceof VoidChannelPromise)) {
             if (logger.isWarnEnabled()) {
                 logger.warn("Failed to fail the promise because it's done already: {}", promise, cause);
             }
