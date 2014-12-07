@@ -20,7 +20,7 @@ package io.netty.handler.codec.http2;
 public interface Http2FlowController {
 
     /**
-     * Sets the global flow control window size and updates all stream window sizes by the delta.
+     * Sets the initial flow control window size and updates all stream window sizes by the delta.
      * <p>
      * This method is used to apply the {@code SETTINGS_INITIAL_WINDOW_SIZE} value for an
      * {@code SETTINGS} frame.
@@ -33,7 +33,8 @@ public interface Http2FlowController {
     void initialWindowSize(int newWindowSize) throws Http2Exception;
 
     /**
-     * Gets the initial window size used as the basis for new stream flow control windows.
+     * Gets the initial flow control window size that is used as the basis for new stream flow
+     * control windows.
      */
     int initialWindowSize();
 

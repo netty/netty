@@ -20,15 +20,15 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 
 /**
- * A {@link FlowController} for controlling the flow of outbound {@code DATA} frames to the remote
+ * A {@link Http2FlowController} for controlling the flow of outbound {@code DATA} frames to the remote
  * endpoint.
  */
 public interface Http2RemoteFlowController extends Http2FlowController {
 
     /**
-     * Writes or queues a DATA frame for transmission to the remote endpoint. There is no guarantee
-     * when the data will be written or whether it will be split into multiple frames before
-     * sending. The returned future will only be completed once all of the data has been
+     * Writes or queues a {@code DATA} frame for transmission to the remote endpoint. There is no
+     * guarantee when the data will be written or whether it will be split into multiple frames
+     * before sending. The returned future will only be completed once all of the data has been
      * successfully written to the remote endpoint.
      * <p>
      * Manually flushing the {@link ChannelHandlerContext} is not required, since the flow
@@ -42,6 +42,7 @@ public interface Http2RemoteFlowController extends Http2FlowController {
      *            for this stream.
      * @param promise the promise to be completed when the data has been successfully written or a
      *            failure occurs.
+     * @return a future that is completed when the frame is sent to the remote endpoint.
      */
     ChannelFuture sendFlowControlledFrame(ChannelHandlerContext ctx, Http2Stream stream,
             ByteBuf data, int padding, boolean endStream, ChannelPromise promise);

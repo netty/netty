@@ -18,7 +18,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 
 /**
- * A {@link FlowController} for controlling the inbound flow of {@code DATA} frames from the remote
+ * A {@link Http2FlowController} for controlling the inbound flow of {@code DATA} frames from the remote
  * endpoint.
  */
 public interface Http2LocalFlowController extends Http2FlowController {
@@ -42,17 +42,19 @@ public interface Http2LocalFlowController extends Http2FlowController {
             boolean endOfStream) throws Http2Exception;
 
     /**
-     * Indicates that the application has consumed a number of bytes for the given stream
-     * and is therefore ready to receive more data from the remote endpoint. The application must
-     * consume any bytes that it receives or the flow control window will collapse. Consuming bytes
-     * enables the flow controller to send {@code WINDOW_UPDATE} to restore a portion of the flow
-     * control window for the stream.
+     * Indicates that the application has consumed a number of bytes for the given stream and is
+     * therefore ready to receive more data from the remote endpoint. The application must consume
+     * any bytes that it receives or the flow control window will collapse. Consuming bytes enables
+     * the flow controller to send {@code WINDOW_UPDATE} to restore a portion of the flow control
+     * window for the stream.
      *
      * @param ctx the channel handler context to use when sending a {@code WINDOW_UPDATE} if
      *            appropriate
      * @param stream the stream for which window space should be freed. The connection stream object
      *            must not be used.
      * @param numBytes the number of bytes to be returned to the flow control window.
+     * @throws Http2Exception if the number of bytes returned exceeds the {@link #unconsumedBytes()}
+     *             for the stream.
      */
     void consumeBytes(ChannelHandlerContext ctx, Http2Stream stream, int numBytes) throws Http2Exception;
 
@@ -60,8 +62,7 @@ public interface Http2LocalFlowController extends Http2FlowController {
      * The number of bytes for the given stream that have been received but not yet consumed by the
      * application.
      *
-     * @param stream the stream for which window space should be freed. The connection stream object
-     *            must not be used.
+     * @param stream the stream for which window space should be freed.
      * @return the number of unconsumed bytes for the stream.
      */
     int unconsumedBytes(Http2Stream stream);
