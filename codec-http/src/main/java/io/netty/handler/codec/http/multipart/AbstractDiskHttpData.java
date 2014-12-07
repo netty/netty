@@ -331,11 +331,11 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             FileOutputStream outputStream = new FileOutputStream(dest);
             FileChannel in = inputStream.getChannel();
             FileChannel out = outputStream.getChannel();
-            int chunkSize = 8196;
+            long chunkSize = 8196;
             long position = 0;
             while (position < size) {
                 if (chunkSize < size - position) {
-                    chunkSize = (int) (size - position);
+                    chunkSize = size - position;
                 }
                 position += in.transferTo(position, chunkSize , out);
             }
