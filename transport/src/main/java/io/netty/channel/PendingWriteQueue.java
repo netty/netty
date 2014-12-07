@@ -217,11 +217,11 @@ public final class PendingWriteQueue {
     }
 
     private void recycle(PendingWrite write) {
-        PendingWrite next = write.next;
+        final PendingWrite next = write.next;
+        final long writeSize = write.size;
 
-        buffer.decrementPendingOutboundBytes(write.size);
-        write.recycle();
         size --;
+
         if (next == null) {
             // Handled last PendingWrite so rest head and tail
             head = tail = null;
@@ -230,6 +230,9 @@ public final class PendingWriteQueue {
             head = next;
             assert size > 0;
         }
+
+        write.recycle();
+        buffer.decrementPendingOutboundBytes(writeSize);
     }
 
     private static void safeFail(ChannelPromise promise, Throwable cause) {
