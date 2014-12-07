@@ -49,7 +49,8 @@ public interface Http2RemoteFlowController extends Http2FlowController {
 
     /**
      * Gets the {@link ChannelFuture} for the most recent frame that was sent for the given stream
-     * via a call to {@link #sendFlowControlledFrame()}.
+     * via a call to {@link #sendFlowControlledFrame()}. This is useful for cases such as ensuring
+     * that {@code HEADERS} frames maintain send order with {@code DATA} frames.
      *
      * @param stream the subject stream. Must not be the connection stream object.
      * @return the most recent sent frame, or {@code null} if no frame has been sent for the stream.
