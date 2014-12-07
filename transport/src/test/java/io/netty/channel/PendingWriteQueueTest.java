@@ -23,6 +23,11 @@ import io.netty.util.CharsetUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.*;
+
 public class PendingWriteQueueTest {
 
     @Test
@@ -84,6 +89,55 @@ public class PendingWriteQueueTest {
                 super.flush(ctx);
             }
         }, 3);
+    }
+
+    @Test
+    public void shouldFireChannelWritabilityChangedAfterRemoval() {
+        final AtomicReference<ChannelHandlerContext> ctxRef = new AtomicReference<ChannelHandlerContext>();
+        final AtomicReference<PendingWriteQueue> queueRef = new AtomicReference<PendingWriteQueue>();
+        final ByteBuf msg = Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII);
+
+        final EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {
+            @Override
+            public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                ctxRef.set(ctx);
+                queueRef.set(new PendingWriteQueue(ctx));
+            }
+
+            @Override
+            public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+                final PendingWriteQueue queue = queueRef.get();
+
+                final ByteBuf msg = (ByteBuf) queue.current();
+                if (msg == null) {
+                    return;
+                }
+
+                assertThat(msg.refCnt(), is(1));
+
+                // This call will trigger another channelWritabilityChanged() event because the number of
+                // pending bytes will go below the low watermark.
+                //
+                // If PendingWriteQueue.remove() did not remove the current entry before triggering
+                // channelWritabilityChanged() event, we will end up with attempting to remove the same
+                // element twice, resulting in the double release.
+                queue.remove();
+
+                assertThat(msg.refCnt(), is(0));
+            }
+        });
+
+        channel.config().setWriteBufferLowWaterMark(1);
+        channel.config().setWriteBufferHighWaterMark(3);
+
+        final PendingWriteQueue queue = queueRef.get();
+
+        // Trigger channelWritabilityChanged() by adding a message that's larger than the high watermark.
+        queue.add(msg, channel.newPromise());
+
+        channel.finish();
+
+        assertThat(msg.refCnt(), is(0));
     }
 
     private static void assertWrite(ChannelHandler handler, int count) {
