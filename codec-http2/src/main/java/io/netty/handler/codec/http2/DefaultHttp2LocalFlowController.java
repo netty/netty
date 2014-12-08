@@ -110,7 +110,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         FlowState state = state(stream);
         // Just add the delta to the stream-specific initial window size so that the next time the window
         // expands it will grow to the new initial size.
-        state.initialStreamWindowSize(state.initialStreamWindowSize + delta);
+        state.incrementInitialStreamWindow(delta);
         state.writeWindowUpdateIfNeeded(ctx);
     }
 
@@ -261,10 +261,6 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
 
         void windowUpdateRatio(float ratio) {
             streamWindowUpdateRatio = ratio;
-        }
-
-        void initialStreamWindowSize(int initialWindowSize) {
-            initialStreamWindowSize = initialWindowSize;
         }
 
         /**

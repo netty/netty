@@ -885,8 +885,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public void flowController(F flowController) {
-            checkNotNull(flowController, "flowController");
-            this.flowController = flowController;
+            this.flowController = checkNotNull(flowController, "flowController");
         }
 
         @Override
