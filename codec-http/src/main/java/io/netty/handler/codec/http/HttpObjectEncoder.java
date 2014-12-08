@@ -69,7 +69,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             buf = ctx.alloc().buffer();
             // Encode the message.
             encodeInitialLine(buf, m);
-            HttpHeaders.encode(m.headers(), buf);
+            encodeHeaders(m.headers(), buf);
             buf.writeBytes(CRLF);
             state = HttpHeaders.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
         }
@@ -132,6 +132,13 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         }
     }
 
+    /**
+     * Encode the {@link HttpHeaders} into a {@link ByteBuf}.
+     */
+    protected void encodeHeaders(HttpHeaders headers, ByteBuf buf) {
+        HttpHeaders.encode(headers, buf);
+    }
+
     private void encodeChunkedContent(ChannelHandlerContext ctx, Object msg, long contentLength, List<Object> out) {
         if (contentLength > 0) {
             byte[] length = Long.toHexString(contentLength).getBytes(CharsetUtil.US_ASCII);
@@ -150,7 +157,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             } else {
                 ByteBuf buf = ctx.alloc().buffer();
                 buf.writeBytes(ZERO_CRLF);
-                HttpHeaders.encode(headers, buf);
+                encodeHeaders(headers, buf);
                 buf.writeBytes(CRLF);
                 out.add(buf);
             }
