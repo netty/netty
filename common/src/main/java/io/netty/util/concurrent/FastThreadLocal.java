@@ -23,7 +23,7 @@ import java.util.IdentityHashMap;
 import java.util.Set;
 
 /**
- * A special variant of {@link ThreadLocal} that yields higher access performan when accessed from a
+ * A special variant of {@link ThreadLocal} that yields higher access performance when accessed from a
  * {@link FastThreadLocalThread}.
  * <p>
  * Internally, a {@link FastThreadLocal} uses a constant index in an array, instead of using hash code and hash table,
