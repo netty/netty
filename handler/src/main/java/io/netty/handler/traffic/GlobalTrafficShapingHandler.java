@@ -219,7 +219,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     }
 
     /**
-     * @return the global size of the buffers for all queues
+     * @return the global size of the buffers for all queues.
      */
     public long queuesSize() {
         return queuesSize.get();
