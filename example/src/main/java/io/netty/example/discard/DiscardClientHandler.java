@@ -28,6 +28,11 @@ public class DiscardClientHandler extends SimpleChannelInboundHandler<Object> {
 
     private ByteBuf content;
     private ChannelHandlerContext ctx;
+    private final boolean useIsWritable;
+
+    public DiscardClientHandler(boolean useIsWritable) {
+        this.useIsWritable = useIsWritable;
+    }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
@@ -60,7 +65,7 @@ public class DiscardClientHandler extends SimpleChannelInboundHandler<Object> {
     long counter;
 
     private void generateTraffic() {
-        if (DiscardClient.useIsWritable) {
+        if (useIsWritable) {
             // Flush the outbound buffer to the socket.
             // But checked the isWritable() property before generating the same amount of traffic again.
             while (ctx.channel().isWritable()) {
@@ -75,7 +80,7 @@ public class DiscardClientHandler extends SimpleChannelInboundHandler<Object> {
 
     @Override
     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
-        if (DiscardClient.useIsWritable && ctx.channel().isWritable()) {
+        if (useIsWritable && ctx.channel().isWritable()) {
             // We are in useIsWritable mode and the channel is again writable
             generateTraffic();
         }
