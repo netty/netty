@@ -28,8 +28,6 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http2.DefaultHttp2Connection;
 import io.netty.handler.codec.http2.DefaultHttp2FrameReader;
 import io.netty.handler.codec.http2.DefaultHttp2FrameWriter;
-import io.netty.handler.codec.http2.DefaultHttp2InboundFlowController;
-import io.netty.handler.codec.http2.DefaultHttp2OutboundFlowController;
 import io.netty.handler.codec.http2.DelegatingDecompressorFrameListener;
 import io.netty.handler.codec.http2.Http2ClientUpgradeCodec;
 import io.netty.handler.codec.http2.Http2Connection;
@@ -68,8 +66,6 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
         connectionHandler = new HttpToHttp2ConnectionHandler(connection,
                 frameReader(),
                 frameWriter,
-                new DefaultHttp2InboundFlowController(connection, frameWriter),
-                new DefaultHttp2OutboundFlowController(connection, frameWriter),
                 new DelegatingDecompressorFrameListener(connection,
                         new InboundHttp2ToHttpAdapter.Builder(connection)
                                 .maxContentLength(maxContentLength)

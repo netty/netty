@@ -20,6 +20,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelPromiseAggregator;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http2.Http2ConnectionDecoder.Builder;
 
 /**
  * Translates HTTP/1.x object writes into HTTP/2 frames.
@@ -40,10 +41,9 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
         super(connection, frameReader, frameWriter, listener);
     }
 
-    public HttpToHttp2ConnectionHandler(Http2Connection connection, Http2FrameReader frameReader,
-            Http2FrameWriter frameWriter, Http2InboundFlowController inboundFlow,
-            Http2OutboundFlowController outboundFlow, Http2FrameListener listener) {
-        super(connection, frameReader, frameWriter, inboundFlow, outboundFlow, listener);
+    public HttpToHttp2ConnectionHandler(Builder decoderBuilder,
+            io.netty.handler.codec.http2.Http2ConnectionEncoder.Builder encoderBuilder) {
+        super(decoderBuilder, encoderBuilder);
     }
 
     /**

@@ -32,7 +32,6 @@ import java.util.ArrayDeque;
 public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     private final Http2FrameWriter frameWriter;
     private final Http2Connection connection;
-    private final Http2OutboundFlowController outboundFlow;
     private final Http2LifecycleManager lifecycleManager;
     // We prefer ArrayDeque to LinkedList because later will produce more GC.
     // This initial capacity is plenty for SETTINGS traffic.
@@ -44,7 +43,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     public static class Builder implements Http2ConnectionEncoder.Builder {
         protected Http2FrameWriter frameWriter;
         protected Http2Connection connection;
-        protected Http2OutboundFlowController outboundFlow;
         protected Http2LifecycleManager lifecycleManager;
 
         @Override
@@ -74,13 +72,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         }
 
         @Override
-        public Builder outboundFlow(
-                Http2OutboundFlowController outboundFlow) {
-            this.outboundFlow = outboundFlow;
-            return this;
-        }
-
-        @Override
         public Http2ConnectionEncoder build() {
             return new DefaultHttp2ConnectionEncoder(this);
         }
@@ -91,10 +82,12 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     }
 
     protected DefaultHttp2ConnectionEncoder(Builder builder) {
-        frameWriter = checkNotNull(builder.frameWriter, "frameWriter");
         connection = checkNotNull(builder.connection, "connection");
-        outboundFlow = checkNotNull(builder.outboundFlow, "outboundFlow");
+        frameWriter = checkNotNull(builder.frameWriter, "frameWriter");
         lifecycleManager = checkNotNull(builder.lifecycleManager, "lifecycleManager");
+        if (connection.remote().flowController() == null) {
+            connection.remote().flowController(new DefaultHttp2RemoteFlowController(connection, frameWriter));
+        }
     }
 
     @Override
@@ -105,6 +98,12 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     @Override
     public Http2Connection connection() {
         return connection;
+    }
+
+    
+    @Override
+    public final Http2RemoteFlowController flowController() {
+        return connection().remote().flowController();
     }
 
     @Override
@@ -142,19 +141,20 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
         Integer initialWindowSize = settings.initialWindowSize();
         if (initialWindowSize != null) {
-            initialOutboundWindowSize(initialWindowSize);
+            flowController().initialWindowSize(initialWindowSize);
         }
     }
 
     @Override
     public ChannelFuture writeData(final ChannelHandlerContext ctx, final int streamId, ByteBuf data, int padding,
             final boolean endOfStream, ChannelPromise promise) {
+        Http2Stream stream;
         try {
             if (connection.isGoAway()) {
                 throw new IllegalStateException("Sending data after connection going away.");
             }
 
-            Http2Stream stream = connection.requireStream(streamId);
+            stream = connection.requireStream(streamId);
             if (stream.isResetSent()) {
                 throw new IllegalStateException("Sending data after sending RST_STREAM.");
             }
@@ -184,7 +184,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
         // Hand control of the frame to the flow controller.
         ChannelFuture future =
-                outboundFlow.writeData(ctx, streamId, data, padding, endOfStream, promise);
+                flowController().sendFlowControlledFrame(ctx, stream, data, padding, endOfStream, promise);
         future.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
@@ -203,11 +203,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     }
 
     @Override
-    public ChannelFuture lastWriteForStream(int streamId) {
-        return outboundFlow.lastWriteForStream(streamId);
-    }
-
-    @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
             boolean endStream, ChannelPromise promise) {
         return writeHeaders(ctx, streamId, headers, 0, DEFAULT_PRIORITY_WEIGHT, false, padding, endStream, promise);
@@ -219,7 +214,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             final boolean exclusive, final int padding, final boolean endOfStream,
             final ChannelPromise promise) {
         Http2Stream stream = connection.stream(streamId);
-        ChannelFuture lastDataWrite = lastWriteForStream(streamId);
+        ChannelFuture lastDataWrite = stream != null ? flowController().lastFrameSent(stream) : null;
         try {
             if (connection.isGoAway()) {
                 throw connectionError(PROTOCOL_ERROR, "Sending headers after connection going away.");
@@ -471,20 +466,5 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     @Override
     public Configuration configuration() {
         return frameWriter.configuration();
-    }
-
-    @Override
-    public void initialOutboundWindowSize(int newWindowSize) throws Http2Exception {
-        outboundFlow.initialOutboundWindowSize(newWindowSize);
-    }
-
-    @Override
-    public int initialOutboundWindowSize() {
-        return outboundFlow.initialOutboundWindowSize();
-    }
-
-    @Override
-    public void updateOutboundWindowSize(int streamId, int deltaWindowSize) throws Http2Exception {
-        outboundFlow.updateOutboundWindowSize(streamId, deltaWindowSize);
     }
 }

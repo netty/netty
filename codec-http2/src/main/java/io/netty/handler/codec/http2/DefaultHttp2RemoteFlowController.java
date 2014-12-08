@@ -17,11 +17,9 @@ package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
-import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
-import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -38,9 +36,9 @@ import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Basic implementation of {@link Http2OutboundFlowController}.
+ * Basic implementation of {@link Http2RemoteFlowController}.
  */
-public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowController {
+public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowController {
 
     /**
      * A {@link Comparator} that sorts streams in ascending order the amount of streamable data.
@@ -58,19 +56,19 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     private ChannelHandlerContext ctx;
     private boolean frameSent;
 
-    public DefaultHttp2OutboundFlowController(Http2Connection connection, Http2FrameWriter frameWriter) {
+    public DefaultHttp2RemoteFlowController(Http2Connection connection, Http2FrameWriter frameWriter) {
         this.connection = checkNotNull(connection, "connection");
         this.frameWriter = checkNotNull(frameWriter, "frameWriter");
 
         // Add a flow state for the connection.
-        connection.connectionStream().outboundFlow(new OutboundFlowState(connection.connectionStream()));
+        connection.connectionStream().setProperty(FlowState.class, new FlowState(connection.connectionStream()));
 
         // Register for notification of new streams.
         connection.addListener(new Http2ConnectionAdapter() {
             @Override
             public void streamAdded(Http2Stream stream) {
                 // Just add a new flow state to the stream.
-                stream.outboundFlow(new OutboundFlowState(stream));
+                stream.setProperty(FlowState.class, new FlowState(stream));
             }
 
             @Override
@@ -108,7 +106,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     }
 
     @Override
-    public void initialOutboundWindowSize(int newWindowSize) throws Http2Exception {
+    public void initialWindowSize(int newWindowSize) throws Http2Exception {
         if (newWindowSize < 0) {
             throw new IllegalArgumentException("Invalid initial window size: " + newWindowSize);
         }
@@ -117,7 +115,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         initialWindowSize = newWindowSize;
         for (Http2Stream stream : connection.activeStreams()) {
             // Verify that the maximum value is not exceeded by this change.
-            OutboundFlowState state = state(stream);
+            FlowState state = state(stream);
             state.incrementStreamWindow(delta);
         }
 
@@ -128,19 +126,24 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     }
 
     @Override
-    public int initialOutboundWindowSize() {
+    public int initialWindowSize() {
         return initialWindowSize;
     }
 
     @Override
-    public void updateOutboundWindowSize(int streamId, int delta) throws Http2Exception {
-        if (streamId == CONNECTION_STREAM_ID) {
+    public int windowSize(Http2Stream stream) {
+        return state(stream).window();
+    }
+
+    @Override
+    public void incrementWindowSize(Http2Stream stream, int delta) throws Http2Exception {
+        if (stream.id() == CONNECTION_STREAM_ID) {
             // Update the connection window and write any pending frames for all streams.
             connectionState().incrementStreamWindow(delta);
             writePendingBytes();
         } else {
             // Update the stream window and write any pending frames for the stream.
-            OutboundFlowState state = stateOrFail(streamId);
+            FlowState state = state(stream);
             state.incrementStreamWindow(delta);
             frameSent = false;
             state.writeBytes(state.writableWindow());
@@ -151,9 +154,10 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     }
 
     @Override
-    public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
+    public ChannelFuture sendFlowControlledFrame(ChannelHandlerContext ctx, Http2Stream stream, ByteBuf data, int padding,
             boolean endStream, ChannelPromise promise) {
         checkNotNull(ctx, "ctx");
+        checkNotNull(stream, "stream");
         checkNotNull(promise, "promise");
         checkNotNull(data, "data");
         if (this.ctx != null && this.ctx != ctx) {
@@ -162,20 +166,17 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         if (padding < 0) {
             throw new IllegalArgumentException("padding must be >= 0");
         }
-        if (streamId <= 0) {
-            throw new IllegalArgumentException("streamId must be >= 0");
-        }
 
         // Save the context. We'll use this later when we write pending bytes.
         this.ctx = ctx;
 
         try {
-            OutboundFlowState state = stateOrFail(streamId);
+            FlowState state = state(stream);
 
             int window = state.writableWindow();
             boolean framesAlreadyQueued = state.hasFrame();
 
-            OutboundFlowState.Frame frame = state.newFrame(promise, data, padding, endStream);
+            FlowState.Frame frame = state.newFrame(promise, data, padding, endStream);
             if (!framesAlreadyQueued && window >= frame.size()) {
                 // Window size is large enough to send entire data frame
                 frame.write();
@@ -194,41 +195,33 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             // Create and send a partial frame up to the window size.
             frame.split(window).write();
             ctx.flush();
-        } catch (Http2Exception e) {
+        } catch (Throwable e) {
             promise.setFailure(e);
         }
         return promise;
     }
 
     @Override
-    public ChannelFuture lastWriteForStream(int streamId) {
-        OutboundFlowState state = state(streamId);
+    public ChannelFuture lastFrameSent(Http2Stream stream) {
+        FlowState state = state(stream);
         return state != null ? state.lastNewFrame() : null;
     }
 
-    private static OutboundFlowState state(Http2Stream stream) {
-        return (OutboundFlowState) stream.outboundFlow();
-    }
-
-    private OutboundFlowState connectionState() {
-        return state(connection.connectionStream());
-    }
-
-    private OutboundFlowState state(int streamId) {
-        Http2Stream stream = connection.stream(streamId);
-        return stream != null ? state(stream) : null;
-    }
-
     /**
-     * Attempts to get the {@link OutboundFlowState} for the given stream. If not available, raises a
-     * {@code PROTOCOL_ERROR}.
+     * For testing purposes only. Exposes the number of streamable bytes for the tree rooted at
+     * the given stream.
      */
-    private OutboundFlowState stateOrFail(int streamId) throws Http2Exception {
-        OutboundFlowState state = state(streamId);
-        if (state == null) {
-            throw connectionError(PROTOCOL_ERROR, "Missing flow control window for stream: %d", streamId);
-        }
-        return state;
+    int streamableBytesForTree(Http2Stream stream) {
+        return state(stream).streamableBytesForTree();
+    }
+
+    private static FlowState state(Http2Stream stream) {
+        checkNotNull(stream, "stream");
+        return stream.getProperty(FlowState.class);
+    }
+
+    private FlowState connectionState() {
+        return state(connection.connectionStream());
     }
 
     /**
@@ -273,7 +266,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
      * @return An object summarizing the write and allocation results.
      */
     private int writeChildren(Http2Stream parent, int connectionWindow) {
-        OutboundFlowState state = state(parent);
+        FlowState state = state(parent);
         if (state.streamableBytesForTree() <= 0) {
             return 0;
         }
@@ -353,7 +346,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     /**
      * Write bytes allocated to {@code state}
      */
-    private static void writeChildNode(OutboundFlowState state) {
+    private static void writeChildNode(FlowState state) {
         state.writeBytes(state.allocated());
         state.resetAllocated();
     }
@@ -361,7 +354,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     /**
      * The outbound flow control state for a single stream.
      */
-    final class OutboundFlowState implements Http2FlowState {
+    final class FlowState {
         private final Queue<Frame> pendingWriteQueue;
         private final Http2Stream stream;
         private int window = initialWindowSize;
@@ -370,12 +363,11 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         private int allocated;
         private ChannelFuture lastNewFrame;
 
-        private OutboundFlowState(Http2Stream stream) {
+        private FlowState(Http2Stream stream) {
             this.stream = stream;
             pendingWriteQueue = new ArrayDeque<Frame>(2);
         }
 
-        @Override
         public int window() {
             return window;
         }

@@ -148,36 +148,6 @@ public interface Http2Stream {
     <V> V removeProperty(Object key);
 
     /**
-     * Gets the in-bound flow control state for this stream.
-     */
-    Http2FlowState inboundFlow();
-
-    /**
-     * Sets the in-bound flow control state for this stream.
-     */
-    void inboundFlow(Http2FlowState state);
-
-    /**
-     * Gets the out-bound flow control window for this stream.
-     */
-    Http2FlowState outboundFlow();
-
-    /**
-     * Sets the out-bound flow control window for this stream.
-     */
-    void outboundFlow(Http2FlowState state);
-
-    /**
-     * Gets the interface which allows bytes to be returned to the flow controller
-     */
-    Http2FlowControlWindowManager garbageCollector();
-
-    /**
-     * Sets the interface which allows bytes to be returned to the flow controller
-     */
-    void garbageCollector(Http2FlowControlWindowManager collector);
-
-    /**
      * Updates an priority for this stream. Calling this method may affect the straucture of the
      * priority tree.
      *
