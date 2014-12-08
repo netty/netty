@@ -17,7 +17,6 @@ package io.netty.handler.codec.http2;
 import static io.netty.handler.codec.http.HttpMethod.GET;
 import static io.netty.handler.codec.http.HttpMethod.POST;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static io.netty.handler.codec.http2.Http2CodecUtil.ignoreSettingsHandler;
 import static io.netty.handler.codec.http2.Http2TestUtil.as;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -83,7 +82,8 @@ public class HttpToHttp2ConnectionHandlerTest {
     private Bootstrap cb;
     private Channel serverChannel;
     private Channel clientChannel;
-    private volatile CountDownLatch requestLatch;
+    private CountDownLatch requestLatch;
+    private CountDownLatch serverSettingsAckLatch;
     private FrameCountDown serverFrameCountDown;
 
     @Before
@@ -104,7 +104,7 @@ public class HttpToHttp2ConnectionHandlerTest {
 
     @Test
     public void testJustHeadersRequest() throws Exception {
-        bootstrapEnv(3);
+        bootstrapEnv(2, 1);
         final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/example");
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
@@ -147,7 +147,7 @@ public class HttpToHttp2ConnectionHandlerTest {
             }
         }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3),
                 any(ByteBuf.class), eq(0), eq(true));
-        bootstrapEnv(4);
+        bootstrapEnv(3, 1);
         final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, "/example",
                 Unpooled.copiedBuffer(text, UTF_8));
         final HttpHeaders httpHeaders = request.headers();
@@ -177,8 +177,9 @@ public class HttpToHttp2ConnectionHandlerTest {
         assertEquals(0, request.refCnt());
     }
 
-    private void bootstrapEnv(int requestCountDown) throws Exception {
+    private void bootstrapEnv(int requestCountDown, int serverSettingsAckCount) throws Exception {
         requestLatch = new CountDownLatch(requestCountDown);
+        serverSettingsAckLatch = new CountDownLatch(serverSettingsAckCount);
 
         sb = new ServerBootstrap();
         cb = new Bootstrap();
@@ -189,9 +190,8 @@ public class HttpToHttp2ConnectionHandlerTest {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                serverFrameCountDown = new FrameCountDown(serverListener, requestLatch);
+                serverFrameCountDown = new FrameCountDown(serverListener, serverSettingsAckLatch, requestLatch);
                 p.addLast(new HttpToHttp2ConnectionHandler(true, serverFrameCountDown));
-                p.addLast(ignoreSettingsHandler());
             }
         });
 
@@ -202,7 +202,6 @@ public class HttpToHttp2ConnectionHandlerTest {
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
                 p.addLast(new HttpToHttp2ConnectionHandler(false, clientListener));
-                p.addLast(ignoreSettingsHandler());
             }
         });
 

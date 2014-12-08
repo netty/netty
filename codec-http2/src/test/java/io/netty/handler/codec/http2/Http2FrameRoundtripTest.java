@@ -363,7 +363,6 @@ public class Http2FrameRoundtripTest {
                 ChannelPipeline p = ch.pipeline();
                 serverAdapter = new Http2TestUtil.FrameAdapter(serverListener, requestLatch);
                 p.addLast("reader", serverAdapter);
-                p.addLast(Http2CodecUtil.ignoreSettingsHandler());
             }
         });
 
@@ -374,7 +373,6 @@ public class Http2FrameRoundtripTest {
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
                 p.addLast("reader", new Http2TestUtil.FrameAdapter(null, null));
-                p.addLast(Http2CodecUtil.ignoreSettingsHandler());
             }
         });
 

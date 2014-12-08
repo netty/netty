@@ -82,8 +82,9 @@ public class DataCompressionHttp2Test {
     private Bootstrap cb;
     private Channel serverChannel;
     private Channel clientChannel;
-    private volatile CountDownLatch serverLatch;
-    private volatile CountDownLatch clientLatch;
+    private CountDownLatch serverLatch;
+    private CountDownLatch clientLatch;
+    private CountDownLatch clientSettingsAckLatch;
     private Http2Connection serverConnection;
     private Http2Connection clientConnection;
     private ByteArrayOutputStream serverOut;
@@ -111,7 +112,7 @@ public class DataCompressionHttp2Test {
 
     @Test
     public void justHeadersNoData() throws Exception {
-        bootstrapEnv(1, 0, 1);
+        bootstrapEnv(1, 1, 0, 1);
         final Http2Headers headers = new DefaultHttp2Headers().method(GET).path(PATH)
                 .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
 
@@ -135,7 +136,7 @@ public class DataCompressionHttp2Test {
     public void gzipEncodingSingleEmptyMessage() throws Exception {
         final String text = "";
         final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
-        bootstrapEnv(1, data.readableBytes(), 1);
+        bootstrapEnv(1, 1, data.readableBytes(), 1);
         try {
             final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
                     .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
@@ -164,7 +165,7 @@ public class DataCompressionHttp2Test {
     public void gzipEncodingSingleMessage() throws Exception {
         final String text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
         final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
-        bootstrapEnv(1, data.readableBytes(), 1);
+        bootstrapEnv(1, 1, data.readableBytes(), 1);
         try {
             final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
                     .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
@@ -195,7 +196,7 @@ public class DataCompressionHttp2Test {
         final String text2 = "dddddddddddddddddddeeeeeeeeeeeeeeeeeeeffffffffffffffffffff";
         final ByteBuf data1 = Unpooled.copiedBuffer(text1.getBytes());
         final ByteBuf data2 = Unpooled.copiedBuffer(text2.getBytes());
-        bootstrapEnv(1, data1.readableBytes() + data2.readableBytes(), 1);
+        bootstrapEnv(1, 1, data1.readableBytes() + data2.readableBytes(), 1);
         try {
             final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
                     .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
@@ -228,7 +229,7 @@ public class DataCompressionHttp2Test {
         final int BUFFER_SIZE = 1 << 12;
         final byte[] bytes = new byte[BUFFER_SIZE];
         new Random().nextBytes(bytes);
-        bootstrapEnv(1, BUFFER_SIZE, 1);
+        bootstrapEnv(1, 1, BUFFER_SIZE, 1);
         final ByteBuf data = Unpooled.wrappedBuffer(bytes);
         try {
             final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
@@ -255,10 +256,12 @@ public class DataCompressionHttp2Test {
         }
     }
 
-    private void bootstrapEnv(int serverHalfClosedCount, int serverOutSize, int clientCount) throws Exception {
+    private void bootstrapEnv(int serverHalfClosedCount, int clientSettingsAckLatchCount,
+            int serverOutSize, int clientCount) throws Exception {
         serverOut = new ByteArrayOutputStream(serverOutSize);
         serverLatch = new CountDownLatch(serverHalfClosedCount);
         clientLatch = new CountDownLatch(clientCount);
+        clientSettingsAckLatch = new CountDownLatch(clientSettingsAckLatchCount);
         sb = new ServerBootstrap();
         cb = new Bootstrap();
 
@@ -304,7 +307,6 @@ public class DataCompressionHttp2Test {
                                 new CompressorHttp2ConnectionEncoder.Builder().connection(
                                         serverConnection).frameWriter(writer));
                 p.addLast(connectionHandler);
-                p.addLast(Http2CodecUtil.ignoreSettingsHandler());
                 serverChannelLatch.countDown();
             }
         });
@@ -315,7 +317,8 @@ public class DataCompressionHttp2Test {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                FrameCountDown clientFrameCountDown = new FrameCountDown(clientListener, clientLatch);
+                FrameCountDown clientFrameCountDown = new FrameCountDown(clientListener,
+                        clientSettingsAckLatch, clientLatch);
                 Http2FrameWriter writer = new DefaultHttp2FrameWriter();
                 Http2ConnectionHandler connectionHandler =
                         new Http2ConnectionHandler(new DefaultHttp2ConnectionDecoder.Builder()
@@ -328,7 +331,6 @@ public class DataCompressionHttp2Test {
                                         clientConnection).frameWriter(writer));
                 clientEncoder = connectionHandler.encoder();
                 p.addLast(connectionHandler);
-                p.addLast(Http2CodecUtil.ignoreSettingsHandler());
             }
         });
 
@@ -342,6 +344,7 @@ public class DataCompressionHttp2Test {
     }
 
     private void awaitServer() throws Exception {
+        assertTrue(clientSettingsAckLatch.await(5, SECONDS));
         assertTrue(serverLatch.await(5, SECONDS));
         serverOut.flush();
     }
