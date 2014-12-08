@@ -44,13 +44,13 @@ public final class DiscardClient {
     static final int MAXCHANNELTHROUGHPUT = Integer.parseInt(System.getProperty("maxChannelThroughput", "0"));
     static final int connectionCount = Integer.parseInt(System.getProperty("connectionCount", "1"));
 
-   /**
-    * {@code true} - Use {@link Channel#isWritable()} and
-    * {@link ChannelInboundHandler#channelWritabilityChanged(ChannelHandlerContext)},
-    * {@code false} - Use {@code writeAndFLuxh(object).addListener(listener)},
-    * Default value is {@code false}.
-    */
-    static final boolean useIsWritable = Boolean.parseBoolean(System.getProperty("useIsWritable", "false"));
+    /**
+     * {@code true} - Use {@link Channel#isWritable()} and
+     * {@link ChannelInboundHandler#channelWritabilityChanged(ChannelHandlerContext)},
+     * {@code false} - Use {@code writeAndFLuxh(object).addListener(listener)},
+     * Default value is {@code false}.
+     */
+    private static final boolean useIsWritable = Boolean.parseBoolean(System.getProperty("useIsWritable", "false"));
 
     public static void main(String[] args) throws Exception {
         // Configure SSL.
@@ -93,7 +93,7 @@ public final class DiscardClient {
                      } else if (MAXCHANNELTHROUGHPUT > 0) {
                          p.addLast(new ChannelTrafficShapingHandler(MAXCHANNELTHROUGHPUT, 0, 1000));
                      }
-                     p.addLast(new DiscardClientHandler());
+                     p.addLast(new DiscardClientHandler(useIsWritable));
                  }
              });
 

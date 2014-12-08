@@ -29,10 +29,10 @@ import java.util.concurrent.TimeUnit;
  */
 public class GlobalChannelTrafficCounter extends TrafficCounter {
     /**
-     * @param trafficShapingHandler the associated {@link GlobalChannelTrafficShapingHandler}
-     * @param executor the underlying executor service for scheduling checks (both Global and per Channel)
-     * @param name the name given to this monitor
-     * @param checkInterval the checkInterval in millisecond between two computations
+     * @param trafficShapingHandler the associated {@link GlobalChannelTrafficShapingHandler}.
+     * @param executor the underlying executor service for scheduling checks (both Global and per Channel).
+     * @param name the name given to this monitor.
+     * @param checkInterval the checkInterval in millisecond between two computations.
      */
     public GlobalChannelTrafficCounter(GlobalChannelTrafficShapingHandler trafficShapingHandler,
             ScheduledExecutorService executor, String name, long checkInterval) {
@@ -56,8 +56,8 @@ public class GlobalChannelTrafficCounter extends TrafficCounter {
         private final TrafficCounter counter;
 
         /**
-         * @param trafficShapingHandler The parent handler to which this task needs to callback to for accounting
-         * @param counter The parent TrafficCounter that we need to reset the statistics for
+         * @param trafficShapingHandler The parent handler to which this task needs to callback to for accounting.
+         * @param counter The parent TrafficCounter that we need to reset the statistics for.
          */
         MixedTrafficMonitoringTask(
                 GlobalChannelTrafficShapingHandler trafficShapingHandler,
@@ -83,7 +83,7 @@ public class GlobalChannelTrafficCounter extends TrafficCounter {
     }
 
     /**
-     * Start the monitoring process
+     * Start the monitoring process.
      */
     public synchronized void start() {
         if (monitorActive) {
@@ -100,7 +100,7 @@ public class GlobalChannelTrafficCounter extends TrafficCounter {
     }
 
     /**
-     * Stop the monitoring process
+     * Stop the monitoring process.
      */
     public synchronized void stop() {
         if (!monitorActive) {

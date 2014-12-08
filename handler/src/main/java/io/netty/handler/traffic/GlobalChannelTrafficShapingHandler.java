@@ -112,29 +112,29 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
      * Max size in the list before proposing to stop writing new objects from next handlers
      * for all channel (global)
      */
-    long maxGlobalWriteSize = DEFAULT_MAX_SIZE * 100; // default 400MB
+    volatile long maxGlobalWriteSize = DEFAULT_MAX_SIZE * 100; // default 400MB
 
     /**
      * Limit in B/s to apply to write
      */
-    private long writeChannelLimit;
+    private volatile long writeChannelLimit;
 
     /**
      * Limit in B/s to apply to read
      */
-    private long readChannelLimit;
+    private volatile long readChannelLimit;
 
     private static final float DEFAULT_DEVIATION = 0.1F;
     private static final float MAX_DEVIATION = 0.4F;
     private static final float DEFAULT_SLOWDOWN = 0.4F;
     private static final float DEFAULT_ACCELERATION = -0.1F;
-    private float maxDeviation;
-    private float accelerationFactor;
-    private float slowDownFactor;
+    private volatile float maxDeviation;
+    private volatile float accelerationFactor;
+    private volatile float slowDownFactor;
     private volatile boolean readDeviationActive;
     private volatile boolean writeDeviationActive;
 
-    static class PerChannel {
+    static final class PerChannel {
         ArrayDeque<ToSend> messagesQueue;
         TrafficCounter channelTrafficCounter;
         long queueSize;
@@ -156,14 +156,14 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
 
     @Override
     int userDefinedWritabilityIndex() {
-        return AbstractTrafficShapingHandler.GLOBAL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX;
+        return AbstractTrafficShapingHandler.GLOBALCHANNEL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX;
     }
 
     /**
-     * Create a new instance
+     * Create a new instance.
      *
      * @param executor
-     *            the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}
+     *            the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}.
      * @param writeGlobalLimit
      *            0 or a limit in bytes/s
      * @param readGlobalLimit
@@ -174,9 +174,9 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
      *            0 or a limit in bytes/s
      * @param checkInterval
      *            The delay between two computations of performances for
-     *            channels or 0 if no stats are to be computed
+     *            channels or 0 if no stats are to be computed.
      * @param maxTime
-     *            The maximum delay to wait in case of traffic excess
+     *            The maximum delay to wait in case of traffic excess.
      */
     public GlobalChannelTrafficShapingHandler(ScheduledExecutorService executor,
             long writeGlobalLimit, long readGlobalLimit,
@@ -189,10 +189,10 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
     }
 
     /**
-     * Create a new instance
+     * Create a new instance.
      *
      * @param executor
-     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}
+     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}.
      * @param writeGlobalLimit
      *            0 or a limit in bytes/s
      * @param readGlobalLimit
@@ -203,7 +203,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
      *            0 or a limit in bytes/s
      * @param checkInterval
      *          The delay between two computations of performances for
-     *            channels or 0 if no stats are to be computed
+     *            channels or 0 if no stats are to be computed.
      */
     public GlobalChannelTrafficShapingHandler(ScheduledExecutorService executor,
             long writeGlobalLimit, long readGlobalLimit,
@@ -216,10 +216,10 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
     }
 
     /**
-     * Create a new instance
+     * Create a new instance.
      *
      * @param executor
-     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}
+     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}.
      * @param writeGlobalLimit
      *            0 or a limit in bytes/s
      * @param readGlobalLimit
@@ -239,13 +239,13 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
     }
 
     /**
-     * Create a new instance
+     * Create a new instance.
      *
      * @param executor
-     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}
+     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}.
      * @param checkInterval
      *          The delay between two computations of performances for
-     *            channels or 0 if no stats are to be computed
+     *            channels or 0 if no stats are to be computed.
      */
     public GlobalChannelTrafficShapingHandler(ScheduledExecutorService executor, long checkInterval) {
         super(checkInterval);
@@ -253,10 +253,10 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
     }
 
     /**
-     * Create a new instance
+     * Create a new instance.
      *
      * @param executor
-     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}
+     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}.
      */
     public GlobalChannelTrafficShapingHandler(ScheduledExecutorService executor) {
         createGlobalTrafficCounter(executor);
@@ -284,12 +284,15 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
     }
 
     /**
-     * @param maxDeviation the maximum deviation to allow during computation of average,
-     *      default deviation being 0.1, so +/-10% of the desired bandwidth. Maximum being 0.4.
-     * @param slowDownFactor the factor set as +x% to the too fast client
-     *          (minimal value being 0, meaning no slow down factor), default being 40% (0.4)
-     * @param accelerationFactor the factor set as -x% to the too slow client
-     *          (maximal value being 0, meaning no acceleration factor), default being -10% (-0.1)
+     * @param maxDeviation
+     *            the maximum deviation to allow during computation of average, default deviation
+     *            being 0.1, so +/-10% of the desired bandwidth. Maximum being 0.4.
+     * @param slowDownFactor
+     *            the factor set as +x% to the too fast client (minimal value being 0, meaning no
+     *            slow down factor), default being 40% (0.4).
+     * @param accelerationFactor
+     *            the factor set as -x% to the too slow client (maximal value being 0, meaning no
+     *            acceleration factor), default being -10% (-0.1).
      */
     public void setMaxDeviation(float maxDeviation, float slowDownFactor, float accelerationFactor) {
         if (maxDeviation > MAX_DEVIATION) {
@@ -378,14 +381,17 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
      * accordingly to the traffic shaping configuration.
      *
      * @param maxGlobalWriteSize the maximum Global Write Size allowed in the buffer
-     *            globally for all channels before write suspended is set
+     *            globally for all channels before write suspended is set.
      */
     public void setMaxGlobalWriteSize(long maxGlobalWriteSize) {
+        if (maxGlobalWriteSize <= 0) {
+            throw new IllegalArgumentException("maxGlobalWriteSize must be positive");
+        }
         this.maxGlobalWriteSize = maxGlobalWriteSize;
     }
 
     /**
-     * @return the global size of the buffers for all queues
+     * @return the global size of the buffers for all queues.
      */
     public long queuesSize() {
         return queuesSize.get();
@@ -441,7 +447,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
     }
 
     /**
-     * Release all internal resources of this instance
+     * Release all internal resources of this instance.
      */
     public final void release() {
         trafficCounter.stop();
@@ -612,11 +618,12 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
     }
 
     /**
-     * To allow for instance doAccounting to use the TrafficCounter per channel
-     * @return the list of TrafficCounters that exists at the time of the call
+     * To allow for instance doAccounting to use the TrafficCounter per channel.
+     * @return the list of TrafficCounters that exists at the time of the call.
      */
     public Collection<TrafficCounter> channelTrafficCounters() {
         Collection<TrafficCounter> valueCollection = new AbstractCollection<TrafficCounter>() {
+            @Override
             public Iterator<TrafficCounter> iterator() {
                 return new Iterator<TrafficCounter>() {
                     final Iterator<PerChannel> iter = channelQueues.values().iterator();
@@ -631,6 +638,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
                     }
                 };
             }
+            @Override
             public int size() {
                 return channelQueues.size();
             }
@@ -757,7 +765,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
 
     @Override
     public String toString() {
-        return new StringBuilder(super.toString())
+        return new StringBuilder(340).append(super.toString())
             .append(" Write Channel Limit: ").append(writeChannelLimit)
             .append(" Read Channel Limit: ").append(readChannelLimit).toString();
     }

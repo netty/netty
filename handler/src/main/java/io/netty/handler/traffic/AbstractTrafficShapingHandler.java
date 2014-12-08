@@ -79,32 +79,32 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     /**
      * Limit in B/s to apply to write
      */
-    private long writeLimit;
+    private volatile long writeLimit;
 
     /**
      * Limit in B/s to apply to read
      */
-    private long readLimit;
+    private volatile long readLimit;
 
-   /**
-    * Max delay in wait
-    */
-    long maxTime = DEFAULT_MAX_TIME; // default 15 s
+    /**
+     * Max delay in wait
+     */
+    protected volatile long maxTime = DEFAULT_MAX_TIME; // default 15 s
 
     /**
      * Delay between two performance snapshots
      */
-    long checkInterval = DEFAULT_CHECK_INTERVAL; // default 1 s
+    volatile long checkInterval = DEFAULT_CHECK_INTERVAL; // default 1 s
 
     /**
      * Max time to delay before proposing to stop writing new objects from next handlers
      */
-    long maxWriteDelay = 4 * DEFAULT_CHECK_INTERVAL; // default 4 s
+    volatile long maxWriteDelay = 4 * DEFAULT_CHECK_INTERVAL; // default 4 s
 
     /**
      * Max size in the list before proposing to stop writing new objects from next handlers
      */
-    long maxWriteSize = DEFAULT_MAX_SIZE; // default 4MB
+    volatile long maxWriteSize = DEFAULT_MAX_SIZE; // default 4MB
 
     /**
      * Rank in UserDefinedWritability (1 for Channel, 2 for Global TrafficShapingHandler).
@@ -123,19 +123,27 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
      */
     static final int GLOBAL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX = 2;
 
+    /**
+     * Default value for GlobalChannel UserDefinedWritability index
+     */
+    static final int GLOBALCHANNEL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX = 3;
+
     static final AttributeKey<Boolean> READ_SUSPENDED =
             AttributeKey.valueOf(AbstractTrafficShapingHandler.class, "READ_SUSPENDED");
     static final AttributeKey<Runnable> REOPEN_TASK =
             AttributeKey.valueOf(AbstractTrafficShapingHandler.class, "REOPEN_TASK");
 
     /**
-     * @return the index to be used by the TrafficShapingHandler to manage the user defined
-     *         writability/ For Channel TSH it is defined as
-     *         {@value #CHANNEL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX}, for Global TSH it is
-     *         defined as {@value #GLOBAL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX},
+     * @return the index to be used by the TrafficShapingHandler to manage the user defined writability.
+     *              For Channel TSH it is defined as {@value #CHANNEL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX},
+     *              for Global TSH it is defined as {@value #GLOBAL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX},
+     *              for GlobalChannel TSH it is defined as
+     *              {@value #GLOBALCHANNEL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX}.
      */
     int userDefinedWritabilityIndex() {
-        if (this instanceof GlobalTrafficShapingHandler) {
+        if (this instanceof GlobalChannelTrafficShapingHandler) {
+            return GLOBALCHANNEL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX;
+        } else if (this instanceof GlobalTrafficShapingHandler) {
             return GLOBAL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX;
         } else {
             return CHANNEL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX;
@@ -155,13 +163,17 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
      * @param readLimit
      *          0 or a limit in bytes/s
      * @param checkInterval
-     *          The delay between two computations of performances for
-     *            channels or 0 if no stats are to be computed
+     *            The delay between two computations of performances for
+     *            channels or 0 if no stats are to be computed.
      * @param maxTime
-     *          The maximum delay to wait in case of traffic excess
+     *            The maximum delay to wait in case of traffic excess.
+     *            Must be positive.
      */
     protected AbstractTrafficShapingHandler(long writeLimit, long readLimit,
-                                            long checkInterval, long maxTime) {
+            long checkInterval, long maxTime) {
+        if (maxTime <= 0) {
+            throw new IllegalArgumentException("maxTime must be positive");
+        }
         this.userDefinedWritabilityIndex = userDefinedWritabilityIndex();
         this.writeLimit = writeLimit;
         this.readLimit = readLimit;
@@ -169,25 +181,23 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
         this.maxTime = maxTime;
     }
 
-   /**
-    * Constructor using
-    * default max time as delay allowed value of {@value #DEFAULT_MAX_TIME} ms
-    * @param writeLimit
-    *           0 or a limit in bytes/s
-    * @param readLimit
-    *           0 or a limit in bytes/s
-    * @param checkInterval
-    *           The delay between two computations of performances for
-    *           channels or 0 if no stats are to be computed
-    */
-    protected AbstractTrafficShapingHandler(long writeLimit, long readLimit,
-            long checkInterval) {
+    /**
+     * Constructor using default max time as delay allowed value of {@value #DEFAULT_MAX_TIME} ms.
+     * @param writeLimit
+     *            0 or a limit in bytes/s
+     * @param readLimit
+     *            0 or a limit in bytes/s
+     * @param checkInterval
+     *            The delay between two computations of performances for
+     *            channels or 0 if no stats are to be computed.
+     */
+    protected AbstractTrafficShapingHandler(long writeLimit, long readLimit, long checkInterval) {
         this(writeLimit, readLimit, checkInterval, DEFAULT_MAX_TIME);
     }
 
     /**
      * Constructor using default Check Interval value of {@value #DEFAULT_CHECK_INTERVAL} ms and
-     * default max time as delay allowed value of {@value #DEFAULT_MAX_TIME} ms
+     * default max time as delay allowed value of {@value #DEFAULT_MAX_TIME} ms.
      *
      * @param writeLimit
      *          0 or a limit in bytes/s
@@ -199,8 +209,8 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     }
 
     /**
-     * Constructor using NO LIMIT and default Check Interval value of {@value #DEFAULT_CHECK_INTERVAL} ms and
-     * default max time as delay allowed value of {@value #DEFAULT_MAX_TIME} ms
+     * Constructor using NO LIMIT, default Check Interval value of {@value #DEFAULT_CHECK_INTERVAL} ms and
+     * default max time as delay allowed value of {@value #DEFAULT_MAX_TIME} ms.
      */
     protected AbstractTrafficShapingHandler() {
         this(0, 0, DEFAULT_CHECK_INTERVAL, DEFAULT_MAX_TIME);
@@ -208,11 +218,11 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
 
     /**
      * Constructor using NO LIMIT and
-     * default max time as delay allowed value of {@value #DEFAULT_MAX_TIME} ms
+     * default max time as delay allowed value of {@value #DEFAULT_MAX_TIME} ms.
      *
      * @param checkInterval
-     *          The delay between two computations of performances for
-     *            channels or 0 if no stats are to be computed
+     *            The delay between two computations of performances for
+     *            channels or 0 if no stats are to be computed.
      */
     protected AbstractTrafficShapingHandler(long checkInterval) {
         this(0, 0, checkInterval, DEFAULT_MAX_TIME);
@@ -323,7 +333,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     }
 
     /**
-     * @param checkInterval the interval in ms between each step check to set
+     * @param checkInterval the interval in ms between each step check to set, default value beeing 1000 ms.
      */
     public void setCheckInterval(long checkInterval) {
         this.checkInterval = checkInterval;
@@ -340,9 +350,13 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
      * accordingly to the traffic shaping configuration.</p>
      *
      * @param maxTime
-     *            Max delay in wait, shall be less than TIME OUT in related protocol
+     *            Max delay in wait, shall be less than TIME OUT in related protocol.
+     *            Must be positive.
      */
     public void setMaxTimeWait(long maxTime) {
+        if (maxTime <= 0) {
+            throw new IllegalArgumentException("maxTime must be positive");
+        }
         this.maxTime = maxTime;
     }
 
@@ -367,14 +381,18 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
      * <p>So the expected usage of this method is to be used not too often,
      * accordingly to the traffic shaping configuration.</p>
      *
-     * @param maxWriteDelay the maximum Write Delay in ms in the buffer allowed before write suspension is set
+     * @param maxWriteDelay the maximum Write Delay in ms in the buffer allowed before write suspension is set.
+     *              Must be positive.
      */
     public void setMaxWriteDelay(long maxWriteDelay) {
+        if (maxWriteDelay <= 0) {
+            throw new IllegalArgumentException("maxWriteDelay must be positive");
+        }
         this.maxWriteDelay = maxWriteDelay;
     }
 
     /**
-     * @return the maxWriteSize default being {@value #DEFAULT_MAX_SIZE} bytes
+     * @return the maxWriteSize default being {@value #DEFAULT_MAX_SIZE} bytes.
      */
     public long getMaxWriteSize() {
         return maxWriteSize;
@@ -390,7 +408,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
      *
      * @param maxWriteSize the maximum Write Size allowed in the buffer
      *            per channel before write suspended is set,
-     *             default being {@value #DEFAULT_MAX_SIZE} bytes
+     *            default being {@value #DEFAULT_MAX_SIZE} bytes.
      */
     public void setMaxWriteSize(long maxWriteSize) {
         this.maxWriteSize = maxWriteSize;
@@ -496,7 +514,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     }
 
     /**
-     * Method overridden in GTSH to take into account specific timer for the channel
+     * Method overridden in GTSH to take into account specific timer for the channel.
      * @param wait the wait delay computed in ms
      * @param now the relative now time in ms
      * @return the wait to use according to the context
@@ -507,7 +525,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     }
 
     /**
-     * Method overridden in GTSH to take into account specific timer for the channel
+     * Method overridden in GTSH to take into account specific timer for the channel.
      * @param now the relative now time in ms
      */
     void informReadOperation(final ChannelHandlerContext ctx, final long now) {
@@ -576,7 +594,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
         }
     }
     /**
-     * Explicitly release the Write suspended status
+     * Explicitly release the Write suspended status.
      */
     void releaseWriteSuspended(ChannelHandlerContext ctx) {
         setUserDefinedWritability(ctx, true);
@@ -592,12 +610,13 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder("TrafficShaping with Write Limit: ").append(writeLimit)
-                .append(" Read Limit: ").append(readLimit)
-                .append(" CheckInterval: ").append(checkInterval)
-                .append(" maxDelay: ").append(maxWriteDelay)
-                .append(" maxSize: ").append(maxWriteSize)
-                .append(" and Counter: ");
+        StringBuilder builder = new StringBuilder(290)
+            .append("TrafficShaping with Write Limit: ").append(writeLimit)
+            .append(" Read Limit: ").append(readLimit)
+            .append(" CheckInterval: ").append(checkInterval)
+            .append(" maxDelay: ").append(maxWriteDelay)
+            .append(" maxSize: ").append(maxWriteSize)
+            .append(" and Counter: ");
         if (trafficCounter != null) {
             builder.append(trafficCounter.toString());
         } else {
@@ -610,8 +629,10 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
      * Calculate the size of the given {@link Object}.
      *
      * This implementation supports {@link ByteBuf} and {@link ByteBufHolder}. Sub-classes may override this.
-     * @param msg       the msg for which the size should be calculated
-     * @return size     the size of the msg or {@code -1} if unknown.
+     *
+     * @param msg
+     *            the msg for which the size should be calculated.
+     * @return size the size of the msg or {@code -1} if unknown.
      */
     protected long calculateSize(Object msg) {
         if (msg instanceof ByteBuf) {
