@@ -85,6 +85,7 @@ public abstract class AbstractTrafficShapingHandler extends
 
     static final int CHANNEL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX = 1;
     static final int GLOBAL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX = 2;
+    static final int GLOBALCHANNEL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX = 3;
 
     /**
      * Traffic Counter
@@ -109,32 +110,32 @@ public abstract class AbstractTrafficShapingHandler extends
     /**
      * Limit in B/s to apply to write
      */
-    private long writeLimit;
+    private volatile long writeLimit;
 
     /**
      * Limit in B/s to apply to read
      */
-    private long readLimit;
+    private volatile long readLimit;
 
     /**
      * Delay between two performance snapshots
      */
-    protected long checkInterval = DEFAULT_CHECK_INTERVAL; // default 1 s
+    protected volatile long checkInterval = DEFAULT_CHECK_INTERVAL; // default 1 s
 
     /**
      * Max delay in wait
      */
-    protected long maxTime = DEFAULT_MAX_TIME; // default 15 s
+    protected volatile long maxTime = DEFAULT_MAX_TIME; // default 15 s
 
     /**
      * Max time to delay before proposing to stop writing new objects from next handlers
      */
-    long maxWriteDelay = 4 * DEFAULT_CHECK_INTERVAL; // default 4 s
+    volatile long maxWriteDelay = 4 * DEFAULT_CHECK_INTERVAL; // default 4 s
 
     /**
      * Max size in the list before proposing to stop writing new objects from next handlers
      */
-    long maxWriteSize = DEFAULT_MAX_SIZE; // default 4MB
+    volatile long maxWriteSize = DEFAULT_MAX_SIZE; // default 4MB
 
     /**
      * Boolean associated with the release of this TrafficShapingHandler.
@@ -148,7 +149,7 @@ public abstract class AbstractTrafficShapingHandler extends
      * Attachment of ChannelHandlerContext
      *
      */
-    static class ReadWriteStatus {
+    static final class ReadWriteStatus {
         volatile boolean readSuspend;
         volatile TimerTask reopenReadTimerTask;
     }
@@ -175,9 +176,13 @@ public abstract class AbstractTrafficShapingHandler extends
      *         writability. For Channel TSH it is defined as
      *         {@value #CHANNEL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX}, for Global TSH it is
      *         defined as {@value #GLOBAL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX},
+     *         for GlobalChannel TSH it is defined as
+     *         {@value #GLOBALCHANNEL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX}.
      */
     int userDefinedWritabilityIndex() {
-        if (this instanceof GlobalTrafficShapingHandler) {
+        if (this instanceof GlobalChannelTrafficShapingHandler) {
+            return GLOBALCHANNEL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX;
+        } else if (this instanceof GlobalTrafficShapingHandler) {
             return GLOBAL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX;
         } else {
             return CHANNEL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX;
@@ -187,6 +192,9 @@ public abstract class AbstractTrafficShapingHandler extends
     private void init(ObjectSizeEstimator newObjectSizeEstimator,
              Timer newTimer, long newWriteLimit, long newReadLimit,
              long newCheckInterval, long newMaxTime) {
+        if (newMaxTime <= 0) {
+            throw new IllegalArgumentException("maxTime must be positive");
+        }
          objectSizeEstimator = newObjectSizeEstimator;
          timer = newTimer;
          writeLimit = newWriteLimit;
@@ -205,17 +213,17 @@ public abstract class AbstractTrafficShapingHandler extends
 
     /**
      * Constructor using default {@link ObjectSizeEstimator} and
-     * default max time as delay allowed value of {@value #DEFAULT_MAX_TIME} ms
+     * default max time as delay allowed value of {@value #DEFAULT_MAX_TIME} ms.
      *
      * @param timer
-     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
+     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024).
      * @param writeLimit
      *          0 or a limit in bytes/s
      * @param readLimit
      *          0 or a limit in bytes/s
      * @param checkInterval
      *          The delay between two computations of performances for
-     *            channels or 0 if no stats are to be computed
+     *            channels or 0 if no stats are to be computed.
      */
     protected AbstractTrafficShapingHandler(Timer timer, long writeLimit,
                                             long readLimit, long checkInterval) {
@@ -226,20 +234,20 @@ public abstract class AbstractTrafficShapingHandler extends
 
     /**
      * Constructor using the specified ObjectSizeEstimator and
-     * default max time as delay allowed value of {@value #DEFAULT_MAX_TIME} ms
+     * default max time as delay allowed value of {@value #DEFAULT_MAX_TIME} ms.
      *
      * @param objectSizeEstimator
      *            the {@link ObjectSizeEstimator} that will be used to compute
-     *            the size of the message
+     *            the size of the message.
      * @param timer
-     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
+     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024).
      * @param writeLimit
      *          0 or a limit in bytes/s
      * @param readLimit
      *          0 or a limit in bytes/s
      * @param checkInterval
      *          The delay between two computations of performances for
-     *            channels or 0 if no stats are to be computed
+     *            channels or 0 if no stats are to be computed.
      */
     protected AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Timer timer,
@@ -251,10 +259,10 @@ public abstract class AbstractTrafficShapingHandler extends
     /**
      * Constructor using default {@link ObjectSizeEstimator} and using
      * default Check Interval value of {@value #DEFAULT_CHECK_INTERVAL} ms and
-     * default max time as delay allowed value of {@value #DEFAULT_MAX_TIME} ms
+     * default max time as delay allowed value of {@value #DEFAULT_MAX_TIME} ms.
      *
      * @param timer
-     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
+     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024).
      * @param writeLimit
      *          0 or a limit in bytes/s
      * @param readLimit
@@ -270,13 +278,13 @@ public abstract class AbstractTrafficShapingHandler extends
     /**
      * Constructor using the specified ObjectSizeEstimator and using
      * default Check Interval value of {@value #DEFAULT_CHECK_INTERVAL} ms and
-     * default max time as delay allowed value of {@value #DEFAULT_MAX_TIME} ms
+     * default max time as delay allowed value of {@value #DEFAULT_MAX_TIME} ms.
      *
      * @param objectSizeEstimator
      *            the {@link ObjectSizeEstimator} that will be used to compute
-     *            the size of the message
+     *            the size of the message.
      * @param timer
-     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
+     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024).
      * @param writeLimit
      *          0 or a limit in bytes/s
      * @param readLimit
@@ -293,10 +301,10 @@ public abstract class AbstractTrafficShapingHandler extends
     /**
      * Constructor using default {@link ObjectSizeEstimator} and using NO LIMIT and
      * default Check Interval value of {@value #DEFAULT_CHECK_INTERVAL} ms and
-     * default max time as delay allowed value of {@value #DEFAULT_MAX_TIME} ms
+     * default max time as delay allowed value of {@value #DEFAULT_MAX_TIME} ms.
      *
      * @param timer
-     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
+     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024).
      */
     protected AbstractTrafficShapingHandler(Timer timer) {
         this.index = userDefinedWritabilityIndex();
@@ -307,13 +315,13 @@ public abstract class AbstractTrafficShapingHandler extends
     /**
      * Constructor using the specified ObjectSizeEstimator and using NO LIMIT and
      * default Check Interval value of {@value #DEFAULT_CHECK_INTERVAL} ms and
-     * default max time as delay allowed value of {@value #DEFAULT_MAX_TIME} ms
+     * default max time as delay allowed value of {@value #DEFAULT_MAX_TIME} ms.
      *
      * @param objectSizeEstimator
      *            the {@link ObjectSizeEstimator} that will be used to compute
-     *            the size of the message
+     *            the size of the message.
      * @param timer
-     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
+     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024).
      */
     protected AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Timer timer) {
@@ -324,13 +332,13 @@ public abstract class AbstractTrafficShapingHandler extends
 
     /**
      * Constructor using default {@link ObjectSizeEstimator} and using NO LIMIT and
-     * default max time as delay allowed value of {@value #DEFAULT_MAX_TIME} ms
+     * default max time as delay allowed value of {@value #DEFAULT_MAX_TIME} ms.
      *
      * @param timer
-     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
+     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024).
      * @param checkInterval
      *          The delay between two computations of performances for
-     *            channels or 0 if no stats are to be computed
+     *            channels or 0 if no stats are to be computed.
      */
     protected AbstractTrafficShapingHandler(Timer timer, long checkInterval) {
         this.index = userDefinedWritabilityIndex();
@@ -339,16 +347,16 @@ public abstract class AbstractTrafficShapingHandler extends
 
     /**
      * Constructor using the specified ObjectSizeEstimator and using NO LIMIT and
-     * default max time as delay allowed value of {@value #DEFAULT_MAX_TIME} ms
+     * default max time as delay allowed value of {@value #DEFAULT_MAX_TIME} ms.
      *
      * @param objectSizeEstimator
      *            the {@link ObjectSizeEstimator} that will be used to compute
-     *            the size of the message
+     *            the size of the message.
      * @param timer
-     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
+     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024).
      * @param checkInterval
      *          The delay between two computations of performances for
-     *            channels or 0 if no stats are to be computed
+     *            channels or 0 if no stats are to be computed.
      */
     protected AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Timer timer,
@@ -358,19 +366,20 @@ public abstract class AbstractTrafficShapingHandler extends
     }
 
     /**
-     * Constructor using default {@link ObjectSizeEstimator}
+     * Constructor using default {@link ObjectSizeEstimator}.
      *
      * @param timer
-     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
+     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024).
      * @param writeLimit
      *          0 or a limit in bytes/s
      * @param readLimit
      *          0 or a limit in bytes/s
      * @param checkInterval
      *          The delay between two computations of performances for
-     *            channels or 0 if no stats are to be computed
+     *            channels or 0 if no stats are to be computed.
      * @param maxTime
-     *          The max time to wait in case of excess of traffic (to prevent Time Out event)
+     *          The max time to wait in case of excess of traffic (to prevent Time Out event).
+     *          Must be positive.
      */
     protected AbstractTrafficShapingHandler(Timer timer, long writeLimit,
                                             long readLimit, long checkInterval, long maxTime) {
@@ -380,22 +389,23 @@ public abstract class AbstractTrafficShapingHandler extends
     }
 
     /**
-     * Constructor using the specified ObjectSizeEstimator
+     * Constructor using the specified ObjectSizeEstimator.
      *
      * @param objectSizeEstimator
      *            the {@link ObjectSizeEstimator} that will be used to compute
-     *            the size of the message
+     *            the size of the message.
      * @param timer
-     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
+     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024).
      * @param writeLimit
      *          0 or a limit in bytes/s
      * @param readLimit
      *          0 or a limit in bytes/s
      * @param checkInterval
      *          The delay between two computations of performances for
-     *            channels or 0 if no stats are to be computed
+     *            channels or 0 if no stats are to be computed.
      * @param maxTime
-     *          The max time to wait in case of excess of traffic (to prevent Time Out event)
+     *          The max time to wait in case of excess of traffic (to prevent Time Out event).
+     *          Must be positive.
      */
     protected AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Timer timer,
@@ -531,9 +541,13 @@ public abstract class AbstractTrafficShapingHandler extends
     * accordingly to the traffic shaping configuration.
     *
     * @param maxTime
-    *    Max delay in wait, shall be less than TIME OUT in related protocol
+    *    Max delay in wait, shall be less than TIME OUT in related protocol.
+    *    Must be positive.
     */
    public void setMaxTimeWait(long maxTime) {
+       if (maxTime <= 0) {
+           throw new IllegalArgumentException("maxTime must be positive");
+       }
        this.maxTime = maxTime;
    }
 
@@ -551,9 +565,13 @@ public abstract class AbstractTrafficShapingHandler extends
     * So the expected usage of this method is to be used not too often,
     * accordingly to the traffic shaping configuration.
     *
-    * @param maxWriteDelay the maximum Write Delay in ms in the buffer allowed before write suspended is set
+    * @param maxWriteDelay the maximum Write Delay in ms in the buffer allowed before write suspended is set.
+    *       Must be positive.
     */
    public void setMaxWriteDelay(long maxWriteDelay) {
+       if (maxWriteDelay <= 0) {
+           throw new IllegalArgumentException("maxWriteDelay must be positive");
+       }
        this.maxWriteDelay = maxWriteDelay;
    }
 
@@ -591,7 +609,7 @@ public abstract class AbstractTrafficShapingHandler extends
     }
 
     /**
-     * Class to implement setReadable at fix time
+     * Class to implement setReadable at fix time.
      */
     class ReopenReadTimerTask implements TimerTask {
         final ChannelHandlerContext ctx;
@@ -639,7 +657,7 @@ public abstract class AbstractTrafficShapingHandler extends
     }
 
    /**
-    * Release the Read suspension
+    * Release the Read suspension.
     */
     void releaseReadSuspended(ChannelHandlerContext ctx) {
         ReadWriteStatus rws = checkAttachment(ctx);
@@ -702,10 +720,10 @@ public abstract class AbstractTrafficShapingHandler extends
     }
 
     /**
-     * Method overridden in GTSH to take into account specific timer for the channel
+     * Method overridden in GTSH to take into account specific timer for the channel.
      * @param wait the wait delay computed in ms
      * @param now the relative now time in ms
-     * @return the wait to use according to the context
+     * @return the wait to use according to the context.
      */
     long checkWaitReadTime(final ChannelHandlerContext ctx, long wait, final long now) {
         // no change by default
@@ -713,7 +731,7 @@ public abstract class AbstractTrafficShapingHandler extends
     }
 
     /**
-     * Method overridden in GTSH to take into account specific timer for the channel
+     * Method overridden in GTSH to take into account specific timer for the channel.
      * @param now the relative now time in ms
      */
     void informReadOperation(final ChannelHandlerContext ctx, final long now) {
@@ -779,7 +797,7 @@ public abstract class AbstractTrafficShapingHandler extends
     }
 
     /**
-     * Explicitly release the Write suspended status
+     * Explicitly release the Write suspended status.
      */
     void releaseWriteSuspended(ChannelHandlerContext ctx) {
         setWritable(ctx, true);
@@ -787,7 +805,7 @@ public abstract class AbstractTrafficShapingHandler extends
 
     /**
      * @return the current TrafficCounter (if
-     *         channel is still connected)
+     *         channel is still connected).
      */
     public TrafficCounter getTrafficCounter() {
         return trafficCounter;
@@ -828,12 +846,13 @@ public abstract class AbstractTrafficShapingHandler extends
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder("TrafficShaping with Write Limit: ").append(writeLimit)
-                .append(" Read Limit: ").append(readLimit)
-                .append(" CheckInterval: ").append(checkInterval)
-                .append(" maxDelay: ").append(maxWriteDelay)
-                .append(" maxSize: ").append(maxWriteSize)
-                .append(" and Counter: ");
+        StringBuilder builder = new StringBuilder(290)
+            .append("TrafficShaping with Write Limit: ").append(writeLimit)
+            .append(" Read Limit: ").append(readLimit)
+            .append(" CheckInterval: ").append(checkInterval)
+            .append(" maxDelay: ").append(maxWriteDelay)
+            .append(" maxSize: ").append(maxWriteSize)
+            .append(" and Counter: ");
         if (trafficCounter != null) {
             builder.append(trafficCounter.toString());
         } else {

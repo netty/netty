@@ -88,7 +88,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
      */
     long maxGlobalWriteSize = DEFAULT_MAX_SIZE * 100; // default 400MB
 
-    private static class PerChannel {
+    private static final class PerChannel {
         List<ToSend> messagesQueue;
         ChannelHandlerContext ctx;
         long queueSize;
@@ -96,7 +96,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         long lastReadTimestamp;
     }
     /**
-     * Create the global TrafficCounter
+     * Create the global TrafficCounter.
      */
     void createGlobalTrafficCounter() {
         TrafficCounter tc;
@@ -171,7 +171,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     }
 
     /**
-     * @return the maxGlobalWriteSize default value being 400 MB
+     * @return the maxGlobalWriteSize default value being 400 MB.
      */
     public long getMaxGlobalWriteSize() {
         return maxGlobalWriteSize;
@@ -180,14 +180,14 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     /**
      * @param maxGlobalWriteSize the maximum Global Write Size allowed in the buffer
      *            globally for all channels before write suspended is set,
-     *            default value being 400 MB
+     *            default value being 400 MB.
      */
     public void setMaxGlobalWriteSize(long maxGlobalWriteSize) {
         this.maxGlobalWriteSize = maxGlobalWriteSize;
     }
 
     /**
-     * @return the global size of the buffers for all queues
+     * @return the global size of the buffers for all queues.
      */
     public long queuesSize() {
         return queuesSize.get();

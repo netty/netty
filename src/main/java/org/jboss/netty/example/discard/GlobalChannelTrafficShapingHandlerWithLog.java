@@ -86,13 +86,13 @@ public class GlobalChannelTrafficShapingHandlerWithLog extends GlobalChannelTraf
             cumulativeReadBytesPercent.add((maxReadNonZero - cumulativeRead) * 100 / maxReadNonZero);
             throughputReadBytes.add(tc.getLastReadThroughput() >> 10);
         }
-        logger.info(this.toString() + " QueuesSize: " + queuesSize()
-                + "\nWrittenBytesPercentage: " + cumulativeWrittenBytesPercent
-                + "\nWrittenThroughputBytes: " + throughputWrittenBytes
-                + "\nWrittenBytes:           " + cumulativeWrittenBytes
-                + "\nReadBytesPercentage:    " + cumulativeReadBytesPercent
-                + "\nReadThroughputBytes:    " + throughputReadBytes
-                + "\nReadBytes:              " + cumulativeReadBytes);
+        logger.info(new StringBuilder().append(this.toString()).append(" QueuesSize: ").append(queuesSize())
+                .append("\nWrittenBytesPercentage: ").append(cumulativeWrittenBytesPercent)
+                .append("\nWrittenThroughputBytes: ").append(throughputWrittenBytes)
+                .append("\nWrittenBytes:           ").append(cumulativeWrittenBytes)
+                .append("\nReadBytesPercentage:    ").append(cumulativeReadBytesPercent)
+                .append("\nReadThroughputBytes:    ").append(throughputReadBytes)
+                .append("\nReadBytes:              ").append(cumulativeReadBytes).toString());
         cumulativeWrittenBytesPercent.clear();
         cumulativeReadBytesPercent.clear();
         cumulativeWrittenBytes.clear();

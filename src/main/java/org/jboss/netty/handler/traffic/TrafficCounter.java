@@ -37,7 +37,7 @@ public class TrafficCounter {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(TrafficCounter.class);
 
     /**
-     * @return the time in ms using nanoTime, so not real EPOCH time but elapsed time in ms
+     * @return the time in ms using nanoTime, so not real EPOCH time but elapsed time in ms.
      */
     public static final long milliSecondFromNano() {
         return System.nanoTime() / 1000000;
@@ -165,7 +165,7 @@ public class TrafficCounter {
      * Class to implement monitoring at fix delay
      *
      */
-    private static class TrafficMonitoringTask implements TimerTask {
+    private static final class TrafficMonitoringTask implements TimerTask {
         /**
          * The associated TrafficShapingHandler
          */
@@ -197,7 +197,7 @@ public class TrafficCounter {
     }
 
     /**
-     * Start the monitoring process
+     * Start the monitoring process.
      */
     public void start() {
         if (monitorActive) {
@@ -214,7 +214,7 @@ public class TrafficCounter {
     }
 
     /**
-     * Stop the monitoring process
+     * Stop the monitoring process.
      */
     public void stop() {
         if (!monitorActive) {
@@ -231,7 +231,7 @@ public class TrafficCounter {
     }
 
     /**
-     * Reset the accounting on Read and Write
+     * Reset the accounting on Read and Write.
      */
     void resetAccounting(long newLastTime) {
         long interval = newLastTime - lastTime.getAndSet(newLastTime);
@@ -252,15 +252,15 @@ public class TrafficCounter {
 
     /**
      * Constructor with the {@link AbstractTrafficShapingHandler} that hosts it, the Timer to use, its
-     * name, the checkInterval between two computations in millisecond
+     * name, the checkInterval between two computations in millisecond.
      * @param trafficShapingHandler the associated AbstractTrafficShapingHandler
      * @param timer
      *            Could be a HashedWheelTimer, might be null when used
-     *              from {@link GlobalChannelTrafficCounter}
+     *              from {@link GlobalChannelTrafficCounter}.
      * @param name
      *            the name given to this monitor
      * @param checkInterval
-     *            the checkInterval in millisecond between two computations
+     *            the checkInterval in millisecond between two computations.
      */
     public TrafficCounter(AbstractTrafficShapingHandler trafficShapingHandler,
             Timer timer, String name, long checkInterval) {
@@ -281,7 +281,7 @@ public class TrafficCounter {
 
     /**
      * Change checkInterval between
-     * two computations in millisecond
+     * two computations in millisecond.
      */
     public void configure(long newcheckInterval) {
         long newInterval = newcheckInterval / 10 * 10;
@@ -333,56 +333,56 @@ public class TrafficCounter {
 
     /**
      * @return the current checkInterval between two computations of traffic counter
-     *         in millisecond
+     *         in millisecond.
      */
     public long getCheckInterval() {
         return checkInterval.get();
     }
 
     /**
-     * @return the Read Throughput in bytes/s computes in the last check interval
+     * @return the Read Throughput in bytes/s computes in the last check interval.
      */
     public long getLastReadThroughput() {
         return lastReadThroughput;
     }
 
     /**
-     * @return the Write Throughput in bytes/s computes in the last check interval
+     * @return the Write Throughput in bytes/s computes in the last check interval.
      */
     public long getLastWriteThroughput() {
         return lastWriteThroughput;
     }
 
     /**
-     * @return the number of bytes read during the last check Interval
+     * @return the number of bytes read during the last check Interval.
      */
     public long getLastReadBytes() {
         return lastReadBytes;
     }
 
     /**
-     * @return the number of bytes written during the last check Interval
+     * @return the number of bytes written during the last check Interval.
      */
     public long getLastWrittenBytes() {
         return lastWrittenBytes;
     }
 
     /**
-    * @return the current number of bytes read since the last checkInterval
+    * @return the current number of bytes read since the last checkInterval.
     */
     public long getCurrentReadBytes() {
         return currentReadBytes.get();
     }
 
     /**
-     * @return the current number of bytes written since the last check Interval
+     * @return the current number of bytes written since the last check Interval.
      */
     public long getCurrentWrittenBytes() {
         return currentWrittenBytes.get();
     }
 
     /**
-     * @return the Time in millisecond of the last check as of System.currentTimeMillis()
+     * @return the Time in millisecond of the last check as of System.currentTimeMillis().
      */
     public long getLastTime() {
         return lastTime.get();
@@ -436,15 +436,15 @@ public class TrafficCounter {
 
     /**
      * Returns the time to wait (if any) for the given length message, using the given limitTraffic and the max wait
-     * time
+     * time.
      *
      * @param size
      *            the recv size
      * @param limitTraffic
      *            the traffic limit in bytes per second
      * @param maxTime
-     *            the max time in ms to wait in case of excess of traffic
-     * @return the current time to wait (in ms) if needed for Read operation
+     *            the max time in ms to wait in case of excess of traffic.
+     * @return the current time to wait (in ms) if needed for Read operation.
      */
     @Deprecated
     public long readTimeToWait(final long size, final long limitTraffic, final long maxTime) {
@@ -453,16 +453,16 @@ public class TrafficCounter {
 
     /**
      * Returns the time to wait (if any) for the given length message, using the given limitTraffic and the max wait
-     * time
+     * time.
      *
      * @param size
      *            the recv size
      * @param limitTraffic
      *            the traffic limit in bytes per second
      * @param maxTime
-     *            the max time in ms to wait in case of excess of traffic
+     *            the max time in ms to wait in case of excess of traffic.
      * @param now the current time
-     * @return the current time to wait (in ms) if needed for Read operation
+     * @return the current time to wait (in ms) if needed for Read operation.
      */
     public long readTimeToWait(final long size, final long limitTraffic, final long maxTime, final long now) {
         bytesRecvFlowControl(size);
@@ -511,15 +511,15 @@ public class TrafficCounter {
 
     /**
      * Returns the time to wait (if any) for the given length message, using the given limitTraffic and
-     * the max wait time
+     * the max wait time.
      *
      * @param size
      *            the write size
      * @param limitTraffic
      *            the traffic limit in bytes per second
      * @param maxTime
-     *            the max time in ms to wait in case of excess of traffic
-     * @return the current time to wait (in ms) if needed for Write operation
+     *            the max time in ms to wait in case of excess of traffic.
+     * @return the current time to wait (in ms) if needed for Write operation.
      */
     @Deprecated
     public long writeTimeToWait(final long size, final long limitTraffic, final long maxTime) {
@@ -528,16 +528,16 @@ public class TrafficCounter {
 
     /**
      * Returns the time to wait (if any) for the given length message, using the given limitTraffic and
-     * the max wait time
+     * the max wait time.
      *
      * @param size
      *            the write size
      * @param limitTraffic
      *            the traffic limit in bytes per second
      * @param maxTime
-     *            the max time in ms to wait in case of excess of traffic
+     *            the max time in ms to wait in case of excess of traffic.
      * @param now the current time
-     * @return the current time to wait (in ms) if needed for Write operation
+     * @return the current time to wait (in ms) if needed for Write operation.
      */
     public long writeTimeToWait(final long size, final long limitTraffic, final long maxTime, final long now) {
         bytesWriteFlowControl(size);
@@ -596,7 +596,7 @@ public class TrafficCounter {
      */
     @Override
     public String toString() {
-        return new StringBuilder("Monitor ").append(name)
+        return new StringBuilder(165).append("Monitor ").append(name)
                 .append(" Current Speed Read: ").append(lastReadThroughput >> 10).append(" KB/s, ")
                 .append("Asked Write: ").append(lastWriteThroughput >> 10).append(" KB/s, ")
                 .append("Real Write: ").append(realWriteThroughput >> 10).append(" KB/s, ")

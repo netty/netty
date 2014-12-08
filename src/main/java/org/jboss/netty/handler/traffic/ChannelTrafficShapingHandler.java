@@ -231,7 +231,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
     }
 
    /**
-    * @return current size in bytes of the write buffer
+    * @return current size in bytes of the write buffer.
     */
    public long queueSize() {
        return queueSize;
