@@ -67,7 +67,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
     private long queueSize;
 
     /**
-     * Create a new instance
+     * Create a new instance.
      *
      * @param writeLimit
      *            0 or a limit in bytes/s
@@ -75,9 +75,9 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
      *            0 or a limit in bytes/s
      * @param checkInterval
      *            The delay between two computations of performances for
-     *            channels or 0 if no stats are to be computed
+     *            channels or 0 if no stats are to be computed.
      * @param maxTime
-     *            The maximum delay to wait in case of traffic excess
+     *            The maximum delay to wait in case of traffic excess.
      */
     public ChannelTrafficShapingHandler(long writeLimit, long readLimit,
             long checkInterval, long maxTime) {
@@ -86,7 +86,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
 
     /**
      * Create a new instance using default
-     * max time as delay allowed value of 15000 ms
+     * max time as delay allowed value of 15000 ms.
      *
      * @param writeLimit
      *          0 or a limit in bytes/s
@@ -94,7 +94,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
      *          0 or a limit in bytes/s
      * @param checkInterval
      *          The delay between two computations of performances for
-     *            channels or 0 if no stats are to be computed
+     *            channels or 0 if no stats are to be computed.
      */
     public ChannelTrafficShapingHandler(long writeLimit,
             long readLimit, long checkInterval) {
@@ -103,7 +103,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
 
     /**
      * Create a new instance using default Check Interval value of 1000 ms and
-     * max time as delay allowed value of 15000 ms
+     * max time as delay allowed value of 15000 ms.
      *
      * @param writeLimit
      *          0 or a limit in bytes/s
@@ -117,11 +117,11 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
 
     /**
      * Create a new instance using
-     * default max time as delay allowed value of 15000 ms and no limit
+     * default max time as delay allowed value of 15000 ms and no limit.
      *
      * @param checkInterval
      *          The delay between two computations of performances for
-     *            channels or 0 if no stats are to be computed
+     *            channels or 0 if no stats are to be computed.
      */
     public ChannelTrafficShapingHandler(long checkInterval) {
         super(checkInterval);
@@ -223,7 +223,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
     }
 
     /**
-    * @return current size in bytes of the write buffer
+    * @return current size in bytes of the write buffer.
     */
    public long queueSize() {
        return queueSize;

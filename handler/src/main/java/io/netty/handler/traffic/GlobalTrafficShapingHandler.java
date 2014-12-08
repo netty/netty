@@ -92,7 +92,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
      */
     long maxGlobalWriteSize = DEFAULT_MAX_SIZE * 100; // default 400MB
 
-    private static class PerChannel {
+    private static final class PerChannel {
         ArrayDeque<ToSend> messagesQueue;
         long queueSize;
         long lastWriteTimestamp;
@@ -100,7 +100,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     }
 
     /**
-     * Create the global TrafficCounter
+     * Create the global TrafficCounter.
      */
     void createGlobalTrafficCounter(ScheduledExecutorService executor) {
         if (executor == null) {
@@ -112,19 +112,19 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     }
 
     /**
-     * Create a new instance
+     * Create a new instance.
      *
      * @param executor
-     *            the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}
+     *            the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}.
      * @param writeLimit
      *            0 or a limit in bytes/s
      * @param readLimit
      *            0 or a limit in bytes/s
      * @param checkInterval
      *            The delay between two computations of performances for
-     *            channels or 0 if no stats are to be computed
+     *            channels or 0 if no stats are to be computed.
      * @param maxTime
-     *            The maximum delay to wait in case of traffic excess
+     *            The maximum delay to wait in case of traffic excess.
      */
     public GlobalTrafficShapingHandler(ScheduledExecutorService executor, long writeLimit, long readLimit,
             long checkInterval, long maxTime) {
@@ -134,17 +134,17 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
 
     /**
      * Create a new instance using
-     * default max time as delay allowed value of 15000 ms
+     * default max time as delay allowed value of 15000 ms.
      *
      * @param executor
-     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}
+     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}.
      * @param writeLimit
      *          0 or a limit in bytes/s
      * @param readLimit
      *          0 or a limit in bytes/s
      * @param checkInterval
      *          The delay between two computations of performances for
-     *            channels or 0 if no stats are to be computed
+     *            channels or 0 if no stats are to be computed.
      */
     public GlobalTrafficShapingHandler(ScheduledExecutorService executor, long writeLimit,
             long readLimit, long checkInterval) {
@@ -154,10 +154,10 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
 
     /**
      * Create a new instance using default Check Interval value of 1000 ms and
-     * default max time as delay allowed value of 15000 ms
+     * default max time as delay allowed value of 15000 ms.
      *
      * @param executor
-     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}
+     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}.
      * @param writeLimit
      *          0 or a limit in bytes/s
      * @param readLimit
@@ -171,13 +171,13 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
 
     /**
      * Create a new instance using
-     * default max time as delay allowed value of 15000 ms and no limit
+     * default max time as delay allowed value of 15000 ms and no limit.
      *
      * @param executor
-     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}
+     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}.
      * @param checkInterval
      *          The delay between two computations of performances for
-     *            channels or 0 if no stats are to be computed
+     *            channels or 0 if no stats are to be computed.
      */
     public GlobalTrafficShapingHandler(ScheduledExecutorService executor, long checkInterval) {
         super(checkInterval);
@@ -186,10 +186,10 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
 
     /**
      * Create a new instance using default Check Interval value of 1000 ms and
-     * default max time as delay allowed value of 15000 ms and no limit
+     * default max time as delay allowed value of 15000 ms and no limit.
      *
      * @param executor
-     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}
+     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}.
      */
     public GlobalTrafficShapingHandler(EventExecutor executor) {
         super();
@@ -197,7 +197,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     }
 
     /**
-     * @return the maxGlobalWriteSize default value being 400 MB
+     * @return the maxGlobalWriteSize default value being 400 MB.
      */
     public long getMaxGlobalWriteSize() {
         return maxGlobalWriteSize;
@@ -212,7 +212,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
      *
      * @param maxGlobalWriteSize the maximum Global Write Size allowed in the buffer
      *            globally for all channels before write suspended is set,
-     *            default value being 400 MB
+     *            default value being 400 MB.
      */
     public void setMaxGlobalWriteSize(long maxGlobalWriteSize) {
         this.maxGlobalWriteSize = maxGlobalWriteSize;
@@ -226,7 +226,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     }
 
     /**
-     * Release all internal resources of this instance
+     * Release all internal resources of this instance.
      */
     public final void release() {
         trafficCounter.stop();
