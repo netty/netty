@@ -100,7 +100,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         return connection;
     }
 
-    
     @Override
     public final Http2RemoteFlowController flowController() {
         return connection().remote().flowController();
@@ -214,7 +213,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             final boolean exclusive, final int padding, final boolean endOfStream,
             final ChannelPromise promise) {
         Http2Stream stream = connection.stream(streamId);
-        ChannelFuture lastDataWrite = stream != null ? flowController().lastFrameSent(stream) : null;
+        ChannelFuture lastDataWrite = stream != null ? flowController().lastFlowControlledFrameSent(stream) : null;
         try {
             if (connection.isGoAway()) {
                 throw connectionError(PROTOCOL_ERROR, "Sending headers after connection going away.");

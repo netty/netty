@@ -42,7 +42,7 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
     }
 
     public HttpToHttp2ConnectionHandler(Builder decoderBuilder,
-            io.netty.handler.codec.http2.Http2ConnectionEncoder.Builder encoderBuilder) {
+            Http2ConnectionEncoder.Builder encoderBuilder) {
         super(decoderBuilder, encoderBuilder);
     }
 

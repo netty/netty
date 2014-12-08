@@ -248,13 +248,14 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             }
 
             int bytesToReturn = data.readableBytes() + padding;
-            int unprocessedBytes = unconsumedBytes(stream);
+            int unconsumedBytes = unconsumedBytes(stream);
+            Http2LocalFlowController flowController = flowController();
             try {
                 // If we should apply flow control, do so now.
                 if (shouldApplyFlowControl) {
-                    flowController().receiveFlowControlledFrame(ctx, stream, data, padding, endOfStream);
-                    // Update the unprocessed bytes after flow control is applied.
-                    unprocessedBytes = unconsumedBytes(stream);
+                    flowController.receiveFlowControlledFrame(ctx, stream, data, padding, endOfStream);
+                    // Update the unconsumed bytes after flow control is applied.
+                    unconsumedBytes = unconsumedBytes(stream);
                 }
 
                 // If we should ignore this frame, do so now.
@@ -275,20 +276,20 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 // If an exception happened during delivery, the listener may have returned part
                 // of the bytes before the error occurred. If that's the case, subtract that from
                 // the total processed bytes so that we don't return too many bytes.
-                int delta = unprocessedBytes - unconsumedBytes(stream);
+                int delta = unconsumedBytes - unconsumedBytes(stream);
                 bytesToReturn -= delta;
                 throw e;
             } catch (RuntimeException e) {
                 // If an exception happened during delivery, the listener may have returned part
                 // of the bytes before the error occurred. If that's the case, subtract that from
                 // the total processed bytes so that we don't return too many bytes.
-                int delta = unprocessedBytes - unconsumedBytes(stream);
+                int delta = unconsumedBytes - unconsumedBytes(stream);
                 bytesToReturn -= delta;
                 throw e;
             } finally {
                 // If appropriate, returned the processed bytes to the flow controller.
                 if (shouldApplyFlowControl && bytesToReturn > 0) {
-                    flowController().consumeBytes(ctx, stream, bytesToReturn);
+                    flowController.consumeBytes(ctx, stream, bytesToReturn);
                 }
 
                 if (endOfStream) {
@@ -530,7 +531,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             }
 
             // Update the outbound flow controller.
-            encoder.flowController().incrementWindowSize(stream, windowSizeIncrement);
+            encoder.flowController().incrementWindowSize(ctx, stream, windowSizeIncrement);
 
             listener.onWindowUpdateRead(ctx, streamId, windowSizeIncrement);
         }

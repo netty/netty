@@ -46,7 +46,6 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     private final Http2FrameWriter frameWriter;
     private volatile float windowUpdateRatio;
     private volatile int initialWindowSize = DEFAULT_WINDOW_SIZE;
-    private volatile ChannelHandlerContext ctx;
 
     public DefaultHttp2LocalFlowController(Http2Connection connection, Http2FrameWriter frameWriter) {
         this(connection, frameWriter, DEFAULT_WINDOW_UPDATE_RATIO);
@@ -100,27 +99,24 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         return initialWindowSize;
     }
 
-    
     @Override
     public int windowSize(Http2Stream stream) {
         return state(stream).window();
     }
 
     @Override
-    public void incrementWindowSize(Http2Stream stream, int delta) throws Http2Exception {
+    public void incrementWindowSize(ChannelHandlerContext ctx, Http2Stream stream, int delta) throws Http2Exception {
+        checkNotNull(ctx, "ctx");
         FlowState state = state(stream);
         // Just add the delta to the stream-specific initial window size so that the next time the window
         // expands it will grow to the new initial size.
         state.initialStreamWindowSize(state.initialStreamWindowSize + delta);
-        if (ctx != null) {
-            state.writeWindowUpdateIfNeeded(ctx);
-        }
+        state.writeWindowUpdateIfNeeded(ctx);
     }
 
     @Override
     public void consumeBytes(ChannelHandlerContext ctx, Http2Stream stream, int numBytes)
             throws Http2Exception {
-        this.ctx = checkNotNull(ctx, "ctx");
         state(stream).consumeBytes(ctx, numBytes);
     }
 
@@ -171,7 +167,6 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
      * @throws Http2Exception If a protocol-error occurs while generating {@code WINDOW_UPDATE} frames
      */
     public void windowUpdateRatio(ChannelHandlerContext ctx, Http2Stream stream, float ratio) throws Http2Exception {
-        this.ctx = checkNotNull(ctx, "ctx");
         checkValidRatio(ratio);
         FlowState state = state(stream);
         state.windowUpdateRatio(ratio);
@@ -191,16 +186,15 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     @Override
     public void receiveFlowControlledFrame(ChannelHandlerContext ctx, Http2Stream stream, ByteBuf data,
             int padding, boolean endOfStream) throws Http2Exception {
-        this.ctx = checkNotNull(ctx, "ctx");
         int dataLength = data.readableBytes() + padding;
 
         // Apply the connection-level flow control
-        connectionState().applyFlowControl(dataLength);
+        connectionState().receiveFlowControlledFrame(dataLength);
 
         // Apply the stream-level flow control
         FlowState state = state(stream);
         state.endOfStream(endOfStream);
-        state.applyFlowControl(dataLength);
+        state.receiveFlowControlledFrame(dataLength);
     }
 
     private FlowState connectionState() {
@@ -307,7 +301,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
          * @param dataLength The amount of data to for which this stream is no longer eligible to use for flow control.
          * @throws Http2Exception If too much data is used relative to how much is available.
          */
-        void applyFlowControl(int dataLength) throws Http2Exception {
+        void receiveFlowControlledFrame(int dataLength) throws Http2Exception {
             assert dataLength > 0;
 
             // Apply the delta. Even if we throw an exception we want to have taken this delta into account.

@@ -73,14 +73,14 @@ public class DefaultHttp2LocalFlowControllerTest {
 
     @Test
     public void dataFrameShouldBeAccepted() throws Http2Exception {
-        applyFlowControl(STREAM_ID, 10, 0, false);
+        receiveFlowControlledFrame(STREAM_ID, 10, 0, false);
         verifyWindowUpdateNotSent();
     }
 
     @Test
     public void windowUpdateShouldSendOnceBytesReturned() throws Http2Exception {
         int dataSize = (int) (DEFAULT_WINDOW_SIZE * updateRatio) + 1;
-        applyFlowControl(STREAM_ID, dataSize, 0, false);
+        receiveFlowControlledFrame(STREAM_ID, dataSize, 0, false);
 
         // Return only a few bytes and verify that the WINDOW_UPDATE hasn't been sent.
         consumeBytes(STREAM_ID, 10);
@@ -95,7 +95,7 @@ public class DefaultHttp2LocalFlowControllerTest {
     @Test(expected = Http2Exception.class)
     public void connectionFlowControlExceededShouldThrow() throws Http2Exception {
         // Window exceeded because of the padding.
-        applyFlowControl(STREAM_ID, DEFAULT_WINDOW_SIZE, 1, true);
+        receiveFlowControlledFrame(STREAM_ID, DEFAULT_WINDOW_SIZE, 1, true);
     }
 
     @Test
@@ -103,7 +103,7 @@ public class DefaultHttp2LocalFlowControllerTest {
         int dataSize = (int) (DEFAULT_WINDOW_SIZE * updateRatio) + 1;
 
         // Set end-of-stream on the frame, so no window update will be sent for the stream.
-        applyFlowControl(STREAM_ID, dataSize, 0, true);
+        receiveFlowControlledFrame(STREAM_ID, dataSize, 0, true);
         verifyWindowUpdateNotSent(CONNECTION_STREAM_ID);
         verifyWindowUpdateNotSent(STREAM_ID);
 
@@ -119,7 +119,7 @@ public class DefaultHttp2LocalFlowControllerTest {
         int windowDelta = getWindowDelta(initialWindowSize, initialWindowSize, dataSize);
 
         // Don't set end-of-stream so we'll get a window update for the stream as well.
-        applyFlowControl(STREAM_ID, dataSize, 0, false);
+        receiveFlowControlledFrame(STREAM_ID, dataSize, 0, false);
         consumeBytes(STREAM_ID, dataSize);
         verifyWindowUpdateSent(CONNECTION_STREAM_ID, windowDelta);
         verifyWindowUpdateSent(STREAM_ID, windowDelta);
@@ -129,7 +129,7 @@ public class DefaultHttp2LocalFlowControllerTest {
     public void initialWindowUpdateShouldAllowMoreFrames() throws Http2Exception {
         // Send a frame that takes up the entire window.
         int initialWindowSize = DEFAULT_WINDOW_SIZE;
-        applyFlowControl(STREAM_ID, initialWindowSize, 0, false);
+        receiveFlowControlledFrame(STREAM_ID, initialWindowSize, 0, false);
         assertEquals(0, window(STREAM_ID));
         assertEquals(0, window(CONNECTION_STREAM_ID));
         consumeBytes(STREAM_ID, initialWindowSize);
@@ -146,7 +146,7 @@ public class DefaultHttp2LocalFlowControllerTest {
         reset(frameWriter);
 
         // Send the next frame and verify that the expected window updates were sent.
-        applyFlowControl(STREAM_ID, initialWindowSize, 0, false);
+        receiveFlowControlledFrame(STREAM_ID, initialWindowSize, 0, false);
         consumeBytes(STREAM_ID, initialWindowSize);
         int delta = newInitialWindowSize - initialWindowSize;
         verifyWindowUpdateSent(STREAM_ID, delta);
@@ -164,7 +164,7 @@ public class DefaultHttp2LocalFlowControllerTest {
 
             // Test that both stream and connection window are updated (or not updated) together
             int data1 = (int) (DEFAULT_WINDOW_SIZE * updateRatio) + 1;
-            applyFlowControl(STREAM_ID, data1, 0, false);
+            receiveFlowControlledFrame(STREAM_ID, data1, 0, false);
             verifyWindowUpdateNotSent(STREAM_ID);
             verifyWindowUpdateNotSent(CONNECTION_STREAM_ID);
             assertEquals(DEFAULT_WINDOW_SIZE - data1, window(STREAM_ID));
@@ -180,8 +180,8 @@ public class DefaultHttp2LocalFlowControllerTest {
             // a window update for the connection stream.
             --data1;
             int data2 = data1 >> 1;
-            applyFlowControl(STREAM_ID, data1, 0, false);
-            applyFlowControl(newStreamId, data1, 0, false);
+            receiveFlowControlledFrame(STREAM_ID, data1, 0, false);
+            receiveFlowControlledFrame(newStreamId, data1, 0, false);
             verifyWindowUpdateNotSent(STREAM_ID);
             verifyWindowUpdateNotSent(newStreamId);
             verifyWindowUpdateNotSent(CONNECTION_STREAM_ID);
@@ -216,23 +216,19 @@ public class DefaultHttp2LocalFlowControllerTest {
 
     private void testRatio(float ratio, int newDefaultWindowSize, int newStreamId, boolean setStreamRatio)
             throws Http2Exception {
-        // Receive an empty frame so that the ChannelHandlerContext is set. This is needed so that
-        // calls to increment the window size will trigger a WINDOW_UPDATE.
-        applyFlowControl(0, 0, 0, false);
-
         int delta = newDefaultWindowSize - DEFAULT_WINDOW_SIZE;
-        controller.incrementWindowSize(stream(0), delta);
+        controller.incrementWindowSize(ctx, stream(0), delta);
         Http2Stream stream = connection.local().createStream(newStreamId, false);
         if (setStreamRatio) {
             controller.windowUpdateRatio(ctx, stream, ratio);
         }
-        controller.incrementWindowSize(stream, delta);
+        controller.incrementWindowSize(ctx, stream, delta);
         reset(frameWriter);
         try {
             int data1 = (int) (newDefaultWindowSize * ratio) + 1;
             int data2 = (int) (DEFAULT_WINDOW_SIZE * updateRatio) >> 1;
-            applyFlowControl(STREAM_ID, data2, 0, false);
-            applyFlowControl(newStreamId, data1, 0, false);
+            receiveFlowControlledFrame(STREAM_ID, data2, 0, false);
+            receiveFlowControlledFrame(newStreamId, data1, 0, false);
             verifyWindowUpdateNotSent(STREAM_ID);
             verifyWindowUpdateNotSent(newStreamId);
             verifyWindowUpdateNotSent(CONNECTION_STREAM_ID);
@@ -257,7 +253,8 @@ public class DefaultHttp2LocalFlowControllerTest {
         return initialSize - newWindowSize;
     }
 
-    private void applyFlowControl(int streamId, int dataSize, int padding, boolean endOfStream) throws Http2Exception {
+    private void receiveFlowControlledFrame(int streamId, int dataSize, int padding,
+            boolean endOfStream) throws Http2Exception {
         final ByteBuf buf = dummyData(dataSize);
         try {
             controller.receiveFlowControlledFrame(ctx, stream(streamId), buf, padding, endOfStream);

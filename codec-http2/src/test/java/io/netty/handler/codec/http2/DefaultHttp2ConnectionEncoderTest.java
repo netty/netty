@@ -135,22 +135,18 @@ public class DefaultHttp2ConnectionEncoderTest {
         when(local.reservePushStream(eq(PUSH_STREAM_ID), eq(stream))).thenReturn(pushStream);
         when(remote.createStream(eq(STREAM_ID), anyBoolean())).thenReturn(stream);
         when(remote.reservePushStream(eq(PUSH_STREAM_ID), eq(stream))).thenReturn(pushStream);
-        when(writer.writeSettings(eq(ctx), any(Http2Settings.class), eq(promise))).thenReturn(
-                future);
+        when(writer.writeSettings(eq(ctx), any(Http2Settings.class), eq(promise))).thenReturn(future);
         when(writer.writeGoAway(eq(ctx), anyInt(), anyInt(), any(ByteBuf.class), eq(promise)))
                 .thenReturn(future);
-        when(
-                remoteFlow.sendFlowControlledFrame(eq(ctx), any(Http2Stream.class),
-                        any(ByteBuf.class), anyInt(), anyBoolean(), eq(promise)))
-                .thenReturn(future);
+        when(remoteFlow.sendFlowControlledFrame(eq(ctx), any(Http2Stream.class),
+                 any(ByteBuf.class), anyInt(), anyBoolean(), eq(promise))).thenReturn(future);
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(ctx.channel()).thenReturn(channel);
         when(ctx.newSucceededFuture()).thenReturn(future);
         when(ctx.newPromise()).thenReturn(promise);
         when(ctx.write(any())).thenReturn(future);
 
-        encoder =
-                DefaultHttp2ConnectionEncoder.newBuilder().connection(connection)
+        encoder = DefaultHttp2ConnectionEncoder.newBuilder().connection(connection)
                         .frameWriter(writer).lifecycleManager(lifecycleManager).build();
     }
 
@@ -245,7 +241,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         }).when(future).addListener(any(ChannelFutureListener.class));
 
         // Indicate that there was a previous data write operation that the headers must wait for.
-        when(remoteFlow.lastFrameSent(any(Http2Stream.class))).thenReturn(future);
+        when(remoteFlow.lastFlowControlledFrameSent(any(Http2Stream.class))).thenReturn(future);
         encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true, promise);
         verify(writer, never()).writeHeaders(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true), eq(promise));

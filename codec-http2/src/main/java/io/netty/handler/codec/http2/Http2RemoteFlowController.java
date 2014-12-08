@@ -55,5 +55,5 @@ public interface Http2RemoteFlowController extends Http2FlowController {
      * @param stream the subject stream. Must not be the connection stream object.
      * @return the most recent sent frame, or {@code null} if no frame has been sent for the stream.
      */
-    ChannelFuture lastFrameSent(Http2Stream stream);
+    ChannelFuture lastFlowControlledFrameSent(Http2Stream stream);
 }

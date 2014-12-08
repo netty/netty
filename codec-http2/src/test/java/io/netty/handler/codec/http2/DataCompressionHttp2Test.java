@@ -315,8 +315,7 @@ public class DataCompressionHttp2Test {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                FrameCountDown clientFrameCountDown =
-                        new FrameCountDown(clientListener, clientLatch);
+                FrameCountDown clientFrameCountDown = new FrameCountDown(clientListener, clientLatch);
                 Http2FrameWriter writer = new DefaultHttp2FrameWriter();
                 Http2ConnectionHandler connectionHandler =
                         new Http2ConnectionHandler(new DefaultHttp2ConnectionDecoder.Builder()

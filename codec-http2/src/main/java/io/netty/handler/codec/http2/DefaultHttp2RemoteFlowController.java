@@ -115,8 +115,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         initialWindowSize = newWindowSize;
         for (Http2Stream stream : connection.activeStreams()) {
             // Verify that the maximum value is not exceeded by this change.
-            FlowState state = state(stream);
-            state.incrementStreamWindow(delta);
+            state(stream).incrementStreamWindow(delta);
         }
 
         if (delta > 0) {
@@ -136,7 +135,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     }
 
     @Override
-    public void incrementWindowSize(Http2Stream stream, int delta) throws Http2Exception {
+    public void incrementWindowSize(ChannelHandlerContext ctx, Http2Stream stream, int delta) throws Http2Exception {
         if (stream.id() == CONNECTION_STREAM_ID) {
             // Update the connection window and write any pending frames for all streams.
             connectionState().incrementStreamWindow(delta);
@@ -154,10 +153,9 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     }
 
     @Override
-    public ChannelFuture sendFlowControlledFrame(ChannelHandlerContext ctx, Http2Stream stream, ByteBuf data, int padding,
-            boolean endStream, ChannelPromise promise) {
+    public ChannelFuture sendFlowControlledFrame(ChannelHandlerContext ctx, Http2Stream stream,
+            ByteBuf data, int padding, boolean endStream, ChannelPromise promise) {
         checkNotNull(ctx, "ctx");
-        checkNotNull(stream, "stream");
         checkNotNull(promise, "promise");
         checkNotNull(data, "data");
         if (this.ctx != null && this.ctx != ctx) {
@@ -202,7 +200,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     }
 
     @Override
-    public ChannelFuture lastFrameSent(Http2Stream stream) {
+    public ChannelFuture lastFlowControlledFrameSent(Http2Stream stream) {
         FlowState state = state(stream);
         return state != null ? state.lastNewFrame() : null;
     }

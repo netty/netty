@@ -366,7 +366,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     public void windowUpdateReadAfterGoAwayShouldBeIgnored() throws Exception {
         when(connection.goAwaySent()).thenReturn(true);
         decode().onWindowUpdateRead(ctx, STREAM_ID, 10);
-        verify(remoteFlow, never()).incrementWindowSize(any(Http2Stream.class), anyInt());
+        verify(remoteFlow, never()).incrementWindowSize(eq(ctx), any(Http2Stream.class), anyInt());
         verify(listener, never()).onWindowUpdateRead(eq(ctx), anyInt(), anyInt());
     }
 
@@ -379,7 +379,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     @Test
     public void windowUpdateReadShouldSucceed() throws Exception {
         decode().onWindowUpdateRead(ctx, STREAM_ID, 10);
-        verify(remoteFlow).incrementWindowSize(eq(stream), eq(10));
+        verify(remoteFlow).incrementWindowSize(eq(ctx), eq(stream), eq(10));
         verify(listener).onWindowUpdateRead(eq(ctx), eq(STREAM_ID), eq(10));
     }
 

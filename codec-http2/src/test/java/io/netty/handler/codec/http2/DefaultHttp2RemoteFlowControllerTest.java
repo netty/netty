@@ -148,12 +148,12 @@ public class DefaultHttp2RemoteFlowControllerTest {
             // Write one frame.
             Http2Stream stream = stream(STREAM_A);
             ChannelFuture future1 = controller.sendFlowControlledFrame(ctx, stream, data, 0, false, promise);
-            assertEquals(future1, controller.lastFrameSent(stream));
+            assertEquals(future1, controller.lastFlowControlledFrameSent(stream));
 
             // Now write another and verify that the last write is updated.
             ChannelFuture future2 = controller.sendFlowControlledFrame(ctx, stream, data, 0, false, promise2);
             assertNotSame(future1, future2);
-            assertEquals(future2, controller.lastFrameSent(stream));
+            assertEquals(future2, controller.lastFlowControlledFrameSent(stream));
         } finally {
             manualSafeRelease(data);
         }
@@ -1038,12 +1038,10 @@ public class DefaultHttp2RemoteFlowControllerTest {
             verifyNoWrite(STREAM_C);
             verifyNoWrite(STREAM_D);
 
-            assertEquals(
-                    calculateStreamSizeSum(streamSizes,
+            assertEquals(calculateStreamSizeSum(streamSizes,
                             Arrays.asList(STREAM_A, STREAM_B, STREAM_C, STREAM_D)),
-                    streamableBytesForTree(stream0));
-            assertEquals(
-                    calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_A, STREAM_C, STREAM_D)),
+                            streamableBytesForTree(stream0));
+            assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_A, STREAM_C, STREAM_D)),
                     streamableBytesForTree(streamA));
             assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B)),
                     streamableBytesForTree(streamB));
@@ -1109,17 +1107,14 @@ public class DefaultHttp2RemoteFlowControllerTest {
             verifyNoWrite(STREAM_D);
 
             streamB.setPriority(STREAM_A, DEFAULT_PRIORITY_WEIGHT, true);
-            assertEquals(
-                    calculateStreamSizeSum(streamSizes,
+            assertEquals(calculateStreamSizeSum(streamSizes,
                             Arrays.asList(STREAM_A, STREAM_B, STREAM_C, STREAM_D)),
-                    streamableBytesForTree(stream0));
-            assertEquals(
-                    calculateStreamSizeSum(streamSizes,
+                            streamableBytesForTree(stream0));
+            assertEquals(calculateStreamSizeSum(streamSizes,
                             Arrays.asList(STREAM_A, STREAM_B, STREAM_C, STREAM_D)),
-                    streamableBytesForTree(streamA));
-            assertEquals(
-                    calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B, STREAM_C, STREAM_D)),
-                    streamableBytesForTree(streamB));
+                            streamableBytesForTree(streamA));
+            assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B, STREAM_C, STREAM_D)),
+                         streamableBytesForTree(streamB));
             assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_C)),
                     streamableBytesForTree(streamC));
             assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_D)),
@@ -1188,12 +1183,10 @@ public class DefaultHttp2RemoteFlowControllerTest {
             verifyNoWrite(STREAM_D);
             verifyNoWrite(STREAM_E);
 
-            assertEquals(
-                    calculateStreamSizeSum(streamSizes,
+            assertEquals(calculateStreamSizeSum(streamSizes,
                             Arrays.asList(STREAM_A, STREAM_B, STREAM_C, STREAM_D, STREAM_E)),
                     streamableBytesForTree(stream0));
-            assertEquals(
-                    calculateStreamSizeSum(streamSizes,
+            assertEquals(calculateStreamSizeSum(streamSizes,
                             Arrays.asList(STREAM_A, STREAM_E, STREAM_C, STREAM_D)),
                     streamableBytesForTree(streamA));
             assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B)),
@@ -1202,8 +1195,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
                     streamableBytesForTree(streamC));
             assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_D)),
                     streamableBytesForTree(streamD));
-            assertEquals(
-                    calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_E, STREAM_C, STREAM_D)),
+            assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_E, STREAM_C, STREAM_D)),
                     streamableBytesForTree(streamE));
         } finally {
             manualSafeRelease(bufs);
@@ -1260,8 +1252,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
             streamA.close();
 
-            assertEquals(
-                    calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B, STREAM_C, STREAM_D)),
+            assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B, STREAM_C, STREAM_D)),
                     streamableBytesForTree(stream0));
             assertEquals(0, streamableBytesForTree(streamA));
             assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B)),
@@ -1289,7 +1280,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
     private void send(int streamId, ByteBuf data, int padding) throws Http2Exception {
         Http2Stream stream = stream(streamId);
         ChannelFuture future = controller.sendFlowControlledFrame(ctx, stream, data, padding, false, promise);
-        assertEquals(future, controller.lastFrameSent(stream));
+        assertEquals(future, controller.lastFlowControlledFrameSent(stream));
     }
 
     private void verifyWrite(int streamId, ByteBuf data, int padding) {
@@ -1322,12 +1313,12 @@ public class DefaultHttp2RemoteFlowControllerTest {
         when(frameWriterSizePolicy.maxFrameSize()).thenReturn(Integer.MAX_VALUE);
     }
 
-    private int window(int streamId) throws Http2Exception{
+    private int window(int streamId) throws Http2Exception {
         return controller.windowSize(stream(streamId));
     }
 
     private void incrementWindowSize(int streamId, int delta) throws Http2Exception {
-        controller.incrementWindowSize(stream(streamId), delta);
+        controller.incrementWindowSize(ctx, stream(streamId), delta);
     }
 
     private int streamableBytesForTree(Http2Stream stream) throws Http2Exception {
