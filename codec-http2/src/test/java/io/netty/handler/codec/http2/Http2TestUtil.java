@@ -262,21 +262,19 @@ final class Http2TestUtil {
     static class FrameCountDown implements Http2FrameListener {
         private final Http2FrameListener listener;
         private final CountDownLatch messageLatch;
+        private final CountDownLatch settingsAckLatch;
         private final CountDownLatch dataLatch;
         private final CountDownLatch trailersLatch;
 
-        FrameCountDown(Http2FrameListener listener, CountDownLatch messageLatch) {
-            this(listener, messageLatch, null);
+        FrameCountDown(Http2FrameListener listener, CountDownLatch settingsAckLatch, CountDownLatch messageLatch) {
+            this(listener, settingsAckLatch, messageLatch, null, null);
         }
 
-        FrameCountDown(Http2FrameListener listener, CountDownLatch messageLatch, CountDownLatch dataLatch) {
-            this(listener, messageLatch, dataLatch, null);
-        }
-
-        FrameCountDown(Http2FrameListener listener, CountDownLatch messageLatch,
+        FrameCountDown(Http2FrameListener listener, CountDownLatch settingsAckLatch, CountDownLatch messageLatch,
                 CountDownLatch dataLatch, CountDownLatch trailersLatch) {
             this.listener = listener;
             this.messageLatch = messageLatch;
+            this.settingsAckLatch = settingsAckLatch;
             this.dataLatch = dataLatch;
             this.trailersLatch = trailersLatch;
         }
@@ -331,7 +329,7 @@ final class Http2TestUtil {
         @Override
         public void onSettingsAckRead(ChannelHandlerContext ctx) throws Http2Exception {
             listener.onSettingsAckRead(ctx);
-            messageLatch.countDown();
+            settingsAckLatch.countDown();
         }
 
         @Override

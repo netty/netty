@@ -32,7 +32,6 @@ public final class Http2CodecUtil {
 
     private static final byte[] CONNECTION_PREFACE = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes(UTF_8);
     private static final byte[] EMPTY_PING = new byte[8];
-    private static final IgnoreSettingsHandler IGNORE_SETTINGS_HANDLER = new IgnoreSettingsHandler();
 
     public static final int CONNECTION_STREAM_ID = 0;
     public static final int HTTP_UPGRADE_STREAM_ID = 1;
@@ -130,15 +129,6 @@ public final class Http2CodecUtil {
     }
 
     /**
-     * Creates a new {@link ChannelHandler} that does nothing but ignore inbound settings frames.
-     * This is a useful utility to avoid verbose logging output for pipelines that don't handle
-     * settings frames directly.
-     */
-    public static ChannelHandler ignoreSettingsHandler() {
-        return IGNORE_SETTINGS_HANDLER;
-    }
-
-    /**
      * Iteratively looks through the causaility chain for the given exception and returns the first
      * {@link Http2Exception} or {@code null} if none.
      */
@@ -214,21 +204,6 @@ public final class Http2CodecUtil {
             promise.setFailure(cause);
         }
         throw cause;
-    }
-
-    /**
-     * A{@link ChannelHandler} that does nothing but ignore inbound settings frames. This is a
-     * useful utility to avoid verbose logging output for pipelines that don't handle settings
-     * frames directly.
-     */
-    @ChannelHandler.Sharable
-    private static class IgnoreSettingsHandler extends ChannelHandlerAdapter {
-        @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            if (!(msg instanceof Http2Settings)) {
-                super.channelRead(ctx, msg);
-            }
-        }
     }
 
     private Http2CodecUtil() {
