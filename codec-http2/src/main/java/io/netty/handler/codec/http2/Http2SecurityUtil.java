@@ -30,7 +30,7 @@ public final class Http2SecurityUtil {
      * Ciphers</a> and <a
      * href="https://wiki.mozilla.org/Security/Server_Side_TLS#Non-Backward_Compatible_Ciphersuite">Mozilla Cipher
      * Suites</a> in accordance with the <a
-     * href="https://tools.ietf.org/html/draft-ietf-httpbis-http2-14#section-9.2.2">HTTP/2 Specification</a>.
+     * href="https://tools.ietf.org/html/draft-ietf-httpbis-http2-16#section-9.2.2">HTTP/2 Specification</a>.
      */
     public static final List<String> CIPHERS;
 
@@ -40,7 +40,6 @@ public final class Http2SecurityUtil {
             "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384", /* openssl = ECDHE-ECDSA-AES256-GCM-SHA384 */
             "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256", /* openssl = ECDHE-ECDSA-AES128-GCM-SHA256 */
             "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384", /* openssl = ECDHE-RSA-AES256-GCM-SHA384 */
-            "TLS_RSA_WITH_AES_256_GCM_SHA384", /* openssl = AES256-GCM-SHA384 */
             /* REQUIRED BY HTTP/2 SPEC */
             "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", /* openssl = ECDHE-RSA-AES128-GCM-SHA256 */
             /* REQUIRED BY HTTP/2 SPEC */
@@ -50,25 +49,14 @@ public final class Http2SecurityUtil {
     private static final List<String> CIPHERS_JAVA_NO_MOZILLA_INCREASED_SECURITY = Collections.unmodifiableList(Arrays
             .asList(
             /* Java 8 */
-            "TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384", /* openssl = ECDH-ECDSA-AES256-GCM-SHA384 */
-            "TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384", /* openssl = ECDH-RSA-AES256-GCM-SHA384 */
             "TLS_DHE_RSA_WITH_AES_256_GCM_SHA384", /* openssl = DHE-RSA-AES256-GCM-SHA384 */
-            "TLS_DHE_DSS_WITH_AES_256_GCM_SHA384", /* openssl = DHE-DSS-AES256-GCM-SHA384 */
-            "TLS_RSA_WITH_AES_128_GCM_SHA256", /* openssl = AES128-GCM-SHA256 */
-            "TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256", /* openssl = ECDH-ECDSA-AES128-GCM-SHA256 */
-            "TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256" /* openssl = ECDH-RSA-AES128-GCM-SHA256 */));
-
-    private static final List<String> CIPHERS_JAVA_DISABLED_DEFAULT = Collections.unmodifiableList(Arrays.asList(
-            /* Java 8 */
-            "TLS_DH_anon_WITH_AES_256_GCM_SHA384", /* openssl = ADH-AES256-GCM-SHA384 */
-            "TLS_DH_anon_WITH_AES_128_GCM_SHA256" /* openssl = ADH-AES128-GCM-SHA256 */));
+            "TLS_DHE_DSS_WITH_AES_256_GCM_SHA384" /* openssl = DHE-DSS-AES256-GCM-SHA384 */));
 
     static {
         List<String> ciphers = new ArrayList<String>(CIPHERS_JAVA_MOZILLA_INCREASED_SECURITY.size()
-                + CIPHERS_JAVA_NO_MOZILLA_INCREASED_SECURITY.size() + CIPHERS_JAVA_DISABLED_DEFAULT.size());
+                + CIPHERS_JAVA_NO_MOZILLA_INCREASED_SECURITY.size());
         ciphers.addAll(CIPHERS_JAVA_MOZILLA_INCREASED_SECURITY);
         ciphers.addAll(CIPHERS_JAVA_NO_MOZILLA_INCREASED_SECURITY);
-        ciphers.addAll(CIPHERS_JAVA_DISABLED_DEFAULT);
         CIPHERS = Collections.unmodifiableList(ciphers);
     }
 

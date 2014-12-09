@@ -28,6 +28,7 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderUtil;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
@@ -59,6 +60,7 @@ public final class HttpUtil {
             add(HttpHeaderNames.PROXY_CONNECTION);
             add(HttpHeaderNames.TRANSFER_ENCODING);
             add(HttpHeaderNames.HOST);
+            add(HttpHeaderNames.UPGRADE);
             add(ExtensionHeaderNames.STREAM_ID.text());
             add(ExtensionHeaderNames.AUTHORITY.text());
             add(ExtensionHeaderNames.SCHEME.text());
@@ -68,19 +70,19 @@ public final class HttpUtil {
 
     /**
      * This will be the method used for {@link HttpRequest} objects generated out of the HTTP message flow defined in <a
-     * href="http://tools.ietf.org/html/draft-ietf-httpbis-http2-14#section-8.1.">HTTP/2 Spec Message Flow</a>
+     * href="http://tools.ietf.org/html/draft-ietf-httpbis-http2-16#section-8.1.">HTTP/2 Spec Message Flow</a>
      */
     public static final HttpMethod OUT_OF_MESSAGE_SEQUENCE_METHOD = HttpMethod.OPTIONS;
 
     /**
      * This will be the path used for {@link HttpRequest} objects generated out of the HTTP message flow defined in <a
-     * href="http://tools.ietf.org/html/draft-ietf-httpbis-http2-14#section-8.1.">HTTP/2 Spec Message Flow</a>
+     * href="http://tools.ietf.org/html/draft-ietf-httpbis-http2-16#section-8.1.">HTTP/2 Spec Message Flow</a>
      */
     public static final String OUT_OF_MESSAGE_SEQUENCE_PATH = "";
 
     /**
      * This will be the status code used for {@link HttpResponse} objects generated out of the HTTP message flow defined
-     * in <a href="http://tools.ietf.org/html/draft-ietf-httpbis-http2-14#section-8.1.">HTTP/2 Spec Message Flow</a>
+     * in <a href="http://tools.ietf.org/html/draft-ietf-httpbis-http2-16#section-8.1.">HTTP/2 Spec Message Flow</a>
      */
     public static final HttpResponseStatus OUT_OF_MESSAGE_SEQUENCE_RETURN_CODE = HttpResponseStatus.OK;
 
@@ -308,7 +310,12 @@ public final class HttpUtil {
                 final AsciiString aName = AsciiString.of(entry.getKey()).toLowerCase();
                 if (!HTTP_TO_HTTP2_HEADER_BLACKLIST.contains(aName)) {
                     AsciiString aValue = AsciiString.of(entry.getValue());
-                    out.add(aName, aValue);
+                    // https://tools.ietf.org/html/draft-ietf-httpbis-http2-16#section-8.1.2.2
+                    // makes a special exception for TE
+                    if (!aName.equalsIgnoreCase(HttpHeaderNames.TE) ||
+                        aValue.equalsIgnoreCase(HttpHeaderValues.TRAILERS)) {
+                        out.add(aName, aValue);
+                    }
                 }
                 return true;
             }
@@ -364,7 +371,7 @@ public final class HttpUtil {
                     translatedName = name;
                 }
 
-                // http://tools.ietf.org/html/draft-ietf-httpbis-http2-14#section-8.1.2.3
+                // http://tools.ietf.org/html/draft-ietf-httpbis-http2-16#section-8.1.2.3
                 // All headers that start with ':' are only valid in HTTP/2 context
                 if (translatedName.isEmpty() || translatedName.charAt(0) == ':') {
                     throw streamError(streamId, PROTOCOL_ERROR,

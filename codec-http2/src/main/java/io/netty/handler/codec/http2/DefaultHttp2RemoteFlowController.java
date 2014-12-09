@@ -61,14 +61,22 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         this.frameWriter = checkNotNull(frameWriter, "frameWriter");
 
         // Add a flow state for the connection.
-        connection.connectionStream().setProperty(FlowState.class, new FlowState(connection.connectionStream()));
+        connection.connectionStream().setProperty(FlowState.class,
+                new FlowState(connection.connectionStream(), initialWindowSize));
 
         // Register for notification of new streams.
         connection.addListener(new Http2ConnectionAdapter() {
             @Override
             public void streamAdded(Http2Stream stream) {
                 // Just add a new flow state to the stream.
-                stream.setProperty(FlowState.class, new FlowState(stream));
+                stream.setProperty(FlowState.class, new FlowState(stream, 0));
+            }
+
+            @Override
+            public void streamActive(Http2Stream stream) {
+                // Need to be sure the stream's initial window is adjusted for SETTINGS
+                // frames which may have been exchanged while it was in IDLE
+                state(stream).window(initialWindowSize);
             }
 
             @Override
@@ -91,7 +99,10 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             public void priorityTreeParentChanged(Http2Stream stream, Http2Stream oldParent) {
                 Http2Stream parent = stream.parent();
                 if (parent != null) {
-                    state(parent).incrementStreamableBytesForTree(state(stream).streamableBytesForTree());
+                    int delta = state(stream).streamableBytesForTree();
+                    if (delta != 0) {
+                        state(parent).incrementStreamableBytesForTree(delta);
+                    }
                 }
             }
 
@@ -99,7 +110,10 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             public void priorityTreeParentChanging(Http2Stream stream, Http2Stream newParent) {
                 Http2Stream parent = stream.parent();
                 if (parent != null) {
-                    state(parent).incrementStreamableBytesForTree(-state(stream).streamableBytesForTree());
+                    int delta = -state(stream).streamableBytesForTree();
+                    if (delta != 0) {
+                        state(parent).incrementStreamableBytesForTree(delta);
+                    }
                 }
             }
         });
@@ -355,46 +369,51 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     final class FlowState {
         private final Queue<Frame> pendingWriteQueue;
         private final Http2Stream stream;
-        private int window = initialWindowSize;
+        private int window;
         private int pendingBytes;
         private int streamableBytesForTree;
         private int allocated;
         private ChannelFuture lastNewFrame;
 
-        FlowState(Http2Stream stream) {
+        FlowState(Http2Stream stream, int initialWindowSize) {
             this.stream = stream;
+            window(initialWindowSize);
             pendingWriteQueue = new ArrayDeque<Frame>(2);
         }
 
-        public int window() {
+        int window() {
             return window;
+        }
+
+        void window(int initialWindowSize) {
+            window = initialWindowSize;
         }
 
         /**
          * Increment the number of bytes allocated to this stream by the priority algorithm
          */
-        private void allocate(int bytes) {
+        void allocate(int bytes) {
             allocated += bytes;
         }
 
         /**
          * Gets the number of bytes that have been allocated to this stream by the priority algorithm.
          */
-        private int allocated() {
+        int allocated() {
             return allocated;
         }
 
         /**
          * Reset the number of bytes that have been allocated to this stream by the priority algorithm.
          */
-        private void resetAllocated() {
+        void resetAllocated() {
             allocated = 0;
         }
 
         /**
          * Increments the flow control window for this stream by the given delta and returns the new value.
          */
-        private int incrementStreamWindow(int delta) throws Http2Exception {
+        int incrementStreamWindow(int delta) throws Http2Exception {
             if (delta > 0 && Integer.MAX_VALUE - delta < window) {
                 throw streamError(stream.id(), FLOW_CONTROL_ERROR,
                         "Window size overflow for stream: %d", stream.id());
@@ -404,7 +423,9 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
             // Update this branch of the priority tree if the streamable bytes have changed for this node.
             int streamableDelta = streamableBytes() - previouslyStreamable;
-            incrementStreamableBytesForTree(streamableDelta);
+            if (streamableDelta != 0) {
+                incrementStreamableBytesForTree(streamableDelta);
+            }
             return window;
         }
 
@@ -439,7 +460,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         /**
          * Creates a new frame with the given values but does not add it to the pending queue.
          */
-        private Frame newFrame(final ChannelPromise promise, ByteBuf data, int padding, boolean endStream) {
+        Frame newFrame(final ChannelPromise promise, ByteBuf data, int padding, boolean endStream) {
             // Store this as the future for the most recent write attempt.
             lastNewFrame = promise;
             return new Frame(new SimplePromiseAggregator(promise), data, padding, endStream);
@@ -455,14 +476,14 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         /**
          * Returns the the head of the pending queue, or {@code null} if empty.
          */
-        private Frame peek() {
+        Frame peek() {
             return pendingWriteQueue.peek();
         }
 
         /**
          * Clears the pending queue and writes errors for each remaining frame.
          */
-        private void clear() {
+        void clear() {
             for (;;) {
                 Frame frame = pendingWriteQueue.poll();
                 if (frame == null) {
@@ -478,7 +499,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          * the number of pending writes available, or because a frame does not support splitting on arbitrary
          * boundaries.
          */
-        private int writeBytes(int bytes) {
+        int writeBytes(int bytes) {
             if (!stream.localSideOpen()) {
                 return 0;
             }
@@ -513,12 +534,10 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          * Recursively increments the streamable bytes for this branch in the priority tree starting at the current
          * node.
          */
-        private void incrementStreamableBytesForTree(int numBytes) {
-            if (numBytes != 0) {
-                streamableBytesForTree += numBytes;
-                if (!stream.isRoot()) {
-                    state(stream.parent()).incrementStreamableBytesForTree(numBytes);
-                }
+        void incrementStreamableBytesForTree(int numBytes) {
+            streamableBytesForTree += numBytes;
+            if (!stream.isRoot()) {
+                state(stream.parent()).incrementStreamableBytesForTree(numBytes);
             }
         }
 
@@ -569,7 +588,9 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                 pendingBytes += numBytes;
 
                 int delta = streamableBytes() - previouslyStreamable;
-                incrementStreamableBytesForTree(delta);
+                if (delta != 0) {
+                    incrementStreamableBytesForTree(delta);
+                }
             }
 
             /**

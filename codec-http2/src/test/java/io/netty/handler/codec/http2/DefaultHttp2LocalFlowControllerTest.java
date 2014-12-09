@@ -68,7 +68,7 @@ public class DefaultHttp2LocalFlowControllerTest {
         connection = new DefaultHttp2Connection(false);
         controller = new DefaultHttp2LocalFlowController(connection, frameWriter, updateRatio);
 
-        connection.local().createStream(STREAM_ID, false);
+        connection.local().createStream(STREAM_ID).open(false);
     }
 
     @Test
@@ -156,7 +156,7 @@ public class DefaultHttp2LocalFlowControllerTest {
     @Test
     public void connectionWindowShouldAdjustWithMultipleStreams() throws Http2Exception {
         int newStreamId = 3;
-        connection.local().createStream(newStreamId, false);
+        connection.local().createStream(newStreamId).open(false);
 
         try {
             assertEquals(DEFAULT_WINDOW_SIZE, window(STREAM_ID));
@@ -218,7 +218,7 @@ public class DefaultHttp2LocalFlowControllerTest {
             throws Http2Exception {
         int delta = newDefaultWindowSize - DEFAULT_WINDOW_SIZE;
         controller.incrementWindowSize(ctx, stream(0), delta);
-        Http2Stream stream = connection.local().createStream(newStreamId, false);
+        Http2Stream stream = connection.local().createStream(newStreamId).open(false);
         if (setStreamRatio) {
             controller.windowUpdateRatio(ctx, stream, ratio);
         }

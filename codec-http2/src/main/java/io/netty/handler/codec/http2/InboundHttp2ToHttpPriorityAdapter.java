@@ -171,7 +171,7 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
         FullHttpMessage msg = messageMap.get(stream.id());
         if (msg == null) {
             // msg may be null if a HTTP/2 frame event in received outside the HTTP message flow
-            // For example a PRIORITY frame can be received in any state besides IDLE
+            // For example a PRIORITY frame can be received in any state
             // and the HTTP message flow exists in OPEN.
             if (parent != null && !parent.equals(connection.connectionStream())) {
                 HttpHeaders headers = new DefaultHttpHeaders();
@@ -192,10 +192,10 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
     @Override
     public void onWeightChanged(Http2Stream stream, short oldWeight) {
         FullHttpMessage msg = messageMap.get(stream.id());
-        HttpHeaders headers;
+        final HttpHeaders headers;
         if (msg == null) {
             // msg may be null if a HTTP/2 frame event in received outside the HTTP message flow
-            // For example a PRIORITY frame can be received in any state besides IDLE
+            // For example a PRIORITY frame can be received in any state
             // and the HTTP message flow exists in OPEN.
             headers = new DefaultHttpHeaders();
             importOutOfMessageFlowHeaders(stream.id(), headers);

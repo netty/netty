@@ -15,8 +15,8 @@
 package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
@@ -222,7 +222,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             // We should ignore this frame if RST_STREAM was sent or if GO_AWAY was sent with a
             // lower stream ID.
             boolean shouldApplyFlowControl = false;
-            boolean shouldIgnore = shouldIgnoreFrame(stream);
+            boolean shouldIgnore = shouldIgnoreFrame(stream, false);
             Http2Exception error = null;
             switch (stream.state()) {
                 case OPEN:
@@ -322,21 +322,20 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             Http2Stream stream = connection.stream(streamId);
             verifyGoAwayNotReceived();
             verifyRstStreamNotReceived(stream);
-            if (connection.goAwaySent() || stream != null && shouldIgnoreFrame(stream)) {
+            if (shouldIgnoreFrame(stream, false)) {
                 // Ignore this frame.
                 return;
             }
 
             if (stream == null) {
-                stream = connection.createRemoteStream(streamId, endOfStream);
+                stream = connection.createRemoteStream(streamId).open(endOfStream);
             } else {
                 verifyEndOfStreamNotReceived(stream);
 
                 switch (stream.state()) {
                     case RESERVED_REMOTE:
-                        // Received headers for a reserved push stream ... open it for push to the
-                        // local endpoint.
-                        stream.openForPush();
+                    case IDLE:
+                        stream.open(endOfStream);
                         break;
                     case OPEN:
                     case HALF_CLOSED_LOCAL:
@@ -371,16 +370,24 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 boolean exclusive) throws Http2Exception {
             verifyPrefaceReceived();
 
-            Http2Stream stream = connection.requireStream(streamId);
+            Http2Stream stream = connection.stream(streamId);
             verifyGoAwayNotReceived();
-            if (shouldIgnoreFrame(stream)) {
-                // Ignore frames for any stream created after we sent a go-away.
+            if (shouldIgnoreFrame(stream, true)) {
+                // Ignore this frame.
                 return;
             }
 
-            listener.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);
+            if (stream == null) {
+                // PRIORITY frames always identify a stream. This means that if a PRIORITY frame is the
+                // first frame to be received for a stream that we must create the stream.
+                stream = connection.createRemoteStream(streamId);
+            }
 
+            // This call will create a stream for streamDependency if necessary.
+            // For this reason it must be done before notifying the listener.
             stream.setPriority(streamDependency, weight, exclusive);
+
+            listener.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);
         }
 
         @Override
@@ -497,7 +504,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             Http2Stream parentStream = connection.requireStream(streamId);
             verifyGoAwayNotReceived();
             verifyRstStreamNotReceived(parentStream);
-            if (shouldIgnoreFrame(parentStream)) {
+            if (shouldIgnoreFrame(parentStream, false)) {
                 // Ignore frames for any stream created after we sent a go-away.
                 return;
             }
@@ -525,7 +532,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             Http2Stream stream = connection.requireStream(streamId);
             verifyGoAwayNotReceived();
             verifyRstStreamNotReceived(stream);
-            if (stream.state() == CLOSED || shouldIgnoreFrame(stream)) {
+            if (stream.state() == CLOSED || shouldIgnoreFrame(stream, false)) {
                 // Ignore frames for any stream created after we sent a go-away.
                 return;
             }
@@ -546,15 +553,16 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
          * Indicates whether or not frames for the given stream should be ignored based on the state of the
          * stream/connection.
          */
-        private boolean shouldIgnoreFrame(Http2Stream stream) {
-            if (connection.goAwaySent() && connection.remote().lastStreamCreated() <= stream.id()) {
+        private boolean shouldIgnoreFrame(Http2Stream stream, boolean allowResetSent) {
+            if (connection.goAwaySent() &&
+                    (stream == null || connection.remote().lastStreamCreated() <= stream.id())) {
                 // Frames from streams created after we sent a go-away should be ignored.
                 // Frames for the connection stream ID (i.e. 0) will always be allowed.
                 return true;
             }
 
             // Also ignore inbound frames after we sent a RST_STREAM frame.
-            return stream.isResetSent();
+            return stream != null && !allowResetSent && stream.isResetSent();
         }
 
         /**

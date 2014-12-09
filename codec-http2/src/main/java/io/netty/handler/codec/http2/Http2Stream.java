@@ -46,9 +46,18 @@ public interface Http2Stream {
     State state();
 
     /**
-     * If this is a reserved push stream, opens the stream for push in one direction.
+     * Add this stream to {@link Http2Connection#activeStreams()} and transition state to:
+     * <ul>
+     * <li>{@link State#OPEN} if {@link #state()} is {@link State#IDLE} and {@code halfClosed} is {@code false}.</li>
+     * <li>{@link State#HALF_CLOSED_LOCAL} if {@link #state()} is {@link State#IDLE} and {@code halfClosed}
+     * is {@code true} and the stream is local.</li>
+     * <li>{@link State#HALF_CLOSED_REMOTE} if {@link #state()} is {@link State#IDLE} and {@code halfClosed}
+     * is {@code true} and the stream is remote.</li>
+     * <li>{@link State#RESERVED_LOCAL} if {@link #state()} is {@link State#HALF_CLOSED_REMOTE}.</li>
+     * <li>{@link State#RESERVED_REMOTE} if {@link #state()} is {@link State#HALF_CLOSED_LOCAL}.</li>
+     * </ul>
      */
-    Http2Stream openForPush() throws Http2Exception;
+    Http2Stream open(boolean halfClosed) throws Http2Exception;
 
     /**
      * Closes the stream.
@@ -160,8 +169,7 @@ public interface Http2Stream {
      *            This only applies if the stream has a parent.
      * @return this stream.
      */
-    Http2Stream setPriority(int parentStreamId, short weight, boolean exclusive)
-            throws Http2Exception;
+    Http2Stream setPriority(int parentStreamId, short weight, boolean exclusive) throws Http2Exception;
 
     /**
      * Indicates whether or not this stream is the root node of the priority tree.

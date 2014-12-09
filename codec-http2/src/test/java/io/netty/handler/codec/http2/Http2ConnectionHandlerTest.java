@@ -60,10 +60,10 @@ public class Http2ConnectionHandlerTest {
     private Http2Connection connection;
 
     @Mock
-    private Http2Connection.Endpoint remote;
+    private Http2Connection.Endpoint<Http2RemoteFlowController> remote;
 
     @Mock
-    private Http2Connection.Endpoint local;
+    private Http2Connection.Endpoint<Http2LocalFlowController> local;
 
     @Mock
     private ChannelHandlerContext ctx;
@@ -110,20 +110,21 @@ public class Http2ConnectionHandlerTest {
         when(connection.remote()).thenReturn(remote);
         when(connection.local()).thenReturn(local);
         when(connection.activeStreams()).thenReturn(Collections.singletonList(stream));
+        when(stream.open(anyBoolean())).thenReturn(stream);
         doAnswer(new Answer<Http2Stream>() {
             @Override
             public Http2Stream answer(InvocationOnMock invocation) throws Throwable {
                 Object[] args = invocation.getArguments();
-                return local.createStream((Integer) args[0], (Boolean) args[1]);
+                return local.createStream((Integer) args[0]);
             }
-        }).when(connection).createLocalStream(anyInt(), anyBoolean());
+        }).when(connection).createLocalStream(anyInt());
         doAnswer(new Answer<Http2Stream>() {
             @Override
             public Http2Stream answer(InvocationOnMock invocation) throws Throwable {
                 Object[] args = invocation.getArguments();
-                return remote.createStream((Integer) args[0], (Boolean) args[1]);
+                return remote.createStream((Integer) args[0]);
             }
-        }).when(connection).createRemoteStream(anyInt(), anyBoolean());
+        }).when(connection).createRemoteStream(anyInt());
         when(encoder.writeSettings(eq(ctx), any(Http2Settings.class), eq(promise))).thenReturn(future);
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(ctx.channel()).thenReturn(channel);

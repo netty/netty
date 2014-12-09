@@ -75,8 +75,8 @@ public final class Http2Settings extends IntObjectHashMap<Long> {
      *
      * @throws IllegalArgumentException if verification of the setting fails.
      */
-    public Http2Settings headerTableSize(long value) {
-        put(SETTINGS_HEADER_TABLE_SIZE, value);
+    public Http2Settings headerTableSize(int value) {
+        put(SETTINGS_HEADER_TABLE_SIZE, (long) value);
         return this;
     }
 
@@ -189,8 +189,7 @@ public final class Http2Settings extends IntObjectHashMap<Long> {
         switch (key) {
             case SETTINGS_HEADER_TABLE_SIZE:
                 if (value < MIN_HEADER_TABLE_SIZE || value > MAX_HEADER_TABLE_SIZE) {
-                    throw new IllegalArgumentException("Setting HEADER_TABLE_SIZE is invalid: "
-                            + value);
+                    throw new IllegalArgumentException("Setting HEADER_TABLE_SIZE is invalid: " + value);
                 }
                 break;
             case SETTINGS_ENABLE_PUSH:
@@ -212,14 +211,12 @@ public final class Http2Settings extends IntObjectHashMap<Long> {
                 break;
             case SETTINGS_MAX_FRAME_SIZE:
                 if (!isMaxFrameSizeValid(value.intValue())) {
-                    throw new IllegalArgumentException("Setting MAX_FRAME_SIZE is invalid: "
-                            + value);
+                    throw new IllegalArgumentException("Setting MAX_FRAME_SIZE is invalid: " + value);
                 }
                 break;
             case SETTINGS_MAX_HEADER_LIST_SIZE:
                 if (value < MIN_HEADER_LIST_SIZE || value > MAX_HEADER_LIST_SIZE) {
-                    throw new IllegalArgumentException("Setting MAX_HEADER_LIST_SIZE is invalid: "
-                            + value);
+                    throw new IllegalArgumentException("Setting MAX_HEADER_LIST_SIZE is invalid: " + value);
                 }
                 break;
             default:

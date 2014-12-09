@@ -65,8 +65,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         }
 
         @Override
-        public Builder frameWriter(
-                Http2FrameWriter frameWriter) {
+        public Builder frameWriter(Http2FrameWriter frameWriter) {
             this.frameWriter = frameWriter;
             return this;
         }
@@ -220,8 +219,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             }
 
             if (stream == null) {
-                // Create a new locally-initiated stream.
-                stream = connection.createLocalStream(streamId, endOfStream);
+                stream = connection.createLocalStream(streamId).open(endOfStream);
             } else {
                 if (stream.isResetSent()) {
                     throw new IllegalStateException("Sending headers after sending RST_STREAM.");
@@ -233,8 +231,8 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                 // An existing stream...
                 switch (stream.state()) {
                     case RESERVED_LOCAL:
-                        // Sending headers on a reserved push stream ... open it for push to the remote endpoint.
-                        stream.openForPush();
+                    case IDLE:
+                        stream.open(endOfStream);
                         break;
                     case OPEN:
                     case HALF_CLOSED_REMOTE:
@@ -316,14 +314,17 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             }
 
             // Update the priority on this stream.
-            connection.requireStream(streamId).setPriority(streamDependency, weight, exclusive);
+            Http2Stream stream = connection.stream(streamId);
+            if (stream == null) {
+                stream = connection.createLocalStream(streamId);
+            }
+
+            stream.setPriority(streamDependency, weight, exclusive);
         } catch (Throwable e) {
             return promise.setFailure(e);
         }
 
-        ChannelFuture future =
-                frameWriter.writePriority(ctx, streamId, streamDependency, weight, exclusive,
-                        promise);
+        ChannelFuture future = frameWriter.writePriority(ctx, streamId, streamDependency, weight, exclusive, promise);
         ctx.flush();
         return future;
     }
@@ -425,10 +426,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             return promise.setFailure(e);
         }
 
-        // Write the frame.
-        ChannelFuture future =
-                frameWriter.writePushPromise(ctx, streamId, promisedStreamId, headers, padding,
-                        promise);
+        ChannelFuture future = frameWriter.writePushPromise(ctx, streamId, promisedStreamId, headers, padding, promise);
         ctx.flush();
         return future;
     }

@@ -59,13 +59,20 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
 
         // Add a flow state for the connection.
         final Http2Stream connectionStream = connection.connectionStream();
-        connectionStream.setProperty(FlowState.class, new FlowState(connectionStream));
+        connectionStream.setProperty(FlowState.class, new FlowState(connectionStream, initialWindowSize));
 
         // Register for notification of new streams.
         connection.addListener(new Http2ConnectionAdapter() {
             @Override
             public void streamAdded(Http2Stream stream) {
-                stream.setProperty(FlowState.class, new FlowState(stream));
+                stream.setProperty(FlowState.class, new FlowState(stream, 0));
+            }
+
+            @Override
+            public void streamActive(Http2Stream stream) {
+                // Need to be sure the stream's initial window is adjusted for SETTINGS
+                // frames which may have been exchanged while it was in IDLE
+                state(stream).window(initialWindowSize);
             }
         });
     }
@@ -241,14 +248,18 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         private int lowerBound;
         private boolean endOfStream;
 
-        FlowState(Http2Stream stream) {
+        FlowState(Http2Stream stream, int initialWindowSize) {
             this.stream = stream;
-            window = processedWindow = initialStreamWindowSize = initialWindowSize;
+            window(initialWindowSize);
             streamWindowUpdateRatio = windowUpdateRatio;
         }
 
         int window() {
             return window;
+        }
+
+        void window(int initialWindowSize) {
+            window = processedWindow = initialStreamWindowSize = initialWindowSize;
         }
 
         void endOfStream(boolean endOfStream) {
@@ -343,7 +354,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
             writeWindowUpdateIfNeeded(ctx);
         }
 
-        public int unconsumedBytes() {
+        int unconsumedBytes() {
             return processedWindow - window;
         }
 

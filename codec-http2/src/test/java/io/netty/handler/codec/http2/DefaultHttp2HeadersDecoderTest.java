@@ -15,17 +15,20 @@
 
 package io.netty.handler.codec.http2;
 
-import com.twitter.hpack.Encoder;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
+import static io.netty.handler.codec.http2.Http2TestUtil.as;
+import static io.netty.handler.codec.http2.Http2TestUtil.randomBytes;
+import static io.netty.util.CharsetUtil.UTF_8;
+import static org.junit.Assert.assertEquals;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import org.junit.Before;
-import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
 
-import static io.netty.handler.codec.http2.Http2TestUtil.*;
-import static io.netty.util.CharsetUtil.*;
-import static org.junit.Assert.*;
+import org.junit.Before;
+import org.junit.Test;
+
+import com.twitter.hpack.Encoder;
 
 /**
  * Tests for {@link DefaultHttp2HeadersDecoder}.
@@ -57,7 +60,7 @@ public class DefaultHttp2HeadersDecoderTest {
     }
 
     private static ByteBuf encode(byte[]... entries) throws Exception {
-        Encoder encoder = new Encoder();
+        Encoder encoder = new Encoder(MAX_HEADER_TABLE_SIZE);
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
         for (int ix = 0; ix < entries.length;) {
             byte[] key = entries[ix++];
