@@ -88,10 +88,10 @@ public class DefaultHttp2RemoteFlowControllerTest {
         connection = new DefaultHttp2Connection(false);
         controller = new DefaultHttp2RemoteFlowController(connection, frameWriter);
 
-        connection.local().createStream(STREAM_A, false);
-        connection.local().createStream(STREAM_B, false);
-        Http2Stream streamC = connection.local().createStream(STREAM_C, false);
-        Http2Stream streamD = connection.local().createStream(STREAM_D, false);
+        connection.local().createStream(STREAM_A).open(false);
+        connection.local().createStream(STREAM_B).open(false);
+        Http2Stream streamC = connection.local().createStream(STREAM_C).open(false);
+        Http2Stream streamD = connection.local().createStream(STREAM_D).open(false);
         streamC.setPriority(STREAM_A, DEFAULT_PRIORITY_WEIGHT, false);
         streamD.setPriority(STREAM_A, DEFAULT_PRIORITY_WEIGHT, false);
 
@@ -1158,7 +1158,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         Http2Stream streamC = connection.stream(STREAM_C);
         Http2Stream streamD = connection.stream(STREAM_D);
 
-        Http2Stream streamE = connection.local().createStream(STREAM_E, false);
+        Http2Stream streamE = connection.local().createStream(STREAM_E).open(false);
         streamE.setPriority(STREAM_A, DEFAULT_PRIORITY_WEIGHT, true);
 
         // Send a bunch of data on each stream.

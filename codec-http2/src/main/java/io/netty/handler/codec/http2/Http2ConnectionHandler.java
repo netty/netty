@@ -123,7 +123,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
 
         // Create a local stream used for the HTTP cleartext upgrade.
-        connection().createLocalStream(HTTP_UPGRADE_STREAM_ID, true);
+        connection().createLocalStream(HTTP_UPGRADE_STREAM_ID).open(true);
     }
 
     /**
@@ -142,7 +142,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         encoder.remoteSettings(settings);
 
         // Create a stream in the half-closed state.
-        connection().createRemoteStream(HTTP_UPGRADE_STREAM_ID, true);
+        connection().createRemoteStream(HTTP_UPGRADE_STREAM_ID).open(true);
     }
 
     @Override

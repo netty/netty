@@ -34,10 +34,8 @@ public final class Http2CodecUtil {
     public static final int CONNECTION_STREAM_ID = 0;
     public static final int HTTP_UPGRADE_STREAM_ID = 1;
     public static final String HTTP_UPGRADE_SETTINGS_HEADER = "HTTP2-Settings";
-    // Draft 15 is actually supported but because draft 15 and draft 14 are binary compatible draft 14 is advertised
-    // for interoperability with technologies that have not yet updated, or are also advertising the older draft.
-    public static final String HTTP_UPGRADE_PROTOCOL_NAME = "h2c-14";
-    public static final String TLS_UPGRADE_PROTOCOL_NAME = "h2-14";
+    public static final String HTTP_UPGRADE_PROTOCOL_NAME = "h2c-16";
+    public static final String TLS_UPGRADE_PROTOCOL_NAME = "h2-16";
 
     public static final int PING_FRAME_PAYLOAD_LENGTH = 8;
     public static final short MAX_UNSIGNED_BYTE = 0xFF;
@@ -57,7 +55,7 @@ public final class Http2CodecUtil {
     public static final int SETTINGS_MAX_FRAME_SIZE = 5;
     public static final int SETTINGS_MAX_HEADER_LIST_SIZE = 6;
 
-    public static final long MAX_HEADER_TABLE_SIZE = MAX_UNSIGNED_INT;
+    public static final int MAX_HEADER_TABLE_SIZE = Integer.MAX_VALUE; // Size limited by HPACK library
     public static final long MAX_CONCURRENT_STREAMS = MAX_UNSIGNED_INT;
     public static final int MAX_INITIAL_WINDOW_SIZE = Integer.MAX_VALUE;
     public static final int MAX_FRAME_SIZE_LOWER_BOUND = 0x4000;
@@ -80,16 +78,14 @@ public final class Http2CodecUtil {
      * Indicates whether or not the given value for max frame size falls within the valid range.
      */
     public static boolean isMaxFrameSizeValid(int maxFrameSize) {
-        return maxFrameSize >= MAX_FRAME_SIZE_LOWER_BOUND
-                && maxFrameSize <= MAX_FRAME_SIZE_UPPER_BOUND;
+        return maxFrameSize >= MAX_FRAME_SIZE_LOWER_BOUND && maxFrameSize <= MAX_FRAME_SIZE_UPPER_BOUND;
     }
 
     /**
      * Returns a buffer containing the the {@link #CONNECTION_PREFACE}.
      */
     public static ByteBuf connectionPrefaceBuf() {
-        // Return a duplicate so that modifications to the reader index will not affect the original
-        // buffer.
+        // Return a duplicate so that modifications to the reader index will not affect the original buffer.
         return Unpooled.wrappedBuffer(CONNECTION_PREFACE);
     }
 
@@ -97,8 +93,7 @@ public final class Http2CodecUtil {
      * Returns a buffer filled with all zeros that is the appropriate length for a PING frame.
      */
     public static ByteBuf emptyPingBuf() {
-        // Return a duplicate so that modifications to the reader index will not affect the original
-        // buffer.
+        // Return a duplicate so that modifications to the reader index will not affect the original buffer.
         return Unpooled.wrappedBuffer(EMPTY_PING);
     }
 
@@ -204,6 +199,5 @@ public final class Http2CodecUtil {
         throw cause;
     }
 
-    private Http2CodecUtil() {
-    }
+    private Http2CodecUtil() { }
 }

@@ -33,7 +33,7 @@ public class DefaultHttp2Headers extends DefaultBinaryHeaders implements Http2He
      * <p>
      *
      * <strong>Note</strong> that setting {@code forceKeyToLower} to {@code false} can violate the
-     * <a href="https://tools.ietf.org/html/draft-ietf-httpbis-http2-15#section-8.1.2">HTTP/2 specification</a>
+     * <a href="https://tools.ietf.org/html/draft-ietf-httpbis-http2-16#section-8.1.2">HTTP/2 specification</a>
      * which specifies that a request or response containing an uppercase header field MUST be treated
      * as malformed. Only set {@code forceKeyToLower} to {@code false} if you are explicitly using lowercase
      * header field names and want to avoid the conversion to lowercase.

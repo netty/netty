@@ -119,6 +119,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         when(channel.isActive()).thenReturn(true);
         when(stream.id()).thenReturn(STREAM_ID);
         when(stream.state()).thenReturn(OPEN);
+        when(stream.open(anyBoolean())).thenReturn(stream);
         when(pushStream.id()).thenReturn(PUSH_STREAM_ID);
         when(connection.activeStreams()).thenReturn(Collections.singletonList(stream));
         when(connection.stream(STREAM_ID)).thenReturn(stream);
@@ -131,19 +132,19 @@ public class DefaultHttp2ConnectionDecoderTest {
             @Override
             public Http2Stream answer(InvocationOnMock invocation) throws Throwable {
                 Object[] args = invocation.getArguments();
-                return local.createStream((Integer) args[0], (Boolean) args[1]);
+                return local.createStream((Integer) args[0]);
             }
-        }).when(connection).createLocalStream(anyInt(), anyBoolean());
+        }).when(connection).createLocalStream(anyInt());
         doAnswer(new Answer<Http2Stream>() {
             @Override
             public Http2Stream answer(InvocationOnMock invocation) throws Throwable {
                 Object[] args = invocation.getArguments();
-                return remote.createStream((Integer) args[0], (Boolean) args[1]);
+                return remote.createStream((Integer) args[0]);
             }
-        }).when(connection).createRemoteStream(anyInt(), anyBoolean());
-        when(local.createStream(eq(STREAM_ID), anyBoolean())).thenReturn(stream);
+        }).when(connection).createRemoteStream(anyInt());
+        when(local.createStream(eq(STREAM_ID))).thenReturn(stream);
         when(local.reservePushStream(eq(PUSH_STREAM_ID), eq(stream))).thenReturn(pushStream);
-        when(remote.createStream(eq(STREAM_ID), anyBoolean())).thenReturn(stream);
+        when(remote.createStream(eq(STREAM_ID))).thenReturn(stream);
         when(remote.reservePushStream(eq(PUSH_STREAM_ID), eq(stream))).thenReturn(pushStream);
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(ctx.channel()).thenReturn(channel);
@@ -287,28 +288,34 @@ public class DefaultHttp2ConnectionDecoderTest {
     public void headersReadAfterGoAwayShouldBeIgnored() throws Exception {
         when(connection.goAwaySent()).thenReturn(true);
         decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
-        verify(remote, never()).createStream(eq(STREAM_ID), eq(false));
+        verify(remote, never()).createStream(eq(STREAM_ID));
+        verify(stream, never()).open(anyBoolean());
 
         // Verify that the event was absorbed and not propagated to the oberver.
         verify(listener, never()).onHeadersRead(eq(ctx), anyInt(), any(Http2Headers.class), anyInt(), anyBoolean());
-        verify(remote, never()).createStream(anyInt(), anyBoolean());
+        verify(remote, never()).createStream(anyInt());
+        verify(stream, never()).open(anyBoolean());
     }
 
     @Test
     public void headersReadForUnknownStreamShouldCreateStream() throws Exception {
-        when(remote.createStream(eq(5), eq(false))).thenReturn(stream);
-        decode().onHeadersRead(ctx, 5, EmptyHttp2Headers.INSTANCE, 0, false);
-        verify(remote).createStream(eq(5), eq(false));
-        verify(listener).onHeadersRead(eq(ctx), eq(5), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+        final int streamId = 5;
+        when(remote.createStream(eq(streamId))).thenReturn(stream);
+        decode().onHeadersRead(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false);
+        verify(remote).createStream(eq(streamId));
+        verify(stream).open(eq(false));
+        verify(listener).onHeadersRead(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false));
     }
 
     @Test
     public void headersReadForUnknownStreamShouldCreateHalfClosedStream() throws Exception {
-        when(remote.createStream(eq(5), eq(true))).thenReturn(stream);
-        decode().onHeadersRead(ctx, 5, EmptyHttp2Headers.INSTANCE, 0, true);
-        verify(remote).createStream(eq(5), eq(true));
-        verify(listener).onHeadersRead(eq(ctx), eq(5), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+        final int streamId = 5;
+        when(remote.createStream(eq(streamId))).thenReturn(stream);
+        decode().onHeadersRead(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, true);
+        verify(remote).createStream(eq(streamId));
+        verify(stream).open(eq(true));
+        verify(listener).onHeadersRead(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true));
     }
 
@@ -316,7 +323,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     public void headersReadForPromisedStreamShouldHalfOpenStream() throws Exception {
         when(stream.state()).thenReturn(RESERVED_REMOTE);
         decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
-        verify(stream).openForPush();
+        verify(stream).open(false);
         verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false));
     }
@@ -325,7 +332,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     public void headersReadForPromisedStreamShouldCloseStream() throws Exception {
         when(stream.state()).thenReturn(RESERVED_REMOTE);
         decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true);
-        verify(stream).openForPush();
+        verify(stream).open(true);
         verify(lifecycleManager).closeRemoteSide(eq(stream), eq(future));
         verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true));
@@ -357,9 +364,13 @@ public class DefaultHttp2ConnectionDecoderTest {
 
     @Test
     public void priorityReadShouldSucceed() throws Exception {
+        when(connection.stream(STREAM_ID)).thenReturn(null);
+        when(connection.requireStream(STREAM_ID)).thenReturn(null);
         decode().onPriorityRead(ctx, STREAM_ID, 0, (short) 255, true);
         verify(stream).setPriority(eq(0), eq((short) 255), eq(true));
         verify(listener).onPriorityRead(eq(ctx), eq(STREAM_ID), eq(0), eq((short) 255), eq(true));
+        verify(connection).createRemoteStream(STREAM_ID);
+        verify(stream, never()).open(anyBoolean());
     }
 
     @Test

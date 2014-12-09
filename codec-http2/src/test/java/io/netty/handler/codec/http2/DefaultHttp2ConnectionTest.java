@@ -15,6 +15,7 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -29,6 +30,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import io.netty.handler.codec.http2.Http2Connection.Endpoint;
 import io.netty.handler.codec.http2.Http2Stream.State;
 
 import java.util.Arrays;
@@ -72,25 +74,25 @@ public class DefaultHttp2ConnectionTest {
 
     @Test
     public void serverCreateStreamShouldSucceed() throws Http2Exception {
-        Http2Stream stream = server.local().createStream(2, false);
+        Http2Stream stream = server.local().createStream(2).open(false);
         assertEquals(2, stream.id());
         assertEquals(State.OPEN, stream.state());
         assertEquals(1, server.activeStreams().size());
         assertEquals(2, server.local().lastStreamCreated());
 
-        stream = server.local().createStream(4, true);
+        stream = server.local().createStream(4).open(true);
         assertEquals(4, stream.id());
         assertEquals(State.HALF_CLOSED_LOCAL, stream.state());
         assertEquals(2, server.activeStreams().size());
         assertEquals(4, server.local().lastStreamCreated());
 
-        stream = server.remote().createStream(3, true);
+        stream = server.remote().createStream(3).open(true);
         assertEquals(3, stream.id());
         assertEquals(State.HALF_CLOSED_REMOTE, stream.state());
         assertEquals(3, server.activeStreams().size());
         assertEquals(3, server.remote().lastStreamCreated());
 
-        stream = server.remote().createStream(5, false);
+        stream = server.remote().createStream(5).open(false);
         assertEquals(5, stream.id());
         assertEquals(State.OPEN, stream.state());
         assertEquals(4, server.activeStreams().size());
@@ -99,25 +101,25 @@ public class DefaultHttp2ConnectionTest {
 
     @Test
     public void clientCreateStreamShouldSucceed() throws Http2Exception {
-        Http2Stream stream = client.remote().createStream(2, false);
+        Http2Stream stream = client.remote().createStream(2).open(false);
         assertEquals(2, stream.id());
         assertEquals(State.OPEN, stream.state());
         assertEquals(1, client.activeStreams().size());
         assertEquals(2, client.remote().lastStreamCreated());
 
-        stream = client.remote().createStream(4, true);
+        stream = client.remote().createStream(4).open(true);
         assertEquals(4, stream.id());
         assertEquals(State.HALF_CLOSED_REMOTE, stream.state());
         assertEquals(2, client.activeStreams().size());
         assertEquals(4, client.remote().lastStreamCreated());
 
-        stream = client.local().createStream(3, true);
+        stream = client.local().createStream(3).open(true);
         assertEquals(3, stream.id());
         assertEquals(State.HALF_CLOSED_LOCAL, stream.state());
         assertEquals(3, client.activeStreams().size());
         assertEquals(3, client.local().lastStreamCreated());
 
-        stream = client.local().createStream(5, false);
+        stream = client.local().createStream(5).open(false);
         assertEquals(5, stream.id());
         assertEquals(State.OPEN, stream.state());
         assertEquals(4, client.activeStreams().size());
@@ -126,7 +128,7 @@ public class DefaultHttp2ConnectionTest {
 
     @Test
     public void serverReservePushStreamShouldSucceed() throws Http2Exception {
-        Http2Stream stream = server.remote().createStream(3, true);
+        Http2Stream stream = server.remote().createStream(3).open(true);
         Http2Stream pushStream = server.local().reservePushStream(2, stream);
         assertEquals(2, pushStream.id());
         assertEquals(State.RESERVED_LOCAL, pushStream.state());
@@ -136,7 +138,7 @@ public class DefaultHttp2ConnectionTest {
 
     @Test
     public void clientReservePushStreamShouldSucceed() throws Http2Exception {
-        Http2Stream stream = server.remote().createStream(3, true);
+        Http2Stream stream = server.remote().createStream(3).open(true);
         Http2Stream pushStream = server.local().reservePushStream(4, stream);
         assertEquals(4, pushStream.id());
         assertEquals(State.RESERVED_LOCAL, pushStream.state());
@@ -146,28 +148,28 @@ public class DefaultHttp2ConnectionTest {
 
     @Test(expected = Http2Exception.class)
     public void newStreamBehindExpectedShouldThrow() throws Http2Exception {
-        server.local().createStream(0, true);
+        server.local().createStream(0).open(true);
     }
 
     @Test(expected = Http2Exception.class)
     public void newStreamNotForServerShouldThrow() throws Http2Exception {
-        server.local().createStream(11, true);
+        server.local().createStream(11).open(true);
     }
 
     @Test(expected = Http2Exception.class)
     public void newStreamNotForClientShouldThrow() throws Http2Exception {
-        client.local().createStream(10, true);
+        client.local().createStream(10).open(true);
     }
 
     @Test(expected = Http2Exception.class)
     public void maxAllowedStreamsExceededShouldThrow() throws Http2Exception {
         server.local().maxStreams(0);
-        server.local().createStream(2, true);
+        server.local().createStream(2).open(true);
     }
 
     @Test(expected = Http2Exception.class)
     public void reserveWithPushDisallowedShouldThrow() throws Http2Exception {
-        Http2Stream stream = server.remote().createStream(3, true);
+        Http2Stream stream = server.remote().createStream(3).open(true);
         server.remote().allowPushTo(false);
         server.local().reservePushStream(2, stream);
     }
@@ -175,12 +177,12 @@ public class DefaultHttp2ConnectionTest {
     @Test(expected = Http2Exception.class)
     public void goAwayReceivedShouldDisallowCreation() throws Http2Exception {
         server.goAwayReceived(0);
-        server.remote().createStream(3, true);
+        server.remote().createStream(3).open(true);
     }
 
     @Test
     public void closeShouldSucceed() throws Http2Exception {
-        Http2Stream stream = server.remote().createStream(3, true);
+        Http2Stream stream = server.remote().createStream(3).open(true);
         stream.close();
         assertEquals(State.CLOSED, stream.state());
         assertTrue(server.activeStreams().isEmpty());
@@ -188,7 +190,7 @@ public class DefaultHttp2ConnectionTest {
 
     @Test
     public void closeLocalWhenOpenShouldSucceed() throws Http2Exception {
-        Http2Stream stream = server.remote().createStream(3, false);
+        Http2Stream stream = server.remote().createStream(3).open(false);
         stream.closeLocalSide();
         assertEquals(State.HALF_CLOSED_LOCAL, stream.state());
         assertEquals(1, server.activeStreams().size());
@@ -196,7 +198,7 @@ public class DefaultHttp2ConnectionTest {
 
     @Test
     public void closeRemoteWhenOpenShouldSucceed() throws Http2Exception {
-        Http2Stream stream = server.remote().createStream(3, false);
+        Http2Stream stream = server.remote().createStream(3).open(false);
         stream.closeRemoteSide();
         assertEquals(State.HALF_CLOSED_REMOTE, stream.state());
         assertEquals(1, server.activeStreams().size());
@@ -204,7 +206,7 @@ public class DefaultHttp2ConnectionTest {
 
     @Test
     public void closeOnlyOpenSideShouldClose() throws Http2Exception {
-        Http2Stream stream = server.remote().createStream(3, true);
+        Http2Stream stream = server.remote().createStream(3).open(true);
         stream.closeLocalSide();
         assertEquals(State.CLOSED, stream.state());
         assertTrue(server.activeStreams().isEmpty());
@@ -212,17 +214,31 @@ public class DefaultHttp2ConnectionTest {
 
     @Test(expected = Http2Exception.class)
     public void localStreamInvalidStreamIdShouldThrow() throws Http2Exception {
-        client.createLocalStream(Integer.MAX_VALUE + 2, false);
+        client.createLocalStream(Integer.MAX_VALUE + 2).open(false);
     }
 
     @Test(expected = Http2Exception.class)
     public void remoteStreamInvalidStreamIdShouldThrow() throws Http2Exception {
-        client.createRemoteStream(Integer.MAX_VALUE + 1, false);
+        client.createRemoteStream(Integer.MAX_VALUE + 1).open(false);
+    }
+
+    @Test
+    public void localStreamCanDependUponIdleStream() throws Http2Exception {
+        Http2Stream streamA = client.local().createStream(1).open(false);
+        streamA.setPriority(3, MIN_WEIGHT, true);
+        verifyDependUponIdleStream(streamA, client.stream(3), client.local());
+    }
+
+    @Test
+    public void remoteStreamCanDependUponIdleStream() throws Http2Exception {
+        Http2Stream streamA = client.remote().createStream(2).open(false);
+        streamA.setPriority(4, MIN_WEIGHT, true);
+        verifyDependUponIdleStream(streamA, client.stream(4), client.remote());
     }
 
     @Test
     public void prioritizeShouldUseDefaults() throws Exception {
-        Http2Stream stream = client.local().createStream(1, false);
+        Http2Stream stream = client.local().createStream(1).open(false);
         assertEquals(1, client.connectionStream().numChildren());
         assertEquals(stream, client.connectionStream().child(1));
         assertEquals(DEFAULT_PRIORITY_WEIGHT, stream.weight());
@@ -232,7 +248,7 @@ public class DefaultHttp2ConnectionTest {
 
     @Test
     public void reprioritizeWithNoChangeShouldDoNothing() throws Exception {
-        Http2Stream stream = client.local().createStream(1, false);
+        Http2Stream stream = client.local().createStream(1).open(false);
         stream.setPriority(0, DEFAULT_PRIORITY_WEIGHT, false);
         assertEquals(1, client.connectionStream().numChildren());
         assertEquals(stream, client.connectionStream().child(1));
@@ -243,10 +259,10 @@ public class DefaultHttp2ConnectionTest {
 
     @Test
     public void insertExclusiveShouldAddNewLevel() throws Exception {
-        Http2Stream streamA = client.local().createStream(1, false);
-        Http2Stream streamB = client.local().createStream(3, false);
-        Http2Stream streamC = client.local().createStream(5, false);
-        Http2Stream streamD = client.local().createStream(7, false);
+        Http2Stream streamA = client.local().createStream(1).open(false);
+        Http2Stream streamB = client.local().createStream(3).open(false);
+        Http2Stream streamC = client.local().createStream(5).open(false);
+        Http2Stream streamD = client.local().createStream(7).open(false);
 
         streamB.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
         streamC.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
@@ -288,10 +304,10 @@ public class DefaultHttp2ConnectionTest {
 
     @Test
     public void weightChangeWithNoTreeChangeShouldNotifyListeners() throws Http2Exception {
-        Http2Stream streamA = client.local().createStream(1, false);
-        Http2Stream streamB = client.local().createStream(3, false);
-        Http2Stream streamC = client.local().createStream(5, false);
-        Http2Stream streamD = client.local().createStream(7, false);
+        Http2Stream streamA = client.local().createStream(1).open(false);
+        Http2Stream streamB = client.local().createStream(3).open(false);
+        Http2Stream streamC = client.local().createStream(5).open(false);
+        Http2Stream streamD = client.local().createStream(7).open(false);
 
         streamB.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
         streamC.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
@@ -313,10 +329,10 @@ public class DefaultHttp2ConnectionTest {
 
     @Test
     public void removeShouldRestructureTree() throws Exception {
-        Http2Stream streamA = client.local().createStream(1, false);
-        Http2Stream streamB = client.local().createStream(3, false);
-        Http2Stream streamC = client.local().createStream(5, false);
-        Http2Stream streamD = client.local().createStream(7, false);
+        Http2Stream streamA = client.local().createStream(1).open(false);
+        Http2Stream streamB = client.local().createStream(3).open(false);
+        Http2Stream streamC = client.local().createStream(5).open(false);
+        Http2Stream streamD = client.local().createStream(7).open(false);
 
         streamB.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
         streamC.setPriority(streamB.id(), DEFAULT_PRIORITY_WEIGHT, false);
@@ -352,19 +368,19 @@ public class DefaultHttp2ConnectionTest {
 
     @Test
     public void circularDependencyShouldRestructureTree() throws Exception {
-        // Using example from http://tools.ietf.org/html/draft-ietf-httpbis-http2-14#section-5.3.3
+        // Using example from http://tools.ietf.org/html/draft-ietf-httpbis-http2-16#section-5.3.3
         // Initialize all the nodes
-        Http2Stream streamA = client.local().createStream(1, false);
+        Http2Stream streamA = client.local().createStream(1).open(false);
         verifyParentChanged(streamA, null);
-        Http2Stream streamB = client.local().createStream(3, false);
+        Http2Stream streamB = client.local().createStream(3).open(false);
         verifyParentChanged(streamB, null);
-        Http2Stream streamC = client.local().createStream(5, false);
+        Http2Stream streamC = client.local().createStream(5).open(false);
         verifyParentChanged(streamC, null);
-        Http2Stream streamD = client.local().createStream(7, false);
+        Http2Stream streamD = client.local().createStream(7).open(false);
         verifyParentChanged(streamD, null);
-        Http2Stream streamE = client.local().createStream(9, false);
+        Http2Stream streamE = client.local().createStream(9).open(false);
         verifyParentChanged(streamE, null);
-        Http2Stream streamF = client.local().createStream(11, false);
+        Http2Stream streamF = client.local().createStream(11).open(false);
         verifyParentChanged(streamF, null);
 
         // Build the tree
@@ -442,19 +458,19 @@ public class DefaultHttp2ConnectionTest {
 
     @Test
     public void circularDependencyWithExclusiveShouldRestructureTree() throws Exception {
-        // Using example from http://tools.ietf.org/html/draft-ietf-httpbis-http2-14#section-5.3.3
+        // Using example from http://tools.ietf.org/html/draft-ietf-httpbis-http2-16#section-5.3.3
         // Initialize all the nodes
-        Http2Stream streamA = client.local().createStream(1, false);
+        Http2Stream streamA = client.local().createStream(1).open(false);
         verifyParentChanged(streamA, null);
-        Http2Stream streamB = client.local().createStream(3, false);
+        Http2Stream streamB = client.local().createStream(3).open(false);
         verifyParentChanged(streamB, null);
-        Http2Stream streamC = client.local().createStream(5, false);
+        Http2Stream streamC = client.local().createStream(5).open(false);
         verifyParentChanged(streamC, null);
-        Http2Stream streamD = client.local().createStream(7, false);
+        Http2Stream streamD = client.local().createStream(7).open(false);
         verifyParentChanged(streamD, null);
-        Http2Stream streamE = client.local().createStream(9, false);
+        Http2Stream streamE = client.local().createStream(9).open(false);
         verifyParentChanged(streamE, null);
-        Http2Stream streamF = client.local().createStream(11, false);
+        Http2Stream streamF = client.local().createStream(11).open(false);
         verifyParentChanged(streamF, null);
 
         // Build the tree
@@ -562,6 +578,17 @@ public class DefaultHttp2ConnectionTest {
             assertEquals(expectedArg1.get(i), capturedArg1.get(i));
             assertEquals(expectedArg2.get(i), capturedArg2.get(i));
         }
+    }
+
+    private static void verifyDependUponIdleStream(Http2Stream streamA, Http2Stream streamB, Endpoint<?> endpoint) {
+        assertNotNull(streamB);
+        assertEquals(streamB.id(), endpoint.lastStreamCreated());
+        assertEquals(State.IDLE, streamB.state());
+        assertEquals(MIN_WEIGHT, streamA.weight());
+        assertEquals(DEFAULT_PRIORITY_WEIGHT, streamB.weight());
+        assertEquals(streamB, streamA.parent());
+        assertEquals(1, streamB.numChildren());
+        assertEquals(streamA, streamB.children().iterator().next());
     }
 
     @SuppressWarnings("unchecked")

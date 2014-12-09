@@ -116,9 +116,9 @@ final class Http2TestUtil {
                 Http2Stream stream = connection.stream(streamId);
                 if (stream == null) {
                     if (connection.isServer() && streamId % 2 == 0 || !connection.isServer() && streamId % 2 != 0) {
-                        stream = connection.local().createStream(streamId, halfClosed);
+                        stream = connection.local().createStream(streamId).open(halfClosed);
                     } else {
-                        stream = connection.remote().createStream(streamId, halfClosed);
+                        stream = connection.remote().createStream(streamId).open(halfClosed);
                     }
                 }
                 return stream;
