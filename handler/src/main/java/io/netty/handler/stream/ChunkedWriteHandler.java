@@ -15,8 +15,6 @@
  */
 package io.netty.handler.stream;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -135,16 +133,16 @@ public class ChunkedWriteHandler extends ChannelHandlerAdapter {
 
     @Override
     public void flush(ChannelHandlerContext ctx) throws Exception {
-        Channel channel = ctx.channel();
-        if (channel.isWritable() || !channel.isActive()) {
-            doFlush(ctx);
+        if (!doFlush(ctx)) {
+            // Make sure to flush at least once.
+            ctx.flush();
         }
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         doFlush(ctx);
-        super.channelInactive(ctx);
+        ctx.fireChannelInactive();
     }
 
     @Override
@@ -196,12 +194,14 @@ public class ChunkedWriteHandler extends ChannelHandlerAdapter {
         }
     }
 
-    private void doFlush(final ChannelHandlerContext ctx) throws Exception {
+    private boolean doFlush(final ChannelHandlerContext ctx) throws Exception {
         final Channel channel = ctx.channel();
         if (!channel.isActive()) {
             discard(null);
-            return;
+            return false;
         }
+
+        boolean flushed = false;
         while (channel.isWritable()) {
             if (currentWrite == null) {
                 currentWrite = queue.poll();
@@ -305,12 +305,15 @@ public class ChunkedWriteHandler extends ChannelHandlerAdapter {
 
             // Always need to flush
             ctx.flush();
+            flushed = true;
 
             if (!channel.isActive()) {
                 discard(new ClosedChannelException());
-                return;
+                break;
             }
         }
+
+        return flushed;
     }
 
     static void closeInput(ChunkedInput<?> chunks) {
