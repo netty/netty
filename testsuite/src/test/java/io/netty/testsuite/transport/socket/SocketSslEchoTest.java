@@ -31,6 +31,7 @@ import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.OpenSslServerContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.concurrent.Future;
@@ -51,6 +52,7 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
@@ -77,8 +79,15 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         KEY_FILE = ssc.privateKey();
     }
 
+    public enum RenegotiationType {
+        NONE, // no renegotiation
+        CLIENT_INITIATED, // renegotiation from client
+        SERVER_INITIATED, // renegotiation from server
+    }
+
     @Parameters(name =
-            "{index}: serverEngine = {0}, clientEngine = {1}, useChunkedWriteHandler = {2}, useCompositeByteBuf = {3}")
+            "{index}: serverEngine = {0}, clientEngine = {1}, " +
+            "renegotiation = {2}, autoRead = {3}, useChunkedWriteHandler = {4}, useCompositeByteBuf = {5}")
     public static Collection<Object[]> data() throws Exception {
         List<SslContext> serverContexts = new ArrayList<SslContext>();
         serverContexts.add(new JdkSslServerContext(CERT_FILE, KEY_FILE));
@@ -99,8 +108,16 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         List<Object[]> params = new ArrayList<Object[]>();
         for (SslContext sc: serverContexts) {
             for (SslContext cc: clientContexts) {
-                for (int i = 0; i < 4; i ++) {
-                    params.add(new Object[] { sc, cc, (i & 2) != 0, (i & 1) != 0 });
+                for (RenegotiationType rt: RenegotiationType.values()) {
+                    if (rt != RenegotiationType.NONE &&
+                        (sc instanceof OpenSslServerContext || cc instanceof OpenSslServerContext)) {
+                        // TODO: OpenSslEngine does not support renegotiation yet.
+                        continue;
+                    }
+
+                    for (int i = 0; i < 8; i++) {
+                        params.add(new Object[] { sc, cc, rt, (i & 4) != 0, (i & 2) != 0, (i & 1) != 0 });
+                    }
                 }
             }
         }
@@ -110,13 +127,18 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
     private final SslContext serverCtx;
     private final SslContext clientCtx;
+    private final RenegotiationType renegotiationType;
+    private final boolean autoRead;
     private final boolean useChunkedWriteHandler;
     private final boolean useCompositeByteBuf;
 
     public SocketSslEchoTest(
-            SslContext serverCtx, SslContext clientCtx, boolean useChunkedWriteHandler, boolean useCompositeByteBuf) {
+            SslContext serverCtx, SslContext clientCtx, RenegotiationType renegotiationType,
+            boolean autoRead, boolean useChunkedWriteHandler, boolean useCompositeByteBuf) {
         this.serverCtx = serverCtx;
         this.clientCtx = clientCtx;
+        this.renegotiationType = renegotiationType;
+        this.autoRead = autoRead;
         this.useChunkedWriteHandler = useChunkedWriteHandler;
         this.useCompositeByteBuf = useCompositeByteBuf;
     }
@@ -127,21 +149,8 @@ public class SocketSslEchoTest extends AbstractSocketTest {
     }
 
     public void testSslEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSslEcho(sb, cb, true);
-    }
-
-    @Test(timeout = 30000)
-    public void testSslEchoNotAutoRead() throws Throwable {
-        run();
-    }
-
-    public void testSslEchoNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSslEcho(sb, cb, false);
-    }
-
-    private void testSslEcho(ServerBootstrap sb, Bootstrap cb, boolean autoRead) throws Throwable {
-        final EchoHandler sh = new EchoHandler(true, useCompositeByteBuf, autoRead);
-        final EchoHandler ch = new EchoHandler(false, useCompositeByteBuf, autoRead);
+        final EchoHandler sh = new EchoHandler(true);
+        final EchoHandler ch = new EchoHandler(false);
 
         sb.childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
@@ -175,6 +184,8 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
         assertFalse(firstByteWriteFutureDone.get());
 
+        boolean needsRenegotiation = renegotiationType == RenegotiationType.CLIENT_INITIATED;
+        Future<Channel> renegoFuture = null;
         for (int i = FIRST_MESSAGE_SIZE; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
             ByteBuf buf = Unpooled.wrappedBuffer(data, i, length);
@@ -184,8 +195,23 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             ChannelFuture future = cc.writeAndFlush(buf);
             future.sync();
             i += length;
+
+            if (needsRenegotiation && i >= data.length / 2) {
+                needsRenegotiation = false;
+                renegoFuture = cc.pipeline().get(SslHandler.class).renegotiate();
+                assertThat(renegoFuture, is(not(sameInstance(hf))));
+            }
         }
 
+        // Wait until renegotiation is done.
+        if (renegoFuture != null) {
+            renegoFuture.sync();
+        }
+        if (sh.renegoFuture != null) {
+            sh.renegoFuture.sync();
+        }
+
+        // Ensure all data has been exchanged.
         while (ch.counter < data.length) {
             if (sh.exception.get() != null) {
                 break;
@@ -232,20 +258,27 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         if (ch.exception.get() != null) {
             throw ch.exception.get();
         }
+
+        // When renegotiation is done, both the client and server side should be notified.
+        if (renegotiationType != RenegotiationType.NONE) {
+            assertThat(sh.negoCounter, is(2));
+            assertThat(ch.negoCounter, is(2));
+        } else {
+            assertThat(sh.negoCounter, is(1));
+            assertThat(ch.negoCounter, is(1));
+        }
     }
 
-    private static class EchoHandler extends SimpleChannelInboundHandler<ByteBuf> {
+    private class EchoHandler extends SimpleChannelInboundHandler<ByteBuf> {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
         private final boolean server;
-        private final boolean composite;
-        private final boolean autoRead;
+        volatile Future<Channel> renegoFuture;
+        volatile int negoCounter;
 
-        EchoHandler(boolean server, boolean composite, boolean autoRead) {
+        EchoHandler(boolean server) {
             this.server = server;
-            this.composite = composite;
-            this.autoRead = autoRead;
         }
 
         @Override
@@ -266,13 +299,24 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
             if (channel.parent() != null) {
                 ByteBuf buf = Unpooled.wrappedBuffer(actual);
-                if (composite) {
+                if (useCompositeByteBuf) {
                     buf = Unpooled.compositeBuffer().addComponent(buf).writerIndex(buf.writerIndex());
                 }
                 channel.write(buf);
             }
 
             counter += actual.length;
+
+            // Perform server-initiated renegotiation if necessary.
+            if (server && renegotiationType == RenegotiationType.SERVER_INITIATED &&
+                counter > data.length / 2 && renegoFuture == null) {
+
+                SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
+                Future<Channel> hf = sslHandler.handshakeFuture();
+                renegoFuture = sslHandler.renegotiate();
+                assertThat(renegoFuture, is(not(sameInstance(hf))));
+                assertThat(renegoFuture, is(sameInstance(sslHandler.handshakeFuture())));
+            }
         }
 
         @Override
@@ -283,6 +327,13 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                 if (!autoRead) {
                     ctx.read();
                 }
+            }
+        }
+
+        @Override
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            if (evt instanceof SslHandshakeCompletionEvent) {
+                negoCounter ++;
             }
         }
 
