@@ -24,15 +24,14 @@ import io.netty.testsuite.transport.socket.SocketSslEchoTest;
 import java.util.List;
 
 public class EpollSocketSslEchoTest extends SocketSslEchoTest {
-
     public EpollSocketSslEchoTest(
-            SslContext serverCtx, SslContext clientCtx,
+            SslContext serverCtx, SslContext clientCtx, RenegotiationType renegotiationType,
             boolean serverUsesDelegatedTaskExecutor, boolean clientUsesDelegatedTaskExecutor,
-            boolean useChunkedWriteHandler, boolean useCompositeByteBuf) {
-        super(
-                serverCtx, clientCtx,
-                serverUsesDelegatedTaskExecutor, clientUsesDelegatedTaskExecutor,
-                useChunkedWriteHandler, useCompositeByteBuf);
+            boolean autoRead, boolean useChunkedWriteHandler, boolean useCompositeByteBuf) {
+
+        super(serverCtx, clientCtx, renegotiationType,
+              serverUsesDelegatedTaskExecutor, clientUsesDelegatedTaskExecutor,
+              autoRead, useChunkedWriteHandler, useCompositeByteBuf);
     }
 
     @Override
