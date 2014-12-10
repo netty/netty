@@ -84,6 +84,8 @@ public final class ChannelOutboundBuffer {
     @SuppressWarnings("UnusedDeclaration")
     private volatile int unwritable;
 
+    private volatile Runnable fireChannelWritabilityChangedTask;
+
     static {
         AtomicIntegerFieldUpdater<ChannelOutboundBuffer> unwritableUpdater =
                 PlatformDependent.newAtomicIntegerFieldUpdater(ChannelOutboundBuffer.class, "unwritable");
@@ -124,7 +126,7 @@ public final class ChannelOutboundBuffer {
 
         // increment pending bytes after adding message to the unflushed arrays.
         // See https://github.com/netty/netty/issues/1619
-        incrementPendingOutboundBytes(size);
+        incrementPendingOutboundBytes(size, false);
     }
 
     /**
@@ -147,7 +149,7 @@ public final class ChannelOutboundBuffer {
                 if (!entry.promise.setUncancellable()) {
                     // Was cancelled so make sure we free up memory and notify about the freed bytes
                     int pending = entry.cancel();
-                    decrementPendingOutboundBytes(pending);
+                    decrementPendingOutboundBytes(pending, false);
                 }
                 entry = entry.next;
             } while (entry != null);
@@ -162,13 +164,17 @@ public final class ChannelOutboundBuffer {
      * This method is thread-safe!
      */
     void incrementPendingOutboundBytes(long size) {
+        incrementPendingOutboundBytes(size, true);
+    }
+
+    private void incrementPendingOutboundBytes(long size, boolean invokeLater) {
         if (size == 0) {
             return;
         }
 
         long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, size);
         if (newWriteBufferSize >= channel.config().getWriteBufferHighWaterMark()) {
-            setUnwritable();
+            setUnwritable(invokeLater);
         }
     }
 
@@ -177,13 +183,17 @@ public final class ChannelOutboundBuffer {
      * This method is thread-safe!
      */
     void decrementPendingOutboundBytes(long size) {
+        decrementPendingOutboundBytes(size, true);
+    }
+
+    private void decrementPendingOutboundBytes(long size, boolean invokeLater) {
         if (size == 0) {
             return;
         }
 
         long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, -size);
         if (newWriteBufferSize == 0 || newWriteBufferSize <= channel.config().getWriteBufferLowWaterMark()) {
-            setWritable();
+            setWritable(invokeLater);
         }
     }
 
@@ -247,7 +257,7 @@ public final class ChannelOutboundBuffer {
             // only release message, notify and decrement if it was not canceled before.
             ReferenceCountUtil.safeRelease(msg);
             safeSuccess(promise);
-            decrementPendingOutboundBytes(size);
+            decrementPendingOutboundBytes(size, false);
         }
 
         // recycle the entry
@@ -278,7 +288,7 @@ public final class ChannelOutboundBuffer {
             ReferenceCountUtil.safeRelease(msg);
 
             safeFail(promise, cause);
-            decrementPendingOutboundBytes(size);
+            decrementPendingOutboundBytes(size, false);
         }
 
         // recycle the entry
@@ -476,7 +486,7 @@ public final class ChannelOutboundBuffer {
             final int newValue = oldValue & mask;
             if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
                 if (oldValue != 0 && newValue == 0) {
-                    channel.pipeline().fireChannelWritabilityChanged();
+                    fireChannelWritabilityChanged(true);
                 }
                 break;
             }
@@ -490,7 +500,7 @@ public final class ChannelOutboundBuffer {
             final int newValue = oldValue | mask;
             if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
                 if (oldValue == 0 && newValue != 0) {
-                    channel.pipeline().fireChannelWritabilityChanged();
+                    fireChannelWritabilityChanged(true);
                 }
                 break;
             }
@@ -504,29 +514,47 @@ public final class ChannelOutboundBuffer {
         return 1 << index;
     }
 
-    private void setWritable() {
+    private void setWritable(boolean invokeLater) {
         for (;;) {
             final int oldValue = unwritable;
             final int newValue = oldValue & ~1;
             if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
                 if (oldValue != 0 && newValue == 0) {
-                    channel.pipeline().fireChannelWritabilityChanged();
+                    fireChannelWritabilityChanged(invokeLater);
                 }
                 break;
             }
         }
     }
 
-    private void setUnwritable() {
+    private void setUnwritable(boolean invokeLater) {
         for (;;) {
             final int oldValue = unwritable;
             final int newValue = oldValue | 1;
             if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
                 if (oldValue == 0 && newValue != 0) {
-                    channel.pipeline().fireChannelWritabilityChanged();
+                    fireChannelWritabilityChanged(invokeLater);
                 }
                 break;
             }
+        }
+    }
+
+    private void fireChannelWritabilityChanged(boolean invokeLater) {
+        final ChannelPipeline pipeline = channel.pipeline();
+        if (invokeLater) {
+            Runnable task = fireChannelWritabilityChangedTask;
+            if (task == null) {
+                fireChannelWritabilityChangedTask = task = new Runnable() {
+                    @Override
+                    public void run() {
+                        pipeline.fireChannelWritabilityChanged();
+                    }
+                };
+            }
+            channel.eventLoop().execute(task);
+        } else {
+            pipeline.fireChannelWritabilityChanged();
         }
     }
 
