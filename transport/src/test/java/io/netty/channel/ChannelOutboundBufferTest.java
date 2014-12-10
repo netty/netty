@@ -261,10 +261,12 @@ public class ChannelOutboundBufferTest {
 
         // Ensure that setting a user-defined writability flag to false affects channel.isWritable();
         cob.setUserDefinedWritability(1, false);
+        ch.runPendingTasks();
         assertThat(buf.toString(), is("false "));
 
         // Ensure that setting a user-defined writability flag to true affects channel.isWritable();
         cob.setUserDefinedWritability(1, true);
+        ch.runPendingTasks();
         assertThat(buf.toString(), is("false true "));
 
         safeClose(ch);
@@ -288,19 +290,23 @@ public class ChannelOutboundBufferTest {
 
         // Ensure that setting a user-defined writability flag to false affects channel.isWritable()
         cob.setUserDefinedWritability(1, false);
+        ch.runPendingTasks();
         assertThat(buf.toString(), is("false "));
 
         // Ensure that setting another user-defined writability flag to false does not trigger
         // channelWritabilityChanged.
         cob.setUserDefinedWritability(2, false);
+        ch.runPendingTasks();
         assertThat(buf.toString(), is("false "));
 
         // Ensure that setting only one user-defined writability flag to true does not affect channel.isWritable()
         cob.setUserDefinedWritability(1, true);
+        ch.runPendingTasks();
         assertThat(buf.toString(), is("false "));
 
         // Ensure that setting all user-defined writability flags to true affects channel.isWritable()
         cob.setUserDefinedWritability(2, true);
+        ch.runPendingTasks();
         assertThat(buf.toString(), is("false true "));
 
         safeClose(ch);
@@ -328,6 +334,7 @@ public class ChannelOutboundBufferTest {
 
         // Ensure that setting a user-defined writability flag to false does not trigger channelWritabilityChanged()
         cob.setUserDefinedWritability(1, false);
+        ch.runPendingTasks();
         assertThat(buf.toString(), is("false "));
 
         // Ensure reducing the totalPendingWriteBytes down to zero does not trigger channelWritabilityChannged()
@@ -338,6 +345,7 @@ public class ChannelOutboundBufferTest {
 
         // Ensure that setting the user-defined writability flag to true triggers channelWritabilityChanged()
         cob.setUserDefinedWritability(1, true);
+        ch.runPendingTasks();
         assertThat(buf.toString(), is("false true "));
 
         safeClose(ch);
