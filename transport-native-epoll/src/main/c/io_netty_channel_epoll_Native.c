@@ -211,7 +211,6 @@ int init_sockaddr(JNIEnv * env, jbyteArray address, jint scopeId, jint jport, st
     if (addressBytes == NULL) {
         // No memory left ?!?!?
         throwOutOfMemoryError(env, "Can't allocate memory");
-        return -1;
     }
     if (socketType == AF_INET6) {
         struct sockaddr_in6* ip6addr = (struct sockaddr_in6 *) addr;
@@ -640,7 +639,7 @@ JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_epollCtlDel(JNIEnv * e
     }
 }
 
-jint write0(JNIEnv * env, jclass clazz, jint fd, void *buffer, jint pos, jint limit) {
+jint _write(JNIEnv * env, jclass clazz, jint fd, void *buffer, jint pos, jint limit) {
     ssize_t res;
     int err;
     do {
@@ -649,34 +648,25 @@ jint write0(JNIEnv * env, jclass clazz, jint fd, void *buffer, jint pos, jint li
     } while(res == -1 && ((err = errno) == EINTR));
 
     if (res < 0) {
-        // network stack saturated... try again later
-        if (err == EAGAIN || err == EWOULDBLOCK) {
-            return 0;
-        }
-        if (err == EBADF) {
-            throwClosedChannelException(env);
-            return -1;
-        }
-        throwIOException(env, exceptionMessage("Error while write(...): ", err));
-        return -1;
+        return -err;
     }
     return (jint) res;
 }
 
-JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_write(JNIEnv * env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit) {
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_write0(JNIEnv * env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit) {
     void *buffer = (*env)->GetDirectBufferAddress(env, jbuffer);
     if (buffer == NULL) {
         throwRuntimeException(env, "Unable to access address of buffer");
         return -1;
     }
-    return  write0(env, clazz, fd, buffer, pos, limit);
+    return _write(env, clazz, fd, buffer, pos, limit);
 }
 
-JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_writeAddress(JNIEnv * env, jclass clazz, jint fd, jlong address, jint pos, jint limit) {
-    return write0(env, clazz, fd, (void *) address, pos, limit);
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_writeAddress0(JNIEnv * env, jclass clazz, jint fd, jlong address, jint pos, jint limit) {
+    return _write(env, clazz, fd, (void *) address, pos, limit);
 }
 
-jint sendTo0(JNIEnv * env, jint fd, void* buffer, jint pos, jint limit ,jbyteArray address, jint scopeId, jint port) {
+jint _sendTo(JNIEnv * env, jint fd, void* buffer, jint pos, jint limit ,jbyteArray address, jint scopeId, jint port) {
     struct sockaddr_storage addr;
     if (init_sockaddr(env, address, scopeId, port, &addr) == -1) {
         return -1;
@@ -690,31 +680,22 @@ jint sendTo0(JNIEnv * env, jint fd, void* buffer, jint pos, jint limit ,jbyteArr
     } while(res == -1 && ((err = errno) == EINTR));
 
     if (res < 0) {
-        // network stack saturated... try again later
-        if (err == EAGAIN || err == EWOULDBLOCK) {
-            return 0;
-        }
-        if (err == EBADF) {
-            throwClosedChannelException(env);
-            return -1;
-        }
-        throwIOException(env, exceptionMessage("Error while sendto(...): ", err));
-        return -1;
+        return -err;
     }
     return (jint) res;
 }
 
-JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_sendTo(JNIEnv * env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit, jbyteArray address, jint scopeId, jint port) {
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_sendTo0(JNIEnv * env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit, jbyteArray address, jint scopeId, jint port) {
     void *buffer = (*env)->GetDirectBufferAddress(env, jbuffer);
     if (buffer == NULL) {
         throwRuntimeException(env, "Unable to access address of buffer");
         return -1;
     }
-    return sendTo0(env, fd, buffer, pos, limit, address, scopeId, port);
+    return _sendTo(env, fd, buffer, pos, limit, address, scopeId, port);
 }
 
-JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_sendToAddress(JNIEnv * env, jclass clazz, jint fd, jlong memoryAddress, jint pos, jint limit ,jbyteArray address, jint scopeId, jint port) {
-    return sendTo0(env, fd, (void*) memoryAddress, pos, limit, address, scopeId, port);
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_sendToAddress0(JNIEnv * env, jclass clazz, jint fd, jlong memoryAddress, jint pos, jint limit ,jbyteArray address, jint scopeId, jint port) {
+    return _sendTo(env, fd, (void*) memoryAddress, pos, limit, address, scopeId, port);
 }
 
 JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_sendToAddresses(JNIEnv * env, jclass clazz, jint fd, jlong memoryAddress, jint length, jbyteArray address, jint scopeId, jint port) {
@@ -738,21 +719,12 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_sendToAddresses(JNIEnv
     } while(res == -1 && ((err = errno) == EINTR));
 
     if (res < 0) {
-        // network stack saturated... try again later
-        if (err == EAGAIN || err == EWOULDBLOCK) {
-            return 0;
-        }
-        if (err == EBADF) {
-            throwClosedChannelException(env);
-            return -1;
-        }
-        throwIOException(env, exceptionMessage("Error while sendto(...): ", err));
-        return -1;
+        return -err;
     }
     return (jint) res;
 }
 
-JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_sendmmsg(JNIEnv * env, jclass clazz, jint fd, jobjectArray packets, jint offset, jint len) {
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_sendmmsg0(JNIEnv * env, jclass clazz, jint fd, jobjectArray packets, jint offset, jint len) {
     struct mmsghdr msg[len];
     int i;
 
@@ -785,16 +757,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_sendmmsg(JNIEnv * env,
     } while(res == -1 && ((err = errno) == EINTR));
 
     if (res < 0) {
-        // network stack saturated... try again later
-        if (err == EAGAIN || err == EWOULDBLOCK) {
-            return 0;
-        }
-        if (err == EBADF) {
-            throwClosedChannelException(env);
-            return -1;
-        }
-        throwIOException(env, exceptionMessage("Error while sendmmsg(...): ", err));
-        return -1;
+        return -err;
     }
     return (jint) res;
 }
@@ -840,7 +803,7 @@ JNIEXPORT jobject JNICALL Java_io_netty_channel_epoll_Native_recvFromAddress(JNI
     return recvFrom0(env, fd, (void*) address, pos, limit);
 }
 
-jlong writev0(JNIEnv * env, jclass clazz, jint fd, struct iovec * iov, jint length) {
+jlong _writev(JNIEnv * env, jclass clazz, jint fd, struct iovec * iov, jint length) {
     ssize_t res;
     int err;
     do {
@@ -849,21 +812,12 @@ jlong writev0(JNIEnv * env, jclass clazz, jint fd, struct iovec * iov, jint leng
     } while(res == -1 && ((err = errno) == EINTR));
 
     if (res < 0) {
-        if (err == EAGAIN || err == EWOULDBLOCK) {
-            // network stack is saturated we will try again later
-            return 0;
-        }
-        if (err == EBADF) {
-            throwClosedChannelException(env);
-            return -1;
-        }
-        throwIOException(env, exceptionMessage("Error while writev(...): ", err));
-        return -1;
+        return -err;
     }
     return (jlong) res;
 }
 
-JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_writev(JNIEnv * env, jclass clazz, jint fd, jobjectArray buffers, jint offset, jint length) {
+JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_writev0(JNIEnv * env, jclass clazz, jint fd, jobjectArray buffers, jint offset, jint length) {
     struct iovec iov[length];
     int iovidx = 0;
     int i;
@@ -901,15 +855,15 @@ JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_writev(JNIEnv * env, 
         // See https://github.com/netty/netty/issues/2623
         (*env)->DeleteLocalRef(env, bufObj);
     }
-    return writev0(env, clazz, fd, iov, length);
+    return _writev(env, clazz, fd, iov, length);
 }
 
-JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_writevAddresses(JNIEnv * env, jclass clazz, jint fd, jlong memoryAddress, jint length) {
+JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_writevAddresses0(JNIEnv * env, jclass clazz, jint fd, jlong memoryAddress, jint length) {
     struct iovec * iov = (struct iovec *) memoryAddress;
-    return writev0(env, clazz, fd, iov, length);
+    return _writev(env, clazz, fd, iov, length);
 }
 
-jint read0(JNIEnv * env, jclass clazz, jint fd, void *buffer, jint pos, jint limit) {
+jint _read(JNIEnv * env, jclass clazz, jint fd, void *buffer, jint pos, jint limit) {
     ssize_t res;
     int err;
     do {
@@ -918,45 +872,33 @@ jint read0(JNIEnv * env, jclass clazz, jint fd, void *buffer, jint pos, jint lim
     } while (res == -1 && ((err = errno) == EINTR));
 
     if (res < 0) {
-        if (err == EAGAIN || err == EWOULDBLOCK) {
-            // Nothing left to read
-            return 0;
-        }
-        if (err == EBADF) {
-            throwClosedChannelException(env);
-            return -1;
-        }
-        throwIOException(env, exceptionMessage("Error while read(...): ", err));
-        return -1;
-    }
-
-    if (res == 0) {
-        // end-of-stream
-        return -1;
+        return -err;
     }
     return (jint) res;
 }
 
-JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_read(JNIEnv * env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit) {
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_read0(JNIEnv * env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit) {
     void *buffer = (*env)->GetDirectBufferAddress(env, jbuffer);
     if (buffer == NULL) {
         throwRuntimeException(env, "Unable to access address of buffer");
         return -1;
     }
-    return read0(env, clazz, fd, buffer, pos, limit);
+    return _read(env, clazz, fd, buffer, pos, limit);
 }
 
-JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_readAddress(JNIEnv * env, jclass clazz, jint fd, jlong address, jint pos, jint limit) {
-    return read0(env, clazz, fd, (void*) address, pos, limit);
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_readAddress0(JNIEnv * env, jclass clazz, jint fd, jlong address, jint pos, jint limit) {
+    return _read(env, clazz, fd, (void*) address, pos, limit);
 }
 
-JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_close(JNIEnv * env, jclass clazz, jint fd) {
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_close0(JNIEnv * env, jclass clazz, jint fd) {
    if (close(fd) < 0) {
-      throwIOException(env, "Error closing file descriptor");
+       int err = errno;
+       return -err;
    }
+   return 0;
 }
 
-JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_shutdown(JNIEnv * env, jclass clazz, jint fd, jboolean read, jboolean write) {
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_shutdown0(JNIEnv * env, jclass clazz, jint fd, jboolean read, jboolean write) {
     int mode;
     if (read && write) {
         mode = SHUT_RDWR;
@@ -966,8 +908,10 @@ JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_shutdown(JNIEnv * env,
         mode = SHUT_WR;
     }
     if (shutdown(fd, mode) < 0) {
-        throwIOException(env, "Error shutdown socket file descriptor");
+        int err = errno;
+        return -err;
     }
+    return 0;
 }
 
 jint socket0(JNIEnv * env, jclass clazz, int type) {
@@ -975,8 +919,7 @@ jint socket0(JNIEnv * env, jclass clazz, int type) {
     int fd = socket(socketType, type | SOCK_NONBLOCK, 0);
     if (fd == -1) {
         int err = errno;
-        throwIOException(env, exceptionMessage("Error creating socket: ", err));
-        return -1;
+        return -err;
     } else if (socketType == AF_INET6){
         // Allow to listen /connect ipv4 and ipv6
         int optval = 0;
@@ -997,7 +940,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_socketStream(JNIEnv * 
     return socket0(env, clazz, SOCK_STREAM);
 }
 
-JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_bind(JNIEnv * env, jclass clazz, jint fd, jbyteArray address, jint scopeId, jint port) {
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_bind(JNIEnv * env, jclass clazz, jint fd, jbyteArray address, jint scopeId, jint port) {
     struct sockaddr_storage addr;
     if (init_sockaddr(env, address, scopeId, port, &addr) == -1) {
         return;
@@ -1005,20 +948,22 @@ JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_bind(JNIEnv * env, jcl
 
     if(bind(fd, (struct sockaddr *) &addr, sizeof(addr)) == -1){
         int err = errno;
-        throwIOException(env, exceptionMessage("Error during bind(...): ", err));
+        return -err;
     }
 }
 
-JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_listen(JNIEnv * env, jclass clazz, jint fd, jint backlog) {
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_listen0(JNIEnv * env, jclass clazz, jint fd, jint backlog) {
     if(listen(fd, backlog) == -1) {
         int err = errno;
-        throwIOException(env, exceptionMessage("Error during listen(...): ", err));
+        return -err;
     }
+    return 0;
 }
 
-JNIEXPORT jboolean JNICALL Java_io_netty_channel_epoll_Native_connect(JNIEnv * env, jclass clazz, jint fd, jbyteArray address, jint scopeId, jint port) {
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_connect(JNIEnv * env, jclass clazz, jint fd, jbyteArray address, jint scopeId, jint port) {
     struct sockaddr_storage addr;
     if (init_sockaddr(env, address, scopeId, port, &addr) == -1) {
+        // A runtime exception was thrown
         return -1;
     }
 
@@ -1029,18 +974,12 @@ JNIEXPORT jboolean JNICALL Java_io_netty_channel_epoll_Native_connect(JNIEnv * e
     } while (res == -1 && ((err = errno) == EINTR));
 
     if (res < 0) {
-        if (err == EINPROGRESS) {
-            // connect not complete yet need to wait for EPOLLOUT event
-            return JNI_FALSE;
-        }
-        throwIOException(env, exceptionMessage("Unable to connect to remote host: ", err));
-
-        return JNI_FALSE;
+        return -err;
     }
-    return JNI_TRUE;
+    return 0;
 }
 
-JNIEXPORT jboolean JNICALL Java_io_netty_channel_epoll_Native_finishConnect(JNIEnv * env, jclass clazz, jint fd) {
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_finishConnect0(JNIEnv * env, jclass clazz, jint fd) {
     // connect may be done
     // return true if connection finished successfully
     // return false if connection is still in progress
@@ -1049,22 +988,16 @@ JNIEXPORT jboolean JNICALL Java_io_netty_channel_epoll_Native_finishConnect(JNIE
     int res = getOption(env, fd, SOL_SOCKET, SO_ERROR, &optval, sizeof(optval));
     if (res != 0) {
         // getOption failed
-        throwIOException(env, exceptionMessage("finishConnect getOption failed: ", res));
-        return JNI_FALSE;
-    } else if (optval == EINPROGRESS) {
-        // connect still in progress
-        return JNI_FALSE;
-    } else if (optval == 0) {
-        // connect succeeded
-        return JNI_TRUE;
-    } else {
-        // connect failed
-        throwIOException(env, exceptionMessage("Unable to connect to remote host: ", optval));
-        return JNI_FALSE;
+        return -1;
     }
+    if (optval == 0) {
+        // connect succeeded
+        return 0;
+    }
+    return -optval;
 }
 
-JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_accept(JNIEnv * env, jclass clazz, jint fd) {
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_accept0(JNIEnv * env, jclass clazz, jint fd) {
     jint socketFd;
     int err;
 
@@ -1077,31 +1010,25 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_accept(JNIEnv * env, j
     } while (socketFd == -1 && ((err = errno) == EINTR));
 
     if (socketFd == -1) {
-        if (err == EAGAIN || err == EWOULDBLOCK) {
-            // Everything consumed so just return -1 here.
-            return -1;
-        } else {
-            throwIOException(env, exceptionMessage("Error during accept(...): ", err));
-            return -1;
-        }
+        return -err;
     }
     if (accept4)  {
         return socketFd;
     } else  {
         // accept4 was not present so need two more sys-calls ...
         if (fcntl(socketFd, F_SETFD, FD_CLOEXEC) == -1) {
-            throwIOException(env, exceptionMessage("Error during accept(...): ", err));
-            return -1;
+            err = errno;
+            return -err;
         }
         if (fcntl(socketFd, F_SETFL, O_NONBLOCK) == -1) {
-            throwIOException(env, exceptionMessage("Error during accept(...): ", err));
-            return -1;
+            err = errno;
+            return -err;
         }
     }
     return socketFd;
 }
 
-JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_sendfile(JNIEnv *env, jclass clazz, jint fd, jobject fileRegion, jlong base_off, jlong off, jlong len) {
+JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_sendfile0(JNIEnv *env, jclass clazz, jint fd, jobject fileRegion, jlong base_off, jlong off, jlong len) {
     jobject fileChannel = (*env)->GetObjectField(env, fileRegion, fileChannelFieldId);
     if (fileChannel == NULL) {
         throwRuntimeException(env, "Unable to obtain FileChannel from FileRegion");
@@ -1124,11 +1051,7 @@ JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_sendfile(JNIEnv *env,
       res = sendfile(fd, srcFd, &offset, (size_t) len);
     } while (res == -1 && ((err = errno) == EINTR));
     if (res < 0) {
-        if (err == EAGAIN) {
-            return 0;
-        }
-        throwIOException(env, exceptionMessage("Error during sendfile(...): ", err));
-        return -1;
+        return -err;
     }
     if (res > 0) {
         // update the transfered field in DefaultFileRegion
@@ -1340,11 +1263,35 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_uioMaxIov(JNIEnv *env,
     return UIO_MAXIOV;
 }
 
-
 JNIEXPORT jboolean JNICALL Java_io_netty_channel_epoll_Native_isSupportingSendmmsg(JNIEnv *env, jclass clazz) {
     if (sendmmsg) {
         return JNI_TRUE;
     }
     return JNI_FALSE;
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_errnoEBADF(JNIEnv *env, jclass clazz) {
+    return EBADF;
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_errnoEPIPE(JNIEnv *env, jclass clazz) {
+    return EPIPE;
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_errnoEAGAIN(JNIEnv *env, jclass clazz) {
+    return EAGAIN;
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_errnoEWOULDBLOCK(JNIEnv *env, jclass clazz) {
+    return EWOULDBLOCK;
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_errnoEINPROGRESS(JNIEnv *env, jclass clazz) {
+    return EINPROGRESS;
+}
+
+JNIEXPORT jstring JNICALL Java_io_netty_channel_epoll_Native_strError(JNIEnv *env, jclass clazz, jint error) {
+    char *err = strerror(error);
+    return (*env)->NewStringUTF(env, err);
 }
 
