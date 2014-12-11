@@ -812,4 +812,38 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
 
         cbuf.discardSomeReadBytes();
     }
+
+    @Test
+    public void testAddEmptyBufferRelease() {
+        CompositeByteBuf cbuf = compositeBuffer();
+        ByteBuf buf = buffer();
+        assertEquals(1, buf.refCnt());
+        cbuf.addComponent(buf);
+        assertEquals(1, buf.refCnt());
+
+        cbuf.release();
+        assertEquals(0, buf.refCnt());
+    }
+
+    @Test
+    public void testAddEmptyBuffersRelease() {
+        CompositeByteBuf cbuf = compositeBuffer();
+        ByteBuf buf = buffer();
+        ByteBuf buf2 = buffer().writeInt(1);
+        ByteBuf buf3 = buffer();
+
+        assertEquals(1, buf.refCnt());
+        assertEquals(1, buf2.refCnt());
+        assertEquals(1, buf3.refCnt());
+
+        cbuf.addComponents(buf, buf2, buf3);
+        assertEquals(1, buf.refCnt());
+        assertEquals(1, buf2.refCnt());
+        assertEquals(1, buf3.refCnt());
+
+        cbuf.release();
+        assertEquals(0, buf.refCnt());
+        assertEquals(0, buf2.refCnt());
+        assertEquals(0, buf3.refCnt());
+    }
 }

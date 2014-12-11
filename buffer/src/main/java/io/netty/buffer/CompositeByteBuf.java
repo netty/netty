@@ -164,9 +164,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
         }
 
         int readableBytes = buffer.readableBytes();
-        if (readableBytes == 0) {
-            return cIndex;
-        }
 
         // No need to consolidate - just add a component to the list.
         Component c = new Component(buffer.order(ByteOrder.BIG_ENDIAN).slice());
@@ -208,31 +205,15 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
             throw new NullPointerException("buffers");
         }
 
-        int readableBytes = 0;
-        for (ByteBuf b: buffers) {
-            if (b == null) {
-                break;
-            }
-            readableBytes += b.readableBytes();
-        }
-
-        if (readableBytes == 0) {
-            return cIndex;
-        }
-
         // No need for consolidation
         for (ByteBuf b: buffers) {
             if (b == null) {
                 break;
             }
-            if (b.isReadable()) {
-                cIndex = addComponent0(cIndex, b) + 1;
-                int size = components.size();
-                if (cIndex > size) {
-                    cIndex = size;
-                }
-            } else {
-                b.release();
+            cIndex = addComponent0(cIndex, b) + 1;
+            int size = components.size();
+            if (cIndex > size) {
+                cIndex = size;
             }
         }
         return cIndex;
