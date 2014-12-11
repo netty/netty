@@ -554,15 +554,11 @@ public final class OpenSslEngine extends SSLEngine {
         isInboundDone = true;
         engineClosed = true;
 
-        if (accepted != 0) {
-            if (!receivedShutdown) {
-                shutdown();
-                throw new SSLException(
-                        "Inbound closed before receiving peer's close_notify: possible truncation attack?");
-            }
-        } else {
-            // engine closing before initial handshake
-            shutdown();
+        shutdown();
+
+        if (accepted != 0 && !receivedShutdown) {
+            throw new SSLException(
+                    "Inbound closed before receiving peer's close_notify: possible truncation attack?");
         }
     }
 
@@ -746,10 +742,9 @@ public final class OpenSslEngine extends SSLEngine {
 
     @Override
     public synchronized void beginHandshake() throws SSLException {
-        if (engineClosed) {
+        if (engineClosed || destroyed != 0) {
             throw ENGINE_CLOSED;
         }
-
         switch (accepted) {
             case 0:
                 SSL.doHandshake(ssl);
@@ -772,7 +767,7 @@ public final class OpenSslEngine extends SSLEngine {
     }
 
     private synchronized void beginHandshakeImplicitly() throws SSLException {
-        if (engineClosed) {
+        if (engineClosed || destroyed != 0) {
             throw ENGINE_CLOSED;
         }
 
@@ -881,5 +876,12 @@ public final class OpenSslEngine extends SSLEngine {
     @Override
     public boolean getEnableSessionCreation() {
         return false;
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        super.finalize();
+        // Call shutdown as the user may have created the OpenSslEngine and not used it at all.
+        shutdown();
     }
 }
