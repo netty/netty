@@ -118,9 +118,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
                         buf = nextBuf;
                     }
                 } finally {
-                    if (buf != null) {
-                        buf.release();
-                    }
+                    buf.release();
                 }
             }
             decompressor.incrementProcessedBytes(processedBytes);
@@ -290,7 +288,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
     /**
      * A decorator around the local flow controller that converts consumed bytes from uncompressed to compressed.
      */
-    private final class ConsumedBytesConverter implements Http2LocalFlowController {
+    private static final class ConsumedBytesConverter implements Http2LocalFlowController {
         private final Http2LocalFlowController flowController;
 
         ConsumedBytesConverter(Http2LocalFlowController flowController) {

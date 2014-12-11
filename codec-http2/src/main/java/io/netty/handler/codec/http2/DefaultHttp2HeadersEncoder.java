@@ -87,14 +87,15 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
                     return true;
                 }
             });
-        } catch (Exception e) {
-            throw connectionError(COMPRESSION_ERROR, "Failed encoding headers block: %s",
-                            e.getMessage());
+        } catch (Http2Exception e) {
+            throw e;
+        } catch (Throwable t) {
+            throw connectionError(COMPRESSION_ERROR, t, "Failed encoding headers block: %s", t.getMessage());
         } finally {
             try {
                 stream.close();
             } catch (IOException e) {
-                throw new Http2Exception(INTERNAL_ERROR, e.getMessage(), e);
+                throw connectionError(INTERNAL_ERROR, e, e.getMessage());
             }
         }
     }

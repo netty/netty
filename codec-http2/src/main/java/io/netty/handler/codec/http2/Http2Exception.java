@@ -137,18 +137,13 @@ public class Http2Exception extends Exception {
         private static final long serialVersionUID = 462766352505067095L;
         private final int streamId;
 
-        private StreamException(int streamId, Http2Error error, String message) {
+        StreamException(int streamId, Http2Error error, String message) {
             super(error, message);
             this.streamId = streamId;
         }
 
-        private StreamException(int streamId, Http2Error error, String message, Throwable cause) {
+        StreamException(int streamId, Http2Error error, String message, Throwable cause) {
             super(error, message, cause);
-            this.streamId = streamId;
-        }
-
-        private StreamException(int streamId, Http2Error error) {
-            super(error);
             this.streamId = streamId;
         }
 

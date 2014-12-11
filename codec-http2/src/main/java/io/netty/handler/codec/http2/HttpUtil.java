@@ -175,8 +175,8 @@ public final class HttpUtil {
             }
         } catch (Http2Exception e) {
             throw e;
-        } catch (Exception ignored) {
-            throw connectionError(PROTOCOL_ERROR,
+        } catch (Throwable t) {
+            throw connectionError(PROTOCOL_ERROR, t,
                             "Unrecognized HTTP status code '%s' encountered in translation to HTTP/1.x", status);
         }
         return result;
