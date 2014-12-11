@@ -903,10 +903,6 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf slice(int index, int length) {
-        if (length == 0) {
-            return Unpooled.EMPTY_BUFFER;
-        }
-
         return new SlicedByteBuf(this, index, length);
     }
 
