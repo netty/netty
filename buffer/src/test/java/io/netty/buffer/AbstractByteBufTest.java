@@ -2456,6 +2456,22 @@ public abstract class AbstractByteBufTest {
         }
     }
 
+    @Test
+    public void testSliceRelease() {
+        ByteBuf buf = newBuffer(8);
+        assertEquals(1, buf.refCnt());
+        assertTrue(buf.slice().release());
+        assertEquals(0, buf.refCnt());
+    }
+
+    @Test
+    public void testDuplicateRelease() {
+        ByteBuf buf = newBuffer(8);
+        assertEquals(1, buf.refCnt());
+        assertTrue(buf.duplicate().release());
+        assertEquals(0, buf.refCnt());
+    }
+
     // Test-case trying to reproduce:
     // https://github.com/netty/netty/issues/2843
     @Test
