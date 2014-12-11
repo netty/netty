@@ -513,14 +513,12 @@ public class DefaultHttp2Connection implements Http2Connection {
             notifyParentChanging(child, this);
             child.parent = this;
 
-            if (exclusive) {
+            if (exclusive && !children.isEmpty()) {
                 // If it was requested that this child be the exclusive dependency of this node,
                 // move any previous children to the child node, becoming grand children
                 // of this node.
-                if (!children.isEmpty()) {
-                    for (DefaultStream grandchild : removeAllChildren().values()) {
-                        child.takeChild(grandchild, false, events);
-                    }
+                for (DefaultStream grandchild : removeAllChildren().values()) {
+                    child.takeChild(grandchild, false, events);
                 }
             }
 
@@ -676,7 +674,7 @@ public class DefaultHttp2Connection implements Http2Connection {
      * Stream class representing the connection, itself.
      */
     private final class ConnectionStream extends DefaultStream {
-        private ConnectionStream() {
+        ConnectionStream() {
             super(CONNECTION_STREAM_ID);
         }
 

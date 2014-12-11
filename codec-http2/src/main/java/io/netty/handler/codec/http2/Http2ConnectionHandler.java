@@ -373,7 +373,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         try {
             // Read the remaining of the client preface string if we haven't already.
             // If this is a client endpoint, always returns true.
-            if (!readClientPrefaceString(ctx, in)) {
+            if (!readClientPrefaceString(in)) {
                 // Still processing the client preface.
                 return;
             }
@@ -422,7 +422,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      * @return {@code true} if processing of the client preface string is complete. Since client preface strings can
      *         only be received by servers, returns true immediately for client endpoints.
      */
-    private boolean readClientPrefaceString(ChannelHandlerContext ctx, ByteBuf in) throws Http2Exception {
+    private boolean readClientPrefaceString(ByteBuf in) throws Http2Exception {
         if (clientPrefaceString == null) {
             return true;
         }

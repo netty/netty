@@ -20,6 +20,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertSame;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyShort;
 import static org.mockito.Matchers.eq;
@@ -532,15 +533,15 @@ public class DefaultHttp2ConnectionTest {
     }
 
     private void verifyParentChanging(List<Http2Stream> expectedArg1, List<Http2Stream> expectedArg2) {
-        assertTrue(expectedArg1.size() == expectedArg2.size());
+        assertSame(expectedArg1.size(), expectedArg2.size());
         ArgumentCaptor<Http2Stream> arg1Captor = ArgumentCaptor.forClass(Http2Stream.class);
         ArgumentCaptor<Http2Stream> arg2Captor = ArgumentCaptor.forClass(Http2Stream.class);
         verify(clientListener, times(expectedArg1.size())).priorityTreeParentChanging(arg1Captor.capture(),
                         arg2Captor.capture());
         List<Http2Stream> capturedArg1 = arg1Captor.getAllValues();
         List<Http2Stream> capturedArg2 = arg2Captor.getAllValues();
-        assertTrue(capturedArg1.size() == capturedArg2.size());
-        assertTrue(capturedArg1.size() == expectedArg1.size());
+        assertSame(capturedArg1.size(), capturedArg2.size());
+        assertSame(capturedArg1.size(), expectedArg1.size());
         for (int i = 0; i < capturedArg1.size(); ++i) {
             assertEquals(expectedArg1.get(i), capturedArg1.get(i));
             assertEquals(expectedArg2.get(i), capturedArg2.get(i));
@@ -548,15 +549,15 @@ public class DefaultHttp2ConnectionTest {
     }
 
     private void verifyParentsChanged(List<Http2Stream> expectedArg1, List<Http2Stream> expectedArg2) {
-        assertTrue(expectedArg1.size() == expectedArg2.size());
+        assertSame(expectedArg1.size(), expectedArg2.size());
         ArgumentCaptor<Http2Stream> arg1Captor = ArgumentCaptor.forClass(Http2Stream.class);
         ArgumentCaptor<Http2Stream> arg2Captor = ArgumentCaptor.forClass(Http2Stream.class);
         verify(clientListener, times(expectedArg1.size())).priorityTreeParentChanged(arg1Captor.capture(),
                         arg2Captor.capture());
         List<Http2Stream> capturedArg1 = arg1Captor.getAllValues();
         List<Http2Stream> capturedArg2 = arg2Captor.getAllValues();
-        assertTrue(capturedArg1.size() == capturedArg2.size());
-        assertTrue(capturedArg1.size() == expectedArg1.size());
+        assertSame(capturedArg1.size(), capturedArg2.size());
+        assertSame(capturedArg1.size(), expectedArg1.size());
         for (int i = 0; i < capturedArg1.size(); ++i) {
             assertEquals(expectedArg1.get(i), capturedArg1.get(i));
             assertEquals(expectedArg2.get(i), capturedArg2.get(i));

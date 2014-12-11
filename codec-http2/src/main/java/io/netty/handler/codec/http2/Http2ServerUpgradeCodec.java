@@ -47,7 +47,6 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
     private final String handlerName;
     private final Http2ConnectionHandler connectionHandler;
     private final Http2FrameReader frameReader;
-    private Http2Settings settings;
 
     /**
      * Creates the codec using a default name for the connection handler when adding to the
@@ -92,7 +91,7 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
                 throw new IllegalArgumentException("There must be 1 and only 1 "
                         + HTTP_UPGRADE_SETTINGS_HEADER + " header.");
             }
-            settings = decodeSettingsHeader(ctx, upgradeHeaders.get(0));
+            Http2Settings settings = decodeSettingsHeader(ctx, upgradeHeaders.get(0));
             connectionHandler.onHttpServerUpgrade(settings);
             // Everything looks good, no need to modify the response.
         } catch (Throwable e) {

@@ -403,7 +403,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         // is present in the headers frame.
         if (flags.priorityPresent()) {
             long word1 = payload.readUnsignedInt();
-            final boolean exclusive = (word1 & 0x80000000L) > 0;
+            final boolean exclusive = (word1 & 0x80000000L) != 0;
             final int streamDependency = (int) (word1 & 0x7FFFFFFFL);
             final short weight = (short) (payload.readUnsignedByte() + 1);
             final ByteBuf fragment = payload.readSlice(payload.readableBytes() - padding);
@@ -462,7 +462,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
     private void readPriorityFrame(ChannelHandlerContext ctx, ByteBuf payload,
             Http2FrameListener listener) throws Http2Exception {
         long word1 = payload.readUnsignedInt();
-        boolean exclusive = (word1 & 0x80000000L) > 0;
+        boolean exclusive = (word1 & 0x80000000L) != 0;
         int streamDependency = (int) (word1 & 0x7FFFFFFFL);
         short weight = (short) (payload.readUnsignedByte() + 1);
         listener.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);

@@ -62,7 +62,7 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
         }
     }
 
-    private InboundHttp2ToHttpPriorityAdapter(Builder builder) {
+    InboundHttp2ToHttpPriorityAdapter(Builder builder) {
         super(builder);
         outOfMessageFlowHeaders = new IntObjectHashMap<HttpHeaders>();
     }

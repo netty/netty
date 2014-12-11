@@ -361,7 +361,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         private int allocated;
         private ChannelFuture lastNewFrame;
 
-        private FlowState(Http2Stream stream) {
+        FlowState(Http2Stream stream) {
             this.stream = stream;
             pendingWriteQueue = new ArrayDeque<Frame>(2);
         }
@@ -590,9 +590,8 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                         try {
                             connectionState().incrementStreamWindow(-bytesToWrite);
                             incrementStreamWindow(-bytesToWrite);
-                        } catch (Http2Exception e) {
-                            // Should never get here since we're decrementing.
-                            throw new AssertionError("Invalid window state when writing frame: " + e.getMessage());
+                        } catch (Http2Exception e) { // Should never get here since we're decrementing.
+                            throw new RuntimeException("Invalid window state when writing frame: " + e.getMessage(), e);
                         }
                         frameWriter.writeData(ctx, stream.id(), data, padding, endStream, promise);
                         frameSent = true;
@@ -662,7 +661,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     /**
      * Lightweight promise aggregator.
      */
-    private class SimplePromiseAggregator {
+    private static final class SimplePromiseAggregator {
         final ChannelPromise promise;
         final AtomicInteger awaiting = new AtomicInteger();
         final ChannelFutureListener listener = new ChannelFutureListener() {
