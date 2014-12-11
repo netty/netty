@@ -206,7 +206,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     private final boolean startTls;
     private boolean sentFirstMessage;
-    private boolean flushedBeforeHandshakeDone;
+    private boolean flushedBeforeHandshake;
+    private boolean readDuringHandshake;
     private PendingWriteQueue pendingUnencryptedWrites;
 
     private Promise<Channel> handshakePromise = new LazyChannelPromise();
@@ -408,7 +409,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) {
+    public void read(ChannelHandlerContext ctx) throws Exception {
+        if (!handshakePromise.isDone()) {
+            readDuringHandshake = true;
+        }
+
         ctx.read();
     }
 
@@ -431,7 +436,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             pendingUnencryptedWrites.add(Unpooled.EMPTY_BUFFER, ctx.voidPromise());
         }
         if (!handshakePromise.isDone()) {
-            flushedBeforeHandshakeDone = true;
+            flushedBeforeHandshake = true;
         }
         wrap(ctx, false);
         ctx.flush();
@@ -888,7 +893,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             needsFlush = false;
             ctx.flush();
         }
-        super.channelReadComplete(ctx);
+
+        // If handshake is not finished yet, we need more data.
+        if (!handshakePromise.isDone() && !ctx.channel().config().isAutoRead()) {
+            ctx.read();
+        }
+
+        ctx.fireChannelReadComplete();
     }
 
     /**
@@ -952,11 +963,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                             wrapLater = true;
                             continue;
                         }
-                        if (flushedBeforeHandshakeDone) {
+                        if (flushedBeforeHandshake) {
                             // We need to call wrap(...) in case there was a flush done before the handshake completed.
                             //
                             // See https://github.com/netty/netty/pull/2437
-                            flushedBeforeHandshakeDone = false;
+                            flushedBeforeHandshake = false;
                             wrapLater = true;
                         }
 
@@ -1109,6 +1120,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             logger.debug(ctx.channel() + " HANDSHAKEN: " + engine.getSession().getCipherSuite());
         }
         ctx.fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
+
+        if (readDuringHandshake && !ctx.channel().config().isAutoRead()) {
+            readDuringHandshake = false;
+            ctx.read();
+        }
     }
 
     /**
