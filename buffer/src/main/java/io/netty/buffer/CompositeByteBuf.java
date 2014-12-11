@@ -165,9 +165,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
         }
 
         int readableBytes = buffer.readableBytes();
-        if (readableBytes == 0) {
-            return cIndex;
-        }
 
         // No need to consolidate - just add a component to the list.
         Component c = new Component(buffer.order(ByteOrder.BIG_ENDIAN).slice());
@@ -182,7 +179,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
             }
         } else {
             components.add(cIndex, c);
-            updateComponentOffsets(cIndex);
+            if (readableBytes != 0) {
+                updateComponentOffsets(cIndex);
+            }
         }
         return cIndex;
     }
@@ -209,31 +208,15 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
             throw new NullPointerException("buffers");
         }
 
-        int readableBytes = 0;
-        for (ByteBuf b: buffers) {
-            if (b == null) {
-                break;
-            }
-            readableBytes += b.readableBytes();
-        }
-
-        if (readableBytes == 0) {
-            return cIndex;
-        }
-
         // No need for consolidation
         for (ByteBuf b: buffers) {
             if (b == null) {
                 break;
             }
-            if (b.isReadable()) {
-                cIndex = addComponent0(cIndex, b) + 1;
-                int size = components.size();
-                if (cIndex > size) {
-                    cIndex = size;
-                }
-            } else {
-                b.release();
+            cIndex = addComponent0(cIndex, b) + 1;
+            int size = components.size();
+            if (cIndex > size) {
+                cIndex = size;
             }
         }
         return cIndex;
@@ -350,8 +333,12 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
      */
     public CompositeByteBuf removeComponent(int cIndex) {
         checkComponentIndex(cIndex);
-        components.remove(cIndex).freeIfNecessary();
-        updateComponentOffsets(cIndex);
+        Component comp = components.remove(cIndex);
+        comp.freeIfNecessary();
+        if (comp.length > 0) {
+            // Only need to call updateComponentOffsets if the length was > 0
+            updateComponentOffsets(cIndex);
+        }
         return this;
     }
 
@@ -364,13 +351,23 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     public CompositeByteBuf removeComponents(int cIndex, int numComponents) {
         checkComponentIndex(cIndex, numComponents);
 
+        if (numComponents == 0) {
+            return this;
+        }
         List<Component> toRemove = components.subList(cIndex, cIndex + numComponents);
+        boolean needsUpdate = false;
         for (Component c: toRemove) {
+            if (c.length > 0) {
+                needsUpdate = true;
+            }
             c.freeIfNecessary();
         }
         toRemove.clear();
 
-        updateComponentOffsets(cIndex);
+        if (needsUpdate) {
+            // Only need to call updateComponentOffsets if the length was > 0
+            updateComponentOffsets(cIndex);
+        }
         return this;
     }
 
@@ -1105,6 +1102,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
             } else if (offset < c.offset) {
                 high = mid - 1;
             } else {
+                assert c.length != 0;
                 return c;
             }
         }
