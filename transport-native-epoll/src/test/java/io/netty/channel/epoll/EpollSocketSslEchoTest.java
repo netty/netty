@@ -25,11 +25,11 @@ import java.util.List;
 
 public class EpollSocketSslEchoTest extends SocketSslEchoTest {
     public EpollSocketSslEchoTest(
-            SslContext serverCtx, SslContext clientCtx, RenegotiationType renegotiationType,
+            SslContext serverCtx, SslContext clientCtx, Renegotiation renegotiation,
             boolean serverUsesDelegatedTaskExecutor, boolean clientUsesDelegatedTaskExecutor,
             boolean autoRead, boolean useChunkedWriteHandler, boolean useCompositeByteBuf) {
 
-        super(serverCtx, clientCtx, renegotiationType,
+        super(serverCtx, clientCtx, renegotiation,
               serverUsesDelegatedTaskExecutor, clientUsesDelegatedTaskExecutor,
               autoRead, useChunkedWriteHandler, useCompositeByteBuf);
     }
