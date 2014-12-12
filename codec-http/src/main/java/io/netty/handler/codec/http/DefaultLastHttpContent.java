@@ -132,7 +132,7 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
             NO_VALIDATE_NAME_CONVERTER = new TrailingHttpHeadersNameConverter(false);
 
         TrailingHttpHeaders(boolean validate) {
-            super(validate, validate ? VALIDATE_NAME_CONVERTER : NO_VALIDATE_NAME_CONVERTER);
+            super(validate, validate ? VALIDATE_NAME_CONVERTER : NO_VALIDATE_NAME_CONVERTER, false);
         }
     }
 }

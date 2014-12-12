@@ -43,7 +43,7 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
      * @param validateHeaders   validate the header names and values when adding them to the {@link HttpHeaders}
      */
     public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, boolean validateHeaders) {
-        super(httpVersion, validateHeaders);
+        super(httpVersion, validateHeaders, false);
         if (method == null) {
             throw new NullPointerException("method");
         }

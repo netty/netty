@@ -27,18 +27,18 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
      * Creates a new instance.
      */
     protected DefaultHttpMessage(final HttpVersion version) {
-        this(version, true);
+        this(version, true, false);
     }
 
     /**
      * Creates a new instance.
      */
-    protected DefaultHttpMessage(final HttpVersion version, boolean validateHeaders) {
+    protected DefaultHttpMessage(final HttpVersion version, boolean validateHeaders, boolean singleHeaderFields) {
         if (version == null) {
             throw new NullPointerException("version");
         }
         this.version = version;
-        headers = new DefaultHttpHeaders(validateHeaders);
+        headers = new DefaultHttpHeaders(validateHeaders, singleHeaderFields);
     }
 
     @Override

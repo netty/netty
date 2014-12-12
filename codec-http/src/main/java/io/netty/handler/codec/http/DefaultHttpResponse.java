@@ -29,7 +29,7 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
      * @param status  the getStatus of this response
      */
     public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status) {
-        this(version, status, true);
+        this(version, status, true, false);
     }
 
     /**
@@ -40,7 +40,21 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
      * @param validateHeaders   validate the header names and values when adding them to the {@link HttpHeaders}
      */
     public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status, boolean validateHeaders) {
-        super(version, validateHeaders);
+        this(version, status, validateHeaders, false);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param version           the HTTP version of this response
+     * @param status            the getStatus of this response
+     * @param validateHeaders   validate the header names and values when adding them to the {@link HttpHeaders}
+     * @param singleHeaderFields  determines if HTTP headers with multiple values should be added as a single
+     *                            field or as multiple header fields.
+     */
+    public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status, boolean validateHeaders,
+                               boolean singleHeaderFields) {
+        super(version, validateHeaders, singleHeaderFields);
         if (status == null) {
             throw new NullPointerException("status");
         }
