@@ -65,7 +65,7 @@ public class CorsHandler extends ChannelDuplexHandler {
     }
 
     private void handlePreflight(final ChannelHandlerContext ctx, final HttpRequest request) {
-        final HttpResponse response = new DefaultFullHttpResponse(request.protocolVersion(), OK);
+        final HttpResponse response = new DefaultFullHttpResponse(request.protocolVersion(), OK, true, true);
         if (setOrigin(response)) {
             setAllowMethods(response);
             setAllowHeaders(response);
