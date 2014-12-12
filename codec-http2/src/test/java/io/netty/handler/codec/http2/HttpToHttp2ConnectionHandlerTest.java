@@ -132,7 +132,6 @@ public class HttpToHttp2ConnectionHandlerTest {
                 eq(http2Headers), eq(0), anyShort(), anyBoolean(), eq(0), eq(true));
         verify(serverListener, never()).onDataRead(any(ChannelHandlerContext.class), anyInt(),
                 any(ByteBuf.class), anyInt(), anyBoolean());
-        assertEquals(0, request.refCnt());
     }
 
     @Test
@@ -174,7 +173,6 @@ public class HttpToHttp2ConnectionHandlerTest {
                 eq(true));
         assertEquals(1, receivedBuffers.size());
         assertEquals(text, receivedBuffers.get(0));
-        assertEquals(0, request.refCnt());
     }
 
     private void bootstrapEnv(int requestCountDown, int serverSettingsAckCount) throws Exception {
