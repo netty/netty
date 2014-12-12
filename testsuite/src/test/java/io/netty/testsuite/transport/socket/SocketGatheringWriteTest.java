@@ -21,8 +21,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.testsuite.util.TestUtils;
+import io.netty.util.internal.StringUtil;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -40,7 +43,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         random.nextBytes(data);
     }
 
-    @Test(timeout = 30000)
+    @Test(timeout = 60000)
     public void testGatheringWrite() throws Throwable {
         run();
     }
@@ -49,7 +52,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         testGatheringWrite0(sb, cb, data, false, true);
     }
 
-    @Test(timeout = 30000)
+    @Test(timeout = 60000)
     public void testGatheringWriteNotAutoRead() throws Throwable {
         run();
     }
@@ -58,7 +61,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         testGatheringWrite0(sb, cb, data, false, false);
     }
 
-    @Test(timeout = 30000)
+    @Test(timeout = 60000)
     public void testGatheringWriteWithComposite() throws Throwable {
         run();
     }
@@ -67,7 +70,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         testGatheringWrite0(sb, cb, data, true, false);
     }
 
-    @Test(timeout = 30000)
+    @Test(timeout = 60000)
     public void testGatheringWriteWithCompositeNotAutoRead() throws Throwable {
         run();
     }
@@ -77,7 +80,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
     }
 
     // Test for https://github.com/netty/netty/issues/2647
-    @Test(timeout = 30000)
+    @Test(timeout = 60000)
     public void testGatheringWriteBig() throws Throwable {
         run();
     }
@@ -88,7 +91,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         testGatheringWrite0(sb, cb, bigData, false, true);
     }
 
-    private static void testGatheringWrite0(
+    private void testGatheringWrite0(
             ServerBootstrap sb, Bootstrap cb, byte[] data, boolean composite, boolean autoRead) throws Throwable {
         final TestHandler sh = new TestHandler(autoRead);
         final TestHandler ch = new TestHandler(autoRead);
@@ -116,7 +119,17 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
             }
             i += length;
         }
-        assertNotEquals(cc.voidPromise(), cc.writeAndFlush(Unpooled.EMPTY_BUFFER).sync());
+
+        ChannelFuture cf = cc.writeAndFlush(Unpooled.EMPTY_BUFFER);
+        assertNotEquals(cc.voidPromise(), cf);
+        try {
+            assertTrue(cf.await(30000));
+            cf.sync();
+        } catch (Throwable t) {
+            // TODO: Remove this once we fix this test.
+            TestUtils.dump(StringUtil.simpleClassName(this));
+            throw t;
+        }
 
         while (sh.counter < data.length) {
             if (sh.exception.get() != null) {
