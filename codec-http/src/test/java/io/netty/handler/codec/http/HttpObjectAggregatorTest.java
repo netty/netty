@@ -18,20 +18,33 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResultProvider;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
-import org.easymock.EasyMock;
 import org.junit.Test;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.List;
 
-import static io.netty.util.ReferenceCountUtil.*;
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static io.netty.util.ReferenceCountUtil.releaseLater;
+import static org.easymock.EasyMock.anyObject;
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.createMockBuilder;
+import static org.easymock.EasyMock.expectLastCall;
+import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.verify;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class HttpObjectAggregatorTest {
 
@@ -332,8 +345,8 @@ public class HttpObjectAggregatorTest {
     @Test(expected = IllegalStateException.class)
     public void testSetMaxCumulationBufferComponentsAfterInit() throws Exception {
         HttpObjectAggregator aggr = new HttpObjectAggregator(Integer.MAX_VALUE);
-        ChannelHandlerContext ctx = EasyMock.createMock(ChannelHandlerContext.class);
-        EasyMock.replay(ctx);
+        ChannelHandlerContext ctx = createMock(ChannelHandlerContext.class);
+        replay(ctx);
         aggr.handlerAdded(ctx);
         aggr.setMaxCumulationBufferComponents(10);
     }
@@ -387,4 +400,40 @@ public class HttpObjectAggregatorTest {
         assertNull(ch.readInbound());
         ch.finish();
     }
+
+    @Test
+    public void testReadCompleteSuppression() throws Exception {
+        ChannelHandlerAdapter sink = createMockBuilder(ChannelHandlerAdapter.class)
+            .addMockedMethod("channelReadComplete")
+            .createStrictMock();
+
+        sink.channelReadComplete(anyObject(ChannelHandlerContext.class));
+        expectLastCall();
+        replay(sink);
+
+        HttpObjectAggregator aggr = new HttpObjectAggregator(1024 * 1024);
+        EmbeddedChannel embedder = new EmbeddedChannel(aggr, sink);
+
+        HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost");
+        HttpContent chunk1 = new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
+        HttpContent chunk2 = new DefaultHttpContent(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
+        HttpContent chunk3 = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER);
+        assertFalse(embedder.writeInbound(message));
+        assertFalse(embedder.writeInbound(chunk1));
+        assertFalse(embedder.writeInbound(chunk2));
+
+        // this should trigger a channelRead event so return true
+        assertTrue(embedder.writeInbound(chunk3));
+        assertTrue(embedder.finish());
+        FullHttpRequest aggratedMessage = embedder.readInbound();
+        assertNotNull(aggratedMessage);
+
+        assertEquals(chunk1.content().readableBytes() + chunk2.content().readableBytes(),
+                HttpHeaderUtil.getContentLength(aggratedMessage));
+        checkContentBuffer(aggratedMessage);
+        assertNull(embedder.readInbound());
+
+        verify(sink);
+    }
+
 }

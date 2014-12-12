@@ -185,6 +185,15 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     }
 
     @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        // if currentMessage is null when this callback fires, aggregation
+        // of a message already completed.
+        if (currentMessage == null) {
+            ctx.fireChannelReadComplete();
+        }
+    }
+
+    @Override
     protected void decode(final ChannelHandlerContext ctx, I msg, List<Object> out) throws Exception {
         O currentMessage = this.currentMessage;
 
