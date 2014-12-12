@@ -247,12 +247,17 @@ public class DefaultHttpHeaders extends HttpHeaders {
     }
 
     public DefaultHttpHeaders(boolean validate) {
-        this(true, validate? VALIDATE_NAME_CONVERTER : NO_VALIDATE_NAME_CONVERTER);
+        this(true, validate? VALIDATE_NAME_CONVERTER : NO_VALIDATE_NAME_CONVERTER, false);
     }
 
-    protected DefaultHttpHeaders(boolean validate, NameConverter<CharSequence> nameConverter) {
+    public DefaultHttpHeaders(boolean validate, boolean singleHeaderFields) {
+        this(true, validate? VALIDATE_NAME_CONVERTER : NO_VALIDATE_NAME_CONVERTER, singleHeaderFields);
+    }
+
+    protected DefaultHttpHeaders(boolean validate, NameConverter<CharSequence> nameConverter,
+                                 boolean singleHeaderFields) {
         headers = new DefaultTextHeaders(true,
-                validate ? VALIDATE_OBJECT_CONVERTER : NO_VALIDATE_OBJECT_CONVERTER, nameConverter);
+                validate ? VALIDATE_OBJECT_CONVERTER : NO_VALIDATE_OBJECT_CONVERTER, nameConverter, singleHeaderFields);
     }
 
     @Override

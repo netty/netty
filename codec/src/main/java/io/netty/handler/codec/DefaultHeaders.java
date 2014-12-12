@@ -1216,6 +1216,10 @@ public class DefaultHeaders<T> implements Headers<T> {
         return builder.append(']').toString();
     }
 
+    protected ValueConverter<T> valueConverter() {
+        return valueConverter;
+    }
+
     private T convertName(T name) {
         return nameConverter.convertName(checkNotNull(name, "name"));
     }
