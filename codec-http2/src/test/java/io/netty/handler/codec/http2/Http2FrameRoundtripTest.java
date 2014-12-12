@@ -328,7 +328,7 @@ public class Http2FrameRoundtripTest {
                     }
                 }
             });
-            awaitRequests(30);
+            awaitRequests(60);
             verify(serverListener, times(numStreams)).onDataRead(any(ChannelHandlerContext.class), anyInt(),
                     any(ByteBuf.class), eq(0), eq(true));
             assertEquals(numStreams, receivedBuffers.size());
