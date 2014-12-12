@@ -230,7 +230,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.connect().sync().channel();
-        Future<Channel> hf = cc.pipeline().get(SslHandler.class).handshakeFuture();
+        Future<Channel> hf = ch.sslHandler.handshakeFuture();
         cc.writeAndFlush(Unpooled.wrappedBuffer(data, 0, FIRST_MESSAGE_SIZE));
         final AtomicBoolean firstByteWriteFutureDone = new AtomicBoolean();
 
@@ -252,10 +252,10 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
             if (needsRenegotiation && i >= data.length / 2) {
                 needsRenegotiation = false;
-                SslHandler sslHandler = cc.pipeline().get(SslHandler.class);
-                sslHandler.engine().setEnabledCipherSuites(new String[] { renegotiation.cipherSuite });
-                renegoFuture = sslHandler.renegotiate();
+                ch.sslHandler.engine().setEnabledCipherSuites(new String[] { renegotiation.cipherSuite });
+                renegoFuture = ch.sslHandler.renegotiate();
                 assertThat(renegoFuture, is(not(sameInstance(hf))));
+                assertThat(renegoFuture.isDone(), is(false));
             }
         }
 
@@ -319,7 +319,9 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         // When renegotiation is done, both the client and server side should be notified.
         try {
             if (renegotiation.type != RenegotiationType.NONE) {
+                assertThat(sh.sslHandler.engine().getSession().getCipherSuite(), is(renegotiation.cipherSuite));
                 assertThat(sh.negoCounter, is(2));
+                assertThat(ch.sslHandler.engine().getSession().getCipherSuite(), is(renegotiation.cipherSuite));
                 assertThat(ch.negoCounter, is(2));
             } else {
                 assertThat(sh.negoCounter, is(1));
@@ -327,6 +329,13 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             }
         } catch (Throwable t) {
             // TODO: Remove this once we fix this test.
+            logger.warn(sh.channel +
+                        "[S] cipherSuite: " + sh.sslHandler.engine().getSession().getCipherSuite() +
+                        ", negoCounter: " + sh.negoCounter);
+            logger.warn(ch.channel +
+                        "[C] cipherSuite: " + ch.sslHandler.engine().getSession().getCipherSuite() +
+                        ", negoCounter: " + ch.negoCounter);
+
             TestUtils.dump(StringUtil.simpleClassName(this));
             throw t;
         }
@@ -337,6 +346,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
         private final boolean server;
+        volatile SslHandler sslHandler;
         volatile Future<Channel> renegoFuture;
         volatile int negoCounter;
 
@@ -345,8 +355,9 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
             channel = ctx.channel();
+            sslHandler = channel.pipeline().get(SslHandler.class);
         }
 
         @Override
@@ -382,6 +393,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                 renegoFuture = sslHandler.renegotiate();
                 assertThat(renegoFuture, is(not(sameInstance(hf))));
                 assertThat(renegoFuture, is(sameInstance(sslHandler.handshakeFuture())));
+                assertThat(renegoFuture.isDone(), is(false));
             }
         }
 
