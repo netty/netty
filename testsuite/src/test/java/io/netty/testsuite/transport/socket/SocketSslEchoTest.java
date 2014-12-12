@@ -34,7 +34,9 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.stream.ChunkedWriteHandler;
+import io.netty.testsuite.util.TestUtils;
 import io.netty.util.concurrent.Future;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Test;
@@ -285,12 +287,18 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         // When renegotiation is done, both the client and server side should be notified.
-        if (renegotiationType != RenegotiationType.NONE) {
-            assertThat(sh.negoCounter, is(2));
-            assertThat(ch.negoCounter, is(2));
-        } else {
-            assertThat(sh.negoCounter, is(1));
-            assertThat(ch.negoCounter, is(1));
+        try {
+            if (renegotiationType != RenegotiationType.NONE) {
+                assertThat(sh.negoCounter, is(2));
+                assertThat(ch.negoCounter, is(2));
+            } else {
+                assertThat(sh.negoCounter, is(1));
+                assertThat(ch.negoCounter, is(1));
+            }
+        } catch (Throwable t) {
+            // TODO: Remove this once we fix this test.
+            TestUtils.dump(StringUtil.simpleClassName(this));
+            throw t;
         }
     }
 
