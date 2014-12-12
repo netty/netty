@@ -15,21 +15,35 @@
  */
 package io.netty.testsuite.util;
 
+import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.rules.TestName;
 
+import javax.management.MBeanServer;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
+import java.lang.reflect.Method;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.channels.Channel;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 
 public final class TestUtils {
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(TestUtils.class);
 
     private static final int START_PORT = 32768;
     private static final int END_PORT = 65536;
@@ -38,18 +52,32 @@ public final class TestUtils {
     private static final List<Integer> PORTS = new ArrayList<Integer>();
     private static Iterator<Integer> portIterator;
 
+    private static final Method hotspotMXBeanDumpHeap;
+    private static final Object hotspotMXBean;
+
     static {
+        // Populate the list of random ports.
         for (int i = START_PORT; i < END_PORT; i ++) {
             PORTS.add(i);
         }
         Collections.shuffle(PORTS);
-    }
 
-    private static int nextCandidatePort() {
-        if (portIterator == null || !portIterator.hasNext()) {
-            portIterator = PORTS.iterator();
+        // Retrieve the hotspot MXBean and its class if available.
+        Object mxBean;
+        Method mxBeanDumpHeap;
+        try {
+            Class<?> clazz = Class.forName("com.sun.management.HotSpotDiagnosticMXBean");
+            MBeanServer server = ManagementFactory.getPlatformMBeanServer();
+            mxBean = ManagementFactory.newPlatformMXBeanProxy(
+                    server, "com.sun.management:type=HotSpotDiagnostic", clazz);
+            mxBeanDumpHeap = clazz.getMethod("dumpHeap", String.class, boolean.class);
+        } catch (Exception ignored) {
+            mxBean = null;
+            mxBeanDumpHeap = null;
         }
-        return portIterator.next();
+
+        hotspotMXBean = mxBean;
+        hotspotMXBeanDumpHeap = mxBeanDumpHeap;
     }
 
     /**
@@ -73,6 +101,13 @@ public final class TestUtils {
         }
 
         throw new RuntimeException("unable to find a free port");
+    }
+
+    private static int nextCandidatePort() {
+        if (portIterator == null || !portIterator.hasNext()) {
+            portIterator = PORTS.iterator();
+        }
+        return portIterator.next();
     }
 
     private static boolean isTcpPortAvailable(InetSocketAddress localAddress) {
@@ -160,6 +195,79 @@ public final class TestUtils {
             testMethodName = testMethodName.substring(0, testMethodName.indexOf('['));
         }
         return testMethodName;
+    }
+
+    public static void dump(String filenamePrefix) throws IOException {
+
+        if (filenamePrefix == null) {
+            throw new NullPointerException("filenamePrefix");
+        }
+
+        final String timestamp = timestamp();
+        final File heapDumpFile = new File(filenamePrefix + '.' + timestamp + ".hprof");
+        if (heapDumpFile.exists()) {
+            if (!heapDumpFile.delete()) {
+                throw new IOException("Failed to remove the old heap dump: " + heapDumpFile);
+            }
+        }
+
+        final File threadDumpFile = new File(filenamePrefix + '.' + timestamp + ".threads");
+        if (threadDumpFile.exists()) {
+            if (!threadDumpFile.delete()) {
+                throw new IOException("Failed to remove the old thread dump: " + threadDumpFile);
+            }
+        }
+
+        dumpHeap(heapDumpFile);
+        dumpStack(threadDumpFile);
+    }
+
+    private static String timestamp() {
+        return new SimpleDateFormat("HHmmss.SSS").format(new Date());
+    }
+
+    private static void dumpHeap(File file) {
+        if (hotspotMXBean == null) {
+            logger.warn("Can't dump heap: HotSpotDiagnosticMXBean unavailable");
+            return;
+        }
+
+        final String filename = file.toString();
+        try {
+            hotspotMXBeanDumpHeap.invoke(hotspotMXBean, filename, true);
+        } catch (Exception e) {
+            logger.warn("Failed to dump heap: {}", filename, e);
+        }
+    }
+
+    private static void dumpStack(File file) {
+        final String filename = file.toString();
+        OutputStream out = null;
+        try {
+            final StringBuilder buf = new StringBuilder(8192);
+            try {
+                for (ThreadInfo info : ManagementFactory.getThreadMXBean().dumpAllThreads(true, true)) {
+                    buf.append(info);
+                }
+                buf.append('\n');
+            } catch (UnsupportedOperationException ignored) {
+                logger.warn("Can't dump threads: ThreadMXBean.dumpAllThreads() unsupported");
+                return;
+            }
+
+            out = new FileOutputStream(file);
+            out.write(buf.toString().getBytes(CharsetUtil.UTF_8));
+        } catch (Exception e) {
+            logger.warn("Failed to dump threads: {}", filename, e);
+        } finally {
+            if (out != null) {
+                try {
+                    out.close();
+                } catch (IOException ignored) {
+                    // Ignore.
+                }
+            }
+        }
     }
 
     private TestUtils() { }
