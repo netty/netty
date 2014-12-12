@@ -222,7 +222,7 @@ public interface ChannelHandlerContext extends AttributeMap {
     ChannelHandlerContext fireChannelRead(Object msg);
 
     /**
-     * Triggers an {@link ChannelInboundHandler#channelWritabilityChanged(ChannelHandlerContext)}
+     * Triggers an {@link ChannelInboundHandler#channelReadComplete(ChannelHandlerContext)}
      * event to the next {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
      */
     ChannelHandlerContext fireChannelReadComplete();
