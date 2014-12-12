@@ -84,10 +84,31 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         KEY_FILE = ssc.privateKey();
     }
 
-    public enum RenegotiationType {
+    protected enum RenegotiationType {
         NONE, // no renegotiation
         CLIENT_INITIATED, // renegotiation from client
         SERVER_INITIATED, // renegotiation from server
+    }
+
+    protected static class Renegotiation {
+        static final Renegotiation NONE = new Renegotiation(RenegotiationType.NONE, null);
+
+        final RenegotiationType type;
+        final String cipherSuite;
+
+        Renegotiation(RenegotiationType type, String cipherSuite) {
+            this.type = type;
+            this.cipherSuite = cipherSuite;
+        }
+
+        @Override
+        public String toString() {
+            if (type == RenegotiationType.NONE) {
+                return "NONE";
+            }
+
+            return type + "(" + cipherSuite + ')';
+        }
     }
 
     @Parameters(name =
@@ -121,9 +142,16 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                         continue;
                     }
 
+                    Renegotiation r;
+                    if (rt == RenegotiationType.NONE) {
+                        r = Renegotiation.NONE;
+                    } else {
+                        r = new Renegotiation(rt, "SSL_RSA_WITH_RC4_128_SHA");
+                    }
+
                     for (int i = 0; i < 32; i++) {
                         params.add(new Object[] {
-                                sc, cc, rt,
+                                sc, cc, r,
                                 (i & 16) != 0, (i & 8) != 0, (i & 4) != 0, (i & 2) != 0, (i & 1) != 0 });
                     }
                 }
@@ -135,7 +163,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
     private final SslContext serverCtx;
     private final SslContext clientCtx;
-    private final RenegotiationType renegotiationType;
+    private final Renegotiation renegotiation;
     private final boolean serverUsesDelegatedTaskExecutor;
     private final boolean clientUsesDelegatedTaskExecutor;
     private final boolean autoRead;
@@ -143,14 +171,14 @@ public class SocketSslEchoTest extends AbstractSocketTest {
     private final boolean useCompositeByteBuf;
 
     public SocketSslEchoTest(
-            SslContext serverCtx, SslContext clientCtx, RenegotiationType renegotiationType,
+            SslContext serverCtx, SslContext clientCtx, Renegotiation renegotiation,
             boolean serverUsesDelegatedTaskExecutor, boolean clientUsesDelegatedTaskExecutor,
             boolean autoRead, boolean useChunkedWriteHandler, boolean useCompositeByteBuf) {
         this.serverCtx = serverCtx;
         this.clientCtx = clientCtx;
         this.serverUsesDelegatedTaskExecutor = serverUsesDelegatedTaskExecutor;
         this.clientUsesDelegatedTaskExecutor = clientUsesDelegatedTaskExecutor;
-        this.renegotiationType = renegotiationType;
+        this.renegotiation = renegotiation;
         this.autoRead = autoRead;
         this.useChunkedWriteHandler = useChunkedWriteHandler;
         this.useCompositeByteBuf = useCompositeByteBuf;
@@ -210,7 +238,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
         assertFalse(firstByteWriteFutureDone.get());
 
-        boolean needsRenegotiation = renegotiationType == RenegotiationType.CLIENT_INITIATED;
+        boolean needsRenegotiation = renegotiation.type == RenegotiationType.CLIENT_INITIATED;
         Future<Channel> renegoFuture = null;
         for (int i = FIRST_MESSAGE_SIZE; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
@@ -224,7 +252,9 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
             if (needsRenegotiation && i >= data.length / 2) {
                 needsRenegotiation = false;
-                renegoFuture = cc.pipeline().get(SslHandler.class).renegotiate();
+                SslHandler sslHandler = cc.pipeline().get(SslHandler.class);
+                sslHandler.engine().setEnabledCipherSuites(new String[] { renegotiation.cipherSuite });
+                renegoFuture = sslHandler.renegotiate();
                 assertThat(renegoFuture, is(not(sameInstance(hf))));
             }
         }
@@ -288,7 +318,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
         // When renegotiation is done, both the client and server side should be notified.
         try {
-            if (renegotiationType != RenegotiationType.NONE) {
+            if (renegotiation.type != RenegotiationType.NONE) {
                 assertThat(sh.negoCounter, is(2));
                 assertThat(ch.negoCounter, is(2));
             } else {
@@ -340,7 +370,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             counter += actual.length;
 
             // Perform server-initiated renegotiation if necessary.
-            if (server && renegotiationType == RenegotiationType.SERVER_INITIATED &&
+            if (server && renegotiation.type == RenegotiationType.SERVER_INITIATED &&
                 counter > data.length / 2 && renegoFuture == null) {
 
                 SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
@@ -348,6 +378,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                 Future<Channel> hf = sslHandler.handshakeFuture();
                 assertThat(hf.isDone(), is(true));
 
+                sslHandler.engine().setEnabledCipherSuites(new String[] { renegotiation.cipherSuite });
                 renegoFuture = sslHandler.renegotiate();
                 assertThat(renegoFuture, is(not(sameInstance(hf))));
                 assertThat(renegoFuture, is(sameInstance(sslHandler.handshakeFuture())));
