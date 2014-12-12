@@ -219,7 +219,7 @@ public final class TestUtils {
         }
 
         dumpHeap(heapDumpFile);
-        dumpStack(threadDumpFile);
+        dumpThreads(threadDumpFile);
     }
 
     private static String timestamp() {
@@ -233,6 +233,7 @@ public final class TestUtils {
         }
 
         final String filename = file.toString();
+        logger.info("Dumping heap: {}", filename);
         try {
             hotspotMXBeanDumpHeap.invoke(hotspotMXBean, filename, true);
         } catch (Exception e) {
@@ -240,10 +241,11 @@ public final class TestUtils {
         }
     }
 
-    private static void dumpStack(File file) {
+    private static void dumpThreads(File file) {
         final String filename = file.toString();
         OutputStream out = null;
         try {
+            logger.info("Dumping threads: {}", filename);
             final StringBuilder buf = new StringBuilder(8192);
             try {
                 for (ThreadInfo info : ManagementFactory.getThreadMXBean().dumpAllThreads(true, true)) {
