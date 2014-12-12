@@ -887,6 +887,7 @@ public class SslHandler extends ByteToMessageDecoder {
         }
 
         boolean wrapLater = false;
+        boolean notifyClosure = false;
         ByteBuf decodeOut = allocate(ctx, initialOutAppBufCapacity);
         try {
             for (;;) {
@@ -898,8 +899,7 @@ public class SslHandler extends ByteToMessageDecoder {
 
                 if (status == Status.CLOSED) {
                     // notify about the CLOSED state of the SSLEngine. See #137
-                    sslCloseFuture.trySuccess(ctx.channel());
-                    break;
+                    notifyClosure = true;
                 }
 
                 switch (handshakeStatus) {
@@ -940,6 +940,10 @@ public class SslHandler extends ByteToMessageDecoder {
 
             if (wrapLater) {
                 wrap(ctx, true);
+            }
+
+            if (notifyClosure) {
+                sslCloseFuture.trySuccess(ctx.channel());
             }
         } catch (SSLException e) {
             setHandshakeFailure(e);

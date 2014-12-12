@@ -290,8 +290,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx)
-                throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
             channel = ctx.channel();
         }
 
@@ -320,7 +319,10 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                 counter > data.length / 2 && renegoFuture == null) {
 
                 SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
+
                 Future<Channel> hf = sslHandler.handshakeFuture();
+                assertThat(hf.isDone(), is(true));
+
                 renegoFuture = sslHandler.renegotiate();
                 assertThat(renegoFuture, is(not(sameInstance(hf))));
                 assertThat(renegoFuture, is(sameInstance(sslHandler.handshakeFuture())));
@@ -341,13 +343,13 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
             if (evt instanceof SslHandshakeCompletionEvent) {
+                assertSame(SslHandshakeCompletionEvent.SUCCESS, evt);
                 negoCounter ++;
             }
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx,
-                Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             if (logger.isWarnEnabled()) {
                 logger.warn(
                         "Unexpected exception from the " +
