@@ -17,17 +17,13 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-
 import org.junit.Assert;
 import org.junit.Test;
 
-import static org.easymock.EasyMock.*;
 
 public class WebSocketFrameAggregatorTest {
     private final ByteBuf content1 = ReferenceCountUtil.releaseLater(
@@ -150,34 +146,4 @@ public class WebSocketFrameAggregatorTest {
         }
         channel.finish();
     }
-
-    @Test
-    public void testReadCompleteSuppression() throws Exception {
-        ChannelHandlerAdapter sink = createMockBuilder(ChannelHandlerAdapter.class)
-            .addMockedMethod("channelReadComplete")
-            .createStrictMock();
-
-        sink.channelReadComplete(anyObject(ChannelHandlerContext.class));
-        expectLastCall();
-        replay(sink);
-
-        WebSocketFrameAggregator aggr = new WebSocketFrameAggregator(Integer.MAX_VALUE);
-        EmbeddedChannel channel = new EmbeddedChannel(aggr, sink);
-
-        Assert.assertFalse(channel.writeInbound(new TextWebSocketFrame(false, 0, content1.copy())));
-        Assert.assertFalse(channel.writeInbound(new ContinuationWebSocketFrame(false, 0, content2.copy())));
-        Assert.assertTrue(channel.writeInbound(new ContinuationWebSocketFrame(true, 0, content3.copy())));
-        Assert.assertTrue(channel.finish());
-
-        WebSocketFrame frame = channel.readInbound();
-        Assert.assertTrue(frame.isFinalFragment());
-        Assert.assertEquals(0, frame.rsv());
-        Assert.assertEquals(aggregatedContent, frame.content());
-        frame.release();
-
-        Assert.assertNull(channel.readInbound());
-
-        verify(sink);
-    }
-
 }
