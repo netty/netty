@@ -27,6 +27,8 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.handler.traffic.ChannelTrafficShapingHandler;
+import io.netty.handler.traffic.GlobalTrafficShapingHandler;
 
 /**
  * Discards any incoming data.
@@ -35,6 +37,8 @@ public final class DiscardServer {
 
     static final boolean SSL = System.getProperty("ssl") != null;
     static final int PORT = Integer.parseInt(System.getProperty("port", "8009"));
+    static final int MAXGLOBALTHROUGHPUT = Integer.parseInt(System.getProperty("maxGlobalThroughput", "0"));
+    static final int MAXCHANNELTHROUGHPUT = Integer.parseInt(System.getProperty("maxChannelThroughput", "0"));
 
     public static void main(String[] args) throws Exception {
         // Configure SSL.
@@ -48,6 +52,19 @@ public final class DiscardServer {
 
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
         EventLoopGroup workerGroup = new NioEventLoopGroup();
+        final GlobalTrafficShapingHandler gtsh;
+        final GlobalChannelTrafficShapingHandlerWithLog gctsh;
+        if (MAXGLOBALTHROUGHPUT > 0 && MAXCHANNELTHROUGHPUT > 0) {
+            gctsh = new GlobalChannelTrafficShapingHandlerWithLog(workerGroup, 0, MAXGLOBALTHROUGHPUT,
+                    0, MAXCHANNELTHROUGHPUT, 1000);
+            gtsh = null;
+        } else if (MAXGLOBALTHROUGHPUT > 0) {
+            gtsh = new GlobalTrafficShapingHandler(workerGroup, 0, MAXGLOBALTHROUGHPUT, 1000);
+            gctsh = null;
+        } else {
+            gtsh = null;
+            gctsh = null;
+        }
         try {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
@@ -59,6 +76,13 @@ public final class DiscardServer {
                      ChannelPipeline p = ch.pipeline();
                      if (sslCtx != null) {
                          p.addLast(sslCtx.newHandler(ch.alloc()));
+                     }
+                     if (MAXGLOBALTHROUGHPUT > 0 && MAXCHANNELTHROUGHPUT > 0) {
+                         p.addLast(gctsh);
+                     } else if (MAXGLOBALTHROUGHPUT > 0) {
+                         p.addLast(gtsh);
+                     } else if (MAXCHANNELTHROUGHPUT > 0) {
+                         p.addLast(new ChannelTrafficShapingHandler(0, MAXCHANNELTHROUGHPUT, 1000));
                      }
                      p.addLast(new DiscardServerHandler());
                  }
