@@ -46,7 +46,6 @@
       <groupId>io.netty</groupId>
       <artifactId>netty-testsuite</artifactId>
       <version>${project.version}</version>
-      <type>test-jar</type>
       <scope>test</scope>
     </dependency>
     <dependency>
