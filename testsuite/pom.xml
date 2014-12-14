@@ -59,7 +59,6 @@
     <dependency>
       <groupId>org.tukaani</groupId>
       <artifactId>xz</artifactId>
-      <scope>test</scope>
     </dependency>
   </dependencies>
 

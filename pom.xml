@@ -719,12 +719,11 @@
         <scope>test</scope>
       </dependency>
 
-      <!-- Test dependency for generating a compressed heap dump file -->
+      <!-- Test suite dependency for generating a compressed heap dump file -->
       <dependency>
         <groupId>org.tukaani</groupId>
         <artifactId>xz</artifactId>
         <version>1.5</version>
-        <scope>test</scope>
       </dependency>
     </dependencies>
   </dependencyManagement>
