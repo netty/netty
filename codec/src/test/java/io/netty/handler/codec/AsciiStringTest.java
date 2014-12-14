@@ -23,6 +23,7 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 /**
@@ -77,6 +78,13 @@ public class AsciiStringTest {
             byte[] actual = AsciiString.getBytes(new AsciiString(bString), charset);
             assertArrayEquals("failure for " + charset, expected, actual);
         }
+    }
+
+    @Test
+    public void testComparisonWithString() {
+        String string = "shouldn't fail";
+        AsciiString ascii = new AsciiString(string.toCharArray());
+        Assert.assertEquals(string, ascii.toString());
     }
 
     private static byte[] getBytesWithEncoder(CharSequence value, Charset charset) {
