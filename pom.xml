@@ -553,7 +553,7 @@
       <dependency>
         <groupId>com.jcraft</groupId>
         <artifactId>jzlib</artifactId>
-          <version>1.1.2</version>
+        <version>1.1.2</version>
       </dependency>
       <dependency>
         <groupId>com.ning</groupId>
@@ -708,6 +708,14 @@
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-compress</artifactId>
         <version>1.8.1</version>
+        <scope>test</scope>
+      </dependency>
+
+      <!-- Test dependency for generating a compressed heap dump file -->
+      <dependency>
+        <groupId>org.tukaani</groupId>
+        <artifactId>xz</artifactId>
+        <version>1.5</version>
         <scope>test</scope>
       </dependency>
     </dependencies>

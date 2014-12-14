@@ -20,11 +20,15 @@ import io.netty.util.NetUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.rules.TestName;
+import org.tukaani.xz.LZMA2Options;
+import org.tukaani.xz.XZOutputStream;
 
 import javax.management.MBeanServer;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
@@ -238,6 +242,51 @@ public final class TestUtils {
             hotspotMXBeanDumpHeap.invoke(hotspotMXBean, filename, true);
         } catch (Exception e) {
             logger.warn("Failed to dump heap: {}", filename, e);
+            return;
+        }
+
+        final String xzFilename = filename + ".xz";
+        logger.info("Compressing the heap dump: {}", xzFilename);
+        final byte[] buf = new byte[65536];
+        InputStream in = null;
+        OutputStream out = null;
+        try {
+            in = new FileInputStream(filename);
+            out = new XZOutputStream(new FileOutputStream(xzFilename), new LZMA2Options(9));
+            for (;;) {
+                int readBytes = in.read(buf);
+                if (readBytes < 0) {
+                    break;
+                }
+                if (readBytes == 0) {
+                    continue;
+                }
+                out.write(buf, 0, readBytes);
+            }
+            out.close();
+            in.close();
+        } catch (Exception e) {
+            logger.warn("Failed to compress the heap dump: {}", xzFilename, e);
+        } finally {
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (IOException ignored) {
+                    // Ignore.
+                }
+            }
+            if (out != null) {
+                try {
+                    out.close();
+                } catch (IOException ignored) {
+                    // Ignore.
+                }
+            }
+        }
+
+        // Delete the uncompressed dump in favor of the compressed one.
+        if (!file.delete()) {
+            logger.warn("Failed to delete the uncompressed heap dump: {}", filename);
         }
     }
 
