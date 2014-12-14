@@ -545,7 +545,7 @@
       <dependency>
         <groupId>com.jcraft</groupId>
         <artifactId>jzlib</artifactId>
-          <version>1.1.2</version>
+        <version>1.1.2</version>
       </dependency>
 
       <dependency>
@@ -677,6 +677,14 @@
         <groupId>com.google.caliper</groupId>
         <artifactId>caliper</artifactId>
         <version>0.5-rc1</version>
+        <scope>test</scope>
+      </dependency>
+
+      <!-- Test dependency for generating a compressed heap dump file -->
+      <dependency>
+        <groupId>org.tukaani</groupId>
+        <artifactId>xz</artifactId>
+        <version>1.5</version>
         <scope>test</scope>
       </dependency>
     </dependencies>
