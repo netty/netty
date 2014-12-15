@@ -66,6 +66,9 @@ public interface HttpHeaders extends TextHeaders {
     HttpHeaders addDouble(CharSequence name, double value);
 
     @Override
+    HttpHeaders addTimeMillis(CharSequence name, long value);
+
+    @Override
     HttpHeaders add(TextHeaders headers);
 
     @Override
@@ -109,6 +112,9 @@ public interface HttpHeaders extends TextHeaders {
 
     @Override
     HttpHeaders setDouble(CharSequence name, double value);
+
+    @Override
+    HttpHeaders setTimeMillis(CharSequence name, long value);
 
     @Override
     HttpHeaders set(TextHeaders headers);

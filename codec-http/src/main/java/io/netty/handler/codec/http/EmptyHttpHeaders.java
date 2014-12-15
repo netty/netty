@@ -111,6 +111,12 @@ public class EmptyHttpHeaders extends EmptyTextHeaders implements HttpHeaders {
     }
 
     @Override
+    public HttpHeaders addTimeMillis(CharSequence name, long value) {
+        super.addTimeMillis(name, value);
+        return this;
+    }
+
+    @Override
     public HttpHeaders add(TextHeaders headers) {
         super.add(headers);
         return this;
@@ -197,6 +203,12 @@ public class EmptyHttpHeaders extends EmptyTextHeaders implements HttpHeaders {
     @Override
     public HttpHeaders setDouble(CharSequence name, double value) {
         super.setDouble(name, value);
+        return this;
+    }
+
+    @Override
+    public HttpHeaders setTimeMillis(CharSequence name, long value) {
+        super.setTimeMillis(name, value);
         return this;
     }
 

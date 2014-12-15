@@ -123,6 +123,9 @@ public interface Http2Headers extends BinaryHeaders {
     Http2Headers addDouble(AsciiString name, double value);
 
     @Override
+    Http2Headers addTimeMillis(AsciiString name, long value);
+
+    @Override
     Http2Headers add(BinaryHeaders headers);
 
     @Override
@@ -166,6 +169,9 @@ public interface Http2Headers extends BinaryHeaders {
 
     @Override
     Http2Headers setDouble(AsciiString name, double value);
+
+    @Override
+    Http2Headers setTimeMillis(AsciiString name, long value);
 
     @Override
     Http2Headers set(BinaryHeaders headers);
