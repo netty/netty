@@ -20,12 +20,19 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 public class QueryStringDecoderTest {
+
+    @Test
+    public void testBasicUris() throws URISyntaxException {
+        QueryStringDecoder d = new QueryStringDecoder(new URI("http://localhost/path"));
+        Assert.assertEquals(0, d.parameters().size());
+    }
 
     @Test
     public void testBasic() throws Exception {
