@@ -198,6 +198,14 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
         return cache;
     }
 
+    public Map<Object, Boolean> messageToMessageDecoderRead() {
+        Map<Object, Boolean> map = messageToMessageDecoderRead;
+        if (map == null) {
+            messageToMessageDecoderRead = map = new IdentityHashMap<Object, Boolean>();
+        }
+        return map;
+    }
+
     public int futureListenerStackDepth() {
         return futureListenerStackDepth;
     }

@@ -51,6 +51,9 @@ class UnpaddedInternalThreadLocalMap {
     Map<Charset, CharsetEncoder> charsetEncoderCache;
     Map<Charset, CharsetDecoder> charsetDecoderCache;
 
+    // MessageToMessageDecoder cache
+    Map<Object, Boolean> messageToMessageDecoderRead;
+
     UnpaddedInternalThreadLocalMap(Object[] indexedVariables) {
         this.indexedVariables = indexedVariables;
     }
