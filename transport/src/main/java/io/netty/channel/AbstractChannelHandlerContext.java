@@ -40,6 +40,12 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
     private final DefaultChannelPipeline pipeline;
     private final String name;
     private boolean removed;
+    // This does not need to be volatile as we always check and set this flag from EventExecutor thread. This means
+    // that at worse we will submit a task for channelReadComplete() that may do nothing if nextChannelReadInvoked
+    // is false. This is prefered to introduce another volatile flag because often fireChannelRead(...) and
+    // fireChannelReadComplete() are triggered from the EventExecutor thread anyway.
+    private boolean nextChannelReadInvoked;
+    private boolean readInvoked;
 
     // Will be set to null if no child executor should be used, otherwise it will be set to the
     // child executor.
@@ -291,12 +297,12 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
         final AbstractChannelHandlerContext next = findContextInbound();
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            next.invokeChannelRead(msg);
+            invokeNextChannelRead(next, msg);
         } else {
             executor.execute(new OneTimeTask() {
                 @Override
                 public void run() {
-                    next.invokeChannelRead(msg);
+                    invokeNextChannelRead(next, msg);
                 }
             });
         }
@@ -311,19 +317,24 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
         }
     }
 
+    private void invokeNextChannelRead(AbstractChannelHandlerContext next, Object msg) {
+        nextChannelReadInvoked = true;
+        next.invokeChannelRead(msg);
+    }
+
     @Override
     public ChannelHandlerContext fireChannelReadComplete() {
         final AbstractChannelHandlerContext next = findContextInbound();
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            next.invokeChannelReadComplete();
+            invokeNextChannelReadComplete(next);
         } else {
             Runnable task = next.invokeChannelReadCompleteTask;
             if (task == null) {
                 next.invokeChannelReadCompleteTask = task = new Runnable() {
                     @Override
                     public void run() {
-                        next.invokeChannelReadComplete();
+                        invokeNextChannelReadComplete(next);
                     }
                 };
             }
@@ -337,6 +348,24 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
             ((ChannelInboundHandler) handler()).channelReadComplete(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
+        }
+    }
+
+    private void invokeNextChannelReadComplete(AbstractChannelHandlerContext next) {
+        if (nextChannelReadInvoked) {
+            nextChannelReadInvoked = false;
+            readInvoked = false;
+
+            next.invokeChannelReadComplete();
+        } else if (readInvoked && !channel().config().isAutoRead()) {
+            // As this context not belongs to the last handler in the pipeline and autoRead is false we need to
+            // trigger read again as otherwise we may stop reading before a full message was passed on to the
+            // pipeline. This is especially true for all kind of decoders that usually buffer bytes/messages until
+            // they are able to compose a full message that is passed via fireChannelRead(...) and so be consumed
+            // be the rest of the handlers in the pipeline.
+            read();
+        } else {
+            readInvoked = false;
         }
     }
 
@@ -601,6 +630,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
 
     private void invokeRead() {
         try {
+            readInvoked = true;
             ((ChannelOutboundHandler) handler()).read(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
