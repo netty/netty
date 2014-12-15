@@ -328,6 +328,12 @@ public class DefaultHttpHeaders extends DefaultTextHeaders implements HttpHeader
     }
 
     @Override
+    public HttpHeaders addTimeMillis(CharSequence name, long value) {
+        super.addTimeMillis(name, value);
+        return this;
+    }
+
+    @Override
     public HttpHeaders add(TextHeaders headers) {
         super.add(headers);
         return this;
@@ -414,6 +420,12 @@ public class DefaultHttpHeaders extends DefaultTextHeaders implements HttpHeader
     @Override
     public HttpHeaders setDouble(CharSequence name, double value) {
         super.setDouble(name, value);
+        return this;
+    }
+
+    @Override
+    public HttpHeaders setTimeMillis(CharSequence name, long value) {
+        super.setTimeMillis(name, value);
         return this;
     }
 

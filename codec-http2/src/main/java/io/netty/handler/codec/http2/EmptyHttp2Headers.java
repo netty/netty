@@ -110,6 +110,12 @@ public final class EmptyHttp2Headers extends EmptyBinaryHeaders implements Http2
     }
 
     @Override
+    public Http2Headers addTimeMillis(AsciiString name, long value) {
+        super.addTimeMillis(name, value);
+        return this;
+    }
+
+    @Override
     public Http2Headers add(BinaryHeaders headers) {
         super.add(headers);
         return this;
@@ -196,6 +202,12 @@ public final class EmptyHttp2Headers extends EmptyBinaryHeaders implements Http2
     @Override
     public Http2Headers setDouble(AsciiString name, double value) {
         super.setDouble(name, value);
+        return this;
+    }
+
+    @Override
+    public Http2Headers setTimeMillis(AsciiString name, long value) {
+        super.setTimeMillis(name, value);
         return this;
     }
 

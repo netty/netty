@@ -129,6 +129,12 @@ public class DefaultHttp2Headers extends DefaultBinaryHeaders implements Http2He
     }
 
     @Override
+    public Http2Headers addTimeMillis(AsciiString name, long value) {
+        super.addTimeMillis(name, value);
+        return this;
+    }
+
+    @Override
     public Http2Headers add(BinaryHeaders headers) {
         super.add(headers);
         return this;
@@ -215,6 +221,12 @@ public class DefaultHttp2Headers extends DefaultBinaryHeaders implements Http2He
     @Override
     public Http2Headers setDouble(AsciiString name, double value) {
         super.setDouble(name, value);
+        return this;
+    }
+
+    @Override
+    public Http2Headers setTimeMillis(AsciiString name, long value) {
+        super.setTimeMillis(name, value);
         return this;
     }
 
