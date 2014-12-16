@@ -24,6 +24,7 @@ import org.jboss.netty.util.internal.ExecutorUtil;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -43,7 +44,7 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker>
     private final AbstractNioWorker[] workers;
     private final AtomicInteger workerIndex = new AtomicInteger();
     private final Executor workerExecutor;
-    private volatile boolean initialized;
+    private final AtomicBoolean initialized = new AtomicBoolean(false);
 
     /**
      * Create a new instance
@@ -71,11 +72,9 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker>
     }
 
     protected void init() {
-        if (initialized) {
+        if (!initialized.compareAndSet(false, true)) {
             throw new IllegalStateException("initialized already");
         }
-
-        initialized = true;
 
         for (int i = 0; i < workers.length; i++) {
             workers[i] = newWorker(workerExecutor);

@@ -22,6 +22,7 @@ import org.jboss.netty.util.internal.ExecutorUtil;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public abstract class AbstractNioBossPool<E extends Boss>
@@ -37,7 +38,7 @@ public abstract class AbstractNioBossPool<E extends Boss>
     private final Boss[] bosses;
     private final AtomicInteger bossIndex = new AtomicInteger();
     private final Executor bossExecutor;
-    private volatile boolean initialized;
+    private final AtomicBoolean initialized = new AtomicBoolean(false);
 
     /**
      * Create a new instance
@@ -66,10 +67,9 @@ public abstract class AbstractNioBossPool<E extends Boss>
     }
 
     protected void init() {
-        if (initialized) {
+        if (!initialized.compareAndSet(false, true)) {
             throw new IllegalStateException("initialized already");
         }
-        initialized = true;
 
         for (int i = 0; i < bosses.length; i++) {
             bosses[i] = newBoss(bossExecutor);
