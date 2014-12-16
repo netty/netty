@@ -27,6 +27,7 @@ import javax.management.MBeanServer;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -44,6 +45,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 public final class TestUtils {
 
@@ -58,6 +60,8 @@ public final class TestUtils {
 
     private static final Method hotspotMXBeanDumpHeap;
     private static final Object hotspotMXBean;
+
+    private static final long DUMP_PROGRESS_LOGGING_INTERVAL = TimeUnit.SECONDS.toNanos(5);
 
     static {
         // Populate the list of random ports.
@@ -226,6 +230,79 @@ public final class TestUtils {
         dumpThreads(threadDumpFile);
     }
 
+    public static void compressHeapDumps() throws IOException {
+        final File[] files = new File(System.getProperty("user.dir")).listFiles(new FilenameFilter() {
+            @Override
+            public boolean accept(File dir, String name) {
+                return name.endsWith(".hprof");
+            }
+        });
+
+        final byte[] buf = new byte[65536];
+        final LZMA2Options options = new LZMA2Options(9);
+
+        for (File file: files) {
+            final String filename = file.toString();
+            final String xzFilename = filename + ".xz";
+            final long fileLength = file.length();
+
+            logger.info("Compressing the heap dump: {}", xzFilename);
+
+            long lastLogTime = System.nanoTime();
+            long counter = 0;
+
+            InputStream in = null;
+            OutputStream out = null;
+            try {
+                in = new FileInputStream(filename);
+                out = new XZOutputStream(new FileOutputStream(xzFilename), options);
+                for (;;) {
+                    int readBytes = in.read(buf);
+                    if (readBytes < 0) {
+                        break;
+                    }
+                    if (readBytes == 0) {
+                        continue;
+                    }
+
+                    out.write(buf, 0, readBytes);
+                    counter += readBytes;
+
+                    long currentTime = System.nanoTime();
+                    if (currentTime - lastLogTime > DUMP_PROGRESS_LOGGING_INTERVAL) {
+                        logger.info("Compressing the heap dump: {} ({}%)",
+                                    xzFilename, counter * 100 / fileLength);
+                        lastLogTime = currentTime;
+                    }
+                }
+                out.close();
+                in.close();
+            } catch (Exception e) {
+                logger.warn("Failed to compress the heap dump: {}", xzFilename, e);
+            } finally {
+                if (in != null) {
+                    try {
+                        in.close();
+                    } catch (IOException ignored) {
+                        // Ignore.
+                    }
+                }
+                if (out != null) {
+                    try {
+                        out.close();
+                    } catch (IOException ignored) {
+                        // Ignore.
+                    }
+                }
+            }
+
+            // Delete the uncompressed dump in favor of the compressed one.
+            if (!file.delete()) {
+                logger.warn("Failed to delete the uncompressed heap dump: {}", filename);
+            }
+        }
+    }
+
     private static String timestamp() {
         return new SimpleDateFormat("HHmmss.SSS").format(new Date());
     }
@@ -242,51 +319,6 @@ public final class TestUtils {
             hotspotMXBeanDumpHeap.invoke(hotspotMXBean, filename, true);
         } catch (Exception e) {
             logger.warn("Failed to dump heap: {}", filename, e);
-            return;
-        }
-
-        final String xzFilename = filename + ".xz";
-        logger.info("Compressing the heap dump: {}", xzFilename);
-        final byte[] buf = new byte[65536];
-        InputStream in = null;
-        OutputStream out = null;
-        try {
-            in = new FileInputStream(filename);
-            out = new XZOutputStream(new FileOutputStream(xzFilename), new LZMA2Options(9));
-            for (;;) {
-                int readBytes = in.read(buf);
-                if (readBytes < 0) {
-                    break;
-                }
-                if (readBytes == 0) {
-                    continue;
-                }
-                out.write(buf, 0, readBytes);
-            }
-            out.close();
-            in.close();
-        } catch (Exception e) {
-            logger.warn("Failed to compress the heap dump: {}", xzFilename, e);
-        } finally {
-            if (in != null) {
-                try {
-                    in.close();
-                } catch (IOException ignored) {
-                    // Ignore.
-                }
-            }
-            if (out != null) {
-                try {
-                    out.close();
-                } catch (IOException ignored) {
-                    // Ignore.
-                }
-            }
-        }
-
-        // Delete the uncompressed dump in favor of the compressed one.
-        if (!file.delete()) {
-            logger.warn("Failed to delete the uncompressed heap dump: {}", filename);
         }
     }
 

@@ -26,7 +26,10 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.internal.StringUtil;
+import org.junit.AfterClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 
 import java.io.IOException;
 import java.util.Random;
@@ -36,6 +39,9 @@ import static org.junit.Assert.*;
 
 public class SocketGatheringWriteTest extends AbstractSocketTest {
 
+    @Rule
+    public final Timeout globalTimeout = new Timeout(60000);
+
     private static final Random random = new Random();
     static final byte[] data = new byte[1048576];
 
@@ -43,7 +49,12 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         random.nextBytes(data);
     }
 
-    @Test(timeout = 60000)
+    @AfterClass
+    public static void compressHeapDumps() throws Exception {
+        TestUtils.compressHeapDumps();
+    }
+
+    @Test
     public void testGatheringWrite() throws Throwable {
         run();
     }
@@ -52,7 +63,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         testGatheringWrite0(sb, cb, data, false, true);
     }
 
-    @Test(timeout = 60000)
+    @Test
     public void testGatheringWriteNotAutoRead() throws Throwable {
         run();
     }
@@ -61,7 +72,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         testGatheringWrite0(sb, cb, data, false, false);
     }
 
-    @Test(timeout = 60000)
+    @Test
     public void testGatheringWriteWithComposite() throws Throwable {
         run();
     }
@@ -70,7 +81,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         testGatheringWrite0(sb, cb, data, true, false);
     }
 
-    @Test(timeout = 60000)
+    @Test
     public void testGatheringWriteWithCompositeNotAutoRead() throws Throwable {
         run();
     }
@@ -80,7 +91,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
     }
 
     // Test for https://github.com/netty/netty/issues/2647
-    @Test(timeout = 60000)
+    @Test
     public void testGatheringWriteBig() throws Throwable {
         run();
     }
