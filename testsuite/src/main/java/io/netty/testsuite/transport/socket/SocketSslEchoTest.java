@@ -39,6 +39,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.junit.AfterClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -187,6 +188,11 @@ public class SocketSslEchoTest extends AbstractSocketTest {
     @Test(timeout = 30000)
     public void testSslEcho() throws Throwable {
         run();
+    }
+
+    @AfterClass
+    public static void compressHeapDumps() throws Exception {
+        TestUtils.compressHeapDumps();
     }
 
     public void testSslEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
