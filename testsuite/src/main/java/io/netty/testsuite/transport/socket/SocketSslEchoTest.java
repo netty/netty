@@ -287,7 +287,6 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             clientSendCounter.set(clientSendCounterVal += length);
             future.sync();
 
-
             if (needsRenegotiation && clientSendCounterVal >= data.length / 2) {
                 needsRenegotiation = false;
                 clientSslHandler.engine().setEnabledCipherSuites(new String[] { renegotiation.cipherSuite });
@@ -474,7 +473,6 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             recvCounter.addAndGet(actual.length);
         }
     }
-
 
     private class EchoServerHandler extends EchoHandler {
         volatile Future<Channel> renegoFuture;
