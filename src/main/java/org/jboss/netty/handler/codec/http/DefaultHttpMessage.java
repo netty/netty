@@ -44,26 +44,6 @@ public class DefaultHttpMessage implements HttpMessage {
         return headers;
     }
 
-    @Deprecated
-    public void addHeader(final String name, final Object value) {
-        headers.add(name, value);
-    }
-
-    @Deprecated
-    public void setHeader(final String name, final Object value) {
-        headers.set(name, value);
-    }
-
-    @Deprecated
-    public void setHeader(final String name, final Iterable<?> values) {
-        headers.set(name, values);
-    }
-
-    @Deprecated
-    public void removeHeader(final String name) {
-        headers.remove(name);
-    }
-
     public boolean isChunked() {
         if (chunked) {
             return true;
@@ -79,11 +59,6 @@ public class DefaultHttpMessage implements HttpMessage {
         }
     }
 
-    @Deprecated
-    public void clearHeaders() {
-        headers.clear();
-    }
-
     public void setContent(ChannelBuffer content) {
         if (content == null) {
             content = ChannelBuffers.EMPTY_BUFFER;
@@ -93,31 +68,6 @@ public class DefaultHttpMessage implements HttpMessage {
                     "non-empty content disallowed if this.chunked == true");
         }
         this.content = content;
-    }
-
-    @Deprecated
-    public String getHeader(final String name) {
-        return headers.get(name);
-    }
-
-    @Deprecated
-    public List<String> getHeaders(final String name) {
-        return headers.getAll(name);
-    }
-
-    @Deprecated
-    public List<Map.Entry<String, String>> getHeaders() {
-        return headers.entries();
-    }
-
-    @Deprecated
-    public boolean containsHeader(final String name) {
-        return headers.contains(name);
-    }
-
-    @Deprecated
-    public Set<String> getHeaderNames() {
-        return headers.names();
     }
 
     public HttpVersion getProtocolVersion() {

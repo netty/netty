@@ -40,8 +40,7 @@ public class NioWorkerPool extends AbstractNioWorkerPool<NioWorker> {
     }
 
     @Override
-    @Deprecated
-    protected NioWorker createWorker(Executor executor) {
+    protected NioWorker newWorker(Executor executor) {
         return new NioWorker(executor, determiner);
     }
 }

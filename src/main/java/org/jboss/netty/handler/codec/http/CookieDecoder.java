@@ -50,13 +50,6 @@ public class CookieDecoder {
     }
 
     /**
-     * @deprecated Use {@link #CookieDecoder()} instead.
-     */
-    @Deprecated
-    public CookieDecoder(@SuppressWarnings("unused") boolean lenient) {
-    }
-
-    /**
      * Decodes the specified HTTP header value into {@link Cookie}s.
      *
      * @return the decoded {@link Cookie}s

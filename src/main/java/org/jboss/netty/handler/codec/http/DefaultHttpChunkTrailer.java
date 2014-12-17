@@ -34,56 +34,6 @@ public class DefaultHttpChunkTrailer implements HttpChunkTrailer {
         return true;
     }
 
-    @Deprecated
-    public void addHeader(final String name, final Object value) {
-        trailingHeaders.add(name, value);
-    }
-
-    @Deprecated
-    public void setHeader(final String name, final Object value) {
-        trailingHeaders.set(name, value);
-    }
-
-    @Deprecated
-    public void setHeader(final String name, final Iterable<?> values) {
-        trailingHeaders.set(name, values);
-    }
-
-    @Deprecated
-    public void removeHeader(final String name) {
-        trailingHeaders.remove(name);
-    }
-
-    @Deprecated
-    public void clearHeaders() {
-        trailingHeaders.clear();
-    }
-
-    @Deprecated
-    public String getHeader(final String name) {
-        return trailingHeaders.get(name);
-    }
-
-    @Deprecated
-    public List<String> getHeaders(final String name) {
-        return trailingHeaders.getAll(name);
-    }
-
-    @Deprecated
-    public List<Map.Entry<String, String>> getHeaders() {
-        return trailingHeaders.entries();
-    }
-
-    @Deprecated
-    public boolean containsHeader(final String name) {
-        return trailingHeaders.contains(name);
-    }
-
-    @Deprecated
-    public Set<String> getHeaderNames() {
-        return trailingHeaders.names();
-    }
-
     public ChannelBuffer getContent() {
         return ChannelBuffers.EMPTY_BUFFER;
     }

@@ -39,11 +39,6 @@ public class SucceededChannelFuture extends CompleteChannelFuture {
         return true;
     }
 
-    @Deprecated
-    public ChannelFuture rethrowIfFailed() throws Exception {
-        return this;
-    }
-
     public ChannelFuture sync() throws InterruptedException {
         return this;
     }

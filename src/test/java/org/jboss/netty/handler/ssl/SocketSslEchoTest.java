@@ -59,29 +59,7 @@ public class SocketSslEchoTest extends SslTest {
     }
 
     @Test
-    public void testSslEcho1() throws Throwable {
-        testSslEcho(false, false);
-    }
-
-    @Test
-    public void testSslEcho2() throws Throwable {
-        testSslEcho(false, true);
-    }
-
-    @Test
-    public void testSslEcho3() throws Throwable {
-        testSslEcho(true, false);
-    }
-
-    @Test
-    public void testSslEcho4() throws Throwable {
-        testSslEcho(true, true);
-    }
-
-    @SuppressWarnings("deprecation")
-    private void testSslEcho(
-            boolean serverUsesDelegatedTaskExecutor, boolean clientUsesDelegatedTaskExecutor) throws Throwable {
-        ExecutorService delegatedTaskExecutor = Executors.newCachedThreadPool();
+    public void testSslEcho() throws Throwable {
         ServerBootstrap sb = new ServerBootstrap(serverChannelFactory);
         ClientBootstrap cb = new ClientBootstrap(clientChannelFactory);
 
@@ -93,21 +71,11 @@ public class SocketSslEchoTest extends SslTest {
         sb.setOption("receiveBufferSize", 1048576);
 
         // Configure the server pipeline.
-        if (serverUsesDelegatedTaskExecutor) {
-            sb.getPipeline().addFirst(
-                    "ssl", new SslHandler(serverCtx.newEngine(), serverCtx.bufferPool(), delegatedTaskExecutor));
-        } else {
-            sb.getPipeline().addFirst("ssl", serverCtx.newHandler());
-        }
+        sb.getPipeline().addFirst("ssl", serverCtx.newHandler());
         sb.getPipeline().addLast("handler", sh);
 
         // Configure the client pipeline.
-        if (clientUsesDelegatedTaskExecutor) {
-            cb.getPipeline().addFirst(
-                    "ssl", new SslHandler(clientCtx.newEngine(), clientCtx.bufferPool(), delegatedTaskExecutor));
-        } else {
-            cb.getPipeline().addFirst("ssl", clientCtx.newHandler());
-        }
+        cb.getPipeline().addFirst("ssl", clientCtx.newHandler());
         cb.getPipeline().addLast("handler", ch);
 
         Channel sc = sb.bind(new InetSocketAddress(0));
@@ -172,7 +140,6 @@ public class SocketSslEchoTest extends SslTest {
         sh.channel.close().awaitUninterruptibly();
         ch.channel.close().awaitUninterruptibly();
         sc.close().awaitUninterruptibly();
-        delegatedTaskExecutor.shutdown();
 
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
             throw sh.exception.get();
