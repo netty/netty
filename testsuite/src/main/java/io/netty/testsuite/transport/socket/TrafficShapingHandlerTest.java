@@ -29,15 +29,9 @@ import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import io.netty.util.internal.logging.Slf4JLoggerFactory;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.slf4j.LoggerFactory;
-
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -57,7 +51,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
     static final int messageSize = 1024;
     static final int bandwidthFactor = 12;
     static final int minfactor = 3;
-    static final int maxfactor = bandwidthFactor + (bandwidthFactor / 2);
+    static final int maxfactor = bandwidthFactor + bandwidthFactor / 2;
     static final long stepms = (1000 / bandwidthFactor - 10) / 10 * 10;
     static final long minimalms = Math.max(stepms / 2, 20) / 10 * 10;
     static final long check = 10;
@@ -65,12 +59,12 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
     static final byte[] data = new byte[messageSize];
 
     private static final String TRAFFIC = "traffic";
-    private static String TESTNAME;
-    private static int TESTRUN;
+    private static String currentTestName;
+    private static int currentTestRun;
 
     private static EventExecutorGroup group;
     private static EventExecutorGroup groupForGlobal;
-    private static ScheduledExecutorService executor = Executors.newScheduledThreadPool(10);
+    private static final ScheduledExecutorService executor = Executors.newScheduledThreadPool(10);
     static {
         random.nextBytes(data);
     }
@@ -79,9 +73,6 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
     public static void createGroup() {
         logger.info("Bandwidth: " + minfactor + " <= " + bandwidthFactor + " <= " + maxfactor +
                     " StepMs: " + stepms + " MinMs: " + minimalms + " CheckMs: " + check);
-        InternalLoggerFactory.setDefaultFactory(new Slf4JLoggerFactory());
-        Logger logger = (Logger) LoggerFactory.getLogger("ROOT");
-        logger.setLevel(Level.INFO);
         group = new DefaultEventExecutorGroup(8);
         groupForGlobal = new DefaultEventExecutorGroup(8);
     }
@@ -137,8 +128,8 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
 
     @Test(timeout = 10000)
     public void testNoTrafficShapping() throws Throwable {
-        TESTNAME = "TEST NO TRAFFIC";
-        TESTRUN = 0;
+        currentTestName = "TEST NO TRAFFIC";
+        currentTestRun = 0;
         run();
     }
 
@@ -151,8 +142,8 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
 
     @Test(timeout = 10000)
     public void testWriteTrafficShapping() throws Throwable {
-        TESTNAME = "TEST WRITE";
-        TESTRUN = 0;
+        currentTestName = "TEST WRITE";
+        currentTestRun = 0;
         run();
     }
 
@@ -165,8 +156,8 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
 
     @Test(timeout = 10000)
     public void testReadTrafficShapping() throws Throwable {
-        TESTNAME = "TEST READ";
-        TESTRUN = 0;
+        currentTestName = "TEST READ";
+        currentTestRun = 0;
         run();
     }
 
@@ -179,8 +170,8 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
 
     @Test(timeout = 10000)
     public void testWrite1TrafficShapping() throws Throwable {
-        TESTNAME = "TEST WRITE";
-        TESTRUN = 0;
+        currentTestName = "TEST WRITE";
+        currentTestRun = 0;
         run();
     }
 
@@ -193,8 +184,8 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
 
     @Test(timeout = 10000)
     public void testRead1TrafficShapping() throws Throwable {
-        TESTNAME = "TEST READ";
-        TESTRUN = 0;
+        currentTestName = "TEST READ";
+        currentTestRun = 0;
         run();
     }
 
@@ -207,8 +198,8 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
 
     @Test(timeout = 10000)
     public void testWriteGlobalTrafficShapping() throws Throwable {
-        TESTNAME = "TEST GLOBAL WRITE";
-        TESTRUN = 0;
+        currentTestName = "TEST GLOBAL WRITE";
+        currentTestRun = 0;
         run();
     }
 
@@ -221,8 +212,8 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
 
     @Test(timeout = 10000)
     public void testReadGlobalTrafficShapping() throws Throwable {
-        TESTNAME = "TEST GLOBAL READ";
-        TESTRUN = 0;
+        currentTestName = "TEST GLOBAL READ";
+        currentTestRun = 0;
         run();
     }
 
@@ -235,8 +226,8 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
 
     @Test(timeout = 10000)
     public void testAutoReadTrafficShapping() throws Throwable {
-        TESTNAME = "TEST AUTO READ";
-        TESTRUN = 0;
+        currentTestName = "TEST AUTO READ";
+        currentTestRun = 0;
         run();
     }
 
@@ -247,10 +238,11 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         long[] minimalWaitBetween = computeWaitAutoRead(autoRead);
         testTrafficShapping0(sb, cb, false, true, false, false, autoRead, minimalWaitBetween, multipleMessage);
     }
+
     @Test(timeout = 10000)
     public void testAutoReadGlobalTrafficShapping() throws Throwable {
-        TESTNAME = "TEST AUTO READ GLOBAL";
-        TESTRUN = 0;
+        currentTestName = "TEST AUTO READ GLOBAL";
+        currentTestRun = 0;
         run();
     }
 
@@ -264,8 +256,6 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
 
     /**
      *
-     * @param sb
-     * @param cb
      * @param additionalExecutor
      *            shall the pipeline add the handler using an additionnal executor
      * @param limitRead
@@ -274,7 +264,6 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
      *            True to set Write Limit on Client side
      * @param globalLimit
      *            True to change Channel to Global TrafficShapping
-     * @param autoRead
      * @param minimalWaitBetween
      *            time in ms that should be waited before getting the final result (note: for READ the values are
      *            right shifted once, the first value being 0)
@@ -288,8 +277,8 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
             final boolean limitRead, final boolean limitWrite, final boolean globalLimit, int[] autoRead,
             long[] minimalWaitBetween, int[] multipleMessage) throws Throwable {
 
-        TESTRUN ++;
-        logger.info("TEST: " + TESTNAME + " RUN: " + TESTRUN +
+        currentTestRun++;
+        logger.info("TEST: " + currentTestName + " RUN: " + currentTestRun +
                     " Exec: " + additionalExecutor + " Read: " + limitRead + " Write: " + limitWrite + " Global: "
                     + globalLimit);
         final ServerHandler sh = new ServerHandler(autoRead, multipleMessage);
@@ -352,7 +341,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         assertTrue("Error during exceution of TrafficShapping: " + promise.cause(), promise.isSuccess());
 
         float average = (totalNb * messageSize) / (float) (stop - start);
-        logger.info("TEST: " + TESTNAME + " RUN: " + TESTRUN +
+        logger.info("TEST: " + currentTestName + " RUN: " + currentTestRun +
                     " Average of traffic: " + average + " compare to " + bandwidthFactor);
         sh.channel.close().sync();
         ch.channel.close().sync();
@@ -418,7 +407,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         @Override
         public void messageReceived(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             long lastTimestamp = 0;
-            loggerClient.debug("Step: " + step + " Read: " + (in.readableBytes() / 8) + " blocks");
+            loggerClient.debug("Step: " + step + " Read: " + in.readableBytes() / 8 + " blocks");
             while (in.isReadable()) {
                 lastTimestamp = in.readLong();
                 multipleMessage[step]--;
@@ -427,7 +416,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
                 // still some message to get
                 return;
             }
-            long minimalWait = (minimalWaitBetween != null) ? minimalWaitBetween[step] : 0;
+            long minimalWait = minimalWaitBetween != null? minimalWaitBetween[step] : 0;
             int ar = 0;
             if (autoRead != null) {
                 if (step > 0 && autoRead[step - 1] != 0) {
@@ -435,7 +424,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
                 }
             }
             loggerClient.info("Step: " + step + " Interval: " + (lastTimestamp - currentLastTime) + " compareTo "
-                              + minimalWait + " (" + ar + ")");
+                              + minimalWait + " (" + ar + ')');
             assertTrue("The interval of time is incorrect:" + (lastTimestamp - currentLastTime) + " not> "
                        + minimalWait, lastTimestamp - currentLastTime >= minimalWait);
             currentLastTime = lastTimestamp;
@@ -519,11 +508,12 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
                 if (isAutoRead != 0) {
                     if (isAutoRead < 0) {
                         final int exactStep = step;
-                        long wait = (isAutoRead == -1) ? minimalms : stepms + minimalms;
+                        long wait = isAutoRead == -1? minimalms : stepms + minimalms;
                         if (isAutoRead == -3) {
                             wait = stepms * 3;
                         }
                         executor.schedule(new Runnable() {
+                            @Override
                             public void run() {
                                 loggerServer.info("Step: " + exactStep + " Reset AutoRead");
                                 channel.config().setAutoRead(true);
@@ -534,6 +524,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
                             loggerServer.debug("Step: " + step + " Will Set AutoRead: True");
                             final int exactStep = step;
                             executor.schedule(new Runnable() {
+                                @Override
                                 public void run() {
                                     loggerServer.info("Step: " + exactStep + " Set AutoRead: True");
                                     channel.config().setAutoRead(true);
