@@ -16,7 +16,9 @@
 
 package io.netty.handler.ssl;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
@@ -30,7 +32,15 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
+import javax.security.auth.x500.X500Principal;
 import java.io.File;
+import java.io.IOException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.List;
 
 /**
@@ -56,6 +66,15 @@ import java.util.List;
  * </pre>
  */
 public abstract class SslContext {
+    static final CertificateFactory X509_CERT_FACTORY;
+    static {
+        try {
+            X509_CERT_FACTORY = CertificateFactory.getInstance("X.509");
+        } catch (CertificateException e) {
+            throw new IllegalStateException("Unable to instance X.509 CertificateFactory", e);
+        }
+    }
+
     /**
      * Returns the default server-side implementation provider currently in use.
      *
@@ -509,7 +528,6 @@ public abstract class SslContext {
             File certChainFile, TrustManagerFactory trustManagerFactory,
             Iterable<String> ciphers, Iterable<String> nextProtocols,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
-
         return newClientContext(
                 provider, certChainFile, trustManagerFactory, null, null, null, null,
                 ciphers, IdentityCipherSuiteFilter.INSTANCE,
@@ -593,9 +611,20 @@ public abstract class SslContext {
         if (provider != null && provider != SslProvider.JDK) {
             throw new SSLException("client context unsupported for: " + provider);
         }
-
-        return new JdkSslClientContext(trustCertChainFile, trustManagerFactory, keyCertChainFile, keyFile, keyPassword,
-                keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
+        if (provider == null) {
+            provider = SslProvider.JDK;
+        }
+        switch (provider) {
+            case JDK:
+                new JdkSslClientContext(trustCertChainFile, trustManagerFactory, keyCertChainFile, keyFile, keyPassword,
+                    keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
+            case OPENSSL:
+                return new OpenSslClientContext(
+                        trustCertChainFile, trustManagerFactory,
+                        ciphers, apn, sessionCacheSize, sessionTimeout);
+        }
+        // Should never happen!!
+        throw new Error();
     }
 
     static ApplicationProtocolConfig toApplicationProtocolConfig(Iterable<String> nextProtocols) {
@@ -692,5 +721,25 @@ public abstract class SslContext {
 
     private static SslHandler newHandler(SSLEngine engine) {
         return new SslHandler(engine);
+    }
+
+    static void initTrustManagerFactory(File certChainFile, TrustManagerFactory trustManagerFactory)
+            throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException {
+        KeyStore ks = KeyStore.getInstance("JKS");
+        ks.load(null, null);
+        ByteBuf[] certs = PemReader.readCertificates(certChainFile);
+        try {
+            for (ByteBuf buf: certs) {
+                X509Certificate cert = (X509Certificate) X509_CERT_FACTORY.generateCertificate(
+                        new ByteBufInputStream(buf));
+                X500Principal principal = cert.getSubjectX500Principal();
+                ks.setCertificateEntry(principal.getName("RFC2253"), cert);
+            }
+        } finally {
+            for (ByteBuf buf: certs) {
+                buf.release();
+            }
+        }
+        trustManagerFactory.init(ks);
     }
 }
