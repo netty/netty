@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,17 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.socksx;
 
-import io.netty.handler.codec.DecoderResultProvider;
+package io.netty.handler.codec.socksx.v5;
+
+import io.netty.handler.codec.socksx.SocksMessage;
 
 /**
- * An interface that all SOCKS protocol messages implement.
+ * A tag interface that all SOCKS5 protocol messages implement.
  */
-public interface SocksMessage extends DecoderResultProvider {
-
-    /**
-     * Returns the protocol version of this message.
-     */
-    SocksVersion version();
+public interface Socks5Message extends SocksMessage {
+    // Tag interface
 }

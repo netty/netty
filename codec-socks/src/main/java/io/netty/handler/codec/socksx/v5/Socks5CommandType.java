@@ -17,36 +17,36 @@
 package io.netty.handler.codec.socksx.v5;
 
 /**
- * The type of address in {@link Socks5CommandRequest} and {@link Socks5CommandResponse}.
+ * The type of {@link Socks5CommandRequest}.
  */
-public class Socks5AddressType implements Comparable<Socks5AddressType> {
+public class Socks5CommandType implements Comparable<Socks5CommandType> {
 
-    public static final Socks5AddressType IPv4 = new Socks5AddressType(0x01, "IPv4");
-    public static final Socks5AddressType DOMAIN = new Socks5AddressType(0x03, "DOMAIN");
-    public static final Socks5AddressType IPv6 = new Socks5AddressType(0x04, "IPv6");
+    public static final Socks5CommandType CONNECT = new Socks5CommandType(0x01, "CONNECT");
+    public static final Socks5CommandType BIND = new Socks5CommandType(0x02, "BIND");
+    public static final Socks5CommandType UDP_ASSOCIATE = new Socks5CommandType(0x03, "UDP_ASSOCIATE");
 
-    public static Socks5AddressType valueOf(byte b) {
+    public static Socks5CommandType valueOf(byte b) {
         switch (b) {
         case 0x01:
-            return IPv4;
+            return CONNECT;
+        case 0x02:
+            return BIND;
         case 0x03:
-            return DOMAIN;
-        case 0x04:
-            return IPv6;
+            return UDP_ASSOCIATE;
         }
 
-        return new Socks5AddressType(b);
+        return new Socks5CommandType(b);
     }
 
     private final byte byteValue;
     private final String name;
     private String text;
 
-    public Socks5AddressType(int byteValue) {
+    public Socks5CommandType(int byteValue) {
         this(byteValue, "UNKNOWN");
     }
 
-    public Socks5AddressType(int byteValue, String name) {
+    public Socks5CommandType(int byteValue, String name) {
         if (name == null) {
             throw new NullPointerException("name");
         }
@@ -66,15 +66,15 @@ public class Socks5AddressType implements Comparable<Socks5AddressType> {
 
     @Override
     public boolean equals(Object obj) {
-        if (!(obj instanceof Socks5AddressType)) {
+        if (!(obj instanceof Socks5CommandType)) {
             return false;
         }
 
-        return byteValue == ((Socks5AddressType) obj).byteValue;
+        return byteValue == ((Socks5CommandType) obj).byteValue;
     }
 
     @Override
-    public int compareTo(Socks5AddressType o) {
+    public int compareTo(Socks5CommandType o) {
         return byteValue - o.byteValue;
     }
 
