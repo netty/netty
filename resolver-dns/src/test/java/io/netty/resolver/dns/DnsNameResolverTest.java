@@ -160,7 +160,6 @@ public class DnsNameResolverTest {
             "dailymotion.com",
             "dailymail.co.uk",
             "indiatimes.com",
-            "thepiratebay.se",
             "amazon.co.uk",
             "xnxx.com",
             "rakuten.co.jp",
