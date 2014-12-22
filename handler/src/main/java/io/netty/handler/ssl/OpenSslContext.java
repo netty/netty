@@ -138,14 +138,8 @@ public abstract class OpenSslContext extends SslContext {
                 /* List the ciphers that are permitted to negotiate. */
                 try {
                     // Convert the cipher list into a colon-separated string.
-                    StringBuilder cipherBuf = new StringBuilder();
-                    for (String c: this.ciphers) {
-                        cipherBuf.append(c);
-                        cipherBuf.append(':');
-                    }
-                    cipherBuf.setLength(cipherBuf.length() - 1);
-
-                    SSLContext.setCipherSuite(ctx, cipherBuf.toString());
+                    SSLContext.setCipherSuite(ctx, OpenSsl.ciphers(
+                            this.ciphers.toArray(new String[this.ciphers.size()])));
                 } catch (SSLException e) {
                     throw e;
                 } catch (Exception e) {
@@ -317,12 +311,12 @@ public abstract class OpenSslContext extends SslContext {
             return OpenSslDefaultApplicationProtocolNegotiator.INSTANCE;
         }
 
-        switch(config.protocol()) {
+        switch (config.protocol()) {
             case NONE:
                 return OpenSslDefaultApplicationProtocolNegotiator.INSTANCE;
             case NPN:
                 if (isServer) {
-                    switch(config.selectedListenerFailureBehavior()) {
+                    switch (config.selectedListenerFailureBehavior()) {
                         case CHOOSE_MY_LAST_PROTOCOL:
                             return new OpenSslNpnApplicationProtocolNegotiator(config.supportedProtocols());
                         default:

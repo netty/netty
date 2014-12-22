@@ -38,8 +38,13 @@ import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
 import java.security.Principal;
 import java.security.cert.Certificate;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.regex.Pattern;
@@ -81,6 +86,24 @@ public final class OpenSslEngine extends SSLEngine {
     private static final int MAX_PLAINTEXT_LENGTH = 16 * 1024; // 2^14
     private static final int MAX_COMPRESSED_LENGTH = MAX_PLAINTEXT_LENGTH + 1024;
     private static final int MAX_CIPHERTEXT_LENGTH = MAX_COMPRESSED_LENGTH + 1024;
+
+    // Protocols
+    private static final String PROTOCOL_SSL_V2_HELLO = "SSLv2Hello";
+    private static final String PROTOCOL_SSL_V2 = "SSLv2";
+    private static final String PROTOCOL_SSL_V3 = "SSLv3";
+    private static final String PROTOCOL_TLS_V1 = "TLSv1";
+    private static final String PROTOCOL_TLS_V1_1 = "TLSv1.1";
+    private static final String PROTOCOL_TLS_V1_2 = "TLSv1.2";
+
+    private static final String[] SUPPORTED_PROTOCOLS = {
+            PROTOCOL_SSL_V2_HELLO,
+            PROTOCOL_SSL_V2,
+            PROTOCOL_SSL_V3,
+            PROTOCOL_TLS_V1,
+            PROTOCOL_TLS_V1_1,
+            PROTOCOL_TLS_V1_2
+    };
+    private static final Set<String> SUPPORTED_PROTOCOLS_SET = new HashSet<String>(Arrays.asList(SUPPORTED_PROTOCOLS));
 
     // Header (5) + Data (2^14) + Compression (1024) + Encryption (1024) + MAC (20) + Padding (256)
     static final int MAX_ENCRYPTED_PACKET_LENGTH = MAX_CIPHERTEXT_LENGTH + 5 + 20 + 256;
@@ -629,32 +652,127 @@ public final class OpenSslEngine extends SSLEngine {
 
     @Override
     public String[] getSupportedCipherSuites() {
-        return EmptyArrays.EMPTY_STRINGS;
+        return OpenSsl.supportedCiphers();
     }
 
     @Override
     public String[] getEnabledCipherSuites() {
-        return EmptyArrays.EMPTY_STRINGS;
+        String[] enabled = SSL.getCiphers(ssl);
+        if (enabled == null) {
+            return EmptyArrays.EMPTY_STRINGS;
+        } else {
+            for (int i = 0; i < enabled.length; i++) {
+                String c = enabled[i];
+                String mapped = OpenSsl.jdkSslCipher(c);
+                if (mapped != null) {
+                    enabled[i] = mapped;
+                }
+            }
+            return enabled;
+        }
     }
 
     @Override
-    public void setEnabledCipherSuites(String[] strings) {
-        throw new UnsupportedOperationException();
+    public void setEnabledCipherSuites(String[] ciphers) {
+        if (ciphers == null) {
+            throw new IllegalArgumentException();
+        }
+
+        String[] mappedCiphers = new String[ciphers.length];
+        for (int i = 0; i < ciphers.length; i++) {
+            String c = ciphers[i];
+            String mapped = OpenSsl.cipherIfSupported(ciphers[i]);
+            if (mapped == null) {
+                throw new IllegalArgumentException("CipherSuite " + c + " not supported.");
+            }
+            mappedCiphers[i] = mapped;
+        }
+        try {
+            SSL.setCipherSuites(ssl, OpenSsl.ciphers(mappedCiphers));
+        } catch (Exception e) {
+            throw new IllegalStateException("Error during enable ciphersuites", e);
+        }
     }
 
     @Override
     public String[] getSupportedProtocols() {
-        return EmptyArrays.EMPTY_STRINGS;
+        return SUPPORTED_PROTOCOLS.clone();
     }
 
     @Override
     public String[] getEnabledProtocols() {
-        return EmptyArrays.EMPTY_STRINGS;
+        List<String> enabled = new ArrayList<String>();
+        // Seems like there is no way to explict disable SSLv2Hello in openssl so it is always enabled
+        enabled.add(PROTOCOL_SSL_V2_HELLO);
+        int opts = SSL.getOptions(ssl);
+        if ((opts & SSL.SSL_OP_NO_TLSv1) == 0) {
+            enabled.add(PROTOCOL_TLS_V1);
+        }
+        if ((opts & SSL.SSL_OP_NO_TLSv1_1) == 0) {
+            enabled.add(PROTOCOL_TLS_V1_1);
+        }
+        if ((opts & SSL.SSL_OP_NO_TLSv1_2) == 0) {
+            enabled.add(PROTOCOL_TLS_V1_2);
+        }
+        if ((opts & SSL.SSL_OP_NO_SSLv2) == 0) {
+            enabled.add(PROTOCOL_SSL_V2);
+        }
+        if ((opts & SSL.SSL_OP_NO_SSLv3) == 0) {
+            enabled.add(PROTOCOL_SSL_V3);
+        }
+        int size = enabled.size();
+        if (size == 0) {
+            return EmptyArrays.EMPTY_STRINGS;
+        } else {
+            return enabled.toArray(new String[size]);
+        }
     }
 
     @Override
-    public void setEnabledProtocols(String[] strings) {
-        throw new UnsupportedOperationException();
+    public void setEnabledProtocols(String[] protocols) {
+        if (protocols == null) {
+            // This is correct from the API docs
+            throw new IllegalArgumentException();
+        }
+        boolean sslv2 = false;
+        boolean sslv3 = false;
+        boolean tlsv1 = false;
+        boolean tlsv1_1 = false;
+        boolean tlsv1_2 = false;
+        for (String p: protocols) {
+            if (!SUPPORTED_PROTOCOLS_SET.contains(p)) {
+                throw new IllegalArgumentException("Protocol " + p + " is not supported.");
+            }
+            if (p.equals(PROTOCOL_SSL_V2)) {
+                sslv2 = true;
+            } else if (p.equals(PROTOCOL_SSL_V3)) {
+                sslv3 = true;
+            } else if (p.equals(PROTOCOL_TLS_V1)) {
+                tlsv1 = true;
+            } else if (p.equals(PROTOCOL_TLS_V1_1)) {
+                tlsv1_1 = true;
+            } else if (p.equals(PROTOCOL_TLS_V1_2)) {
+                tlsv1_2 = true;
+            }
+        }
+        // Enable all and then disable what we not want
+        SSL.setOptions(ssl, SSL.SSL_OP_ALL);
+
+        if (!sslv2) {
+            SSL.setOptions(ssl, SSL.SSL_OP_NO_SSLv2);
+        }
+        if (!sslv3) {
+            SSL.setOptions(ssl, SSL.SSL_OP_NO_SSLv3);
+        }
+        if (!tlsv1) {
+            SSL.setOptions(ssl, SSL.SSL_OP_NO_TLSv1);
+        }
+        if (!tlsv1_1) {
+            SSL.setOptions(ssl, SSL.SSL_OP_NO_TLSv1_1);
+        }
+        if (!tlsv1_2) {
+            SSL.setOptions(ssl, SSL.SSL_OP_NO_TLSv1_2);
+        }
     }
 
     private Certificate[] initPeerCertChain() throws SSLPeerUnverifiedException {
