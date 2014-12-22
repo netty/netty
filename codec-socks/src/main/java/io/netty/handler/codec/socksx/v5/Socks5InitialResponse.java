@@ -13,17 +13,16 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.socksx;
-
-import io.netty.handler.codec.DecoderResultProvider;
+package io.netty.handler.codec.socksx.v5;
 
 /**
- * An interface that all SOCKS protocol messages implement.
+ * An initial SOCKS5 authentication method selection request, as defined in
+ * <a href="http://tools.ietf.org/html/rfc1928#section-3">the section 3, RFC1928</a>.
  */
-public interface SocksMessage extends DecoderResultProvider {
+public interface Socks5InitialResponse extends Socks5Message {
 
     /**
-     * Returns the protocol version of this message.
+     * Returns the {@code METHOD} field of this response.
      */
-    SocksVersion version();
+    Socks5AuthMethod authMethod();
 }

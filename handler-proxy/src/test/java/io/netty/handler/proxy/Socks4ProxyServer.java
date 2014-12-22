@@ -21,18 +21,19 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
-import io.netty.handler.codec.socksx.v4.Socks4CmdRequest;
-import io.netty.handler.codec.socksx.v4.Socks4CmdRequestDecoder;
-import io.netty.handler.codec.socksx.v4.Socks4CmdResponse;
-import io.netty.handler.codec.socksx.v4.Socks4CmdStatus;
-import io.netty.handler.codec.socksx.v4.Socks4CmdType;
-import io.netty.handler.codec.socksx.v4.Socks4MessageEncoder;
+import io.netty.handler.codec.socksx.v4.DefaultSocks4CommandResponse;
+import io.netty.handler.codec.socksx.v4.Socks4CommandRequest;
+import io.netty.handler.codec.socksx.v4.Socks4CommandResponse;
+import io.netty.handler.codec.socksx.v4.Socks4CommandStatus;
+import io.netty.handler.codec.socksx.v4.Socks4CommandType;
+import io.netty.handler.codec.socksx.v4.Socks4ServerDecoder;
+import io.netty.handler.codec.socksx.v4.Socks4ServerEncoder;
 import io.netty.util.CharsetUtil;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
 final class Socks4ProxyServer extends ProxyServer {
@@ -50,13 +51,13 @@ final class Socks4ProxyServer extends ProxyServer {
         ChannelPipeline p = ch.pipeline();
         switch (testMode) {
         case INTERMEDIARY:
-            p.addLast(new Socks4CmdRequestDecoder());
-            p.addLast(Socks4MessageEncoder.INSTANCE);
+            p.addLast(new Socks4ServerDecoder());
+            p.addLast(Socks4ServerEncoder.INSTANCE);
             p.addLast(new Socks4IntermediaryHandler());
             break;
         case TERMINAL:
-            p.addLast(new Socks4CmdRequestDecoder());
-            p.addLast(Socks4MessageEncoder.INSTANCE);
+            p.addLast(new Socks4ServerDecoder());
+            p.addLast(Socks4ServerEncoder.INSTANCE);
             p.addLast(new Socks4TerminalHandler());
             break;
         case UNRESPONSIVE:
@@ -65,8 +66,8 @@ final class Socks4ProxyServer extends ProxyServer {
         }
     }
 
-    private boolean authenticate(ChannelHandlerContext ctx, Socks4CmdRequest req) {
-        assertThat(req.cmdType(), is(Socks4CmdType.CONNECT));
+    private boolean authenticate(ChannelHandlerContext ctx, Socks4CommandRequest req) {
+        assertThat(req.type(), is(Socks4CommandType.CONNECT));
 
         if (testMode != TestMode.INTERMEDIARY) {
             ctx.pipeline().addBefore(ctx.name(), "lineDecoder", new LineBasedFrameDecoder(64, false, true));
@@ -87,18 +88,20 @@ final class Socks4ProxyServer extends ProxyServer {
 
         @Override
         protected boolean handleProxyProtocol(ChannelHandlerContext ctx, Object msg) throws Exception {
-            Socks4CmdRequest req = (Socks4CmdRequest) msg;
-            Socks4CmdResponse res;
+            Socks4CommandRequest req = (Socks4CommandRequest) msg;
+            Socks4CommandResponse res;
 
             if (!authenticate(ctx, req)) {
-                res = new Socks4CmdResponse(Socks4CmdStatus.IDENTD_AUTH_FAILURE);
+                res = new DefaultSocks4CommandResponse(Socks4CommandStatus.IDENTD_AUTH_FAILURE);
             } else {
-                res = new Socks4CmdResponse(Socks4CmdStatus.SUCCESS);
-                intermediaryDestination = new InetSocketAddress(req.host(), req.port());
+                res = new DefaultSocks4CommandResponse(Socks4CommandStatus.SUCCESS);
+                intermediaryDestination = new InetSocketAddress(req.dstAddr(), req.dstPort());
             }
 
             ctx.write(res);
-            ctx.pipeline().remove(Socks4MessageEncoder.class);
+
+            ctx.pipeline().remove(Socks4ServerDecoder.class);
+            ctx.pipeline().remove(Socks4ServerEncoder.class);
 
             return true;
         }
@@ -112,23 +115,25 @@ final class Socks4ProxyServer extends ProxyServer {
     private final class Socks4TerminalHandler extends TerminalHandler {
         @Override
         protected boolean handleProxyProtocol(ChannelHandlerContext ctx, Object msg) throws Exception {
-            Socks4CmdRequest req = (Socks4CmdRequest) msg;
+            Socks4CommandRequest req = (Socks4CommandRequest) msg;
             boolean authzSuccess = authenticate(ctx, req);
 
-            Socks4CmdResponse res;
+            Socks4CommandResponse res;
             boolean sendGreeting = false;
             if (!authzSuccess) {
-                res = new Socks4CmdResponse(Socks4CmdStatus.IDENTD_AUTH_FAILURE);
-            } else if (!req.host().equals(destination.getHostString()) ||
-                       req.port() != destination.getPort()) {
-                res = new Socks4CmdResponse(Socks4CmdStatus.REJECTED_OR_FAILED);
+                res = new DefaultSocks4CommandResponse(Socks4CommandStatus.IDENTD_AUTH_FAILURE);
+            } else if (!req.dstAddr().equals(destination.getHostString()) ||
+                       req.dstPort() != destination.getPort()) {
+                res = new DefaultSocks4CommandResponse(Socks4CommandStatus.REJECTED_OR_FAILED);
             } else {
-                res = new Socks4CmdResponse(Socks4CmdStatus.SUCCESS);
+                res = new DefaultSocks4CommandResponse(Socks4CommandStatus.SUCCESS);
                 sendGreeting = true;
             }
 
             ctx.write(res);
-            ctx.pipeline().remove(Socks4MessageEncoder.class);
+
+            ctx.pipeline().remove(Socks4ServerDecoder.class);
+            ctx.pipeline().remove(Socks4ServerEncoder.class);
 
             if (sendGreeting) {
                 ctx.write(Unpooled.copiedBuffer("0\n", CharsetUtil.US_ASCII));

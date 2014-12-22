@@ -329,8 +329,7 @@ final class ReplayingDecoderBuffer extends ByteBuf {
 
     @Override
     public int bytesBefore(int length, byte value) {
-        final int readerIndex = buffer.readerIndex();
-        return bytesBefore(readerIndex, buffer.writerIndex() - readerIndex, value);
+        return bytesBefore(buffer.readerIndex(), length, value);
     }
 
     @Override

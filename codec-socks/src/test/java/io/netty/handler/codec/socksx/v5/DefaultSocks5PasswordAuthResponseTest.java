@@ -13,17 +13,18 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.socksx;
+package io.netty.handler.codec.socksx.v5;
 
-import io.netty.handler.codec.DecoderResultProvider;
+import org.junit.Test;
+import static org.junit.Assert.assertTrue;
 
-/**
- * An interface that all SOCKS protocol messages implement.
- */
-public interface SocksMessage extends DecoderResultProvider {
-
-    /**
-     * Returns the protocol version of this message.
-     */
-    SocksVersion version();
+public class DefaultSocks5PasswordAuthResponseTest {
+    @Test
+    public void testConstructorParamsAreNotNull() {
+        try {
+            new DefaultSocks5PasswordAuthResponse(null);
+        } catch (Exception e) {
+            assertTrue(e instanceof NullPointerException);
+        }
+    }
 }

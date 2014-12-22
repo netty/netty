@@ -18,12 +18,12 @@ package io.netty.handler.proxy;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.socksx.v4.Socks4CmdRequest;
-import io.netty.handler.codec.socksx.v4.Socks4CmdResponse;
-import io.netty.handler.codec.socksx.v4.Socks4CmdResponseDecoder;
-import io.netty.handler.codec.socksx.v4.Socks4CmdStatus;
-import io.netty.handler.codec.socksx.v4.Socks4CmdType;
-import io.netty.handler.codec.socksx.v4.Socks4MessageEncoder;
+import io.netty.handler.codec.socksx.v4.DefaultSocks4CommandRequest;
+import io.netty.handler.codec.socksx.v4.Socks4ClientDecoder;
+import io.netty.handler.codec.socksx.v4.Socks4ClientEncoder;
+import io.netty.handler.codec.socksx.v4.Socks4CommandResponse;
+import io.netty.handler.codec.socksx.v4.Socks4CommandStatus;
+import io.netty.handler.codec.socksx.v4.Socks4CommandType;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -69,13 +69,13 @@ public final class Socks4ProxyHandler extends ProxyHandler {
         ChannelPipeline p = ctx.pipeline();
         String name = ctx.name();
 
-        Socks4CmdResponseDecoder decoder = new Socks4CmdResponseDecoder();
+        Socks4ClientDecoder decoder = new Socks4ClientDecoder();
         p.addBefore(name, null, decoder);
 
         decoderName = p.context(decoder).name();
         encoderName = decoderName + ".encoder";
 
-        p.addBefore(name, encoderName, Socks4MessageEncoder.INSTANCE);
+        p.addBefore(name, encoderName, Socks4ClientEncoder.INSTANCE);
     }
 
     @Override
@@ -99,18 +99,18 @@ public final class Socks4ProxyHandler extends ProxyHandler {
         } else {
             rhost = raddr.getAddress().getHostAddress();
         }
-        return new Socks4CmdRequest(
-                username != null? username : "", Socks4CmdType.CONNECT, rhost, raddr.getPort());
+        return new DefaultSocks4CommandRequest(
+                Socks4CommandType.CONNECT, rhost, raddr.getPort(), username != null? username : "");
     }
 
     @Override
     protected boolean handleResponse(ChannelHandlerContext ctx, Object response) throws Exception {
-        final Socks4CmdResponse res = (Socks4CmdResponse) response;
-        final Socks4CmdStatus status = res.cmdStatus();
-        if (status == Socks4CmdStatus.SUCCESS) {
+        final Socks4CommandResponse res = (Socks4CommandResponse) response;
+        final Socks4CommandStatus status = res.status();
+        if (status == Socks4CommandStatus.SUCCESS) {
             return true;
         }
 
-        throw new ProxyConnectException(exceptionMessage("cmdStatus: " + status));
+        throw new ProxyConnectException(exceptionMessage("status: " + status));
     }
 }

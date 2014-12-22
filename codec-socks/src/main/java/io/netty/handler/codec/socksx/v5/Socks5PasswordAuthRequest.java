@@ -13,17 +13,21 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.socksx;
-
-import io.netty.handler.codec.DecoderResultProvider;
+package io.netty.handler.codec.socksx.v5;
 
 /**
- * An interface that all SOCKS protocol messages implement.
+ * A SOCKS5 subnegotiation request for username-password authentication, as defined in
+ * <a href="http://tools.ietf.org/html/rfc1929#section-2">the section 2, RFC1929</a>.
  */
-public interface SocksMessage extends DecoderResultProvider {
+public interface Socks5PasswordAuthRequest extends Socks5Message {
 
     /**
-     * Returns the protocol version of this message.
+     * Returns the username of this request.
      */
-    SocksVersion version();
+    String username();
+
+    /**
+     * Returns the password of this request.
+     */
+    String password();
 }
