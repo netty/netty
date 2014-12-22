@@ -18,6 +18,7 @@ package io.netty.handler.ssl;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.apache.tomcat.jni.Buffer;
@@ -28,6 +29,8 @@ import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
+import javax.net.ssl.SSLSessionBindingEvent;
+import javax.net.ssl.SSLSessionBindingListener;
 import javax.net.ssl.SSLSessionContext;
 import javax.net.ssl.X509TrustManager;
 import javax.security.cert.X509Certificate;
@@ -38,8 +41,11 @@ import java.security.Principal;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.regex.Pattern;
 
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.*;
@@ -61,6 +67,19 @@ public final class OpenSslEngine extends SSLEngine {
         ENGINE_CLOSED.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
         RENEGOTIATION_UNSUPPORTED.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
         ENCRYPTED_PACKET_OVERSIZED.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+
+        AtomicIntegerFieldUpdater<OpenSslEngine> destroyedUpdater =
+                PlatformDependent.newAtomicIntegerFieldUpdater(OpenSslEngine.class, "destroyed");
+        if (destroyedUpdater == null) {
+            destroyedUpdater = AtomicIntegerFieldUpdater.newUpdater(OpenSslEngine.class, "destroyed");
+        }
+        DESTROYED_UPDATER = destroyedUpdater;
+        AtomicReferenceFieldUpdater<OpenSslEngine, SSLSession> sessionUpdater =
+                PlatformDependent.newAtomicReferenceFieldUpdater(OpenSslEngine.class, "session");
+        if (sessionUpdater == null) {
+            sessionUpdater = AtomicReferenceFieldUpdater.newUpdater(OpenSslEngine.class, SSLSession.class, "session");
+        }
+        SESSION_UPDATER = sessionUpdater;
     }
 
     private static final int MAX_PLAINTEXT_LENGTH = 16 * 1024; // 2^14
@@ -72,8 +91,8 @@ public final class OpenSslEngine extends SSLEngine {
 
     static final int MAX_ENCRYPTION_OVERHEAD_LENGTH = MAX_ENCRYPTED_PACKET_LENGTH - MAX_PLAINTEXT_LENGTH;
 
-    private static final AtomicIntegerFieldUpdater<OpenSslEngine> DESTROYED_UPDATER =
-            AtomicIntegerFieldUpdater.newUpdater(OpenSslEngine.class, "destroyed");
+    private static final AtomicIntegerFieldUpdater<OpenSslEngine> DESTROYED_UPDATER;
+    private static final AtomicReferenceFieldUpdater<OpenSslEngine, SSLSession> SESSION_UPDATER;
 
     private static final Pattern CIPHER_REPLACE_PATTERN = Pattern.compile("-");
     // OpenSSL state
@@ -93,8 +112,9 @@ public final class OpenSslEngine extends SSLEngine {
     // See http://docs.oracle.com/javase/7/docs/api/javax/net/ssl/SSLEngine.html#getSession()
     private volatile String cipher = "SSL_NULL_WITH_NULL_NULL";
     private volatile String applicationProtocol;
+
+    // We store this outside of the SslSession so we not need to create an instance during verifyCertificates(...)
     private volatile Certificate[] peerCerts;
-    private volatile X509Certificate[] x509PeerCerts;
 
     // SSL Engine status variables
     private boolean isInboundDone;
@@ -107,7 +127,9 @@ public final class OpenSslEngine extends SSLEngine {
     private final boolean clientMode;
     private final ByteBufAllocator alloc;
     private final String fallbackApplicationProtocol;
-    private SSLSession session;
+
+    @SuppressWarnings("unused")
+    private volatile SSLSession session;
 
     /**
      * Creates a new instance
@@ -685,10 +707,16 @@ public final class OpenSslEngine extends SSLEngine {
 
     @Override
     public SSLSession getSession() {
+        // A other methods on SSLEngine are thread-safe we also need to make this thread-safe...
         SSLSession session = this.session;
         if (session == null) {
-            this.session = session = new SSLSession() {
-                private volatile byte[] id;
+            session = new SSLSession() {
+                // SSLSession implementation seems to not need to be thread-safe so no need for volatile etc.
+                private byte[] id;
+                private X509Certificate[] x509PeerCerts;
+
+                // lazy init for memory reasons
+                private Map<String, Object> values;
 
                 @Override
                 public byte[] getId() {
@@ -706,16 +734,19 @@ public final class OpenSslEngine extends SSLEngine {
 
                 @Override
                 public long getCreationTime() {
-                    return 0;
+                    // We need ot multiple by 1000 as openssl uses seconds and we need milli-seconds.
+                    return SSL.getTime(ssl) * 1000L;
                 }
 
                 @Override
                 public long getLastAccessedTime() {
-                    return 0;
+                    // TODO: Add proper implementation
+                    return getCreationTime();
                 }
 
                 @Override
                 public void invalidate() {
+                    // NOOP
                 }
 
                 @Override
@@ -724,21 +755,62 @@ public final class OpenSslEngine extends SSLEngine {
                 }
 
                 @Override
-                public void putValue(String s, Object o) {
+                public void putValue(String name, Object value) {
+                    if (name == null) {
+                        throw new NullPointerException("name");
+                    }
+                    if (value == null) {
+                        throw new NullPointerException("value");
+                    }
+                    Map<String, Object> values = this.values;
+                    if (values == null) {
+                        // Use size of 2 to keep the memory overhead small
+                        values = this.values = new HashMap<String, Object>(2);
+                    }
+                    Object old = values.put(name, value);
+                    if (value instanceof SSLSessionBindingListener) {
+                        ((SSLSessionBindingListener) value).valueBound(new SSLSessionBindingEvent(this, name));
+                    }
+                    notifyUnbound(old, name);
                 }
 
                 @Override
-                public Object getValue(String s) {
-                    return null;
+                public Object getValue(String name) {
+                    if (name == null) {
+                        throw new NullPointerException("name");
+                    }
+                    if (values == null) {
+                        return null;
+                    }
+                    return values.get(name);
                 }
 
                 @Override
-                public void removeValue(String s) {
+                public void removeValue(String name) {
+                    if (name == null) {
+                        throw new NullPointerException("name");
+                    }
+                    Map<String, Object> values = this.values;
+                    if (values == null) {
+                        return;
+                    }
+                    Object old = values.remove(name);
+                    notifyUnbound(old, name);
                 }
 
                 @Override
                 public String[] getValueNames() {
-                    return EmptyArrays.EMPTY_STRINGS;
+                    Map<String, Object> values = this.values;
+                    if (values == null || values.isEmpty()) {
+                        return EmptyArrays.EMPTY_STRINGS;
+                    }
+                    return values.keySet().toArray(new String[values.size()]);
+                }
+
+                private void notifyUnbound(Object value, String name) {
+                    if (value instanceof SSLSessionBindingListener) {
+                        ((SSLSessionBindingListener) value).valueUnbound(new SSLSessionBindingEvent(this, name));
+                    }
                 }
 
                 @Override
@@ -756,6 +828,7 @@ public final class OpenSslEngine extends SSLEngine {
 
                 @Override
                 public Certificate[] getLocalCertificates() {
+                    // TODO: Find out how to get these
                     return EMPTY_CERTIFICATES;
                 }
 
@@ -785,13 +858,25 @@ public final class OpenSslEngine extends SSLEngine {
                 }
 
                 @Override
-                public Principal getPeerPrincipal() {
-                    return null;
+                public Principal getPeerPrincipal() throws SSLPeerUnverifiedException {
+                    Certificate[] peer = getPeerCertificates();
+                    if (peer == null || peer.length == 0) {
+                        return null;
+                    }
+                    return principal(peer);
                 }
 
                 @Override
                 public Principal getLocalPrincipal() {
-                    return null;
+                    Certificate[] local = getLocalCertificates();
+                    if (local == null || local.length == 0) {
+                        return null;
+                    }
+                    return principal(local);
+                }
+
+                private Principal principal(Certificate[] certs) {
+                    return ((java.security.cert.X509Certificate) certs[0]).getIssuerX500Principal();
                 }
 
                 @Override
@@ -801,12 +886,12 @@ public final class OpenSslEngine extends SSLEngine {
 
                 @Override
                 public String getProtocol() {
-                    // TODO: Figure out how to get the current protocol.
                     String applicationProtocol = OpenSslEngine.this.applicationProtocol;
+                    String version = SSL.getVersion(ssl);
                     if (applicationProtocol == null) {
-                        return "unknown";
+                        return version;
                     } else {
-                        return "unknown:" + applicationProtocol;
+                        return version + ':' + applicationProtocol;
                     }
                 }
 
@@ -830,6 +915,11 @@ public final class OpenSslEngine extends SSLEngine {
                     return MAX_PLAINTEXT_LENGTH;
                 }
             };
+
+            if (!SESSION_UPDATER.compareAndSet(this, null, session)) {
+                // Was lazy created in the meantime so get the current reference.
+                session = this.session;
+            }
         }
 
         return session;
