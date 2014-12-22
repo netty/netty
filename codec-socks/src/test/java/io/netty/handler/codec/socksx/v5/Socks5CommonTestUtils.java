@@ -16,7 +16,6 @@
 package io.netty.handler.codec.socksx.v5;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 
 final class Socks5CommonTestUtils {
@@ -27,15 +26,31 @@ final class Socks5CommonTestUtils {
         //NOOP
     }
 
-    public static void writeMessageIntoEmbedder(EmbeddedChannel embedder, Socks5Request msg) {
-        ByteBuf buf = Unpooled.buffer();
-        msg.encodeAsByteBuf(buf);
-        embedder.writeInbound(buf);
+    public static void writeFromClientToServer(EmbeddedChannel embedder, Socks5Message msg) {
+        embedder.writeInbound(encodeClient(msg));
     }
 
-    public static void writeMessageIntoEmbedder(EmbeddedChannel embedder, Socks5Response msg) {
-        ByteBuf buf = Unpooled.buffer();
-        msg.encodeAsByteBuf(buf);
-        embedder.writeInbound(buf);
+    public static void writeFromServerToClient(EmbeddedChannel embedder, Socks5Message msg) {
+        embedder.writeInbound(encodeServer(msg));
+    }
+
+    public static ByteBuf encodeClient(Socks5Message msg) {
+        EmbeddedChannel out = new EmbeddedChannel(Socks5ClientEncoder.DEFAULT);
+        out.writeOutbound(msg);
+
+        ByteBuf encoded = out.readOutbound();
+        out.finish();
+
+        return encoded;
+    }
+
+    public static ByteBuf encodeServer(Socks5Message msg) {
+        EmbeddedChannel out = new EmbeddedChannel(Socks5ServerEncoder.DEFAULT);
+        out.writeOutbound(msg);
+
+        ByteBuf encoded = out.readOutbound();
+        out.finish();
+
+        return encoded;
     }
 }

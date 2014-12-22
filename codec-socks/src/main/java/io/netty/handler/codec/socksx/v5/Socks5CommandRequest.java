@@ -13,17 +13,31 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.socksx;
-
-import io.netty.handler.codec.DecoderResultProvider;
+package io.netty.handler.codec.socksx.v5;
 
 /**
- * An interface that all SOCKS protocol messages implement.
+ * A SOCKS5 request detail message, as defined in
+ * <a href="http://tools.ietf.org/html/rfc1928#section-4">the section 4, RFC1928</a>.
  */
-public interface SocksMessage extends DecoderResultProvider {
+public interface Socks5CommandRequest extends Socks5Message {
 
     /**
-     * Returns the protocol version of this message.
+     * Returns the type of this request.
      */
-    SocksVersion version();
+    Socks5CommandType type();
+
+    /**
+     * Returns the type of the {@code DST.ADDR} field of this request.
+     */
+    Socks5AddressType dstAddrType();
+
+    /**
+     * Returns the {@code DST.ADDR} field of this request.
+     */
+    String dstAddr();
+
+    /**
+     * Returns the {@code DST.PORT} field of this request.
+     */
+    int dstPort();
 }

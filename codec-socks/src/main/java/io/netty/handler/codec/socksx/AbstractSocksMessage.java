@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,17 +13,28 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package io.netty.handler.codec.socksx;
 
-import io.netty.handler.codec.DecoderResultProvider;
+import io.netty.handler.codec.DecoderResult;
 
 /**
- * An interface that all SOCKS protocol messages implement.
+ * An abstract {@link SocksMessage}.
  */
-public interface SocksMessage extends DecoderResultProvider {
+public abstract class AbstractSocksMessage implements SocksMessage {
 
-    /**
-     * Returns the protocol version of this message.
-     */
-    SocksVersion version();
+    private DecoderResult decoderResult = DecoderResult.SUCCESS;
+
+    @Override
+    public DecoderResult decoderResult() {
+        return decoderResult;
+    }
+
+    @Override
+    public void setDecoderResult(DecoderResult decoderResult) {
+        if (decoderResult == null) {
+            throw new NullPointerException("decoderResult");
+        }
+        this.decoderResult = decoderResult;
+    }
 }

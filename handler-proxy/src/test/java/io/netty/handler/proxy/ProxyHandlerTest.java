@@ -219,12 +219,12 @@ public class ProxyHandlerTest {
 
                 new FailureTestItem(
                         "Anonymous SOCKS4: rejected connection",
-                        BAD_DESTINATION, "cmdStatus: REJECTED_OR_FAILED",
+                        BAD_DESTINATION, "status: REJECTED_OR_FAILED",
                         new Socks4ProxyHandler(anonSocks4Proxy.address())),
 
                 new FailureTestItem(
                         "SOCKS4: rejected anonymous connection",
-                        DESTINATION, "cmdStatus: IDENTD_AUTH_FAILURE",
+                        DESTINATION, "status: IDENTD_AUTH_FAILURE",
                         new Socks4ProxyHandler(socks4Proxy.address())),
 
                 new SuccessTestItem(
@@ -234,12 +234,12 @@ public class ProxyHandlerTest {
 
                 new FailureTestItem(
                         "SOCKS4: rejected connection",
-                        BAD_DESTINATION, "cmdStatus: REJECTED_OR_FAILED",
+                        BAD_DESTINATION, "status: REJECTED_OR_FAILED",
                         new Socks4ProxyHandler(socks4Proxy.address(), USERNAME)),
 
                 new FailureTestItem(
                         "SOCKS4: authentication failure",
-                        DESTINATION, "cmdStatus: IDENTD_AUTH_FAILURE",
+                        DESTINATION, "status: IDENTD_AUTH_FAILURE",
                         new Socks4ProxyHandler(socks4Proxy.address(), BAD_USERNAME)),
 
                 new TimeoutTestItem(
@@ -255,12 +255,12 @@ public class ProxyHandlerTest {
 
                 new FailureTestItem(
                         "Anonymous SOCKS5: rejected connection",
-                        BAD_DESTINATION, "cmdStatus: FORBIDDEN",
+                        BAD_DESTINATION, "status: FORBIDDEN",
                         new Socks5ProxyHandler(anonSocks5Proxy.address())),
 
                 new FailureTestItem(
                         "SOCKS5: rejected anonymous connection",
-                        DESTINATION, "unexpected authScheme: AUTH_PASSWORD",
+                        DESTINATION, "unexpected authMethod: PASSWORD",
                         new Socks5ProxyHandler(socks5Proxy.address())),
 
                 new SuccessTestItem(
@@ -270,7 +270,7 @@ public class ProxyHandlerTest {
 
                 new FailureTestItem(
                         "SOCKS5: rejected connection",
-                        BAD_DESTINATION, "cmdStatus: FORBIDDEN",
+                        BAD_DESTINATION, "status: FORBIDDEN",
                         new Socks5ProxyHandler(socks5Proxy.address(), USERNAME, PASSWORD)),
 
                 new FailureTestItem(

@@ -21,30 +21,34 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
+import io.netty.handler.codec.socksx.v5.DefaultSocks5CommandResponse;
+import io.netty.handler.codec.socksx.v5.DefaultSocks5InitialResponse;
+import io.netty.handler.codec.socksx.v5.DefaultSocks5PasswordAuthResponse;
 import io.netty.handler.codec.socksx.v5.Socks5AddressType;
-import io.netty.handler.codec.socksx.v5.Socks5AuthRequest;
-import io.netty.handler.codec.socksx.v5.Socks5AuthRequestDecoder;
-import io.netty.handler.codec.socksx.v5.Socks5AuthResponse;
-import io.netty.handler.codec.socksx.v5.Socks5AuthScheme;
-import io.netty.handler.codec.socksx.v5.Socks5AuthStatus;
-import io.netty.handler.codec.socksx.v5.Socks5CmdRequest;
-import io.netty.handler.codec.socksx.v5.Socks5CmdRequestDecoder;
-import io.netty.handler.codec.socksx.v5.Socks5CmdResponse;
-import io.netty.handler.codec.socksx.v5.Socks5CmdStatus;
-import io.netty.handler.codec.socksx.v5.Socks5CmdType;
-import io.netty.handler.codec.socksx.v5.Socks5InitRequest;
-import io.netty.handler.codec.socksx.v5.Socks5InitRequestDecoder;
-import io.netty.handler.codec.socksx.v5.Socks5InitResponse;
-import io.netty.handler.codec.socksx.v5.Socks5MessageEncoder;
+import io.netty.handler.codec.socksx.v5.Socks5AuthMethod;
+import io.netty.handler.codec.socksx.v5.Socks5CommandRequest;
+import io.netty.handler.codec.socksx.v5.Socks5CommandRequestDecoder;
+import io.netty.handler.codec.socksx.v5.Socks5CommandResponse;
+import io.netty.handler.codec.socksx.v5.Socks5CommandStatus;
+import io.netty.handler.codec.socksx.v5.Socks5CommandType;
+import io.netty.handler.codec.socksx.v5.Socks5InitialRequest;
+import io.netty.handler.codec.socksx.v5.Socks5InitialRequestDecoder;
+import io.netty.handler.codec.socksx.v5.Socks5PasswordAuthRequest;
+import io.netty.handler.codec.socksx.v5.Socks5PasswordAuthRequestDecoder;
+import io.netty.handler.codec.socksx.v5.Socks5PasswordAuthStatus;
+import io.netty.handler.codec.socksx.v5.Socks5ServerEncoder;
 import io.netty.util.CharsetUtil;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
 final class Socks5ProxyServer extends ProxyServer {
+
+    private static final String ENCODER = "encoder";
+    private static final String DECODER = "decoder";
 
     Socks5ProxyServer(boolean useSsl, TestMode testMode, InetSocketAddress destination) {
         super(useSsl, testMode, destination);
@@ -60,13 +64,13 @@ final class Socks5ProxyServer extends ProxyServer {
         ChannelPipeline p = ch.pipeline();
         switch (testMode) {
         case INTERMEDIARY:
-            p.addLast("decoder", new Socks5InitRequestDecoder());
-            p.addLast("encoder", Socks5MessageEncoder.INSTANCE);
+            p.addLast(DECODER, new Socks5InitialRequestDecoder());
+            p.addLast(ENCODER, Socks5ServerEncoder.DEFAULT);
             p.addLast(new Socks5IntermediaryHandler());
             break;
         case TERMINAL:
-            p.addLast("decoder", new Socks5InitRequestDecoder());
-            p.addLast("encoder", Socks5MessageEncoder.INSTANCE);
+            p.addLast(DECODER, new Socks5InitialRequestDecoder());
+            p.addLast(ENCODER, Socks5ServerEncoder.DEFAULT);
             p.addLast(new Socks5TerminalHandler());
             break;
         case UNRESPONSIVE:
@@ -75,28 +79,28 @@ final class Socks5ProxyServer extends ProxyServer {
         }
     }
 
-    private boolean authenticate(ChannelHandlerContext ctx, Object msg) {
+    boolean authenticate(ChannelHandlerContext ctx, Object msg) {
         if (username == null) {
-            ctx.pipeline().addBefore("encoder", "decoder", new Socks5CmdRequestDecoder());
-            ctx.write(new Socks5InitResponse(Socks5AuthScheme.NO_AUTH));
+            ctx.pipeline().replace(DECODER, DECODER, new Socks5CommandRequestDecoder());
+            ctx.write(new DefaultSocks5InitialResponse(Socks5AuthMethod.NO_AUTH));
             return true;
         }
 
-        if (msg instanceof Socks5InitRequest) {
-            ctx.pipeline().addBefore("encoder", "decoder", new Socks5AuthRequestDecoder());
-            ctx.write(new Socks5InitResponse(Socks5AuthScheme.AUTH_PASSWORD));
+        if (msg instanceof Socks5InitialRequest) {
+            ctx.pipeline().replace(DECODER, DECODER, new Socks5PasswordAuthRequestDecoder());
+            ctx.write(new DefaultSocks5InitialResponse(Socks5AuthMethod.PASSWORD));
             return false;
         }
 
-        Socks5AuthRequest req = (Socks5AuthRequest) msg;
+        Socks5PasswordAuthRequest req = (Socks5PasswordAuthRequest) msg;
         if (req.username().equals(username) && req.password().equals(password)) {
-            ctx.pipeline().addBefore("encoder", "decoder", new Socks5CmdRequestDecoder());
-            ctx.write(new Socks5AuthResponse(Socks5AuthStatus.SUCCESS));
+            ctx.pipeline().replace(DECODER, DECODER, new Socks5CommandRequestDecoder());
+            ctx.write(new DefaultSocks5PasswordAuthResponse(Socks5PasswordAuthStatus.SUCCESS));
             return true;
         }
 
-        ctx.pipeline().addBefore("encoder", "decoder", new Socks5AuthRequestDecoder());
-        ctx.write(new Socks5AuthResponse(Socks5AuthStatus.FAILURE));
+        ctx.pipeline().replace(DECODER, DECODER, new Socks5PasswordAuthRequestDecoder());
+        ctx.write(new DefaultSocks5PasswordAuthResponse(Socks5PasswordAuthStatus.FAILURE));
         return false;
     }
 
@@ -112,15 +116,17 @@ final class Socks5ProxyServer extends ProxyServer {
                 return false;
             }
 
-            Socks5CmdRequest req = (Socks5CmdRequest) msg;
-            assertThat(req.cmdType(), is(Socks5CmdType.CONNECT));
+            Socks5CommandRequest req = (Socks5CommandRequest) msg;
+            assertThat(req.type(), is(Socks5CommandType.CONNECT));
 
-            Socks5CmdResponse res;
-            res = new Socks5CmdResponse(Socks5CmdStatus.SUCCESS, Socks5AddressType.IPv4);
-            intermediaryDestination = new InetSocketAddress(req.host(), req.port());
+            Socks5CommandResponse res =
+                    new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4);
+            intermediaryDestination = new InetSocketAddress(req.dstAddr(), req.dstPort());
 
             ctx.write(res);
-            ctx.pipeline().remove(Socks5MessageEncoder.class);
+
+            ctx.pipeline().remove(ENCODER);
+            ctx.pipeline().remove(DECODER);
 
             return true;
         }
@@ -142,23 +148,25 @@ final class Socks5ProxyServer extends ProxyServer {
                 return false;
             }
 
-            Socks5CmdRequest req = (Socks5CmdRequest) msg;
-            assertThat(req.cmdType(), is(Socks5CmdType.CONNECT));
+            Socks5CommandRequest req = (Socks5CommandRequest) msg;
+            assertThat(req.type(), is(Socks5CommandType.CONNECT));
 
             ctx.pipeline().addBefore(ctx.name(), "lineDecoder", new LineBasedFrameDecoder(64, false, true));
 
-            Socks5CmdResponse res;
+            Socks5CommandResponse res;
             boolean sendGreeting = false;
-            if (!req.host().equals(destination.getHostString()) ||
-                       req.port() != destination.getPort()) {
-                res = new Socks5CmdResponse(Socks5CmdStatus.FORBIDDEN, Socks5AddressType.IPv4);
+            if (!req.dstAddr().equals(destination.getHostString()) ||
+                       req.dstPort() != destination.getPort()) {
+                res = new DefaultSocks5CommandResponse(Socks5CommandStatus.FORBIDDEN, Socks5AddressType.IPv4);
             } else {
-                res = new Socks5CmdResponse(Socks5CmdStatus.SUCCESS, Socks5AddressType.IPv4);
+                res = new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4);
                 sendGreeting = true;
             }
 
             ctx.write(res);
-            ctx.pipeline().remove(Socks5MessageEncoder.class);
+
+            ctx.pipeline().remove(ENCODER);
+            ctx.pipeline().remove(DECODER);
 
             if (sendGreeting) {
                 ctx.write(Unpooled.copiedBuffer("0\n", CharsetUtil.US_ASCII));

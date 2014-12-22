@@ -17,36 +17,33 @@
 package io.netty.handler.codec.socksx.v5;
 
 /**
- * The type of address in {@link Socks5CommandRequest} and {@link Socks5CommandResponse}.
+ * The status of {@link Socks5PasswordAuthResponse}.
  */
-public class Socks5AddressType implements Comparable<Socks5AddressType> {
+public class Socks5PasswordAuthStatus implements Comparable<Socks5PasswordAuthStatus> {
 
-    public static final Socks5AddressType IPv4 = new Socks5AddressType(0x01, "IPv4");
-    public static final Socks5AddressType DOMAIN = new Socks5AddressType(0x03, "DOMAIN");
-    public static final Socks5AddressType IPv6 = new Socks5AddressType(0x04, "IPv6");
+    public static final Socks5PasswordAuthStatus SUCCESS = new Socks5PasswordAuthStatus(0x00, "SUCCESS");
+    public static final Socks5PasswordAuthStatus FAILURE = new Socks5PasswordAuthStatus(0xFF, "FAILURE");
 
-    public static Socks5AddressType valueOf(byte b) {
+    public static Socks5PasswordAuthStatus valueOf(byte b) {
         switch (b) {
-        case 0x01:
-            return IPv4;
-        case 0x03:
-            return DOMAIN;
-        case 0x04:
-            return IPv6;
+        case 0x00:
+            return SUCCESS;
+        case (byte) 0xFF:
+            return FAILURE;
         }
 
-        return new Socks5AddressType(b);
+        return new Socks5PasswordAuthStatus(b);
     }
 
     private final byte byteValue;
     private final String name;
     private String text;
 
-    public Socks5AddressType(int byteValue) {
+    public Socks5PasswordAuthStatus(int byteValue) {
         this(byteValue, "UNKNOWN");
     }
 
-    public Socks5AddressType(int byteValue, String name) {
+    public Socks5PasswordAuthStatus(int byteValue, String name) {
         if (name == null) {
             throw new NullPointerException("name");
         }
@@ -59,6 +56,10 @@ public class Socks5AddressType implements Comparable<Socks5AddressType> {
         return byteValue;
     }
 
+    public boolean isSuccess() {
+        return byteValue == 0;
+    }
+
     @Override
     public int hashCode() {
         return byteValue;
@@ -66,15 +67,15 @@ public class Socks5AddressType implements Comparable<Socks5AddressType> {
 
     @Override
     public boolean equals(Object obj) {
-        if (!(obj instanceof Socks5AddressType)) {
+        if (!(obj instanceof Socks5PasswordAuthStatus)) {
             return false;
         }
 
-        return byteValue == ((Socks5AddressType) obj).byteValue;
+        return byteValue == ((Socks5PasswordAuthStatus) obj).byteValue;
     }
 
     @Override
-    public int compareTo(Socks5AddressType o) {
+    public int compareTo(Socks5PasswordAuthStatus o) {
         return byteValue - o.byteValue;
     }
 
