@@ -91,6 +91,12 @@ public final class OpenSslEngine extends SSLEngine {
 
     static final int MAX_ENCRYPTION_OVERHEAD_LENGTH = MAX_ENCRYPTED_PACKET_LENGTH - MAX_PLAINTEXT_LENGTH;
 
+    enum ClientAuthMode {
+        NONE,
+        WANT,
+        REQUIRE,
+    }
+
     private static final AtomicIntegerFieldUpdater<OpenSslEngine> DESTROYED_UPDATER;
     private static final AtomicReferenceFieldUpdater<OpenSslEngine, SSLSession> SESSION_UPDATER;
 
@@ -115,6 +121,7 @@ public final class OpenSslEngine extends SSLEngine {
 
     // We store this outside of the SslSession so we not need to create an instance during verifyCertificates(...)
     private volatile Certificate[] peerCerts;
+    private volatile ClientAuthMode clientAuth = ClientAuthMode.NONE;
 
     // SSL Engine status variables
     private boolean isInboundDone;
@@ -1075,26 +1082,46 @@ public final class OpenSslEngine extends SSLEngine {
 
     @Override
     public void setNeedClientAuth(boolean b) {
-        if (b) {
-            throw new UnsupportedOperationException();
-        }
+        setClientAuth(b ? ClientAuthMode.REQUIRE : ClientAuthMode.NONE);
     }
 
     @Override
     public boolean getNeedClientAuth() {
-        return false;
+        return clientAuth == ClientAuthMode.REQUIRE;
     }
 
     @Override
     public void setWantClientAuth(boolean b) {
-        if (b) {
-            throw new UnsupportedOperationException();
-        }
+        setClientAuth(b ? ClientAuthMode.WANT : ClientAuthMode.NONE);
     }
 
     @Override
     public boolean getWantClientAuth() {
-        return false;
+        return clientAuth == ClientAuthMode.WANT;
+    }
+
+    private void setClientAuth(ClientAuthMode mode) {
+        if (clientMode) {
+            return;
+        }
+        synchronized (this) {
+            if (clientAuth == mode) {
+                // No need to issue any JNI calls if the mode is the same
+                return;
+            }
+            switch (mode) {
+                case NONE:
+                    SSL.setVerify(ssl, SSL.SSL_CVERIFY_NONE, OpenSslContext.VERIFY_DEPTH);
+                    break;
+                case REQUIRE:
+                    SSL.setVerify(ssl, SSL.SSL_CVERIFY_REQUIRE, OpenSslContext.VERIFY_DEPTH);
+                    break;
+                case WANT:
+                    SSL.setVerify(ssl, SSL.SSL_CVERIFY_OPTIONAL, OpenSslContext.VERIFY_DEPTH);
+                    break;
+            }
+            clientAuth = mode;
+        }
     }
 
     @Override
