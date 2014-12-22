@@ -16,9 +16,7 @@
 
 package io.netty.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
@@ -38,17 +36,13 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
-import javax.security.auth.x500.X500Principal;
 import java.io.File;
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.List;
@@ -91,20 +85,24 @@ public abstract class SslContext {
      * @return {@link SslProvider#OPENSSL} if OpenSSL is available. {@link SslProvider#JDK} otherwise.
      */
     public static SslProvider defaultServerProvider() {
-        if (OpenSsl.isAvailable()) {
-            return SslProvider.OPENSSL;
-        } else {
-            return SslProvider.JDK;
-        }
+        return defaultProvider();
     }
 
     /**
      * Returns the default client-side implementation provider currently in use.
      *
-     * @return {@link SslProvider#JDK}, because it is the only implementation at the moment
+     * @return {@link SslProvider#OPENSSL} if OpenSSL is available. {@link SslProvider#JDK} otherwise.
      */
     public static SslProvider defaultClientProvider() {
-        return SslProvider.JDK;
+        return defaultProvider();
+    }
+
+    private static SslProvider defaultProvider() {
+        if (OpenSsl.isAvailable()) {
+            return SslProvider.OPENSSL;
+        } else {
+            return SslProvider.JDK;
+        }
     }
 
     /**
@@ -279,7 +277,7 @@ public abstract class SslContext {
             long sessionCacheSize, long sessionTimeout) throws SSLException {
 
         return newServerContext(
-                provider, certChainFile, keyFile, keyPassword,
+                provider,  null, trustManagerFactory, certChainFile,  keyFile, keyPassword, null,
                 ciphers, IdentityCipherSuiteFilter.INSTANCE,
                 toApplicationProtocolConfig(nextProtocols), sessionCacheSize, sessionTimeout);
     }
@@ -351,7 +349,7 @@ public abstract class SslContext {
             long sessionCacheSize, long sessionTimeout) throws SSLException {
 
         if (provider == null) {
-            provider = OpenSsl.isAvailable()? SslProvider.OPENSSL : SslProvider.JDK;
+            provider = defaultServerProvider();
         }
 
         switch (provider) {
@@ -361,7 +359,7 @@ public abstract class SslContext {
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
         case OPENSSL:
             return new OpenSslServerContext(
-                    keyCertChainFile, keyFile, keyPassword,
+                    keyCertChainFile, keyFile, keyPassword, trustManagerFactory,
                     ciphers, apn, sessionCacheSize, sessionTimeout);
         default:
             throw new Error(provider.toString());
@@ -645,12 +643,8 @@ public abstract class SslContext {
             File keyCertChainFile, File keyFile, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
-
-        if (provider != null && provider != SslProvider.JDK) {
-            throw new SSLException("client context unsupported for: " + provider);
-        }
         if (provider == null) {
-            provider = SslProvider.JDK;
+            provider = defaultClientProvider();
         }
         switch (provider) {
             case JDK:
