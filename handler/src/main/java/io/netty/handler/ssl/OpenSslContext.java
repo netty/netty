@@ -105,7 +105,11 @@ public abstract class OpenSslContext extends SslContext {
             if (c == null) {
                 break;
             }
-            this.ciphers.add(c);
+            String cipher = OpenSsl.openSslCipher(c);
+            if (cipher == null) {
+                cipher = c;
+            }
+            this.ciphers.add(cipher);
         }
 
         this.apn = checkNotNull(apn, "apn");

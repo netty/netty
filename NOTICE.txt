@@ -42,6 +42,14 @@ Base64 Encoder and Decoder, which can be obtained at:
   * HOMEPAGE:
     * http://iharder.sourceforge.net/current/java/base64/
 
+This product contains modified parts of Android for its OpenSsl support,
+which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.android.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * https://source.android.com/index.html
+
 This product contains a modified portion of 'Webbit', an event based  
 WebSocket and HTTP server, which can be obtained at:
 
