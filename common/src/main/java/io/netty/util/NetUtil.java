@@ -16,6 +16,7 @@
 package io.netty.util;
 
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -395,8 +396,7 @@ public final class NetUtil {
         ipByteArray[byteIndex + 1] |= charValue & 15;
     }
 
-    static int getIntValue(char c) {
-
+    private static int getIntValue(char c) {
         switch (c) {
             case '0':
                 return 0;
@@ -436,6 +436,58 @@ public final class NetUtil {
                 return 15;
         }
         return 0;
+    }
+
+    /**
+     * Converts a 32-bit integer into an IPv4 address.
+     */
+    public static String intToIpAddress(int i) {
+        StringBuilder buf = new StringBuilder(15);
+        buf.append(i >> 24 & 0xff);
+        buf.append('.');
+        buf.append(i >> 16 & 0xff);
+        buf.append('.');
+        buf.append(i >> 8 & 0xff);
+        buf.append('.');
+        buf.append(i & 0xff);
+        return buf.toString();
+    }
+
+    /**
+     * Converts 4-byte or 16-byte data into an IPv4 or IPv6 string respectively.
+     *
+     * @throws IllegalArgumentException
+     *         if {@code length} is not {@code 4} nor {@code 16}
+     */
+    public static String bytesToIpAddress(byte[] bytes, int offset, int length) {
+        if (length == 4) {
+            StringBuilder buf = new StringBuilder(15);
+
+            buf.append(bytes[offset ++] >> 24 & 0xff);
+            buf.append('.');
+            buf.append(bytes[offset ++] >> 16 & 0xff);
+            buf.append('.');
+            buf.append(bytes[offset ++] >> 8 & 0xff);
+            buf.append('.');
+            buf.append(bytes[offset] & 0xff);
+
+            return buf.toString();
+        }
+
+        if (length == 16) {
+            final StringBuilder sb = new StringBuilder(39);
+            final int endOffset = offset + 14;
+
+            for (; offset < endOffset; offset += 2) {
+                StringUtil.toHexString(sb, bytes, offset, 2);
+                sb.append(':');
+            }
+            StringUtil.toHexString(sb, bytes, offset, 2);
+
+            return sb.toString();
+        }
+
+        throw new IllegalArgumentException("length: " + length + " (expected: 4 or 16)");
     }
 
     public static boolean isValidIpV6Address(String ipAddress) {

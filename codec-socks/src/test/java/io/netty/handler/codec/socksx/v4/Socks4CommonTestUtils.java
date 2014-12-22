@@ -15,8 +15,6 @@
  */
 package io.netty.handler.codec.socksx.v4;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 
 final class Socks4CommonTestUtils {
@@ -27,15 +25,15 @@ final class Socks4CommonTestUtils {
         //NOOP
     }
 
-    public static void writeMessageIntoEmbedder(EmbeddedChannel embedder, Socks4Request msg) {
-        ByteBuf buf = Unpooled.buffer();
-        msg.encodeAsByteBuf(buf);
-        embedder.writeInbound(buf);
-    }
-
-    public static void writeMessageIntoEmbedder(EmbeddedChannel embedder, Socks4Response msg) {
-        ByteBuf buf = Unpooled.buffer();
-        msg.encodeAsByteBuf(buf);
-        embedder.writeInbound(buf);
+    public static void writeMessageIntoEmbedder(EmbeddedChannel embedder, Socks4Message msg) {
+        EmbeddedChannel out;
+        if (msg instanceof Socks4CommandRequest) {
+            out = new EmbeddedChannel(Socks4ClientEncoder.INSTANCE);
+        } else {
+            out = new EmbeddedChannel(Socks4ServerEncoder.INSTANCE);
+        }
+        out.writeOutbound(msg);
+        embedder.writeInbound(out.readOutbound());
+        out.finish();
     }
 }

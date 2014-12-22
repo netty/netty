@@ -13,17 +13,30 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.socksx;
-
-import io.netty.handler.codec.DecoderResultProvider;
+package io.netty.handler.codec.socksx.v4;
 
 /**
- * An interface that all SOCKS protocol messages implement.
+ * A SOCKS4a {@code CONNECT} or {@code BIND} request.
  */
-public interface SocksMessage extends DecoderResultProvider {
+public interface Socks4CommandRequest extends Socks4Message {
 
     /**
-     * Returns the protocol version of this message.
+     * Returns the type of this request.
      */
-    SocksVersion version();
+    Socks4CommandType type();
+
+    /**
+     * Returns the {@code USERID} field of this request.
+     */
+    String userId();
+
+    /**
+     * Returns the {@code DSTIP} field of this request.
+     */
+    String dstAddr();
+
+    /**
+     * Returns the {@code DSTPORT} field of this request.
+     */
+    int dstPort();
 }

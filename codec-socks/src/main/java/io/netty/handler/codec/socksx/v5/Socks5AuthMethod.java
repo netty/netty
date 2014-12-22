@@ -17,36 +17,43 @@
 package io.netty.handler.codec.socksx.v5;
 
 /**
- * The type of address in {@link Socks5CommandRequest} and {@link Socks5CommandResponse}.
+ * The authentication method of SOCKS5.
  */
-public class Socks5AddressType implements Comparable<Socks5AddressType> {
+public class Socks5AuthMethod implements Comparable<Socks5AuthMethod> {
 
-    public static final Socks5AddressType IPv4 = new Socks5AddressType(0x01, "IPv4");
-    public static final Socks5AddressType DOMAIN = new Socks5AddressType(0x03, "DOMAIN");
-    public static final Socks5AddressType IPv6 = new Socks5AddressType(0x04, "IPv6");
+    public static final Socks5AuthMethod NO_AUTH = new Socks5AuthMethod(0x00, "NO_AUTH");
+    public static final Socks5AuthMethod GSSAPI = new Socks5AuthMethod(0x01, "GSSAPI");
+    public static final Socks5AuthMethod PASSWORD = new Socks5AuthMethod(0x02, "PASSWORD");
 
-    public static Socks5AddressType valueOf(byte b) {
+    /**
+     * Indicates that the server does not accept any authentication methods the client proposed.
+     */
+    public static final Socks5AuthMethod UNACCEPTED = new Socks5AuthMethod(0xff, "UNACCEPTED");
+
+    public static Socks5AuthMethod valueOf(byte b) {
         switch (b) {
+        case 0x00:
+            return NO_AUTH;
         case 0x01:
-            return IPv4;
-        case 0x03:
-            return DOMAIN;
-        case 0x04:
-            return IPv6;
+            return GSSAPI;
+        case 0x02:
+            return PASSWORD;
+        case (byte) 0xFF:
+            return UNACCEPTED;
         }
 
-        return new Socks5AddressType(b);
+        return new Socks5AuthMethod(b);
     }
 
     private final byte byteValue;
     private final String name;
     private String text;
 
-    public Socks5AddressType(int byteValue) {
+    public Socks5AuthMethod(int byteValue) {
         this(byteValue, "UNKNOWN");
     }
 
-    public Socks5AddressType(int byteValue, String name) {
+    public Socks5AuthMethod(int byteValue, String name) {
         if (name == null) {
             throw new NullPointerException("name");
         }
@@ -66,15 +73,15 @@ public class Socks5AddressType implements Comparable<Socks5AddressType> {
 
     @Override
     public boolean equals(Object obj) {
-        if (!(obj instanceof Socks5AddressType)) {
+        if (!(obj instanceof Socks5AuthMethod)) {
             return false;
         }
 
-        return byteValue == ((Socks5AddressType) obj).byteValue;
+        return byteValue == ((Socks5AuthMethod) obj).byteValue;
     }
 
     @Override
-    public int compareTo(Socks5AddressType o) {
+    public int compareTo(Socks5AuthMethod o) {
         return byteValue - o.byteValue;
     }
 
