@@ -138,6 +138,36 @@ public final class OpenSsl {
         return OPENSSL_TO_JDK_CIPHER_SUITES.get(cipher);
     }
 
+    static String[] supportedCiphers() {
+        return JDK_TO_OPENSSL_CIPHER_SUITES.keySet().toArray(new String[JDK_TO_OPENSSL_CIPHER_SUITES.size()]);
+    }
+
+    static String cipherIfSupported(String cipher) {
+        String mapped = JDK_TO_OPENSSL_CIPHER_SUITES.get(cipher);
+        if (mapped == null) {
+            if (OPENSSL_TO_JDK_CIPHER_SUITES.containsKey(cipher)) {
+                mapped = cipher;
+            }
+        }
+        return mapped;
+    }
+
+    static String ciphers(String[] ciphers) {
+        // Convert the cipher list into a colon-separated string.
+        StringBuilder cipherBuf = new StringBuilder();
+        for (String c: ciphers) {
+            // Support JDK cipher names and OpenSSL ones.
+            String mapped = JDK_TO_OPENSSL_CIPHER_SUITES.get(c);
+            if (mapped == null) {
+                mapped = c;
+            }
+            cipherBuf.append(mapped);
+            cipherBuf.append(':');
+        }
+        cipherBuf.setLength(cipherBuf.length() - 1);
+        return cipherBuf.toString();
+    }
+
     /**
      * Returns {@code true} if and only if
      * <a href="http://netty.io/wiki/forked-tomcat-native.html">{@code netty-tcnative}</a> and its OpenSSL support
