@@ -212,11 +212,17 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
                     currentMessage.setTrailingHeaders(new DefaultHttpHeaders());
                 }
 
-                // Set the 'Content-Length' header.
-                currentMessage.headers().set(
-                        HttpHeaders.Names.CONTENT_LENGTH,
-                        String.valueOf(content.readableBytes()));
-
+                // Set the 'Content-Length' header. If one isn't already set.
+                // This is important as HEAD responses will use a 'Content-Length' header which
+                // does not match the actual body, but the number of bytes that would be
+                // transmitted if a GET would have been used.
+                //
+                // See rfc2616 14.13 Content-Length
+                if (!isContentLengthSet(currentMessage)) {
+                    currentMessage.headers().set(
+                            Names.CONTENT_LENGTH,
+                            String.valueOf(content.readableBytes()));
+                }
                 // All done
                 out.add(currentMessage);
             }
