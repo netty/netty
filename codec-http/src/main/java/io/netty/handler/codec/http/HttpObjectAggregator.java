@@ -140,10 +140,12 @@ public class HttpObjectAggregator
 
     @Override
     protected void finishAggregation(FullHttpMessage aggregated) throws Exception {
-        // Set the 'Content-Length' header.
-        aggregated.headers().set(
-                HttpHeaderNames.CONTENT_LENGTH,
-                String.valueOf(aggregated.content().readableBytes()));
+        // Set the 'Content-Length' header. If one isn't already set.
+        if (!HttpHeaderUtil.isContentLengthSet(aggregated)) {
+            aggregated.headers().set(
+                    HttpHeaderNames.CONTENT_LENGTH,
+                    String.valueOf(aggregated.content().readableBytes()));
+        }
     }
 
     @Override
