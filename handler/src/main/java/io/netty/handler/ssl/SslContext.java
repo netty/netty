@@ -479,12 +479,12 @@ public abstract class SslContext {
         }
         switch (provider) {
             case JDK:
-                new JdkSslClientContext(trustCertChainFile, trustManagerFactory, keyCertChainFile, keyFile, keyPassword,
-                    keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
+                return new JdkSslClientContext(
+                        trustCertChainFile, trustManagerFactory, keyCertChainFile, keyFile, keyPassword,
+                        keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
             case OPENSSL:
                 return new OpenSslClientContext(
-                        trustCertChainFile, trustManagerFactory,
-                        ciphers, apn, sessionCacheSize, sessionTimeout);
+                        trustCertChainFile, trustManagerFactory, ciphers, apn, sessionCacheSize, sessionTimeout);
         }
         // Should never happen!!
         throw new Error();
