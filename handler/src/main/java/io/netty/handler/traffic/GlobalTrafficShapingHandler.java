@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * <p>This implementation of the {@link AbstractTrafficShapingHandler} is for global
  * traffic shaping, that is to say a global limitation of the bandwidth, whatever
  * the number of opened channels.</p>
- * <p>Note the index used in <code>OutboundBuffer.setUserDefinedWritability(index, boolean)</code> is <b>2</b>.</p>
+ * <p>Note the index used in {@code OutboundBuffer.setUserDefinedWritability(index, boolean)} is <b>2</b>.</p>
  *
  * <p>The general use should be as follow:</p>
  * <ul>
@@ -57,10 +57,10 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * <p>maxTimeToWait, by default set to 15s, allows to specify an upper bound of time shaping.</p>
  * </li>
- * <li>In your handler, you should consider to use the <code>channel.isWritable()</code> and
- * <code>channelWritabilityChanged(ctx)</code> to handle writability, or through
- * <code>future.addListener(new GenericFutureListener())</code> on the future returned by
- * <code>ctx.write()</code>.</li>
+ * <li>In your handler, you should consider to use the {@code channel.isWritable()} and
+ * {@code channelWritabilityChanged(ctx)} to handle writability, or through
+ * {@code future.addListener(new GenericFutureListener())} on the future returned by
+ * {@code ctx.write()}.</li>
  * <li><p>You shall also consider to have object size in read or write operations relatively adapted to
  * the bandwidth you required: for instance having 10 MB objects for 10KB/s will lead to burst effect,
  * while having 100 KB objects for 1 MB/s should be smoothly handle by this TrafficShaping handler.</p></li>
@@ -192,7 +192,6 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
      *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}.
      */
     public GlobalTrafficShapingHandler(EventExecutor executor) {
-        super();
         createGlobalTrafficCounter(executor);
     }
 
@@ -314,7 +313,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         final ChannelPromise promise;
 
         private ToSend(final long delay, final Object toSend, final long size, final ChannelPromise promise) {
-            this.relativeTimeAction = delay;
+            relativeTimeAction = delay;
             this.toSend = toSend;
             this.size = size;
             this.promise = promise;

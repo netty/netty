@@ -164,12 +164,12 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
      *            The maximum delay to wait in case of traffic excess.
      *            Must be positive.
      */
-    protected AbstractTrafficShapingHandler(long writeLimit, long readLimit,
-            long checkInterval, long maxTime) {
+    protected AbstractTrafficShapingHandler(long writeLimit, long readLimit, long checkInterval, long maxTime) {
         if (maxTime <= 0) {
             throw new IllegalArgumentException("maxTime must be positive");
         }
-        this.userDefinedWritabilityIndex = userDefinedWritabilityIndex();
+
+        userDefinedWritabilityIndex = userDefinedWritabilityIndex();
         this.writeLimit = writeLimit;
         this.readLimit = readLimit;
         this.checkInterval = checkInterval;
@@ -400,9 +400,9 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
      * <p>Note that this limit is a best effort on memory limitation to prevent Out Of
      * Memory Exception. To ensure it works, the handler generating the write should
      * use one of the way provided by Netty to handle the capacity:</p>
-     * <p>- the <code>Channel.isWritable()</code> property and the corresponding
-     * <code>channelWritabilityChanged()</code></p>
-     * <p>- the <code>ChannelFuture.addListener(new GenericFutureListener())</code></p>
+     * <p>- the {@code Channel.isWritable()} property and the corresponding
+     * {@code channelWritabilityChanged()}</p>
+     * <p>- the {@code ChannelFuture.addListener(new GenericFutureListener())}</p>
      *
      * @param maxWriteSize the maximum Write Size allowed in the buffer
      *            per channel before write suspended is set,
@@ -433,13 +433,14 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
             this.ctx = ctx;
         }
 
+        @Override
         public void run() {
             ChannelConfig config = ctx.channel().config();
             if (!config.isAutoRead() && isHandlerActive(ctx)) {
                 // If AutoRead is False and Active is True, user make a direct setAutoRead(false)
                 // Then Just reset the status
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Not unsuspend: " + config.isAutoRead() + ":" +
+                    logger.debug("Not unsuspend: " + config.isAutoRead() + ':' +
                             isHandlerActive(ctx));
                 }
                 ctx.attr(READ_SUSPENDED).set(false);
@@ -447,10 +448,10 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                 // Anything else allows the handler to reset the AutoRead
                 if (logger.isDebugEnabled()) {
                     if (config.isAutoRead() && !isHandlerActive(ctx)) {
-                        logger.debug("Unsuspend: " + config.isAutoRead() + ":" +
+                        logger.debug("Unsuspend: " + config.isAutoRead() + ':' +
                                 isHandlerActive(ctx));
                     } else {
-                        logger.debug("Normal unsuspend: " + config.isAutoRead() + ":"
+                        logger.debug("Normal unsuspend: " + config.isAutoRead() + ':'
                                 + isHandlerActive(ctx));
                     }
                 }
@@ -459,7 +460,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                 ctx.channel().read();
             }
             if (logger.isDebugEnabled()) {
-                logger.debug("Unsupsend final status => " + config.isAutoRead() + ":"
+                logger.debug("Unsupsend final status => " + config.isAutoRead() + ':'
                         + isHandlerActive(ctx));
             }
         }
@@ -486,7 +487,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                 // Only AutoRead AND HandlerActive True means Context Active
                 ChannelConfig config = ctx.channel().config();
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Read suspend: " + wait + ":" + config.isAutoRead() + ":"
+                    logger.debug("Read suspend: " + wait + ':' + config.isAutoRead() + ':'
                             + isHandlerActive(ctx));
                 }
                 if (config.isAutoRead() && isHandlerActive(ctx)) {
@@ -502,7 +503,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                     }
                     ctx.executor().schedule(reopenTask, wait, TimeUnit.MILLISECONDS);
                     if (logger.isDebugEnabled()) {
-                        logger.debug("Suspend final status => " + config.isAutoRead() + ":"
+                        logger.debug("Suspend final status => " + config.isAutoRead() + ':'
                                 + isHandlerActive(ctx) + " will reopened at: " + wait);
                     }
                 }
@@ -554,7 +555,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
             long wait = trafficCounter.writeTimeToWait(size, writeLimit, maxTime, now);
             if (wait >= MINIMAL_WAIT) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Write suspend: " + wait + ":" + ctx.channel().config().isAutoRead() + ":"
+                    logger.debug("Write suspend: " + wait + ':' + ctx.channel().config().isAutoRead() + ':'
                             + isHandlerActive(ctx));
                 }
                 submitWrite(ctx, msg, size, wait, now, promise);
@@ -572,8 +573,8 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                 delay, TrafficCounter.milliSecondFromNano(), promise);
     }
 
-    abstract void submitWrite(final ChannelHandlerContext ctx, final Object msg, final long size,
-            final long delay, final long now, final ChannelPromise promise);
+    abstract void submitWrite(
+            ChannelHandlerContext ctx, Object msg, long size, long delay, long now, ChannelPromise promise);
 
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
@@ -624,7 +625,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
             .append(" maxSize: ").append(maxWriteSize)
             .append(" and Counter: ");
         if (trafficCounter != null) {
-            builder.append(trafficCounter.toString());
+            builder.append(trafficCounter);
         } else {
             builder.append("none");
         }
