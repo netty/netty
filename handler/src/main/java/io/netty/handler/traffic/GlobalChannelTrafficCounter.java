@@ -86,6 +86,7 @@ public class GlobalChannelTrafficCounter extends TrafficCounter {
     /**
      * Start the monitoring process.
      */
+    @Override
     public synchronized void start() {
         if (monitorActive) {
             return;
@@ -103,6 +104,7 @@ public class GlobalChannelTrafficCounter extends TrafficCounter {
     /**
      * Stop the monitoring process.
      */
+    @Override
     public synchronized void stop() {
         if (!monitorActive) {
             return;
