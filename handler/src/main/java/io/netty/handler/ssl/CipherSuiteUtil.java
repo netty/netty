@@ -1,0 +1,481 @@
+/*
+ * Copyright 2014 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+package io.netty.handler.ssl;
+
+import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import javax.net.ssl.SSLContext;
+import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.ConcurrentMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/**
+ * Converts a Java cipher suite string to an OpenSSL cipher suite string and vice versa.
+ *
+ * @see <a href="http://en.wikipedia.org/wiki/Cipher_suite">Wikipedia page about cipher suite</a>
+ */
+final class CipherSuiteUtil {
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(CipherSuiteUtil.class);
+
+    /**
+     * A_B_WITH_C_D, where:
+     *
+     * A - TLS or SSL (protocol)
+     * B - handshake algorithm (key exchange and authentication algorithms to be precise)
+     * C - bulk cipher
+     * D - HMAC algorithm
+     *
+     * This regular expression assumees that:
+     *
+     * 1) A is always TLS or SSL, and
+     * 2) D is always a single word.
+     */
+    private static final Pattern JAVA_CIPHERSUITE_PATTERN =
+            Pattern.compile("^(?:TLS|SSL)_((?:(?!_WITH_).)+)_WITH_(.*)_(.*)$");
+
+    /**
+     * A-B-C, where:
+     *
+     * A - handshake algorithm (key exchange and authentication algorithms to be precise)
+     * B - bulk cipher
+     * C - HMAC algorithm
+     *
+     * This regular expression assumes that:
+     *
+     * 1) A has some deterministic pattern as shown below, and
+     * 2) C is always a single word
+     */
+    private static final Pattern OPENSSL_CIPHERSUITE_PATTERN =
+            // Be very careful not to break the indentation while editing.
+            Pattern.compile(
+                    "^(?:(" + // BEGIN handshake algorithm
+                        "(?:(?:EXP-)?" +
+                            "(?:" +
+                                "(?:DHE|EDH|ECDH|ECDHE)-(?:DSS|RSA|ECDSA)|" +
+                                "(?:ADH|AECDH|KRB5|PSK)" +
+                            ')' +
+                        ")|" +
+                        "EXP" +
+                    ")-)?" +  // END handshake algorithm
+                    "(.*)-(.*)$");
+
+    private static final Pattern JAVA_AES_CBC_PATTERN = Pattern.compile("^(AES)_([0-9]+)_CBC$");
+    private static final Pattern JAVA_AES_PATTERN = Pattern.compile("^(AES)_([0-9]+)_(.*)$");
+    private static final Pattern OPENSSL_AES_CBC_PATTERN = Pattern.compile("^(AES)([0-9]+)$");
+    private static final Pattern OPENSSL_AES_PATTERN = Pattern.compile("^(AES)([0-9]+)-(.*)$");
+
+    /**
+     * Java-to-OpenSSL cipher suite conversion map
+     * Note that the Java cipher suite has the protocol prefix (TLS_, SSL_)
+     */
+    private static final ConcurrentMap<String, String> j2o = PlatformDependent.newConcurrentHashMap();
+
+    /**
+     * OpenSSL-to-Java cipher suite conversion map.
+     * Note that the Java cipher suite *does not* have the protocol prefix (TLS_, SSL_)
+     */
+    private static final ConcurrentMap<String, String> o2j = PlatformDependent.newConcurrentHashMap();
+
+    static {
+        String[] cipherSuites = EmptyArrays.EMPTY_STRINGS;
+        try {
+            cipherSuites = SSLContext.getDefault().getSupportedSSLParameters().getCipherSuites();
+        } catch (NoSuchAlgorithmException e) {
+            logger.warn("Failed to get the default SSLContext:", e);
+        }
+
+        // Populate the initial mapping from the currently supported cipher suites.
+        for (String c: cipherSuites) {
+            cacheFromJava(c);
+        }
+
+        // Also popluate those unavailable from Java but maybe available in OpenSSL.
+        cacheFromJava("SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA");
+        cacheFromJava("SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA");
+        cacheFromJava("SSL_DHE_DSS_WITH_DES_CBC_SHA");
+        cacheFromJava("SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA");
+        cacheFromJava("SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA");
+        cacheFromJava("SSL_DHE_RSA_WITH_DES_CBC_SHA");
+        cacheFromJava("SSL_DH_anon_EXPORT_WITH_DES40_CBC_SHA");
+        cacheFromJava("SSL_DH_anon_EXPORT_WITH_RC4_40_MD5");
+        cacheFromJava("SSL_DH_anon_WITH_3DES_EDE_CBC_SHA");
+        cacheFromJava("SSL_DH_anon_WITH_DES_CBC_SHA");
+        cacheFromJava("SSL_DH_anon_WITH_RC4_128_MD5");
+        cacheFromJava("SSL_RSA_EXPORT_WITH_DES40_CBC_SHA");
+        cacheFromJava("SSL_RSA_EXPORT_WITH_RC2_CBC_40_MD5");
+        cacheFromJava("SSL_RSA_EXPORT_WITH_RC4_40_MD5");
+        cacheFromJava("SSL_RSA_WITH_3DES_EDE_CBC_SHA");
+        cacheFromJava("SSL_RSA_WITH_DES_CBC_SHA");
+        cacheFromJava("SSL_RSA_WITH_NULL_MD5");
+        cacheFromJava("SSL_RSA_WITH_NULL_SHA");
+        cacheFromJava("SSL_RSA_WITH_RC4_128_MD5");
+        cacheFromJava("SSL_RSA_WITH_RC4_128_SHA");
+        cacheFromJava("TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA");
+        cacheFromJava("TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA");
+        cacheFromJava("TLS_DHE_DSS_WITH_AES_128_CBC_SHA");
+        cacheFromJava("TLS_DHE_DSS_WITH_AES_128_CBC_SHA256");
+        cacheFromJava("TLS_DHE_DSS_WITH_AES_128_GCM_SHA256");
+        cacheFromJava("TLS_DHE_DSS_WITH_AES_256_CBC_SHA");
+        cacheFromJava("TLS_DHE_DSS_WITH_DES_CBC_SHA");
+        cacheFromJava("TLS_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA");
+        cacheFromJava("TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA");
+        cacheFromJava("TLS_DHE_RSA_WITH_AES_128_CBC_SHA");
+        cacheFromJava("TLS_DHE_RSA_WITH_AES_128_CBC_SHA256");
+        cacheFromJava("TLS_DHE_RSA_WITH_AES_128_GCM_SHA256");
+        cacheFromJava("TLS_DHE_RSA_WITH_AES_256_CBC_SHA");
+        cacheFromJava("TLS_DHE_RSA_WITH_DES_CBC_SHA");
+        cacheFromJava("TLS_DH_anon_EXPORT_WITH_DES40_CBC_SHA");
+        cacheFromJava("TLS_DH_anon_EXPORT_WITH_RC4_40_MD5");
+        cacheFromJava("TLS_DH_anon_WITH_3DES_EDE_CBC_SHA");
+        cacheFromJava("TLS_DH_anon_WITH_AES_128_CBC_SHA");
+        cacheFromJava("TLS_DH_anon_WITH_AES_128_CBC_SHA256");
+        cacheFromJava("TLS_DH_anon_WITH_AES_128_GCM_SHA256");
+        cacheFromJava("TLS_DH_anon_WITH_AES_256_CBC_SHA");
+        cacheFromJava("TLS_DH_anon_WITH_DES_CBC_SHA");
+        cacheFromJava("TLS_DH_anon_WITH_RC4_128_MD5");
+        cacheFromJava("TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA");
+        cacheFromJava("TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA");
+        cacheFromJava("TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256");
+        cacheFromJava("TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
+        cacheFromJava("TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA");
+        cacheFromJava("TLS_ECDHE_ECDSA_WITH_NULL_SHA");
+        cacheFromJava("TLS_ECDHE_ECDSA_WITH_RC4_128_SHA");
+        cacheFromJava("TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA");
+        cacheFromJava("TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA");
+        cacheFromJava("TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256");
+        cacheFromJava("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256");
+        cacheFromJava("TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA");
+        cacheFromJava("TLS_ECDHE_RSA_WITH_NULL_SHA");
+        cacheFromJava("TLS_ECDHE_RSA_WITH_RC4_128_SHA");
+        cacheFromJava("TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA");
+        cacheFromJava("TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA");
+        cacheFromJava("TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA256");
+        cacheFromJava("TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256");
+        cacheFromJava("TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA");
+        cacheFromJava("TLS_ECDH_ECDSA_WITH_NULL_SHA");
+        cacheFromJava("TLS_ECDH_ECDSA_WITH_RC4_128_SHA");
+        cacheFromJava("TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA");
+        cacheFromJava("TLS_ECDH_RSA_WITH_AES_128_CBC_SHA");
+        cacheFromJava("TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256");
+        cacheFromJava("TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256");
+        cacheFromJava("TLS_ECDH_RSA_WITH_AES_256_CBC_SHA");
+        cacheFromJava("TLS_ECDH_RSA_WITH_NULL_SHA");
+        cacheFromJava("TLS_ECDH_RSA_WITH_RC4_128_SHA");
+        cacheFromJava("TLS_ECDH_anon_WITH_3DES_EDE_CBC_SHA");
+        cacheFromJava("TLS_ECDH_anon_WITH_AES_128_CBC_SHA");
+        cacheFromJava("TLS_ECDH_anon_WITH_AES_256_CBC_SHA");
+        cacheFromJava("TLS_ECDH_anon_WITH_NULL_SHA");
+        cacheFromJava("TLS_ECDH_anon_WITH_RC4_128_SHA");
+        cacheFromJava("TLS_KRB5_EXPORT_WITH_DES_CBC_40_MD5");
+        cacheFromJava("TLS_KRB5_EXPORT_WITH_DES_CBC_40_SHA");
+        cacheFromJava("TLS_KRB5_EXPORT_WITH_RC2_CBC_40_MD5");
+        cacheFromJava("TLS_KRB5_EXPORT_WITH_RC2_CBC_40_SHA");
+        cacheFromJava("TLS_KRB5_EXPORT_WITH_RC4_40_MD5");
+        cacheFromJava("TLS_KRB5_EXPORT_WITH_RC4_40_SHA");
+        cacheFromJava("TLS_KRB5_WITH_3DES_EDE_CBC_MD5");
+        cacheFromJava("TLS_KRB5_WITH_3DES_EDE_CBC_SHA");
+        cacheFromJava("TLS_KRB5_WITH_DES_CBC_MD5");
+        cacheFromJava("TLS_KRB5_WITH_DES_CBC_SHA");
+        cacheFromJava("TLS_KRB5_WITH_RC4_128_MD5");
+        cacheFromJava("TLS_KRB5_WITH_RC4_128_SHA");
+        cacheFromJava("TLS_RSA_EXPORT_WITH_DES40_CBC_SHA");
+        cacheFromJava("TLS_RSA_EXPORT_WITH_RC2_CBC_40_MD5");
+        cacheFromJava("TLS_RSA_EXPORT_WITH_RC4_40_MD5");
+        cacheFromJava("TLS_RSA_WITH_3DES_EDE_CBC_SHA");
+        cacheFromJava("TLS_RSA_WITH_AES_128_CBC_SHA");
+        cacheFromJava("TLS_RSA_WITH_AES_128_CBC_SHA256");
+        cacheFromJava("TLS_RSA_WITH_AES_128_GCM_SHA256");
+        cacheFromJava("TLS_RSA_WITH_AES_256_CBC_SHA");
+        cacheFromJava("TLS_RSA_WITH_DES_CBC_SHA");
+        cacheFromJava("TLS_RSA_WITH_NULL_MD5");
+        cacheFromJava("TLS_RSA_WITH_NULL_SHA");
+        cacheFromJava("TLS_RSA_WITH_NULL_SHA256");
+        cacheFromJava("TLS_RSA_WITH_RC4_128_MD5");
+        cacheFromJava("TLS_RSA_WITH_RC4_128_SHA");
+    }
+
+    /**
+     * Clears the cache for testing purpose.
+     */
+    static void clearCache() {
+        j2o.clear();
+        o2j.clear();
+    }
+
+    /**
+     * Tests if the specified key-value pair has been cached in Java-to-OpenSSL cache.
+     */
+    static boolean isJ2OCached(String key, String value) {
+        return value.equals(j2o.get(key));
+    }
+
+    /**
+     * Tests if the specified key-value pair has been cached in OpenSSL-to-Java cache.
+     */
+    static boolean isO2JCached(String key, String value) {
+        return value.equals(o2j.get(key));
+    }
+
+    /**
+     * Converts the specified Java cipher suite to its corresponding OpenSSL cipher suite name.
+     *
+     * @return {@code null} if the conversion has failed
+     */
+    static String toOpenSsl(String javaCipherSuite) {
+        String converted = j2o.get(javaCipherSuite);
+        if (converted != null) {
+            return converted;
+        } else {
+            return cacheFromJava(javaCipherSuite);
+        }
+    }
+
+    private static String cacheFromJava(String javaCipherSuite) {
+        String openSslCipherSuite = toOpenSslUncached(javaCipherSuite);
+        if (openSslCipherSuite == null) {
+            return null;
+        }
+
+        // Cache the mapping.
+        j2o.putIfAbsent(javaCipherSuite, openSslCipherSuite);
+
+        // Cache the reverse mapping after stripping the protocol prefix (TLS_ or SSL_)
+        o2j.put(openSslCipherSuite, javaCipherSuite.substring(4));
+
+        logger.debug("Cipher suite mapping: {} => {}", javaCipherSuite, openSslCipherSuite);
+
+        return openSslCipherSuite;
+    }
+
+    static String toOpenSslUncached(String javaCipherSuite) {
+        Matcher m = JAVA_CIPHERSUITE_PATTERN.matcher(javaCipherSuite);
+        if (!m.matches()) {
+            return null;
+        }
+
+        String handshakeAlgo = toOpenSslHandshakeAlgo(m.group(1));
+        String bulkCipher = toOpenSslBulkCipher(m.group(2));
+        String hmacAlgo = toOpenSslHmacAlgo(m.group(3));
+        if (handshakeAlgo.length() == 0) {
+            return bulkCipher + '-' + hmacAlgo;
+        } else {
+            return handshakeAlgo + '-' + bulkCipher + '-' + hmacAlgo;
+        }
+    }
+
+    private static String toOpenSslHandshakeAlgo(String handshakeAlgo) {
+        final boolean export = handshakeAlgo.endsWith("_EXPORT");
+        if (export) {
+            handshakeAlgo = handshakeAlgo.substring(0, handshakeAlgo.length() - 7);
+        }
+
+        if ("RSA".equals(handshakeAlgo)) {
+            handshakeAlgo = "";
+        } else if (handshakeAlgo.endsWith("_anon")) {
+            handshakeAlgo = 'A' + handshakeAlgo.substring(0, handshakeAlgo.length() - 5);
+        }
+
+        if (export) {
+            if (handshakeAlgo.length() == 0) {
+                handshakeAlgo = "EXP";
+            } else {
+                handshakeAlgo = "EXP-" + handshakeAlgo;
+            }
+        }
+
+        return handshakeAlgo.replace('_', '-');
+    }
+
+    private static String toOpenSslBulkCipher(String bulkCipher) {
+        if (bulkCipher.startsWith("AES_")) {
+            Matcher m = JAVA_AES_CBC_PATTERN.matcher(bulkCipher);
+            if (m.matches()) {
+                return m.replaceFirst("$1$2");
+            }
+
+            m = JAVA_AES_PATTERN.matcher(bulkCipher);
+            if (m.matches()) {
+                return m.replaceFirst("$1$2-$3");
+            }
+        }
+
+        if ("3DES_EDE_CBC".equals(bulkCipher)) {
+            return "DES-CBC3";
+        }
+
+        if ("RC4_128".equals(bulkCipher) || "RC4_40".equals(bulkCipher)) {
+            return "RC4";
+        }
+
+        if ("DES40_CBC".equals(bulkCipher) || "DES_CBC_40".equals(bulkCipher)) {
+            return "DES-CBC";
+        }
+
+        if ("RC2_CBC_40".equals(bulkCipher)) {
+            return "RC2-CBC";
+        }
+
+        return bulkCipher.replace('_', '-');
+    }
+
+    private static String toOpenSslHmacAlgo(String hmacAlgo) {
+        // Java and OpenSSL use the same algorithm names for:
+        //
+        //   * SHA
+        //   * SHA256
+        //   * MD5
+        //
+        return hmacAlgo;
+    }
+
+    static String toJava(String openSslCipherSuite, String protocol) {
+        String converted = o2j.get(openSslCipherSuite);
+        if (converted == null) {
+            converted = cacheFromOpenSsl(openSslCipherSuite);
+            if (converted == null) {
+                return null;
+            }
+        }
+
+        return protocol + '_' + converted;
+    }
+
+    private static String cacheFromOpenSsl(String openSslCipherSuite) {
+        String javaCipherSuite = toJavaUncached(openSslCipherSuite);
+        if (javaCipherSuite == null) {
+            return null;
+        }
+
+        // Cache the mapping.
+        o2j.putIfAbsent(openSslCipherSuite, javaCipherSuite);
+
+        // Cache the reverse mapping after adding the protocol prefix (TLS_ or SSL_)
+        j2o.putIfAbsent("TLS_" + javaCipherSuite, openSslCipherSuite);
+        j2o.putIfAbsent("SSL_" + javaCipherSuite, openSslCipherSuite);
+
+        logger.debug("Cipher suite mapping: TLS_{} => {}", javaCipherSuite, openSslCipherSuite);
+        logger.debug("Cipher suite mapping: SSL_{} => {}", javaCipherSuite, openSslCipherSuite);
+
+        return javaCipherSuite;
+    }
+
+    static String toJavaUncached(String openSslCipherSuite) {
+        Matcher m = OPENSSL_CIPHERSUITE_PATTERN.matcher(openSslCipherSuite);
+        if (!m.matches()) {
+            return null;
+        }
+
+        String handshakeAlgo = m.group(1);
+        final boolean export;
+        if (handshakeAlgo == null) {
+            handshakeAlgo = "";
+            export = false;
+        } else if (handshakeAlgo.startsWith("EXP-")) {
+            handshakeAlgo = handshakeAlgo.substring(4);
+            export = true;
+        } else if ("EXP".equals(handshakeAlgo)) {
+            handshakeAlgo = "";
+            export = true;
+        } else {
+            export = false;
+        }
+
+        handshakeAlgo = toJavaHandshakeAlgo(handshakeAlgo, export);
+        String bulkCipher = toJavaBulkCipher(m.group(2), export);
+        String hmacAlgo = toJavaHmacAlgo(m.group(3));
+
+        return handshakeAlgo + "_WITH_" + bulkCipher + '_' + hmacAlgo;
+    }
+
+    private static String toJavaHandshakeAlgo(String handshakeAlgo, boolean export) {
+        if (handshakeAlgo.length() == 0) {
+            handshakeAlgo = "RSA";
+        } else if ("ADH".equals(handshakeAlgo)) {
+            handshakeAlgo = "DH_anon";
+        } else if ("AECDH".equals(handshakeAlgo)) {
+            handshakeAlgo = "ECDH_anon";
+        }
+
+        handshakeAlgo = handshakeAlgo.replace('-', '_');
+        if (export) {
+            return handshakeAlgo + "_EXPORT";
+        } else {
+            return handshakeAlgo;
+        }
+    }
+
+    private static String toJavaBulkCipher(String bulkCipher, boolean export) {
+        if (bulkCipher.startsWith("AES")) {
+            Matcher m = OPENSSL_AES_CBC_PATTERN.matcher(bulkCipher);
+            if (m.matches()) {
+                return m.replaceFirst("$1_$2_CBC");
+            }
+
+            m = OPENSSL_AES_PATTERN.matcher(bulkCipher);
+            if (m.matches()) {
+                return m.replaceFirst("$1_$2_$3");
+            }
+        }
+
+        if ("DES-CBC3".equals(bulkCipher)) {
+            return "3DES_EDE_CBC";
+        }
+
+        if ("RC4".equals(bulkCipher)) {
+            if (export) {
+                return "RC4_40";
+            } else {
+                return "RC4_128";
+            }
+        }
+
+        if ("DES-CBC".equals(bulkCipher)) {
+            if (export) {
+                return "DES_CBC_40";
+            } else {
+                return "DES_CBC";
+            }
+        }
+
+        if ("RC2-CBC".equals(bulkCipher)) {
+            if (export) {
+                return "RC2_CBC_40";
+            } else {
+                return "RC2_CBC";
+            }
+        }
+
+        return bulkCipher.replace('-', '_');
+    }
+
+    private static String toJavaHmacAlgo(String hmacAlgo) {
+        // Java and OpenSSL use the same algorithm names for:
+        //
+        //   * SHA
+        //   * SHA256
+        //   * MD5
+        //
+        return hmacAlgo;
+    }
+
+    private CipherSuiteUtil() { }
+}
