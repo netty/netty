@@ -105,6 +105,12 @@ public abstract class OpenSslContext extends SslContext {
             if (c == null) {
                 break;
             }
+
+            String converted = CipherSuiteConverter.toOpenSsl(c);
+            if (converted != null) {
+                c = converted;
+            }
+
             this.ciphers.add(c);
         }
 
