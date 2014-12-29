@@ -66,10 +66,10 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * maxTimeToWait, by default set to 15s, allows to specify an upper bound of time shaping.<br><br>
  * </li>
- * <li>In your handler, you should consider to use the <code>channel.isWritable()</code> and
- * <code>channelWritabilityChanged(ctx)</code> to handle writability, or through
- * <code>future.addListener(new GenericFutureListener())</code> on the future returned by
- * <code>ctx.write()</code>.</li>
+ * <li>In your handler, you should consider to use the {@code channel.isWritable()} and
+ * {@code channelWritabilityChanged(ctx)} to handle writability, or through
+ * {@code future.addListener(new GenericFutureListener())} on the future returned by
+ * {@code ctx.write()}.</li>
  * <li>You shall also consider to have object size in read or write operations relatively adapted to
  * the bandwidth you required: for instance having 10 MB objects for 10KB/s will lead to burst effect,
  * while having 100 KB objects for 1 MB/s should be smoothly handle by this TrafficShaping handler.<br><br></li>
@@ -528,7 +528,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
                 wait = perChannel.channelTrafficCounter.readTimeToWait(size, readChannelLimit, maxTime, now);
                 if (readDeviationActive) {
                     // now try to balance between the channels
-                    long maxLocalRead = 0;
+                    long maxLocalRead;
                     maxLocalRead = perChannel.channelTrafficCounter.cumulativeReadBytes();
                     long maxGlobalRead = cumulativeReadBytes.get();
                     if (maxLocalRead <= 0) {
@@ -549,7 +549,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
                 // Only AutoRead AND HandlerActive True means Context Active
                 ChannelConfig config = ctx.channel().config();
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Read Suspend: " + wait + ":" + config.isAutoRead() + ":"
+                    logger.debug("Read Suspend: " + wait + ':' + config.isAutoRead() + ':'
                             + isHandlerActive(ctx));
                 }
                 if (config.isAutoRead() && isHandlerActive(ctx)) {
@@ -565,7 +565,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
                     }
                     ctx.executor().schedule(reopenTask, wait, TimeUnit.MILLISECONDS);
                     if (logger.isDebugEnabled()) {
-                        logger.debug("Suspend final status => " + config.isAutoRead() + ":"
+                        logger.debug("Suspend final status => " + config.isAutoRead() + ':'
                                 + isHandlerActive(ctx) + " will reopened at: " + wait);
                     }
                 }
@@ -603,7 +603,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
         final long size;
 
         private ToSend(final long delay, final Object toSend, final long size, final ChannelPromise promise) {
-            this.relativeTimeAction = delay;
+            relativeTimeAction = delay;
             this.toSend = toSend;
             this.size = size;
             this.promise = promise;
@@ -623,17 +623,20 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
      * @return the list of TrafficCounters that exists at the time of the call.
      */
     public Collection<TrafficCounter> channelTrafficCounters() {
-        Collection<TrafficCounter> valueCollection = new AbstractCollection<TrafficCounter>() {
+        return new AbstractCollection<TrafficCounter>() {
             @Override
             public Iterator<TrafficCounter> iterator() {
                 return new Iterator<TrafficCounter>() {
                     final Iterator<PerChannel> iter = channelQueues.values().iterator();
+                    @Override
                     public boolean hasNext() {
                         return iter.hasNext();
                     }
+                    @Override
                     public TrafficCounter next() {
                         return iter.next().channelTrafficCounter;
                     }
+                    @Override
                     public void remove() {
                         throw new UnsupportedOperationException();
                     }
@@ -644,7 +647,6 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
                 return channelQueues.size();
             }
         };
-        return valueCollection;
     }
 
     @Override
@@ -662,7 +664,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
                 wait = perChannel.channelTrafficCounter.writeTimeToWait(size, writeChannelLimit, maxTime, now);
                 if (writeDeviationActive) {
                     // now try to balance between the channels
-                    long maxLocalWrite = 0;
+                    long maxLocalWrite;
                     maxLocalWrite = perChannel.channelTrafficCounter.cumulativeWrittenBytes();
                     long maxGlobalWrite = cumulativeWrittenBytes.get();
                     if (maxLocalWrite <= 0) {
@@ -679,7 +681,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
             }
             if (wait >= MINIMAL_WAIT) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Write suspend: " + wait + ":" + ctx.channel().config().isAutoRead() + ":"
+                    logger.debug("Write suspend: " + wait + ':' + ctx.channel().config().isAutoRead() + ':'
                             + isHandlerActive(ctx));
                 }
                 submitWrite(ctx, msg, size, wait, now, promise);

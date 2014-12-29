@@ -42,7 +42,7 @@ public class TrafficCounter {
     /**
      * @return the time in ms using nanoTime, so not real EPOCH time but elapsed time in ms.
      */
-    public static final long milliSecondFromNano() {
+    public static long milliSecondFromNano() {
         return System.nanoTime() / 1000000;
     }
 
@@ -178,15 +178,10 @@ public class TrafficCounter {
         private final TrafficCounter counter;
 
         /**
-<<<<<<< HEAD
-         * @param trafficShapingHandler The parent handler to which this task needs to callback to for accounting
-         * @param counter The parent TrafficCounter that we need to reset the statistics for
-=======
          * @param trafficShapingHandler
          *            The parent handler to which this task needs to callback to for accounting.
          * @param counter
          *            The parent TrafficCounter that we need to reset the statistics for.
->>>>>>> b886c05... Fix big transfer and Write traffic shaping issues
          */
         protected TrafficMonitoringTask(
                 AbstractTrafficShapingHandler trafficShapingHandler,
@@ -247,11 +242,7 @@ public class TrafficCounter {
     /**
      * Reset the accounting on Read and Write.
      *
-<<<<<<< HEAD
-     * @param newLastTime the millisecond unix timestamp that we should be considered up-to-date for
-=======
      * @param newLastTime the milliseconds unix timestamp that we should be considered up-to-date for.
->>>>>>> b886c05... Fix big transfer and Write traffic shaping issues
      */
     synchronized void resetAccounting(long newLastTime) {
         long interval = newLastTime - lastTime.getAndSet(newLastTime);
@@ -259,7 +250,7 @@ public class TrafficCounter {
             // nothing to do
             return;
         }
-        if (logger.isDebugEnabled() && (interval > checkInterval() << 1)) {
+        if (logger.isDebugEnabled() && interval > checkInterval() << 1) {
             logger.debug("Acct schedule not ok: " + interval + " > 2*" + checkInterval() + " from " + name);
         }
         lastReadBytes = currentReadBytes.getAndSet(0);
@@ -511,7 +502,7 @@ public class TrafficCounter {
             long time = sum * 1000 / limitTraffic - interval + pastDelay;
             if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Time: " + time + ":" + sum + ":" + interval + ":" + pastDelay);
+                    logger.debug("Time: " + time + ':' + sum + ':' + interval + ':' + pastDelay);
                 }
                 if (time > maxTime && now + time - localReadingTime > maxTime) {
                     time = maxTime;
@@ -528,7 +519,7 @@ public class TrafficCounter {
         long time = lastsum * 1000 / limitTraffic - lastinterval + pastDelay;
         if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
             if (logger.isDebugEnabled()) {
-                logger.debug("Time: " + time + ":" + lastsum + ":" + lastinterval + ":" + pastDelay);
+                logger.debug("Time: " + time + ':' + lastsum + ':' + lastinterval + ':' + pastDelay);
             }
             if (time > maxTime && now + time - localReadingTime > maxTime) {
                 time = maxTime;
@@ -586,7 +577,7 @@ public class TrafficCounter {
             long time = sum * 1000 / limitTraffic - interval + pastDelay;
             if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Time: " + time + ":" + sum + ":" + interval + ":" + pastDelay);
+                    logger.debug("Time: " + time + ':' + sum + ':' + interval + ':' + pastDelay);
                 }
                 if (time > maxTime && now + time - localWritingTime > maxTime) {
                     time = maxTime;
@@ -603,7 +594,7 @@ public class TrafficCounter {
         long time = lastsum * 1000 / limitTraffic - lastinterval + pastDelay;
         if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
             if (logger.isDebugEnabled()) {
-                logger.debug("Time: " + time + ":" + lastsum + ":" + lastinterval + ":" + pastDelay);
+                logger.debug("Time: " + time + ':' + lastsum + ':' + lastinterval + ':' + pastDelay);
             }
             if (time > maxTime && now + time - localWritingTime > maxTime) {
                 time = maxTime;
