@@ -1093,9 +1093,16 @@ public final class OpenSslEngine extends SSLEngine {
                 handshakeFinished = true;
                 String c = SSL.getCipherForSSL(ssl);
                 if (c != null) {
+                    String protocol = toProtocolFamily(SSL.getVersion(ssl));
+                    String converted = CipherSuiteConverter.toJava(c, protocol);
+                    if (converted != null) {
+                        c = converted;
+                    } else {
+                        c = protocol + '_' + c.replace('-', '_');
+                    }
                     // OpenSSL returns the ciphers seperated by '-' but the JDK SSLEngine does by '_', so replace '-'
                     // with '_' to match the behaviour.
-                    cipher = CIPHER_REPLACE_PATTERN.matcher(c).replaceAll("_");
+                    cipher = c;
                 }
                 String applicationProtocol = SSL.getNextProtoNegotiated(ssl);
                 if (applicationProtocol == null) {
@@ -1126,6 +1133,27 @@ public final class OpenSslEngine extends SSLEngine {
         }
 
         return NOT_HANDSHAKING;
+    }
+
+    /**
+     * Converts the protocol version string returned by {@link SSL#getVersion(long)} to protocol family string.
+     */
+    private static String toProtocolFamily(String protocolVersion) {
+        final char c;
+        if (protocolVersion == null || protocolVersion.length() == 0) {
+            c = 0;
+        } else {
+            c = protocolVersion.charAt(0);
+        }
+
+        switch (c) {
+        case 'T':
+            return "TLS";
+        case 'S':
+            return "SSL";
+        default:
+            return "UNKNOWN";
+        }
     }
 
     @Override
