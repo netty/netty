@@ -227,7 +227,7 @@ public abstract class AbstractTrafficShapingHandler extends
      */
     protected AbstractTrafficShapingHandler(Timer timer, long writeLimit,
                                             long readLimit, long checkInterval) {
-        this.index = userDefinedWritabilityIndex();
+        index = userDefinedWritabilityIndex();
         init(new SimpleObjectSizeEstimator(), timer, writeLimit, readLimit, checkInterval,
                 DEFAULT_MAX_TIME);
     }
@@ -252,7 +252,7 @@ public abstract class AbstractTrafficShapingHandler extends
     protected AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Timer timer,
             long writeLimit, long readLimit, long checkInterval) {
-        this.index = userDefinedWritabilityIndex();
+        index = userDefinedWritabilityIndex();
         init(objectSizeEstimator, timer, writeLimit, readLimit, checkInterval, DEFAULT_MAX_TIME);
     }
 
@@ -270,7 +270,7 @@ public abstract class AbstractTrafficShapingHandler extends
      */
     protected AbstractTrafficShapingHandler(Timer timer, long writeLimit,
                                             long readLimit) {
-        this.index = userDefinedWritabilityIndex();
+        index = userDefinedWritabilityIndex();
         init(new SimpleObjectSizeEstimator(), timer, writeLimit, readLimit,
                 DEFAULT_CHECK_INTERVAL, DEFAULT_MAX_TIME);
     }
@@ -293,7 +293,7 @@ public abstract class AbstractTrafficShapingHandler extends
     protected AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Timer timer,
             long writeLimit, long readLimit) {
-        this.index = userDefinedWritabilityIndex();
+        index = userDefinedWritabilityIndex();
         init(objectSizeEstimator, timer, writeLimit, readLimit,
                 DEFAULT_CHECK_INTERVAL, DEFAULT_MAX_TIME);
     }
@@ -307,7 +307,7 @@ public abstract class AbstractTrafficShapingHandler extends
      *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024).
      */
     protected AbstractTrafficShapingHandler(Timer timer) {
-        this.index = userDefinedWritabilityIndex();
+        index = userDefinedWritabilityIndex();
         init(new SimpleObjectSizeEstimator(), timer, 0, 0,
                 DEFAULT_CHECK_INTERVAL, DEFAULT_MAX_TIME);
     }
@@ -325,7 +325,7 @@ public abstract class AbstractTrafficShapingHandler extends
      */
     protected AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Timer timer) {
-        this.index = userDefinedWritabilityIndex();
+        index = userDefinedWritabilityIndex();
         init(objectSizeEstimator, timer, 0, 0,
                 DEFAULT_CHECK_INTERVAL, DEFAULT_MAX_TIME);
     }
@@ -341,7 +341,7 @@ public abstract class AbstractTrafficShapingHandler extends
      *            channels or 0 if no stats are to be computed.
      */
     protected AbstractTrafficShapingHandler(Timer timer, long checkInterval) {
-        this.index = userDefinedWritabilityIndex();
+        index = userDefinedWritabilityIndex();
         init(new SimpleObjectSizeEstimator(), timer, 0, 0, checkInterval, DEFAULT_MAX_TIME);
     }
 
@@ -361,7 +361,7 @@ public abstract class AbstractTrafficShapingHandler extends
     protected AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Timer timer,
             long checkInterval) {
-        this.index = userDefinedWritabilityIndex();
+        index = userDefinedWritabilityIndex();
         init(objectSizeEstimator, timer, 0, 0, checkInterval, DEFAULT_MAX_TIME);
     }
 
@@ -383,7 +383,7 @@ public abstract class AbstractTrafficShapingHandler extends
      */
     protected AbstractTrafficShapingHandler(Timer timer, long writeLimit,
                                             long readLimit, long checkInterval, long maxTime) {
-        this.index = userDefinedWritabilityIndex();
+        index = userDefinedWritabilityIndex();
         init(new SimpleObjectSizeEstimator(), timer, writeLimit, readLimit, checkInterval,
                 maxTime);
     }
@@ -410,7 +410,7 @@ public abstract class AbstractTrafficShapingHandler extends
     protected AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Timer timer,
             long writeLimit, long readLimit, long checkInterval, long maxTime) {
-        this.index = userDefinedWritabilityIndex();
+        index = userDefinedWritabilityIndex();
         init(objectSizeEstimator, timer, writeLimit, readLimit, checkInterval, maxTime);
     }
 
@@ -520,7 +520,7 @@ public abstract class AbstractTrafficShapingHandler extends
      * @param newCheckInterval the checkInterval to set
      */
     public void setCheckInterval(long newCheckInterval) {
-        this.checkInterval = newCheckInterval;
+        checkInterval = newCheckInterval;
         if (trafficCounter != null) {
             trafficCounter.configure(checkInterval);
         }
@@ -631,7 +631,7 @@ public abstract class AbstractTrafficShapingHandler extends
                 // If isReadable is False and Active is True, user make a direct setReadable(false)
                 // Then Just reset the status
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Not unsuspend: " + channel.isReadable() + ":" +
+                    logger.debug("Not unsuspend: " + channel.isReadable() + ':' +
                             rws.readSuspend);
                 }
                 rws.readSuspend = false;
@@ -639,10 +639,10 @@ public abstract class AbstractTrafficShapingHandler extends
                 // Anything else allows the handler to reset the AutoRead
                 if (logger.isDebugEnabled()) {
                     if (channel.isReadable() && rws.readSuspend) {
-                        logger.debug("Unsuspend: " + channel.isReadable() + ":" +
+                        logger.debug("Unsuspend: " + channel.isReadable() + ':' +
                                 rws.readSuspend);
                     } else {
-                        logger.debug("Normal unsuspend: " + channel.isReadable() + ":" +
+                        logger.debug("Normal unsuspend: " + channel.isReadable() + ':' +
                                 rws.readSuspend);
                     }
                 }
@@ -650,7 +650,7 @@ public abstract class AbstractTrafficShapingHandler extends
                 channel.setReadable(true);
             }
             if (logger.isDebugEnabled()) {
-                logger.debug("Unsupsend final status => " + channel.isReadable() + ":" +
+                logger.debug("Unsupsend final status => " + channel.isReadable() + ':' +
                         rws.readSuspend);
             }
         }
@@ -685,7 +685,7 @@ public abstract class AbstractTrafficShapingHandler extends
                     if (channel != null && channel.isConnected()) {
                         // Only AutoRead AND HandlerActive True means Context Active
                         if (logger.isDebugEnabled()) {
-                            logger.debug("Read suspend: " + wait + ":" + channel.isReadable() + ":" +
+                            logger.debug("Read suspend: " + wait + ':' + channel.isReadable() + ':' +
                                     rws.readSuspend);
                         }
                         if (timer == null) {
@@ -698,7 +698,7 @@ public abstract class AbstractTrafficShapingHandler extends
                             rws.readSuspend = true;
                             channel.setReadable(false);
                             if (logger.isDebugEnabled()) {
-                                logger.debug("Suspend final status => " + channel.isReadable() + ":" +
+                                logger.debug("Suspend final status => " + channel.isReadable() + ':' +
                                         rws.readSuspend);
                             }
                             // Create a Runnable to reactive the read if needed. If one was create before
@@ -750,7 +750,7 @@ public abstract class AbstractTrafficShapingHandler extends
                 // compute the number of ms to wait before continue with the channel
                 wait = trafficCounter.writeTimeToWait(size, writeLimit, maxTime, now);
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Write suspend: " + wait + ":" + channel.isWritable() + ":" +
+                    logger.debug("Write suspend: " + wait + ':' + channel.isWritable() + ':' +
                             channel.getUserDefinedWritability(index));
                 }
                 if (wait < MINIMAL_WAIT || release.get()) {
@@ -774,8 +774,8 @@ public abstract class AbstractTrafficShapingHandler extends
         submitWrite(ctx, evt, calculateSize(evt.getMessage()), delay, TrafficCounter.milliSecondFromNano());
     }
 
-    abstract void submitWrite(final ChannelHandlerContext ctx, final MessageEvent evt, final long size,
-            final long delay, final long now) throws Exception;
+    abstract void submitWrite(ChannelHandlerContext ctx, MessageEvent evt, long size,
+            long delay, long now) throws Exception;
 
     void setWritable(ChannelHandlerContext ctx, boolean writable) {
         Channel channel = ctx.getChannel();
@@ -839,9 +839,8 @@ public abstract class AbstractTrafficShapingHandler extends
     }
 
     protected long calculateSize(Object obj) {
-        long size = objectSizeEstimator.estimateSize(obj);
         //logger.debug("Size: "+size);
-        return size;
+        return objectSizeEstimator.estimateSize(obj);
     }
 
     @Override
@@ -854,7 +853,7 @@ public abstract class AbstractTrafficShapingHandler extends
             .append(" maxSize: ").append(maxWriteSize)
             .append(" and Counter: ");
         if (trafficCounter != null) {
-            builder.append(trafficCounter.toString());
+            builder.append(trafficCounter);
         } else {
             builder.append("none");
         }

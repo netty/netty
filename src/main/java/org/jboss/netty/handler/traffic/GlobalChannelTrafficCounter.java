@@ -15,12 +15,12 @@
  */
 package org.jboss.netty.handler.traffic;
 
-import java.util.concurrent.TimeUnit;
-
 import org.jboss.netty.handler.traffic.GlobalChannelTrafficShapingHandler.PerChannel;
 import org.jboss.netty.util.Timeout;
 import org.jboss.netty.util.Timer;
 import org.jboss.netty.util.TimerTask;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * Version for {@link GlobalChannelTrafficShapingHandler}.
@@ -31,7 +31,6 @@ import org.jboss.netty.util.TimerTask;
 public class GlobalChannelTrafficCounter extends TrafficCounter {
     /**
      * @param trafficShapingHandler the associated {@link GlobalChannelTrafficShapingHandler}.
-     * @param executor the underlying executor service for scheduling checks (both Global and per Channel).
      * @param name the name given to this monitor
      * @param checkInterval the checkInterval in millisecond between two computations.
      */
@@ -69,7 +68,6 @@ public class GlobalChannelTrafficCounter extends TrafficCounter {
             this.counter = counter;
         }
 
-        @Override
         public void run(Timeout timeout) throws Exception {
             if (!counter.monitorActive) {
                 return;
@@ -87,6 +85,7 @@ public class GlobalChannelTrafficCounter extends TrafficCounter {
     /**
      * Start the monitoring process.
      */
+    @Override
     public synchronized void start() {
         if (monitorActive) {
             return;
@@ -105,6 +104,7 @@ public class GlobalChannelTrafficCounter extends TrafficCounter {
     /**
      * Stop the monitoring process.
      */
+    @Override
     public synchronized void stop() {
         if (!monitorActive) {
             return;

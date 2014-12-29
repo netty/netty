@@ -15,19 +15,10 @@
  */
 package org.jboss.netty.handler.traffic;
 
-import java.util.AbstractCollection;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ChannelHandler.Sharable;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
@@ -36,6 +27,15 @@ import org.jboss.netty.util.Timeout;
 import org.jboss.netty.util.Timer;
 import org.jboss.netty.util.TimerTask;
 import org.jboss.netty.util.internal.ConcurrentHashMap;
+
+import java.util.AbstractCollection;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * This implementation of the {@link AbstractTrafficShapingHandler} is for global
@@ -67,10 +67,10 @@ import org.jboss.netty.util.internal.ConcurrentHashMap;
  *
  * maxTimeToWait, by default set to 15s, allows to specify an upper bound of time shaping.<br><br>
  * </li>
- * <li>In your handler, you should consider to use the <code>channel.isWritable()</code> and
- * <code>channelWritabilityChanged(ctx)</code> to handle writability, or through
- * <code>future.addListener(new GenericFutureListener())</code> on the future returned by
- * <code>ctx.write()</code>.</li>
+ * <li>In your handler, you should consider to use the {@code channel.isWritable()} and
+ * {@code channelWritabilityChanged(ctx)} to handle writability, or through
+ * {@code future.addListener(new GenericFutureListener())} on the future returned by
+ * {@code ctx.write()}.</li>
  * <li>You shall also consider to have object size in read or write operations relatively adapted to
  * the bandwidth you required: for instance having 10 MB objects for 10KB/s will lead to burst effect,
  * while having 100 KB objects for 1 MB/s should be smoothly handle by this TrafficShaping handler.<br><br></li>
@@ -82,7 +82,7 @@ import org.jboss.netty.util.internal.ConcurrentHashMap;
  * </ul><br>
  *
  * Be sure to call {@link #release()} once this handler is not needed anymore to release all internal resources.
- * This will not shutdown the {@link EventExecutor} as it may be shared, so you need to do this by your own.
+ * This will not shutdown the {@link Timer} as it may be shared, so you need to do this by your own.
  */
 @Sharable
 public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHandler {
@@ -610,7 +610,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
                     wait = perChannel.channelTrafficCounter.readTimeToWait(size, readChannelLimit, maxTime, now);
                     if (readDeviationActive) {
                         // now try to balance between the channels
-                        long maxLocalRead = 0;
+                        long maxLocalRead;
                         maxLocalRead = perChannel.channelTrafficCounter.getCumulativeReadBytes();
                         long maxGlobalRead = cumulativeReadBytes.get();
                         if (maxLocalRead <= 0) {
@@ -635,7 +635,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
                     if (channel != null && channel.isConnected()) {
                         // Only AutoRead AND HandlerActive True means Context Active
                         if (logger.isDebugEnabled()) {
-                            logger.debug("Read suspend: " + wait + ":" + channel.isReadable() + ":" +
+                            logger.debug("Read suspend: " + wait + ':' + channel.isReadable() + ':' +
                                     rws.readSuspend);
                         }
                         if (timer == null) {
@@ -648,7 +648,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
                             rws.readSuspend = true;
                             channel.setReadable(false);
                             if (logger.isDebugEnabled()) {
-                                logger.debug("Suspend final status => " + channel.isReadable() + ":" +
+                                logger.debug("Suspend final status => " + channel.isReadable() + ':' +
                                         rws.readSuspend);
                             }
                             // Create a Runnable to reactive the read if needed. If one was create before
@@ -696,7 +696,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
         final long size;
 
         private ToSend(final long delay, final MessageEvent toSend, final long size) {
-            this.relativeTimeAction = delay;
+            relativeTimeAction = delay;
             this.toSend = toSend;
             this.size = size;
         }
@@ -715,7 +715,8 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
      * @return the list of TrafficCounters that exists at the time of the call.
      */
     public Collection<TrafficCounter> channelTrafficCounters() {
-        Collection<TrafficCounter> valueCollection = new AbstractCollection<TrafficCounter>() {
+        return new AbstractCollection<TrafficCounter>() {
+            @Override
             public Iterator<TrafficCounter> iterator() {
                 return new Iterator<TrafficCounter>() {
                     final Iterator<PerChannel> iter = channelQueues.values().iterator();
@@ -730,11 +731,11 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
                     }
                 };
             }
+            @Override
             public int size() {
                 return channelQueues.size();
             }
         };
-        return valueCollection;
     }
 
     @Override
@@ -753,7 +754,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
                     wait = perChannel.channelTrafficCounter.writeTimeToWait(size, writeChannelLimit, maxTime, now);
                     if (writeDeviationActive) {
                         // now try to balance between the channels
-                        long maxLocalWrite = 0;
+                        long maxLocalWrite;
                         maxLocalWrite = perChannel.channelTrafficCounter.getCumulativeWrittenBytes();
                         long maxGlobalWrite = cumulativeWrittenBytes.get();
                         if (maxLocalWrite <= 0) {

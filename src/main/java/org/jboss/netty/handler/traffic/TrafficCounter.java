@@ -39,7 +39,7 @@ public class TrafficCounter {
     /**
      * @return the time in ms using nanoTime, so not real EPOCH time but elapsed time in ms.
      */
-    public static final long milliSecondFromNano() {
+    public static long milliSecondFromNano() {
         return System.nanoTime() / 1000000;
     }
 
@@ -176,7 +176,7 @@ public class TrafficCounter {
          */
         private final TrafficCounter counter;
 
-        protected TrafficMonitoringTask(
+        TrafficMonitoringTask(
                 AbstractTrafficShapingHandler trafficShapingHandler,
                 TrafficCounter counter) {
             trafficShapingHandler1 = trafficShapingHandler;
@@ -324,8 +324,6 @@ public class TrafficCounter {
      *
      * @param write
      *            the size in bytes to write
-     * @param schedule
-     *            the time when this write was scheduled
      */
     void bytesRealWriteFlowControl(long write) {
         realWrittenBytes.addAndGet(write);
@@ -480,7 +478,7 @@ public class TrafficCounter {
             long time = (sum * 1000 / limitTraffic - interval + pastDelay) / 10 * 10;
             if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Time: " + time + ":" + sum + ":" + interval + ":" + pastDelay);
+                    logger.debug("Time: " + time + ':' + sum + ':' + interval + ':' + pastDelay);
                 }
                 if (time > maxTime && now + time - localReadingTime > maxTime) {
                     time = maxTime;
@@ -497,7 +495,7 @@ public class TrafficCounter {
         long time = (lastsum * 1000 / limitTraffic - lastinterval + pastDelay) / 10 * 10;
         if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
             if (logger.isDebugEnabled()) {
-                logger.debug("Time: " + time + ":" + lastsum + ":" + lastinterval + ":" + pastDelay);
+                logger.debug("Time: " + time + ':' + lastsum + ':' + lastinterval + ':' + pastDelay);
             }
             if (time > maxTime && now + time - localReadingTime > maxTime) {
                 time = maxTime;
@@ -555,7 +553,7 @@ public class TrafficCounter {
             long time = (sum * 1000 / limitTraffic - interval + pastDelay) / 10 * 10;
             if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Time: " + time + ":" + sum + ":" + interval + ":" + pastDelay);
+                    logger.debug("Time: " + time + ':' + sum + ':' + interval + ':' + pastDelay);
                 }
                 if (time > maxTime && now + time - localWritingTime > maxTime) {
                     time = maxTime;
@@ -572,7 +570,7 @@ public class TrafficCounter {
         long time = (lastsum * 1000 / limitTraffic - lastinterval + pastDelay) / 10 * 10;
         if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
             if (logger.isDebugEnabled()) {
-                logger.debug("Time: " + time + ":" + lastsum + ":" + lastinterval + ":" + pastDelay);
+                logger.debug("Time: " + time + ':' + lastsum + ':' + lastinterval + ':' + pastDelay);
             }
             if (time > maxTime && now + time - localWritingTime > maxTime) {
                 time = maxTime;

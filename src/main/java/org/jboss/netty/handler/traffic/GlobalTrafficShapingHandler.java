@@ -15,12 +15,6 @@
  */
 package org.jboss.netty.handler.traffic;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandler.Sharable;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -34,6 +28,12 @@ import org.jboss.netty.util.Timeout;
 import org.jboss.netty.util.Timer;
 import org.jboss.netty.util.TimerTask;
 import org.jboss.netty.util.internal.ConcurrentHashMap;
+
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 
 /**
@@ -80,7 +80,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     /**
      * Global queues size
      */
-    private AtomicLong queuesSize = new AtomicLong();
+    private final AtomicLong queuesSize = new AtomicLong();
 
     /**
      * Max size in the list before proposing to stop writing new objects from next handlers
@@ -214,7 +214,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         final long size;
 
         private ToSend(final long delay, final MessageEvent toSend, final long size) {
-            this.relativeTimeAction = delay;
+            relativeTimeAction = delay;
             this.toSend = toSend;
             this.size = size;
         }

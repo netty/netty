@@ -15,10 +15,6 @@
  */
 package org.jboss.netty.handler.traffic;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineFactory;
@@ -31,6 +27,10 @@ import org.jboss.netty.util.ObjectSizeEstimator;
 import org.jboss.netty.util.Timeout;
 import org.jboss.netty.util.Timer;
 import org.jboss.netty.util.TimerTask;
+
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * <p>This implementation of the {@link AbstractTrafficShapingHandler} is for channel
@@ -65,10 +65,10 @@ import org.jboss.netty.util.TimerTask;
  * by calling:<br>
  * <tt>myHandler.releaseExternalResources();</tt><br>
  * </li>
- * <li>In your handler, you should consider to use the <code>channel.isWritable()</code> and
- * <code>channelInterestChanged(ctx, event)</code> to handle writability, or through
- * <code>future.addListener(new ChannelFutureListener())</code> on the future returned by
- * <code>channel.write()</code>.</li>
+ * <li>In your handler, you should consider to use the {@code channel.isWritable()} and
+ * {@code channelInterestChanged(ctx, event)} to handle writability, or through
+ * {@code future.addListener(new ChannelFutureListener())} on the future returned by
+ * {@code channel.write()}.</li>
  * <li><p>You shall also consider to have object size in read or write operations relatively adapted to
  * the bandwidth you required: for instance having 10 MB objects for 10KB/s will lead to burst effect,
  * while having 100 KB objects for 1 MB/s should be smoothly handle by this TrafficShaping handler.</p></li>
@@ -144,7 +144,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
         final MessageEvent toSend;
 
         private ToSend(final long delay, final MessageEvent toSend) {
-            this.relativeTimeAction = delay;
+            relativeTimeAction = delay;
             this.toSend = toSend;
         }
     }
