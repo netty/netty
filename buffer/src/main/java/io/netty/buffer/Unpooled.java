@@ -93,6 +93,10 @@ public final class Unpooled {
      */
     public static final ByteBuf EMPTY_BUFFER = ALLOC.buffer(0, 0);
 
+    static {
+        assert EMPTY_BUFFER instanceof EmptyByteBuf: "EMPTY_BUFFER must be an EmptyByteBuf.";
+    }
+
     /**
      * Creates a new big-endian Java heap buffer with reasonably small initial capacity, which
      * expands its capacity boundlessly on demand.
