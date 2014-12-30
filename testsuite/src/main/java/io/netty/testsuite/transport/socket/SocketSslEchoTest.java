@@ -29,6 +29,8 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.ssl.JdkSslClientContext;
 import io.netty.handler.ssl.JdkSslServerContext;
 import io.netty.handler.ssl.OpenSsl;
+import io.netty.handler.ssl.OpenSslClientContext;
+import io.netty.handler.ssl.OpenSslContext;
 import io.netty.handler.ssl.OpenSslServerContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
@@ -127,9 +129,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         boolean hasOpenSsl = OpenSsl.isAvailable();
         if (hasOpenSsl) {
             serverContexts.add(new OpenSslServerContext(CERT_FILE, KEY_FILE));
-
-            // TODO: Client mode is not supported yet.
-            // clientContexts.add(new OpenSslContext(CERT_FILE));
+            clientContexts.add(new OpenSslClientContext(CERT_FILE));
         } else {
             logger.warn("OpenSSL is unavailable and thus will not be tested.", OpenSsl.unavailabilityCause());
         }
@@ -139,7 +139,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             for (SslContext cc: clientContexts) {
                 for (RenegotiationType rt: RenegotiationType.values()) {
                     if (rt != RenegotiationType.NONE &&
-                        (sc instanceof OpenSslServerContext || cc instanceof OpenSslServerContext)) {
+                        (sc instanceof OpenSslContext || cc instanceof OpenSslContext)) {
                         // TODO: OpenSslEngine does not support renegotiation yet.
                         continue;
                     }
@@ -434,6 +434,10 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         @Override
         public final void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
             if (evt instanceof SslHandshakeCompletionEvent) {
+                SslHandshakeCompletionEvent handshakeEvt = (SslHandshakeCompletionEvent) evt;
+                if (handshakeEvt.cause() != null) {
+                    logger.warn("Handshake failed:", handshakeEvt.cause());
+                }
                 assertSame(SslHandshakeCompletionEvent.SUCCESS, evt);
                 negoCounter.incrementAndGet();
                 logStats("HANDSHAKEN");
