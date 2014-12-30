@@ -32,7 +32,8 @@ import org.openjdk.jmh.annotations.Warmup;
 @State(Scope.Benchmark)
 @Warmup(iterations = 10)
 @Measurement(iterations = 25)
-public class ByteBufUtilBenchmark extends AbstractMicrobenchmark {
+public class
+    ByteBufUtilBenchmark extends AbstractMicrobenchmark {
     private ByteBuf buffer;
     private ByteBuf wrapped;
 
@@ -120,13 +121,13 @@ public class ByteBufUtilBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     public void writeUtf8StringViaArray() {
         buffer.resetWriterIndex();
-        buffer.writeBytes(utf8.getBytes(CharsetUtil.US_ASCII));
+        buffer.writeBytes(utf8.getBytes(CharsetUtil.UTF_8));
     }
 
     @Benchmark
     public void writeUtf8StringViaArrayWrapped() {
         wrapped.resetWriterIndex();
-        wrapped.writeBytes(utf8.getBytes(CharsetUtil.US_ASCII));
+        wrapped.writeBytes(utf8.getBytes(CharsetUtil.UTF_8));
     }
 
     @Benchmark
@@ -144,13 +145,13 @@ public class ByteBufUtilBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     public void writeUtf8ViaArray() {
         buffer.resetWriterIndex();
-        buffer.writeBytes(utf8Sequence.toString().getBytes(CharsetUtil.US_ASCII));
+        buffer.writeBytes(utf8Sequence.toString().getBytes(CharsetUtil.UTF_8));
     }
 
     @Benchmark
     public void writeUtf8ViaArrayWrapped() {
         wrapped.resetWriterIndex();
-        wrapped.writeBytes(utf8Sequence.toString().getBytes(CharsetUtil.US_ASCII));
+        wrapped.writeBytes(utf8Sequence.toString().getBytes(CharsetUtil.UTF_8));
     }
 
     @Benchmark
