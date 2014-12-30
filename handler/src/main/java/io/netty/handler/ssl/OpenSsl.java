@@ -24,9 +24,9 @@ import org.apache.tomcat.jni.Pool;
 import org.apache.tomcat.jni.SSL;
 import org.apache.tomcat.jni.SSLContext;
 
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * Tells if <a href="http://netty.io/wiki/forked-tomcat-native.html">{@code netty-tcnative}</a> and its OpenSSL support
@@ -37,7 +37,7 @@ public final class OpenSsl {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OpenSsl.class);
     private static final Throwable UNAVAILABILITY_CAUSE;
 
-    private static final List<String> AVAILABLE_CIPHER_SUITES;
+    private static final Set<String> AVAILABLE_CIPHER_SUITES;
 
     static {
         Throwable cause = null;
@@ -54,7 +54,7 @@ public final class OpenSsl {
         UNAVAILABILITY_CAUSE = cause;
 
         if (cause == null) {
-            final List<String> availableCipherSuites = new ArrayList<String>(128);
+            final Set<String> availableCipherSuites = new LinkedHashSet<String>(128);
             final long aprPool = Pool.create(0);
             try {
                 final long sslCtx = SSLContext.make(aprPool, SSL.SSL_PROTOCOL_ALL, SSL.SSL_MODE_SERVER);
@@ -82,9 +82,9 @@ public final class OpenSsl {
                 Pool.destroy(aprPool);
             }
 
-            AVAILABLE_CIPHER_SUITES = Collections.unmodifiableList(availableCipherSuites);
+            AVAILABLE_CIPHER_SUITES = Collections.unmodifiableSet(availableCipherSuites);
         } else {
-            AVAILABLE_CIPHER_SUITES = Collections.emptyList();
+            AVAILABLE_CIPHER_SUITES = Collections.emptySet();
         }
     }
 
@@ -124,8 +124,20 @@ public final class OpenSsl {
      * Returns all the available OpenSSL cipher suites.
      * Please note that the returned array may include the cipher suites that are insecure or non-functional.
      */
-    public static String[] availableCipherSuites() {
-        return AVAILABLE_CIPHER_SUITES.toArray(new String[AVAILABLE_CIPHER_SUITES.size()]);
+    public static Set<String> availableCipherSuites() {
+        return AVAILABLE_CIPHER_SUITES;
+    }
+
+    /**
+     * Returns {@code true} if and only if the specified cipher suite is available in OpenSSL.
+     * Both Java-style cipher suite and OpenSSL-style cipher suite are accepted.
+     */
+    public static boolean isCipherSuiteAvailable(String cipherSuite) {
+        String converted = CipherSuiteConverter.toOpenSsl(cipherSuite);
+        if (converted != null) {
+            cipherSuite = converted;
+        }
+        return AVAILABLE_CIPHER_SUITES.contains(cipherSuite);
     }
 
     static boolean isError(long errorCode) {
