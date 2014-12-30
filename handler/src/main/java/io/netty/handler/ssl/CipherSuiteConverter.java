@@ -72,8 +72,8 @@ final class CipherSuiteConverter {
                     "^(?:(" + // BEGIN handshake algorithm
                         "(?:(?:EXP-)?" +
                             "(?:" +
-                                "(?:DHE|EDH|ECDH|ECDHE)-(?:DSS|RSA|ECDSA)|" +
-                                "(?:ADH|AECDH|KRB5|PSK)" +
+                                "(?:DHE|EDH|ECDH|ECDHE|SRP)-(?:DSS|RSA|ECDSA)|" +
+                                "(?:ADH|AECDH|KRB5|PSK|SRP)" +
                             ')' +
                         ")|" +
                         "EXP" +
@@ -240,6 +240,33 @@ final class CipherSuiteConverter {
             return false;
         } else {
             return value.equals(p2j.get(protocol));
+        }
+    }
+
+    /**
+     * Converts the specified Java cipher suites to the colon-separated OpenSSL cipher suite specification.
+     */
+    static String toOpenSsl(Iterable<String> javaCipherSuites) {
+        final StringBuilder buf = new StringBuilder();
+        for (String c: javaCipherSuites) {
+            if (c == null) {
+                break;
+            }
+
+            String converted = toOpenSsl(c);
+            if (converted != null) {
+                c = converted;
+            }
+
+            buf.append(c);
+            buf.append(':');
+        }
+
+        if (buf.length() > 0) {
+            buf.setLength(buf.length() - 1);
+            return buf.toString();
+        } else {
+            return "";
         }
     }
 
