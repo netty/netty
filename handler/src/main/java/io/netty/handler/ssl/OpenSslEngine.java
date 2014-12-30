@@ -32,8 +32,8 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSessionBindingEvent;
 import javax.net.ssl.SSLSessionBindingListener;
 import javax.net.ssl.SSLSessionContext;
-import javax.security.cert.X509Certificate;
 import javax.security.cert.CertificateException;
+import javax.security.cert.X509Certificate;
 import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
 import java.security.Principal;
@@ -47,7 +47,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.regex.Pattern;
 
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.*;
 import static javax.net.ssl.SSLEngineResult.Status.*;
@@ -119,7 +118,6 @@ public final class OpenSslEngine extends SSLEngine {
     private static final AtomicIntegerFieldUpdater<OpenSslEngine> DESTROYED_UPDATER;
     private static final AtomicReferenceFieldUpdater<OpenSslEngine, SSLSession> SESSION_UPDATER;
 
-    private static final Pattern CIPHER_REPLACE_PATTERN = Pattern.compile("-");
     // OpenSSL state
     private long ssl;
     private long networkBIO;
@@ -652,17 +650,39 @@ public final class OpenSslEngine extends SSLEngine {
 
     @Override
     public String[] getSupportedCipherSuites() {
-        return EmptyArrays.EMPTY_STRINGS;
+        return OpenSsl.availableCipherSuites();
     }
 
     @Override
     public String[] getEnabledCipherSuites() {
-        return EmptyArrays.EMPTY_STRINGS;
+        String[] enabled = SSL.getCiphers(ssl);
+        if (enabled == null) {
+            return EmptyArrays.EMPTY_STRINGS;
+        } else {
+            for (int i = 0; i < enabled.length; i++) {
+                String c = enabled[i];
+                // TODO: Determine the protocol using SSL_CIPHER_get_version()
+                String mapped = CipherSuiteConverter.toJava(c, "TLS");
+                if (mapped != null) {
+                    enabled[i] = mapped;
+                }
+            }
+            return enabled;
+        }
     }
 
     @Override
-    public void setEnabledCipherSuites(String[] strings) {
-        throw new UnsupportedOperationException();
+    public void setEnabledCipherSuites(String[] cipherSuites) {
+        if (cipherSuites == null) {
+            throw new NullPointerException("cipherSuites");
+        }
+
+        final String converted = CipherSuiteConverter.toOpenSsl(Arrays.asList(cipherSuites));
+        try {
+            SSL.setCipherSuites(ssl, converted);
+        } catch (Exception e) {
+            throw new IllegalStateException("failed to enable cipher suites: " + converted, e);
+        }
     }
 
     @Override
@@ -1225,6 +1245,7 @@ public final class OpenSslEngine extends SSLEngine {
     }
 
     @Override
+    @SuppressWarnings("FinalizeDeclaration")
     protected void finalize() throws Throwable {
         super.finalize();
         // Call shutdown as the user may have created the OpenSslEngine and not used it at all.

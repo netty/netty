@@ -139,15 +139,7 @@ public abstract class OpenSslContext extends SslContext {
 
                 /* List the ciphers that are permitted to negotiate. */
                 try {
-                    // Convert the cipher list into a colon-separated string.
-                    StringBuilder cipherBuf = new StringBuilder();
-                    for (String c: this.ciphers) {
-                        cipherBuf.append(c);
-                        cipherBuf.append(':');
-                    }
-                    cipherBuf.setLength(cipherBuf.length() - 1);
-
-                    SSLContext.setCipherSuite(ctx, cipherBuf.toString());
+                    SSLContext.setCipherSuite(ctx, CipherSuiteConverter.toOpenSsl(this.ciphers));
                 } catch (SSLException e) {
                     throw e;
                 } catch (Exception e) {
