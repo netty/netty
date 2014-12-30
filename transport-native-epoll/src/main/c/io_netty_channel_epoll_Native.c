@@ -90,9 +90,9 @@ void throwClosedChannelException(JNIEnv* env) {
     (*env)->Throw(env, exception);
 }
 
-void throwOutOfMemoryError(JNIEnv* env, char* message) {
+void throwOutOfMemoryError(JNIEnv* env) {
     jclass exceptionClass = (*env)->FindClass(env, "java/lang/OutOfMemoryError");
-    (*env)->ThrowNew(env, exceptionClass, message);
+    (*env)->ThrowNew(env, exceptionClass, "");
 }
 
 char* exceptionMessage(char* msg, int error) {
@@ -132,7 +132,7 @@ jint getOption(JNIEnv* env, jint fd, int level, int optname, void* optval, sockl
         return 0;
     }
     int err = errno;
-    throwRuntimeException(env, exceptionMessage("Error during getsockopt(...): ", err));
+    throwRuntimeException(env, exceptionMessage("getsockopt() failed: ", err));
     return code;
 }
 
@@ -140,7 +140,7 @@ int setOption(JNIEnv* env, jint fd, int level, int optname, const void* optval, 
     int rc = setsockopt(fd, level, optname, optval, len);
     if (rc < 0) {
         int err = errno;
-        throwRuntimeException(env, exceptionMessage("Error during setsockopt(...): ", err));
+        throwRuntimeException(env, exceptionMessage("setsockopt() failed: ", err));
     }
     return rc;
 }
@@ -272,7 +272,7 @@ int init_sockaddr(JNIEnv* env, jbyteArray address, jint scopeId, jint jport, str
     jbyte* addressBytes = (*env)->GetPrimitiveArrayCritical(env, address, 0);
     if (addressBytes == NULL) {
         // No memory left ?!?!?
-        throwOutOfMemoryError(env, "Can't allocate memory");
+        throwOutOfMemoryError(env);
     }
     if (socketType == AF_INET6) {
         struct sockaddr_in6* ip6addr = (struct sockaddr_in6*) addr;
@@ -314,7 +314,7 @@ int init_in_addr(JNIEnv* env, jbyteArray address, struct in_addr* addr) {
     jbyte* addressBytes = (*env)->GetPrimitiveArrayCritical(env, address, 0);
     if (addressBytes == NULL) {
         // No memory left ?!?!?
-        throwOutOfMemoryError(env, "Can't allocate memory");
+        throwOutOfMemoryError(env);
         return -1;
     }
     if (socketType == AF_INET6) {
@@ -341,12 +341,12 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
         closedChannelExceptionClass = (jclass) (*env)->NewGlobalRef(env, localClosedChannelExceptionClass);
         if (closedChannelExceptionClass == NULL) {
             // out-of-memory!
-            throwOutOfMemoryError(env, "Error allocating memory");
+            throwOutOfMemoryError(env);
             return JNI_ERR;
         }
         closedChannelExceptionMethodId = (*env)->GetMethodID(env, closedChannelExceptionClass, "<init>", "()V");
         if (closedChannelExceptionMethodId == NULL) {
-            throwRuntimeException(env, "Unable to obtain constructor of ClosedChannelException");
+            throwRuntimeException(env, "failed to get method ID: ClosedChannelException.<init>()");
             return JNI_ERR;
         }
         jclass localRuntimeExceptionClass = (*env)->FindClass(env, "java/lang/RuntimeException");
@@ -357,7 +357,7 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
         runtimeExceptionClass = (jclass) (*env)->NewGlobalRef(env, localRuntimeExceptionClass);
         if (runtimeExceptionClass == NULL) {
             // out-of-memory!
-            throwOutOfMemoryError(env, "Error allocating memory");
+            throwOutOfMemoryError(env);
             return JNI_ERR;
         }
 
@@ -369,7 +369,7 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
         ioExceptionClass = (jclass) (*env)->NewGlobalRef(env, localIoExceptionClass);
         if (ioExceptionClass == NULL) {
             // out-of-memory!
-            throwOutOfMemoryError(env, "Error allocating memory");
+            throwOutOfMemoryError(env);
             return JNI_ERR;
         }
 
@@ -381,7 +381,7 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
         inetSocketAddressClass = (jclass) (*env)->NewGlobalRef(env, localInetSocketAddressClass);
         if (inetSocketAddressClass == NULL) {
             // out-of-memory!
-            throwOutOfMemoryError(env, "Error allocating memory");
+            throwOutOfMemoryError(env);
             return JNI_ERR;
         }
 
@@ -393,20 +393,20 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
         datagramSocketAddressClass = (jclass) (*env)->NewGlobalRef(env, localDatagramSocketAddressClass);
         if (datagramSocketAddressClass == NULL) {
             // out-of-memory!
-            throwOutOfMemoryError(env, "Error allocating memory");
+            throwOutOfMemoryError(env);
             return JNI_ERR;
         }
 
         void* mem = malloc(1);
         if (mem == NULL) {
-            throwOutOfMemoryError(env, "Error allocating native buffer");
+            throwOutOfMemoryError(env);
             return JNI_ERR;
         }
         jobject directBuffer = (*env)->NewDirectByteBuffer(env, mem, 1);
         if (directBuffer == NULL) {
             free(mem);
 
-            throwOutOfMemoryError(env, "Error allocating native buffer");
+            throwOutOfMemoryError(env);
             return JNI_ERR;
         }
 
@@ -419,7 +419,7 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
             free(mem);
 
             // position method was not found.. something is wrong so bail out
-            throwRuntimeException(env, "Unable to find method ByteBuffer.position()");
+            throwRuntimeException(env, "failed to get method ID: ByteBuffer.position()");
             return JNI_ERR;
         }
 
@@ -428,7 +428,7 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
             free(mem);
 
             // limit method was not found.. something is wrong so bail out
-            throwRuntimeException(env, "Unable to find method ByteBuffer.limit()");
+            throwRuntimeException(env, "failed to get method ID: ByteBuffer.limit()");
             return JNI_ERR;
         }
         updatePosId = (*env)->GetMethodID(env, cls, "position", "(I)Ljava/nio/Buffer;");
@@ -436,7 +436,7 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
             free(mem);
 
             // position method was not found.. something is wrong so bail out
-            throwRuntimeException(env, "Unable to find method ByteBuffer.position(int)");
+            throwRuntimeException(env, "failed to fet method ID: ByteBuffer.position(int)");
             return JNI_ERR;
         }
         // Try to get the ids of the position and limit fields. We later then check if we was able
@@ -462,12 +462,12 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
         }
         fileChannelFieldId = (*env)->GetFieldID(env, fileRegionCls, "file", "Ljava/nio/channels/FileChannel;");
         if (fileChannelFieldId == NULL) {
-            throwRuntimeException(env, "Unable to obtain FileChannel field for DefaultFileRegion");
+            throwRuntimeException(env, "failed to get field ID: DefaultFileRegion.file");
             return JNI_ERR;
         }
         transferedFieldId = (*env)->GetFieldID(env, fileRegionCls, "transfered", "J");
         if (transferedFieldId == NULL) {
-            throwRuntimeException(env, "Unable to obtain transfered field for DefaultFileRegion");
+            throwRuntimeException(env, "failed to get field ID: DefaultFileRegion.transfered");
             return JNI_ERR;
         }
 
@@ -478,7 +478,7 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
         }
         fileDescriptorFieldId = (*env)->GetFieldID(env, fileChannelCls, "fd", "Ljava/io/FileDescriptor;");
         if (fileDescriptorFieldId == NULL) {
-            throwRuntimeException(env, "Unable to obtain fd field for FileChannelImpl");
+            throwRuntimeException(env, "failed to get field ID: FileChannelImpl.fd");
             return JNI_ERR;
         }
 
@@ -489,20 +489,20 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
         }
         fdFieldId = (*env)->GetFieldID(env, fileDescriptorCls, "fd", "I");
         if (fdFieldId == NULL) {
-            throwRuntimeException(env, "Unable to obtain fd field for FileDescriptor");
+            throwRuntimeException(env, "failed to get field ID: FileDescriptor.fd");
             return JNI_ERR;
         }
 
         inetSocketAddrMethodId = (*env)->GetMethodID(env, inetSocketAddressClass, "<init>", "(Ljava/lang/String;I)V");
         if (inetSocketAddrMethodId == NULL) {
-            throwRuntimeException(env, "Unable to obtain constructor of InetSocketAddress");
+            throwRuntimeException(env, "failed to get method ID: InetSocketAddress.<init>(String, int)");
             return JNI_ERR;
         }
         socketType = socket_type();
 
         datagramSocketAddrMethodId = (*env)->GetMethodID(env, datagramSocketAddressClass, "<init>", "(Ljava/lang/String;II)V");
         if (datagramSocketAddrMethodId == NULL) {
-            throwRuntimeException(env, "Unable to obtain constructor of DatagramSocketAddress");
+            throwRuntimeException(env, "failed to get method ID: DatagramSocketAddress.<init>(String, int, int)");
             return JNI_ERR;
         }
         jclass nativeDatagramPacketCls = (*env)->FindClass(env, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket");
@@ -513,28 +513,28 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
 
         packetAddrFieldId = (*env)->GetFieldID(env, nativeDatagramPacketCls, "addr", "[B");
         if (packetAddrFieldId == NULL) {
-            throwRuntimeException(env, "Unable to obtain addr field for NativeDatagramPacket");
+            throwRuntimeException(env, "failed to get field ID: NativeDatagramPacket.addr");
             return JNI_ERR;
         }
         packetScopeIdFieldId = (*env)->GetFieldID(env, nativeDatagramPacketCls, "scopeId", "I");
         if (packetScopeIdFieldId == NULL) {
-            throwRuntimeException(env, "Unable to obtain scopeId field for NativeDatagramPacket");
+            throwRuntimeException(env, "failed to get field ID: NativeDatagramPacket.scopeId");
             return JNI_ERR;
         }
         packetPortFieldId = (*env)->GetFieldID(env, nativeDatagramPacketCls, "port", "I");
         if (packetPortFieldId == NULL) {
-            throwRuntimeException(env, "Unable to obtain port field for NativeDatagramPacket");
+            throwRuntimeException(env, "failed to get field ID: NativeDatagramPacket.port");
             return JNI_ERR;
         }
         packetMemoryAddressFieldId = (*env)->GetFieldID(env, nativeDatagramPacketCls, "memoryAddress", "J");
         if (packetMemoryAddressFieldId == NULL) {
-            throwRuntimeException(env, "Unable to obtain memoryAddress field for NativeDatagramPacket");
+            throwRuntimeException(env, "failed to get field ID: NativeDatagramPacket.memoryAddress");
             return JNI_ERR;
         }
 
         packetCountFieldId = (*env)->GetFieldID(env, nativeDatagramPacketCls, "count", "I");
         if (packetCountFieldId == NULL) {
-            throwRuntimeException(env, "Unable to obtain count field for NativeDatagramPacket");
+            throwRuntimeException(env, "failed to get field ID: NativeDatagramPacket.count");
             return JNI_ERR;
         }
         return JNI_VERSION_1_6;
@@ -571,7 +571,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_eventFd(JNIEnv* env, j
 
     if (eventFD < 0) {
         int err = errno;
-        throwRuntimeException(env, exceptionMessage("Error calling eventfd(...): ", err));
+        throwRuntimeException(env, exceptionMessage("eventfd() failed: ", err));
     }
     return eventFD;
 }
@@ -581,7 +581,7 @@ JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_eventFdWrite(JNIEnv* e
 
     if (eventFD < 0) {
         int err = errno;
-        throwRuntimeException(env, exceptionMessage("Error calling eventfd_write(...): ", err));
+        throwRuntimeException(env, exceptionMessage("eventfd_write() failed: ", err));
     }
 }
 
@@ -590,7 +590,7 @@ JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_eventFdRead(JNIEnv* en
 
     if (eventfd_read(fd, &eventfd_t) != 0) {
         // something is serious wrong
-        throwRuntimeException(env, "Error calling eventfd_read(...)");
+        throwRuntimeException(env, "eventfd_read() failed");
     }
 }
 
@@ -605,9 +605,9 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollCreate(JNIEnv* en
     if (efd < 0) {
         int err = errno;
         if (epoll_create1) {
-            throwRuntimeException(env, exceptionMessage("Error during epoll_create1(...): ", err));
+            throwRuntimeException(env, exceptionMessage("epoll_create1() failed: ", err));
         } else {
-            throwRuntimeException(env, exceptionMessage("Error during epoll_create(...): ", err));
+            throwRuntimeException(env, exceptionMessage("epoll_create() failed: ", err));
         }
         return efd;
     }
@@ -615,7 +615,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollCreate(JNIEnv* en
         if (fcntl(efd, F_SETFD, FD_CLOEXEC) < 0) {
             int err = errno;
             close(efd);
-            throwRuntimeException(env, exceptionMessage("Error during fcntl(...): ", err));
+            throwRuntimeException(env, exceptionMessage("fcntl() failed: ", err));
             return err;
         }
     }
@@ -633,7 +633,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollWait(JNIEnv* env,
     } while (ready == -1 && ((err = errno) == EINTR));
 
     if (ready < 0) {
-         throwIOException(env, exceptionMessage("Error during epoll_wait(...): ", err));
+         throwIOException(env, exceptionMessage("epoll_wait() failed: ", err));
          return -1;
     }
     if (ready == 0) {
@@ -648,7 +648,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollWait(JNIEnv* env,
     jlong* elements = (*env)->GetPrimitiveArrayCritical(env, events, &isCopy);
     if (elements == NULL) {
         // No memory left ?!?!?
-        throwOutOfMemoryError(env, "Can't allocate memory");
+        throwOutOfMemoryError(env);
         return -1;
     }
     int i;
@@ -681,14 +681,14 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollWait(JNIEnv* env,
 JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_epollCtlAdd(JNIEnv* env, jclass clazz, jint efd, jint fd, jint flags, jint id) {
     if (epollCtl(env, efd, EPOLL_CTL_ADD, fd, flags, id) < 0) {
         int err = errno;
-        throwRuntimeException(env, exceptionMessage("Error during calling epoll_ctl(...): ", err));
+        throwRuntimeException(env, exceptionMessage("epoll_ctl() failed: ", err));
     }
 }
 
 JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_epollCtlMod(JNIEnv* env, jclass clazz, jint efd, jint fd, jint flags, jint id) {
     if (epollCtl(env, efd, EPOLL_CTL_MOD, fd, flags, id) < 0) {
         int err = errno;
-        throwRuntimeException(env, exceptionMessage("Error during calling epoll_ctl(...): ", err));
+        throwRuntimeException(env, exceptionMessage("epoll_ctl() failed: ", err));
     }
 }
 
@@ -697,7 +697,7 @@ JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_epollCtlDel(JNIEnv* en
     struct epoll_event event = { 0 };
     if (epoll_ctl(efd, EPOLL_CTL_DEL, fd, &event) < 0) {
         int err = errno;
-        throwRuntimeException(env, exceptionMessage("Error during calling epoll_ctl(...): ", err));
+        throwRuntimeException(env, exceptionMessage("epoll_ctl() failed: ", err));
     }
 }
 
@@ -718,7 +718,7 @@ jint _write(JNIEnv* env, jclass clazz, jint fd, void* buffer, jint pos, jint lim
 JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_write0(JNIEnv* env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit) {
     void* buffer = (*env)->GetDirectBufferAddress(env, jbuffer);
     if (buffer == NULL) {
-        throwRuntimeException(env, "Unable to access address of buffer");
+        throwRuntimeException(env, "failed to get direct buffer address");
         return -1;
     }
     return _write(env, clazz, fd, buffer, pos, limit);
@@ -750,7 +750,7 @@ jint _sendTo(JNIEnv* env, jint fd, void* buffer, jint pos, jint limit ,jbyteArra
 JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_sendTo0(JNIEnv* env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit, jbyteArray address, jint scopeId, jint port) {
     void* buffer = (*env)->GetDirectBufferAddress(env, jbuffer);
     if (buffer == NULL) {
-        throwRuntimeException(env, "Unable to access address of buffer");
+        throwRuntimeException(env, "failed to get direct buffer address");
         return -1;
     }
     return _sendTo(env, fd, buffer, pos, limit, address, scopeId, port);
@@ -844,7 +844,7 @@ jobject recvFrom0(JNIEnv* env, jint fd, void* buffer, jint pos, jint limit) {
             throwClosedChannelException(env);
             return NULL;
         }
-        throwIOException(env, exceptionMessage("Error while recvFrom(...): ", err));
+        throwIOException(env, exceptionMessage("recvfrom() failed: ", err));
         return NULL;
     }
 
@@ -854,7 +854,7 @@ jobject recvFrom0(JNIEnv* env, jint fd, void* buffer, jint pos, jint limit) {
 JNIEXPORT jobject JNICALL Java_io_netty_channel_epoll_Native_recvFrom(JNIEnv* env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit) {
     void* buffer = (*env)->GetDirectBufferAddress(env, jbuffer);
     if (buffer == NULL) {
-        throwRuntimeException(env, "Unable to access address of buffer");
+        throwRuntimeException(env, "failed to get direct buffer address");
         return NULL;
     }
 
@@ -904,7 +904,7 @@ JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_writev0(JNIEnv* env, 
         }
         void* buffer = (*env)->GetDirectBufferAddress(env, bufObj);
         if (buffer == NULL) {
-            throwRuntimeException(env, "Unable to access address of buffer");
+            throwRuntimeException(env, "failed to get direct buffer address");
             return -1;
         }
         iov[iovidx].iov_base = buffer + pos;
@@ -942,7 +942,7 @@ jint _read(JNIEnv* env, jclass clazz, jint fd, void* buffer, jint pos, jint limi
 JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_read0(JNIEnv* env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit) {
     void* buffer = (*env)->GetDirectBufferAddress(env, jbuffer);
     if (buffer == NULL) {
-        throwRuntimeException(env, "Unable to access address of buffer");
+        throwRuntimeException(env, "failed to get direct buffer address");
         return -1;
     }
     return _read(env, clazz, fd, buffer, pos, limit);
@@ -1085,17 +1085,17 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_accept0(JNIEnv* env, j
 JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_sendfile0(JNIEnv* env, jclass clazz, jint fd, jobject fileRegion, jlong base_off, jlong off, jlong len) {
     jobject fileChannel = (*env)->GetObjectField(env, fileRegion, fileChannelFieldId);
     if (fileChannel == NULL) {
-        throwRuntimeException(env, "Unable to obtain FileChannel from FileRegion");
+        throwRuntimeException(env, "failed to get DefaultFileRegion.file");
         return -1;
     }
     jobject fileDescriptor = (*env)->GetObjectField(env, fileChannel, fileDescriptorFieldId);
     if (fileDescriptor == NULL) {
-        throwRuntimeException(env, "Unable to obtain FileDescriptor from FileChannel");
+        throwRuntimeException(env, "failed to get FileChannelImpl.fd");
         return -1;
     }
     jint srcFd = (*env)->GetIntField(env, fileDescriptor, fdFieldId);
     if (srcFd == -1) {
-        throwRuntimeException(env, "Unable to obtain the fd from the FileDescriptor");
+        throwRuntimeException(env, "failed to get FileDescriptor.fd");
         return -1;
     }
     ssize_t res;
@@ -1305,7 +1305,7 @@ JNIEXPORT jstring JNICALL Java_io_netty_channel_epoll_Native_kernelVersion(JNIEn
         return (*env)->NewStringUTF(env, name.release);
     }
     int err = errno;
-    throwRuntimeException(env, exceptionMessage("Error during uname(...): ", err));
+    throwRuntimeException(env, exceptionMessage("uname() failed: ", err));
     return NULL;
 }
 
