@@ -650,7 +650,8 @@ public final class OpenSslEngine extends SSLEngine {
 
     @Override
     public String[] getSupportedCipherSuites() {
-        return OpenSsl.availableCipherSuites();
+        Set<String> availableCipherSuites = OpenSsl.availableCipherSuites();
+        return availableCipherSuites.toArray(new String[availableCipherSuites.size()]);
     }
 
     @Override
@@ -677,11 +678,35 @@ public final class OpenSslEngine extends SSLEngine {
             throw new NullPointerException("cipherSuites");
         }
 
-        final String converted = CipherSuiteConverter.toOpenSsl(Arrays.asList(cipherSuites));
+        final StringBuilder buf = new StringBuilder();
+        for (String c: cipherSuites) {
+            if (c == null) {
+                break;
+            }
+
+            String converted = CipherSuiteConverter.toOpenSsl(c);
+            if (converted == null) {
+                converted = c;
+            }
+
+            if (!OpenSsl.isCipherSuiteAvailable(converted)) {
+                throw new IllegalArgumentException("unsupported cipher suite: " + c + '(' + converted + ')');
+            }
+
+            buf.append(converted);
+            buf.append(':');
+        }
+
+        if (buf.length() == 0) {
+            throw new IllegalArgumentException("empty cipher suites");
+        }
+        buf.setLength(buf.length() - 1);
+
+        final String cipherSuiteSpec = buf.toString();
         try {
-            SSL.setCipherSuites(ssl, converted);
+            SSL.setCipherSuites(ssl, cipherSuiteSpec);
         } catch (Exception e) {
-            throw new IllegalStateException("failed to enable cipher suites: " + converted, e);
+            throw new IllegalStateException("failed to enable cipher suites: " + cipherSuiteSpec, e);
         }
     }
 
