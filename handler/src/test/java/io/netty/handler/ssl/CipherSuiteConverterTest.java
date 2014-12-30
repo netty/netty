@@ -237,6 +237,27 @@ public class CipherSuiteConverterTest {
         testO2JMapping("DHE_RSA_WITH_CAMELLIA128_SHA", "DHE-RSA-CAMELLIA128-SHA");
         testO2JMapping("DHE_DSS_WITH_CAMELLIA128_SHA", "DHE-DSS-CAMELLIA128-SHA");
         testO2JMapping("EDH_RSA_WITH_3DES_EDE_CBC_SHA", "EDH-RSA-DES-CBC3-SHA");
+        testO2JMapping("SRP_DSS_WITH_AES_256_CBC_SHA", "SRP-DSS-AES-256-CBC-SHA");
+        testO2JMapping("SRP_RSA_WITH_AES_256_CBC_SHA", "SRP-RSA-AES-256-CBC-SHA");
+        testO2JMapping("SRP_WITH_AES_256_CBC_SHA", "SRP-AES-256-CBC-SHA");
+        testO2JMapping("DH_anon_WITH_AES_256_GCM_SHA384", "ADH-AES256-GCM-SHA384");
+        testO2JMapping("DH_anon_WITH_AES_256_CBC_SHA256", "ADH-AES256-SHA256");
+        testO2JMapping("DH_anon_WITH_CAMELLIA256_SHA", "ADH-CAMELLIA256-SHA");
+        testO2JMapping("SRP_DSS_WITH_AES_128_CBC_SHA", "SRP-DSS-AES-128-CBC-SHA");
+        testO2JMapping("SRP_RSA_WITH_AES_128_CBC_SHA", "SRP-RSA-AES-128-CBC-SHA");
+        testO2JMapping("SRP_WITH_AES_128_CBC_SHA", "SRP-AES-128-CBC-SHA");
+        testO2JMapping("DH_anon_WITH_SEED_SHA", "ADH-SEED-SHA");
+        testO2JMapping("DH_anon_WITH_CAMELLIA128_SHA", "ADH-CAMELLIA128-SHA");
+        testO2JMapping("RSA_WITH_RC2_CBC_MD5", "RC2-CBC-MD5");
+        testO2JMapping("SRP_DSS_WITH_3DES_EDE_CBC_SHA", "SRP-DSS-3DES-EDE-CBC-SHA");
+        testO2JMapping("SRP_RSA_WITH_3DES_EDE_CBC_SHA", "SRP-RSA-3DES-EDE-CBC-SHA");
+        testO2JMapping("SRP_WITH_3DES_EDE_CBC_SHA", "SRP-3DES-EDE-CBC-SHA");
+        testO2JMapping("RSA_WITH_3DES_EDE_CBC_MD5", "DES-CBC3-MD5");
+        testO2JMapping("EDH_RSA_WITH_DES_CBC_SHA", "EDH-RSA-DES-CBC-SHA");
+        testO2JMapping("EDH_DSS_WITH_DES_CBC_SHA", "EDH-DSS-DES-CBC-SHA");
+        testO2JMapping("RSA_WITH_DES_CBC_MD5", "DES-CBC-MD5");
+        testO2JMapping("EDH_RSA_EXPORT_WITH_DES_CBC_40_SHA", "EXP-EDH-RSA-DES-CBC-SHA");
+        testO2JMapping("EDH_DSS_EXPORT_WITH_DES_CBC_40_SHA", "EXP-EDH-DSS-DES-CBC-SHA");
     }
 
     private static void testO2JMapping(String javaCipherSuite, String openSslCipherSuite) {

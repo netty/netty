@@ -20,7 +20,13 @@ import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.apache.tomcat.jni.Library;
+import org.apache.tomcat.jni.Pool;
 import org.apache.tomcat.jni.SSL;
+import org.apache.tomcat.jni.SSLContext;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Tells if <a href="http://netty.io/wiki/forked-tomcat-native.html">{@code netty-tcnative}</a> and its OpenSSL support
@@ -30,6 +36,8 @@ public final class OpenSsl {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OpenSsl.class);
     private static final Throwable UNAVAILABILITY_CAUSE;
+
+    private static final List<String> AVAILABLE_CIPHER_SUITES;
 
     static {
         Throwable cause = null;
@@ -44,6 +52,40 @@ public final class OpenSsl {
                             OpenSslEngine.class.getSimpleName() + " will be unavailable.", t);
         }
         UNAVAILABILITY_CAUSE = cause;
+
+        if (cause == null) {
+            final List<String> availableCipherSuites = new ArrayList<String>(128);
+            final long aprPool = Pool.create(0);
+            try {
+                final long sslCtx = SSLContext.make(aprPool, SSL.SSL_PROTOCOL_ALL, SSL.SSL_MODE_SERVER);
+                try {
+                    SSLContext.setOptions(sslCtx, SSL.SSL_OP_ALL);
+                    SSLContext.setCipherSuite(sslCtx, "ALL");
+                    final long ssl = SSL.newSSL(sslCtx, true);
+                    try {
+                        for (String c: SSL.getCiphers(ssl)) {
+                            // Filter out bad input.
+                            if (c == null || c.length() == 0 || availableCipherSuites.contains(c)) {
+                                continue;
+                            }
+                            availableCipherSuites.add(c);
+                        }
+                    } finally {
+                        SSL.freeSSL(ssl);
+                    }
+                } finally {
+                    SSLContext.free(sslCtx);
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to get the list of available OpenSSL cipher suites.", e);
+            } finally {
+                Pool.destroy(aprPool);
+            }
+
+            AVAILABLE_CIPHER_SUITES = Collections.unmodifiableList(availableCipherSuites);
+        } else {
+            AVAILABLE_CIPHER_SUITES = Collections.emptyList();
+        }
     }
 
     /**
@@ -76,6 +118,14 @@ public final class OpenSsl {
      */
     public static Throwable unavailabilityCause() {
         return UNAVAILABILITY_CAUSE;
+    }
+
+    /**
+     * Returns all the available OpenSSL cipher suites.
+     * Please note that the returned array may include the cipher suites that are insecure or non-functional.
+     */
+    public static String[] availableCipherSuites() {
+        return AVAILABLE_CIPHER_SUITES.toArray(new String[AVAILABLE_CIPHER_SUITES.size()]);
     }
 
     static boolean isError(long errorCode) {
