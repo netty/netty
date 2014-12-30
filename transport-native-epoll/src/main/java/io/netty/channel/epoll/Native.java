@@ -18,6 +18,7 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.ChannelException;
 import io.netty.channel.DefaultFileRegion;
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -28,6 +29,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.util.Locale;
 
 /**
@@ -36,8 +38,6 @@ import java.util.Locale;
  * <strong>Internal usage only!</strong>
  */
 final class Native {
-    private static final byte[] IPV4_MAPPED_IPV6_PREFIX = {
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, (byte) 0xff, (byte) 0xff };
 
     static {
         String name = SystemPropertyUtil.get("os.name").toLowerCase(Locale.UK).trim();
@@ -56,6 +56,78 @@ final class Native {
     public static final int UIO_MAX_IOV = uioMaxIov();
     public static final boolean IS_SUPPORTING_SENDMMSG = isSupportingSendmmsg();
 
+    private static final byte[] IPV4_MAPPED_IPV6_PREFIX = {
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, (byte) 0xff, (byte) 0xff };
+
+    // As all our JNI methods return -errno on error we need to compare with the negative errno codes.
+    private static final int ERRNO_EBADF_NEGATIVE = -errnoEBADF();
+    private static final int ERRNO_EPIPE_NEGATIVE = -errnoEPIPE();
+    private static final int ERRNO_EAGAIN_NEGATIVE = -errnoEAGAIN();
+    private static final int ERRNO_EWOULDBLOCK_NEGATIVE = -errnoEWOULDBLOCK();
+    private static final int ERRNO_EINPROGRESS_NEGATIVE = -errnoEINPROGRESS();
+
+    /**
+     * Holds the mappings for errno codes to String messages.
+     * This eliminates the need to call back into JNI to get the right String message on an exception
+     * and thus is faster.
+     *
+     * The array length of 1024 should be more then enough because errno.h only holds < 200 codes.
+     */
+    private static final String[] ERRORS = new String[1024]; //
+
+    // Pre-instantiated exceptions which does not need any stacktrace and
+    // can be thrown multiple times for performance reasons.
+    private static final ClosedChannelException CLOSED_CHANNEL_EXCEPTION;
+    private static final IOException CONNECTION_RESET_EXCEPTION_WRITE;
+    private static final IOException CONNECTION_RESET_EXCEPTION_WRITEV;
+    private static final IOException CONNECTION_RESET_EXCEPTION_READ;
+    private static final IOException CONNECTION_RESET_EXCEPTION_SENDFILE;
+    private static final IOException CONNECTION_RESET_EXCEPTION_SENDTO;
+    private static final IOException CONNECTION_RESET_EXCEPTION_SENDMSG;
+    private static final IOException CONNECTION_RESET_EXCEPTION_SENDMMSG;
+
+    static {
+        for (int i = 0; i < ERRORS.length; i++) {
+            // This is ok as strerror returns 'Unknown error i' when the message is not known.
+            ERRORS[i] = strError(i);
+        }
+        CONNECTION_RESET_EXCEPTION_WRITE = newConnectionResetException("write");
+        CONNECTION_RESET_EXCEPTION_WRITEV = newConnectionResetException("writev");
+        CONNECTION_RESET_EXCEPTION_READ = newConnectionResetException("read");
+        CONNECTION_RESET_EXCEPTION_SENDFILE = newConnectionResetException("sendfile");
+        CONNECTION_RESET_EXCEPTION_SENDTO = newConnectionResetException("sendto");
+        CONNECTION_RESET_EXCEPTION_SENDMSG = newConnectionResetException("sendmsg");
+        CONNECTION_RESET_EXCEPTION_SENDMMSG = newConnectionResetException("sendmmsg");
+        CLOSED_CHANNEL_EXCEPTION = new ClosedChannelException();
+        CLOSED_CHANNEL_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+    }
+
+    private static IOException newConnectionResetException(String method) {
+        IOException exception = newIOException(method, ERRNO_EPIPE_NEGATIVE);
+        exception.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+        return exception;
+    }
+
+    private static IOException newIOException(String method, int err) {
+        return new IOException(method + "() failed: " + ERRORS[-err]);
+    }
+
+    private static int ioResult(String method, int err, IOException resetCause) throws IOException {
+        // network stack saturated... try again later
+        if (err == ERRNO_EAGAIN_NEGATIVE || err == ERRNO_EWOULDBLOCK_NEGATIVE) {
+            return 0;
+        }
+        if (err == ERRNO_EPIPE_NEGATIVE) {
+            throw resetCause;
+        }
+        if (err == ERRNO_EBADF_NEGATIVE) {
+            throw CLOSED_CHANNEL_EXCEPTION;
+        }
+        // TODO: We could even go futher and use a pre-instanced IOException for the other error codes, but for
+        //       all other errors it may be better to just include a stacktrace.
+        throw newIOException(method, err);
+    }
+
     public static native int eventFd();
     public static native void eventFdWrite(int fd, long value);
     public static native void eventFdRead(int fd);
@@ -65,18 +137,89 @@ final class Native {
     public static native void epollCtlMod(int efd, final int fd, final int flags, final int id);
     public static native void epollCtlDel(int efd, final int fd);
 
+    private static native int errnoEBADF();
+    private static native int errnoEPIPE();
+    private static native int errnoEAGAIN();
+    private static native int errnoEWOULDBLOCK();
+    private static native int errnoEINPROGRESS();
+    private static native String strError(int err);
+
     // File-descriptor operations
-    public static native void close(int fd) throws IOException;
+    public static void close(int fd) throws IOException {
+        int res = close0(fd);
+        if (res < 0) {
+            throw newIOException("close", res);
+        }
+    }
 
-    public static native int write(int fd, ByteBuffer buf, int pos, int limit) throws IOException;
-    public static native int writeAddress(int fd, long address, int pos, int limit) throws IOException;
+    private static native int close0(int fd);
 
-    public static native long writev(int fd, ByteBuffer[] buffers, int offset, int length) throws IOException;
-    public static native long writevAddresses(int fd, long memoryAddress, int length)
-            throws IOException;
+    public static int write(int fd, ByteBuffer buf, int pos, int limit) throws IOException {
+        int res = write0(fd, buf, pos, limit);
+        if (res >= 0) {
+            return res;
+        }
+        return ioResult("write", res, CONNECTION_RESET_EXCEPTION_WRITE);
+    }
 
-    public static native int read(int fd, ByteBuffer buf, int pos, int limit) throws IOException;
-    public static native int readAddress(int fd, long address, int pos, int limit) throws IOException;
+    private static native int write0(int fd, ByteBuffer buf, int pos, int limit);
+
+    public static int writeAddress(int fd, long address, int pos, int limit) throws IOException {
+        int res = writeAddress0(fd, address, pos, limit);
+        if (res >= 0) {
+            return res;
+        }
+        return ioResult("write", res, CONNECTION_RESET_EXCEPTION_WRITE);
+    }
+
+    private static native int writeAddress0(int fd, long address, int pos, int limit);
+
+    public static long writev(int fd, ByteBuffer[] buffers, int offset, int length) throws IOException {
+        long res = writev0(fd, buffers, offset, length);
+        if (res >= 0) {
+            return res;
+        }
+        return ioResult("writev", (int) res, CONNECTION_RESET_EXCEPTION_WRITEV);
+    }
+
+    private static native long writev0(int fd, ByteBuffer[] buffers, int offset, int length);
+
+    public static long writevAddresses(int fd, long memoryAddress, int length)
+            throws IOException {
+        long res = writevAddresses0(fd, memoryAddress, length);
+        if (res >= 0) {
+            return res;
+        }
+        return ioResult("writev", (int) res, CONNECTION_RESET_EXCEPTION_WRITEV);
+    }
+
+    private static native long writevAddresses0(int fd, long memoryAddress, int length);
+
+    public static int read(int fd, ByteBuffer buf, int pos, int limit) throws IOException {
+        int res = read0(fd, buf, pos, limit);
+        if (res > 0) {
+            return res;
+        }
+        if (res == 0) {
+            return -1;
+        }
+        return ioResult("read", res, CONNECTION_RESET_EXCEPTION_READ);
+    }
+
+    private static native int read0(int fd, ByteBuffer buf, int pos, int limit);
+
+    public static int readAddress(int fd, long address, int pos, int limit) throws IOException {
+        int res = readAddress0(fd, address, pos, limit);
+        if (res > 0) {
+            return res;
+        }
+        if (res == 0) {
+            return -1;
+        }
+        return ioResult("read", res, CONNECTION_RESET_EXCEPTION_READ);
+    }
+
+    private static native int readAddress0(int fd, long address, int pos, int limit);
 
     public static long sendfile(
             int dest, DefaultFileRegion src, long baseOffset, long offset, long length) throws IOException {
@@ -84,7 +227,11 @@ final class Native {
         // the FileChannel field directly via JNI
         src.open();
 
-        return sendfile0(dest, src, baseOffset, offset, length);
+        long res = sendfile0(dest, src, baseOffset, offset, length);
+        if (res >= 0) {
+            return res;
+        }
+        return ioResult("sendfile", (int) res, CONNECTION_RESET_EXCEPTION_SENDFILE);
     }
 
     private static native long sendfile0(
@@ -104,11 +251,15 @@ final class Native {
             scopeId = 0;
             address = ipv4MappedIpv6Address(addr.getAddress());
         }
-        return sendTo(fd, buf, pos, limit, address, scopeId, port);
+        int res = sendTo0(fd, buf, pos, limit, address, scopeId, port);
+        if (res >= 0) {
+            return res;
+        }
+        return ioResult("sendfile", res, CONNECTION_RESET_EXCEPTION_SENDTO);
     }
 
-    private static native int sendTo(
-            int fd, ByteBuffer buf, int pos, int limit, byte[] address, int scopeId, int port) throws IOException;
+    private static native int sendTo0(
+            int fd, ByteBuffer buf, int pos, int limit, byte[] address, int scopeId, int port);
 
     public static int sendToAddress(
             int fd, long memoryAddress, int pos, int limit, InetAddress addr, int port) throws IOException {
@@ -124,11 +275,15 @@ final class Native {
             scopeId = 0;
             address = ipv4MappedIpv6Address(addr.getAddress());
         }
-        return sendToAddress(fd, memoryAddress, pos, limit, address, scopeId, port);
+        int res = sendToAddress0(fd, memoryAddress, pos, limit, address, scopeId, port);
+        if (res >= 0) {
+            return res;
+        }
+        return ioResult("sendto", res, CONNECTION_RESET_EXCEPTION_SENDTO);
     }
 
-    private static native int sendToAddress(
-            int fd, long memoryAddress, int pos, int limit, byte[] address, int scopeId, int port) throws IOException;
+    private static native int sendToAddress0(
+            int fd, long memoryAddress, int pos, int limit, byte[] address, int scopeId, int port);
 
     public static int sendToAddresses(
             int fd, long memoryAddress, int length, InetAddress addr, int port) throws IOException {
@@ -144,11 +299,15 @@ final class Native {
             scopeId = 0;
             address = ipv4MappedIpv6Address(addr.getAddress());
         }
-        return sendToAddresses(fd, memoryAddress, length, address, scopeId, port);
+        int res = sendToAddresses(fd, memoryAddress, length, address, scopeId, port);
+        if (res >= 0) {
+            return res;
+        }
+        return ioResult("sendmsg", res, CONNECTION_RESET_EXCEPTION_SENDMSG);
     }
 
     private static native int sendToAddresses(
-            int fd, long memoryAddress, int length, byte[] address, int scopeId, int port) throws IOException;
+            int fd, long memoryAddress, int length, byte[] address, int scopeId, int port);
 
     public static native EpollDatagramChannel.DatagramSocketAddress recvFrom(
             int fd, ByteBuffer buf, int pos, int limit) throws IOException;
@@ -156,50 +315,87 @@ final class Native {
     public static native EpollDatagramChannel.DatagramSocketAddress recvFromAddress(
             int fd, long memoryAddress, int pos, int limit) throws IOException;
 
-    public static native int sendmmsg(
-            int fd, NativeDatagramPacketArray.NativeDatagramPacket[] msgs, int offset, int len) throws IOException;
+    public static int sendmmsg(
+            int fd, NativeDatagramPacketArray.NativeDatagramPacket[] msgs, int offset, int len) throws IOException {
+        int res = sendmmsg0(fd, msgs, offset, len);
+        if (res >= 0) {
+            return res;
+        }
+        return ioResult("sendmmsg", res, CONNECTION_RESET_EXCEPTION_SENDMMSG);
+    }
+
+    private static native int sendmmsg0(
+            int fd, NativeDatagramPacketArray.NativeDatagramPacket[] msgs, int offset, int len);
 
     private static native boolean isSupportingSendmmsg();
 
     // socket operations
     public static int socketStreamFd() {
-        try {
-            return socketStream();
-        } catch (IOException e) {
-            throw new ChannelException(e);
+        int res = socketStream();
+        if (res < 0) {
+            throw new ChannelException(newIOException("socket", res));
         }
+        return res;
     }
 
     public static int socketDgramFd() {
-        try {
-            return socketDgram();
-        } catch (IOException e) {
-            throw new ChannelException(e);
+        int res = socketDgram();
+        if (res < 0) {
+            throw new ChannelException(newIOException("socket", res));
         }
+        return res;
     }
-    private static native int socketStream() throws IOException;
-    private static native int socketDgram() throws IOException;
+
+    private static native int socketStream();
+    private static native int socketDgram();
 
     public static void bind(int fd, InetAddress addr, int port) throws IOException {
         NativeInetAddress address = toNativeInetAddress(addr);
-        bind(fd, address.address, address.scopeId, port);
+        int res = bind(fd, address.address, address.scopeId, port);
+        if (res < 0) {
+            throw newIOException("bind", res);
+        }
     }
 
-    static byte[] ipv4MappedIpv6Address(byte[] ipv4) {
-        byte[] address = new byte[16];
-        System.arraycopy(IPV4_MAPPED_IPV6_PREFIX, 0, address, 0, IPV4_MAPPED_IPV6_PREFIX.length);
-        System.arraycopy(ipv4, 0, address, 12, ipv4.length);
-        return address;
+    private static native int bind(int fd, byte[] address, int scopeId, int port);
+
+    public static void listen(int fd, int backlog) throws IOException {
+        int res = listen0(fd, backlog);
+        if (res < 0) {
+            throw newIOException("listen", res);
+        }
     }
 
-    public static native void bind(int fd, byte[] address, int scopeId, int port) throws IOException;
-    public static native void listen(int fd, int backlog) throws IOException;
+    private static native int listen0(int fd, int backlog);
+
     public static boolean connect(int fd, InetAddress addr, int port) throws IOException {
         NativeInetAddress address = toNativeInetAddress(addr);
-        return connect(fd, address.address, address.scopeId, port);
+        int res = connect(fd, address.address, address.scopeId, port);
+        if (res < 0) {
+            if (res == ERRNO_EINPROGRESS_NEGATIVE) {
+                // connect not complete yet need to wait for EPOLLOUT event
+                return false;
+            }
+            throw newIOException("connect", res);
+        }
+        return true;
     }
-    public static native boolean connect(int fd, byte[] address, int scopeId, int port) throws IOException;
-    public static native boolean finishConnect(int fd) throws IOException;
+
+    private static native int connect(int fd, byte[] address, int scopeId, int port);
+
+    public static boolean finishConnect(int fd) throws IOException {
+        int res = finishConnect0(fd);
+        if (res < 0) {
+            if (res == ERRNO_EINPROGRESS_NEGATIVE) {
+                // connect still in progress
+                return false;
+            }
+            throw newIOException("getsockopt", res);
+        }
+        return true;
+    }
+
+    private static native int finishConnect0(int fd);
 
     public static InetSocketAddress remoteAddress(int fd) {
         byte[] addr = remoteAddress0(fd);
@@ -256,8 +452,29 @@ final class Native {
 
     private static native byte[] remoteAddress0(int fd);
     private static native byte[] localAddress0(int fd);
-    public static native int accept(int fd) throws IOException;
-    public static native void shutdown(int fd, boolean read, boolean write) throws IOException;
+
+    public static int accept(int fd) throws IOException {
+        int res = accept0(fd);
+        if (res >= 0) {
+            return res;
+        }
+        if (res == ERRNO_EAGAIN_NEGATIVE || res == ERRNO_EWOULDBLOCK_NEGATIVE) {
+            // Everything consumed so just return -1 here.
+            return -1;
+        }
+        throw newIOException("accept", res);
+    }
+
+    private static native int accept0(int fd);
+
+    public static void shutdown(int fd, boolean read, boolean write) throws IOException {
+        int res = shutdown0(fd, read, write);
+        if (res < 0) {
+            throw newIOException("shutdown", res);
+        }
+    }
+
+    private static native int shutdown0(int fd, boolean read, boolean write);
 
     // Socket option operations
     public static native int getReceiveBufferSize(int fd);
@@ -296,6 +513,13 @@ final class Native {
             // convert to ipv4 mapped ipv6 address;
             return new NativeInetAddress(ipv4MappedIpv6Address(bytes));
         }
+    }
+
+    static byte[] ipv4MappedIpv6Address(byte[] ipv4) {
+        byte[] address = new byte[16];
+        System.arraycopy(IPV4_MAPPED_IPV6_PREFIX, 0, address, 0, IPV4_MAPPED_IPV6_PREFIX.length);
+        System.arraycopy(ipv4, 0, address, 12, ipv4.length);
+        return address;
     }
 
     private static class NativeInetAddress {
