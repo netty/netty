@@ -169,7 +169,7 @@ final class Native {
         if (res >= 0) {
             return res;
         }
-        return ioResult("write", res, CONNECTION_RESET_EXCEPTION_WRITE);
+        return ioResult("writeAddress", res, CONNECTION_RESET_EXCEPTION_WRITE);
     }
 
     private static native int writeAddress0(int fd, long address, int pos, int limit);
@@ -190,7 +190,7 @@ final class Native {
         if (res >= 0) {
             return res;
         }
-        return ioResult("writev", (int) res, CONNECTION_RESET_EXCEPTION_WRITEV);
+        return ioResult("writevAddresses", (int) res, CONNECTION_RESET_EXCEPTION_WRITEV);
     }
 
     private static native long writevAddresses0(int fd, long memoryAddress, int length);
@@ -216,7 +216,7 @@ final class Native {
         if (res == 0) {
             return -1;
         }
-        return ioResult("read", res, CONNECTION_RESET_EXCEPTION_READ);
+        return ioResult("readAddress", res, CONNECTION_RESET_EXCEPTION_READ);
     }
 
     private static native int readAddress0(int fd, long address, int pos, int limit);
@@ -255,7 +255,7 @@ final class Native {
         if (res >= 0) {
             return res;
         }
-        return ioResult("sendfile", res, CONNECTION_RESET_EXCEPTION_SENDTO);
+        return ioResult("sendTo", res, CONNECTION_RESET_EXCEPTION_SENDTO);
     }
 
     private static native int sendTo0(
@@ -279,7 +279,7 @@ final class Native {
         if (res >= 0) {
             return res;
         }
-        return ioResult("sendto", res, CONNECTION_RESET_EXCEPTION_SENDTO);
+        return ioResult("sendToAddress", res, CONNECTION_RESET_EXCEPTION_SENDTO);
     }
 
     private static native int sendToAddress0(
@@ -303,7 +303,7 @@ final class Native {
         if (res >= 0) {
             return res;
         }
-        return ioResult("sendmsg", res, CONNECTION_RESET_EXCEPTION_SENDMSG);
+        return ioResult("sendToAddresses", res, CONNECTION_RESET_EXCEPTION_SENDMSG);
     }
 
     private static native int sendToAddresses(
@@ -333,7 +333,7 @@ final class Native {
     public static int socketStreamFd() {
         int res = socketStream();
         if (res < 0) {
-            throw new ChannelException(newIOException("socket", res));
+            throw new ChannelException(newIOException("socketStreamFd", res));
         }
         return res;
     }
@@ -341,7 +341,7 @@ final class Native {
     public static int socketDgramFd() {
         int res = socketDgram();
         if (res < 0) {
-            throw new ChannelException(newIOException("socket", res));
+            throw new ChannelException(newIOException("socketDgramFd", res));
         }
         return res;
     }
@@ -390,7 +390,7 @@ final class Native {
                 // connect still in progress
                 return false;
             }
-            throw newIOException("getsockopt", res);
+            throw newIOException("finishConnect", res);
         }
         return true;
     }
