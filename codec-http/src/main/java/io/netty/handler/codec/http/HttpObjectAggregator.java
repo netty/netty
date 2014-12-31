@@ -281,17 +281,23 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
         protected final HttpMessage message;
         private HttpHeaders trailingHeaders;
 
-        private AggregatedFullHttpMessage(HttpMessage message, ByteBuf content, HttpHeaders trailingHeaders) {
+        AggregatedFullHttpMessage(HttpMessage message, ByteBuf content, HttpHeaders trailingHeaders) {
             super(content);
             this.message = message;
             this.trailingHeaders = trailingHeaders;
         }
+
         @Override
         public HttpHeaders trailingHeaders() {
-            return trailingHeaders;
+            HttpHeaders trailingHeaders = this.trailingHeaders;
+            if (trailingHeaders == null) {
+                return HttpHeaders.EMPTY_HEADERS;
+            } else {
+                return trailingHeaders;
+            }
         }
 
-        public void setTrailingHeaders(HttpHeaders trailingHeaders) {
+        void setTrailingHeaders(HttpHeaders trailingHeaders) {
             this.trailingHeaders = trailingHeaders;
         }
 
@@ -342,7 +348,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
 
     private static final class AggregatedFullHttpRequest extends AggregatedFullHttpMessage implements FullHttpRequest {
 
-        private AggregatedFullHttpRequest(HttpRequest request, ByteBuf content, HttpHeaders trailingHeaders) {
+        AggregatedFullHttpRequest(HttpRequest request, ByteBuf content, HttpHeaders trailingHeaders) {
             super(request, content, trailingHeaders);
         }
 
@@ -412,7 +418,8 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
 
     private static final class AggregatedFullHttpResponse extends AggregatedFullHttpMessage
             implements FullHttpResponse {
-        private AggregatedFullHttpResponse(HttpResponse message, ByteBuf content, HttpHeaders trailingHeaders) {
+
+        AggregatedFullHttpResponse(HttpResponse message, ByteBuf content, HttpHeaders trailingHeaders) {
             super(message, content, trailingHeaders);
         }
 
