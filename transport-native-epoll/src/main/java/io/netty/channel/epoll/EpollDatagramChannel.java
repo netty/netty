@@ -539,8 +539,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 if (exception != null) {
                     pipeline.fireExceptionCaught(exception);
                 }
-
-                pipeline.fireChannelReadComplete();
             } finally {
                 // Check if there is a readPending which was not processed yet.
                 // This could be for two reasons:
