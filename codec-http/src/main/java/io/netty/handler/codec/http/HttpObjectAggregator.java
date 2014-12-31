@@ -403,6 +403,11 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             super.setProtocolVersion(version);
             return this;
         }
+
+        @Override
+        public String toString() {
+            return HttpMessageUtil.appendFullRequest(new StringBuilder(256), this).toString();
+        }
     }
 
     private static final class AggregatedFullHttpResponse extends AggregatedFullHttpMessage
@@ -456,6 +461,11 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
         public FullHttpResponse retain() {
             super.retain();
             return this;
+        }
+
+        @Override
+        public String toString() {
+            return HttpMessageUtil.appendFullResponse(new StringBuilder(256), this).toString();
         }
     }
 }

@@ -15,10 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.util.internal.StringUtil;
-
-import java.util.Map;
-
 /**
  * The default {@link HttpMessage} implementation.
  */
@@ -53,42 +49,11 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
     }
 
     @Override
-    public String toString() {
-        StringBuilder buf = new StringBuilder()
-        .append(StringUtil.simpleClassName(this))
-        .append("(version: ")
-        .append(getProtocolVersion().text())
-        .append(", keepAlive: ")
-        .append(HttpHeaders.isKeepAlive(this))
-        .append(')')
-        .append(StringUtil.NEWLINE);
-
-        appendHeaders(buf);
-
-        // Remove the last newline.
-        buf.setLength(buf.length() - StringUtil.NEWLINE.length());
-        return buf.toString();
-    }
-
-    @Override
     public HttpMessage setProtocolVersion(HttpVersion version) {
         if (version == null) {
             throw new NullPointerException("version");
         }
         this.version = version;
         return this;
-    }
-
-    void appendHeaders(StringBuilder buf) {
-        appendHeaders(buf, headers());
-    }
-
-    void appendHeaders(StringBuilder buf, HttpHeaders headers) {
-        for (Map.Entry<String, String> e: headers) {
-            buf.append(e.getKey())
-               .append(": ")
-               .append(e.getValue())
-               .append(StringUtil.NEWLINE);
-        }
     }
 }

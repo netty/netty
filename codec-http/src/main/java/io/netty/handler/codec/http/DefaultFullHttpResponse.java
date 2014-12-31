@@ -113,4 +113,9 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
         duplicate.trailingHeaders().set(trailingHeaders());
         return duplicate;
     }
+
+    @Override
+    public String toString() {
+        return HttpMessageUtil.appendFullResponse(new StringBuilder(256), this).toString();
+    }
 }

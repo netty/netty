@@ -117,4 +117,9 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
         duplicate.trailingHeaders().set(trailingHeaders());
         return duplicate;
     }
+
+    @Override
+    public String toString() {
+        return HttpMessageUtil.appendFullRequest(new StringBuilder(256), this).toString();
+    }
 }
