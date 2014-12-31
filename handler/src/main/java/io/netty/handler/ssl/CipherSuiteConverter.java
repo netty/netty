@@ -16,13 +16,10 @@
 
 package io.netty.handler.ssl;
 
-import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import javax.net.ssl.SSLContext;
-import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
@@ -97,124 +94,6 @@ final class CipherSuiteConverter {
      * a Java cipher suite has the protocol name prefix (TLS_, SSL_)
      */
     private static final ConcurrentMap<String, Map<String, String>> o2j = PlatformDependent.newConcurrentHashMap();
-
-    static {
-        String[] cipherSuites = EmptyArrays.EMPTY_STRINGS;
-        try {
-            cipherSuites = SSLContext.getDefault().getSupportedSSLParameters().getCipherSuites();
-        } catch (NoSuchAlgorithmException e) {
-            logger.warn("Failed to get the default SSLContext:", e);
-        }
-
-        // Populate the initial mapping from the currently supported cipher suites.
-        for (String c: cipherSuites) {
-            cacheFromJava(c);
-        }
-
-        // Also popluate those unavailable from Java but maybe available in OpenSSL.
-        cacheFromJava("SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA");
-        cacheFromJava("SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA");
-        cacheFromJava("SSL_DHE_DSS_WITH_DES_CBC_SHA");
-        cacheFromJava("SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA");
-        cacheFromJava("SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA");
-        cacheFromJava("SSL_DHE_RSA_WITH_DES_CBC_SHA");
-        cacheFromJava("SSL_DH_anon_EXPORT_WITH_DES40_CBC_SHA");
-        cacheFromJava("SSL_DH_anon_EXPORT_WITH_RC4_40_MD5");
-        cacheFromJava("SSL_DH_anon_WITH_3DES_EDE_CBC_SHA");
-        cacheFromJava("SSL_DH_anon_WITH_DES_CBC_SHA");
-        cacheFromJava("SSL_DH_anon_WITH_RC4_128_MD5");
-        cacheFromJava("SSL_RSA_EXPORT_WITH_DES40_CBC_SHA");
-        cacheFromJava("SSL_RSA_EXPORT_WITH_RC2_CBC_40_MD5");
-        cacheFromJava("SSL_RSA_EXPORT_WITH_RC4_40_MD5");
-        cacheFromJava("SSL_RSA_WITH_3DES_EDE_CBC_SHA");
-        cacheFromJava("SSL_RSA_WITH_DES_CBC_SHA");
-        cacheFromJava("SSL_RSA_WITH_NULL_MD5");
-        cacheFromJava("SSL_RSA_WITH_NULL_SHA");
-        cacheFromJava("SSL_RSA_WITH_RC4_128_MD5");
-        cacheFromJava("SSL_RSA_WITH_RC4_128_SHA");
-        cacheFromJava("TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA");
-        cacheFromJava("TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA");
-        cacheFromJava("TLS_DHE_DSS_WITH_AES_128_CBC_SHA");
-        cacheFromJava("TLS_DHE_DSS_WITH_AES_128_CBC_SHA256");
-        cacheFromJava("TLS_DHE_DSS_WITH_AES_128_GCM_SHA256");
-        cacheFromJava("TLS_DHE_DSS_WITH_AES_256_CBC_SHA");
-        cacheFromJava("TLS_DHE_DSS_WITH_DES_CBC_SHA");
-        cacheFromJava("TLS_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA");
-        cacheFromJava("TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA");
-        cacheFromJava("TLS_DHE_RSA_WITH_AES_128_CBC_SHA");
-        cacheFromJava("TLS_DHE_RSA_WITH_AES_128_CBC_SHA256");
-        cacheFromJava("TLS_DHE_RSA_WITH_AES_128_GCM_SHA256");
-        cacheFromJava("TLS_DHE_RSA_WITH_AES_256_CBC_SHA");
-        cacheFromJava("TLS_DHE_RSA_WITH_DES_CBC_SHA");
-        cacheFromJava("TLS_DH_anon_EXPORT_WITH_DES40_CBC_SHA");
-        cacheFromJava("TLS_DH_anon_EXPORT_WITH_RC4_40_MD5");
-        cacheFromJava("TLS_DH_anon_WITH_3DES_EDE_CBC_SHA");
-        cacheFromJava("TLS_DH_anon_WITH_AES_128_CBC_SHA");
-        cacheFromJava("TLS_DH_anon_WITH_AES_128_CBC_SHA256");
-        cacheFromJava("TLS_DH_anon_WITH_AES_128_GCM_SHA256");
-        cacheFromJava("TLS_DH_anon_WITH_AES_256_CBC_SHA");
-        cacheFromJava("TLS_DH_anon_WITH_DES_CBC_SHA");
-        cacheFromJava("TLS_DH_anon_WITH_RC4_128_MD5");
-        cacheFromJava("TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA");
-        cacheFromJava("TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA");
-        cacheFromJava("TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256");
-        cacheFromJava("TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
-        cacheFromJava("TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA");
-        cacheFromJava("TLS_ECDHE_ECDSA_WITH_NULL_SHA");
-        cacheFromJava("TLS_ECDHE_ECDSA_WITH_RC4_128_SHA");
-        cacheFromJava("TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA");
-        cacheFromJava("TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA");
-        cacheFromJava("TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256");
-        cacheFromJava("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256");
-        cacheFromJava("TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA");
-        cacheFromJava("TLS_ECDHE_RSA_WITH_NULL_SHA");
-        cacheFromJava("TLS_ECDHE_RSA_WITH_RC4_128_SHA");
-        cacheFromJava("TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA");
-        cacheFromJava("TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA");
-        cacheFromJava("TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA256");
-        cacheFromJava("TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256");
-        cacheFromJava("TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA");
-        cacheFromJava("TLS_ECDH_ECDSA_WITH_NULL_SHA");
-        cacheFromJava("TLS_ECDH_ECDSA_WITH_RC4_128_SHA");
-        cacheFromJava("TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA");
-        cacheFromJava("TLS_ECDH_RSA_WITH_AES_128_CBC_SHA");
-        cacheFromJava("TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256");
-        cacheFromJava("TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256");
-        cacheFromJava("TLS_ECDH_RSA_WITH_AES_256_CBC_SHA");
-        cacheFromJava("TLS_ECDH_RSA_WITH_NULL_SHA");
-        cacheFromJava("TLS_ECDH_RSA_WITH_RC4_128_SHA");
-        cacheFromJava("TLS_ECDH_anon_WITH_3DES_EDE_CBC_SHA");
-        cacheFromJava("TLS_ECDH_anon_WITH_AES_128_CBC_SHA");
-        cacheFromJava("TLS_ECDH_anon_WITH_AES_256_CBC_SHA");
-        cacheFromJava("TLS_ECDH_anon_WITH_NULL_SHA");
-        cacheFromJava("TLS_ECDH_anon_WITH_RC4_128_SHA");
-        cacheFromJava("TLS_KRB5_EXPORT_WITH_DES_CBC_40_MD5");
-        cacheFromJava("TLS_KRB5_EXPORT_WITH_DES_CBC_40_SHA");
-        cacheFromJava("TLS_KRB5_EXPORT_WITH_RC2_CBC_40_MD5");
-        cacheFromJava("TLS_KRB5_EXPORT_WITH_RC2_CBC_40_SHA");
-        cacheFromJava("TLS_KRB5_EXPORT_WITH_RC4_40_MD5");
-        cacheFromJava("TLS_KRB5_EXPORT_WITH_RC4_40_SHA");
-        cacheFromJava("TLS_KRB5_WITH_3DES_EDE_CBC_MD5");
-        cacheFromJava("TLS_KRB5_WITH_3DES_EDE_CBC_SHA");
-        cacheFromJava("TLS_KRB5_WITH_DES_CBC_MD5");
-        cacheFromJava("TLS_KRB5_WITH_DES_CBC_SHA");
-        cacheFromJava("TLS_KRB5_WITH_RC4_128_MD5");
-        cacheFromJava("TLS_KRB5_WITH_RC4_128_SHA");
-        cacheFromJava("TLS_RSA_EXPORT_WITH_DES40_CBC_SHA");
-        cacheFromJava("TLS_RSA_EXPORT_WITH_RC2_CBC_40_MD5");
-        cacheFromJava("TLS_RSA_EXPORT_WITH_RC4_40_MD5");
-        cacheFromJava("TLS_RSA_WITH_3DES_EDE_CBC_SHA");
-        cacheFromJava("TLS_RSA_WITH_AES_128_CBC_SHA");
-        cacheFromJava("TLS_RSA_WITH_AES_128_CBC_SHA256");
-        cacheFromJava("TLS_RSA_WITH_AES_128_GCM_SHA256");
-        cacheFromJava("TLS_RSA_WITH_AES_256_CBC_SHA");
-        cacheFromJava("TLS_RSA_WITH_DES_CBC_SHA");
-        cacheFromJava("TLS_RSA_WITH_NULL_MD5");
-        cacheFromJava("TLS_RSA_WITH_NULL_SHA");
-        cacheFromJava("TLS_RSA_WITH_NULL_SHA256");
-        cacheFromJava("TLS_RSA_WITH_RC4_128_MD5");
-        cacheFromJava("TLS_RSA_WITH_RC4_128_SHA");
-    }
 
     /**
      * Clears the cache for testing purpose.
