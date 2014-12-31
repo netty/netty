@@ -104,22 +104,6 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append(StringUtil.simpleClassName(this));
-        buf.append("(decodeResult: ");
-        buf.append(decoderResult());
-        buf.append(')');
-        buf.append(StringUtil.NEWLINE);
-        buf.append(method());
-        buf.append(' ');
-        buf.append(uri());
-        buf.append(' ');
-        buf.append(protocolVersion().text());
-        buf.append(StringUtil.NEWLINE);
-        appendHeaders(buf);
-
-        // Remove the last newline.
-        buf.setLength(buf.length() - StringUtil.NEWLINE.length());
-        return buf.toString();
+        return HttpMessageUtil.appendRequest(new StringBuilder(256), this).toString();
     }
 }
