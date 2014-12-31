@@ -15,8 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.util.internal.StringUtil;
-
 /**
  * The default {@link HttpResponse} implementation.
  */
@@ -90,24 +88,6 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        appendAll(buf);
-
-        // Remove the last newline.
-        buf.setLength(buf.length() - StringUtil.NEWLINE.length());
-        return buf.toString();
-    }
-
-    void appendAll(StringBuilder buf) {
-        buf.append(StringUtil.simpleClassName(this));
-        buf.append("(decodeResult: ");
-        buf.append(decoderResult());
-        buf.append(')');
-        buf.append(StringUtil.NEWLINE);
-        buf.append(protocolVersion().text());
-        buf.append(' ');
-        buf.append(status());
-        buf.append(StringUtil.NEWLINE);
-        appendHeaders(buf);
+        return HttpMessageUtil.appendResponse(new StringBuilder(256), this).toString();
     }
 }

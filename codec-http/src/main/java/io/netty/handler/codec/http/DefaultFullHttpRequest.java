@@ -17,7 +17,6 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.util.internal.StringUtil;
 
 /**
  * Default implementation of {@link FullHttpRequest}.
@@ -186,13 +185,6 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        appendAll(buf);
-        buf.append(StringUtil.NEWLINE);
-        appendHeaders(buf, trailingHeaders());
-
-        // Remove the last newline.
-        buf.setLength(buf.length() - StringUtil.NEWLINE.length());
-        return buf.toString();
+        return HttpMessageUtil.appendFullRequest(new StringBuilder(256), this).toString();
     }
 }

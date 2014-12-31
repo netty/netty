@@ -170,7 +170,7 @@ public class HttpObjectAggregator
             // If the client started to send data already, close because it's impossible to recover.
             // If keep-alive is off and 'Expect: 100-continue' is missing, no need to leave the connection open.
             if (oversized instanceof FullHttpMessage ||
-                    (!HttpHeaderUtil.is100ContinueExpected(oversized) && !HttpHeaderUtil.isKeepAlive(oversized))) {
+                !HttpHeaderUtil.is100ContinueExpected(oversized) && !HttpHeaderUtil.isKeepAlive(oversized)) {
                 future.addListener(ChannelFutureListener.CLOSE);
             }
 
@@ -364,6 +364,11 @@ public class HttpObjectAggregator
             super.setProtocolVersion(version);
             return this;
         }
+
+        @Override
+        public String toString() {
+            return HttpMessageUtil.appendFullRequest(new StringBuilder(256), this).toString();
+        }
     }
 
     private static final class AggregatedFullHttpResponse extends AggregatedFullHttpMessage
@@ -455,6 +460,11 @@ public class HttpObjectAggregator
         public FullHttpResponse touch() {
             super.touch();
             return this;
+        }
+
+        @Override
+        public String toString() {
+            return HttpMessageUtil.appendFullResponse(new StringBuilder(256), this).toString();
         }
     }
 }
