@@ -230,11 +230,14 @@ public final class NativeLibraryLoader {
 
     private static void patch(byte[] buf, int offset, int length) {
         patch(buf, offset, length,
+              new byte[] { '@', '@', 'l', 'i', 'b', 's', 's', 'l', '.', 's', 'o', '.', '1', '0', 0 },
+              new byte[] { 0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0 });
+        patch(buf, offset, length,
+              new byte[] { '@', '@', 'l', 'i', 'b', 'c', 'r', 'y', 'p', 't', 'o', '.', 's', 'o', '.', '1', '0', 0 },
+              new byte[] { 0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0 });
+        patch(buf, offset, length,
               new byte[] { '.', 's', 'o', '.', '1', '0', 0 },
               new byte[] { '.', 's', 'o', 0,   0,   0,   0 });
-        patch(buf, offset, length,
-              new byte[] { '.', 's', 'o', '.', '1', '.', '0', '.', '0', 0 },
-              new byte[] { '.', 's', 'o', 0,   0,   0,   0,   0,   0,   0 });
     }
 
     private static void patch(byte[] buf, int offset, int length, byte[] needle, byte[] replacement) {
