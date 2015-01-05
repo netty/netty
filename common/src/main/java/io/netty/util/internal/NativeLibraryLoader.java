@@ -18,6 +18,7 @@ package io.netty.util.internal;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -173,22 +174,27 @@ public final class NativeLibraryLoader {
         String prefix = libname.substring(0, index);
         String suffix = libname.substring(index, libname.length());
         InputStream in = null;
-        OutputStream out = null;
+        OutputStream fout = null;
         File tmpFile = null;
         boolean loaded = false;
         try {
             tmpFile = File.createTempFile(prefix, suffix, WORKDIR);
             in = url.openStream();
-            out = new FileOutputStream(tmpFile);
+            ByteArrayOutputStream bout = new ByteArrayOutputStream();
+            fout = new FileOutputStream(tmpFile);
 
             byte[] buffer = new byte[8192];
             int length;
             while ((length = in.read(buffer)) > 0) {
-                out.write(buffer, 0, length);
+                bout.write(buffer, 0, length);
             }
-            out.flush();
-            out.close();
-            out = null;
+
+            byte[] content = bout.toByteArray();
+            patch(content, 0, content.length);
+            fout.write(content);
+            fout.flush();
+            fout.close();
+            fout = null;
 
             System.load(tmpFile.getPath());
             loaded = true;
@@ -203,9 +209,9 @@ public final class NativeLibraryLoader {
                     // ignore
                 }
             }
-            if (out != null) {
+            if (fout != null) {
                 try {
-                    out.close();
+                    fout.close();
                 } catch (IOException ignore) {
                     // ignore
                 }
@@ -218,6 +224,34 @@ public final class NativeLibraryLoader {
                         tmpFile.deleteOnExit();
                     }
                 }
+            }
+        }
+    }
+
+    private static void patch(byte[] buf, int offset, int length) {
+        patch(buf, offset, length,
+              new byte[] { '.', 's', 'o', '.', '1', '0', 0 },
+              new byte[] { '.', 's', 'o', 0,   0,   0,   0 });
+        patch(buf, offset, length,
+              new byte[] { '.', 's', 'o', '.', '1', '.', '0', '.', '0', 0 },
+              new byte[] { '.', 's', 'o', 0,   0,   0,   0,   0,   0,   0 });
+    }
+
+    private static void patch(byte[] buf, int offset, int length, byte[] needle, byte[] replacement) {
+        assert needle.length == replacement.length;
+
+        for (int i = offset; i <= offset + length - needle.length; i ++) {
+            boolean found = true;
+            for (int j = 0; j < needle.length; j ++) {
+                if (buf[i + j] != needle[j]) {
+                    found = false;
+                    break;
+                }
+            }
+
+            if (found) {
+                logger.debug("Patched the native library!");
+                System.arraycopy(replacement, 0, buf, i, replacement.length);
             }
         }
     }
