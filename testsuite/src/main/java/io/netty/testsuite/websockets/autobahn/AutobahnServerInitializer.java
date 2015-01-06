@@ -28,7 +28,6 @@ public class AutobahnServerInitializer extends ChannelInitializer<SocketChannel>
         ChannelPipeline pipeline = ch.pipeline();
         pipeline.addLast("encoder", new HttpResponseEncoder());
         pipeline.addLast("decoder", new HttpRequestDecoder());
-        pipeline.addLast("aggregator", new HttpObjectAggregator(65536));
         pipeline.addLast("handler", new AutobahnServerHandler());
     }
 }
