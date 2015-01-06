@@ -25,6 +25,7 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.ContinuationWebSocketFrame;
@@ -56,8 +57,8 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof FullHttpRequest) {
-            handleHttpRequest(ctx, (FullHttpRequest) msg);
+        if (msg instanceof HttpRequest) {
+            handleHttpRequest(ctx, (HttpRequest) msg);
         } else if (msg instanceof WebSocketFrame) {
             handleWebSocketFrame(ctx, (WebSocketFrame) msg);
         } else {
@@ -70,19 +71,17 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
         ctx.flush();
     }
 
-    private void handleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest req)
+    private void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest req)
             throws Exception {
         // Handle a bad request.
         if (!req.getDecoderResult().isSuccess()) {
             sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST));
-            req.release();
             return;
         }
 
         // Allow only GET methods.
         if (req.getMethod() != GET) {
             sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN));
-            req.release();
             return;
         }
 
@@ -95,7 +94,6 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
         } else {
             handshaker.handshake(ctx.channel(), req);
         }
-        req.release();
     }
 
     private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {
@@ -124,7 +122,7 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
     }
 
     private static void sendHttpResponse(
-            ChannelHandlerContext ctx, FullHttpRequest req, FullHttpResponse res) {
+            ChannelHandlerContext ctx, HttpRequest req, FullHttpResponse res) {
         // Generate an error page if response status code is not OK (200).
         if (res.getStatus().code() != 200) {
             ByteBuf buf = Unpooled.copiedBuffer(res.getStatus().toString(), CharsetUtil.UTF_8);
@@ -145,7 +143,7 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
         ctx.close();
     }
 
-    private static String getWebSocketLocation(FullHttpRequest req) {
-        return "ws://" + req.headers().get(HttpHeaders.Names.HOST);
+    private static String getWebSocketLocation(HttpRequest req) {
+        return "ws://" + req.headers().get(Names.HOST);
     }
 }
