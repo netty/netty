@@ -16,8 +16,10 @@
 package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.SlicedByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.CharsetUtil;
@@ -25,6 +27,7 @@ import io.netty.util.internal.StringUtil;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.*;
@@ -108,6 +111,38 @@ public class HttpPostRequestEncoderTest {
                 "--" + multipartDataBoundary + "--" + "\r\n";
 
         assertEquals(expected, content);
+    }
+
+    @Test
+    public void testHttpPostRequestEncoderSlicedBuffer() throws Exception {
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
+                HttpMethod.POST, "http://localhost");
+
+        HttpPostRequestEncoder encoder = new HttpPostRequestEncoder(request, true);
+        // add Form attribute
+        encoder.addBodyAttribute("getform", "POST");
+        encoder.addBodyAttribute("info", "first value");
+        encoder.addBodyAttribute("secondinfo", "secondvalue a&");
+        encoder.addBodyAttribute("thirdinfo", "short text");
+        int length = 100000;
+        char[] array = new char[length];
+        Arrays.fill(array, 'a');
+        String longText = new String(array);
+        encoder.addBodyAttribute("fourthinfo", longText.substring(0, 7470));
+        File file1 = new File(getClass().getResource("/file-01.txt").toURI());
+        encoder.addBodyFileUpload("myfile", file1, "application/x-zip-compressed", false);
+        encoder.finalizeRequest();
+        while (! encoder.isEndOfInput()) {
+            HttpContent httpContent = encoder.readChunk(null);
+            if (httpContent.content() instanceof SlicedByteBuf) {
+                assertEquals(2, httpContent.content().refCnt());
+            } else {
+                assertEquals(1, httpContent.content().refCnt());
+            }
+            httpContent.release();
+        }
+        encoder.cleanFiles();
+        encoder.close();
     }
 
     private static String getRequestBody(HttpPostRequestEncoder encoder) throws Exception {
