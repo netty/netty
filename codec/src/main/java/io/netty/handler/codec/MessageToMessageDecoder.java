@@ -19,6 +19,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.RecyclableArrayList;
@@ -51,6 +52,9 @@ import java.util.List;
  *
  */
 public abstract class MessageToMessageDecoder<I> extends ChannelHandlerAdapter {
+
+    private static final AttributeKey<Integer> MESSAGES_DECODED =
+            AttributeKey.valueOf(MessageToMessageDecoder.class, "MESSAGES_DECODED");
 
     private final TypeParameterMatcher matcher;
 
@@ -87,6 +91,8 @@ public abstract class MessageToMessageDecoder<I> extends ChannelHandlerAdapter {
                 I cast = (I) msg;
                 try {
                     decode(ctx, cast, out);
+                    // Note whether a message was decoded successfully.
+                    ctx.channel().attr(MESSAGES_DECODED).set(out.size());
                 } finally {
                     ReferenceCountUtil.release(cast);
                 }
@@ -103,6 +109,35 @@ public abstract class MessageToMessageDecoder<I> extends ChannelHandlerAdapter {
                 ctx.fireChannelRead(out.get(i));
             }
             out.recycle();
+        }
+    }
+
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        if (!ctx.channel().hasAttr(MESSAGES_DECODED)) {
+            // We haven't received a corresponding channelRead yet. Let the
+            // channelReadComplete flow through for compatibility.
+            //
+            // This is possible because some handlers swallow channelRead yet
+            // allow the channelReadComplete to pass down the pipeline.
+            ctx.fireChannelReadComplete();
+            return;
+        }
+
+        // We're guaranteed to have the attribute at this point.
+        final int numMessages = ctx.channel().attr(MESSAGES_DECODED).get();
+        if (numMessages > 0) {
+            // If we read a message, clear the flag and fire channelReadComplete
+            // for each message we read.
+            ctx.channel().attr(MESSAGES_DECODED).remove();
+            for (int i = 0; i < numMessages; i++) {
+                ctx.fireChannelReadComplete();
+            }
+        } else {
+            // Otherwise, issue another read if we're not in auto read mode.
+            if (!ctx.channel().config().isAutoRead()) {
+                ctx.channel().read();
+            }
         }
     }
 
