@@ -62,7 +62,8 @@ public final class OpenSsl {
                 cause = t;
                 logger.debug(
                         "Failed to load netty-tcnative; " +
-                        OpenSslEngine.class.getSimpleName() + " will be unavailable.", t);
+                        OpenSslEngine.class.getSimpleName() + " will be unavailable. " +
+                        "See http://netty.io/wiki/forked-tomcat-native.html for more information.", t);
             }
         }
 
