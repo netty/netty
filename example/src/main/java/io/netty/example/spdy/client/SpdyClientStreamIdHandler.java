@@ -22,12 +22,19 @@ import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.spdy.SpdyHttpHeaders;
 import io.netty.handler.codec.spdy.SpdyHttpHeaders.Names;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Adds a unique client stream ID to the SPDY header. Client stream IDs MUST be odd.
  */
 public class SpdyClientStreamIdHandler extends ChannelOutboundHandlerAdapter {
 
-    private int currentStreamId = 1;
+    private final AtomicInteger lastGiven;
+
+    public SpdyClientStreamIdHandler() {
+        super();
+        this.lastGiven = new AtomicInteger(0);
+    }
 
     public boolean acceptOutboundMessage(Object msg) {
         return msg instanceof HttpMessage;
@@ -38,11 +45,13 @@ public class SpdyClientStreamIdHandler extends ChannelOutboundHandlerAdapter {
         if (acceptOutboundMessage(msg)) {
             HttpMessage httpMsg = (HttpMessage) msg;
             if (!httpMsg.headers().contains(SpdyHttpHeaders.Names.STREAM_ID)) {
-                httpMsg.headers().setInt(Names.STREAM_ID, currentStreamId);
-                // Client stream IDs are always odd
-                currentStreamId += 2;
+                httpMsg.headers().setInt(Names.STREAM_ID, nextStreamId());
             }
         }
         ctx.write(msg, promise);
+    }
+
+    private int nextStreamId() {
+        return (this.lastGiven.getAndIncrement() * 2) + 1;
     }
 }
