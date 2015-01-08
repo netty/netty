@@ -238,11 +238,13 @@ public final class ResourceLeakDetector<T> {
                     logger.error("LEAK: {}.release() was not called before it's garbage-collected. " +
                             "Enable advanced leak reporting to find out where the leak occurred. " +
                             "To enable advanced leak reporting, " +
-                            "specify the JVM option '-D{}={}' or call {}.setLevel()",
+                            "specify the JVM option '-D{}={}' or call {}.setLevel() " +
+                            "See http://netty.io/wiki/reference-counted-objects.html for more information.",
                             resourceType, PROP_LEVEL, Level.ADVANCED.name().toLowerCase(), simpleClassName(this));
                 } else {
                     logger.error(
-                            "LEAK: {}.release() was not called before it's garbage-collected.{}",
+                            "LEAK: {}.release() was not called before it's garbage-collected. " +
+                            "See http://netty.io/wiki/reference-counted-objects.html for more information.{}",
                             resourceType, records);
                 }
             }
@@ -317,6 +319,7 @@ public final class ResourceLeakDetector<T> {
             return false;
         }
 
+        @Override
         public String toString() {
             if (creationRecord == null) {
                 return "";
