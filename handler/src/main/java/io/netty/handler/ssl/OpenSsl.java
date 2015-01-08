@@ -41,16 +41,31 @@ public final class OpenSsl {
 
     static {
         Throwable cause = null;
+
+        // Test if netty-tcnative is in the classpath first.
         try {
-            NativeLibraryLoader.load("netty-tcnative", SSL.class.getClassLoader());
-            Library.initialize("provided");
-            SSL.initialize(null);
-        } catch (Throwable t) {
+            Class.forName("org.apache.tomcat.jni.SSL", false, OpenSsl.class.getClassLoader());
+        } catch (ClassNotFoundException t) {
             cause = t;
             logger.debug(
-                    "Failed to load netty-tcnative; " +
-                            OpenSslEngine.class.getSimpleName() + " will be unavailable.", t);
+                    "netty-tcnative not in the classpath; " +
+                    OpenSslEngine.class.getSimpleName() + " will be unavailable.");
         }
+
+        // If in the classpath, try to load the native library and initialize netty-tcnative.
+        if (cause == null) {
+            try {
+                NativeLibraryLoader.load("netty-tcnative", SSL.class.getClassLoader());
+                Library.initialize("provided");
+                SSL.initialize(null);
+            } catch (Throwable t) {
+                cause = t;
+                logger.debug(
+                        "Failed to load netty-tcnative; " +
+                        OpenSslEngine.class.getSimpleName() + " will be unavailable.", t);
+            }
+        }
+
         UNAVAILABILITY_CAUSE = cause;
 
         if (cause == null) {
