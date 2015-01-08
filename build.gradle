@@ -1,0 +1,419 @@
+ext {
+	build_sourceEncoding = 'UTF-8'
+	reporting_outputEncoding = 'UTF-8'
+
+	jboss_marshalling_version = '1.3.18.GA'
+	jetty_npn_version = '1.1.9.v20141016'
+	//jetty_npn_path = "${settings.localRepository}/org/mortbay/jetty/npn/npn-boot/${jetty.npn.version}/npn-boot-${jetty.npn.version}.jar"
+	jetty_alpn_version = '8.1.2.v20141202'
+	//jetty_alpn_path = "${settings.localRepository}/org/mortbay/jetty/alpn/alpn-boot/${jetty.alpn.version}/alpn-boot-${jetty.alpn.version}.jar"
+
+	argLine_common = [
+		'-server',
+		'-dsa -da -ea:io.netty...',
+		'-XX:+AggressiveOpts',
+		'-XX:+TieredCompilation',
+		'-XX:+UseBiasedLocking',
+		'-XX:+UseFastAccessorMethods',
+		'-XX:+OptimizeStringConcat',
+		'-XX:+HeapDumpOnOutOfMemoryError'
+		]
+	//argLine_bootcp = "-Xbootclasspath/p:${jetty_alpn_path}"
+	argLine_leak = '-verbose:gc'
+	argLine_coverage = '-D_'
+}
+
+group = 'io.netty'
+version = '5.0.0.Alpha2-SNAPSHOT'
+
+def dependencyManagement = [
+	// Byte code generator - completely optional
+	'javassist': [
+		'groupId': 'org.javassist',
+		'artifactId': 'javassist',
+		'version': '3.18.0-GA',
+		'test': false
+	],
+	// JBoss Marshalling - completely optional
+	'jboss-marshalling': [
+		'groupId': 'org.jboss.marshalling',
+		'artifactId': 'jboss-marshalling',
+		'version': rootProject.ext.jboss_marshalling_version,
+		'test': false
+	],
+	// SPDY and HTTP/2 - completely optional
+	'hpack': [
+		'groupId': 'com.twitter',
+		'artifactId': 'hpack',
+		'version': '0.10.0',
+		'test': false
+	],
+	'npn-api': [
+		'groupId': 'org.eclipse.jetty.npn',
+		'artifactId': 'npn-api',
+		'version': '1.1.1.v20141010',
+		'test': false
+	],
+	'npn-boot': [
+		'groupId': 'org.mortbay.jetty.npn',
+		'artifactId': 'npn-boot',
+		'version': "${jetty_npn_version}",
+		'test': false
+	],
+	'alpn-api': [
+		'groupId': 'org.eclipse.jetty.alpn',
+		'artifactId': 'alpn-api',
+		'version': '1.1.0.v20141014',
+		'test': false
+	],
+	'alpn-boot': [
+		'groupId': 'org.mortbay.jetty.alpn',
+		'artifactId': 'alpn-boot',
+		'version': "${jetty_alpn_version}",
+		'test': false
+	],
+	// Google Protocol Buffers - completely optional
+	'protobuf-java': [
+		'groupId': 'com.google.protobuf',
+		'artifactId': 'protobuf-java',
+		'version': '2.5.0',
+		'test': false
+	],
+	// Our own Tomcat Native fork - completely optional, used for acclerating SSL with OpenSSL
+	'netty-tcnative': [
+		'groupId': rootProject.group,
+		'artifactId': 'netty-tcnative',
+		'version': '1.1.32.Fork1',
+		'test': false
+	],
+	// Bouncy Castle - completely optional, only needed when:
+	// - you generate a temporary self-signed certificate using SelfSignedCertificate, and
+    // - you don't use the JDK which doesn't provide sun.security.x509 package.
+	'bcpkix-jdk15on': [
+		'groupId': 'org.bouncycastle',
+		'artifactId': 'bcpkix-jdk15on',
+		'version': '1.50',
+		'test': false
+	],
+	'jzlib': [
+		'groupId': 'com.jcraft',
+		'artifactId': 'jzlib',
+		'version': '1.1.2',
+		'test': false
+	],
+	'compress-lzf': [
+		'groupId': 'com.ning',
+		'artifactId': 'compress-lzf',
+		'version': '1.0.1',
+		'test': false
+	],
+	'lz4': [
+		'groupId': 'net.jpountz.lz4',
+		'artifactId': 'lz4',
+		'version': '1.2.0',
+		'test': false
+	],
+	'marshalling': [
+		'groupId': 'org.javassist',
+		'artifactId': 'javassist',
+		'version': rootProject.ext.jboss_marshalling_version,
+		'test': false
+	],
+	'lzma-java': [
+		'groupId': 'com.github.jponge',
+		'artifactId': 'lzma-java',
+		'version': '1.3',
+		'test': false
+	],
+	'rxtx': [
+		'groupId': 'org.rxtx',
+		'artifactId': 'rxtx',
+		'version': '2.1.7',
+		'test': false
+	],
+	'barchart-udt-bundle': [
+		'groupId': 'com.barchart.udt',
+		'artifactId': 'barchart-udt-bundle',
+		'version': '2.3.0',
+		'test': false
+	],
+	'servlet-api': [
+		'groupId': 'javax.servlet',
+		'artifactId': 'servlet-api',
+		'version': '2.5',
+		'test': false
+	],
+	'slf4j-api': [
+		'groupId': 'org.slf4j',
+		'artifactId': 'slf4j-api',
+		'version': '1.7.5',
+		'test': false
+	],
+	'commons-logging': [
+		'groupId': 'commons-logging',
+		'artifactId': 'commons-logging',
+		'version': '1.1.3',
+		'test': false
+	],
+	'log4j': [
+		'groupId': 'log4j',
+		'artifactId': 'log4j',
+		'version': '1.2.17',
+		'test': false
+	],
+	// Metrics providers
+	'metrics-core': [
+		'groupId': 'com.yammer.metrics',
+		'artifactId': 'metrics-core',
+		'version': '2.2.0',
+		'test': false
+	],
+	// Common test dependencies
+	'junit': [
+		'groupId': 'junit',
+		'artifactId': 'junit',
+		'version': '4.11',
+		'test': true
+	],
+	'hamcrest-library': [
+		'groupId': 'org.hamcrest',
+		'artifactId': 'hamcrest-library',
+		'version': '1.3',
+		'test': true
+	],
+	'easymock': [
+		'groupId': 'org.easymock',
+		'artifactId': 'easymock',
+		'version': '3.2',
+		'test': true
+	],
+	'easymockclassextension': [
+		'groupId': 'org.easymock',
+		'artifactId': 'easymockclassextension',
+		'version': '3.2',
+		'test': true
+	],
+	'jmock-junit4': [
+		'groupId': 'org.jmock',
+		'artifactId': 'jmock-junit4',
+		'version': '2.6.0',
+		'test': true
+	],
+	'mockito-core': [
+		'groupId': 'org.mockito',
+		'artifactId': 'mockito-core',
+		'version': '1.10.8',
+		'test': true
+	],
+	'logback-classic': [
+		'groupId': 'ch.qos.logback',
+		'artifactId': 'logback-classic',
+		'version': '1.0.13',
+		'test': true
+	],
+	// Test dependencies for jboss marshalling encoder/decoder
+	'jboss-marshalling-serial': [
+		'groupId': 'org.jboss.marshalling',
+		'artifactId': 'jboss-marshalling-serial',
+		'version': rootProject.ext.jboss_marshalling_version,
+		'test': true
+	],
+	'jboss-marshalling-river': [
+		'groupId': 'org.jboss.marshalling',
+		'artifactId': 'jboss-marshalling-river',
+		'version': rootProject.ext.jboss_marshalling_version,
+		'test': true
+	],
+	// Test dependencies for microbench
+	'caliper': [
+		'groupId': 'com.google.caliper',
+		'artifactId': 'caliper',
+		'version': '0.5-rc1',
+		'test': true
+	],
+	// Test dependency for Bzip2Decoder
+	'commons-compress': [
+		'groupId': 'org.apache.commons',
+		'artifactId': 'commons-compress',
+		'version': '1.8.1',
+		'test': true
+	],
+	// Test suite dependency for generating a compressed heap dump file
+	'xz': [
+		'groupId': 'org.tukaani',
+		'artifactId': 'xz',
+		'version': '1.5',
+		'test': true
+	],
+	// Test dependency for Bzip2Decoder
+	'commons-compress': [
+		'groupId': 'org.apache.commons',
+		'artifactId': 'commons-compress',
+		'version': '1.8.1',
+		'test': true
+	],
+	// Test dependency for Bzip2Decoder
+	'commons-compress': [
+		'groupId': 'org.apache.commons',
+		'artifactId': 'commons-compress',
+		'version': '1.8.1',
+		'test': true
+	],
+	// Test dependency for Bzip2Decoder
+	'commons-compress': [
+		'groupId': 'org.apache.commons',
+		'artifactId': 'commons-compress',
+		'version': '1.8.1',
+		'test': true
+	]
+]
+
+allprojects {
+	apply plugin: 'java'
+
+	sourceCompatibility = 1.6
+	targetCompatibility = 1.7
+
+	tasks.withType(JavaCompile) {
+		options.encoding = rootProject.ext.build_sourceEncoding
+		options.warnings = false
+	}
+
+	dependencies {
+		dependencyManagement.each { k, v ->
+			def lib = "${v.groupId}:${v.artifactId}:${v.version}"
+			if (v.test) {
+				testCompile lib
+			} else {
+				compile lib
+			}
+		}
+	}
+
+	repositories {
+		mavenLocal()
+		mavenCentral()
+	}
+}
+
+project(':buffer') {
+	dependencies {
+		compile project(':common')
+	}
+}
+
+project(':codec') {
+	dependencies {
+		compile project(':transport')
+	}
+}
+
+project(':codec-dns') {
+	dependencies {
+		compile project(':codec')
+	}
+}
+
+project(':codec-haproxy') {
+	dependencies {
+		compile project(':codec')
+	}
+}
+
+project(':codec-http') {
+	dependencies {
+		compile project(':codec')
+		compile project(':handler')
+	}
+}
+
+project(':codec-http2') {
+	dependencies {
+		compile project(':codec-http')
+		compile project(':handler')
+	}
+}
+
+project(':codec-memcache') {
+	dependencies {
+		compile project(':codec')
+	}
+}
+
+project(':codec-mqtt') {
+	dependencies {
+		compile project(':codec')
+	}
+}
+
+project(':codec-socks') {
+	dependencies {
+		compile project(':codec')
+	}
+}
+
+project(':codec-stomp') {
+	dependencies {
+		compile project(':codec')
+	}
+}
+
+project(':handler') {
+	dependencies {
+		compile project(':buffer')
+		compile project(':transport')
+		compile project(':codec')
+	}
+}
+
+project(':handler-proxy') {
+	dependencies {
+		compile project(':handler')
+		compile project(':transport')
+		compile project(':codec-http')
+		compile project(':codec-socks')
+	}
+}
+
+project(':resolver') {
+	dependencies {
+		compile project(':common')
+	}
+}
+
+project(':resolver-dns') {
+	dependencies {
+		compile project(':codec-dns')
+		compile project(':resolver')
+		compile project(':transport')
+	}
+}
+
+project(':transport') {
+	dependencies {
+		compile project(':buffer')
+		compile project(':resolver')
+	}
+}
+
+project(':transport-rxtx') {
+	dependencies {
+		compile project(':transport')
+		compile project(':buffer')
+	}
+}
+
+project(':transport-sctp') {
+	dependencies {
+		compile project(':transport')
+		compile project(':buffer')
+		compile project(':codec')
+	}
+}
+
+project(':transport-udt') {
+	dependencies {
+		compile project(':transport')
+		compile project(':buffer')
+	}
+}
