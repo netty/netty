@@ -271,9 +271,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      */
     @Deprecated
     public SslHandler(SSLEngine engine, boolean startTls, Executor delegatedTaskExecutor) {
-        // As SslEngine.unwrap(....) only works with one ByteBuffer we should not try to use a CompositeByteBuf
-        // at the first place to make it as fast as possible.
-        super(false);
         if (engine == null) {
             throw new NullPointerException("engine");
         }
