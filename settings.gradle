@@ -1,27 +1,24 @@
-include ':netty-buffer',                //common
-		':codec',                 //transport
-		':codec-dns',             //codec
-		':codec-haproxy',         //codec
-		':codec-http',            //codec, handler
-		':codec-http2',           //codec-http, handler
-		':codec-memcache',        //codec
-		':codec-mqtt',            //codec
-		':codec-socks',           //codec
-		':codec-stomp',           //codec
-		':common',       
-		':handler',               //buffer, transport, codec
-		':handler-proxy',         //transport, codec-socks, codec-http, handler
-		':resolver',              //common
-		':resolver-dns',          //resolver, codec-dns, transport
-		':transport',             //buffer, resolver
-		//'transport-native-epoll', //common, buffer, transport, testsuite(test)
-		':transport-rxtx',        //buffer, transport
-		':transport-sctp',        //buffer, codec, transport
-		':transport-udt'         //buffer, transport
+include ':buffer',                 //common
+		':codec',                  //transport
+		':codec-dns',              //codec
+		':codec-haproxy',          //codec
+		':codec-http',             //codec, handler
+		':codec-http2',            //codec-http, handler
+		':codec-memcache',         //codec
+		':codec-mqtt',             //codec
+		':codec-socks',            //codec
+		':codec-stomp',            //codec
+		':common',
+		':handler',                //buffer, transport, codec
+		':handler-proxy',          //transport, codec-socks, codec-http, handler
+		':resolver',               //common
+		':resolver-dns',           //resolver, codec-dns, transport
+		':transport',              //buffer, resolver
+		//':transport-native-epoll', //common, buffer, transport, testsuite(test)
+		':transport-rxtx',         //buffer, transport
+		':transport-sctp',         //buffer, codec, transport
+		':transport-udt'           //buffer, transport
 
-		//'example',                //transport, transport-sctp, handler, handler-proxy, codec-http, codec-memcache, codec-http2, codec-socks, codec-stomp, transport-udt, transport-rxtx
-		//'microbench',             //handler, codec-http
-		//'testsuite'               //transport-sctp, handler, codec-http, transport-udt
-
-project(':netty-buffer').projectDir = new File('buffer')
-
+		//'example',                 //transport, transport-sctp, handler, handler-proxy, codec-http, codec-memcache, codec-http2, codec-socks, codec-stomp, transport-udt, transport-rxtx
+		//'microbench',              //handler, codec-http
+		//'testsuite'                //transport-sctp, handler, codec-http, transport-udt
