@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE module PUBLIC "-//Puppy Crawl//DTD Check Configuration 1.3//EN" "http://www.puppycrawl.com/dtds/configuration_1_3.dtd">
+
+<!--
+    This configuration file was written by the eclipse-cs plugin configuration editor
+-->
+<!--
+    Checkstyle-Configuration: check
+    Description: none
+-->
+<module name="Checker">
+  <property name="severity" value="error"/>
+  <property name="charset" value="UTF-8"/>
+  <message key="general.exception" value="有一个异常 - {0}"/>
+  <message key="general.fileNotFound" value="文件没找到!"/>
+  <module name="TreeWalker">
+    <property name="severity" value="error"/>
+    <property name="tabWidth" value="4"/>
+    <message key="general.exception" value="有一个异常 - {0}"/>
+    <module name="PackageName">
+      <property name="format" value="^[a-z]+(\.[a-z][a-z0-9]*)*$"/>
+      <message key="name.invalidPattern" value="包名 ''{0}'' 必须符合正则表达式 ''{1}''."/>
+    </module>
+    <module name="TypeName">
+      <message key="name.invalidPattern" value="名称 ''{0}'' 必须符合正则表达式 ''{1}''."/>
+    </module>
+    <module name="MethodName">
+      <property name="severity" value="warning"/>
+      <property name="format" value="(^[a-z][a-zA-Z0-9]{0,14}$)"/>
+      <message key="name.invalidPattern" value="名称 ''{0}''必须符合以下正则表达式 ''{1}''."/>
+      <message key="method.name.equals.class.name" value="名称 ''{0}'' 不能与内部类名称相同."/>
+    </module>
+    <module name="MemberName">
+      <message key="name.invalidPattern" value="名称 ''{0}'' 必须符合正则表达式 ''{1}''."/>
+    </module>
+    <module name="Indentation">
+      <message key="indentation.error" value="{0} 代码缩进 {1} 不正确, {2}"/>
+      <message key="indentation.child.error" value="{0} 子功能代码缩进 {1} 不正确, {2}"/>
+    </module>
+    <module name="RedundantThrows">
+      <property name="severity" value="warning"/>
+      <message key="redundant.throws.classInfo" value="没办法获得类信息 {0}."/>
+      <message key="redundant.throws.duplicate" value="冗余的 throws: ''{0}'' 使用了多次."/>
+      <message key="redundant.throws.subclass" value="冗余的 throws: ''{0}'' 是 ''{1}''的子类."/>
+      <message key="redundant.throws.unchecked" value="冗余的 throws: ''{0}'' 是运行时的异常."/>
+    </module>
+    <module name="MultipleVariableDeclarations">
+      <property name="severity" value="warning"/>
+      <message key="multiple.variable.declarations.comma" value="每一个变量的定义必须在它的声明处，且在同一行."/>
+      <message key="multiple.variable.declarations" value="每一行只能定义一个变量."/>
+    </module>
+    <module name="UpperEll">
+      <message key="upperEll" value="必须使用大写字母 ''L''."/>
+    </module>
+    <module name="ArrayTypeStyle">
+      <message key="array.type.style" value="数组中括号位置不对,建议如:String[] args."/>
+    </module>
+    <module name="ConstantName">
+      <message key="name.invalidPattern" value="名称 ''{0}'' 必须符合正则表达式 ''{1}''."/>
+    </module>
+    <module name="MagicNumber">
+      <property name="severity" value="warning"/>
+      <message key="magic.number" value="''{0}'' 是一个魔法数(即常数)."/>
+    </module>
+    <module name="NeedBraces">
+      <message key="needBraces" value="''{0}'' 结构必须要用大括号 '''{}'''s."/>
+    </module>
+    <module name="AvoidInlineConditionals">
+      <property name="severity" value="warning"/>
+      <message key="inline.conditional.avoid" value="避免内部条件语句，不易于代码阅读."/>
+    </module>
+    <module name="EmptyStatement">
+      <message key="empty.statement" value="空代码块."/>
+    </module>
+    <module name="ModifiedControlVariable"/>
+    <module name="ParameterNumber">
+      <property name="severity" value="warning"/>
+      <property name="max" value="5"/>
+      <property name="tokens" value="METHOD_DEF"/>
+      <message key="maxParam" value="超过 {0,number,integer} 参数."/>
+    </module>
+    <module name="JavadocType">
+      <property name="authorFormat" value="\S"/>
+      <message key="type.missingTag" value="注解缺少 {0} tag."/>
+      <message key="javadoc.missing" value="缺少注解"/>
+      <message key="javadoc.unusedTagGeneral" value="不使用的注解tag"/>
+      <message key="type.tagFormat" value="注解tag {0} 必须符合正则表达式 ''{1}''."/>
+    </module>
+    <module name="ParameterName">
+      <message key="name.invalidPattern" value="名称 ''{0}'' 必须符合正则表达式 ''{1}''."/>
+    </module>
+    <module name="UnusedImports">
+      <message key="import.unused" value="没被使用过 import - {0}."/>
+    </module>
+    <module name="LineLength">
+      <property name="max" value="120"/>
+      <message key="maxLineLen" value="行字符数超过 {0,number,integer} 个."/>
+    </module>
+    <module name="MethodLength">
+      <property name="max" value="40"/>
+      <property name="tokens" value="METHOD_DEF"/>
+      <message key="maxLen.method" value="方法长度 {0,number,integer} 行 (最大允许行数为 {1,number,integer})."/>
+    </module>
+
+    
+    <module name="MethodParamPad"/>
+    <module name="ModifierOrder">
+      <message key="mod.order" value="''{0}'' 修饰符没有按照 JLS 的建议顺序."/>
+      <message key="annotation.order" value="''{0}'' 注释修饰符不能在非注释修饰符前面."/>
+    </module>
+    <module name="RedundantModifier">
+      <message key="redundantModifier" value="冗余 ''{0}'' 修饰符."/>
+    </module>
+    <module name="AvoidNestedBlocks">
+      <property name="severity" value="warning"/>
+      <property name="allowInSwitchCase" value="true"/>
+      <message key="block.nested" value="避免代码块的嵌套"/>
+    </module>
+    <module name="StringLiteralEquality">
+      <message key="string.literal.equality" value="字符串比较必须使用 equals(), 而不是 ''{0}''."/>
+    </module>
+    <module name="NestedIfDepth">
+      <property name="severity" value="warning"/>
+      <property name="max" value="3"/>
+      <message key="nested.if.depth" value="if-else嵌套语句个数为 {0,number,integer} (最大允许嵌套语句个数为: {1,number,integer})."/>
+    </module>
+    <module name="NestedTryDepth">
+      <property name="max" value="2"/>
+    </module>
+    <module name="SuperClone">
+      <message key="missing.super.call" value="方法 ''{0}'' 需要调用 ''super.{0}''."/>
+    </module>
+    <module name="SuperFinalize">
+      <message key="missing.super.call" value="方法 ''{0}'' 需要调用 ''super.{0}''."/>
+    </module>
+    <module name="IllegalCatch">
+      <property name="illegalClassNames" value="java.lang.Exception"/>
+      <message key="illegal.catch" value="Catching ''{0}'' 是不允许的."/>
+    </module>
+    <module name="PackageDeclaration">
+      <message key="missing.package.declaration" value="缺少包的定义."/>
+      <message key="package.dir.mismatch" value="包定义与目录名不匹配 ''{0}''."/>
+    </module>
+    <module name="ReturnCount">
+      <property name="severity" value="warning"/>
+      <property name="max" value="3"/>
+      <property name="format" value="^$"/>
+      <message key="return.count" value="Return 个数 {0,number,integer} (最大允许个数为: {1,number,integer})."/>
+    </module>
+    <module name="ParameterAssignment">
+      <message key="parameter.assignment" value="参数赋值 ''{0}'' 是不允许的."/>
+    </module>
+    <module name="MultipleStringLiterals">
+      <property name="severity" value="warning"/>
+    </module>
+    <module name="UnnecessaryParentheses"/>
+    <module name="JavadocMethod">
+      <property name="suppressLoadErrors" value="true"/>
+    </module>
+  </module>
+  <module name="StrictDuplicateCode">
+    <property name="min" value="8"/>
+    <message key="duplicates.lines" value="从第 {2}开始,有{0}行相同代码 与 {1}中重复."/>
+  </module>
+  <module name="FileLength">
+    <property name="severity" value="warning"/>
+    <property name="max" value="1500"/>
+    <message key="maxLen.file" value="文件 {0,number,integer} 行 (最大行数为： {1,number,integer})."/>
+  </module>
+  <module name="Translation">
+    <message key="translation.missingKey" value="关键字 ''{0}'' 没找到."/>
+  </module>
+</module>
