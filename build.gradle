@@ -41,10 +41,10 @@ def moduleDependencies = [
 	'codec-socks':            ['codec'],
 	'codec-stomp':            ['codec'],
 	'handler':                ['codec'],
-	'handler-proxy':          ['codec-socks', ':codec-http'],
+	'handler-proxy':          ['codec-socks', 'codec-http'],
 	'resolver':               ['common'],
 	'resolver-dns':           ['codec-dns'],
-	'transport':              ['buffer', ':resolver'],
+	'transport':              ['buffer', 'resolver'],
 	'transport-native-epoll': ['transport'],
 	'transport-rxtx':         ['transport'],
 	'transport-sctp':         ['codec'],
@@ -244,17 +244,15 @@ def getProjectByName(dirName) {
 	}
 }
 
-def assembleModuleSources = allprojects.findAll {
-	!it.name.contains('example') && !it.name.contains('microbench') && !it.name.contains('testsuite')
-}.collect {
-	it.sourceSets.main.allJava
-}
-
 allprojects {
 	group = 'io.netty'
 	version = '5.0.0.Alpha2-SNAPSHOT'
 
 	apply plugin: 'java'
+	apply plugin: 'idea'
+	apply plugin: 'eclipse'
+	apply plugin: 'checkstyle'
+	apply plugin: 'findbugs'
 
 	sourceCompatibility = 1.6
 	targetCompatibility = 1.7
@@ -271,7 +269,7 @@ allprojects {
 			testCompile lib
 		}
 
-		moduleDependencies[projectDir.name].each {
+		moduleDependencies[projectDir.name]?.each {
 			compile getProjectByName(it)
 		}
 	}
@@ -284,6 +282,12 @@ allprojects {
 	javadoc {
 		failOnError = false
 	}
+}
+
+def assembleModuleSources = subprojects.findAll {
+	!it.name.contains('example') && !it.name.contains('microbench') && !it.name.contains('testsuite')
+}.collect {
+	it.sourceSets.main.allJava
 }
 
 task generateJavadoc(type: Javadoc) {
@@ -307,4 +311,6 @@ task packageSource(type: Jar) {
 	destinationDir = file("$buildDir/sources")
 }
 
-println(project(':buffer').name)
+task wrapper(type: Wrapper) {
+	gradleVersion = '2.2.1'
+}
