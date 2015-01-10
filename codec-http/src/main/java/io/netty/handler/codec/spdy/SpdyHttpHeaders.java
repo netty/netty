@@ -40,10 +40,6 @@ public final class SpdyHttpHeaders {
          */
         public static final AsciiString PRIORITY = new AsciiString("X-SPDY-Priority");
         /**
-         * {@code "X-SPDY-URL"}
-         */
-        public static final AsciiString URL = new AsciiString("X-SPDY-URL");
-        /**
          * {@code "X-SPDY-Scheme"}
          */
         public static final AsciiString SCHEME = new AsciiString("X-SPDY-Scheme");
