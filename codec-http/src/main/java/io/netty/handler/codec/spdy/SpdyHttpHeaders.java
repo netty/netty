@@ -41,10 +41,6 @@ public final class SpdyHttpHeaders {
          */
         public static final String PRIORITY = "X-SPDY-Priority";
         /**
-         * {@code "X-SPDY-URL"}
-         */
-        public static final String URL = "X-SPDY-URL";
-        /**
          * {@code "X-SPDY-Scheme"}
          */
         public static final String SCHEME = "X-SPDY-Scheme";
@@ -122,27 +118,6 @@ public final class SpdyHttpHeaders {
      */
     public static void setPriority(HttpMessage message, byte priority) {
         HttpHeaders.setIntHeader(message, Names.PRIORITY, priority);
-    }
-
-    /**
-     * Removes the {@code "X-SPDY-URL"} header.
-     */
-    public static void removeUrl(HttpMessage message) {
-        message.headers().remove(Names.URL);
-    }
-
-    /**
-     * Returns the value of the {@code "X-SPDY-URL"} header.
-     */
-    public static String getUrl(HttpMessage message) {
-        return message.headers().get(Names.URL);
-    }
-
-    /**
-     * Sets the {@code "X-SPDY-URL"} header.
-     */
-    public static void setUrl(HttpMessage message, String url) {
-        message.headers().set(Names.URL, url);
     }
 
     /**

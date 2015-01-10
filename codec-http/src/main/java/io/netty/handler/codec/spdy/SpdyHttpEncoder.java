@@ -19,7 +19,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.handler.codec.http.FullHttpMessage;
-import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
@@ -71,7 +70,7 @@ import java.util.Map;
  *
  * <h3>Pushed Resource Annotations</h3>
  *
- * SPDY specific headers must be added to pushed {@link HttpResponse}s:
+ * SPDY specific headers must be added to pushed {@link HttpRequest}s:
  * <table border=1>
  * <tr>
  * <th>Header Name</th><th>Header Value</th>
@@ -91,10 +90,6 @@ import java.util.Map;
  * The priority should be between 0 and 7 inclusive.
  * 0 represents the highest priority and 7 represents the lowest.
  * This header is optional and defaults to 0.</td>
- * </tr>
- * <tr>
- * <td>{@code "X-SPDY-URL"}</td>
- * <td>The absolute path for the resource being pushed.</td>
  * </tr>
  * </table>
  *
@@ -122,7 +117,6 @@ import java.util.Map;
  */
 public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
 
-    private final int spdyVersion;
     private int currentStreamId;
 
     /**
@@ -134,7 +128,6 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
         if (version == null) {
             throw new NullPointerException("version");
         }
-        spdyVersion = version.getVersion();
     }
 
     @Override
@@ -149,22 +142,16 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
             SpdySynStreamFrame spdySynStreamFrame = createSynStreamFrame(httpRequest);
             out.add(spdySynStreamFrame);
 
-            last = spdySynStreamFrame.isLast();
+            last = spdySynStreamFrame.isLast() || spdySynStreamFrame.isUnidirectional();
             valid = true;
         }
         if (msg instanceof HttpResponse) {
 
             HttpResponse httpResponse = (HttpResponse) msg;
-            if (httpResponse.headers().contains(SpdyHttpHeaders.Names.ASSOCIATED_TO_STREAM_ID)) {
-                SpdySynStreamFrame spdySynStreamFrame = createSynStreamFrame(httpResponse);
-                last = spdySynStreamFrame.isLast();
-                out.add(spdySynStreamFrame);
-            } else {
-                SpdySynReplyFrame spdySynReplyFrame = createSynReplyFrame(httpResponse);
-                last = spdySynReplyFrame.isLast();
-                out.add(spdySynReplyFrame);
-            }
+            SpdyHeadersFrame spdyHeadersFrame = createHeadersFrame(httpResponse);
+            out.add(spdyHeadersFrame);
 
+            last = spdyHeadersFrame.isLast();
             valid = true;
         }
         if (msg instanceof HttpContent && !last) {
@@ -173,22 +160,23 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
 
             chunk.content().retain();
             SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(currentStreamId, chunk.content());
-            spdyDataFrame.setLast(chunk instanceof LastHttpContent);
             if (chunk instanceof LastHttpContent) {
                 LastHttpContent trailer = (LastHttpContent) chunk;
                 HttpHeaders trailers = trailer.trailingHeaders();
                 if (trailers.isEmpty()) {
+                    spdyDataFrame.setLast(true);
                     out.add(spdyDataFrame);
                 } else {
                     // Create SPDY HEADERS frame out of trailers
                     SpdyHeadersFrame spdyHeadersFrame = new DefaultSpdyHeadersFrame(currentStreamId);
+                    spdyHeadersFrame.setLast(true);
                     for (Map.Entry<String, String> entry: trailers) {
                         spdyHeadersFrame.headers().add(entry.getKey(), entry.getValue());
                     }
 
-                    // Write HEADERS frame and append Data Frame
-                    out.add(spdyHeadersFrame);
+                    // Write DATA frame and append HEADERS frame
                     out.add(spdyDataFrame);
+                    out.add(spdyHeadersFrame);
                 }
             } else {
                 out.add(spdyDataFrame);
@@ -202,96 +190,94 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
         }
     }
 
-    private SpdySynStreamFrame createSynStreamFrame(HttpMessage httpMessage)
-            throws Exception {
-        // Get the Stream-ID, Associated-To-Stream-ID, Priority, URL, and scheme from the headers
-        int streamID = SpdyHttpHeaders.getStreamId(httpMessage);
-        int associatedToStreamId = SpdyHttpHeaders.getAssociatedToStreamId(httpMessage);
-        byte priority = SpdyHttpHeaders.getPriority(httpMessage);
-        String URL = SpdyHttpHeaders.getUrl(httpMessage);
-        String scheme = SpdyHttpHeaders.getScheme(httpMessage);
-        SpdyHttpHeaders.removeStreamId(httpMessage);
-        SpdyHttpHeaders.removeAssociatedToStreamId(httpMessage);
-        SpdyHttpHeaders.removePriority(httpMessage);
-        SpdyHttpHeaders.removeUrl(httpMessage);
-        SpdyHttpHeaders.removeScheme(httpMessage);
+    @SuppressWarnings("deprecation")
+    private SpdySynStreamFrame createSynStreamFrame(HttpRequest httpRequest) throws Exception {
+        // Get the Stream-ID, Associated-To-Stream-ID, Priority, and scheme from the headers
+        final HttpHeaders httpHeaders = httpRequest.headers();
+        int streamId = SpdyHttpHeaders.getStreamId(httpRequest);
+        int associatedToStreamId = SpdyHttpHeaders.getAssociatedToStreamId(httpRequest);
+        byte priority = SpdyHttpHeaders.getPriority(httpRequest);
+        CharSequence scheme = httpHeaders.get(SpdyHttpHeaders.Names.SCHEME);
+        httpHeaders.remove(SpdyHttpHeaders.Names.STREAM_ID);
+        httpHeaders.remove(SpdyHttpHeaders.Names.ASSOCIATED_TO_STREAM_ID);
+        httpHeaders.remove(SpdyHttpHeaders.Names.PRIORITY);
+        httpHeaders.remove(SpdyHttpHeaders.Names.SCHEME);
 
         // The Connection, Keep-Alive, Proxy-Connection, and Transfer-Encoding
         // headers are not valid and MUST not be sent.
-        httpMessage.headers().remove(HttpHeaders.Names.CONNECTION);
-        httpMessage.headers().remove("Keep-Alive");
-        httpMessage.headers().remove("Proxy-Connection");
-        httpMessage.headers().remove(HttpHeaders.Names.TRANSFER_ENCODING);
+        httpHeaders.remove(HttpHeaders.Names.CONNECTION);
+        httpHeaders.remove("Keep-Alive");
+        httpHeaders.remove("Proxy-Connection");
+        httpHeaders.remove(HttpHeaders.Names.TRANSFER_ENCODING);
 
         SpdySynStreamFrame spdySynStreamFrame =
-                new DefaultSpdySynStreamFrame(streamID, associatedToStreamId, priority);
+                new DefaultSpdySynStreamFrame(streamId, associatedToStreamId, priority);
 
         // Unfold the first line of the message into name/value pairs
-        if (httpMessage instanceof FullHttpRequest) {
-            HttpRequest httpRequest = (HttpRequest) httpMessage;
-            SpdyHeaders.setMethod(spdyVersion, spdySynStreamFrame, httpRequest.getMethod());
-            SpdyHeaders.setUrl(spdyVersion, spdySynStreamFrame, httpRequest.getUri());
-            SpdyHeaders.setVersion(spdyVersion, spdySynStreamFrame, httpMessage.getProtocolVersion());
-        }
-        if (httpMessage instanceof HttpResponse) {
-            HttpResponse httpResponse = (HttpResponse) httpMessage;
-            SpdyHeaders.setStatus(spdyVersion, spdySynStreamFrame, httpResponse.getStatus());
-            SpdyHeaders.setUrl(spdyVersion, spdySynStreamFrame, URL);
-            SpdyHeaders.setVersion(spdyVersion, spdySynStreamFrame, httpMessage.getProtocolVersion());
-            spdySynStreamFrame.setUnidirectional(true);
-        }
+        SpdyHeaders frameHeaders = spdySynStreamFrame.headers();
+        frameHeaders.set(SpdyHeaders.HttpNames.METHOD, httpRequest.getMethod());
+        frameHeaders.set(SpdyHeaders.HttpNames.PATH, httpRequest.getUri());
+        frameHeaders.set(SpdyHeaders.HttpNames.VERSION, httpRequest.getProtocolVersion());
 
         // Replace the HTTP host header with the SPDY host header
-        if (spdyVersion >= 3) {
-            String host = HttpHeaders.getHost(httpMessage);
-            httpMessage.headers().remove(HttpHeaders.Names.HOST);
-            SpdyHeaders.setHost(spdySynStreamFrame, host);
-        }
+        CharSequence host = httpHeaders.get(HttpHeaders.Names.HOST);
+        httpHeaders.remove(HttpHeaders.Names.HOST);
+        frameHeaders.set(SpdyHeaders.HttpNames.HOST, host);
 
         // Set the SPDY scheme header
         if (scheme == null) {
             scheme = "https";
         }
-        SpdyHeaders.setScheme(spdyVersion, spdySynStreamFrame, scheme);
+        frameHeaders.set(SpdyHeaders.HttpNames.SCHEME, scheme);
 
         // Transfer the remaining HTTP headers
-        for (Map.Entry<String, String> entry: httpMessage.headers()) {
-            spdySynStreamFrame.headers().add(entry.getKey(), entry.getValue());
+        for (Map.Entry<String, String> entry: httpHeaders) {
+            frameHeaders.add(entry.getKey(), entry.getValue());
         }
         currentStreamId = spdySynStreamFrame.streamId();
-        spdySynStreamFrame.setLast(isLast(httpMessage));
+        if (associatedToStreamId == 0) {
+            spdySynStreamFrame.setLast(isLast(httpRequest));
+        } else {
+            spdySynStreamFrame.setUnidirectional(true);
+        }
 
         return spdySynStreamFrame;
     }
 
-    private SpdySynReplyFrame createSynReplyFrame(HttpResponse httpResponse)
-            throws Exception {
+    @SuppressWarnings("deprecation")
+    private SpdyHeadersFrame createHeadersFrame(HttpResponse httpResponse) throws Exception {
         // Get the Stream-ID from the headers
-        int streamID = SpdyHttpHeaders.getStreamId(httpResponse);
-        SpdyHttpHeaders.removeStreamId(httpResponse);
+        final HttpHeaders httpHeaders = httpResponse.headers();
+        int streamId = SpdyHttpHeaders.getStreamId(httpResponse);
+        httpHeaders.remove(SpdyHttpHeaders.Names.STREAM_ID);
 
         // The Connection, Keep-Alive, Proxy-Connection, and Transfer-Encoding
         // headers are not valid and MUST not be sent.
-        httpResponse.headers().remove(HttpHeaders.Names.CONNECTION);
-        httpResponse.headers().remove("Keep-Alive");
-        httpResponse.headers().remove("Proxy-Connection");
-        httpResponse.headers().remove(HttpHeaders.Names.TRANSFER_ENCODING);
+        httpHeaders.remove(HttpHeaders.Names.CONNECTION);
+        httpHeaders.remove("Keep-Alive");
+        httpHeaders.remove("Proxy-Connection");
+        httpHeaders.remove(HttpHeaders.Names.TRANSFER_ENCODING);
 
-        SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamID);
-
+        SpdyHeadersFrame spdyHeadersFrame;
+        if (SpdyCodecUtil.isServerId(streamId)) {
+            spdyHeadersFrame = new DefaultSpdyHeadersFrame(streamId);
+        } else {
+            spdyHeadersFrame = new DefaultSpdySynReplyFrame(streamId);
+        }
+        SpdyHeaders frameHeaders = spdyHeadersFrame.headers();
         // Unfold the first line of the response into name/value pairs
-        SpdyHeaders.setStatus(spdyVersion, spdySynReplyFrame, httpResponse.getStatus());
-        SpdyHeaders.setVersion(spdyVersion, spdySynReplyFrame, httpResponse.getProtocolVersion());
+        frameHeaders.set(SpdyHeaders.HttpNames.STATUS, httpResponse.getStatus().code());
+        frameHeaders.set(SpdyHeaders.HttpNames.VERSION, httpResponse.getProtocolVersion());
 
         // Transfer the remaining HTTP headers
-        for (Map.Entry<String, String> entry: httpResponse.headers()) {
-            spdySynReplyFrame.headers().add(entry.getKey(), entry.getValue());
+        for (Map.Entry<String, String> entry: httpHeaders) {
+            spdyHeadersFrame.headers().add(entry.getKey(), entry.getValue());
         }
 
-        currentStreamId = streamID;
-        spdySynReplyFrame.setLast(isLast(httpResponse));
+        currentStreamId = streamId;
+        spdyHeadersFrame.setLast(isLast(httpResponse));
 
-        return spdySynReplyFrame;
+        return spdyHeadersFrame;
     }
 
     /**
