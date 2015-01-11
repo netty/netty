@@ -1,4 +1,11 @@
 ext {
+	groupId = 'io.netty'
+	artifactId = 'netty'
+	versionName = '5.0.0.Alpha2-SNAPSHOT'
+
+	baseName_all = 'netty-all'
+	baseName_module = 'netty'
+
 	default_charset = 'UTF-8'
 
 	jboss_marshalling_version = '1.3.18.GA'
@@ -238,15 +245,25 @@ def extraDependencies = [
 ]
 // ================================================
 
-def getProjectByName(dirName) {
+apply plugin: 'java'
+
+def getProjectByName(n) {
 	allprojects.find {
-		it.name.contains(dirName)
+		it.name.contains(n)
+	}
+}
+
+def getBaseName(p) {
+	if (p == rootProject) {
+		rootProject.baseName_all
+	} else {
+		rootProject.baseName_module
 	}
 }
 
 allprojects {
-	group = 'io.netty'
-	version = '5.0.0.Alpha2-SNAPSHOT'
+	group = rootProject.groupId
+	version = rootProject.versionName
 
 	apply plugin: 'java'
 	apply plugin: 'idea'
@@ -279,8 +296,29 @@ allprojects {
 		options.warnings = false
 	}
 
+	jar {
+		baseName = getBaseName(project)
+	}
+
 	javadoc {
 		failOnError = false
+	}
+
+	checkstyle {
+		ignoreFailures = true
+		configFile = rootProject.file('checkstyle.xml')
+	}
+
+	task packageSource(type: Jar) {
+		baseName = getBaseName(project)
+		classifier = 'sources'
+		if (project == rootProject) {
+			from assembleModuleSources
+		} else {
+			from sourceSets.main.allJava
+		}
+		include 'io/netty/**/*'
+		destinationDir = file("$buildDir/sources")
 	}
 }
 
@@ -298,17 +336,11 @@ task generateJavadoc(type: Javadoc) {
 }
 
 task packageJavadoc(type: Jar, dependsOn: generateJavadoc) {
+	baseName = getBaseName(project)
 	classifier = 'javadoc'
 	from "$buildDir/docs/javadoc"
 	exclude 'com'
 	destinationDir = file("$buildDir/docs")
-}
-
-task packageSource(type: Jar) {
-	classifier = 'sources'
-	from assembleModuleSources
-	include 'io/netty/**/*'
-	destinationDir = file("$buildDir/sources")
 }
 
 task wrapper(type: Wrapper) {
