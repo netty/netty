@@ -1,9 +1,8 @@
 ext {
-	groupId = 'io.netty'
-	artifactId = 'netty'
+	groupId     = 'io.netty'
 	versionName = '5.0.0.Alpha2-SNAPSHOT'
 
-	baseName_all = 'netty-all'
+	baseName_all    = 'netty-all'
 	baseName_module = 'netty'
 
 	default_charset = 'UTF-8'
@@ -27,7 +26,7 @@ ext {
 		'-XX:+HeapDumpOnOutOfMemoryError'
 		]
 	//argLine_bootcp = "-Xbootclasspath/p:${jetty_alpn_path}"
-	argLine_leak = '-verbose:gc'
+	argLine_leak     = '-verbose:gc'
 	argLine_coverage = '-D_'
 }
 
@@ -65,86 +64,86 @@ def moduleDependencies = [
 def extraDependencies = [
 	// Byte code generator - completely optional
 	'javassist': [
-		'groupId': 'org.javassist',
+		'groupId'   : 'org.javassist',
 		'artifactId': 'javassist',
-		'version': '3.18.0-GA'
+		'version'   : '3.18.0-GA'
 	],
 	// JBoss Marshalling - completely optional
 	'jboss-marshalling': [
-		'groupId': 'org.jboss.marshalling',
+		'groupId'   : 'org.jboss.marshalling',
 		'artifactId': 'jboss-marshalling',
-		'version': jboss_marshalling_version
+		'version'   : jboss_marshalling_version
 	],
 	// SPDY and HTTP/2 - completely optional
 	'hpack': [
-		'groupId': 'com.twitter',
+		'groupId'   : 'com.twitter',
 		'artifactId': 'hpack',
-		'version': '0.10.0'
+		'version'   : '0.10.0'
 	],
 	'npn-api': [
-		'groupId': 'org.eclipse.jetty.npn',
+		'groupId'   : 'org.eclipse.jetty.npn',
 		'artifactId': 'npn-api',
-		'version': '1.1.1.v20141010'
+		'version'   : '1.1.1.v20141010'
 	],
 	'npn-boot': [
-		'groupId': 'org.mortbay.jetty.npn',
+		'groupId'   : 'org.mortbay.jetty.npn',
 		'artifactId': 'npn-boot',
-		'version': jetty_npn_version
+		'version'   : jetty_npn_version
 	],
 	'alpn-api': [
-		'groupId': 'org.eclipse.jetty.alpn',
+		'groupId'   : 'org.eclipse.jetty.alpn',
 		'artifactId': 'alpn-api',
-		'version': '1.1.0.v20141014'
+		'version'   : '1.1.0.v20141014'
 	],
 	'alpn-boot': [
-		'groupId': 'org.mortbay.jetty.alpn',
+		'groupId'   : 'org.mortbay.jetty.alpn',
 		'artifactId': 'alpn-boot',
-		'version': jetty_alpn_version
+		'version'   : jetty_alpn_version
 	],
 	// Google Protocol Buffers - completely optional
 	'protobuf-java': [
-		'groupId': 'com.google.protobuf',
+		'groupId'   : 'com.google.protobuf',
 		'artifactId': 'protobuf-java',
-		'version': '2.5.0'
+		'version'   : '2.5.0'
 	],
 	// Our own Tomcat Native fork - completely optional, used for acclerating SSL with OpenSSL
 	'netty-tcnative': [
-		'groupId': 'io.netty',
+		'groupId'   : 'io.netty',
 		'artifactId': 'netty-tcnative',
-		'version': '1.1.32.Fork1'
+		'version'   : '1.1.32.Fork1'
 	],
 	// Bouncy Castle - completely optional, only needed when:
 	// - you generate a temporary self-signed certificate using SelfSignedCertificate, and
     // - you don't use the JDK which doesn't provide sun.security.x509 package.
 	'bcpkix-jdk15on': [
-		'groupId': 'org.bouncycastle',
+		'groupId'   : 'org.bouncycastle',
 		'artifactId': 'bcpkix-jdk15on',
-		'version': '1.50'
+		'version'   : '1.50'
 	],
 	'jzlib': [
-		'groupId': 'com.jcraft',
+		'groupId'   : 'com.jcraft',
 		'artifactId': 'jzlib',
-		'version': '1.1.2'
+		'version'   : '1.1.2'
 	],
 	'compress-lzf': [
-		'groupId': 'com.ning',
+		'groupId'   : 'com.ning',
 		'artifactId': 'compress-lzf',
-		'version': '1.0.1'
+		'version'   : '1.0.1'
 	],
 	'lz4': [
-		'groupId': 'net.jpountz.lz4',
+		'groupId'   : 'net.jpountz.lz4',
 		'artifactId': 'lz4',
-		'version': '1.2.0'
+		'version'   : '1.2.0'
 	],
 	'lzma-java': [
-		'groupId': 'com.github.jponge',
+		'groupId'   : 'com.github.jponge',
 		'artifactId': 'lzma-java',
-		'version': '1.3'
+		'version'   : '1.3'
 	],
 	'rxtx': [
-		'groupId': 'org.rxtx',
+		'groupId'   : 'org.rxtx',
 		'artifactId': 'rxtx',
-		'version': '2.1.7'
+		'version'   : '2.1.7'
 	],
 	'barchart-udt-bundle': [
 		'groupId': 'com.barchart.udt',
@@ -152,14 +151,14 @@ def extraDependencies = [
 		'version': '2.3.0'
 	],
 	'servlet-api': [
-		'groupId': 'javax.servlet',
+		'groupId'   : 'javax.servlet',
 		'artifactId': 'servlet-api',
-		'version': '2.5'
+		'version'   : '2.5'
 	],
 	'slf4j-api': [
-		'groupId': 'org.slf4j',
+		'groupId'   : 'org.slf4j',
 		'artifactId': 'slf4j-api',
-		'version': '1.7.5'
+		'version'   : '1.7.5'
 	],
 	'commons-logging': [
 		'groupId': 'commons-logging',
@@ -167,99 +166,83 @@ def extraDependencies = [
 		'version': '1.1.3'
 	],
 	'log4j': [
-		'groupId': 'log4j',
+		'groupId'   : 'log4j',
 		'artifactId': 'log4j',
-		'version': '1.2.17'
+		'version'   : '1.2.17'
 	],
 	// Metrics providers
 	'metrics-core': [
-		'groupId': 'com.yammer.metrics',
+		'groupId'   : 'com.yammer.metrics',
 		'artifactId': 'metrics-core',
-		'version': '2.2.0'
+		'version'   : '2.2.0'
 	],
 	// Common test dependencies
 	'junit': [
-		'groupId': 'junit',
+		'groupId'   : 'junit',
 		'artifactId': 'junit',
-		'version': '4.11'
+		'version'   : '4.11'
 	],
 	'hamcrest-library': [
-		'groupId': 'org.hamcrest',
+		'groupId'   : 'org.hamcrest',
 		'artifactId': 'hamcrest-library',
-		'version': '1.3'
+		'version'   : '1.3'
 	],
 	'easymock': [
-		'groupId': 'org.easymock',
+		'groupId'   : 'org.easymock',
 		'artifactId': 'easymock',
-		'version': '3.2'
+		'version'   : '3.2'
 	],
 	'easymockclassextension': [
-		'groupId': 'org.easymock',
+		'groupId'   : 'org.easymock',
 		'artifactId': 'easymockclassextension',
-		'version': '3.2'
+		'version'   : '3.2'
 	],
 	'jmock-junit4': [
-		'groupId': 'org.jmock',
+		'groupId'   : 'org.jmock',
 		'artifactId': 'jmock-junit4',
-		'version': '2.6.0'
+		'version'   : '2.6.0'
 	],
 	'mockito-core': [
-		'groupId': 'org.mockito',
+		'groupId'   : 'org.mockito',
 		'artifactId': 'mockito-core',
-		'version': '1.10.8'
+		'version'   : '1.10.8'
 	],
 	'logback-classic': [
-		'groupId': 'ch.qos.logback',
+		'groupId'   : 'ch.qos.logback',
 		'artifactId': 'logback-classic',
-		'version': '1.0.13'
+		'version'   : '1.0.13'
 	],
 	// Test dependencies for jboss marshalling encoder/decoder
 	'jboss-marshalling-serial': [
-		'groupId': 'org.jboss.marshalling',
+		'groupId'   : 'org.jboss.marshalling',
 		'artifactId': 'jboss-marshalling-serial',
-		'version': jboss_marshalling_version
+		'version'   : jboss_marshalling_version
 	],
 	'jboss-marshalling-river': [
-		'groupId': 'org.jboss.marshalling',
+		'groupId'   : 'org.jboss.marshalling',
 		'artifactId': 'jboss-marshalling-river',
-		'version': jboss_marshalling_version
+		'version'   : jboss_marshalling_version
 	],
 	// Test dependencies for microbench
 	'caliper': [
-		'groupId': 'com.google.caliper',
+		'groupId'   : 'com.google.caliper',
 		'artifactId': 'caliper',
-		'version': '0.5-rc1'
+		'version'   : '0.5-rc1'
 	],
 	// Test dependency for Bzip2Decoder
 	'commons-compress': [
-		'groupId': 'org.apache.commons',
+		'groupId'   : 'org.apache.commons',
 		'artifactId': 'commons-compress',
-		'version': '1.8.1'
+		'version'   : '1.8.1'
 	],
 	// Test suite dependency for generating a compressed heap dump file
 	'xz': [
-		'groupId': 'org.tukaani',
+		'groupId'   : 'org.tukaani',
 		'artifactId': 'xz',
-		'version': '1.5'
+		'version'   : '1.5'
 	]
 ]
 // ================================================
-
-apply plugin: 'java'
-
-def getProjectByName(n) {
-	allprojects.find {
-		it.name.contains(n)
-	}
-}
-
-def getBaseName(p) {
-	if (p == rootProject) {
-		rootProject.baseName_all
-	} else {
-		rootProject.baseName_module
-	}
-}
 
 allprojects {
 	group = rootProject.groupId
@@ -270,14 +253,43 @@ allprojects {
 	apply plugin: 'eclipse'
 	apply plugin: 'checkstyle'
 	apply plugin: 'findbugs'
-
-	sourceCompatibility = 1.6
-	targetCompatibility = 1.7
+	apply plugin: 'maven-publish'
 
 	repositories {
 		mavenLocal()
 		mavenCentral()
 	}
+}
+
+def isLinux() {
+	def os = System.getProperties().getProperty('os.name').toLowerCase(Locale.US)
+	!os.contains('windows') && !os.contains('mac')
+}
+
+def getProjectByDirName(n) {
+	allprojects.find {
+		it.projectDir.name.toLowerCase(Locale.US).contains(n)
+	}
+}
+
+def getBaseName(p) {
+	if (p == rootProject) {
+		rootProject.baseName_all
+	} else {
+		"${rootProject.baseName_module}-${p.projectDir.name}"
+	}
+}
+
+def assembleModuleSources = subprojects.findAll {
+	def n = it.name.toLowerCase(Locale.US)
+	!n.contains('example') && !n.contains('microbench') && !n.contains('testsuite')
+}.collect {
+	it.sourceSets.main.allJava
+}
+
+allprojects {
+	sourceCompatibility = 1.6
+	targetCompatibility = 1.7
 
 	dependencies {
 		extraDependencies.each { k, v ->
@@ -286,8 +298,8 @@ allprojects {
 			testCompile lib
 		}
 
-		moduleDependencies[projectDir.name]?.each {
-			compile getProjectByName(it)
+		moduleDependencies[projectDir.name.toLowerCase(Locale.US)]?.each {
+			compile getProjectByDirName(it)
 		}
 	}
 
@@ -296,20 +308,28 @@ allprojects {
 		options.warnings = false
 	}
 
-	jar {
+	tasks.withType(Jar) {
 		baseName = getBaseName(project)
 	}
 
-	javadoc {
+	tasks.withType(Javadoc) {
+		options.encoding = default_charset
+		options.quiet()
 		failOnError = false
+		if (project == rootProject) {
+			source = assembleModuleSources
+		}
 	}
 
-	checkstyle {
-		ignoreFailures = true
-		configFile = rootProject.file('checkstyle.xml')
+	task packageJavadoc(type: Jar, dependsOn: javadoc, group: 'Package') {
+		baseName = getBaseName(project)
+		classifier = 'javadoc'
+		from "$buildDir/docs/javadoc"
+		exclude 'com'
+		destinationDir = file("$buildDir/docs")
 	}
 
-	task packageSource(type: Jar) {
+	task packageSource(type: Jar, group: 'Package') {
 		baseName = getBaseName(project)
 		classifier = 'sources'
 		if (project == rootProject) {
@@ -320,27 +340,32 @@ allprojects {
 		include 'io/netty/**/*'
 		destinationDir = file("$buildDir/sources")
 	}
-}
 
-def assembleModuleSources = subprojects.findAll {
-	!it.name.contains('example') && !it.name.contains('microbench') && !it.name.contains('testsuite')
-}.collect {
-	it.sourceSets.main.allJava
-}
+	checkstyle {
+		ignoreFailures = true
+		configFile = rootProject.file('checkstyle.xml')
+	}
 
-task generateJavadoc(type: Javadoc) {
-	options.encoding = default_charset
-	options.quiet()
-	failOnError = false
-	source assembleModuleSources
-}
+	findbugs {
+		ignoreFailures = true
+	}
 
-task packageJavadoc(type: Jar, dependsOn: generateJavadoc) {
-	baseName = getBaseName(project)
-	classifier = 'javadoc'
-	from "$buildDir/docs/javadoc"
-	exclude 'com'
-	destinationDir = file("$buildDir/docs")
+	publishing {
+		publications {
+			maven(MavenPublication) {
+				artifactId getBaseName(project)
+				from components.java
+				//artifact packageSource
+				//artifact packageJavadoc
+			}
+		}
+
+		repositories {
+			maven {
+				url "${rootProject.buildDir}/repo"
+			}
+		}
+	}
 }
 
 task wrapper(type: Wrapper) {
