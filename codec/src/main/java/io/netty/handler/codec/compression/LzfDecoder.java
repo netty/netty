@@ -109,104 +109,102 @@ public class LzfDecoder extends ByteToMessageDecoder {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        for (;;) {
-            try {
-                switch (currentState) {
-                    case INIT_BLOCK:
-                        if (in.readableBytes() < HEADER_LEN_NOT_COMPRESSED) {
-                            return;
-                        }
-                        final int magic = in.readUnsignedShort();
-                        if (magic != MAGIC_NUMBER) {
-                            throw new DecompressionException("unexpected block identifier");
-                        }
-
-                        final int type = in.readByte();
-                        switch (type) {
-                            case BLOCK_TYPE_NON_COMPRESSED:
-                                isCompressed = false;
-                                currentState = State.DECOMPRESS_DATA;
-                                break;
-                            case BLOCK_TYPE_COMPRESSED:
-                                isCompressed = true;
-                                currentState = State.INIT_ORIGINAL_LENGTH;
-                                break;
-                            default:
-                                throw new DecompressionException(String.format(
-                                        "unknown type of chunk: %d (expected: %d or %d)",
-                                        type, BLOCK_TYPE_NON_COMPRESSED, BLOCK_TYPE_COMPRESSED));
-                        }
-                        chunkLength = in.readUnsignedShort();
-
-                        if (type != BLOCK_TYPE_COMPRESSED) {
-                            break;
-                        }
-                    case INIT_ORIGINAL_LENGTH:
-                        if (in.readableBytes() < 2) {
-                            return;
-                        }
-                        originalLength = in.readUnsignedShort();
-
-                        currentState = State.DECOMPRESS_DATA;
-                    case DECOMPRESS_DATA:
-                        final int chunkLength = this.chunkLength;
-                        if (in.readableBytes() < chunkLength) {
-                            return;
-                        }
-                        final int originalLength = this.originalLength;
-
-                        if (isCompressed) {
-                            final int idx = in.readerIndex();
-
-                            final byte[] inputArray;
-                            final int inPos;
-                            if (in.hasArray()) {
-                                inputArray = in.array();
-                                inPos = in.arrayOffset() + idx;
-                            } else {
-                                inputArray = recycler.allocInputBuffer(chunkLength);
-                                in.getBytes(idx, inputArray, 0, chunkLength);
-                                inPos = 0;
-                            }
-
-                            ByteBuf uncompressed = ctx.alloc().heapBuffer(originalLength, originalLength);
-                            final byte[] outputArray = uncompressed.array();
-                            final int outPos = uncompressed.arrayOffset() + uncompressed.writerIndex();
-
-                            boolean success = false;
-                            try {
-                                decoder.decodeChunk(inputArray, inPos, outputArray, outPos, outPos + originalLength);
-                                uncompressed.writerIndex(uncompressed.writerIndex() + originalLength);
-                                out.add(uncompressed);
-                                in.skipBytes(chunkLength);
-                                success = true;
-                            } finally {
-                                if (!success) {
-                                    uncompressed.release();
-                                }
-                            }
-
-                            if (!in.hasArray()) {
-                                recycler.releaseInputBuffer(inputArray);
-                            }
-                        } else {
-                            out.add(in.readSlice(chunkLength).retain());
-                        }
-
-                        currentState = State.INIT_BLOCK;
-                        break;
-                    case CORRUPTED:
-                        in.skipBytes(in.readableBytes());
-                        return;
-                    default:
-                        throw new IllegalStateException();
+        try {
+            switch (currentState) {
+            case INIT_BLOCK:
+                if (in.readableBytes() < HEADER_LEN_NOT_COMPRESSED) {
+                    break;
                 }
-            } catch (Exception e) {
-                currentState = State.CORRUPTED;
-                decoder = null;
-                recycler = null;
-                throw e;
+                final int magic = in.readUnsignedShort();
+                if (magic != MAGIC_NUMBER) {
+                    throw new DecompressionException("unexpected block identifier");
+                }
+
+                final int type = in.readByte();
+                switch (type) {
+                case BLOCK_TYPE_NON_COMPRESSED:
+                    isCompressed = false;
+                    currentState = State.DECOMPRESS_DATA;
+                    break;
+                case BLOCK_TYPE_COMPRESSED:
+                    isCompressed = true;
+                    currentState = State.INIT_ORIGINAL_LENGTH;
+                    break;
+                default:
+                    throw new DecompressionException(String.format(
+                            "unknown type of chunk: %d (expected: %d or %d)",
+                            type, BLOCK_TYPE_NON_COMPRESSED, BLOCK_TYPE_COMPRESSED));
+                }
+                chunkLength = in.readUnsignedShort();
+
+                if (type != BLOCK_TYPE_COMPRESSED) {
+                    break;
+                }
+            case INIT_ORIGINAL_LENGTH:
+                if (in.readableBytes() < 2) {
+                    break;
+                }
+                originalLength = in.readUnsignedShort();
+
+                currentState = State.DECOMPRESS_DATA;
+            case DECOMPRESS_DATA:
+                final int chunkLength = this.chunkLength;
+                if (in.readableBytes() < chunkLength) {
+                    break;
+                }
+                final int originalLength = this.originalLength;
+
+                if (isCompressed) {
+                    final int idx = in.readerIndex();
+
+                    final byte[] inputArray;
+                    final int inPos;
+                    if (in.hasArray()) {
+                        inputArray = in.array();
+                        inPos = in.arrayOffset() + idx;
+                    } else {
+                        inputArray = recycler.allocInputBuffer(chunkLength);
+                        in.getBytes(idx, inputArray, 0, chunkLength);
+                        inPos = 0;
+                    }
+
+                    ByteBuf uncompressed = ctx.alloc().heapBuffer(originalLength, originalLength);
+                    final byte[] outputArray = uncompressed.array();
+                    final int outPos = uncompressed.arrayOffset() + uncompressed.writerIndex();
+
+                    boolean success = false;
+                    try {
+                        decoder.decodeChunk(inputArray, inPos, outputArray, outPos, outPos + originalLength);
+                        uncompressed.writerIndex(uncompressed.writerIndex() + originalLength);
+                        out.add(uncompressed);
+                        in.skipBytes(chunkLength);
+                        success = true;
+                    } finally {
+                        if (!success) {
+                            uncompressed.release();
+                        }
+                    }
+
+                    if (!in.hasArray()) {
+                        recycler.releaseInputBuffer(inputArray);
+                    }
+                } else if (chunkLength > 0) {
+                    out.add(in.readSlice(chunkLength).retain());
+                }
+
+                currentState = State.INIT_BLOCK;
+                break;
+            case CORRUPTED:
+                in.skipBytes(in.readableBytes());
+                break;
+            default:
+                throw new IllegalStateException();
             }
+        } catch (Exception e) {
+            currentState = State.CORRUPTED;
+            decoder = null;
+            recycler = null;
+            throw e;
         }
     }
 }
