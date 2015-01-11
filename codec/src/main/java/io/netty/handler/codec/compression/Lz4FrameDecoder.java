@@ -148,149 +148,147 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        for (;;) {
-            try {
-                switch (currentState) {
-                    case INIT_BLOCK:
-                        if (in.readableBytes() < HEADER_LENGTH) {
-                            return;
+        try {
+            switch (currentState) {
+            case INIT_BLOCK:
+                if (in.readableBytes() < HEADER_LENGTH) {
+                    break;
+                }
+                final long magic = in.readLong();
+                if (magic != MAGIC_NUMBER) {
+                    throw new DecompressionException("unexpected block identifier");
+                }
+
+                final int token = in.readByte();
+                final int compressionLevel = (token & 0x0F) + COMPRESSION_LEVEL_BASE;
+                int blockType = token & 0xF0;
+
+                int compressedLength = Integer.reverseBytes(in.readInt());
+                if (compressedLength < 0 || compressedLength > MAX_BLOCK_SIZE) {
+                    throw new DecompressionException(String.format(
+                            "invalid compressedLength: %d (expected: 0-%d)",
+                            compressedLength, MAX_BLOCK_SIZE));
+                }
+
+                int decompressedLength = Integer.reverseBytes(in.readInt());
+                final int maxDecompressedLength = 1 << compressionLevel;
+                if (decompressedLength < 0 || decompressedLength > maxDecompressedLength) {
+                    throw new DecompressionException(String.format(
+                            "invalid decompressedLength: %d (expected: 0-%d)",
+                            decompressedLength, maxDecompressedLength));
+                }
+                if (decompressedLength == 0 && compressedLength != 0
+                        || decompressedLength != 0 && compressedLength == 0
+                        || blockType == BLOCK_TYPE_NON_COMPRESSED && decompressedLength != compressedLength) {
+                    throw new DecompressionException(String.format(
+                            "stream corrupted: compressedLength(%d) and decompressedLength(%d) mismatch",
+                            compressedLength, decompressedLength));
+                }
+
+                int currentChecksum = Integer.reverseBytes(in.readInt());
+                if (decompressedLength == 0 && compressedLength == 0) {
+                    if (currentChecksum != 0) {
+                        throw new DecompressionException("stream corrupted: checksum error");
+                    }
+                    currentState = State.FINISHED;
+                    decompressor = null;
+                    checksum = null;
+                    break;
+                }
+
+                this.blockType = blockType;
+                this.compressedLength = compressedLength;
+                this.decompressedLength = decompressedLength;
+                this.currentChecksum = currentChecksum;
+
+                currentState = State.DECOMPRESS_DATA;
+            case DECOMPRESS_DATA:
+                blockType = this.blockType;
+                compressedLength = this.compressedLength;
+                decompressedLength = this.decompressedLength;
+                currentChecksum = this.currentChecksum;
+
+                if (in.readableBytes() < compressedLength) {
+                    break;
+                }
+
+                final int idx = in.readerIndex();
+
+                ByteBuf uncompressed = ctx.alloc().heapBuffer(decompressedLength, decompressedLength);
+                final byte[] dest = uncompressed.array();
+                final int destOff = uncompressed.arrayOffset() + uncompressed.writerIndex();
+
+                boolean success = false;
+                try {
+                    switch (blockType) {
+                    case BLOCK_TYPE_NON_COMPRESSED: {
+                        in.getBytes(idx, dest, destOff, decompressedLength);
+                        break;
+                    }
+                    case BLOCK_TYPE_COMPRESSED: {
+                        final byte[] src;
+                        final int srcOff;
+                        if (in.hasArray()) {
+                            src = in.array();
+                            srcOff = in.arrayOffset() + idx;
+                        } else {
+                            src = new byte[compressedLength];
+                            in.getBytes(idx, src);
+                            srcOff = 0;
                         }
-                        final long magic = in.readLong();
-                        if (magic != MAGIC_NUMBER) {
-                            throw new DecompressionException("unexpected block identifier");
-                        }
 
-                        final int token = in.readByte();
-                        final int compressionLevel = (token & 0x0F) + COMPRESSION_LEVEL_BASE;
-                        int blockType = token & 0xF0;
-
-                        int compressedLength = Integer.reverseBytes(in.readInt());
-                        if (compressedLength < 0 || compressedLength > MAX_BLOCK_SIZE) {
-                            throw new DecompressionException(String.format(
-                                    "invalid compressedLength: %d (expected: 0-%d)",
-                                    compressedLength, MAX_BLOCK_SIZE));
-                        }
-
-                        int decompressedLength = Integer.reverseBytes(in.readInt());
-                        final int maxDecompressedLength = 1 << compressionLevel;
-                        if (decompressedLength < 0 || decompressedLength > maxDecompressedLength) {
-                            throw new DecompressionException(String.format(
-                                    "invalid decompressedLength: %d (expected: 0-%d)",
-                                    decompressedLength, maxDecompressedLength));
-                        }
-                        if (decompressedLength == 0 && compressedLength != 0
-                                || decompressedLength != 0 && compressedLength == 0
-                                || blockType == BLOCK_TYPE_NON_COMPRESSED && decompressedLength != compressedLength) {
-                            throw new DecompressionException(String.format(
-                                    "stream corrupted: compressedLength(%d) and decompressedLength(%d) mismatch",
-                                    compressedLength, decompressedLength));
-                        }
-
-                        int currentChecksum = Integer.reverseBytes(in.readInt());
-                        if (decompressedLength == 0 && compressedLength == 0) {
-                            if (currentChecksum != 0) {
-                                throw new DecompressionException("stream corrupted: checksum error");
-                            }
-                            currentState = State.FINISHED;
-                            decompressor = null;
-                            checksum = null;
-                            break;
-                        }
-
-                        this.blockType = blockType;
-                        this.compressedLength = compressedLength;
-                        this.decompressedLength = decompressedLength;
-                        this.currentChecksum = currentChecksum;
-
-                        currentState = State.DECOMPRESS_DATA;
-                    case DECOMPRESS_DATA:
-                        blockType = this.blockType;
-                        compressedLength = this.compressedLength;
-                        decompressedLength = this.decompressedLength;
-                        currentChecksum = this.currentChecksum;
-
-                        if (in.readableBytes() < compressedLength) {
-                            return;
-                        }
-
-                        final int idx = in.readerIndex();
-
-                        ByteBuf uncompressed = ctx.alloc().heapBuffer(decompressedLength, decompressedLength);
-                        final byte[] dest = uncompressed.array();
-                        final int destOff = uncompressed.arrayOffset() + uncompressed.writerIndex();
-
-                        boolean success = false;
                         try {
-                            switch (blockType) {
-                                case BLOCK_TYPE_NON_COMPRESSED: {
-                                    in.getBytes(idx, dest, destOff, decompressedLength);
-                                    break;
-                                }
-                                case BLOCK_TYPE_COMPRESSED: {
-                                    final byte[] src;
-                                    final int srcOff;
-                                    if (in.hasArray()) {
-                                        src = in.array();
-                                        srcOff = in.arrayOffset() + idx;
-                                    } else {
-                                        src = new byte[compressedLength];
-                                        in.getBytes(idx, src);
-                                        srcOff = 0;
-                                    }
-
-                                    try {
-                                        final int readBytes = decompressor.decompress(src, srcOff,
-                                                dest, destOff, decompressedLength);
-                                        if (compressedLength != readBytes) {
-                                            throw new DecompressionException(String.format(
-                                                "stream corrupted: compressedLength(%d) and actual length(%d) mismatch",
-                                                compressedLength, readBytes));
-                                        }
-                                    } catch (LZ4Exception e) {
-                                        throw new DecompressionException(e);
-                                    }
-                                    break;
-                                }
-                                default:
-                                    throw new DecompressionException(String.format(
-                                            "unexpected blockType: %d (expected: %d or %d)",
-                                            blockType, BLOCK_TYPE_NON_COMPRESSED, BLOCK_TYPE_COMPRESSED));
+                            final int readBytes = decompressor.decompress(src, srcOff,
+                                    dest, destOff, decompressedLength);
+                            if (compressedLength != readBytes) {
+                                throw new DecompressionException(String.format(
+                                    "stream corrupted: compressedLength(%d) and actual length(%d) mismatch",
+                                    compressedLength, readBytes));
                             }
-
-                            final Checksum checksum = this.checksum;
-                            if (checksum != null) {
-                                checksum.reset();
-                                checksum.update(dest, destOff, decompressedLength);
-                                final int checksumResult = (int) checksum.getValue();
-                                if (checksumResult != currentChecksum) {
-                                    throw new DecompressionException(String.format(
-                                            "stream corrupted: mismatching checksum: %d (expected: %d)",
-                                            checksumResult, currentChecksum));
-                                }
-                            }
-                            uncompressed.writerIndex(uncompressed.writerIndex() + decompressedLength);
-                            out.add(uncompressed);
-                            in.skipBytes(compressedLength);
-
-                            currentState = State.INIT_BLOCK;
-                            success = true;
-                        } finally {
-                            if (!success) {
-                                uncompressed.release();
-                            }
+                        } catch (LZ4Exception e) {
+                            throw new DecompressionException(e);
                         }
                         break;
-                    case FINISHED:
-                    case CORRUPTED:
-                        in.skipBytes(in.readableBytes());
-                        return;
+                    }
                     default:
-                        throw new IllegalStateException();
+                        throw new DecompressionException(String.format(
+                                "unexpected blockType: %d (expected: %d or %d)",
+                                blockType, BLOCK_TYPE_NON_COMPRESSED, BLOCK_TYPE_COMPRESSED));
+                    }
+
+                    final Checksum checksum = this.checksum;
+                    if (checksum != null) {
+                        checksum.reset();
+                        checksum.update(dest, destOff, decompressedLength);
+                        final int checksumResult = (int) checksum.getValue();
+                        if (checksumResult != currentChecksum) {
+                            throw new DecompressionException(String.format(
+                                    "stream corrupted: mismatching checksum: %d (expected: %d)",
+                                    checksumResult, currentChecksum));
+                        }
+                    }
+                    uncompressed.writerIndex(uncompressed.writerIndex() + decompressedLength);
+                    out.add(uncompressed);
+                    in.skipBytes(compressedLength);
+
+                    currentState = State.INIT_BLOCK;
+                    success = true;
+                } finally {
+                    if (!success) {
+                        uncompressed.release();
+                    }
                 }
-            } catch (Exception e) {
-                currentState = State.CORRUPTED;
-                throw e;
+                break;
+            case FINISHED:
+            case CORRUPTED:
+                in.skipBytes(in.readableBytes());
+                break;
+            default:
+                throw new IllegalStateException();
             }
+        } catch (Exception e) {
+            currentState = State.CORRUPTED;
+            throw e;
         }
     }
 
