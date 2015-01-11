@@ -27,12 +27,9 @@ import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
-import io.netty.handler.codec.spdy.SpdyHttpHeaders.Names;
 
 import java.util.List;
 import java.util.Map;
-
-import static io.netty.handler.codec.spdy.SpdyHeaders.HttpNames.*;
 
 /**
  * Encodes {@link HttpRequest}s, {@link HttpResponse}s, and {@link HttpContent}s
@@ -198,14 +195,14 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
     private SpdySynStreamFrame createSynStreamFrame(HttpRequest httpRequest) throws Exception {
         // Get the Stream-ID, Associated-To-Stream-ID, Priority, and scheme from the headers
         final HttpHeaders httpHeaders = httpRequest.headers();
-        int streamId = httpHeaders.getInt(Names.STREAM_ID);
-        int associatedToStreamId = httpHeaders.getInt(Names.ASSOCIATED_TO_STREAM_ID, 0);
-        byte priority = (byte) httpHeaders.getInt(Names.PRIORITY, 0);
-        CharSequence scheme = httpHeaders.get(Names.SCHEME);
-        httpHeaders.remove(Names.STREAM_ID);
-        httpHeaders.remove(Names.ASSOCIATED_TO_STREAM_ID);
-        httpHeaders.remove(Names.PRIORITY);
-        httpHeaders.remove(Names.SCHEME);
+        int streamId = httpHeaders.getInt(SpdyHttpHeaders.Names.STREAM_ID);
+        int associatedToStreamId = httpHeaders.getInt(SpdyHttpHeaders.Names.ASSOCIATED_TO_STREAM_ID, 0);
+        byte priority = (byte) httpHeaders.getInt(SpdyHttpHeaders.Names.PRIORITY, 0);
+        CharSequence scheme = httpHeaders.get(SpdyHttpHeaders.Names.SCHEME);
+        httpHeaders.remove(SpdyHttpHeaders.Names.STREAM_ID);
+        httpHeaders.remove(SpdyHttpHeaders.Names.ASSOCIATED_TO_STREAM_ID);
+        httpHeaders.remove(SpdyHttpHeaders.Names.PRIORITY);
+        httpHeaders.remove(SpdyHttpHeaders.Names.SCHEME);
 
         // The Connection, Keep-Alive, Proxy-Connection, and Transfer-Encoding
         // headers are not valid and MUST not be sent.
@@ -219,20 +216,20 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
 
         // Unfold the first line of the message into name/value pairs
         SpdyHeaders frameHeaders = spdySynStreamFrame.headers();
-        frameHeaders.setObject(METHOD, httpRequest.method());
-        frameHeaders.set(PATH, httpRequest.uri());
-        frameHeaders.setObject(VERSION, httpRequest.protocolVersion());
+        frameHeaders.setObject(SpdyHeaders.HttpNames.METHOD, httpRequest.method());
+        frameHeaders.set(SpdyHeaders.HttpNames.PATH, httpRequest.uri());
+        frameHeaders.setObject(SpdyHeaders.HttpNames.VERSION, httpRequest.protocolVersion());
 
         // Replace the HTTP host header with the SPDY host header
         CharSequence host = httpHeaders.get(HttpHeaderNames.HOST);
         httpHeaders.remove(HttpHeaderNames.HOST);
-        frameHeaders.set(HOST, host);
+        frameHeaders.set(SpdyHeaders.HttpNames.HOST, host);
 
         // Set the SPDY scheme header
         if (scheme == null) {
             scheme = "https";
         }
-        frameHeaders.set(SCHEME, scheme);
+        frameHeaders.set(SpdyHeaders.HttpNames.SCHEME, scheme);
 
         // Transfer the remaining HTTP headers
         for (Map.Entry<CharSequence, CharSequence> entry: httpHeaders) {
@@ -252,8 +249,8 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
     private SpdyHeadersFrame createHeadersFrame(HttpResponse httpResponse) throws Exception {
         // Get the Stream-ID from the headers
         final HttpHeaders httpHeaders = httpResponse.headers();
-        int streamId = httpHeaders.getInt(Names.STREAM_ID);
-        httpHeaders.remove(Names.STREAM_ID);
+        int streamId = httpHeaders.getInt(SpdyHttpHeaders.Names.STREAM_ID);
+        httpHeaders.remove(SpdyHttpHeaders.Names.STREAM_ID);
 
         // The Connection, Keep-Alive, Proxy-Connection, and Transfer-Encoding
         // headers are not valid and MUST not be sent.
@@ -270,8 +267,8 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
         }
         SpdyHeaders frameHeaders = spdyHeadersFrame.headers();
         // Unfold the first line of the response into name/value pairs
-        frameHeaders.setInt(STATUS, httpResponse.status().code());
-        frameHeaders.setObject(VERSION, httpResponse.protocolVersion());
+        frameHeaders.setInt(SpdyHeaders.HttpNames.STATUS, httpResponse.status().code());
+        frameHeaders.setObject(SpdyHeaders.HttpNames.VERSION, httpResponse.protocolVersion());
 
         // Transfer the remaining HTTP headers
         for (Map.Entry<CharSequence, CharSequence> entry: httpHeaders) {
