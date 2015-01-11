@@ -216,9 +216,9 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
 
         // Unfold the first line of the message into name/value pairs
         SpdyHeaders frameHeaders = spdySynStreamFrame.headers();
-        frameHeaders.setObject(SpdyHeaders.HttpNames.METHOD, httpRequest.method());
+        frameHeaders.set(SpdyHeaders.HttpNames.METHOD, httpRequest.method().name());
         frameHeaders.set(SpdyHeaders.HttpNames.PATH, httpRequest.uri());
-        frameHeaders.setObject(SpdyHeaders.HttpNames.VERSION, httpRequest.protocolVersion());
+        frameHeaders.set(SpdyHeaders.HttpNames.VERSION, httpRequest.protocolVersion().text());
 
         // Replace the HTTP host header with the SPDY host header
         CharSequence host = httpHeaders.get(HttpHeaderNames.HOST);
@@ -267,8 +267,8 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
         }
         SpdyHeaders frameHeaders = spdyHeadersFrame.headers();
         // Unfold the first line of the response into name/value pairs
-        frameHeaders.setInt(SpdyHeaders.HttpNames.STATUS, httpResponse.status().code());
-        frameHeaders.setObject(SpdyHeaders.HttpNames.VERSION, httpResponse.protocolVersion());
+        frameHeaders.set(SpdyHeaders.HttpNames.STATUS, httpResponse.status().codeAsText());
+        frameHeaders.set(SpdyHeaders.HttpNames.VERSION, httpResponse.protocolVersion().text());
 
         // Transfer the remaining HTTP headers
         for (Map.Entry<CharSequence, CharSequence> entry: httpHeaders) {
