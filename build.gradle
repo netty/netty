@@ -1,64 +1,107 @@
-ext {
-	groupId     = 'io.netty'
-	versionName = '5.0.0.Alpha2-SNAPSHOT'
-
-	baseName_all    = 'netty-all'
-	baseName_module = 'netty'
-
-	default_charset = 'UTF-8'
-
-	jboss_marshalling_version = '1.3.18.GA'
-
-	jetty_npn_version = '1.1.9.v20141016'
-	//jetty_npn_path = "${settings.localRepository}/org/mortbay/jetty/npn/npn-boot/${jetty.npn.version}/npn-boot-${jetty.npn.version}.jar"
-
-	jetty_alpn_version = '8.1.2.v20141202'
-	//jetty_alpn_path = "${settings.localRepository}/org/mortbay/jetty/alpn/alpn-boot/${jetty.alpn.version}/alpn-boot-${jetty.alpn.version}.jar"
-
-	argLine_common = [
-		'-server',
-		'-dsa -da -ea:io.netty...',
-		'-XX:+AggressiveOpts',
-		'-XX:+TieredCompilation',
-		'-XX:+UseBiasedLocking',
-		'-XX:+UseFastAccessorMethods',
-		'-XX:+OptimizeStringConcat',
-		'-XX:+HeapDumpOnOutOfMemoryError'
-		]
-	//argLine_bootcp = "-Xbootclasspath/p:${jetty_alpn_path}"
-	argLine_leak     = '-verbose:gc'
-	argLine_coverage = '-D_'
+// apply plugins for all projects.
+allprojects {
+	apply plugin: 'java'
+	apply plugin: 'idea'
+	apply plugin: 'eclipse'
+	apply plugin: 'checkstyle'
+	apply plugin: 'findbugs'
+	apply plugin: 'maven-publish'
+	if (name == 'transport-native-epoll') {
+		apply plugin: 'c'
+	}
 }
 
 // ================================================
-// Defines all the denpendencies.
-// Include third party libraries and netty modules.
+// defines constants.
+// since this is the 'all-in-one' build script,
+// there's no need to use ext block.
 
-// Gradle support transitive dependency
+def groupId     = 'io.netty'
+def versionName = '5.0.0.Alpha2-SNAPSHOT'
+
+def defaultCharset = 'UTF-8'
+
+def jboss_marshalling_version = '1.3.18.GA'
+
+def jetty_npn_version = '1.1.9.v20141016'
+//def jetty_npn_path = "${settings.localRepository}/org/mortbay/jetty/npn/npn-boot/${jetty.npn.version}/npn-boot-${jetty.npn.version}.jar"
+
+def jetty_alpn_version = '8.1.2.v20141202'
+//def jetty_alpn_path = "${settings.localRepository}/org/mortbay/jetty/alpn/alpn-boot/${jetty.alpn.version}/alpn-boot-${jetty.alpn.version}.jar"
+
+def argLine_common = [
+	'-server',
+	'-dsa -da -ea:io.netty...',
+	'-XX:+AggressiveOpts',
+	'-XX:+TieredCompilation',
+	'-XX:+UseBiasedLocking',
+	'-XX:+UseFastAccessorMethods',
+	'-XX:+OptimizeStringConcat',
+	'-XX:+HeapDumpOnOutOfMemoryError'
+]
+//def argLine_bootcp = "-Xbootclasspath/p:${jetty_alpn_path}"
+def argLine_leak     = '-verbose:gc'
+def argLine_coverage = '-D_'
+
+
+// ================================================
+// defines manifest information.
+
+def defaultManifest = [
+	'Url':'http://netty.io/',
+	'Email': 'netty@googlegroups.com'
+]
+
+def jarManifest        = defaultManifest
+def sourceJarManifest  = defaultManifest
+def javadocJarManifest = defaultManifest
+
+
+// ================================================
+// defines repositories' information.
+
+def repos = [
+	// used for resolve dependencies
+	'mavenDependencies': [
+		''
+	],
+	// used for distribute artifacts
+	'mavenDistribute': [
+		''
+	]
+]
+
+
+// ================================================
+// defines all the denpendencies.
+// include third party libraries and netty modules.
+
+// gradle support transitive dependency
+// these are module paths(not names)
 def moduleDependencies = [
-	'buffer':                 ['common'],
-	'codec':                  ['transport'],
-	'codec-dns':              ['codec'],
-	'codec-haproxy':          ['codec'],
-	'codec-http':             ['handler'],
-	'codec-http2':            ['codec-http'],
-	'codec-memcache':         ['codec'],
-	'codec-mqtt':             ['codec'],
-	'codec-socks':            ['codec'],
-	'codec-stomp':            ['codec'],
-	'handler':                ['codec'],
-	'handler-proxy':          ['codec-socks', 'codec-http'],
-	'resolver':               ['common'],
-	'resolver-dns':           ['codec-dns'],
-	'transport':              ['buffer', 'resolver'],
-	'transport-native-epoll': ['transport'],
-	'transport-rxtx':         ['transport'],
-	'transport-sctp':         ['codec'],
-	'transport-udt':          ['transport'],
+	':buffer':                 [':common'],
+	':codec':                  [':transport'],
+	':codec-dns':              [':codec'],
+	':codec-haproxy':          [':codec'],
+	':codec-http':             [':handler'],
+	':codec-http2':            [':codec-http'],
+	':codec-memcache':         [':codec'],
+	':codec-mqtt':             [':codec'],
+	':codec-socks':            [':codec'],
+	':codec-stomp':            [':codec'],
+	':handler':                [':codec'],
+	':handler-proxy':          [':codec-socks', ':codec-http'],
+	':resolver':               [':common'],
+	':resolver-dns':           [':codec-dns'],
+	':transport':              [':buffer', ':resolver'],
+	':transport-native-epoll': [':transport'],
+	':transport-rxtx':         [':transport'],
+	':transport-sctp':         [':codec'],
+	':transport-udt':          [':transport'],
 
-	'example':                ['transport-sctp', 'handler-proxy', 'codec-memcache', 'codec-http2', 'codec-stomp'],
-	'microbench':             ['codec-http'],
-	'testsuite':              ['transport-sctp', 'codec-http', 'transport-udt']
+	':example':                [':transport-sctp', ':handler-proxy', ':codec-memcache', ':codec-http2', ':codec-stomp'],
+	':microbench':             [':codec-http'],
+	':testsuite':              [':transport-sctp', ':codec-http', ':transport-udt']
 ]
 
 def extraDependencies = [
@@ -242,54 +285,51 @@ def extraDependencies = [
 		'version'   : '1.5'
 	]
 ]
+
+
 // ================================================
+// defins common functions/variables for later use
+
+// 'netty-all' for root project and 'netty-xxx' for sub modules
+def getBaseName(aProject) {
+	if (aProject == rootProject) {
+		'netty-all'
+	} else {
+		"netty-${aProject.name}"
+	}
+}
+
+// all modules that need to be assembled, except for 'microbench' and 'testsuite'
+def assembleModules = subprojects.findAll {
+	def n = it.name.toLowerCase(Locale.US)
+	n != 'microbench' && n != 'testsuite'
+}
+
+// all source code from sub modules
+def assembleModuleSources = assembleModules*.sourceSets.main.allJava
+
+// all classes compiled by sub modules
+def assembleModuleClasses = assembleModules*.sourceSets.main.output.classesDir
+
+
+// ================================================
+// all project configurations
 
 allprojects {
-	group = rootProject.groupId
-	version = rootProject.versionName
+	group = groupId
+	version = versionName
 
-	apply plugin: 'java'
-	apply plugin: 'idea'
-	apply plugin: 'eclipse'
-	apply plugin: 'checkstyle'
-	apply plugin: 'findbugs'
-	apply plugin: 'maven-publish'
+	archivesBaseName = getBaseName(project)
+
+	sourceCompatibility = 1.6
+	targetCompatibility = 1.7
+
+	def isRootProject = project == rootProject
 
 	repositories {
 		mavenLocal()
 		mavenCentral()
 	}
-}
-
-def isLinux() {
-	def os = System.getProperties().getProperty('os.name').toLowerCase(Locale.US)
-	!os.contains('windows') && !os.contains('mac')
-}
-
-def getProjectByDirName(n) {
-	allprojects.find {
-		it.projectDir.name.toLowerCase(Locale.US).contains(n)
-	}
-}
-
-def getBaseName(p) {
-	if (p == rootProject) {
-		rootProject.baseName_all
-	} else {
-		"${rootProject.baseName_module}-${p.projectDir.name}"
-	}
-}
-
-def assembleModuleSources = subprojects.findAll {
-	def n = it.name.toLowerCase(Locale.US)
-	!n.contains('example') && !n.contains('microbench') && !n.contains('testsuite')
-}.collect {
-	it.sourceSets.main.allJava
-}
-
-allprojects {
-	sourceCompatibility = 1.6
-	targetCompatibility = 1.7
 
 	dependencies {
 		extraDependencies.each { k, v ->
@@ -298,47 +338,9 @@ allprojects {
 			testCompile lib
 		}
 
-		moduleDependencies[projectDir.name.toLowerCase(Locale.US)]?.each {
-			compile getProjectByDirName(it)
+		moduleDependencies[path]?.each {
+			compile project(it)
 		}
-	}
-
-	tasks.withType(JavaCompile) {
-		options.encoding = rootProject.default_charset
-		options.warnings = false
-	}
-
-	tasks.withType(Jar) {
-		baseName = getBaseName(project)
-	}
-
-	tasks.withType(Javadoc) {
-		options.encoding = default_charset
-		options.quiet()
-		failOnError = false
-		if (project == rootProject) {
-			source = assembleModuleSources
-		}
-	}
-
-	task packageJavadoc(type: Jar, dependsOn: javadoc, group: 'Package') {
-		baseName = getBaseName(project)
-		classifier = 'javadoc'
-		from "$buildDir/docs/javadoc"
-		exclude 'com'
-		destinationDir = file("$buildDir/docs")
-	}
-
-	task packageSource(type: Jar, group: 'Package') {
-		baseName = getBaseName(project)
-		classifier = 'sources'
-		if (project == rootProject) {
-			from assembleModuleSources
-		} else {
-			from sourceSets.main.allJava
-		}
-		include 'io/netty/**/*'
-		destinationDir = file("$buildDir/sources")
 	}
 
 	checkstyle {
@@ -353,7 +355,6 @@ allprojects {
 	publishing {
 		publications {
 			maven(MavenPublication) {
-				artifactId getBaseName(project)
 				from components.java
 				//artifact packageSource
 				//artifact packageJavadoc
@@ -366,8 +367,68 @@ allprojects {
 			}
 		}
 	}
+
+	tasks.withType(JavaCompile) {
+		options.encoding = defaultCharset
+		options.warnings = false
+	}
+
+	tasks.withType(Javadoc) {
+		options.encoding = defaultCharset
+		options.quiet()
+		failOnError = false
+		if (isRootProject) {
+			source = assembleModuleSources
+		}
+	}
+
+	// assemble javadocs
+	task packageJavadoc(type: Jar, dependsOn: javadoc, group: 'Package') {
+		classifier = 'javadoc'
+		from "${buildDir}/docs/javadoc"
+		exclude 'com'
+		destinationDir = file("${buildDir}/docs")
+	}
+
+	// assemble sources
+	task packageSource(type: Jar, group: 'Package') {
+		classifier = 'sources'
+		if (isRootProject) {
+			from assembleModuleSources
+		} else {
+			from sourceSets.main.allJava
+		}
+		include 'io/netty/**/*'
+		destinationDir = file("${buildDir}/sources")
+	}
 }
 
+
+// ================================================
+// root project configurations
+
+// root project jar task, assemble all sub modules' classes
+jar {
+	from assembleModuleClasses
+	exclude 'com'
+	destinationDir = file("${buildDir}/libs")
+}
+
+// root project jar task based on classes that compiled by all sub modules
+// so it must run after all sub modules
+def rootJarTask = getTasksByName('jar', false).getAt(0)
+rootJarTask.dependsOn = getTasksByName('jar', true) - rootJarTask
+
+// package all binaries/sources/javadocs
+task packageAll(type:Zip, group: 'Package') {
+	dependsOn = [jar, packageSource, packageJavadoc]
+	destinationDir = file("${buildDir}")
+	allprojects.each {
+		"${buildDir}/libs/${archiveName}.jar"
+	}
+}
+
+// use gradle wrapper
 task wrapper(type: Wrapper) {
 	gradleVersion = '2.2.1'
 }
