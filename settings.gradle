@@ -1,4 +1,4 @@
-// included all modules here
+// include all modules here
 
 include ':buffer',         //common
 		':codec',          //transport
