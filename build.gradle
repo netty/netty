@@ -11,6 +11,7 @@ allprojects {
 	}
 }
 
+
 // ================================================
 // defines constants.
 // since this is the 'all-in-one' build script,
@@ -69,6 +70,20 @@ def repos = [
 	'mavenDistribute': [
 		''
 	]
+]
+
+
+// ================================================
+// defines resources that would be packed into the final package.
+// each entry would be evaluated as directory or file,
+// add what erver you want.
+
+def packagedResources = [
+	'LICENSE'     : 'LICENSE.txt',
+	'CONTRIBUTING': 'CONTRIBUTING.md',
+	'NOTICE'      : 'NOTICE.txt',
+	'README'      : 'README.md',
+	'licenses'    : 'license'
 ]
 
 
@@ -288,7 +303,7 @@ def extraDependencies = [
 
 
 // ================================================
-// defins common functions/variables for later use
+// defines common functions/variables for later use
 
 // 'netty-all' for root project and 'netty-xxx' for sub modules
 def getBaseName(aProject) {
@@ -419,12 +434,31 @@ jar {
 def rootJarTask = getTasksByName('jar', false).getAt(0)
 rootJarTask.dependsOn = getTasksByName('jar', true) - rootJarTask
 
-// package all binaries/sources/javadocs
+// package all binaries/sources/javadocs and other resources defined in the 'packagedResources' block
 task packageAll(type:Zip, group: 'Package') {
+	baseName = 'netty'
 	dependsOn = [jar, packageSource, packageJavadoc]
 	destinationDir = file("${buildDir}")
 	allprojects.each {
-		"${buildDir}/libs/${archiveName}.jar"
+		def isRootProject = it == rootProject
+		from("${it.buildDir}/libs/${it.archivesBaseName}-${version}.jar") {
+			into isRootProject ? 'jars/all-in-one' : 'jars'
+		}
+		from("${it.buildDir}/sources/${it.archivesBaseName}-${version}-sources.jar") {
+			into isRootProject ? 'jars/all-in-one' : 'jars'
+		}
+	}
+	from("${buildDir}/docs/${archivesBaseName}-${version}-javadoc.jar") {
+		into 'javadoc'
+	}
+	packagedResources.each { k, v ->
+		if ((v as File).isFile()) {
+			from v
+		} else {
+			from(v) {
+				into v
+			}
+		}
 	}
 }
 
