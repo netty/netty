@@ -18,11 +18,11 @@ include ':buffer',         //common
 		':transport',      //buffer, resolver
 		':transport-rxtx', //buffer, transport
 		':transport-sctp', //buffer, codec, transport
-		':transport-udt'   //buffer, transport
+		':transport-udt',  //buffer, transport
 
-		//'example',         //transport, transport-sctp, handler, handler-proxy, codec-http, codec-memcache, codec-http2, codec-socks, codec-stomp, transport-udt, transport-rxtx
-		//'microbench',      //handler, codec-http
-		//'testsuite'        //transport-sctp, handler, codec-http, transport-udt
+		'example',         //transport, transport-sctp, handler, handler-proxy, codec-http, codec-memcache, codec-http2, codec-socks, codec-stomp, transport-udt, transport-rxtx
+		'microbench',      //handler, codec-http
+		'testsuite'        //transport-sctp, handler, codec-http, transport-udt
 
 def os = System.getProperties().getProperty('os.name').toLowerCase(Locale.US)
 if (!os.contains('windows') && !os.contains('mac')) {
