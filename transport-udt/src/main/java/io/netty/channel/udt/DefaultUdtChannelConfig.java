@@ -39,11 +39,11 @@ public class DefaultUdtChannelConfig extends DefaultChannelConfig implements
     private static final int K = 1024;
     private static final int M = K * K;
 
-    private volatile int protocolReceiveBuferSize = 10 * M;
-    private volatile int protocolSendBuferSize = 10 * M;
+    private volatile int protocolReceiveBufferSize = 10 * M;
+    private volatile int protocolSendBufferSize = 10 * M;
 
     private volatile int systemReceiveBufferSize = M;
-    private volatile int systemSendBuferSize = M;
+    private volatile int systemSendBufferSize = M;
 
     private volatile int allocatorReceiveBufferSize = 128 * K;
     private volatile int allocatorSendBufferSize = 128 * K;
@@ -82,7 +82,7 @@ public class DefaultUdtChannelConfig extends DefaultChannelConfig implements
 
     @Override
     public int getProtocolReceiveBufferSize() {
-        return protocolReceiveBuferSize;
+        return protocolReceiveBufferSize;
     }
 
     @SuppressWarnings("unchecked")
@@ -144,8 +144,8 @@ public class DefaultUdtChannelConfig extends DefaultChannelConfig implements
     }
 
     @Override
-    public UdtChannelConfig setProtocolReceiveBufferSize(final int protocolReceiveBuferSize) {
-        this.protocolReceiveBuferSize = protocolReceiveBuferSize;
+    public UdtChannelConfig setProtocolReceiveBufferSize(final int protocolReceiveBufferSize) {
+        this.protocolReceiveBufferSize = protocolReceiveBufferSize;
         return this;
     }
 
@@ -212,26 +212,26 @@ public class DefaultUdtChannelConfig extends DefaultChannelConfig implements
 
     @Override
     public int getProtocolSendBufferSize() {
-        return protocolSendBuferSize;
+        return protocolSendBufferSize;
     }
 
     @Override
     public UdtChannelConfig setProtocolSendBufferSize(
-            final int protocolSendBuferSize) {
-        this.protocolSendBuferSize = protocolSendBuferSize;
+            final int protocolSendBufferSize) {
+        this.protocolSendBufferSize = protocolSendBufferSize;
         return this;
     }
 
     @Override
     public UdtChannelConfig setSystemReceiveBufferSize(
-            final int systemSendBuferSize) {
-        this.systemSendBuferSize = systemSendBuferSize;
+            final int systemSendBufferSize) {
+        this.systemSendBufferSize = systemSendBufferSize;
         return this;
     }
 
     @Override
     public int getSystemSendBufferSize() {
-        return systemSendBuferSize;
+        return systemSendBufferSize;
     }
 
     @Override
