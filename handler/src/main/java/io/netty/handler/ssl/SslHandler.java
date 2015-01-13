@@ -349,7 +349,7 @@ public class SslHandler extends ByteToMessageDecoder {
                     flush(ctx);
                 } catch (Exception e) {
                     if (!future.tryFailure(e)) {
-                        logger.warn("flush() raised a masked exception.", e);
+                        logger.warn("{} flush() raised a masked exception.", ctx.channel(), e);
                     }
                 }
             }
@@ -481,7 +481,7 @@ public class SslHandler extends ByteToMessageDecoder {
                 }
             }
         } catch (SSLException e) {
-            setHandshakeFailure(e);
+            setHandshakeFailure(ctx, e);
             throw e;
         } finally {
             finishWrap(ctx, out, promise, inUnwrap);
@@ -556,7 +556,7 @@ public class SslHandler extends ByteToMessageDecoder {
                 }
             }
         } catch (SSLException e) {
-            setHandshakeFailure(e);
+            setHandshakeFailure(ctx, e);
             throw e;
         }  finally {
             if (out != null) {
@@ -626,7 +626,7 @@ public class SslHandler extends ByteToMessageDecoder {
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         // Make sure to release SSLEngine,
         // and notify the handshake future if the connection has been closed during handshake.
-        setHandshakeFailure(CHANNEL_CLOSED);
+        setHandshakeFailure(ctx, CHANNEL_CLOSED);
         super.channelInactive(ctx);
     }
 
@@ -637,8 +637,8 @@ public class SslHandler extends ByteToMessageDecoder {
             // 'broken pipe' error after sending close_notify.
             if (logger.isDebugEnabled()) {
                 logger.debug(
-                        "Swallowing a harmless 'connection reset by peer / broken pipe' error that occurred " +
-                                "while writing close_notify in response to the peer's close_notify", cause);
+                        "{} Swallowing a harmless 'connection reset by peer / broken pipe' error that occurred " +
+                        "while writing close_notify in response to the peer's close_notify", ctx.channel(), cause);
             }
 
             // Close the connection explicitly just in case the transport
@@ -873,7 +873,19 @@ public class SslHandler extends ByteToMessageDecoder {
             // See https://github.com/netty/netty/issues/1534
 
             in.skipBytes(totalLength);
-            unwrap(ctx, in, startOffset, totalLength);
+
+            // If SSLEngine expects a heap buffer for unwrapping, do the conversion.
+            if (in.isDirect() && wantsInboundHeapBuffer) {
+                ByteBuf copy = ctx.alloc().heapBuffer(totalLength);
+                try {
+                    copy.writeBytes(in, startOffset, totalLength);
+                    unwrap(ctx, copy, 0, totalLength);
+                } finally {
+                    copy.release();
+                }
+            } else {
+                unwrap(ctx, in, startOffset, totalLength);
+            }
         }
 
         if (nonSslRecord) {
@@ -882,7 +894,7 @@ public class SslHandler extends ByteToMessageDecoder {
                     "not an SSL/TLS record: " + ByteBufUtil.hexDump(in));
             in.skipBytes(in.readableBytes());
             ctx.fireExceptionCaught(e);
-            setHandshakeFailure(e);
+            setHandshakeFailure(ctx, e);
         }
     }
 
@@ -911,37 +923,23 @@ public class SslHandler extends ByteToMessageDecoder {
     /**
      * Unwraps inbound SSL records.
      */
-    private void unwrap(ChannelHandlerContext ctx, ByteBuf packet,
-            int readerIndex, int initialOutAppBufCapacity) throws SSLException {
-
-        int len = initialOutAppBufCapacity;
-        // If SSLEngine expects a heap buffer for unwrapping, do the conversion.
-        final ByteBuf oldPacket;
-        final ByteBuf newPacket;
-        if (wantsInboundHeapBuffer && packet.isDirect()) {
-            newPacket = ctx.alloc().heapBuffer(packet.readableBytes());
-            newPacket.writeBytes(packet, readerIndex, len);
-            oldPacket = packet;
-            packet = newPacket;
-        } else {
-            oldPacket = null;
-            newPacket = null;
-        }
+    private void unwrap(
+            ChannelHandlerContext ctx, ByteBuf packet, int offset, int length) throws SSLException {
 
         boolean wrapLater = false;
         boolean notifyClosure = false;
-        ByteBuf decodeOut = allocate(ctx, initialOutAppBufCapacity);
+        ByteBuf decodeOut = allocate(ctx, length);
         try {
             for (;;) {
-                final SSLEngineResult result = unwrap(engine, packet, readerIndex, len, decodeOut);
+                final SSLEngineResult result = unwrap(engine, packet, offset, length, decodeOut);
                 final Status status = result.getStatus();
                 final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
                 final int produced = result.bytesProduced();
                 final int consumed = result.bytesConsumed();
 
                 // Update indexes for the next iteration
-                readerIndex += consumed;
-                len -= consumed;
+                offset += consumed;
+                length -= consumed;
 
                 if (status == Status.CLOSED) {
                     // notify about the CLOSED state of the SSLEngine. See #137
@@ -976,7 +974,7 @@ public class SslHandler extends ByteToMessageDecoder {
 
                         break;
                     default:
-                        throw new IllegalStateException("Unknown handshake status: " + handshakeStatus);
+                        throw new IllegalStateException("unknown handshake status: " + handshakeStatus);
                 }
 
                 if (status == Status.BUFFER_UNDERFLOW || consumed == 0 && produced == 0) {
@@ -992,16 +990,9 @@ public class SslHandler extends ByteToMessageDecoder {
                 sslCloseFuture.trySuccess(ctx.channel());
             }
         } catch (SSLException e) {
-            setHandshakeFailure(e);
+            setHandshakeFailure(ctx, e);
             throw e;
         } finally {
-            // If we converted packet into a heap buffer at the beginning of this method,
-            // we should synchronize the position of the original buffer.
-            if (newPacket != null) {
-                oldPacket.readerIndex(readerIndex + packet.readerIndex());
-                newPacket.release();
-            }
-
             if (decodeOut.isReadable()) {
                 ctx.fireChannelRead(decodeOut);
             } else {
@@ -1135,7 +1126,7 @@ public class SslHandler extends ByteToMessageDecoder {
         handshakePromise.trySuccess(ctx.channel());
 
         if (logger.isDebugEnabled()) {
-            logger.debug(ctx.channel() + " HANDSHAKEN: " + engine.getSession().getCipherSuite());
+            logger.debug("{} HANDSHAKEN: {}", ctx.channel(), engine.getSession().getCipherSuite());
         }
         ctx.fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
 
@@ -1148,7 +1139,7 @@ public class SslHandler extends ByteToMessageDecoder {
     /**
      * Notify all the handshake futures about the failure during the handshake.
      */
-    private void setHandshakeFailure(Throwable cause) {
+    private void setHandshakeFailure(ChannelHandlerContext ctx, Throwable cause) {
         // Release all resources such as internal buffers that SSLEngine
         // is managing.
         engine.closeOutbound();
@@ -1162,7 +1153,7 @@ public class SslHandler extends ByteToMessageDecoder {
             // See https://github.com/netty/netty/issues/1340
             String msg = e.getMessage();
             if (msg == null || !msg.contains("possible truncation attack")) {
-                logger.debug("SSLEngine.closeInbound() raised an exception.", e);
+                logger.debug("{} SSLEngine.closeInbound() raised an exception.", ctx.channel(), e);
             }
         }
         notifyHandshakeFailure(cause);
@@ -1346,9 +1337,7 @@ public class SslHandler extends ByteToMessageDecoder {
             timeoutFuture = ctx.executor().schedule(new Runnable() {
                 @Override
                 public void run() {
-                    logger.warn(
-                            ctx.channel() + " last write attempt timed out." +
-                                    " Force-closing the connection.");
+                    logger.warn("{} Last write attempt timed out; force-closing the connection.", ctx.channel());
                     ctx.close(promise);
                 }
             }, closeNotifyTimeoutMillis, TimeUnit.MILLISECONDS);
