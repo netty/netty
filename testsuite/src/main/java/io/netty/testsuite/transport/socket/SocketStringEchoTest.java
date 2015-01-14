@@ -21,7 +21,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.string.StringDecoder;
@@ -74,9 +73,9 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         final StringEchoHandler sh = new StringEchoHandler(autoRead);
         final StringEchoHandler ch = new StringEchoHandler(autoRead);
 
-        sb.childHandler(new ChannelInitializer<SocketChannel>() {
+        sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
-            public void initChannel(SocketChannel sch) throws Exception {
+            public void initChannel(Channel sch) throws Exception {
                 sch.pipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
                 sch.pipeline().addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
                 sch.pipeline().addBefore("decoder", "encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
@@ -84,9 +83,9 @@ public class SocketStringEchoTest extends AbstractSocketTest {
             }
         });
 
-        cb.handler(new ChannelInitializer<SocketChannel>() {
+        cb.handler(new ChannelInitializer<Channel>() {
             @Override
-            public void initChannel(SocketChannel sch) throws Exception {
+            public void initChannel(Channel sch) throws Exception {
                 sch.pipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
                 sch.pipeline().addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
                 sch.pipeline().addBefore("decoder", "encoder", new StringEncoder(CharsetUtil.ISO_8859_1));

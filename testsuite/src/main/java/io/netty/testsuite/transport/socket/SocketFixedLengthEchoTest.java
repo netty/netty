@@ -23,7 +23,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.FixedLengthFrameDecoder;
 import org.junit.Test;
 
@@ -64,17 +63,17 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         final EchoHandler sh = new EchoHandler(autoRead);
         final EchoHandler ch = new EchoHandler(autoRead);
 
-        sb.childHandler(new ChannelInitializer<SocketChannel>() {
+        sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
-            public void initChannel(SocketChannel sch) throws Exception {
+            public void initChannel(Channel sch) throws Exception {
                 sch.pipeline().addLast("decoder", new FixedLengthFrameDecoder(1024));
                 sch.pipeline().addAfter("decoder", "handler", sh);
             }
         });
 
-        cb.handler(new ChannelInitializer<SocketChannel>() {
+        cb.handler(new ChannelInitializer<Channel>() {
             @Override
-            public void initChannel(SocketChannel sch) throws Exception {
+            public void initChannel(Channel sch) throws Exception {
                 sch.pipeline().addLast("decoder", new FixedLengthFrameDecoder(1024));
                 sch.pipeline().addAfter("decoder", "handler", ch);
             }
