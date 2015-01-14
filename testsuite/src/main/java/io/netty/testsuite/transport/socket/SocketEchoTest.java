@@ -24,7 +24,6 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
 import org.junit.AfterClass;
@@ -129,15 +128,15 @@ public class SocketEchoTest extends AbstractSocketTest {
         final EchoHandler ch = new EchoHandler(autoRead);
 
         if (additionalExecutor) {
-            sb.childHandler(new ChannelInitializer<SocketChannel>() {
+            sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(SocketChannel c) throws Exception {
+                protected void initChannel(Channel c) throws Exception {
                     c.pipeline().addLast(group, sh);
                 }
             });
-            cb.handler(new ChannelInitializer<SocketChannel>() {
+            cb.handler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(SocketChannel c) throws Exception {
+                protected void initChannel(Channel c) throws Exception {
                     c.pipeline().addLast(group, ch);
                 }
             });

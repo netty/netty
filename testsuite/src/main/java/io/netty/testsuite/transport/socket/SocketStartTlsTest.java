@@ -23,7 +23,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
@@ -150,9 +149,9 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         final StartTlsServerHandler sh = new StartTlsServerHandler(sse, autoRead);
         final StartTlsClientHandler ch = new StartTlsClientHandler(cse, autoRead);
 
-        sb.childHandler(new ChannelInitializer<SocketChannel>() {
+        sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
-            public void initChannel(SocketChannel sch) throws Exception {
+            public void initChannel(Channel sch) throws Exception {
                 ChannelPipeline p = sch.pipeline();
                 p.addLast("logger", new LoggingHandler(LOG_LEVEL));
                 p.addLast(new LineBasedFrameDecoder(64), new StringDecoder(), new StringEncoder());
@@ -160,9 +159,9 @@ public class SocketStartTlsTest extends AbstractSocketTest {
             }
         });
 
-        cb.handler(new ChannelInitializer<SocketChannel>() {
+        cb.handler(new ChannelInitializer<Channel>() {
             @Override
-            public void initChannel(SocketChannel sch) throws Exception {
+            public void initChannel(Channel sch) throws Exception {
                 ChannelPipeline p = sch.pipeline();
                 p.addLast("logger", new LoggingHandler(LOG_LEVEL));
                 p.addLast(new LineBasedFrameDecoder(64), new StringDecoder(), new StringEncoder());

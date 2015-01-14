@@ -24,7 +24,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.JdkSslClientContext;
@@ -117,9 +116,9 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
         final ServerHandler sh = new ServerHandler();
         final ClientHandler ch = new ClientHandler();
 
-        sb.childHandler(new ChannelInitializer<SocketChannel>() {
+        sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
-            public void initChannel(SocketChannel sch) throws Exception {
+            public void initChannel(Channel sch) throws Exception {
                 ChannelPipeline p = sch.pipeline();
                 p.addLast(serverCtx.newHandler(sch.alloc()));
                 p.addLast(new LoggingHandler(LOG_LEVEL));
@@ -127,9 +126,9 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
             }
         });
 
-        cb.handler(new ChannelInitializer<SocketChannel>() {
+        cb.handler(new ChannelInitializer<Channel>() {
             @Override
-            public void initChannel(SocketChannel sch) throws Exception {
+            public void initChannel(Channel sch) throws Exception {
                 ChannelPipeline p = sch.pipeline();
                 p.addLast(clientCtx.newHandler(sch.alloc()));
                 p.addLast(new LoggingHandler(LOG_LEVEL));
