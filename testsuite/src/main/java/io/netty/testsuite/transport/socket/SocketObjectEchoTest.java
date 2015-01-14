@@ -21,7 +21,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
@@ -72,9 +71,9 @@ public class SocketObjectEchoTest extends AbstractSocketTest {
         final EchoHandler sh = new EchoHandler(autoRead);
         final EchoHandler ch = new EchoHandler(autoRead);
 
-        sb.childHandler(new ChannelInitializer<SocketChannel>() {
+        sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
-            public void initChannel(SocketChannel sch) throws Exception {
+            public void initChannel(Channel sch) throws Exception {
                 sch.pipeline().addLast(
                         new ObjectDecoder(ClassResolvers.cacheDisabled(getClass().getClassLoader())),
                         new ObjectEncoder(),
@@ -82,9 +81,9 @@ public class SocketObjectEchoTest extends AbstractSocketTest {
             }
         });
 
-        cb.handler(new ChannelInitializer<SocketChannel>() {
+        cb.handler(new ChannelInitializer<Channel>() {
             @Override
-            public void initChannel(SocketChannel sch) throws Exception {
+            public void initChannel(Channel sch) throws Exception {
                 sch.pipeline().addLast(
                         new ObjectDecoder(ClassResolvers.cacheDisabled(getClass().getClassLoader())),
                         new ObjectEncoder(),
