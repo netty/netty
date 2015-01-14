@@ -1582,8 +1582,9 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      * Split one header in Multipart
      * @return an array of String where rank 0 is the name of the header, follows by several
      *  values that were separated by ';' or ','
+     * @throws ErrorDataDecoderException
      */
-    private static String[] splitMultipartHeader(String sb) {
+    private static String[] splitMultipartHeader(String sb) throws ErrorDataDecoderException {
         ArrayList<String> headers = new ArrayList<String>(1);
         int nameStart;
         int nameEnd;
@@ -1609,7 +1610,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         String svalue = sb.substring(valueStart, valueEnd);
         String[] values;
         if (svalue.indexOf(';') >= 0) {
-            values = StringUtil.split(svalue, ';');
+            values = splitMultipartHeaderValues(svalue);
         } else {
             values = StringUtil.split(svalue, ',');
         }
@@ -1621,5 +1622,43 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             array[i] = headers.get(i);
         }
         return array;
+    }
+
+    /**
+     * Split one header value in Multipart
+     * @return an array of String where values that were separated by ';' or ','
+     * @throws ErrorDataDecoderException
+     */
+    private static String[] splitMultipartHeaderValues(String svalue) throws ErrorDataDecoderException {
+        ArrayList<String> values = new ArrayList<String>(1);
+        boolean inQuote = false;
+        boolean quoteClosed = false;
+        int start = 0;
+        for (int i = 0; i < svalue.length(); i++) {
+            char c = svalue.charAt(i);
+            if (inQuote) {
+                if (c == '"') {
+                    inQuote = false;
+                    quoteClosed = true;
+                }
+            } else {
+                if (c == '"') {
+                    if (quoteClosed) {
+                        throw new ErrorDataDecoderException();
+                    } else {
+                        inQuote = true;
+                    }
+                } else if (c == ';') {
+                    values.add(svalue.substring(start, i));
+                    start = i + 1;
+                    quoteClosed = false;
+                }
+            }
+        }
+        values.add(svalue.substring(start));
+        if (inQuote && !quoteClosed) {
+            throw new ErrorDataDecoderException();
+        }
+        return values.toArray(new String[values.size()]);
     }
 }
