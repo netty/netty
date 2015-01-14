@@ -25,7 +25,6 @@ import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.ssl.JdkSslClientContext;
 import io.netty.handler.ssl.JdkSslServerContext;
 import io.netty.handler.ssl.OpenSsl;
@@ -182,8 +181,8 @@ public class SocketSslEchoTest extends AbstractSocketTest {
     private final AtomicInteger clientNegoCounter = new AtomicInteger();
     private final AtomicInteger serverNegoCounter = new AtomicInteger();
 
-    private volatile SocketChannel clientChannel;
-    private volatile SocketChannel serverChannel;
+    private volatile Channel clientChannel;
+    private volatile Channel serverChannel;
 
     private volatile SslHandler clientSslHandler;
     private volatile SslHandler serverSslHandler;
@@ -222,10 +221,10 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         final ExecutorService delegatedTaskExecutor = Executors.newCachedThreadPool();
         reset();
 
-        sb.childHandler(new ChannelInitializer<SocketChannel>() {
+        sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             @SuppressWarnings("deprecation")
-            public void initChannel(SocketChannel sch) throws Exception {
+            public void initChannel(Channel sch) throws Exception {
                 serverChannel = sch;
 
                 if (serverUsesDelegatedTaskExecutor) {
@@ -243,10 +242,10 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             }
         });
 
-        cb.handler(new ChannelInitializer<SocketChannel>() {
+        cb.handler(new ChannelInitializer<Channel>() {
             @Override
             @SuppressWarnings("deprecation")
-            public void initChannel(SocketChannel sch) throws Exception {
+            public void initChannel(Channel sch) throws Exception {
                 clientChannel = sch;
 
                 if (clientUsesDelegatedTaskExecutor) {

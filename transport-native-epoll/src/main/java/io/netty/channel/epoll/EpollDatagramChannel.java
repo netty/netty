@@ -67,6 +67,16 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     @Override
+    public InetSocketAddress remoteAddress() {
+        return (InetSocketAddress) super.remoteAddress();
+    }
+
+    @Override
+    public InetSocketAddress localAddress() {
+        return (InetSocketAddress) super.localAddress();
+    }
+
+    @Override
     public ChannelMetadata metadata() {
         return METADATA;
     }
@@ -252,7 +262,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     protected void doBind(SocketAddress localAddress) throws Exception {
         InetSocketAddress addr = (InetSocketAddress) localAddress;
         checkResolvable(addr);
-        Native.bind(fd, addr.getAddress(), addr.getPort());
+        Native.bind(fd, addr);
         local = Native.localAddress(fd);
         active = true;
     }

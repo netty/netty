@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
@@ -346,18 +347,39 @@ final class Native {
         return res;
     }
 
+    public static int socketDomainFd() {
+        int res = socketDomain();
+        if (res < 0) {
+            throw new ChannelException(newIOException("socketDomain", res));
+        }
+        return res;
+    }
+
     private static native int socketStream();
     private static native int socketDgram();
+    private static native int socketDomain();
 
-    public static void bind(int fd, InetAddress addr, int port) throws IOException {
-        NativeInetAddress address = toNativeInetAddress(addr);
-        int res = bind(fd, address.address, address.scopeId, port);
-        if (res < 0) {
-            throw newIOException("bind", res);
+    public static void bind(int fd, SocketAddress socketAddress) throws IOException {
+        if (socketAddress instanceof InetSocketAddress) {
+            InetSocketAddress addr = (InetSocketAddress) socketAddress;
+            NativeInetAddress address = toNativeInetAddress(addr.getAddress());
+            int res = bind(fd, address.address, address.scopeId, addr.getPort());
+            if (res < 0) {
+                throw newIOException("bind", res);
+            }
+        } else if (socketAddress instanceof DomainSocketAddress) {
+            DomainSocketAddress addr = (DomainSocketAddress) socketAddress;
+            int res = bindDomainSocket(fd, addr.path());
+            if (res < 0) {
+                throw newIOException("bind", res);
+            }
+        } else {
+            throw new Error("Unexpected SocketAddress implementation " + socketAddress);
         }
     }
 
     private static native int bind(int fd, byte[] address, int scopeId, int port);
+    private static native int bindDomainSocket(int fd, String path);
 
     public static void listen(int fd, int backlog) throws IOException {
         int res = listen0(fd, backlog);
@@ -368,9 +390,18 @@ final class Native {
 
     private static native int listen0(int fd, int backlog);
 
-    public static boolean connect(int fd, InetAddress addr, int port) throws IOException {
-        NativeInetAddress address = toNativeInetAddress(addr);
-        int res = connect(fd, address.address, address.scopeId, port);
+    public static boolean connect(int fd, SocketAddress socketAddress) throws IOException {
+        int res;
+        if (socketAddress instanceof InetSocketAddress) {
+            InetSocketAddress inetSocketAddress = (InetSocketAddress) socketAddress;
+            NativeInetAddress address = toNativeInetAddress(inetSocketAddress.getAddress());
+            res = connect(fd, address.address, address.scopeId, inetSocketAddress.getPort());
+        } else if (socketAddress instanceof DomainSocketAddress) {
+            DomainSocketAddress unixDomainSocketAddress = (DomainSocketAddress) socketAddress;
+            res = connectDomainSocket(fd, unixDomainSocketAddress.path());
+        } else {
+            throw new Error("Unexpected SocketAddress implementation " + socketAddress);
+        }
         if (res < 0) {
             if (res == ERRNO_EINPROGRESS_NEGATIVE) {
                 // connect not complete yet need to wait for EPOLLOUT event
@@ -382,6 +413,7 @@ final class Native {
     }
 
     private static native int connect(int fd, byte[] address, int scopeId, int port);
+    private static native int connectDomainSocket(int fd, String path);
 
     public static boolean finishConnect(int fd) throws IOException {
         int res = finishConnect0(fd);
@@ -466,6 +498,20 @@ final class Native {
     }
 
     private static native int accept0(int fd);
+
+    public static int recvFd(int fd) throws IOException {
+        int res = recvFd0(fd);
+        if (res >= 0) {
+            return res;
+        }
+        if (res == ERRNO_EAGAIN_NEGATIVE || res == ERRNO_EWOULDBLOCK_NEGATIVE) {
+            // Everything consumed so just return -1 here.
+            return -1;
+        }
+        throw newIOException("recvFd", res);
+    }
+
+    private static native int recvFd0(int fd);
 
     public static void shutdown(int fd, boolean read, boolean write) throws IOException {
         int res = shutdown0(fd, read, write);
