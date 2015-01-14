@@ -21,6 +21,7 @@
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
 #include <sys/sendfile.h>
+#include <sys/un.h>
 #include <netinet/tcp.h>
 #include <netinet/in.h>
 #include <sys/types.h>
@@ -1348,3 +1349,101 @@ JNIEXPORT jstring JNICALL Java_io_netty_channel_epoll_Native_strError(JNIEnv* en
     char* err = strerror(error);
     return (*env)->NewStringUTF(env, err);
 }
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_socketDomain(JNIEnv* env, jclass clazz) {
+    int fd = socket(PF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
+    if (fd == -1) {
+        return -errno;
+    }
+    return fd;
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_bindDomainSocket(JNIEnv * env, jclass clazz, jint fd, jstring socketPath) {
+    struct sockaddr_un addr;
+
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+
+    const char *socket_path = (*env)->GetStringUTFChars(env, socketPath, 0);
+    memcpy(addr.sun_path, socket_path, strlen(socket_path));
+
+    if (unlink(socket_path) == -1 && errno != ENOENT) {
+        return -errno;
+    }
+
+    int res = bind(fd, (struct sockaddr*) &addr, sizeof(addr));
+    (*env)->ReleaseStringUTFChars(env, socketPath, socket_path);
+
+    if (res == -1) {
+        return -errno;
+    }
+    return res;
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_connectDomainSocket(JNIEnv * env, jclass clazz, jint fd, jstring socketPath) {
+    struct sockaddr_un addr;
+
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+
+    const char *socket_path = (*env)->GetStringUTFChars(env, socketPath, 0);
+    strncpy(addr.sun_path, socket_path, sizeof(addr.sun_path) - 1);
+
+    int res;
+    int err;
+    do {
+        res = connect(fd, (struct sockaddr*) &addr, sizeof(addr));
+    } while (res == -1 && ((err = errno) == EINTR));
+
+    (*env)->ReleaseStringUTFChars(env, socketPath, socket_path);
+
+    if (res < 0) {
+        return -err;
+    }
+    return 0;
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_recvFd(JNIEnv* env, jclass clazz, jint fd) {
+    jint socketFd;
+    struct msghdr msg;
+    struct iovec iov[1];
+    struct cmsghdr *ctrl_msg = NULL;
+    char msg_buffer[1];
+    char elem_buffer[CMSG_SPACE(sizeof(int))];
+
+    /* Fill all with 0 */
+    memset(&msg, 0, sizeof(struct msghdr));
+    memset(elem_buffer, 0, CMSG_SPACE(sizeof(int)));
+
+    iov[0].iov_base = msg_buffer;
+    iov[0].iov_len = 1;
+
+    msg.msg_iov = iov;
+    msg.msg_iovlen = 1;
+    msg.msg_control = elem_buffer;
+    msg.msg_controllen = CMSG_SPACE(sizeof(int));
+
+    if(recvmsg(fd, &msg, MSG_CMSG_CLOEXEC) < 0) {
+        // All read, return -1
+        return -1;
+    }
+
+    if((msg.msg_flags & MSG_CTRUNC) == MSG_CTRUNC) {
+      // Not enough space ?!?!
+      return -1;
+    }
+
+    // skip empty entries
+    for(ctrl_msg = CMSG_FIRSTHDR(&msg); ctrl_msg != NULL; ctrl_msg = CMSG_NXTHDR(&msg, ctrl_msg)) {
+        if((ctrl_msg->cmsg_level == SOL_SOCKET) && (ctrl_msg->cmsg_type == SCM_RIGHTS)) {
+            socketFd = *((int *) CMSG_DATA(ctrl_msg));
+            // set as non blocking as we want to use it with epoll
+            if (fcntl(socketFd, F_SETFL, O_NONBLOCK) == -1) {
+                return -errno;
+            }
+            return socketFd;
+        }
+    }
+    return -1;
+}
+

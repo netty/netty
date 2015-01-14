@@ -30,11 +30,12 @@ import io.netty.testsuite.transport.socket.SocketTestPermutation;
 import io.netty.util.concurrent.DefaultThreadFactory;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 class EpollSocketTestPermutation extends SocketTestPermutation {
 
-    static final SocketTestPermutation INSTANCE = new EpollSocketTestPermutation();
+    static final EpollSocketTestPermutation INSTANCE = new EpollSocketTestPermutation();
 
     static final EventLoopGroup EPOLL_BOSS_GROUP =
             new EpollEventLoopGroup(BOSSES, new DefaultThreadFactory("testsuite-epoll-boss", true));
@@ -118,5 +119,39 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
                 }
         );
         return combo(bfs, bfs);
+    }
+
+    public List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> domainSocket() {
+
+        List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> list =
+                combo(serverDomainSocket(), clientDomainSocket());
+        return list;
+    }
+
+    public List<BootstrapFactory<ServerBootstrap>> serverDomainSocket() {
+        return Collections.<BootstrapFactory<ServerBootstrap>>singletonList(
+                new BootstrapFactory<ServerBootstrap>() {
+                    @Override
+                    public ServerBootstrap newInstance() {
+                        return new ServerBootstrap().group(EPOLL_BOSS_GROUP, EPOLL_WORKER_GROUP)
+                                .channel(EpollServerDomainSocketChannel.class);
+                    }
+                }
+        );
+    }
+
+    public List<BootstrapFactory<Bootstrap>> clientDomainSocket() {
+        return Collections.<BootstrapFactory<Bootstrap>>singletonList(
+                new BootstrapFactory<Bootstrap>() {
+                    @Override
+                    public Bootstrap newInstance() {
+                        return new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollDomainSocketChannel.class);
+                    }
+                }
+        );
+    }
+
+    public static DomainSocketAddress newSocketAddress() {
+        return new DomainSocketAddress("/tmp/netty.dsocket");
     }
 }

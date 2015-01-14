@@ -27,6 +27,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.OneTimeTask;
 
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.UnresolvedAddressException;
 
 abstract class AbstractEpollChannel extends AbstractChannel {
@@ -49,6 +50,10 @@ abstract class AbstractEpollChannel extends AbstractChannel {
         this.active = active;
     }
 
+    protected int fd() {
+        return fd;
+    }
+
     @Override
     public boolean isActive() {
         return active;
@@ -69,16 +74,6 @@ abstract class AbstractEpollChannel extends AbstractChannel {
         int fd = this.fd;
         this.fd = -1;
         Native.close(fd);
-    }
-
-    @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
-    }
-
-    @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
     }
 
     @Override
@@ -211,6 +206,72 @@ abstract class AbstractEpollChannel extends AbstractChannel {
     protected static void checkResolvable(InetSocketAddress addr) {
         if (addr.isUnresolved()) {
             throw new UnresolvedAddressException();
+        }
+    }
+
+    /**
+     * Read bytes into the given {@link ByteBuf} and return the amount.
+     */
+    protected final int doReadBytes(ByteBuf byteBuf) throws Exception {
+        int writerIndex = byteBuf.writerIndex();
+        int localReadAmount;
+        if (byteBuf.hasMemoryAddress()) {
+            localReadAmount = Native.readAddress(fd, byteBuf.memoryAddress(), writerIndex, byteBuf.capacity());
+        } else {
+            ByteBuffer buf = byteBuf.internalNioBuffer(writerIndex, byteBuf.writableBytes());
+            localReadAmount = Native.read(fd, buf, buf.position(), buf.limit());
+        }
+        if (localReadAmount > 0) {
+            byteBuf.writerIndex(writerIndex + localReadAmount);
+        }
+        return localReadAmount;
+    }
+
+    protected final int doWriteBytes(ByteBuf buf) throws Exception {
+        int readableBytes = buf.readableBytes();
+        int writtenBytes = 0;
+        if (buf.hasMemoryAddress()) {
+            long memoryAddress = buf.memoryAddress();
+            int readerIndex = buf.readerIndex();
+            int writerIndex = buf.writerIndex();
+            for (;;) {
+                int localFlushedAmount = Native.writeAddress(fd, memoryAddress, readerIndex, writerIndex);
+                if (localFlushedAmount > 0) {
+                    writtenBytes += localFlushedAmount;
+                    if (writtenBytes == readableBytes) {
+                        return writtenBytes;
+                    }
+                    readerIndex += localFlushedAmount;
+                } else {
+                    // Returned EAGAIN need to set EPOLLOUT
+                    setEpollOut();
+                    return writtenBytes;
+                }
+            }
+        } else {
+            ByteBuffer nioBuf;
+            if (buf.nioBufferCount() == 1) {
+                nioBuf = buf.internalNioBuffer(buf.readerIndex(), buf.readableBytes());
+            } else {
+                nioBuf = buf.nioBuffer();
+            }
+            for (;;) {
+                int pos = nioBuf.position();
+                int limit = nioBuf.limit();
+                int localFlushedAmount = Native.write(fd, nioBuf, pos, limit);
+                if (localFlushedAmount > 0) {
+                    nioBuf.position(pos + localFlushedAmount);
+                    writtenBytes += localFlushedAmount;
+                    if (writtenBytes == readableBytes) {
+                        return writtenBytes;
+                    }
+                } else {
+                    // Returned EAGAIN need to set EPOLLOUT
+                    setEpollOut();
+                    break;
+                }
+            }
+            return writtenBytes;
         }
     }
 
