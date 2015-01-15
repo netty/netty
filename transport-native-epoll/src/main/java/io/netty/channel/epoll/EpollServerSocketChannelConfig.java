@@ -143,7 +143,7 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
      * Returns {@code true} if the SO_REUSEPORT option is set.
      */
     public boolean isReusePort() {
-        return Native.isReusePort(channel.fd) == 1;
+        return Native.isReusePort(channel.fd().intValue()) == 1;
     }
 
     /**
@@ -154,7 +154,7 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
      * any affect.
      */
     public EpollServerSocketChannelConfig setReusePort(boolean reusePort) {
-        Native.setReusePort(channel.fd, reusePort ? 1 : 0);
+        Native.setReusePort(channel.fd().intValue(), reusePort ? 1 : 0);
         return this;
     }
 }

@@ -75,20 +75,20 @@ public class EpollServerChannelConfig extends DefaultChannelConfig {
     }
 
     public boolean isReuseAddress() {
-        return Native.isReuseAddress(channel.fd) == 1;
+        return Native.isReuseAddress(channel.fd().intValue()) == 1;
     }
 
     public EpollServerChannelConfig setReuseAddress(boolean reuseAddress) {
-        Native.setReuseAddress(channel.fd, reuseAddress ? 1 : 0);
+        Native.setReuseAddress(channel.fd().intValue(), reuseAddress ? 1 : 0);
         return this;
     }
 
     public int getReceiveBufferSize() {
-        return Native.getReceiveBufferSize(channel.fd);
+        return Native.getReceiveBufferSize(channel.fd().intValue());
     }
 
     public EpollServerChannelConfig setReceiveBufferSize(int receiveBufferSize) {
-        Native.setReceiveBufferSize(channel.fd, receiveBufferSize);
+        Native.setReceiveBufferSize(channel.fd().intValue(), receiveBufferSize);
         return this;
     }
 

@@ -84,7 +84,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     @Override
     @SuppressWarnings("deprecation")
     public boolean isActive() {
-        return fd != -1 &&
+        return fd() != EpollFileDescriptor.INVALID &&
                 (config.getOption(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) && isRegistered()
                         || active);
     }
@@ -262,6 +262,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     protected void doBind(SocketAddress localAddress) throws Exception {
         InetSocketAddress addr = (InetSocketAddress) localAddress;
         checkResolvable(addr);
+        int fd = fd().intValue();
         Native.bind(fd, addr);
         local = Native.localAddress(fd);
         active = true;
@@ -289,7 +290,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         NativeDatagramPacketArray.NativeDatagramPacket[] packets = array.packets();
 
                         while (cnt > 0) {
-                            int send = Native.sendmmsg(fd, packets, offset, cnt);
+                            int send = Native.sendmmsg(fd().intValue(), packets, offset, cnt);
                             if (send == 0) {
                                 // Did not write all messages.
                                 setEpollOut();
@@ -357,18 +358,18 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         final int writtenBytes;
         if (data.hasMemoryAddress()) {
             long memoryAddress = data.memoryAddress();
-            writtenBytes = Native.sendToAddress(fd, memoryAddress, data.readerIndex(), data.writerIndex(),
+            writtenBytes = Native.sendToAddress(fd().intValue(), memoryAddress, data.readerIndex(), data.writerIndex(),
                     remoteAddress.getAddress(), remoteAddress.getPort());
         } else if (data instanceof CompositeByteBuf) {
             IovArray array = IovArrayThreadLocal.get((CompositeByteBuf) data);
             int cnt = array.count();
             assert cnt != 0;
 
-            writtenBytes = Native.sendToAddresses(fd, array.memoryAddress(0),
+            writtenBytes = Native.sendToAddresses(fd().intValue(), array.memoryAddress(0),
                     cnt, remoteAddress.getAddress(), remoteAddress.getPort());
         } else  {
             ByteBuffer nioData = data.internalNioBuffer(data.readerIndex(), data.readableBytes());
-            writtenBytes = Native.sendTo(fd, nioData, nioData.position(), nioData.limit(),
+            writtenBytes = Native.sendTo(fd().intValue(), nioData, nioData.position(), nioData.limit(),
                     remoteAddress.getAddress(), remoteAddress.getPort());
         }
 
@@ -476,7 +477,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
                     checkResolvable(remoteAddress);
                     EpollDatagramChannel.this.remote = remoteAddress;
-                    EpollDatagramChannel.this.local = Native.localAddress(fd);
+                    EpollDatagramChannel.this.local = Native.localAddress(fd().intValue());
                     success = true;
                 } finally {
                     if (!success) {
@@ -513,11 +514,11 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         if (data.hasMemoryAddress()) {
                             // has a memory address so use optimized call
                             remoteAddress = Native.recvFromAddress(
-                                    fd, data.memoryAddress(), writerIndex, data.capacity());
+                                    fd().intValue(), data.memoryAddress(), writerIndex, data.capacity());
                         } else {
                             ByteBuffer nioData = data.internalNioBuffer(writerIndex, data.writableBytes());
                             remoteAddress = Native.recvFrom(
-                                    fd, nioData, nioData.position(), nioData.limit());
+                                    fd().intValue(), nioData, nioData.position(), nioData.limit());
                         }
 
                         if (remoteAddress == null) {
