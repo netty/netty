@@ -192,56 +192,56 @@ public final class EpollDatagramChannelConfig extends DefaultChannelConfig imple
 
     @Override
     public int getSendBufferSize() {
-        return Native.getSendBufferSize(datagramChannel.fd);
+        return Native.getSendBufferSize(datagramChannel.fd().intValue());
     }
 
     @Override
     public EpollDatagramChannelConfig setSendBufferSize(int sendBufferSize) {
-        Native.setSendBufferSize(datagramChannel.fd, sendBufferSize);
+        Native.setSendBufferSize(datagramChannel.fd().intValue(), sendBufferSize);
         return this;
     }
 
     @Override
     public int getReceiveBufferSize() {
-        return Native.getReceiveBufferSize(datagramChannel.fd);
+        return Native.getReceiveBufferSize(datagramChannel.fd().intValue());
     }
 
     @Override
     public EpollDatagramChannelConfig setReceiveBufferSize(int receiveBufferSize) {
-        Native.setReceiveBufferSize(datagramChannel.fd, receiveBufferSize);
+        Native.setReceiveBufferSize(datagramChannel.fd().intValue(), receiveBufferSize);
         return this;
     }
 
     @Override
     public int getTrafficClass() {
-        return Native.getTrafficClass(datagramChannel.fd);
+        return Native.getTrafficClass(datagramChannel.fd().intValue());
     }
 
     @Override
     public EpollDatagramChannelConfig setTrafficClass(int trafficClass) {
-        Native.setTrafficClass(datagramChannel.fd, trafficClass);
+        Native.setTrafficClass(datagramChannel.fd().intValue(), trafficClass);
         return this;
     }
 
     @Override
     public boolean isReuseAddress() {
-        return Native.isReuseAddress(datagramChannel.fd) == 1;
+        return Native.isReuseAddress(datagramChannel.fd().intValue()) == 1;
     }
 
     @Override
     public EpollDatagramChannelConfig setReuseAddress(boolean reuseAddress) {
-        Native.setReuseAddress(datagramChannel.fd, reuseAddress ? 1 : 0);
+        Native.setReuseAddress(datagramChannel.fd().intValue(), reuseAddress ? 1 : 0);
         return this;
     }
 
     @Override
     public boolean isBroadcast() {
-        return Native.isBroadcast(datagramChannel.fd) == 1;
+        return Native.isBroadcast(datagramChannel.fd().intValue()) == 1;
     }
 
     @Override
     public EpollDatagramChannelConfig setBroadcast(boolean broadcast) {
-        Native.setBroadcast(datagramChannel.fd, broadcast ? 1 : 0);
+        Native.setBroadcast(datagramChannel.fd().intValue(), broadcast ? 1 : 0);
         return this;
     }
 
@@ -289,7 +289,7 @@ public final class EpollDatagramChannelConfig extends DefaultChannelConfig imple
      * Returns {@code true} if the SO_REUSEPORT option is set.
      */
     public boolean isReusePort() {
-        return Native.isReusePort(datagramChannel.fd) == 1;
+        return Native.isReusePort(datagramChannel.fd().intValue()) == 1;
     }
 
     /**
@@ -300,7 +300,7 @@ public final class EpollDatagramChannelConfig extends DefaultChannelConfig imple
      * any affect.
      */
     public EpollDatagramChannelConfig setReusePort(boolean reusePort) {
-        Native.setReusePort(datagramChannel.fd, reusePort ? 1 : 0);
+        Native.setReusePort(datagramChannel.fd().intValue(), reusePort ? 1 : 0);
         return this;
     }
 

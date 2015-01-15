@@ -1403,47 +1403,88 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_connectDomainSocket(JN
     return 0;
 }
 
-JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_recvFd(JNIEnv* env, jclass clazz, jint fd) {
-    jint socketFd;
-    struct msghdr msg;
-    struct iovec iov[1];
-    struct cmsghdr* ctrl_msg = NULL;
-    char msg_buffer[1];
-    char elem_buffer[CMSG_SPACE(sizeof(int))];
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_recvFd0(JNIEnv* env, jclass clazz, jint fd) {
+    int socketFd;
+    struct msghdr descriptorMessage = { 0 };
+    struct iovec iov[1] = { 0 };
+    char control[CMSG_SPACE(sizeof(int))] = { 0 };
+    char iovecData[1];
 
-    /* Fill all with 0 */
-    memset(&msg, 0, sizeof(struct msghdr));
-    memset(elem_buffer, 0, CMSG_SPACE(sizeof(int)));
+    descriptorMessage.msg_control = control;
+    descriptorMessage.msg_controllen = sizeof(control);
+    descriptorMessage.msg_iov = iov;
+    descriptorMessage.msg_iovlen = 1;
+    iov[0].iov_base = iovecData;
+    iov[0].iov_len = sizeof(iovecData);
 
-    iov[0].iov_base = msg_buffer;
-    iov[0].iov_len = 1;
+    ssize_t res;
+    int err;
 
-    msg.msg_iov = iov;
-    msg.msg_iovlen = 1;
-    msg.msg_control = elem_buffer;
-    msg.msg_controllen = CMSG_SPACE(sizeof(int));
+    for (;;) {
+        do {
+            res = recvmsg(fd, &descriptorMessage, 0);
+            // Keep on reading if we was interrupted
+        } while (res == -1 && ((err = errno) == EINTR));
 
-    if(recvmsg(fd, &msg, MSG_CMSG_CLOEXEC) < 0) {
-        // All read, return -1
-        return -1;
-    }
+        if (res == 0) {
+            return 0;
+        }
 
-    if((msg.msg_flags & MSG_CTRUNC) == MSG_CTRUNC) {
-      // Not enough space ?!?!
-      return -1;
-    }
+        if (res < 0) {
+            return -err;
+        }
 
-    // skip empty entries
-    for(ctrl_msg = CMSG_FIRSTHDR(&msg); ctrl_msg != NULL; ctrl_msg = CMSG_NXTHDR(&msg, ctrl_msg)) {
-        if((ctrl_msg->cmsg_level == SOL_SOCKET) && (ctrl_msg->cmsg_type == SCM_RIGHTS)) {
-            socketFd = *((int *) CMSG_DATA(ctrl_msg));
+        struct cmsghdr* cmsg = CMSG_FIRSTHDR(&descriptorMessage);
+        if (!cmsg) {
+            return -errno;
+        }
+
+        if ((cmsg->cmsg_len == CMSG_LEN(sizeof(int))) && (cmsg->cmsg_level == SOL_SOCKET) && (cmsg->cmsg_type == SCM_RIGHTS)) {
+            socketFd = *((int *) CMSG_DATA(cmsg));
             // set as non blocking as we want to use it with epoll
             if (fcntl(socketFd, F_SETFL, O_NONBLOCK) == -1) {
-                return -errno;
+                err = errno;
+                close(socketFd);
+                return -err;
             }
             return socketFd;
         }
     }
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_sendFd0(JNIEnv* env, jclass clazz, jint socketFd, jint fd) {
+    struct msghdr descriptorMessage = { 0 };
+    struct iovec iov[1] = { 0 };
+    char control[CMSG_SPACE(sizeof(int))] = { 0 };
+    char iovecData[1];
+
+    descriptorMessage.msg_control = control;
+    descriptorMessage.msg_controllen = sizeof(control);
+    struct cmsghdr* cmsg = CMSG_FIRSTHDR(&descriptorMessage);
+
+    if (cmsg) {
+        cmsg->cmsg_len = CMSG_LEN(sizeof(int));
+        cmsg->cmsg_level = SOL_SOCKET;
+        cmsg->cmsg_type = SCM_RIGHTS;
+        *((int *)CMSG_DATA(cmsg)) = fd;
+        descriptorMessage.msg_iov = iov;
+        descriptorMessage.msg_iovlen = 1;
+        iov[0].iov_base = iovecData;
+        iov[0].iov_len = sizeof(iovecData);
+
+        size_t res;
+        int err;
+        do {
+            res = sendmsg(socketFd, &descriptorMessage, 0);
+        // keep on writing if it was interrupted
+        } while (res == -1 && ((err = errno) == EINTR));
+
+        if (res < 0) {
+            return -err;
+        }
+        return (jint) res;
+    }
     return -1;
 }
+
 

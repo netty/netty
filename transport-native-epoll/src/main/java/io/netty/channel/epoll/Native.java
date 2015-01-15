@@ -501,6 +501,24 @@ final class Native {
 
     public static int recvFd(int fd) throws IOException {
         int res = recvFd0(fd);
+        if (res > 0) {
+            return res;
+        }
+        if (res == 0) {
+            return -1;
+        }
+
+        if (res == ERRNO_EAGAIN_NEGATIVE || res == ERRNO_EWOULDBLOCK_NEGATIVE) {
+            // Everything consumed so just return -1 here.
+            return 0;
+        }
+        throw newIOException("recvFd", res);
+    }
+
+    private static native int recvFd0(int fd);
+
+    public static int sendFd(int socketFd, int fd) throws IOException {
+        int res = sendFd0(socketFd, fd);
         if (res >= 0) {
             return res;
         }
@@ -508,10 +526,10 @@ final class Native {
             // Everything consumed so just return -1 here.
             return -1;
         }
-        throw newIOException("recvFd", res);
+        throw newIOException("sendFd", res);
     }
 
-    private static native int recvFd0(int fd);
+    private static native int sendFd0(int socketFd, int fd);
 
     public static void shutdown(int fd, boolean read, boolean write) throws IOException {
         int res = shutdown0(fd, read, write);
