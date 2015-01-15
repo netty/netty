@@ -97,7 +97,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
         int offset = 0;
         int end = offset + cnt;
         for (;;) {
-            long localWrittenBytes = Native.writevAddresses(fd, array.memoryAddress(offset), cnt);
+            long localWrittenBytes = Native.writevAddresses(fd().intValue(), array.memoryAddress(offset), cnt);
             if (localWrittenBytes == 0) {
                 // Returned EAGAIN need to set EPOLLOUT
                 setEpollOut();
@@ -139,7 +139,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
         int offset = 0;
         int end = offset + nioBufferCnt;
         for (;;) {
-            long localWrittenBytes = Native.writev(fd, nioBuffers, offset, nioBufferCnt);
+            long localWrittenBytes = Native.writev(fd().intValue(), nioBuffers, offset, nioBufferCnt);
             if (localWrittenBytes == 0) {
                 // Returned EAGAIN need to set EPOLLOUT
                 setEpollOut();
@@ -191,7 +191,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
 
         for (;;) {
             final long offset = region.transfered();
-            final long localFlushedAmount = Native.sendfile(fd, region, baseOffset, offset, regionCount - offset);
+            final long localFlushedAmount =
+                    Native.sendfile(fd().intValue(), region, baseOffset, offset, regionCount - offset);
             if (localFlushedAmount == 0) {
                 // Returned EAGAIN need to set EPOLLOUT
                 setEpollOut();
@@ -243,7 +244,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
         }
     }
 
-    private boolean doWriteSingle(ChannelOutboundBuffer in) throws Exception {
+    protected boolean doWriteSingle(ChannelOutboundBuffer in) throws Exception {
         // The outbound buffer contains only one message or it contains a file region.
         Object msg = in.current();
         if (msg instanceof ByteBuf) {
@@ -345,7 +346,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
         EventLoop loop = eventLoop();
         if (loop.inEventLoop()) {
             try {
-                Native.shutdown(fd, false, true);
+                Native.shutdown(fd().intValue(), false, true);
                 outputShutdown = true;
                 promise.setSuccess();
             } catch (Throwable t) {
@@ -367,12 +368,12 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
      */
     protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         if (localAddress != null) {
-            Native.bind(fd, localAddress);
+            Native.bind(fd().intValue(), localAddress);
         }
 
         boolean success = false;
         try {
-            boolean connected = Native.connect(fd, remoteAddress);
+            boolean connected = Native.connect(fd().intValue(), remoteAddress);
             if (!connected) {
                 setEpollOut();
             }
@@ -385,7 +386,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
         }
     }
 
-    final class EpollStreamUnsafe extends AbstractEpollUnsafe {
+    class EpollStreamUnsafe extends AbstractEpollUnsafe {
         /**
          * The future of the current connection attempt.  If not null, subsequent
          * connection attempts will fail.
@@ -555,7 +556,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
          * Finish the connect
          */
         private boolean doFinishConnect() throws Exception {
-            if (Native.finishConnect(fd)) {
+            if (Native.finishConnect(fd().intValue())) {
                 clearEpollOut();
                 return true;
             } else {

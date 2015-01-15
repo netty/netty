@@ -132,70 +132,70 @@ public final class EpollSocketChannelConfig extends DefaultChannelConfig impleme
 
     @Override
     public int getReceiveBufferSize() {
-        return Native.getReceiveBufferSize(channel.fd);
+        return Native.getReceiveBufferSize(channel.fd().intValue());
     }
 
     @Override
     public int getSendBufferSize() {
-        return Native.getSendBufferSize(channel.fd);
+        return Native.getSendBufferSize(channel.fd().intValue());
     }
 
     @Override
     public int getSoLinger() {
-        return Native.getSoLinger(channel.fd);
+        return Native.getSoLinger(channel.fd().intValue());
     }
 
     @Override
     public int getTrafficClass() {
-        return Native.getTrafficClass(channel.fd);
+        return Native.getTrafficClass(channel.fd().intValue());
     }
 
     @Override
     public boolean isKeepAlive() {
-        return Native.isKeepAlive(channel.fd) == 1;
+        return Native.isKeepAlive(channel.fd().intValue()) == 1;
     }
 
     @Override
     public boolean isReuseAddress() {
-        return Native.isReuseAddress(channel.fd) == 1;
+        return Native.isReuseAddress(channel.fd().intValue()) == 1;
     }
 
     @Override
     public boolean isTcpNoDelay() {
-        return Native.isTcpNoDelay(channel.fd) == 1;
+        return Native.isTcpNoDelay(channel.fd().intValue()) == 1;
     }
 
     /**
      * Get the {@code TCP_CORK} option on the socket. See {@code man 7 tcp} for more details.
      */
     public boolean isTcpCork() {
-        return Native.isTcpCork(channel.fd) == 1;
+        return Native.isTcpCork(channel.fd().intValue()) == 1;
     }
 
     /**
      * Get the {@code TCP_KEEPIDLE} option on the socket. See {@code man 7 tcp} for more details.
      */
     public int getTcpKeepIdle() {
-        return Native.getTcpKeepIdle(channel.fd);
+        return Native.getTcpKeepIdle(channel.fd().intValue());
     }
 
     /**
      * Get the {@code TCP_KEEPINTVL} option on the socket. See {@code man 7 tcp} for more details.
      */
     public int getTcpKeepIntvl() {
-        return Native.getTcpKeepIntvl(channel.fd);
+        return Native.getTcpKeepIntvl(channel.fd().intValue());
     }
 
     /**
      * Get the {@code TCP_KEEPCNT} option on the socket. See {@code man 7 tcp} for more details.
      */
     public int getTcpKeepCnt() {
-        return Native.getTcpKeepCnt(channel.fd);
+        return Native.getTcpKeepCnt(channel.fd().intValue());
     }
 
     @Override
     public EpollSocketChannelConfig setKeepAlive(boolean keepAlive) {
-        Native.setKeepAlive(channel.fd, keepAlive ? 1 : 0);
+        Native.setKeepAlive(channel.fd().intValue(), keepAlive ? 1 : 0);
         return this;
     }
 
@@ -207,31 +207,31 @@ public final class EpollSocketChannelConfig extends DefaultChannelConfig impleme
 
     @Override
     public EpollSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
-        Native.setReceiveBufferSize(channel.fd, receiveBufferSize);
+        Native.setReceiveBufferSize(channel.fd().intValue(), receiveBufferSize);
         return this;
     }
 
     @Override
     public EpollSocketChannelConfig setReuseAddress(boolean reuseAddress) {
-        Native.setReuseAddress(channel.fd, reuseAddress ? 1 : 0);
+        Native.setReuseAddress(channel.fd().intValue(), reuseAddress ? 1 : 0);
         return this;
     }
 
     @Override
     public EpollSocketChannelConfig setSendBufferSize(int sendBufferSize) {
-        Native.setSendBufferSize(channel.fd, sendBufferSize);
+        Native.setSendBufferSize(channel.fd().intValue(), sendBufferSize);
         return this;
     }
 
     @Override
     public EpollSocketChannelConfig setSoLinger(int soLinger) {
-        Native.setSoLinger(channel.fd, soLinger);
+        Native.setSoLinger(channel.fd().intValue(), soLinger);
         return this;
     }
 
     @Override
     public EpollSocketChannelConfig setTcpNoDelay(boolean tcpNoDelay) {
-        Native.setTcpNoDelay(channel.fd, tcpNoDelay ? 1 : 0);
+        Native.setTcpNoDelay(channel.fd().intValue(), tcpNoDelay ? 1 : 0);
         return this;
     }
 
@@ -239,13 +239,13 @@ public final class EpollSocketChannelConfig extends DefaultChannelConfig impleme
      * Set the {@code TCP_CORK} option on the socket. See {@code man 7 tcp} for more details.
      */
     public EpollSocketChannelConfig setTcpCork(boolean tcpCork) {
-        Native.setTcpCork(channel.fd, tcpCork ? 1 : 0);
+        Native.setTcpCork(channel.fd().intValue(), tcpCork ? 1 : 0);
         return this;
     }
 
     @Override
     public EpollSocketChannelConfig setTrafficClass(int trafficClass) {
-        Native.setTrafficClass(channel.fd, trafficClass);
+        Native.setTrafficClass(channel.fd().intValue(), trafficClass);
         return this;
     }
 
@@ -253,7 +253,7 @@ public final class EpollSocketChannelConfig extends DefaultChannelConfig impleme
      * Set the {@code TCP_KEEPIDLE} option on the socket. See {@code man 7 tcp} for more details.
      */
     public EpollSocketChannelConfig setTcpKeepIdle(int seconds) {
-        Native.setTcpKeepIdle(channel.fd, seconds);
+        Native.setTcpKeepIdle(channel.fd().intValue(), seconds);
         return this;
     }
 
@@ -261,7 +261,7 @@ public final class EpollSocketChannelConfig extends DefaultChannelConfig impleme
      * Set the {@code TCP_KEEPINTVL} option on the socket. See {@code man 7 tcp} for more details.
      */
     public EpollSocketChannelConfig setTcpKeepIntvl(int seconds) {
-        Native.setTcpKeepIntvl(channel.fd, seconds);
+        Native.setTcpKeepIntvl(channel.fd().intValue(), seconds);
         return this;
     }
 
@@ -269,7 +269,7 @@ public final class EpollSocketChannelConfig extends DefaultChannelConfig impleme
      * Set the {@code TCP_KEEPCNT} option on the socket. See {@code man 7 tcp} for more details.
      */
     public EpollSocketChannelConfig setTcpKeepCntl(int probes) {
-        Native.setTcpKeepCnt(channel.fd, probes);
+        Native.setTcpKeepCnt(channel.fd().intValue(), probes);
         return this;
     }
 

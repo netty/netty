@@ -61,7 +61,7 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
      * See <a href="http://linux.die.net/man/7/tcp">man 7 tcp</a>.
      */
     public EpollTcpInfo tcpInfo(EpollTcpInfo info) {
-        Native.tcpInfo(fd, info);
+        Native.tcpInfo(fd().intValue(), info);
         return info;
     }
 
@@ -84,7 +84,7 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
     protected SocketAddress remoteAddress0() {
         if (remote == null) {
             // Remote address not know, try to get it now.
-            InetSocketAddress address = Native.remoteAddress(fd);
+            InetSocketAddress address = Native.remoteAddress(fd().intValue());
             if (address != null) {
                 remote = address;
             }
@@ -96,6 +96,7 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
     @Override
     protected void doBind(SocketAddress local) throws Exception {
         InetSocketAddress localAddress = (InetSocketAddress) local;
+        int fd = fd().intValue();
         Native.bind(fd, localAddress);
         this.local = Native.localAddress(fd);
     }
@@ -137,6 +138,7 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
         }
         checkResolvable((InetSocketAddress) remoteAddress);
         if (super.doConnect(remoteAddress, localAddress)) {
+            int fd = fd().intValue();
             local = Native.localAddress(fd);
             remote = Native.remoteAddress(fd);
             return true;
