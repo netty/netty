@@ -1,3 +1,8 @@
+allprojects {
+	apply plugin: 'java'
+}
+
+
 // ================================================
 // defines common constants/variables/functions
 
@@ -32,22 +37,27 @@ def getArtifactId(aProject) {
 	}
 }
 
+def assembleModules = subprojects.findAll {
+	def n = it.name.toLowerCase(Locale.US)
+	n != 'microbench' && n != 'testsuite' && n != 'example'
+}
+
 
 // ================================================
 // defines manifest information
 
 def defaultManifest = [
 	'Built-By'        : 'trustin',
-	'Build-Jdk'       : rootProject.jdkVersion,
-	'Created-By'      : "Gradle ${rootProject.gradleVersionName}",
+	'Build-Jdk'       : jdkVersion,
+	'Created-By'      : "Gradle ${gradleVersionName}",
 	'Archiver-Version': 'Plexus Archiver'
 ]
 
 def jarManifest = [
-	'Implementation-Vendor'    : rootProject.organization,
+	'Implementation-Vendor'    : organization,
 	'Implementation-Title'     : 'Netty/All-in-One',
-	'Implementation-Version'   : rootProject.versionName,
-	'Implementation-Vendor-Id' : rootProject.groupId
+	'Implementation-Version'   : versionName,
+	'Implementation-Vendor-Id' : groupId
 ]
 jarManifest += defaultManifest
 
@@ -143,7 +153,7 @@ def extraDependencies = [
 	'jboss-marshalling': [
 		'groupId'   : 'org.jboss.marshalling',
 		'artifactId': 'jboss-marshalling',
-		'version'   : rootProject.jbossMarshallingVersion
+		'version'   : jbossMarshallingVersion
 	],
 	// SPDY and HTTP/2 - completely optional
 	'hpack': [
@@ -287,12 +297,12 @@ def extraDependencies = [
 	'jboss-marshalling-serial': [
 		'groupId'   : 'org.jboss.marshalling',
 		'artifactId': 'jboss-marshalling-serial',
-		'version'   : rootProject.jbossMarshallingVersion
+		'version'   : jbossMarshallingVersion
 	],
 	'jboss-marshalling-river': [
 		'groupId'   : 'org.jboss.marshalling',
 		'artifactId': 'jboss-marshalling-river',
-		'version'   : rootProject.jbossMarshallingVersion
+		'version'   : jbossMarshallingVersion
 	],
 	// Test dependencies for microbench
 	'caliper': [
@@ -325,33 +335,24 @@ def extraDependencies = [
 	]
 ]
 
+
 // ================================================
-// defines project constants/variables/functions
+// custom configurations
 
-allprojects {
-	apply plugin: 'java'
+configurations {
+	zip
+	doclava
 }
-
-// all modules that need to be assembled, except for 'microbench' and 'testsuite'
-def assembleModules = subprojects.findAll {
-	def n = it.name.toLowerCase(Locale.US)
-	n != 'microbench' && n != 'testsuite'
-}
-
-// all source code from sub modules
-def assembleModuleSources = assembleModules*.sourceSets.main.allJava
-
-// all classes compiled by sub modules
-def assembleModuleClasses = assembleModules*.sourceSets.main.output.classesDir
 
 
 // ================================================
-// all project configurations
+// all project
 
 allprojects {
 	def isRootProject = project == rootProject
 	def isTransportNativeEpollProject = false
-
+	
+	//apply plugin: 'java'
 	apply plugin: 'idea'
 	apply plugin: 'eclipse'
 	apply plugin: 'checkstyle'
@@ -362,11 +363,16 @@ allprojects {
 		isTransportNativeEpollProject = true
 	}
 
-	group = rootProject.groupId
+	group   = rootProject.groupId
 	version = rootProject.versionName
 
-	sourceCompatibility = 1.6
-	targetCompatibility = 1.6
+	if (version >= '4.0') {
+		sourceCompatibility = 1.6
+		targetCompatibility = 1.6
+	} else {
+		sourceCompatibility = 1.5
+		targetCompatibility = 1.5
+	}
 
 	archivesBaseName = getArtifactId(project)
 
@@ -391,55 +397,52 @@ allprojects {
 			compile project(it)
 			testCompile project(it)
 		}
-	}
 
-	jar {
-		manifest {
-			if (!isRootProject) {
-				jarManifest['Implementation-Title'] = "Netty/${archivesBaseName}"
-			}
-			attributes jarManifest
-		}
 		if (isRootProject) {
-			from assembleModuleClasses
-			exclude 'com'
-			destinationDir = file("${rootProject.buildDir}/libs")
+			doclava 'com.google.doclava:doclava:1.0.6'
 		}
 	}
 
-	test {
-		ignoreFailures = true
-	}
-
-	checkstyle {
-		ignoreFailures = true
-		configFile = rootProject.file(rootProject.checkstyleFile)
-	}
-
-	findbugs {
-		ignoreFailures = true
-	}
-
-	tasks.withType(JavaCompile) {
-		options.encoding = rootProject.charset
-		options.warnings = false
-	}
-
-	tasks.withType(Javadoc) {
-		options.encoding = rootProject.charset
-		options.quiet()
-		failOnError = false
+	task prettyJavadoc(type: Exec, group: 'Documentation') {
+		def sourcepath = assembleModules.collect { p ->
+			'\"' + p.sourceSets.main.allJava.srcDirs[0] + '\"'
+		}.join(';')
+		def cmd = ['javadoc']
 		if (isRootProject) {
-			source = assembleModuleSources
+			cmd << '-sourcepath' << sourcepath
+		} else {
+			cmd << '-sourcepath' << '\"' + sourceSets.main.allJava.srcDirs[0] + '\"'
 		}
+		cmd << '-encoding'    << charset
+		cmd << '-quiet'       << 'public'
+		cmd << '-subpackages' << 'io.netty'
+		cmd << '-d'           << "\"${buildDir}/docs/pretty-javadoc\""
+		cmd << '-doclet'      << 'com.google.doclava.Doclava'
+		cmd << '-docletpath'  << "\"${rootProject.configurations.doclava.files[0].path}\""
+		cmd << '-hdf'         << 'project.name' << "\"Netty API Reference(${version})\""
+		cmd << '-generatesources'
+		workingDir      = rootDir
+		commandLine     = cmd
+		ignoreExitValue = true
 	}
 
 	// assemble javadocs
 	task packageJavadocs(type: Jar, dependsOn: javadoc, group: 'Package') {
-		classifier = 'javadoc'
+		classifier     = 'javadoc'
+		destinationDir = file("${buildDir}/docs")
 		from "${buildDir}/docs/javadoc"
 		exclude 'com'
+		manifest {
+			attributes javadocJarManifest
+		}
+	}
+
+	// assemble pretty-javadocs
+	task packagePrettyJavadocs(type: Jar, dependsOn: prettyJavadoc, group: 'Package') {
+		classifier     = 'javadoc'
 		destinationDir = file("${buildDir}/docs")
+		from "${buildDir}/docs/pretty-javadoc"
+		exclude 'com'
 		manifest {
 			attributes javadocJarManifest
 		}
@@ -449,7 +452,7 @@ allprojects {
 	task packageSources(type: Jar, group: 'Package') {
 		classifier = 'sources'
 		if (isRootProject) {
-			from assembleModuleSources
+			from assembleModules*.sourceSets.main.allJava
 		} else {
 			from sourceSets.main.allJava
 		}
@@ -460,11 +463,40 @@ allprojects {
 		}
 	}
 
+	jar {
+		exclude '**/BenchmarkList', '**/CompilerHints'
+		manifest {
+			if (!isRootProject) {
+				jarManifest['Implementation-Title'] = "Netty/${archivesBaseName}"
+			}
+			attributes jarManifest
+		}
+		if (isRootProject) {
+			from assembleModules*.sourceSets.main.output.classesDir
+			exclude 'com'
+			destinationDir = file("${buildDir}/libs")
+		}
+	}
+
+	test {
+		ignoreFailures = true
+	}
+
+	checkstyle {
+		ignoreFailures = true
+		configFile     = rootProject.file(rootProject.checkstyleFile)
+	}
+
+	findbugs {
+		ignoreFailures = true
+	}
+
 	artifacts {
 		archives packageJavadocs
 		archives packageSources
 	}
 
+	// same as publish
 	uploadArchives {
 		uploadDescriptor = false
 		repositories {
@@ -474,6 +506,7 @@ allprojects {
 		}
 	}
 
+	// same as uploadArchives
 	publishing {
 		publications {
 			maven(MavenPublication) {
@@ -491,39 +524,36 @@ allprojects {
 		}
 	}
 
-	if (isRootProject) {
-		configurations {
-			zip
-		}
+	tasks.withType(JavaCompile) {
+		options.encoding = rootProject.charset
+		options.warnings = false
+	}
 
-		task uploadZipArchive(type: Upload) {
-			uploadDescriptor = false
-			configuration = configurations.zip
-			artifacts {
-				zip file("${buildDir}/netty-${version}.zip")
-			}
-			repositories {
-				flatDir dirs: "${rootProject.buildDir}/repos1"
-			}
+	tasks.withType(Javadoc) {
+		options.quiet()
+		options.encoding = rootProject.charset
+		failOnError      = false
+		if (isRootProject) {
+			source = assembleModules*.sourceSets.main.allJava
 		}
 	}
 }
 
 
 // ================================================
-// root project configurations
+// root project
 
 // root project jar task based on classes that compiled by all sub modules
 // so it must run after all sub modules
-def rootJarTask = getTasksByName('jar', false).getAt(0)
+def rootJarTask       = getTasksByName('jar', false).getAt(0)
 rootJarTask.dependsOn = getTasksByName('jar', true) - rootJarTask
 
 // package all binaries/sources/javadocs and other resources defined in the 'packedResources' block
 task packageAll(type:Zip, group: 'Package') {
-	baseName = 'netty'
-	dependsOn = [jar, packageSources, packageJavadocs]
+	baseName       = 'netty'
+	dependsOn      = [getTasksByName('jar', true), getTasksByName('packageSources', true), getTasksByName('packageJavadocs', true)].flatten()
 	destinationDir = file("${buildDir}")
-	allprojects.each {
+	[assembleModules, rootProject].flatten().each {
 		def isRootProject = it == rootProject
 		from("${it.buildDir}/libs/${it.archivesBaseName}-${version}.jar") {
 			into isRootProject ? 'jar/all-in-one' : 'jar'
@@ -544,6 +574,17 @@ task packageAll(type:Zip, group: 'Package') {
 				into v
 			}
 		}
+	}
+}
+
+task uploadZipArchive(type: Upload, group: 'Upload') {
+	uploadDescriptor = false
+	configuration    = configurations.zip
+	artifacts {
+		zip file("${buildDir}/netty-${version}.zip")
+	}
+	repositories {
+		flatDir dirs: "${buildDir}/repos1"
 	}
 }
 
