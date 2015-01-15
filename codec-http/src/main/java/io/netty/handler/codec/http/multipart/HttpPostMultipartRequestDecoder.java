@@ -1786,7 +1786,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         String svalue = sb.substring(valueStart, valueEnd);
         String[] values;
         if (svalue.indexOf(';') >= 0) {
-            values = StringUtil.split(svalue, ';');
+            values = splitMultipartHeaderValues(svalue);
         } else {
             values = StringUtil.split(svalue, ',');
         }
@@ -1798,5 +1798,39 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             array[i] = headers.get(i);
         }
         return array;
+    }
+
+    /**
+     * Split one header value in Multipart
+     * @return an array of String where values that were separated by ';' or ','
+     */
+    private static String[] splitMultipartHeaderValues(String svalue) {
+        List<String> values = new ArrayList<String>(1);
+        boolean inQuote = false;
+        boolean escapeNext = false;
+        int start = 0;
+        for (int i = 0; i < svalue.length(); i++) {
+            char c = svalue.charAt(i);
+            if (inQuote) {
+                if (escapeNext) {
+                    escapeNext = false;
+                } else {
+                    if (c == '\\') {
+                        escapeNext = true;
+                    } else if (c == '"') {
+                        inQuote = false;
+                    }
+                }
+            } else {
+                if (c == '"') {
+                    inQuote = true;
+                } else if (c == ';') {
+                    values.add(svalue.substring(start, i));
+                    start = i + 1;
+                }
+            }
+        }
+        values.add(svalue.substring(start));
+        return values.toArray(new String[values.size()]);
     }
 }
