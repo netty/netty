@@ -46,6 +46,7 @@ public final class EpollServerDomainSocketChannel extends AbstractEpollServerCha
 
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
+        int fd = fd().intValue();
         Native.bind(fd, localAddress);
         Native.listen(fd, config.getBacklog());
         local = (DomainSocketAddress) localAddress;

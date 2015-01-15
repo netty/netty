@@ -23,6 +23,7 @@ import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.EventLoop;
+import io.netty.channel.FileDescriptor;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.OneTimeTask;
 
@@ -33,9 +34,9 @@ import java.nio.channels.UnresolvedAddressException;
 abstract class AbstractEpollChannel extends AbstractChannel {
     private static final ChannelMetadata DATA = new ChannelMetadata(false);
     private final int readFlag;
+    private volatile FileDescriptor fileDescriptor;
     protected int flags;
     protected volatile boolean active;
-    volatile int fd;
     int id;
 
     AbstractEpollChannel(int fd, int flag) {
@@ -44,14 +45,17 @@ abstract class AbstractEpollChannel extends AbstractChannel {
 
     AbstractEpollChannel(Channel parent, int fd, int flag, boolean active) {
         super(parent);
-        this.fd = fd;
         readFlag = flag;
         flags |= flag;
         this.active = active;
+        fileDescriptor = new EpollFileDescriptor(fd);
     }
 
-    protected final int fd() {
-        return fd;
+    /**
+     * Returns the {@link FileDescriptor} that is used by this {@link Channel}.
+     */
+    public final FileDescriptor fd() {
+        return fileDescriptor;
     }
 
     @Override
@@ -71,9 +75,9 @@ abstract class AbstractEpollChannel extends AbstractChannel {
         // deregister from epoll now
         doDeregister();
 
-        int fd = this.fd;
-        this.fd = -1;
-        Native.close(fd);
+        FileDescriptor fd = fileDescriptor;
+        fileDescriptor = FileDescriptor.INVALID;
+        Native.close(fd.intValue());
     }
 
     @Override
@@ -88,7 +92,7 @@ abstract class AbstractEpollChannel extends AbstractChannel {
 
     @Override
     public boolean isOpen() {
-        return fd != -1;
+        return fileDescriptor != EpollFileDescriptor.INVALID;
     }
 
     @Override
@@ -216,10 +220,11 @@ abstract class AbstractEpollChannel extends AbstractChannel {
         int writerIndex = byteBuf.writerIndex();
         int localReadAmount;
         if (byteBuf.hasMemoryAddress()) {
-            localReadAmount = Native.readAddress(fd, byteBuf.memoryAddress(), writerIndex, byteBuf.capacity());
+            localReadAmount = Native.readAddress(
+                    fileDescriptor.intValue(), byteBuf.memoryAddress(), writerIndex, byteBuf.capacity());
         } else {
             ByteBuffer buf = byteBuf.internalNioBuffer(writerIndex, byteBuf.writableBytes());
-            localReadAmount = Native.read(fd, buf, buf.position(), buf.limit());
+            localReadAmount = Native.read(fileDescriptor.intValue(), buf, buf.position(), buf.limit());
         }
         if (localReadAmount > 0) {
             byteBuf.writerIndex(writerIndex + localReadAmount);
@@ -235,7 +240,8 @@ abstract class AbstractEpollChannel extends AbstractChannel {
             int readerIndex = buf.readerIndex();
             int writerIndex = buf.writerIndex();
             for (;;) {
-                int localFlushedAmount = Native.writeAddress(fd, memoryAddress, readerIndex, writerIndex);
+                int localFlushedAmount = Native.writeAddress(
+                        fileDescriptor.intValue(), memoryAddress, readerIndex, writerIndex);
                 if (localFlushedAmount > 0) {
                     writtenBytes += localFlushedAmount;
                     if (writtenBytes == readableBytes) {
@@ -258,7 +264,7 @@ abstract class AbstractEpollChannel extends AbstractChannel {
             for (;;) {
                 int pos = nioBuf.position();
                 int limit = nioBuf.limit();
-                int localFlushedAmount = Native.write(fd, nioBuf, pos, limit);
+                int localFlushedAmount = Native.write(fileDescriptor.intValue(), nioBuf, pos, limit);
                 if (localFlushedAmount > 0) {
                     nioBuf.position(pos + localFlushedAmount);
                     writtenBytes += localFlushedAmount;
