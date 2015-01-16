@@ -328,7 +328,7 @@ public class HttpPostRequestDecoderTest {
         final String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
         final DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
                 "http://localhost");
-        req.headers().add(HttpHeaders.Names.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+        req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
         // Force to use memory-based data.
         final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
         final String data = "asdf";
