@@ -399,11 +399,21 @@ final class Native {
 
     public static InetSocketAddress remoteAddress(int fd) {
         byte[] addr = remoteAddress0(fd);
+        // addr may be null if getpeername failed.
+        // See https://github.com/netty/netty/issues/3328
+        if (addr == null) {
+            return null;
+        }
         return address(addr);
     }
 
     public static InetSocketAddress localAddress(int fd) {
         byte[] addr = localAddress0(fd);
+        // addr may be null if getpeername failed.
+        // See https://github.com/netty/netty/issues/3328
+        if (addr == null) {
+            return null;
+        }
         return address(addr);
     }
 
