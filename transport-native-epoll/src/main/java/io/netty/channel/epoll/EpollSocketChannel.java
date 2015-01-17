@@ -94,6 +94,14 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
 
     @Override
     protected SocketAddress remoteAddress0() {
+        if (remote == null) {
+            // Remote address not know, try to get it now.
+            InetSocketAddress address = Native.remoteAddress(fd);
+            if (address != null) {
+                remote = address;
+            }
+            return address;
+        }
         return remote;
     }
 
