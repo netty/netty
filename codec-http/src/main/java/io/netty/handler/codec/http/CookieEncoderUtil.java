@@ -24,6 +24,14 @@ final class CookieEncoderUtil {
         return InternalThreadLocalMap.get().stringBuilder();
     }
 
+    /**
+     * @param buf a buffer where some cookies were maybe encoded
+     * @return the buffer String without the trailing separator, or null if no cookie was appended.
+     */
+    static String stripTrailingSeparatorOrNull(StringBuilder buf) {
+        return buf.length() == 0 ? null : stripTrailingSeparator(buf);
+    }
+
     static String stripTrailingSeparator(StringBuilder buf) {
         if (buf.length() > 0) {
             buf.setLength(buf.length() - 2);
