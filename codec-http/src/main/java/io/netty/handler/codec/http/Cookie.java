@@ -57,6 +57,21 @@ public interface Cookie extends Comparable<Cookie> {
     void setValue(String value);
 
     /**
+     * Returns the raw value of this {@link Cookie},
+     * as it was set in original Set-Cookie header.
+     *
+     * @return The raw value of this {@link Cookie}
+     */
+    String rawValue();
+
+    /**
+     * Sets the raw value of this {@link Cookie}.
+     *
+     * @param value The raw value to set
+     */
+    void setRawValue(String rawValue);
+
+    /**
      * @deprecated Use {@link #domain()} instead.
      */
     @Deprecated
