@@ -28,6 +28,7 @@ public class DefaultCookie implements Cookie {
 
     private final String name;
     private String value;
+    private String rawValue;
     private String domain;
     private String path;
     private String comment;
@@ -105,6 +106,19 @@ public class DefaultCookie implements Cookie {
             throw new NullPointerException("value");
         }
         this.value = value;
+    }
+
+    @Override
+    public String rawValue() {
+        return rawValue;
+    }
+
+    @Override
+    public void setRawValue(String rawValue) {
+        if (value == null) {
+            throw new NullPointerException("rawValue");
+        }
+        this.rawValue = rawValue;
     }
 
     @Override
