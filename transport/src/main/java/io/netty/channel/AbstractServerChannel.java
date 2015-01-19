@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import io.netty.util.internal.EndpointType;
+
 import java.net.SocketAddress;
 
 /**
@@ -30,7 +32,7 @@ import java.net.SocketAddress;
  */
 public abstract class AbstractServerChannel extends AbstractChannel implements ServerChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false, EndpointType.SERVER);
 
     /**
      * Creates a new instance.

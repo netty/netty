@@ -25,6 +25,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.FileRegion;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.util.internal.EndpointType;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -34,7 +35,7 @@ import java.io.IOException;
  */
 public abstract class AbstractOioByteChannel extends AbstractOioChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false, EndpointType.CLIENT);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(ByteBuf.class) + ", " +
             StringUtil.simpleClassName(FileRegion.class) + ')';

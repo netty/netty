@@ -25,6 +25,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpServerChannelConfig;
 import io.netty.channel.sctp.SctpServerChannelConfig;
+import io.netty.util.internal.EndpointType;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -46,7 +47,7 @@ import java.util.Set;
  */
 public class NioSctpServerChannel extends AbstractNioMessageChannel
         implements io.netty.channel.sctp.SctpServerChannel {
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false, EndpointType.SERVER);
 
     private static SctpServerChannel newSocket() {
         try {

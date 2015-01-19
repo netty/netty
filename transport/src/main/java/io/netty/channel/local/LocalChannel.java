@@ -27,6 +27,7 @@ import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.EndpointType;
 import io.netty.util.internal.InternalThreadLocalMap;
 
 import java.net.SocketAddress;
@@ -45,7 +46,7 @@ public class LocalChannel extends AbstractChannel {
 
     private enum State { OPEN, BOUND, CONNECTED, CLOSED }
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false, EndpointType.CLIENT);
 
     private static final int MAX_READER_STACK_DEPTH = 8;
 

@@ -31,6 +31,7 @@ import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.DefaultDatagramChannelConfig;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.EndpointType;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -59,7 +60,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OioDatagramChannel.class);
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(true);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(true, EndpointType.CLIENT);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
             StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +

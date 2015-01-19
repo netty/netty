@@ -26,6 +26,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.EndpointType;
 import org.easymock.IArgumentMatcher;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -317,7 +318,7 @@ public class LoggingHandlerTest {
 
         @Override
         public ChannelMetadata metadata() {
-            return new ChannelMetadata(true);
+            return new ChannelMetadata(true, EndpointType.CLIENT);
         }
     }
 }

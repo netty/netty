@@ -34,6 +34,7 @@ import io.netty.channel.sctp.SctpChannelConfig;
 import io.netty.channel.sctp.SctpMessage;
 import io.netty.channel.sctp.SctpNotificationHandler;
 import io.netty.channel.sctp.SctpServerChannel;
+import io.netty.util.internal.EndpointType;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -60,7 +61,7 @@ import java.util.Set;
  * to understand what you need to do to use it. Also this feature is only supported on Java 7+.
  */
 public class NioSctpChannel extends AbstractNioMessageChannel implements io.netty.channel.sctp.SctpChannel {
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false, EndpointType.CLIENT);
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioSctpChannel.class);
 

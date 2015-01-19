@@ -26,6 +26,7 @@ import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.udt.DefaultUdtChannelConfig;
 import io.netty.channel.udt.UdtChannel;
 import io.netty.channel.udt.UdtChannelConfig;
+import io.netty.util.internal.EndpointType;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -42,7 +43,7 @@ public class NioUdtByteConnectorChannel extends AbstractNioByteChannel implement
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(NioUdtByteConnectorChannel.class);
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false, EndpointType.CLIENT);
 
     private final UdtChannelConfig config;
 
