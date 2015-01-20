@@ -495,6 +495,7 @@
     <module>codec-dns</module>
     <module>codec-haproxy</module>
     <module>codec-http</module>
+    <module>codec-http2</module>
     <module>codec-memcache</module>
     <module>codec-mqtt</module>
     <module>codec-socks</module>
@@ -554,6 +555,11 @@
         <groupId>org.mortbay.jetty.alpn</groupId>
         <artifactId>alpn-boot</artifactId>
         <version>${jetty.alpn.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.twitter</groupId>
+        <artifactId>hpack</artifactId>
+        <version>0.10.0</version>
       </dependency>
 
       <!-- Google Protocol Buffers - completely optional -->

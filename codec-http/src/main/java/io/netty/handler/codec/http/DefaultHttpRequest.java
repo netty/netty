@@ -15,13 +15,11 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.util.internal.StringUtil;
-
 /**
  * The default {@link HttpRequest} implementation.
  */
 public class DefaultHttpRequest extends DefaultHttpMessage implements HttpRequest {
-
+    private static final int HASH_CODE_PRIME = 31;
     private HttpMethod method;
     private String uri;
 
@@ -100,6 +98,28 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
     public HttpRequest setProtocolVersion(HttpVersion version) {
         super.setProtocolVersion(version);
         return this;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = 1;
+        result = HASH_CODE_PRIME * result + method.hashCode();
+        result = HASH_CODE_PRIME * result + uri.hashCode();
+        result = HASH_CODE_PRIME * result + super.hashCode();
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof DefaultHttpRequest)) {
+            return false;
+        }
+
+        DefaultHttpRequest other = (DefaultHttpRequest) o;
+
+        return method().equals(other.method()) &&
+               uri().equalsIgnoreCase(other.uri()) &&
+               super.equals(o);
     }
 
     @Override
