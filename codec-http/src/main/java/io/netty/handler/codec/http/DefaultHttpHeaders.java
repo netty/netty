@@ -20,6 +20,7 @@ import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.DefaultHeaders.NameConverter;
 import io.netty.handler.codec.DefaultTextHeaders;
 import io.netty.handler.codec.DefaultTextHeaders.DefaultTextValueTypeConverter;
+import io.netty.handler.codec.Headers.EntryVisitor;
 import io.netty.handler.codec.TextHeaders;
 
 import java.util.Calendar;
@@ -27,6 +28,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 /**
@@ -304,6 +306,12 @@ public class DefaultHttpHeaders extends HttpHeaders {
     }
 
     @Override
+    public HttpHeaders addShort(CharSequence name, short value) {
+        headers.addShort(name, value);
+        return this;
+    }
+
+    @Override
     public HttpHeaders remove(String name) {
         headers.remove(name);
         return this;
@@ -346,6 +354,12 @@ public class DefaultHttpHeaders extends HttpHeaders {
     }
 
     @Override
+    public HttpHeaders setShort(CharSequence name, short value) {
+        headers.setShort(name, value);
+        return this;
+    }
+
+    @Override
     public HttpHeaders clear() {
         headers.clear();
         return this;
@@ -368,6 +382,16 @@ public class DefaultHttpHeaders extends HttpHeaders {
 
     @Override
     public int getInt(CharSequence name, int defaultValue) {
+        return headers.getInt(name, defaultValue);
+    }
+
+    @Override
+    public Short getShort(CharSequence name) {
+        return headers.getShort(name);
+    }
+
+    @Override
+    public short getShort(CharSequence name, short defaultValue) {
         return headers.getInt(name, defaultValue);
     }
 
@@ -427,8 +451,29 @@ public class DefaultHttpHeaders extends HttpHeaders {
     }
 
     @Override
+    public Entry<CharSequence, CharSequence> forEachEntry(EntryVisitor<CharSequence> visitor) throws Exception {
+        return headers.forEachEntry(visitor);
+    }
+
+    @Override
     public Set<String> names() {
         return headers.namesAndConvert(String.CASE_INSENSITIVE_ORDER);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof DefaultHttpHeaders)) {
+            return false;
+        }
+
+        DefaultHttpHeaders other = (DefaultHttpHeaders) o;
+
+        return headers.equals(other.headers);
+    }
+
+    @Override
+    public int hashCode() {
+        return headers.hashCode();
     }
 
     void encode(ByteBuf buf) throws Exception {

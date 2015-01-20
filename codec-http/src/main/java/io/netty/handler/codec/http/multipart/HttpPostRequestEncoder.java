@@ -1225,13 +1225,39 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
             return this;
         }
 
-        @Override
-        public FullHttpRequest copy() {
+        /**
+         * Copy this object
+         *
+         * @param copyContent
+         * <ul>
+         * <li>{@code true} if this object's {@link #content()} should be used to copy.</li>
+         * <li>{@code false} if {@code newContent} should be used instead.</li>
+         * </ul>
+         * @param newContent
+         * <ul>
+         * <li>if {@code copyContent} is false then this will be used in the copy's content.</li>
+         * <li>if {@code null} then a default buffer of 0 size will be selected</li>
+         * </ul>
+         * @return A copy of this object
+         */
+        private FullHttpRequest copy(boolean copyContent, ByteBuf newContent) {
             DefaultFullHttpRequest copy = new DefaultFullHttpRequest(
-                    getProtocolVersion(), getMethod(), getUri(), content().copy());
+                    protocolVersion(), method(), uri(),
+                    copyContent ? content().copy() :
+                            newContent == null ? buffer(0) : newContent);
             copy.headers().set(headers());
             copy.trailingHeaders().set(trailingHeaders());
             return copy;
+        }
+
+        @Override
+        public FullHttpRequest copy(ByteBuf newContent) {
+            return copy(false, newContent);
+        }
+
+        @Override
+        public FullHttpRequest copy() {
+            return copy(true, null);
         }
 
         @Override
