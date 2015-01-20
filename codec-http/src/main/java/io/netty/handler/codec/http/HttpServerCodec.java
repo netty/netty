@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.channel.ChannelHandlerAppender;
+import io.netty.channel.ChannelHandlerContext;
 
 
 /**
@@ -24,7 +25,8 @@ import io.netty.channel.ChannelHandlerAppender;
  *
  * @see HttpClientCodec
  */
-public final class HttpServerCodec extends ChannelHandlerAppender {
+public final class HttpServerCodec extends ChannelHandlerAppender implements
+        HttpServerUpgradeHandler.SourceCodec {
 
     /**
      * Creates a new instance with the default decoder options
@@ -48,6 +50,16 @@ public final class HttpServerCodec extends ChannelHandlerAppender {
     public HttpServerCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders) {
         super(new HttpRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders),
                 new HttpResponseEncoder());
+    }
+
+    /**
+     * Upgrades to another protocol from HTTP. Removes the {@link HttpRequestDecoder} and
+     * {@link HttpResponseEncoder} from the pipeline.
+     */
+    @Override
+    public void upgradeFrom(ChannelHandlerContext ctx) {
+        ctx.pipeline().remove(HttpRequestDecoder.class);
+        ctx.pipeline().remove(HttpResponseEncoder.class);
     }
 
     /**

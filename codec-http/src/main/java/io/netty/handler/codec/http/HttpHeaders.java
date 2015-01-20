@@ -17,6 +17,8 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.AsciiString;
+import io.netty.handler.codec.Headers.EntryVisitor;
+import io.netty.util.internal.PlatformDependent;
 
 import java.text.ParseException;
 import java.util.Calendar;
@@ -29,6 +31,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import static io.netty.handler.codec.http.HttpConstants.*;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Provides the constants for the standard HTTP header names and values and
@@ -52,6 +55,16 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
 
         @Override
         public int getInt(CharSequence name, int defaultValue) {
+            return defaultValue;
+        }
+
+        @Override
+        public Short getShort(CharSequence name) {
+            return null;
+        }
+
+        @Override
+        public short getShort(CharSequence name, short defaultValue) {
             return defaultValue;
         }
 
@@ -106,6 +119,11 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         }
 
         @Override
+        public HttpHeaders addShort(CharSequence name, short value) {
+            throw new UnsupportedOperationException("read only");
+        }
+
+        @Override
         public HttpHeaders set(String name, Object value) {
             throw new UnsupportedOperationException("read only");
         }
@@ -121,6 +139,11 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         }
 
         @Override
+        public HttpHeaders setShort(CharSequence name, short value) {
+            throw new UnsupportedOperationException("read only");
+        }
+
+        @Override
         public HttpHeaders remove(String name) {
             throw new UnsupportedOperationException("read only");
         }
@@ -128,6 +151,11 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         @Override
         public HttpHeaders clear() {
             throw new UnsupportedOperationException("read only");
+        }
+
+        @Override
+        public Entry<CharSequence, CharSequence> forEachEntry(EntryVisitor<CharSequence> visitor) throws Exception {
+            return null; // Since this is an empty header collection
         }
 
         @Override
@@ -1337,6 +1365,27 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     public abstract int getInt(CharSequence name, int defaultValue);
 
     /**
+     * Returns the short value of a header with the specified name. If there are more than one values for the
+     * specified name, the first value is returned.
+     *
+     * @param name the name of the header to search
+     * @return the first header value if the header is found and its value is a short. {@code null} if there's no
+     *         such header or its value is not a short.
+     */
+    public abstract Short getShort(CharSequence name);
+
+    /**
+     * Returns the short value of a header with the specified name. If there are more than one values for the
+     * specified name, the first value is returned.
+     *
+     * @param name the name of the header to search
+     * @param defaultValue the default value
+     * @return the first header value if the header is found and its value is a short. {@code defaultValue} if
+     *         there's no such header or its value is not a short.
+     */
+    public abstract short getShort(CharSequence name, short defaultValue);
+
+    /**
      * Returns the date value of a header with the specified name. If there are more than one values for the
      * specified name, the first value is returned.
      *
@@ -1479,6 +1528,14 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     public abstract HttpHeaders addInt(CharSequence name, int value);
 
     /**
+     * Add the {@code name} to {@code value}.
+     * @param name The name to modify
+     * @param value The value
+     * @return {@code this}
+     */
+    public abstract HttpHeaders addShort(CharSequence name, short value);
+
+    /**
      * @see {@link #set(CharSequence, Object)}
      */
     public abstract HttpHeaders set(String name, Object value);
@@ -1534,17 +1591,39 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * @return {@code this}
      */
     public HttpHeaders set(HttpHeaders headers) {
-        if (headers == null) {
-            throw new NullPointerException("headers");
-        }
+        checkNotNull(headers, "headers");
 
         clear();
+
         if (headers.isEmpty()) {
             return this;
         }
 
-        for (Map.Entry<String, String> e: headers) {
-            add(e.getKey(), e.getValue());
+        try {
+            headers.forEachEntry(addAllVisitor());
+        } catch (Exception e) {
+            PlatformDependent.throwException(e);
+        }
+        return this;
+    }
+
+    /**
+     * Retains all current headers but calls {@link #set(String, Object)} for each entry in {@code headers}
+     *
+     * @param headers The headers used to {@link #set(String, Object)} values in this instance
+     * @return {@code this}
+     */
+    public HttpHeaders setAll(HttpHeaders headers) {
+        checkNotNull(headers, "headers");
+
+        if (headers.isEmpty()) {
+            return this;
+        }
+
+        try {
+            headers.forEachEntry(setAllVisitor());
+        } catch (Exception e) {
+            PlatformDependent.throwException(e);
         }
         return this;
     }
@@ -1556,6 +1635,14 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * @return {@code this}
      */
     public abstract HttpHeaders setInt(CharSequence name, int value);
+
+    /**
+     * Set the {@code name} to {@code value}. This will remove all previous values associated with {@code name}.
+     * @param name The name to modify
+     * @param value The value
+     * @return {@code this}
+     */
+    public abstract HttpHeaders setShort(CharSequence name, short value);
 
     /**
      * @see {@link #remove(CharSequence)}
@@ -1613,4 +1700,34 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     public boolean contains(CharSequence name, CharSequence value, boolean ignoreCase) {
         return contains(name.toString(), value.toString(), ignoreCase);
     }
+
+    /**
+     * Provide a means of iterating over elements in this map with low GC
+     *
+     * @param visitor The visitor which will visit each element in this map
+     * @return The last entry before iteration stopped or {@code null} if iteration went past the end
+     */
+    public abstract Map.Entry<CharSequence, CharSequence> forEachEntry(EntryVisitor<CharSequence> visitor)
+            throws Exception;
+
+    private EntryVisitor<CharSequence> setAllVisitor() {
+        return new EntryVisitor<CharSequence>() {
+            @Override
+            public boolean visit(Entry<CharSequence, CharSequence> entry) {
+                set(entry.getKey(), entry.getValue());
+                return true;
+            }
+        };
+    }
+
+    private EntryVisitor<CharSequence> addAllVisitor() {
+        return new EntryVisitor<CharSequence>() {
+            @Override
+            public boolean visit(Entry<CharSequence, CharSequence> entry) {
+                add(entry.getKey(), entry.getValue());
+                return true;
+            }
+        };
+    }
+
 }
