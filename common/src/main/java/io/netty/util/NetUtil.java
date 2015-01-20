@@ -554,7 +554,7 @@ public final class NetUtil {
         return true;
     }
 
-    public static boolean isValidIp4Word(String word) {
+    private static boolean isValidIp4Word(String word) {
         char c;
         if (word.length() < 1 || word.length() > 3) {
             return false;
