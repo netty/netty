@@ -29,6 +29,11 @@ public class ZlibCrossTest2 extends ZlibTest {
         return new JdkZlibDecoder(wrapper);
     }
 
+    @Override
+    protected ZlibDecoder createDecoder(ZlibWrapper wrapper, boolean streaming) {
+        return new JdkZlibDecoder(wrapper, streaming);
+    }
+
     @Test(expected = DecompressionException.class)
     @Override
     public void testZLIB_OR_NONE3() throws Exception {

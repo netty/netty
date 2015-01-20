@@ -36,6 +36,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
 
     private Inflater inflater;
     private final byte[] dictionary;
+    private final boolean streaming;
 
     // GZIP related
     private final CRC32 crc;
@@ -84,7 +85,28 @@ public class JdkZlibDecoder extends ZlibDecoder {
         this(wrapper, null);
     }
 
+    /**
+     * Creates a new instance with the specified wrapper and option for decoder to decompress multiple messages.
+     * Be aware that only {@link ZlibWrapper#GZIP}, {@link ZlibWrapper#ZLIB} and {@link ZlibWrapper#NONE} are
+     * supported atm.
+     */
+    public JdkZlibDecoder(ZlibWrapper wrapper, boolean streaming) {
+        this(wrapper, null, streaming);
+    }
+
+    /**
+     * Creates a new instance with the default wrapper ({@link ZlibWrapper#ZLIB}) and option for decoder to
+     * decompress multiple messages.
+     */
+    public JdkZlibDecoder(boolean streaming) {
+        this(ZlibWrapper.ZLIB, null, streaming);
+    }
+
     private JdkZlibDecoder(ZlibWrapper wrapper, byte[] dictionary) {
+        this(wrapper, dictionary, false);
+    }
+
+    private JdkZlibDecoder(ZlibWrapper wrapper, byte[] dictionary, boolean streaming) {
         if (wrapper == null) {
             throw new NullPointerException("wrapper");
         }
@@ -110,6 +132,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
                 throw new IllegalArgumentException("Only GZIP or ZLIB is supported, but you used " + wrapper);
         }
         this.dictionary = dictionary;
+        this.streaming = streaming;
     }
 
     @Override
@@ -144,7 +167,11 @@ public class JdkZlibDecoder extends ZlibDecoder {
             switch (gzipState) {
                 case FOOTER_START:
                     if (readGZIPFooter(in)) {
-                        finished = true;
+                        if (streaming) {
+                            inflater.reset();
+                        } else {
+                            finished = true;
+                        }
                     }
                     return;
                 default:
@@ -193,7 +220,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
                     if (inflater.needsDictionary()) {
                         if (dictionary == null) {
                             throw new DecompressionException(
-                                    "decompression failure, unable to set dictionary as non was specified");
+                                    "decompression failure, unable to set dictionary as none was specified");
                         }
                         inflater.setDictionary(dictionary);
                     }
@@ -201,7 +228,11 @@ public class JdkZlibDecoder extends ZlibDecoder {
 
                 if (inflater.finished()) {
                     if (crc == null) {
-                        finished = true; // Do not decode anymore.
+                        if (streaming) {
+                            inflater.reset();
+                        } else {
+                            finished = true; // Do not decode anymore.
+                        }
                     } else {
                         readFooter = true;
                     }
@@ -214,7 +245,11 @@ public class JdkZlibDecoder extends ZlibDecoder {
             if (readFooter) {
                 gzipState = GzipState.FOOTER_START;
                 if (readGZIPFooter(in)) {
-                    finished = true;
+                    if (streaming) {
+                        inflater.reset();
+                    } else {
+                        finished = true;
+                    }
                 }
             }
         } catch (DataFormatException e) {
@@ -373,7 +408,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
         long readCrc = crc.getValue();
         if (crcValue != readCrc) {
             throw new DecompressionException(
-                    "CRC value missmatch. Expected: " + crcValue + ", Got: " + readCrc);
+                    "CRC value mismatch. Expected: " + crcValue + ", Got: " + readCrc);
         }
     }
 

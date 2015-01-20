@@ -26,4 +26,9 @@ public class JZlibTest extends ZlibTest {
     protected ZlibDecoder createDecoder(ZlibWrapper wrapper) {
         return new JZlibDecoder(wrapper);
     }
+
+    @Override
+    protected ZlibDecoder createDecoder(ZlibWrapper wrapper, boolean streaming) {
+        return new JZlibDecoder(wrapper, streaming);
+    }
 }
