@@ -90,8 +90,6 @@ public class DefaultHeaders<T> implements Headers<T> {
     private final ValueConverter<T> valueConverter;
     private final NameConverter<T> nameConverter;
     private final int bucketSize;
-    private EntryVisitor<T> setAllVisitor;
-    private EntryVisitor<T> addAllVisitor;
     int size;
 
     @SuppressWarnings("unchecked")
@@ -1307,36 +1305,24 @@ public class DefaultHeaders<T> implements Headers<T> {
         return removed;
     }
 
-    /**
-     * Lazy initialization of the visitor which will set all headers.
-     */
     private EntryVisitor<T> setAllVisitor() {
-        if (setAllVisitor == null) {
-            setAllVisitor = new EntryVisitor<T>() {
-                @Override
-                public boolean visit(Entry<T, T> entry) {
-                    set(entry.getKey(), entry.getValue());
-                    return true;
-                }
-            };
-        }
-        return setAllVisitor;
+        return new EntryVisitor<T>() {
+            @Override
+            public boolean visit(Entry<T, T> entry) {
+                set(entry.getKey(), entry.getValue());
+                return true;
+            }
+        };
     }
 
-    /**
-     * Lazy initialization of the visitor which will add all headers.
-     */
     private EntryVisitor<T> addAllVisitor() {
-        if (addAllVisitor == null) {
-            addAllVisitor = new EntryVisitor<T>() {
-                @Override
-                public boolean visit(Entry<T, T> entry) {
-                    add(entry.getKey(), entry.getValue());
-                    return true;
-                }
-            };
-        }
-        return addAllVisitor;
+        return new EntryVisitor<T>() {
+            @Override
+            public boolean visit(Entry<T, T> entry) {
+                add(entry.getKey(), entry.getValue());
+                return true;
+            }
+        };
     }
 
     private final class HeaderEntry implements Map.Entry<T, T> {
