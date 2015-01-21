@@ -15,11 +15,11 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.handler.codec.http.CookieEncoderUtil.*;
-
 import java.util.Collections;
 import java.util.Set;
 import java.util.TreeSet;
+
+import static io.netty.handler.codec.http.CookieEncoderUtil.*;
 
 /**
  * A <a href="http://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie decoder to be used server side.
@@ -29,9 +29,9 @@ import java.util.TreeSet;
  * Old <a href="http://tools.ietf.org/html/rfc2965">RFC2965</a> cookies are still supported,
  * old fields will simply be ignored.
  *
- * @see Rfc6265ServerCookieEncoder
+ * @see ServerCookieEncoder
  */
-public final class Rfc6265ServerCookieDecoder {
+public final class ServerCookieDecoder {
 
     /**
      * Decodes the specified Set-Cookie HTTP header value into a {@link Cookie}.
@@ -176,7 +176,7 @@ public final class Rfc6265ServerCookieDecoder {
         return cookies;
     }
 
-    private Rfc6265ServerCookieDecoder() {
+    private ServerCookieDecoder() {
         // unused
     }
 }

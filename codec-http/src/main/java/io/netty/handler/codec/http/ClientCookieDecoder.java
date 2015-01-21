@@ -15,10 +15,10 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.handler.codec.http.CookieEncoderUtil.stringBuilder;
-
 import java.text.ParsePosition;
 import java.util.Date;
+
+import static io.netty.handler.codec.http.CookieEncoderUtil.*;
 
 /**
  * A <a href="http://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie decoder to be used client side.
@@ -26,9 +26,9 @@ import java.util.Date;
  * It will store the raw value in {@link Cookie#setRawValue(String)} so it can be
  * eventually sent back to the Origin server as is.
  *
- * @see Rfc6265ClientCookieEncoder
+ * @see ClientCookieEncoder
  */
-public final class Rfc6265ClientCookieDecoder {
+public final class ClientCookieDecoder {
 
     /**
      * Decodes the specified Set-Cookie HTTP header value into a {@link Cookie}.
@@ -307,7 +307,7 @@ public final class Rfc6265ClientCookieDecoder {
         }
     }
 
-    private Rfc6265ClientCookieDecoder() {
+    private ClientCookieDecoder() {
         // unused
     }
 }

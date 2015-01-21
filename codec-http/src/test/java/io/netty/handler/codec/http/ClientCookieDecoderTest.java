@@ -31,14 +31,14 @@ import java.util.TimeZone;
 
 import org.junit.Test;
 
-public class Rfc6265ClientCookieDecoderTest {
+public class ClientCookieDecoderTest {
     @Test
     public void testDecodingSingleCookieV0() {
         String cookieString = "myCookie=myValue;expires=XXX;path=/apathsomewhere;domain=.adomainsomewhere;secure;";
         cookieString = cookieString.replace("XXX", HttpHeaderDateFormat.get()
                 .format(new Date(System.currentTimeMillis() + 50000)));
 
-        Cookie cookie = Rfc6265ClientCookieDecoder.decode(cookieString);
+        Cookie cookie = ClientCookieDecoder.decode(cookieString);
         assertNotNull(cookie);
         assertEquals("myValue", cookie.value());
         assertEquals(".adomainsomewhere", cookie.domain());
@@ -63,7 +63,7 @@ public class Rfc6265ClientCookieDecoderTest {
         String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;" +
                 "domain=.adomainsomewhere;secure;comment=this is a comment;version=0;" +
                 "commentURL=http://aurl.com;port=\"80,8080\";discard;";
-        Cookie cookie = Rfc6265ClientCookieDecoder.decode(cookieString);
+        Cookie cookie = ClientCookieDecoder.decode(cookieString);
         assertNotNull(cookie);
         assertEquals("myValue", cookie.value());
         assertEquals(".adomainsomewhere", cookie.domain());
@@ -76,7 +76,7 @@ public class Rfc6265ClientCookieDecoderTest {
     public void testDecodingSingleCookieV1() {
         String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere"
                 + ";secure;comment=this is a comment;version=1;";
-        Cookie cookie = Rfc6265ClientCookieDecoder.decode(cookieString);
+        Cookie cookie = ClientCookieDecoder.decode(cookieString);
         assertEquals("myValue", cookie.value());
         assertNotNull(cookie);
         assertEquals(".adomainsomewhere", cookie.domain());
@@ -90,7 +90,7 @@ public class Rfc6265ClientCookieDecoderTest {
         String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;"
                 + "domain=.adomainsomewhere;secure;comment=this is a comment;version=1;"
                 + "commentURL=http://aurl.com;port='80,8080';discard;";
-        Cookie cookie = Rfc6265ClientCookieDecoder.decode(cookieString);
+        Cookie cookie = ClientCookieDecoder.decode(cookieString);
         assertNotNull(cookie);
         assertEquals("myValue", cookie.value());
         assertEquals(".adomainsomewhere", cookie.domain());
@@ -104,7 +104,7 @@ public class Rfc6265ClientCookieDecoderTest {
         String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;"
                 + "domain=.adomainsomewhere;secure;comment=this is a comment;version=2;"
                 + "commentURL=http://aurl.com;port=\"80,8080\";discard;";
-        Cookie cookie = Rfc6265ClientCookieDecoder.decode(cookieString);
+        Cookie cookie = ClientCookieDecoder.decode(cookieString);
         assertNotNull(cookie);
         assertEquals("myValue", cookie.value());
         assertEquals(".adomainsomewhere", cookie.domain());
@@ -119,7 +119,7 @@ public class Rfc6265ClientCookieDecoderTest {
                 + "domain=.adomainsomewhere;secure;comment=this is a comment;version=2;"
                 + "commentURL=\"http://aurl.com\";port='80,8080';discard;";
 
-        Cookie cookie = Rfc6265ClientCookieDecoder.decode(c1);
+        Cookie cookie = ClientCookieDecoder.decode(c1);
         assertNotNull(cookie);
         assertEquals("myValue", cookie.value());
         assertEquals(".adomainsomewhere", cookie.domain());
@@ -142,7 +142,7 @@ public class Rfc6265ClientCookieDecoderTest {
 
         Collection<Cookie> cookies = new ArrayList<Cookie>();
         for (String source : sources) {
-            cookies.add(Rfc6265ClientCookieDecoder.decode(source));
+            cookies.add(ClientCookieDecoder.decode(source));
         }
 
         Iterator<Cookie> it = cookies.iterator();
@@ -191,7 +191,7 @@ public class Rfc6265ClientCookieDecoderTest {
                 + "__utmb=48461872.13.10.1258140131; __utmc=48461872; "
                 + "__utmz=48461872.1258140131.1.1.utmcsr=overstock.com|utmccn=(referral)|"
                 + "utmcmd=referral|utmcct=/Home-Garden/Furniture/Clearance,/clearance,/32/dept.html";
-        Cookie cookie = Rfc6265ClientCookieDecoder.decode(source);
+        Cookie cookie = ClientCookieDecoder.decode(source);
 
         assertEquals("ARPT", cookie.name());
         assertEquals("LWUKQPSWRTUN04CKKJI", cookie.value());
@@ -206,7 +206,7 @@ public class Rfc6265ClientCookieDecoderTest {
 
         String source = "Format=EU; expires=Fri, 31-Dec-9999 23:59:59 GMT; path=/";
 
-        Cookie cookie = Rfc6265ClientCookieDecoder.decode(source);
+        Cookie cookie = ClientCookieDecoder.decode(source);
 
         assertTrue(Math.abs(expectedMaxAge - cookie.maxAge()) < 2);
     }
@@ -216,7 +216,7 @@ public class Rfc6265ClientCookieDecoderTest {
         String source = "UserCookie=timeZoneName=(GMT+04:00) Moscow, St. Petersburg, Volgograd&promocode=&region=BE;"
                 + " expires=Sat, 01-Dec-2012 10:53:31 GMT; path=/";
 
-        Cookie cookie = Rfc6265ClientCookieDecoder.decode(source);
+        Cookie cookie = ClientCookieDecoder.decode(source);
 
         assertEquals(
                 "timeZoneName=(GMT+04:00) Moscow, St. Petersburg, Volgograd&promocode=&region=BE",
@@ -226,7 +226,7 @@ public class Rfc6265ClientCookieDecoderTest {
     @Test
     public void testDecodingWeirdNames1() {
         String src = "path=; expires=Mon, 01-Jan-1990 00:00:00 GMT; path=/; domain=.www.google.com";
-        Cookie cookie = Rfc6265ClientCookieDecoder.decode(src);
+        Cookie cookie = ClientCookieDecoder.decode(src);
         assertEquals("path", cookie.name());
         assertEquals("", cookie.value());
         assertEquals("/", cookie.path());
@@ -235,7 +235,7 @@ public class Rfc6265ClientCookieDecoderTest {
     @Test
     public void testDecodingWeirdNames2() {
         String src = "HTTPOnly=";
-        Cookie cookie = Rfc6265ClientCookieDecoder.decode(src);
+        Cookie cookie = ClientCookieDecoder.decode(src);
         assertEquals("HTTPOnly", cookie.name());
         assertEquals("", cookie.value());
     }
@@ -243,7 +243,7 @@ public class Rfc6265ClientCookieDecoderTest {
     @Test
     public void testDecodingValuesWithCommasAndEquals() {
         String src = "A=v=1&lg=en-US,it-IT,it&intl=it&np=1;T=z=E";
-        Cookie cookie = Rfc6265ClientCookieDecoder.decode(src);
+        Cookie cookie = ClientCookieDecoder.decode(src);
         assertEquals("A", cookie.name());
         assertEquals("v=1&lg=en-US,it-IT,it&intl=it&np=1", cookie.value());
     }
@@ -295,8 +295,8 @@ public class Rfc6265ClientCookieDecoderTest {
                 + "%=KqtH!$?mi!!!!'=KqtH!$?mx!!!!'=KqtH!$D7]!!!!#=J_#p!$D@T!!!!#=J_#p!$V<g!!!!"
                 + "'=KqtH";
 
-        Cookie cookie = Rfc6265ClientCookieDecoder.decode("bh=\"" + longValue
-                + "\";");
+        Cookie cookie = ClientCookieDecoder.decode("bh=\"" + longValue
+                                                   + "\";");
         assertEquals("bh", cookie.name());
         assertEquals(longValue, cookie.value());
     }
@@ -304,7 +304,7 @@ public class Rfc6265ClientCookieDecoderTest {
     @Test
     public void testIgnoreEmptyDomain() {
         String emptyDomain = "sessionid=OTY4ZDllNTgtYjU3OC00MWRjLTkzMWMtNGUwNzk4MTY0MTUw;Domain=;Path=/";
-        Cookie cookie = Rfc6265ClientCookieDecoder.decode(emptyDomain);
+        Cookie cookie = ClientCookieDecoder.decode(emptyDomain);
         assertNull(cookie.domain());
     }
 }
