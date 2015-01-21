@@ -73,7 +73,6 @@ public final class ClientCookieDecoder {
             int newNameStart = i;
             int newNameEnd = i;
             String value, rawValue;
-            boolean first = true;
 
             if (i == headerLen) {
                 value = rawValue = null;
@@ -85,7 +84,6 @@ public final class ClientCookieDecoder {
                         // NAME; (no value till ';')
                         newNameEnd = i;
                         value = rawValue = null;
-                        first = false;
                         break keyValLoop;
                     } else if (curChar == '=') {
                         // NAME=VALUE
@@ -94,7 +92,6 @@ public final class ClientCookieDecoder {
                         if (i == headerLen) {
                             // NAME= (empty value, i.e. nothing after '=')
                             value = rawValue = "";
-                            first = false;
                             break keyValLoop;
                         }
 
@@ -115,8 +112,7 @@ public final class ClientCookieDecoder {
                                     value = newValueBuf.toString();
                                     // only need to compute raw value for cookie
                                     // value which is in first position
-                                    rawValue = first ? header.substring(rawValueStart, rawValueEnd) : null;
-                                    first = false;
+                                    rawValue = header.substring(rawValueStart, rawValueEnd);
                                     break keyValLoop;
                                 }
                                 if (hadBackslash) {
@@ -137,8 +133,7 @@ public final class ClientCookieDecoder {
                                         // only need to compute raw value for
                                         // cookie value which is in first
                                         // position
-                                        rawValue = first ? header.substring(rawValueStart, rawValueEnd) : null;
-                                        first = false;
+                                        rawValue = header.substring(rawValueStart, rawValueEnd);
                                         break keyValLoop;
                                     }
                                     newValueBuf.append(c);
@@ -166,7 +161,6 @@ public final class ClientCookieDecoder {
                     if (i == headerLen) {
                         // NAME (no value till the end of string)
                         newNameEnd = i;
-                        first = false;
                         value = rawValue = null;
                         break;
                     }
