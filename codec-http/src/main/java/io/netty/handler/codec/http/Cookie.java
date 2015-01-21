@@ -67,7 +67,7 @@ public interface Cookie extends Comparable<Cookie> {
     /**
      * Sets the raw value of this {@link Cookie}.
      *
-     * @param value The raw value to set
+     * @param rawValue The raw value to set
      */
     void setRawValue(String rawValue);
 
