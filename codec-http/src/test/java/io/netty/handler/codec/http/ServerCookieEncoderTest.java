@@ -17,22 +17,37 @@ package io.netty.handler.codec.http;
 
 import org.junit.Test;
 
+import java.text.ParseException;
+import java.util.Date;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.junit.Assert.*;
 
 public class ServerCookieEncoderTest {
+
     @Test
-    public void testEncodingSingleCookieV0() {
-        String result = "myCookie=myValue; Max-Age=50; Path=/apathsomewhere; Domain=.adomainsomewhere; Secure";
+    public void testEncodingSingleCookieV0() throws ParseException {
+
+        int maxAge = 50;
+
+        String result =
+                "myCookie=myValue; Max-Age=50; Expires=(.+?); Path=/apathsomewhere; Domain=.adomainsomewhere; Secure";
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         cookie.setDomain(".adomainsomewhere");
-        cookie.setMaxAge(50);
+        cookie.setMaxAge(maxAge);
         cookie.setPath("/apathsomewhere");
         cookie.setSecure(true);
 
         String encodedCookie = ServerCookieEncoder.encode(cookie);
-        assertEquals(result, encodedCookie);
+
+        Matcher matcher = Pattern.compile(result).matcher(encodedCookie);
+        assertTrue(matcher.find());
+        Date expiresDate = HttpHeaderDateFormat.get().parse(matcher.group(1));
+        long diff = (expiresDate.getTime() - System.currentTimeMillis()) / 1000;
+        // 1 sec should be fine
+        assertTrue(Math.abs(diff - maxAge) <= 1);
     }
 
     @Test

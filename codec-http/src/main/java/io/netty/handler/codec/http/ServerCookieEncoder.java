@@ -15,12 +15,13 @@
  */
 package io.netty.handler.codec.http;
 
+import static io.netty.handler.codec.http.CookieEncoderUtil.*;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
-
-import static io.netty.handler.codec.http.CookieEncoderUtil.*;
 
 /**
  * A <a href="http://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie encoder to be used server side,
@@ -68,6 +69,8 @@ public final class ServerCookieEncoder {
 
         if (cookie.maxAge() != Long.MIN_VALUE) {
             add(buf, CookieHeaderNames.MAX_AGE, cookie.maxAge());
+            Date expires = new Date(cookie.maxAge() * 1000 + System.currentTimeMillis());
+            addUnquoted(buf, CookieHeaderNames.EXPIRES, HttpHeaderDateFormat.get().format(expires));
         }
 
         if (cookie.path() != null) {
