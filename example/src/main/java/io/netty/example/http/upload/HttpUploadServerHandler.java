@@ -22,7 +22,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.Cookie;
-import io.netty.handler.codec.http.CookieDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
@@ -36,6 +35,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.QueryStringDecoder;
+import io.netty.handler.codec.http.ServerCookieDecoder;
 import io.netty.handler.codec.http.ServerCookieEncoder;
 import io.netty.handler.codec.http.multipart.Attribute;
 import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
@@ -125,7 +125,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
             if (value == null) {
                 cookies = Collections.emptySet();
             } else {
-                cookies = CookieDecoder.decode(value);
+                cookies = ServerCookieDecoder.decode(value);
             }
             for (Cookie cookie : cookies) {
                 responseContent.append("COOKIE: " + cookie + "\r\n");
@@ -308,7 +308,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
         if (value == null) {
             cookies = Collections.emptySet();
         } else {
-            cookies = CookieDecoder.decode(value);
+            cookies = ServerCookieDecoder.decode(value);
         }
         if (!cookies.isEmpty()) {
             // Reset the cookies if necessary.
