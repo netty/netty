@@ -23,14 +23,14 @@ import java.util.Set;
 
 import static org.junit.Assert.*;
 
-public class Rfc6265ServerCookieDecoderTest {
+public class ServerCookieDecoderTest {
     @Test
     public void testDecodingSingleCookie() {
         String cookieString = "myCookie=myValue";
         cookieString = cookieString.replace("XXX",
                 HttpHeaderDateFormat.get().format(new Date(System.currentTimeMillis() + 50000)));
 
-        Set<Cookie> cookies = Rfc6265ServerCookieDecoder.decode(cookieString);
+        Set<Cookie> cookies = ServerCookieDecoder.decode(cookieString);
         assertEquals(1, cookies.size());
         Cookie cookie = cookies.iterator().next();
         assertNotNull(cookie);
@@ -43,7 +43,7 @@ public class Rfc6265ServerCookieDecoderTest {
         String c2 = "myCookie2=myValue2;";
         String c3 = "myCookie3=myValue3;";
 
-        Set<Cookie> cookies = Rfc6265ServerCookieDecoder.decode(c1 + c2 + c3);
+        Set<Cookie> cookies = ServerCookieDecoder.decode(c1 + c2 + c3);
         assertEquals(3, cookies.size());
         Iterator<Cookie> it = cookies.iterator();
         Cookie cookie = it.next();
@@ -69,7 +69,7 @@ public class Rfc6265ServerCookieDecoderTest {
             "g=\"\\\\\";" +
             "h=\"';,\\x\"";
 
-        Set<Cookie> cookies = Rfc6265ServerCookieDecoder.decode(source);
+        Set<Cookie> cookies = ServerCookieDecoder.decode(source);
         Iterator<Cookie> it = cookies.iterator();
         Cookie c;
 
@@ -117,7 +117,7 @@ public class Rfc6265ServerCookieDecoderTest {
             "__utmb=48461872.13.10.1258140131; __utmc=48461872; " +
             "__utmz=48461872.1258140131.1.1.utmcsr=overstock.com|utmccn=(referral)|" +
                     "utmcmd=referral|utmcct=/Home-Garden/Furniture/Clearance,/clearance,/32/dept.html";
-        Set<Cookie> cookies = Rfc6265ServerCookieDecoder.decode(source);
+        Set<Cookie> cookies = ServerCookieDecoder.decode(source);
         Iterator<Cookie> it = cookies.iterator();
         Cookie c;
 
@@ -198,7 +198,7 @@ public class Rfc6265ServerCookieDecoderTest {
                 "%=KqtH!$?mi!!!!'=KqtH!$?mx!!!!'=KqtH!$D7]!!!!#=J_#p!$D@T!!!!#=J_#p!$V<g!!!!" +
                 "'=KqtH";
 
-        Set<Cookie> cookies = Rfc6265ServerCookieDecoder.decode("bh=\"" + longValue + "\";");
+        Set<Cookie> cookies = ServerCookieDecoder.decode("bh=\"" + longValue + "\";");
         assertEquals(1, cookies.size());
         Cookie c = cookies.iterator().next();
         assertEquals("bh", c.name());
@@ -211,7 +211,7 @@ public class Rfc6265ServerCookieDecoderTest {
                 "Part_Number1=\"Riding_Rocket_0023\"; $Path=\"/acme/ammo\"; " +
                 "Part_Number2=\"Rocket_Launcher_0001\"; $Path=\"/acme\"";
 
-        Set<Cookie> cookies = Rfc6265ServerCookieDecoder.decode(source);
+        Set<Cookie> cookies = ServerCookieDecoder.decode(source);
         Iterator<Cookie> it = cookies.iterator();
         Cookie c;
 

@@ -15,13 +15,13 @@
  */
 package io.netty.handler.codec.http;
 
-import static org.junit.Assert.*;
+import org.junit.Test;
 
 import java.util.List;
 
-import org.junit.Test;
+import static org.junit.Assert.*;
 
-public class Rfc6265ServerCookieEncoderTest {
+public class ServerCookieEncoderTest {
     @Test
     public void testEncodingSingleCookieV0() {
         String result = "myCookie=myValue; Max-Age=50; Path=/apathsomewhere; Domain=.adomainsomewhere; Secure";
@@ -31,14 +31,14 @@ public class Rfc6265ServerCookieEncoderTest {
         cookie.setPath("/apathsomewhere");
         cookie.setSecure(true);
 
-        String encodedCookie = Rfc6265ServerCookieEncoder.encode(cookie);
+        String encodedCookie = ServerCookieEncoder.encode(cookie);
         assertEquals(result, encodedCookie);
     }
 
     @Test
     public void testEncodingWithNoCookies() {
-        String encodedCookie1 = Rfc6265ClientCookieEncoder.encode();
-        List<String> encodedCookie2 = Rfc6265ServerCookieEncoder.encode();
+        String encodedCookie1 = ClientCookieEncoder.encode();
+        List<String> encodedCookie2 = ServerCookieEncoder.encode();
         assertNull(encodedCookie1);
         assertNotNull(encodedCookie2);
         assertTrue(encodedCookie2.isEmpty());

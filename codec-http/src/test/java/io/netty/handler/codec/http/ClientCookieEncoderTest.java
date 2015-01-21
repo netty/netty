@@ -19,7 +19,7 @@ import static org.junit.Assert.*;
 
 import org.junit.Test;
 
-public class Rfc6265ClientCookieEncoderTest {
+public class ClientCookieEncoderTest {
 
     @Test
     public void testEncodingMultipleClientCookies() {
@@ -46,7 +46,7 @@ public class Rfc6265ClientCookieEncoderTest {
         cookie2.setSecure(false);
         Cookie cookie3 = new DefaultCookie("myCookie3", "myValue3");
         cookie3.setVersion(1);
-        String encodedCookie = Rfc6265ClientCookieEncoder.encode(cookie, cookie2, cookie3);
+        String encodedCookie = ClientCookieEncoder.encode(cookie, cookie2, cookie3);
         assertEquals(c1 + c2 + c3, encodedCookie);
     }
 }
