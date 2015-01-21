@@ -22,7 +22,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.Cookie;
-import io.netty.handler.codec.http.CookieDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
@@ -33,6 +32,7 @@ import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.QueryStringDecoder;
+import io.netty.handler.codec.http.ServerCookieDecoder;
 import io.netty.handler.codec.http.ServerCookieEncoder;
 import io.netty.util.CharsetUtil;
 
@@ -165,7 +165,7 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
         // Encode the cookie.
         String cookieString = request.headers().getAndConvert(COOKIE);
         if (cookieString != null) {
-            Set<Cookie> cookies = CookieDecoder.decode(cookieString);
+            Set<Cookie> cookies = ServerCookieDecoder.decode(cookieString);
             if (!cookies.isEmpty()) {
                 // Reset the cookies if necessary.
                 for (Cookie cookie: cookies) {
