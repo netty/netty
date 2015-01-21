@@ -21,13 +21,14 @@ package io.netty.handler.codec.http;
  *
  * <h3>Accessing Cookies</h3>
  * <p>
- * Unlike the Servlet API, {@link Cookie} support is provided separately via {@link CookieDecoder},
- * {@link ClientCookieEncoder}, and {@link ServerCookieEncoder}.
+ * Unlike the Servlet API, {@link Cookie} support is provided separately via {@link ClientCookieDecoder},
+ * {@link ServerCookieDecoder}, {@link ClientCookieEncoder}, and {@link @ServerCookieEncoder}.
  *
  * @see HttpRequest
- * @see CookieDecoder
  * @see ClientCookieEncoder
  * @see ServerCookieEncoder
+ * @see ClientCookieDecoder
+ * @see ServerCookieDecoder
  */
 public interface HttpResponse extends HttpMessage {
 
