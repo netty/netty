@@ -25,6 +25,8 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
+ * @deprecated Use {@link ClientCookieDecoder} or {@link ServerCookieDecoder} instead.
+ *
  * Decodes an HTTP header value into {@link Cookie}s.  This decoder can decode
  * the HTTP cookie version 0, 1, and 2.
  *
@@ -37,6 +39,7 @@ import java.util.TreeSet;
  * @see ClientCookieEncoder
  * @see ServerCookieEncoder
  */
+@Deprecated
 public final class CookieDecoder {
 
     private static final char COMMA = ',';
