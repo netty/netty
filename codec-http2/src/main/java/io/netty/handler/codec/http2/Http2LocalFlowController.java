@@ -53,7 +53,7 @@ public interface Http2LocalFlowController extends Http2FlowController {
      * @param stream the stream for which window space should be freed. The connection stream object
      *            must not be used.
      * @param numBytes the number of bytes to be returned to the flow control window.
-     * @throws Http2Exception if the number of bytes returned exceeds the {@link #unconsumedBytes()}
+     * @throws Http2Exception if the number of bytes returned exceeds the {@link #unconsumedBytes}
      *             for the stream.
      */
     void consumeBytes(ChannelHandlerContext ctx, Http2Stream stream, int numBytes) throws Http2Exception;

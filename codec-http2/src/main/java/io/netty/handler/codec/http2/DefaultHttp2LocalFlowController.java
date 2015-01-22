@@ -309,7 +309,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
          * @throws Http2Exception If too much data is used relative to how much is available.
          */
         void receiveFlowControlledFrame(int dataLength) throws Http2Exception {
-            assert dataLength > 0;
+            assert dataLength >= 0;
 
             // Apply the delta. Even if we throw an exception we want to have taken this delta into account.
             window -= dataLength;
