@@ -24,8 +24,10 @@ import java.util.List;
 
 public class JZlibDecoder extends ZlibDecoder {
 
-    private final Inflater z = new Inflater();
+    private Inflater z = new Inflater();
+    private ZlibWrapper wrapper;
     private byte[] dictionary;
+    private final boolean streaming;
     private volatile boolean finished;
 
     /**
@@ -38,19 +40,31 @@ public class JZlibDecoder extends ZlibDecoder {
     }
 
     /**
+     * Creates a new instance with the default wrapper ({@link ZlibWrapper#ZLIB}) and option for decoder to
+     * decompress multiple messages.
+     *
+     * @throws DecompressionException if failed to initialize zlib
+     */
+    public JZlibDecoder(boolean streaming) {
+        this(ZlibWrapper.ZLIB, streaming);
+    }
+
+    /**
      * Creates a new instance with the specified wrapper.
      *
      * @throws DecompressionException if failed to initialize zlib
      */
     public JZlibDecoder(ZlibWrapper wrapper) {
+        this(wrapper, false);
+    }
+
+    public JZlibDecoder(ZlibWrapper wrapper, boolean streaming) {
         if (wrapper == null) {
             throw new NullPointerException("wrapper");
         }
-
-        int resultCode = z.init(ZlibUtil.convertWrapperType(wrapper));
-        if (resultCode != JZlib.Z_OK) {
-            ZlibUtil.fail(z, "initialization failure", resultCode);
-        }
+        this.wrapper = wrapper;
+        initWithWrapper(wrapper);
+        this.streaming = streaming;
     }
 
     /**
@@ -61,13 +75,28 @@ public class JZlibDecoder extends ZlibDecoder {
      * @throws DecompressionException if failed to initialize zlib
      */
     public JZlibDecoder(byte[] dictionary) {
+        this(dictionary, false);
+    }
+
+    public JZlibDecoder(byte[] dictionary, boolean streaming) {
         if (dictionary == null) {
             throw new NullPointerException("dictionary");
         }
         this.dictionary = dictionary;
+        initWithDictionary(dictionary);
+        this.streaming = streaming;
+    }
 
+    private void initWithDictionary(byte[] dictionary) {
         int resultCode;
         resultCode = z.inflateInit(JZlib.W_ZLIB);
+        if (resultCode != JZlib.Z_OK) {
+            ZlibUtil.fail(z, "initialization failure", resultCode);
+        }
+    }
+
+    private void initWithWrapper(ZlibWrapper wrapper) {
+        int resultCode = z.init(ZlibUtil.convertWrapperType(wrapper));
         if (resultCode != JZlib.Z_OK) {
             ZlibUtil.fail(z, "initialization failure", resultCode);
         }
@@ -129,29 +158,37 @@ public class JZlibDecoder extends ZlibDecoder {
                     }
 
                     switch (resultCode) {
-                    case JZlib.Z_NEED_DICT:
-                        if (dictionary == null) {
-                            ZlibUtil.fail(z, "decompression failure", resultCode);
-                        } else {
-                            resultCode = z.inflateSetDictionary(dictionary, dictionary.length);
-                            if (resultCode != JZlib.Z_OK) {
-                                ZlibUtil.fail(z, "failed to set the dictionary", resultCode);
+                        case JZlib.Z_NEED_DICT:
+                            if (dictionary == null) {
+                                ZlibUtil.fail(z, "decompression failure", resultCode);
+                            } else {
+                                resultCode = z.inflateSetDictionary(dictionary, dictionary.length);
+                                if (resultCode != JZlib.Z_OK) {
+                                    ZlibUtil.fail(z, "failed to set the dictionary", resultCode);
+                                }
                             }
-                        }
-                        break;
-                    case JZlib.Z_STREAM_END:
-                        finished = true; // Do not decode anymore.
-                        z.inflateEnd();
-                        break loop;
-                    case JZlib.Z_OK:
-                        break;
-                    case JZlib.Z_BUF_ERROR:
-                        if (z.avail_in <= 0) {
+                            break;
+                        case JZlib.Z_STREAM_END:
+                            z.inflateEnd();
+                            if (streaming) {
+                                if (dictionary == null) {
+                                    initWithWrapper(wrapper);
+                                } else {
+                                    initWithDictionary(dictionary);
+                                }
+                            } else {
+                                finished = true; // Do not decode anymore.
+                            }
                             break loop;
-                        }
-                        break;
-                    default:
-                        ZlibUtil.fail(z, "decompression failure", resultCode);
+                        case JZlib.Z_OK:
+                            break;
+                        case JZlib.Z_BUF_ERROR:
+                            if (z.avail_in <= 0) {
+                                break loop;
+                            }
+                            break;
+                        default:
+                            ZlibUtil.fail(z, "decompression failure", resultCode);
                     }
                 }
             } finally {

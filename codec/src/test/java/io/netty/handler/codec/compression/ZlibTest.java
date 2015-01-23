@@ -17,6 +17,7 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
@@ -89,6 +90,7 @@ public abstract class ZlibTest {
 
     protected abstract ZlibEncoder createEncoder(ZlibWrapper wrapper);
     protected abstract ZlibDecoder createDecoder(ZlibWrapper wrapper);
+    protected abstract ZlibDecoder createDecoder(ZlibWrapper wrapper, boolean streaming);
 
     @Test
     public void testGZIP2() throws Exception {
@@ -108,6 +110,52 @@ public abstract class ZlibTest {
             buf.release();
         } finally {
             dispose(chDecoderGZip);
+        }
+    }
+
+    @Test
+    public void testStreamingGZip() throws Exception {
+        testStreaming(ZlibWrapper.GZIP);
+    }
+
+    @Test
+    public void testStreamingZlib() throws Exception {
+        testStreaming(ZlibWrapper.ZLIB);
+    }
+
+    private void testStreaming(ZlibWrapper wrapper) throws Exception {
+        ByteBuf data = PooledByteBufAllocator.DEFAULT.heapBuffer(12);
+        ByteBuf buf = null;
+
+        EmbeddedChannel chEncoder = new EmbeddedChannel(createEncoder(wrapper));
+        EmbeddedChannel chDecoder = new EmbeddedChannel(createDecoder(wrapper, true));
+
+        try {
+            data.writeBytes("hello, world".getBytes(CharsetUtil.UTF_8));
+            chEncoder.writeOutbound(data.copy());
+            chDecoder.writeInbound(chEncoder.readOutbound());
+            buf = chDecoder.readInbound();
+            assertEquals(buf, data);
+
+            data.resetWriterIndex();
+            buf.release();
+            buf = null;
+
+            data.writeBytes("hello heaven".getBytes(CharsetUtil.UTF_8));
+            chEncoder.writeOutbound(data.copy());
+            chEncoder.finish();
+            chDecoder.writeInbound(chEncoder.readOutbound());
+            buf = chDecoder.readInbound();
+            assertEquals(buf, data);
+        } finally {
+            data.release();
+            if (buf != null) {
+                buf.release();
+            }
+            if (chEncoder != null) {
+                dispose(chEncoder);
+            }
+            dispose(chDecoder);
         }
     }
 
