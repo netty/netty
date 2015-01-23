@@ -14,10 +14,7 @@
  */
 package io.netty.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 
 /**
  * A {@link Http2FlowController} for controlling the flow of outbound {@code DATA} frames to the remote
@@ -26,34 +23,49 @@ import io.netty.channel.ChannelPromise;
 public interface Http2RemoteFlowController extends Http2FlowController {
 
     /**
-     * Writes or queues a {@code DATA} frame for transmission to the remote endpoint. There is no
+     * Writes or queues a payload for transmission to the remote endpoint. There is no
      * guarantee when the data will be written or whether it will be split into multiple frames
-     * before sending. The returned future will only be completed once all of the data has been
-     * successfully written to the remote endpoint.
+     * before sending.
      * <p>
      * Manually flushing the {@link ChannelHandlerContext} is not required, since the flow
      * controller will flush as appropriate.
      *
      * @param ctx the context from the handler.
      * @param stream the subject stream. Must not be the connection stream object.
-     * @param data payload buffer for the frame.
-     * @param padding the number of padding bytes to be added at the end of the frame.
-     * @param endOfStream Indicates whether this is the last frame to be sent to the remote endpoint
-     *            for this stream.
-     * @param promise the promise to be completed when the data has been successfully written or a
-     *            failure occurs.
-     * @return a future that is completed when the frame is sent to the remote endpoint.
+     * @param payload payload to write subject to flow-control accounting and ordering rules.
      */
-    ChannelFuture sendFlowControlledFrame(ChannelHandlerContext ctx, Http2Stream stream,
-            ByteBuf data, int padding, boolean endStream, ChannelPromise promise);
+    void sendFlowControlled(ChannelHandlerContext ctx, Http2Stream stream, FlowControlled payload);
 
     /**
-     * Gets the {@link ChannelFuture} for the most recent frame that was sent for the given stream
-     * via a call to {@link #sendFlowControlledFrame()}. This is useful for cases such as ensuring
-     * that {@code HEADERS} frames maintain send order with {@code DATA} frames.
-     *
-     * @param stream the subject stream. Must not be the connection stream object.
-     * @return the most recent sent frame, or {@code null} if no frame has been sent for the stream.
+     * Implementations of this interface are used to progressively write chunks of the underlying
+     * payload to the stream. A payload is considered to be fully written if {@link #write} has
+     * been called at least once and it's {@link #size} is now zero.
      */
-    ChannelFuture lastFlowControlledFrameSent(Http2Stream stream);
+    interface FlowControlled {
+        /**
+         * The size of the payload in terms of bytes applied to the flow-control window.
+         * Some payloads like {@code HEADER} frames have no cost against flow control and would
+         * return 0 for this value even though they produce a non-zero number of bytes on
+         * the wire. Other frames like {@code DATA} frames have both their payload and padding count
+         * against flow-control.
+         */
+        int size();
+
+        /**
+         * Signal an error and release any retained buffers.
+         * @param cause of the error.
+         */
+        void error(Throwable cause);
+
+        /**
+         * Writes up to {@code allowedBytes} of the encapsulated payload to the stream. Note that
+         * a value of 0 may be passed which will allow payloads with flow-control size == 0 to be
+         * written. The flow-controller may call this method multiple times with different values until
+         * the payload is fully written.
+         *
+         * @param allowedBytes an upper bound on the number of bytes the payload can write at this time.
+         * @return {@code true} if a flush is required, {@code false} otherwise.
+         */
+        boolean write(int allowedBytes);
+    }
 }
