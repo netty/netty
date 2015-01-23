@@ -12,7 +12,6 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
@@ -23,17 +22,12 @@ import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Queue;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Basic implementation of {@link Http2RemoteFlowController}.
@@ -51,14 +45,12 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     };
 
     private final Http2Connection connection;
-    private final Http2FrameWriter frameWriter;
     private int initialWindowSize = DEFAULT_WINDOW_SIZE;
     private ChannelHandlerContext ctx;
-    private boolean frameSent;
+    private boolean needFlush;
 
-    public DefaultHttp2RemoteFlowController(Http2Connection connection, Http2FrameWriter frameWriter) {
+    public DefaultHttp2RemoteFlowController(Http2Connection connection) {
         this.connection = checkNotNull(connection, "connection");
-        this.frameWriter = checkNotNull(frameWriter, "frameWriter");
 
         // Add a flow state for the connection.
         connection.connectionStream().setProperty(FlowState.class,
@@ -158,65 +150,29 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             // Update the stream window and write any pending frames for the stream.
             FlowState state = state(stream);
             state.incrementStreamWindow(delta);
-            frameSent = false;
             state.writeBytes(state.writableWindow());
-            if (frameSent) {
-                flush();
-            }
+            flush();
         }
     }
 
     @Override
-    public ChannelFuture sendFlowControlledFrame(ChannelHandlerContext ctx, Http2Stream stream,
-            ByteBuf data, int padding, boolean endStream, ChannelPromise promise) {
+    public void sendFlowControlled(ChannelHandlerContext ctx, Http2Stream stream,
+                                   FlowControlled payload) {
         checkNotNull(ctx, "ctx");
-        checkNotNull(promise, "promise");
-        checkNotNull(data, "data");
+        checkNotNull(payload, "payload");
         if (this.ctx != null && this.ctx != ctx) {
             throw new IllegalArgumentException("Writing data from multiple ChannelHandlerContexts is not supported");
         }
-        if (padding < 0) {
-            throw new IllegalArgumentException("padding must be >= 0");
-        }
-
         // Save the context. We'll use this later when we write pending bytes.
         this.ctx = ctx;
-
         try {
             FlowState state = state(stream);
-
-            int window = state.writableWindow();
-            boolean framesAlreadyQueued = state.hasFrame();
-
-            FlowState.Frame frame = state.newFrame(promise, data, padding, endStream);
-            if (!framesAlreadyQueued && window >= frame.size()) {
-                // Window size is large enough to send entire data frame
-                frame.write();
-                ctx.flush();
-                return promise;
-            }
-
-            // Enqueue the frame to be written when the window size permits.
-            frame.enqueue();
-
-            if (framesAlreadyQueued || window <= 0) {
-                // Stream already has frames pending or is stalled, don't send anything now.
-                return promise;
-            }
-
-            // Create and send a partial frame up to the window size.
-            frame.split(window).write();
-            ctx.flush();
+            state.newFrame(payload);
+            state.writeBytes(state.writableWindow());
+            flush();
         } catch (Throwable e) {
-            promise.setFailure(e);
+            payload.error(e);
         }
-        return promise;
-    }
-
-    @Override
-    public ChannelFuture lastFlowControlledFrameSent(Http2Stream stream) {
-        FlowState state = state(stream);
-        return state != null ? state.lastNewFrame() : null;
     }
 
     /**
@@ -247,8 +203,9 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
      * Flushes the {@link ChannelHandlerContext} if we've received any data frames.
      */
     private void flush() {
-        if (ctx != null) {
+        if (needFlush) {
             ctx.flush();
+            needFlush = false;
         }
     }
 
@@ -260,14 +217,11 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         int connectionWindow = state(connectionStream).window();
 
         if (connectionWindow > 0) {
-            frameSent = false;
             writeChildren(connectionStream, connectionWindow);
             for (Http2Stream stream : connection.activeStreams()) {
                 writeChildNode(state(stream));
             }
-            if (frameSent) {
-                flush();
-            }
+            flush();
         }
     }
 
@@ -373,7 +327,6 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         private int pendingBytes;
         private int streamableBytesForTree;
         private int allocated;
-        private ChannelFuture lastNewFrame;
 
         FlowState(Http2Stream stream, int initialWindowSize) {
             this.stream = stream;
@@ -430,13 +383,6 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
 
         /**
-         * Returns the future for the last new frame created for this stream.
-         */
-        ChannelFuture lastNewFrame() {
-            return lastNewFrame;
-        }
-
-        /**
          * Returns the maximum writable window (minimum of the stream and connection windows).
          */
         int writableWindow() {
@@ -458,12 +404,13 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
 
         /**
-         * Creates a new frame with the given values but does not add it to the pending queue.
+         * Creates a new payload with the given values and immediately enqueues it.
          */
-        Frame newFrame(final ChannelPromise promise, ByteBuf data, int padding, boolean endStream) {
+        Frame newFrame(FlowControlled payload) {
             // Store this as the future for the most recent write attempt.
-            lastNewFrame = promise;
-            return new Frame(new SimplePromiseAggregator(promise), data, padding, endStream);
+            Frame frame = new Frame(payload);
+            pendingWriteQueue.offer(frame);
+            return frame;
         }
 
         /**
@@ -500,32 +447,13 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          * boundaries.
          */
         int writeBytes(int bytes) {
-            if (!stream.localSideOpen()) {
-                return 0;
-            }
-
             int bytesAttempted = 0;
-            int maxBytes = min(bytes, writableWindow());
             while (hasFrame()) {
-                Frame pendingWrite = peek();
-                if (maxBytes >= pendingWrite.size()) {
-                    // Window size is large enough to send entire data frame
-                    bytesAttempted += pendingWrite.size();
-                    pendingWrite.write();
-                } else if (maxBytes <= 0) {
-                    // No data from the current frame can be written - we're done.
-                    // We purposely check this after first testing the size of the
-                    // pending frame to properly handle zero-length frame.
-                    break;
-                } else {
-                    // We can send a partial frame
-                    Frame partialFrame = pendingWrite.split(maxBytes);
-                    bytesAttempted += partialFrame.size();
-                    partialFrame.write();
+                int maxBytes = min(bytes - bytesAttempted, writableWindow());
+                bytesAttempted += peek().write(maxBytes);
+                if (bytes - bytesAttempted <= 0) {
+                  break;
                 }
-
-                // Update the threshold.
-                maxBytes = min(bytes - bytesAttempted, writableWindow());
             }
             return bytesAttempted;
         }
@@ -545,37 +473,12 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          * A wrapper class around the content of a data frame.
          */
         private final class Frame {
-            final ByteBuf data;
-            final boolean endStream;
-            final SimplePromiseAggregator promiseAggregator;
-            final ChannelPromise promise;
-            int padding;
-            boolean enqueued;
+            final FlowControlled payload;
 
-            Frame(SimplePromiseAggregator promiseAggregator, ByteBuf data, int padding, boolean endStream) {
-                this.data = data;
-                this.padding = padding;
-                this.endStream = endStream;
-                this.promiseAggregator = promiseAggregator;
-                promise = ctx.newPromise();
-                promiseAggregator.add(promise);
-            }
-
-            /**
-             * Gets the total size (in bytes) of this frame including the data and padding.
-             */
-            int size() {
-                return data.readableBytes() + padding;
-            }
-
-            void enqueue() {
-                if (!enqueued) {
-                    enqueued = true;
-                    pendingWriteQueue.offer(this);
-
-                    // Increment the number of pending bytes for this stream.
-                    incrementPendingBytes(size());
-                }
+            Frame(FlowControlled payload) {
+                this.payload = payload;
+                // Increment the number of pending bytes for this stream.
+                incrementPendingBytes(payload.size());
             }
 
             /**
@@ -599,35 +502,21 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
              * <p>
              * Note: this does not flush the {@link ChannelHandlerContext}.
              */
-            void write() {
-                // Using a do/while loop because if the buffer is empty we still need to call
-                // the writer once to send the empty frame.
-                final Http2FrameSizePolicy frameSizePolicy = frameWriter.configuration().frameSizePolicy();
-                do {
-                    int bytesToWrite = size();
-                    int frameBytes = min(bytesToWrite, frameSizePolicy.maxFrameSize());
-                    if (frameBytes == bytesToWrite) {
-                        // All the bytes fit into a single HTTP/2 frame, just send it all.
-                        try {
-                            connectionState().incrementStreamWindow(-bytesToWrite);
-                            incrementStreamWindow(-bytesToWrite);
-                        } catch (Http2Exception e) { // Should never get here since we're decrementing.
-                            throw new RuntimeException("Invalid window state when writing frame: " + e.getMessage(), e);
-                        }
-                        frameWriter.writeData(ctx, stream.id(), data, padding, endStream, promise);
-                        frameSent = true;
-                        decrementPendingBytes(bytesToWrite);
-                        if (enqueued) {
-                            // It's enqueued - remove it from the head of the pending write queue.
-                            pendingWriteQueue.remove();
-                        }
-                        return;
-                    }
-
-                    // Split a chunk that will fit into a single HTTP/2 frame and write it.
-                    Frame frame = split(frameBytes);
-                    frame.write();
-                } while (size() > 0);
+            int write(int allowedBytes) {
+                int before = payload.size();
+                needFlush |= payload.write(Math.max(0, allowedBytes));
+                int writtenBytes = before - payload.size();
+                try {
+                    connectionState().incrementStreamWindow(-writtenBytes);
+                    incrementStreamWindow(-writtenBytes);
+                } catch (Http2Exception e) { // Should never get here since we're decrementing.
+                    throw new RuntimeException("Invalid window state when writing frame: " + e.getMessage(), e);
+                }
+                decrementPendingBytes(writtenBytes);
+                if (payload.size() == 0) {
+                    pendingWriteQueue.remove();
+                }
+                return writtenBytes;
             }
 
             /**
@@ -635,76 +524,16 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
              * removed from this branch of the priority tree.
              */
             void writeError(Http2Exception cause) {
-                decrementPendingBytes(size());
-                data.release();
-                promise.setFailure(cause);
-            }
-
-            /**
-             * Creates a new frame that is a view of this frame's data. The {@code maxBytes} are first split from the
-             * data buffer. If not all the requested bytes are available, the remaining bytes are then split from the
-             * padding (if available).
-             *
-             * @param maxBytes the maximum number of bytes that is allowed in the created frame.
-             * @return the partial frame.
-             */
-            Frame split(int maxBytes) {
-                // The requested maxBytes should always be less than the size of this frame.
-                assert maxBytes < size() : "Attempting to split a frame for the full size.";
-
-                // Get the portion of the data buffer to be split. Limit to the readable bytes.
-                int dataSplit = min(maxBytes, data.readableBytes());
-
-                // Split any remaining bytes from the padding.
-                int paddingSplit = min(maxBytes - dataSplit, padding);
-
-                ByteBuf splitSlice = data.readSlice(dataSplit).retain();
-                padding -= paddingSplit;
-
-                Frame frame = new Frame(promiseAggregator, splitSlice, paddingSplit, false);
-
-                int totalBytesSplit = dataSplit + paddingSplit;
-                decrementPendingBytes(totalBytesSplit);
-                return frame;
+                decrementPendingBytes(payload.size());
+                payload.error(cause);
             }
 
             /**
              * If this frame is in the pending queue, decrements the number of pending bytes for the stream.
              */
             void decrementPendingBytes(int bytes) {
-                if (enqueued) {
-                    incrementPendingBytes(-bytes);
-                }
+                incrementPendingBytes(-bytes);
             }
-        }
-    }
-
-    /**
-     * Lightweight promise aggregator.
-     */
-    private static final class SimplePromiseAggregator {
-        final ChannelPromise promise;
-        final AtomicInteger awaiting = new AtomicInteger();
-        final ChannelFutureListener listener = new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                if (!future.isSuccess()) {
-                    promise.tryFailure(future.cause());
-                } else {
-                    if (awaiting.decrementAndGet() == 0) {
-                        promise.trySuccess();
-                    }
-                }
-            }
-        };
-
-        SimplePromiseAggregator(ChannelPromise promise) {
-            this.promise = promise;
-        }
-
-        void add(ChannelPromise promise) {
-            awaiting.incrementAndGet();
-            promise.addListener(listener);
         }
     }
 }
