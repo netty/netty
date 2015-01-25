@@ -367,10 +367,10 @@ public final class OpenSslEngine extends SSLEngine {
 
         // Throw required runtime exceptions
         if (srcs == null) {
-            throw new NullPointerException("srcs");
+            throw new IllegalArgumentException("srcs is null");
         }
         if (dst == null) {
-            throw new NullPointerException("dst");
+            throw new IllegalArgumentException("dst is null");
         }
 
         if (offset >= srcs.length || offset + length > srcs.length) {
@@ -430,6 +430,9 @@ public final class OpenSslEngine extends SSLEngine {
         int endOffset = offset + length;
         for (int i = offset; i < endOffset; ++ i) {
             final ByteBuffer src = srcs[i];
+            if (src == null) {
+                throw new IllegalArgumentException("srcs[" + i + "] is null");
+            }
             while (src.hasRemaining()) {
 
                 // Write plaintext application data to the SSL engine
@@ -484,7 +487,7 @@ public final class OpenSslEngine extends SSLEngine {
                     " (expected: offset <= offset + length <= srcs.length (" + srcs.length + "))");
         }
         if (dsts == null) {
-            throw new NullPointerException("dsts");
+            throw new IllegalArgumentException("dsts is null");
         }
         if (dstsOffset >= dsts.length || dstsOffset + dstsLength > dsts.length) {
             throw new IndexOutOfBoundsException(
@@ -496,7 +499,7 @@ public final class OpenSslEngine extends SSLEngine {
         for (int i = dstsOffset; i < endOffset; i ++) {
             ByteBuffer dst = dsts[i];
             if (dst == null) {
-                throw new IllegalArgumentException();
+                throw new IllegalArgumentException("dsts[" + i + "] is null");
             }
             if (dst.isReadOnly()) {
                 throw new ReadOnlyBufferException();
@@ -521,7 +524,7 @@ public final class OpenSslEngine extends SSLEngine {
         for (int i = srcsOffset; i < srcsEndOffset; i++) {
             ByteBuffer src = srcs[i];
             if (src == null) {
-                throw new NullPointerException("srcs[" + i + ']');
+                throw new IllegalArgumentException("srcs[" + i + "] is null");
             }
             len += src.remaining();
         }
