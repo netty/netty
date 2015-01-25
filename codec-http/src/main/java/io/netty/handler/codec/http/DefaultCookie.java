@@ -340,8 +340,7 @@ public class DefaultCookie implements Cookie {
         }
         if (maxAge() >= 0) {
             buf.append(", maxAge=")
-               .append(maxAge())
-               .append('s');
+               .append(maxAge());
         }
         if (isSecure()) {
             buf.append(", secure");
