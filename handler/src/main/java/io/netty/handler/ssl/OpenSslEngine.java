@@ -427,7 +427,8 @@ public final class OpenSslEngine extends SSLEngine {
 
         // There was no pending data in the network BIO -- encrypt any application data
         int bytesConsumed = 0;
-        for (int i = offset; i < length; ++ i) {
+        int endOffset = offset + length;
+        for (int i = offset; i < endOffset; ++ i) {
             final ByteBuffer src = srcs[i];
             while (src.hasRemaining()) {
 
