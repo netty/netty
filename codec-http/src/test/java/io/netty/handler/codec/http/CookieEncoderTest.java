@@ -15,11 +15,17 @@
  */
 package io.netty.handler.codec.http;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.text.DateFormat;
+import java.text.ParseException;
 import java.util.Date;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.junit.Test;
 
@@ -56,38 +62,49 @@ public class CookieEncoderTest {
         }
     }
 
+    private void matchCookie(String cookieValue, String pattern, int maxAge) throws ParseException {
+        Matcher matcher = Pattern.compile(pattern).matcher(cookieValue);
+        assertTrue(matcher.find());
+        Date expiresDate = HttpHeaderDateFormat.get().parse(matcher.group(1));
+        long diff = (expiresDate.getTime() - System.currentTimeMillis()) / 1000;
+        // 1 sec should be fine
+        assertTrue(Math.abs(diff - maxAge) <= 1);
+    }
+
     @Test
-    public void testEncodingSingleCookieV1() {
-        String result = "myCookie=myValue; Max-Age=50; Path=\"/apathsomewhere\"; " +
+    public void testEncodingSingleCookieV1() throws ParseException {
+        int maxAge = 50;
+        String result = "myCookie=myValue; Max-Age=" + maxAge + "; Expires=(.+?); Path=\"/apathsomewhere\"; " +
                 "Domain=.adomainsomewhere; Secure; Comment=\"this is a Comment\"; Version=1";
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         cookie.setVersion(1);
         cookie.setComment("this is a Comment");
         cookie.setDomain(".adomainsomewhere");
-        cookie.setMaxAge(50);
+        cookie.setMaxAge(maxAge);
         cookie.setPath("/apathsomewhere");
         cookie.setSecure(true);
         String encodedCookie = ServerCookieEncoder.encode(cookie);
-        assertEquals(result, encodedCookie);
+        matchCookie(encodedCookie, result, maxAge);
     }
 
     @Test
-    public void testEncodingSingleCookieV2() {
-        String result = "myCookie=myValue; Max-Age=50; Path=\"/apathsomewhere\"; Domain=.adomainsomewhere; " +
-                "Secure; Comment=\"this is a Comment\"; Version=1; CommentURL=\"http://aurl.com\"; " +
-                "Port=\"80,8080\"; Discard";
+    public void testEncodingSingleCookieV2() throws ParseException {
+        int maxAge = 50;
+        String result = "myCookie=myValue; Max-Age=" + maxAge + "; Expires=(.+?); Path=\"/apathsomewhere\"; " +
+                "Domain=.adomainsomewhere; Secure; Comment=\"this is a Comment\"; Version=1; " +
+                "CommentURL=\"http://aurl.com\"; Port=\"80,8080\"; Discard";
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         cookie.setVersion(1);
         cookie.setComment("this is a Comment");
         cookie.setCommentUrl("http://aurl.com");
         cookie.setDomain(".adomainsomewhere");
         cookie.setDiscard(true);
-        cookie.setMaxAge(50);
+        cookie.setMaxAge(maxAge);
         cookie.setPath("/apathsomewhere");
         cookie.setPorts(80, 8080);
         cookie.setSecure(true);
         String encodedCookie = ServerCookieEncoder.encode(cookie);
-        assertEquals(result, encodedCookie);
+        matchCookie(encodedCookie, result, maxAge);
     }
 
     @Test

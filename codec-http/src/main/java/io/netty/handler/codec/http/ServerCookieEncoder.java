@@ -52,14 +52,13 @@ public final class ServerCookieEncoder {
         add(buf, cookie.getName(), cookie.getValue());
 
         if (cookie.getMaxAge() != Long.MIN_VALUE) {
-            if (cookie.getVersion() == 0) {
-                addUnquoted(buf, CookieHeaderNames.EXPIRES,
-                        HttpHeaderDateFormat.get().format(
-                                new Date(System.currentTimeMillis() +
-                                         cookie.getMaxAge() * 1000L)));
-            } else {
+            if (cookie.getVersion() != 0) {
                 add(buf, CookieHeaderNames.MAX_AGE, cookie.getMaxAge());
             }
+            addUnquoted(buf, CookieHeaderNames.EXPIRES,
+                    HttpHeaderDateFormat.get().format(
+                            new Date(System.currentTimeMillis() +
+                                    cookie.getMaxAge() * 1000L)));
         }
 
         if (cookie.getPath() != null) {
