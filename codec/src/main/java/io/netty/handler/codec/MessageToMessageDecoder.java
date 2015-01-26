@@ -21,10 +21,12 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.TypeParameterMatcher;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * {@link ChannelInboundHandlerAdapter} which decodes from one message to an other message.
@@ -80,6 +82,8 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAd
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        Map<Object, Boolean> read = InternalThreadLocalMap.get().messageToMessageDecoderRead();
+
         RecyclableArrayList out = RecyclableArrayList.newInstance();
         try {
             if (acceptInboundMessage(msg)) {
@@ -99,11 +103,31 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAd
             throw new DecoderException(e);
         } finally {
             int size = out.size();
+            if (size > 0) {
+                // Mark if something was read
+                read.put(ctx, Boolean.TRUE);
+            }
+
             for (int i = 0; i < size; i ++) {
                 ctx.fireChannelRead(out.get(i));
             }
             out.recycle();
         }
+    }
+
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        Map<Object, Boolean> read = InternalThreadLocalMap.get().messageToMessageDecoderRead();
+        if (read.remove(ctx) == Boolean.TRUE) {
+            ctx.fireChannelReadComplete();
+        }
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        super.handlerRemoved(ctx);
+        // Remove from cache ensure we not get any memory leaks in the long run
+        InternalThreadLocalMap.get().messageToMessageDecoderRead().remove(ctx);
     }
 
     /**
