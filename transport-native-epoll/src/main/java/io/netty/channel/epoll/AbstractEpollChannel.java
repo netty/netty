@@ -50,7 +50,7 @@ abstract class AbstractEpollChannel extends AbstractChannel {
         this.active = active;
     }
 
-    protected int fd() {
+    protected final int fd() {
         return fd;
     }
 

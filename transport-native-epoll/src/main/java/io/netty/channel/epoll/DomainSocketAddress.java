@@ -35,13 +35,13 @@ public final class DomainSocketAddress extends SocketAddress {
     /**
      * The path to the domain socket.
      */
-    public String socketPath() {
+    public String path() {
         return socketPath;
     }
 
     @Override
     public String toString() {
-        return socketPath();
+        return path();
     }
 
     @Override

@@ -86,13 +86,14 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
     private boolean writeBytesMultiple(ChannelOutboundBuffer in, IovArray array) throws IOException {
 
         long expectedWrittenBytes = array.size();
+        final long initialExpectedWrittenBytes = expectedWrittenBytes;
+
         int cnt = array.count();
 
         assert expectedWrittenBytes != 0;
         assert cnt != 0;
 
         boolean done = false;
-        long writtenBytes = 0;
         int offset = 0;
         int end = offset + cnt;
         for (;;) {
@@ -103,7 +104,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
                 break;
             }
             expectedWrittenBytes -= localWrittenBytes;
-            writtenBytes += localWrittenBytes;
 
             if (expectedWrittenBytes == 0) {
                 // Written everything, just break out here (fast-path)
@@ -124,7 +124,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
             } while (offset < end && localWrittenBytes > 0);
         }
 
-        in.removeBytes(writtenBytes);
+        in.removeBytes(initialExpectedWrittenBytes - expectedWrittenBytes);
         return done;
     }
 
@@ -133,9 +133,9 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
             int nioBufferCnt, long expectedWrittenBytes) throws IOException {
 
         assert expectedWrittenBytes != 0;
+        final long initialExpectedWrittenBytes = expectedWrittenBytes;
 
         boolean done = false;
-        long writtenBytes = 0;
         int offset = 0;
         int end = offset + nioBufferCnt;
         for (;;) {
@@ -146,7 +146,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
                 break;
             }
             expectedWrittenBytes -= localWrittenBytes;
-            writtenBytes += localWrittenBytes;
 
             if (expectedWrittenBytes == 0) {
                 // Written everything, just break out here (fast-path)
@@ -169,7 +168,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
             } while (offset < end && localWrittenBytes > 0);
         }
 
-        in.removeBytes(writtenBytes);
+        in.removeBytes(initialExpectedWrittenBytes - expectedWrittenBytes);
         return done;
     }
 

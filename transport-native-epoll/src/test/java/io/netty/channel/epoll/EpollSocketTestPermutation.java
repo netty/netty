@@ -29,6 +29,8 @@ import io.netty.testsuite.transport.TestsuitePermutation.BootstrapFactory;
 import io.netty.testsuite.transport.socket.SocketTestPermutation;
 import io.netty.util.concurrent.DefaultThreadFactory;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -152,6 +154,12 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
     }
 
     public static DomainSocketAddress newSocketAddress() {
-        return new DomainSocketAddress("/tmp/netty.dsocket");
+        try {
+            File file = File.createTempFile("netty", "dsocket");
+            file.delete();
+            return new DomainSocketAddress(file);
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 }

@@ -80,8 +80,9 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
                             // this means everything was handled for now
                             break;
                         }
+                        readPending = false;
+
                         try {
-                            readPending = false;
                             pipeline.fireChannelRead(newChildChannel(socketFd));
                         } catch (Throwable t) {
                             // keep on reading as we use epoll ET and need to consume everything from the socket

@@ -369,10 +369,12 @@ final class Native {
             }
         } else if (socketAddress instanceof DomainSocketAddress) {
             DomainSocketAddress addr = (DomainSocketAddress) socketAddress;
-            int res = bindDomainSocket(fd, addr.socketPath());
+            int res = bindDomainSocket(fd, addr.path());
             if (res < 0) {
                 throw newIOException("bind", res);
             }
+        } else {
+            throw new Error("Unexpected SocketAddress implementation " + socketAddress);
         }
     }
 
@@ -394,9 +396,11 @@ final class Native {
             InetSocketAddress inetSocketAddress = (InetSocketAddress) socketAddress;
             NativeInetAddress address = toNativeInetAddress(inetSocketAddress.getAddress());
             res = connect(fd, address.address, address.scopeId, inetSocketAddress.getPort());
-        } else {
+        } else if (socketAddress instanceof DomainSocketAddress) {
             DomainSocketAddress unixDomainSocketAddress = (DomainSocketAddress) socketAddress;
-            res = connectDomainSocket(fd, unixDomainSocketAddress.socketPath());
+            res = connectDomainSocket(fd, unixDomainSocketAddress.path());
+        } else {
+            throw new Error("Unexpected SocketAddress implementation " + socketAddress);
         }
         if (res < 0) {
             if (res == ERRNO_EINPROGRESS_NEGATIVE) {
