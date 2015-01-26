@@ -63,10 +63,15 @@ jint Java_io_netty_channel_epoll_Native_close0(JNIEnv * env, jclass clazz, jint 
 jint Java_io_netty_channel_epoll_Native_shutdown0(JNIEnv * env, jclass clazz, jint fd, jboolean read, jboolean write);
 jint Java_io_netty_channel_epoll_Native_socketStream(JNIEnv * env, jclass clazz);
 jint Java_io_netty_channel_epoll_Native_socketDgram(JNIEnv * env, jclass clazz);
+jint Java_io_netty_channel_epoll_Native_socketDomain(JNIEnv * env, jclass clazz);
 
 jint Java_io_netty_channel_epoll_Native_bind(JNIEnv * env, jclass clazz, jint fd, jbyteArray address, jint scopeId, jint port);
+jint Java_io_netty_channel_epoll_Native_bindDomainSocket(JNIEnv * env, jclass clazz, jint fd, jstring address);
+jint Java_io_netty_channel_epoll_Native_recvFd(JNIEnv* env, jclass clazz, jint fd);
+
 jint Java_io_netty_channel_epoll_Native_listen0(JNIEnv * env, jclass clazz, jint fd, jint backlog);
 jint Java_io_netty_channel_epoll_Native_connect(JNIEnv * env, jclass clazz, jint fd, jbyteArray address, jint scopeId, jint port);
+jint Java_io_netty_channel_epoll_Native_connectDomainSocket(JNIEnv * env, jclass clazz, jint fd, jstring address);
 jint Java_io_netty_channel_epoll_Native_finishConnect0(JNIEnv * env, jclass clazz, jint fd);
 jint Java_io_netty_channel_epoll_Native_accept0(JNIEnv * env, jclass clazz, jint fd);
 jlong Java_io_netty_channel_epoll_Native_sendfile0(JNIEnv *env, jclass clazz, jint fd, jobject fileRegion, jlong base_off, jlong off, jlong len);
