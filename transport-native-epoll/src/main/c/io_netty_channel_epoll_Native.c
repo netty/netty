@@ -1358,13 +1358,13 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_socketDomain(JNIEnv* e
     return fd;
 }
 
-JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_bindDomainSocket(JNIEnv * env, jclass clazz, jint fd, jstring socketPath) {
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_bindDomainSocket(JNIEnv* env, jclass clazz, jint fd, jstring socketPath) {
     struct sockaddr_un addr;
 
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
 
-    const char *socket_path = (*env)->GetStringUTFChars(env, socketPath, 0);
+    const char* socket_path = (*env)->GetStringUTFChars(env, socketPath, 0);
     memcpy(addr.sun_path, socket_path, strlen(socket_path));
 
     if (unlink(socket_path) == -1 && errno != ENOENT) {
@@ -1380,13 +1380,13 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_bindDomainSocket(JNIEn
     return res;
 }
 
-JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_connectDomainSocket(JNIEnv * env, jclass clazz, jint fd, jstring socketPath) {
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_connectDomainSocket(JNIEnv* env, jclass clazz, jint fd, jstring socketPath) {
     struct sockaddr_un addr;
 
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
 
-    const char *socket_path = (*env)->GetStringUTFChars(env, socketPath, 0);
+    const char* socket_path = (*env)->GetStringUTFChars(env, socketPath, 0);
     strncpy(addr.sun_path, socket_path, sizeof(addr.sun_path) - 1);
 
     int res;
@@ -1407,7 +1407,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_recvFd(JNIEnv* env, jc
     jint socketFd;
     struct msghdr msg;
     struct iovec iov[1];
-    struct cmsghdr *ctrl_msg = NULL;
+    struct cmsghdr* ctrl_msg = NULL;
     char msg_buffer[1];
     char elem_buffer[CMSG_SPACE(sizeof(int))];
 

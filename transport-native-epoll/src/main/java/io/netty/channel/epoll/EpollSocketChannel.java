@@ -35,7 +35,7 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
     private volatile InetSocketAddress local;
     private volatile InetSocketAddress remote;
 
-    public EpollSocketChannel(Channel parent, int fd) {
+    EpollSocketChannel(Channel parent, int fd) {
         super(parent, fd);
         config = new EpollSocketChannelConfig(this);
         // Directly cache the remote and local addresses
