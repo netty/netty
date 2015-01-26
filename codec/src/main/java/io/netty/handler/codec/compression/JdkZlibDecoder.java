@@ -125,17 +125,18 @@ public class JdkZlibDecoder extends ZlibDecoder {
             return;
         }
 
-        if (!in.isReadable()) {
+        int readableBytes = in.readableBytes();
+        if (readableBytes == 0) {
             return;
         }
 
         if (decideZlibOrNone) {
             // First two bytes are needed to decide if it's a ZLIB stream.
-            if (in.readableBytes() < 2) {
+            if (readableBytes < 2) {
                 return;
             }
 
-            boolean nowrap = !looksLikeZlib(in.getShort(0));
+            boolean nowrap = !looksLikeZlib(in.getShort(in.readerIndex()));
             inflater = new Inflater(nowrap);
             decideZlibOrNone = false;
         }
@@ -154,13 +155,14 @@ public class JdkZlibDecoder extends ZlibDecoder {
                         }
                     }
             }
+            // Some bytes may have been consumed, and so we must re-set the number of readable bytes.
+            readableBytes = in.readableBytes();
         }
 
-        int readableBytes = in.readableBytes();
         if (in.hasArray()) {
-            inflater.setInput(in.array(), in.arrayOffset() + in.readerIndex(), in.readableBytes());
+            inflater.setInput(in.array(), in.arrayOffset() + in.readerIndex(), readableBytes);
         } else {
-            byte[] array = new byte[in.readableBytes()];
+            byte[] array = new byte[readableBytes];
             in.getBytes(in.readerIndex(), array);
             inflater.setInput(array);
         }

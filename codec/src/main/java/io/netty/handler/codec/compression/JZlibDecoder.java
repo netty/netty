@@ -90,13 +90,13 @@ public class JZlibDecoder extends ZlibDecoder {
             return;
         }
 
-        if (!in.isReadable()) {
+        final int inputLength = in.readableBytes();
+        if (inputLength == 0) {
             return;
         }
 
         try {
             // Configure input.
-            int inputLength = in.readableBytes();
             z.avail_in = inputLength;
             if (in.hasArray()) {
                 z.next_in = in.array();
