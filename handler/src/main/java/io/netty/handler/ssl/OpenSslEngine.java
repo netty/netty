@@ -540,7 +540,6 @@ public final class OpenSslEngine extends SSLEngine {
 
         // Write encrypted data to network BIO
         int bytesConsumed = -1;
-        int lastPrimingReadResult = 0;
         try {
             while (srcsOffset < srcsEndOffset) {
                 ByteBuffer src = srcs[srcsOffset];
@@ -565,65 +564,73 @@ public final class OpenSslEngine extends SSLEngine {
             throw new SSLException(e);
         }
         if (bytesConsumed >= 0) {
-            lastPrimingReadResult = SSL.readFromSSL(ssl, EMPTY_ADDR, 0); // priming read
+            int lastPrimingReadResult = SSL.readFromSSL(ssl, EMPTY_ADDR, 0); // priming read
+
+            // check if SSL_read returned <= 0. In this case we need to check the error and see if it was something
+            // fatal.
+            if (lastPrimingReadResult <= 0) {
+                // Check for OpenSSL errors caused by the priming read
+                long error = SSL.getLastErrorNumber();
+                if (OpenSsl.isError(error)) {
+                    String err = SSL.getErrorString(error);
+                    if (logger.isDebugEnabled()) {
+                        logger.debug(
+                                "SSL_read failed: primingReadResult: " + lastPrimingReadResult +
+                                        "; OpenSSL error: '" + err + '\'');
+                    }
+
+                    // There was an internal error -- shutdown
+                    shutdown();
+                    throw new SSLException(err);
+                }
+            }
         } else {
             // Reset to 0 as -1 is used to signal that nothing was written and no priming read needs to be done
             bytesConsumed = 0;
         }
 
-        // Check for OpenSSL errors caused by the priming read
-        long error = SSL.getLastErrorNumber();
-        if (OpenSsl.isError(error)) {
-            String err = SSL.getErrorString(error);
-            if (logger.isDebugEnabled()) {
-                logger.debug(
-                        "SSL_read failed: primingReadResult: " + lastPrimingReadResult +
-                                "; OpenSSL error: '" + err + '\'');
-            }
-
-            // There was an internal error -- shutdown
-            shutdown();
-            throw new SSLException(err);
-        }
-
         // There won't be any application data until we're done handshaking
-        int pendingApp = SSL.isInInit(ssl) == 0 ? SSL.pendingReadableBytesInSSL(ssl) : 0;
-
-        // Do we have enough room in dsts to write decrypted data?
-        if (capacity < pendingApp) {
-            return new SSLEngineResult(BUFFER_OVERFLOW, getHandshakeStatus(), bytesConsumed, 0);
-        }
-
-        // Write decrypted data to dsts buffers
+        //
+        // We first check handshakeFinished to eliminate the overhead of extra JNI call if possible.
+        int pendingApp = (handshakeFinished || SSL.isInInit(ssl) == 0) ? SSL.pendingReadableBytesInSSL(ssl) : 0;
         int bytesProduced = 0;
-        int idx = dstsOffset;
-        while (idx < endOffset) {
-            ByteBuffer dst = dsts[idx];
-            if (!dst.hasRemaining()) {
-                idx ++;
-                continue;
+
+        if (pendingApp > 0) {
+            // Do we have enough room in dsts to write decrypted data?
+            if (capacity < pendingApp) {
+                return new SSLEngineResult(BUFFER_OVERFLOW, getHandshakeStatus(), bytesConsumed, 0);
             }
 
-            if (pendingApp <= 0) {
-                break;
-            }
+            // Write decrypted data to dsts buffers
+            int idx = dstsOffset;
+            while (idx < endOffset) {
+                ByteBuffer dst = dsts[idx];
+                if (!dst.hasRemaining()) {
+                    idx ++;
+                    continue;
+                }
 
-            int bytesRead;
-            try {
-                bytesRead = readPlaintextData(dst);
-            } catch (Exception e) {
-                throw new SSLException(e);
-            }
+                if (pendingApp <= 0) {
+                    break;
+                }
 
-            if (bytesRead == 0) {
-                break;
-            }
+                int bytesRead;
+                try {
+                    bytesRead = readPlaintextData(dst);
+                } catch (Exception e) {
+                    throw new SSLException(e);
+                }
 
-            bytesProduced += bytesRead;
-            pendingApp -= bytesRead;
+                if (bytesRead == 0) {
+                    break;
+                }
 
-            if (!dst.hasRemaining()) {
-                idx ++;
+                bytesProduced += bytesRead;
+                pendingApp -= bytesRead;
+
+                if (!dst.hasRemaining()) {
+                    idx ++;
+                }
             }
         }
 
@@ -1149,7 +1156,7 @@ public final class OpenSslEngine extends SSLEngine {
         }
     }
 
-    private synchronized void beginHandshakeImplicitly() throws SSLException {
+    private void beginHandshakeImplicitly() throws SSLException {
         if (engineClosed || destroyed != 0) {
             throw ENGINE_CLOSED;
         }
@@ -1176,6 +1183,10 @@ public final class OpenSslEngine extends SSLEngine {
                 shutdown();
                 throw new SSLException(err);
             }
+        } else {
+            // if SSL_do_handshake returns > 0 it means the handshake was finished. This means we can update
+            // handshakeFinished directly and so eliminate uncessary calls to SSL.isInInit(...)
+            handshakeFinished = true;
         }
     }
 
