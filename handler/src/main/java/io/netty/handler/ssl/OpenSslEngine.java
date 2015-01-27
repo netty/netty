@@ -715,9 +715,7 @@ public final class OpenSslEngine extends SSLEngine {
             return EmptyArrays.EMPTY_STRINGS;
         } else {
             for (int i = 0; i < enabled.length; i++) {
-                String c = enabled[i];
-                // TODO: Determine the protocol using SSL_CIPHER_get_version()
-                String mapped = CipherSuiteConverter.toJava(c, "TLS");
+                String mapped = toJavaCipherSuite(enabled[i]);
                 if (mapped != null) {
                     enabled[i] = mapped;
                 }
@@ -1084,7 +1082,7 @@ public final class OpenSslEngine extends SSLEngine {
                         if (applicationProtocol != null) {
                             OpenSslEngine.this.applicationProtocol = applicationProtocol.replace(':', '_');
                         } else {
-                            OpenSslEngine.this.applicationProtocol = "";
+                            OpenSslEngine.this.applicationProtocol = applicationProtocol = "";
                         }
                     }
                     String version = SSL.getVersion(ssl);
@@ -1241,13 +1239,7 @@ public final class OpenSslEngine extends SSLEngine {
         }
 
         String prefix = toJavaCipherSuitePrefix(SSL.getVersion(ssl));
-        String converted = CipherSuiteConverter.toJava(openSslCipherSuite, prefix);
-        if (converted != null) {
-            openSslCipherSuite = converted;
-        } else {
-            openSslCipherSuite = prefix + '_' + openSslCipherSuite.replace('-', '_');
-        }
-        return openSslCipherSuite;
+        return CipherSuiteConverter.toJava(openSslCipherSuite, prefix);
     }
 
     /**
