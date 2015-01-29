@@ -35,7 +35,8 @@ abstract class AbstractEpollChannel extends AbstractChannel {
     private static final ChannelMetadata DATA = new ChannelMetadata(false);
     private final int readFlag;
     private volatile FileDescriptor fileDescriptor;
-    protected int flags;
+    protected int flags = Native.EPOLLET;
+
     protected volatile boolean active;
     int id;
 
@@ -51,12 +52,33 @@ abstract class AbstractEpollChannel extends AbstractChannel {
         fileDescriptor = new EpollFileDescriptor(fd);
     }
 
+    void setFlag(int flag) {
+        if (!isFlagSet(flag)) {
+            flags |= flag;
+            modifyEvents();
+        }
+    }
+
+    void clearFlag(int flag) {
+        if (isFlagSet(flag)) {
+            flags &= ~flag;
+            modifyEvents();
+        }
+    }
+
+    boolean isFlagSet(int flag) {
+        return (flags & flag) != 0;
+    }
+
     /**
      * Returns the {@link FileDescriptor} that is used by this {@link Channel}.
      */
     public final FileDescriptor fd() {
         return fileDescriptor;
     }
+
+    @Override
+    public abstract EpollChannelConfig config();
 
     @Override
     public boolean isActive() {
@@ -105,10 +127,7 @@ abstract class AbstractEpollChannel extends AbstractChannel {
         // Channel.read() or ChannelHandlerContext.read() was called
         ((AbstractEpollUnsafe) unsafe()).readPending = true;
 
-        if ((flags & readFlag) == 0) {
-            flags |= readFlag;
-            modifyEvents();
-        }
+        setFlag(readFlag);
     }
 
     final void clearEpollIn() {
@@ -137,22 +156,8 @@ abstract class AbstractEpollChannel extends AbstractChannel {
         }
     }
 
-    protected final void setEpollOut() {
-        if ((flags & Native.EPOLLOUT) == 0) {
-            flags |= Native.EPOLLOUT;
-            modifyEvents();
-        }
-    }
-
-    protected final void clearEpollOut() {
-        if ((flags & Native.EPOLLOUT) != 0) {
-            flags &= ~Native.EPOLLOUT;
-            modifyEvents();
-        }
-    }
-
     private void modifyEvents() {
-        if (isOpen()) {
+        if (isOpen() && isRegistered()) {
             ((EpollEventLoop) eventLoop()).modify(this);
         }
     }
@@ -250,7 +255,7 @@ abstract class AbstractEpollChannel extends AbstractChannel {
                     readerIndex += localFlushedAmount;
                 } else {
                     // Returned EAGAIN need to set EPOLLOUT
-                    setEpollOut();
+                    setFlag(Native.EPOLLOUT);
                     return writtenBytes;
                 }
             }
@@ -273,7 +278,7 @@ abstract class AbstractEpollChannel extends AbstractChannel {
                     }
                 } else {
                     // Returned EAGAIN need to set EPOLLOUT
-                    setEpollOut();
+                    setFlag(Native.EPOLLOUT);
                     break;
                 }
             }
@@ -301,7 +306,7 @@ abstract class AbstractEpollChannel extends AbstractChannel {
             // Flush immediately only when there's no pending flush.
             // If there's a pending flush operation, event loop will call forceFlush() later,
             // and thus there's no need to call it now.
-            if (isFlushPending()) {
+            if (isFlagSet(Native.EPOLLOUT)) {
                 return;
             }
             super.flush0();
@@ -315,15 +320,8 @@ abstract class AbstractEpollChannel extends AbstractChannel {
             super.flush0();
         }
 
-        private boolean isFlushPending() {
-            return (flags & Native.EPOLLOUT) != 0;
-        }
-
         protected final void clearEpollIn0() {
-            if ((flags & readFlag) != 0) {
-                flags &= ~readFlag;
-                modifyEvents();
-            }
+            clearFlag(readFlag);
         }
     }
 }
