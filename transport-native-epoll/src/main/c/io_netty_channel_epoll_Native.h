@@ -18,8 +18,9 @@
 
 #define EPOLL_READ 0x01
 #define EPOLL_WRITE 0x02
-#define EPOLL_ACCEPT 0x04
-#define EPOLL_RDHUP 0x08
+#define EPOLL_RDHUP 0x04
+#define EPOLL_EDGE 0x08
+
 
 // Define SO_REUSEPORT if not found to fix build issues.
 // See https://github.com/netty/netty/issues/2558

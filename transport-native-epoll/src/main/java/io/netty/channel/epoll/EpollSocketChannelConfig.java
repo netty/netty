@@ -17,7 +17,6 @@ package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.SocketChannelConfig;
@@ -27,7 +26,7 @@ import java.util.Map;
 
 import static io.netty.channel.ChannelOption.*;
 
-public final class EpollSocketChannelConfig extends DefaultChannelConfig implements SocketChannelConfig {
+public final class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChannelConfig {
 
     private final EpollSocketChannel channel;
     private volatile boolean allowHalfClosure;
@@ -345,7 +344,8 @@ public final class EpollSocketChannelConfig extends DefaultChannelConfig impleme
     }
 
     @Override
-    protected void autoReadCleared() {
-        channel.clearEpollIn();
+    public EpollSocketChannelConfig setEpollMode(EpollMode mode) {
+        super.setEpollMode(mode);
+        return this;
     }
 }
