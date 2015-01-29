@@ -44,14 +44,19 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
     /**
      * Create a new instance using the specified number of threads and the given {@link ThreadFactory}.
      */
+    @SuppressWarnings("deprecation")
     public EpollEventLoopGroup(int nThreads, ThreadFactory threadFactory) {
-        this(nThreads, threadFactory, 128);
+        this(nThreads, threadFactory, 0);
     }
 
     /**
      * Create a new instance using the specified number of threads, the given {@link ThreadFactory} and the given
      * maximal amount of epoll events to handle per epollWait(...).
+     *
+     * @deprecated  Use {@link #EpollEventLoopGroup(int)}, {@link #EpollEventLoopGroup(int)} or
+     *              {@link #EpollEventLoopGroup(int, ThreadFactory)}
      */
+    @Deprecated
     public EpollEventLoopGroup(int nThreads, ThreadFactory threadFactory, int maxEventsAtOnce) {
         super(nThreads, threadFactory, maxEventsAtOnce);
     }
