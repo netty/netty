@@ -55,7 +55,6 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     private final long[] events;
 
     private int id;
-    private boolean overflown;
 
     @SuppressWarnings("unused")
     private volatile int wakenUp;
@@ -95,21 +94,23 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     private int nextId() {
         int id = this.id;
         if (id == Integer.MAX_VALUE) {
-            overflown = true;
+            // We used all possible ints in the past ( 1 - Integer.MAX_VALUE), time to scrub the stored channels
+            // and re-assign ids.
+            AbstractEpollChannel[] channels = ids.values(AbstractEpollChannel.class);
+            ids.clear();
+
             id = 0;
-        }
-        if (overflown) {
-            // the ids had an overflow before so we need to make sure the id is not in use atm before assign
-            // it.
-            for (;;) {
-                if (!ids.containsKey(++id)) {
-                    this.id = id;
-                    break;
-                }
+
+            for (AbstractEpollChannel ch: channels) {
+                id++;
+                ch.id = id;
+                ids.put(ch.id, ch);
             }
-        } else {
-            this.id = ++id;
+            if (id == Integer.MAX_VALUE) {
+                throw new IllegalStateException("Could not scrub ids");
+            }
         }
+        this.id = ++id;
         return id;
     }
 
