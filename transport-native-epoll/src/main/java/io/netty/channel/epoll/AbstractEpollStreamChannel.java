@@ -100,7 +100,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
             long localWrittenBytes = Native.writevAddresses(fd().intValue(), array.memoryAddress(offset), cnt);
             if (localWrittenBytes == 0) {
                 // Returned EAGAIN need to set EPOLLOUT
-                setEpollOut();
+                setFlag(Native.EPOLLOUT);
                 break;
             }
             expectedWrittenBytes -= localWrittenBytes;
@@ -142,7 +142,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
             long localWrittenBytes = Native.writev(fd().intValue(), nioBuffers, offset, nioBufferCnt);
             if (localWrittenBytes == 0) {
                 // Returned EAGAIN need to set EPOLLOUT
-                setEpollOut();
+                setFlag(Native.EPOLLOUT);
                 break;
             }
             expectedWrittenBytes -= localWrittenBytes;
@@ -195,7 +195,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
                     Native.sendfile(fd().intValue(), region, baseOffset, offset, regionCount - offset);
             if (localFlushedAmount == 0) {
                 // Returned EAGAIN need to set EPOLLOUT
-                setEpollOut();
+                setFlag(Native.EPOLLOUT);
                 break;
             }
 
@@ -223,7 +223,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
 
             if (msgCount == 0) {
                 // Wrote all messages.
-                clearEpollOut();
+                clearFlag(Native.EPOLLOUT);
                 break;
             }
 
@@ -375,7 +375,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
         try {
             boolean connected = Native.connect(fd().intValue(), remoteAddress);
             if (!connected) {
-                setEpollOut();
+                setFlag(Native.EPOLLOUT);
             }
             success = true;
             return connected;
@@ -557,10 +557,10 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
          */
         private boolean doFinishConnect() throws Exception {
             if (Native.finishConnect(fd().intValue())) {
-                clearEpollOut();
+                clearFlag(Native.EPOLLOUT);
                 return true;
             } else {
-                setEpollOut();
+                setFlag(Native.EPOLLOUT);
                 return false;
             }
         }
@@ -587,8 +587,13 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
             ByteBuf byteBuf = null;
             boolean close = false;
             try {
+                boolean edgeTriggered = isFlagSet(Native.EPOLLET);
+                // if edgeTriggered is used we need to read all messages as we are not notified again otherwise.
+                final int maxMessagesPerRead = edgeTriggered
+                        ? Integer.MAX_VALUE : config().getMaxMessagesPerRead();
+                int messages = 0;
                 int totalReadAmount = 0;
-                for (;;) {
+                do {
                     // we use a direct buffer here as the native implementations only be able
                     // to handle direct buffers.
                     byteBuf = allocHandle.allocate(allocator);
@@ -618,7 +623,14 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
                         // which might mean we drained the recv buffer completely.
                         break;
                     }
-                }
+                    if (!edgeTriggered && !config().isAutoRead()) {
+                        // This is not using EPOLLET so we can stop reading
+                        // ASAP as we will get notified again later with
+                        // pending data
+                        break;
+                    }
+                } while (++ messages < maxMessagesPerRead);
+
                 pipeline.fireChannelReadComplete();
                 allocHandle.record(totalReadAmount);
 

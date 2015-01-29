@@ -17,7 +17,6 @@ package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.NetUtil;
@@ -28,7 +27,7 @@ import static io.netty.channel.ChannelOption.SO_BACKLOG;
 import static io.netty.channel.ChannelOption.SO_RCVBUF;
 import static io.netty.channel.ChannelOption.SO_REUSEADDR;
 
-public class EpollServerChannelConfig extends DefaultChannelConfig {
+public class EpollServerChannelConfig extends EpollChannelConfig {
     protected final AbstractEpollChannel channel;
     private volatile int backlog = NetUtil.SOMAXCONN;
 
@@ -159,7 +158,8 @@ public class EpollServerChannelConfig extends DefaultChannelConfig {
     }
 
     @Override
-    protected final void autoReadCleared() {
-        channel.clearEpollIn();
+    public EpollServerChannelConfig setEpollMode(EpollMode mode) {
+        super.setEpollMode(mode);
+        return this;
     }
 }

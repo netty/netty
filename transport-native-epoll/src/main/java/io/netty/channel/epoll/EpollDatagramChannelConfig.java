@@ -17,7 +17,6 @@ package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
@@ -27,7 +26,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Map;
 
-public final class EpollDatagramChannelConfig extends DefaultChannelConfig implements DatagramChannelConfig {
+public final class EpollDatagramChannelConfig extends EpollChannelConfig implements DatagramChannelConfig {
     private static final RecvByteBufAllocator DEFAULT_RCVBUF_ALLOCATOR = new FixedRecvByteBufAllocator(2048);
     private final EpollDatagramChannel datagramChannel;
     private boolean activeOnOpen;
@@ -279,6 +278,12 @@ public final class EpollDatagramChannelConfig extends DefaultChannelConfig imple
         throw new UnsupportedOperationException("Multicast not supported");
     }
 
+    @Override
+    public EpollDatagramChannelConfig setEpollMode(EpollMode mode) {
+        super.setEpollMode(mode);
+        return this;
+    }
+
     /**
      * Returns {@code true} if the SO_REUSEPORT option is set.
      */
@@ -296,10 +301,5 @@ public final class EpollDatagramChannelConfig extends DefaultChannelConfig imple
     public EpollDatagramChannelConfig setReusePort(boolean reusePort) {
         Native.setReusePort(datagramChannel.fd().intValue(), reusePort ? 1 : 0);
         return this;
-    }
-
-    @Override
-    protected void autoReadCleared() {
-        datagramChannel.clearEpollIn();
     }
 }
