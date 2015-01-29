@@ -62,8 +62,9 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
      *                      {@code executor} to lie very close together.
      * @param executor  the {@link Executor} to use, or {@code null} if the default should be used.
      */
+    @SuppressWarnings("deprecation")
     public EpollEventLoopGroup(int nEventLoops, Executor executor) {
-        this(nEventLoops, executor, 128);
+        this(nEventLoops, executor, 0);
     }
 
     /**
@@ -75,8 +76,9 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
      * @param executorServiceFactory   the {@link ExecutorServiceFactory} to use, or {@code null} if the
      *                                 default should be used.
      */
+    @SuppressWarnings("deprecation")
     public EpollEventLoopGroup(int nEventLoops, ExecutorServiceFactory executorServiceFactory) {
-        this(nEventLoops, executorServiceFactory, 128);
+        this(nEventLoops, executorServiceFactory, 0);
     }
 
     /**
@@ -87,7 +89,11 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
      *                      {@code executor} to lie very close together.
      * @param executor   the {@link Executor} to use, or {@code null} if the default should be used.
      * @param maxEventsAtOnce   the maximum number of epoll events to handle per epollWait(...).
+     *
+     * @deprecated  Use {@link #EpollEventLoopGroup(int)}, {@link #EpollEventLoopGroup(int)} or
+     *              {@link #EpollEventLoopGroup(int, Executor)}
      */
+    @Deprecated
     public EpollEventLoopGroup(int nEventLoops, Executor executor, int maxEventsAtOnce) {
         super(nEventLoops, executor, maxEventsAtOnce);
     }
@@ -101,7 +107,11 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
      * @param executorServiceFactory   the {@link ExecutorServiceFactory} to use, or {@code null} if the default
      *                                 should be used.
      * @param maxEventsAtOnce   the maximum number of epoll events to handle per epollWait(...).
+     *
+     * @deprecated  Use {@link #EpollEventLoopGroup(int)}, {@link #EpollEventLoopGroup(int)} or
+     *              {@link #EpollEventLoopGroup(int, ExecutorServiceFactory)}
      */
+    @Deprecated
     public EpollEventLoopGroup(int nEventLoops, ExecutorServiceFactory executorServiceFactory, int maxEventsAtOnce) {
         super(nEventLoops, executorServiceFactory, maxEventsAtOnce);
     }

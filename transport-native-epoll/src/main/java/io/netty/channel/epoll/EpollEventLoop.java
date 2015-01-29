@@ -52,7 +52,8 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     private final int epollFd;
     private final int eventFd;
     private final IntObjectMap<AbstractEpollChannel> ids = new IntObjectHashMap<AbstractEpollChannel>();
-    private final long[] events;
+    private final boolean allowGrowing;
+    private long[] events;
 
     private int id;
 
@@ -62,7 +63,13 @@ final class EpollEventLoop extends SingleThreadEventLoop {
 
     EpollEventLoop(EventLoopGroup parent, Executor executor, int maxEvents) {
         super(parent, executor, false);
-        events = new long[maxEvents];
+        if (maxEvents == 0) {
+            allowGrowing = true;
+            events = new long[128];
+        } else {
+            allowGrowing = false;
+            events = new long[maxEvents];
+        }
         boolean success = false;
         int epollFd = -1;
         int eventFd = -1;
@@ -268,7 +275,10 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                 final long ioTime = System.nanoTime() - ioStartTime;
                 runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
             }
-
+            if (allowGrowing && ready == events.length) {
+                // double the size of the array as we needed the whole space for the events
+                events = new long[events.length << 1];
+            }
             if (isShuttingDown()) {
                 closeAll();
                 if (confirmShutdown()) {
