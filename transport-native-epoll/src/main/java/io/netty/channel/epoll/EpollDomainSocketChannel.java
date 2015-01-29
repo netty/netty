@@ -126,7 +126,12 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel {
             final ChannelPipeline pipeline = pipeline();
 
             try {
-                for (;;) {
+                boolean edgeTriggered = isFlagSet(Native.EPOLLET);
+                // if edgeTriggered is used we need to read all messages as we are not notified again otherwise.
+                final int maxMessagesPerRead = edgeTriggered
+                        ? Integer.MAX_VALUE : config().getMaxMessagesPerRead();
+                int messages = 0;
+                do {
                     int socketFd = Native.recvFd(fd().intValue());
                     if (socketFd == 0) {
                         break;
@@ -136,8 +141,23 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel {
                         return;
                     }
                     readPending = false;
-                    pipeline.fireChannelRead(new EpollFileDescriptor(socketFd));
-                }
+
+                    try {
+                        pipeline.fireChannelRead(new EpollFileDescriptor(socketFd));
+                    } catch (Throwable t) {
+                        // keep on reading as we use epoll ET and need to consume everything from the socket
+                        pipeline.fireChannelReadComplete();
+                        pipeline.fireExceptionCaught(t);
+                    } finally {
+                        if (!edgeTriggered && !config().isAutoRead()) {
+                            // This is not using EPOLLET so we can stop reading
+                            // ASAP as we will get notified again later with
+                            // pending data
+                            break;
+                        }
+                    }
+                } while (++ messages < maxMessagesPerRead);
+
                 pipeline.fireChannelReadComplete();
 
             } catch (Throwable t) {

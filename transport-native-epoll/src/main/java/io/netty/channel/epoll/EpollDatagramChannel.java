@@ -25,6 +25,7 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultAddressedEnvelope;
+import io.netty.channel.FileDescriptor;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
@@ -84,7 +85,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     @Override
     @SuppressWarnings("deprecation")
     public boolean isActive() {
-        return fd() != EpollFileDescriptor.INVALID &&
+        return fd() != FileDescriptor.INVALID &&
                 (config.getOption(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) && isRegistered()
                         || active);
     }
@@ -274,7 +275,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             Object msg = in.current();
             if (msg == null) {
                 // Wrote all messages.
-                clearEpollOut();
+                clearFlag(Native.EPOLLOUT);
                 break;
             }
 
@@ -293,7 +294,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                             int send = Native.sendmmsg(fd().intValue(), packets, offset, cnt);
                             if (send == 0) {
                                 // Did not write all messages.
-                                setEpollOut();
+                                setFlag(Native.EPOLLOUT);
                                 return;
                             }
                             for (int i = 0; i < send; i++) {
@@ -317,7 +318,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                     in.remove();
                 } else {
                     // Did not write all messages.
-                    setEpollOut();
+                    setFlag(Native.EPOLLOUT);
                     break;
                 }
             } catch (IOException e) {
@@ -505,7 +506,12 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             final ChannelPipeline pipeline = pipeline();
             Throwable exception = null;
             try {
-                for (;;) {
+                boolean edgeTriggered = isFlagSet(Native.EPOLLET);
+                // if edgeTriggered is used we need to read all messages as we are not notified again otherwise.
+                final int maxMessagesPerRead = edgeTriggered
+                        ? Integer.MAX_VALUE : config().getMaxMessagesPerRead();
+                int messages = 0;
+                do {
                     ByteBuf data = null;
                     try {
                         data = allocHandle.allocate(config.getAllocator());
@@ -540,8 +546,14 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         if (data != null) {
                             data.release();
                         }
+                        if (!edgeTriggered && !config().isAutoRead()) {
+                            // This is not using EPOLLET so we can stop reading
+                            // ASAP as we will get notified again later with
+                            // pending data
+                            break;
+                        }
                     }
-                }
+                } while (++ messages < maxMessagesPerRead);
 
                 int size = readBuf.size();
                 for (int i = 0; i < size; i ++) {
