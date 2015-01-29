@@ -120,6 +120,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     if (localReadAmount <= 0) {
                         // not was read release the buffer
                         byteBuf.release();
+                        byteBuf = null;
                         close = localReadAmount < 0;
                         break;
                     }
