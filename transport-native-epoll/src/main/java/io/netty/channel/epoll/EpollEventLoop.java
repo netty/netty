@@ -310,22 +310,18 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                 // consume wakeup event
                 Native.eventFdRead(eventFd);
             } else {
-                boolean read = (ev & Native.EPOLLIN) != 0;
-                boolean write = (ev & Native.EPOLLOUT) != 0;
-                boolean close = (ev & Native.EPOLLRDHUP) != 0;
-
                 AbstractEpollChannel ch = ids.get(id);
                 if (ch != null) {
                     AbstractEpollUnsafe unsafe = (AbstractEpollUnsafe) ch.unsafe();
-                    if (write && ch.isOpen()) {
+                    if ((ev & Native.EPOLLOUT) != 0 && ch.isOpen()) {
                         // force flush of data as the epoll is writable again
                         unsafe.epollOutReady();
                     }
-                    if (read && ch.isOpen()) {
+                    if ((ev & Native.EPOLLIN) != 0 && ch.isOpen()) {
                         // Something is ready to read, so consume it now
                         unsafe.epollInReady();
                     }
-                    if (close && ch.isOpen()) {
+                    if ((ev & Native.EPOLLRDHUP) != 0 && ch.isOpen()) {
                         unsafe.epollRdHupReady();
                     }
                 }

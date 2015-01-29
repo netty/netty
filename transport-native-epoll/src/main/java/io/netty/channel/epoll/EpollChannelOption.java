@@ -29,6 +29,9 @@ public final class EpollChannelOption<T> extends ChannelOption<T> {
     public static final ChannelOption<EpollDomainSocketReadMode> DOMAIN_SOCKET_READ_MODE =
             valueOf("DOMAIN_SOCKET_READ_MODE");
 
+    public static final ChannelOption<EpollMode> EPOLL_MODE =
+            valueOf("EPOLL_MODE");
+
     @SuppressWarnings({ "unused", "deprecation" })
     private EpollChannelOption(String name) {
         super(name);

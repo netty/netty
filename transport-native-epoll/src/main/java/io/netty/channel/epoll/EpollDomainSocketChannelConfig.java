@@ -18,18 +18,17 @@ package io.netty.channel.epoll;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 
 import java.util.Map;
 
-public final class EpollDomainSocketChannelConfig extends DefaultChannelConfig {
+public final class EpollDomainSocketChannelConfig extends EpollChannelConfig {
     private volatile EpollDomainSocketReadMode mode =
             EpollDomainSocketReadMode.BYTES;
 
-    EpollDomainSocketChannelConfig(Channel channel) {
+    EpollDomainSocketChannelConfig(AbstractEpollChannel channel) {
         super(channel);
     }
 
@@ -116,6 +115,12 @@ public final class EpollDomainSocketChannelConfig extends DefaultChannelConfig {
     @Override
     public EpollDomainSocketChannelConfig setAutoRead(boolean autoRead) {
         super.setAutoRead(autoRead);
+        return this;
+    }
+
+    @Override
+    public EpollDomainSocketChannelConfig setEpollMode(EpollMode mode) {
+        super.setEpollMode(mode);
         return this;
     }
 

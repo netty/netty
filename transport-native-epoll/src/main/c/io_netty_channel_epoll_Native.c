@@ -105,11 +105,8 @@ char* exceptionMessage(char* msg, int error) {
 }
 
 jint epollCtl(JNIEnv* env, jint efd, int op, jint fd, jint flags, jint id) {
-    uint32_t events = EPOLLET;
+    uint32_t events = (flags & EPOLL_EDGE) ? EPOLLET : 0;
 
-    if (flags & EPOLL_ACCEPT) {
-        events |= EPOLLIN;
-    }
     if (flags & EPOLL_READ) {
         events |= EPOLLIN | EPOLLRDHUP;
     }
