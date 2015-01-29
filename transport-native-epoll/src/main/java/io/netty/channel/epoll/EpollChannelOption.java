@@ -26,6 +26,9 @@ public final class EpollChannelOption<T> extends ChannelOption<T> {
 
     public static final ChannelOption<Boolean> SO_REUSEPORT = valueOf("SO_REUSEPORT");
 
+    public static final ChannelOption<EpollDomainSocketReadMode> DOMAIN_SOCKET_READ_MODE =
+            valueOf("DOMAIN_SOCKET_READ_MODE");
+
     @SuppressWarnings({ "unused", "deprecation" })
     private EpollChannelOption(String name) {
         super(name);

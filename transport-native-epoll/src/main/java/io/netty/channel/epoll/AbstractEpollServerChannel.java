@@ -75,7 +75,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
             try {
                 try {
                     for (;;) {
-                        int socketFd = Native.accept(fd);
+                        int socketFd = Native.accept(fd().intValue());
                         if (socketFd == -1) {
                             // this means everything was handled for now
                             break;
