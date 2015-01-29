@@ -29,7 +29,7 @@ import java.net.SocketAddress;
 public abstract class AbstractEpollServerChannel extends AbstractEpollChannel implements ServerChannel {
 
     protected AbstractEpollServerChannel(int fd) {
-        super(fd, Native.EPOLLACCEPT);
+        super(fd, Native.EPOLLIN);
     }
 
     @Override
@@ -74,7 +74,12 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
             Throwable exception = null;
             try {
                 try {
-                    for (;;) {
+                    boolean edgeTriggered = isFlagSet(Native.EPOLLET);
+                    // if edgeTriggered is used we need to read all messages as we are not notified again otherwise.
+                    final int maxMessagesPerRead = edgeTriggered
+                            ? Integer.MAX_VALUE : config().getMaxMessagesPerRead();
+                    int messages = 0;
+                    do {
                         int socketFd = Native.accept(fd().intValue());
                         if (socketFd == -1) {
                             // this means everything was handled for now
@@ -88,8 +93,15 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
                             // keep on reading as we use epoll ET and need to consume everything from the socket
                             pipeline.fireChannelReadComplete();
                             pipeline.fireExceptionCaught(t);
+                        } finally {
+                            if (!edgeTriggered && !config().isAutoRead()) {
+                                // This is not using EPOLLET so we can stop reading
+                                // ASAP as we will get notified again later with
+                                // pending data
+                                break;
+                            }
                         }
-                    }
+                    } while (++ messages < maxMessagesPerRead);
                 } catch (Throwable t) {
                     exception = t;
                 }

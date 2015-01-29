@@ -51,8 +51,9 @@ final class Native {
     // EventLoop operations and constants
     public static final int EPOLLIN = 0x01;
     public static final int EPOLLOUT = 0x02;
-    public static final int EPOLLACCEPT = 0x04;
-    public static final int EPOLLRDHUP = 0x08;
+    public static final int EPOLLRDHUP = 0x04;
+    public static final int EPOLLET = 0x08;
+
     public static final int IOV_MAX = iovMax();
     public static final int UIO_MAX_IOV = uioMaxIov();
     public static final boolean IS_SUPPORTING_SENDMMSG = isSupportingSendmmsg();
