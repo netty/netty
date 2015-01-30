@@ -217,24 +217,49 @@ public class EmbeddedChannel extends AbstractChannel {
     /**
      * Mark this {@link Channel} as finished. Any futher try to write data to it will fail.
      *
-     *
      * @return bufferReadable returns {@code true} if any of the used buffers has something left to read
      */
     public boolean finish() {
         close();
         runPendingTasks();
+
+        // Cancel all scheduled tasks that are left.
+        loop.cancelScheduledTasks();
+
         checkException();
+
         return !inboundMessages.isEmpty() || !outboundMessages.isEmpty();
     }
 
     /**
-     * Run all tasks that are pending in the {@link EventLoop} for this {@link Channel}
+     * Run all tasks (which also includes scheduled tasks) that are pending in the {@link EventLoop}
+     * for this {@link Channel}
      */
     public void runPendingTasks() {
         try {
             loop.runTasks();
         } catch (Exception e) {
             recordException(e);
+        }
+
+        try {
+            loop.runScheduledTasks();
+        } catch (Exception e) {
+            recordException(e);
+        }
+    }
+
+    /**
+     * Run all pending scheduled tasks in the {@link EventLoop} for this {@link Channel} and return the
+     * {@code nanoseconds} when the next scheduled task is ready to run. If no other task was scheduled it will return
+     * {@code -1}.
+     */
+    public long runScheduledPendingTasks() {
+        try {
+            return loop.runScheduledTasks();
+        } catch (Exception e) {
+            recordException(e);
+            return loop.nextScheduledTask();
         }
     }
 

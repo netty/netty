@@ -21,14 +21,14 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.util.concurrent.AbstractEventExecutor;
+import io.netty.util.concurrent.AbstractScheduledEventExecutor;
 import io.netty.util.concurrent.Future;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 
-final class EmbeddedEventLoop extends AbstractEventExecutor implements EventLoop {
+final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements EventLoop {
 
     private final Queue<Runnable> tasks = new ArrayDeque<Runnable>(2);
 
@@ -49,6 +49,27 @@ final class EmbeddedEventLoop extends AbstractEventExecutor implements EventLoop
 
             task.run();
         }
+    }
+
+    long runScheduledTasks() {
+        long time = AbstractScheduledEventExecutor.nanoTime();
+        for (;;) {
+            Runnable task = pollScheduledTask(time);
+            if (task == null) {
+                return nextScheduledTaskNano();
+            }
+
+            task.run();
+        }
+    }
+
+    long nextScheduledTask() {
+        return nextScheduledTaskNano();
+    }
+
+    @Override
+    protected void cancelScheduledTasks() {
+        super.cancelScheduledTasks();
     }
 
     @Override
