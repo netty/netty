@@ -39,27 +39,24 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
     }
 
     private final long id = nextTaskId.getAndIncrement();
-    private volatile Queue<ScheduledFutureTask<?>> delayedTaskQueue;
     private long deadlineNanos;
     /* 0 - no repeat, >0 - repeat at fixed rate, <0 - repeat with fixed delay */
     private final long periodNanos;
 
-    ScheduledFutureTask(EventExecutor executor, Queue<ScheduledFutureTask<?>> delayedTaskQueue,
+    ScheduledFutureTask(EventExecutor executor,
                         Callable<V> callable, long nanoTime, long period) {
         super(executor.unwrap(), callable);
         if (period == 0) {
             throw new IllegalArgumentException("period: 0 (expected: != 0)");
         }
 
-        this.delayedTaskQueue = delayedTaskQueue;
         deadlineNanos = nanoTime;
         periodNanos = period;
     }
 
-    ScheduledFutureTask(EventExecutor executor, Queue<ScheduledFutureTask<?>> delayedTaskQueue,
+    ScheduledFutureTask(EventExecutor executor,
                         Callable<V> callable, long nanoTime) {
         super(executor.unwrap(), callable);
-        this.delayedTaskQueue = delayedTaskQueue;
         deadlineNanos = nanoTime;
         periodNanos = 0;
     }
@@ -114,7 +111,11 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
                     // Try again in ten microseconds.
                     deadlineNanos = nanoTime() + TimeUnit.MICROSECONDS.toNanos(10);
                     if (!isCancelled()) {
-                        delayedTaskQueue.add(this);
+                        // scheduledTaskQueue can never be null as we lazy init it before submit the task!
+                        Queue<ScheduledFutureTask<?>> scheduledTaskQueue =
+                                ((AbstractScheduledEventExecutor) executor()).scheduledTaskQueue;
+                        assert scheduledTaskQueue != null;
+                        scheduledTaskQueue.add(this);
                     }
                 }
             } else {
@@ -126,19 +127,22 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
                     }
                     // periodically executed tasks
                 } else {
+                    // check if is done as it may was cancelled
                     if (!isCancelled()) {
                         task.call();
                         if (!executor().isShutdown()) {
-                            // repeat task at fixed rate
-                            if (periodNanos > 0) {
-                                deadlineNanos += periodNanos;
-                                // repeat task with fixed delay
+                            long p = periodNanos;
+                            if (p > 0) {
+                                deadlineNanos += p;
                             } else {
-                                deadlineNanos = nanoTime() - periodNanos;
+                                deadlineNanos = nanoTime() - p;
                             }
-
                             if (!isCancelled()) {
-                                delayedTaskQueue.add(this);
+                                // scheduledTaskQueue can never be null as we lazy init it before submit the task!
+                                Queue<ScheduledFutureTask<?>> scheduledTaskQueue =
+                                        ((AbstractScheduledEventExecutor) executor()).scheduledTaskQueue;
+                                assert scheduledTaskQueue != null;
+                                scheduledTaskQueue.add(this);
                             }
                         }
                     }
@@ -189,7 +193,8 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
         if (newExecutor instanceof SingleThreadEventExecutor) {
             if (!newExecutor.isShutdown()) {
                 executor = newExecutor;
-                delayedTaskQueue = ((SingleThreadEventExecutor) newExecutor).delayedTaskQueue;
+                final Queue<ScheduledFutureTask<?>> scheduledTaskQueue
+                        = ((SingleThreadEventExecutor) newExecutor).scheduledTaskQueue();
 
                 executor.execute(new OneTimeTask() {
                     @Override
@@ -197,7 +202,7 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
                         // Execute as soon as possible.
                         deadlineNanos = nanoTime();
                         if (!isCancelled()) {
-                            delayedTaskQueue.add(ScheduledFutureTask.this);
+                            scheduledTaskQueue.add(ScheduledFutureTask.this);
                         }
                     }
                 });

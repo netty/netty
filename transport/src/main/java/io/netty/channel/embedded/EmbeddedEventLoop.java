@@ -15,7 +15,6 @@
  */
 package io.netty.channel.embedded;
 
-import io.netty.channel.AbstractEventLoop;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -23,6 +22,9 @@ import io.netty.channel.ChannelHandlerInvoker;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
+import io.netty.util.concurrent.AbstractScheduledEventExecutor;
 import io.netty.util.concurrent.Future;
 
 import java.net.SocketAddress;
@@ -32,9 +34,24 @@ import java.util.concurrent.TimeUnit;
 
 import static io.netty.channel.ChannelHandlerInvokerUtil.*;
 
-final class EmbeddedEventLoop extends AbstractEventLoop implements ChannelHandlerInvoker {
+final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements ChannelHandlerInvoker, EventLoop {
 
     private final Queue<Runnable> tasks = new ArrayDeque<Runnable>(2);
+
+    @Override
+    public EventLoop unwrap() {
+        return this;
+    }
+
+    @Override
+    public EventLoopGroup parent() {
+        return (EventLoopGroup) super.parent();
+    }
+
+    @Override
+    public EventLoop next() {
+        return (EventLoop) super.next();
+    }
 
     @Override
     public void execute(Runnable command) {
@@ -53,6 +70,27 @@ final class EmbeddedEventLoop extends AbstractEventLoop implements ChannelHandle
 
             task.run();
         }
+    }
+
+    long runScheduledTasks() {
+        long time = AbstractScheduledEventExecutor.nanoTime();
+        for (;;) {
+            Runnable task = pollScheduledTask(time);
+            if (task == null) {
+                return nextScheduledTaskNano();
+            }
+
+            task.run();
+        }
+    }
+
+    long nextScheduledTask() {
+        return nextScheduledTaskNano();
+    }
+
+    @Override
+    protected void cancelScheduledTasks() {
+        super.cancelScheduledTasks();
     }
 
     @Override
