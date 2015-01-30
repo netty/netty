@@ -99,12 +99,16 @@ public final class PendingWriteQueue {
         if (cause == null) {
             throw new NullPointerException("cause");
         }
+        // Guard against re-entrance by directly reset
         PendingWrite write = head;
+        head = tail = null;
+        size = 0;
+
         while (write != null) {
             PendingWrite next = write.next;
             ReferenceCountUtil.safeRelease(write.msg);
             ChannelPromise promise = write.promise;
-            recycle(write);
+            recycle(write, false);
             safeFail(promise, cause);
             write = next;
         }
@@ -121,13 +125,14 @@ public final class PendingWriteQueue {
             throw new NullPointerException("cause");
         }
         PendingWrite write = head;
+
         if (write == null) {
             return;
         }
         ReferenceCountUtil.safeRelease(write.msg);
         ChannelPromise promise = write.promise;
         safeFail(promise, cause);
-        recycle(write);
+        recycle(write, true);
     }
 
     /**
@@ -139,22 +144,28 @@ public final class PendingWriteQueue {
      */
     public ChannelFuture removeAndWriteAll() {
         assert ctx.executor().inEventLoop();
+
+        if (size == 1) {
+            // No need to use ChannelPromiseAggregator for this case.
+            return removeAndWrite();
+        }
         PendingWrite write = head;
         if (write == null) {
             // empty so just return null
             return null;
         }
-        if (size == 1) {
-            // No need to use ChannelPromiseAggregator for this case.
-            return removeAndWrite();
-        }
+
+        // Guard against re-entrance by directly reset
+        head = tail = null;
+        size = 0;
+
         ChannelPromise p = ctx.newPromise();
         ChannelPromiseAggregator aggregator = new ChannelPromiseAggregator(p);
         while (write != null) {
             PendingWrite next = write.next;
             Object msg = write.msg;
             ChannelPromise promise = write.promise;
-            recycle(write);
+            recycle(write, false);
             ctx.write(msg, promise);
             aggregator.add(promise);
             write = next;
@@ -182,7 +193,7 @@ public final class PendingWriteQueue {
         }
         Object msg = write.msg;
         ChannelPromise promise = write.promise;
-        recycle(write);
+        recycle(write, true);
         return ctx.write(msg, promise);
     }
 
@@ -200,7 +211,7 @@ public final class PendingWriteQueue {
         }
         ChannelPromise promise = write.promise;
         ReferenceCountUtil.safeRelease(write.msg);
-        recycle(write);
+        recycle(write, true);
         return promise;
     }
 
@@ -216,19 +227,21 @@ public final class PendingWriteQueue {
         return write.msg;
     }
 
-    private void recycle(PendingWrite write) {
+    private void recycle(PendingWrite write, boolean update) {
         final PendingWrite next = write.next;
         final long writeSize = write.size;
 
-        size --;
-
-        if (next == null) {
-            // Handled last PendingWrite so rest head and tail
-            head = tail = null;
-            assert size == 0;
-        } else {
-            head = next;
-            assert size > 0;
+        if (update) {
+            if (next == null) {
+                // Handled last PendingWrite so rest head and tail
+                // Guard against re-entrance by directly reset
+                head = tail = null;
+                size = 0;
+            } else {
+                head = next;
+                size --;
+                assert size > 0;
+            }
         }
 
         write.recycle();
