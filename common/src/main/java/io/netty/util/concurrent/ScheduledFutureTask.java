@@ -36,37 +36,34 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
     }
 
     private final long id = nextTaskId.getAndIncrement();
-    private final Queue<ScheduledFutureTask<?>> delayedTaskQueue;
     private long deadlineNanos;
     /* 0 - no repeat, >0 - repeat at fixed rate, <0 - repeat with fixed delay */
     private final long periodNanos;
 
     ScheduledFutureTask(
-            EventExecutor executor, Queue<ScheduledFutureTask<?>> delayedTaskQueue,
+            AbstractScheduledEventExecutor executor,
             Runnable runnable, V result, long nanoTime) {
 
-        this(executor, delayedTaskQueue, toCallable(runnable, result), nanoTime);
+        this(executor, toCallable(runnable, result), nanoTime);
     }
 
     ScheduledFutureTask(
-            EventExecutor executor, Queue<ScheduledFutureTask<?>> delayedTaskQueue,
+            AbstractScheduledEventExecutor executor,
             Callable<V> callable, long nanoTime, long period) {
 
         super(executor, callable);
         if (period == 0) {
             throw new IllegalArgumentException("period: 0 (expected: != 0)");
         }
-        this.delayedTaskQueue = delayedTaskQueue;
         deadlineNanos = nanoTime;
         periodNanos = period;
     }
 
     ScheduledFutureTask(
-            EventExecutor executor, Queue<ScheduledFutureTask<?>> delayedTaskQueue,
+            AbstractScheduledEventExecutor executor,
             Callable<V> callable, long nanoTime) {
 
         super(executor, callable);
-        this.delayedTaskQueue = delayedTaskQueue;
         deadlineNanos = nanoTime;
         periodNanos = 0;
     }
@@ -135,7 +132,11 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
                             deadlineNanos = nanoTime() - p;
                         }
                         if (!isCancelled()) {
-                            delayedTaskQueue.add(this);
+                            // scheduledTaskQueue can never be null as we lazy init it before submit the task!
+                            Queue<ScheduledFutureTask<?>> scheduledTaskQueue =
+                                    ((AbstractScheduledEventExecutor) executor()).scheduledTaskQueue;
+                            assert scheduledTaskQueue != null;
+                            scheduledTaskQueue.add(this);
                         }
                     }
                 }

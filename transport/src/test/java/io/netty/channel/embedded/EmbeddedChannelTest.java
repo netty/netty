@@ -21,8 +21,14 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.ScheduledFuture;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public class EmbeddedChannelTest {
 
@@ -51,5 +57,42 @@ public class EmbeddedChannelTest {
         Assert.assertSame(first, channel.readInbound());
         Assert.assertSame(second, channel.readInbound());
         Assert.assertNull(channel.readInbound());
+    }
+
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @Test
+    public void testScheduling() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
+        final CountDownLatch latch = new CountDownLatch(2);
+        ScheduledFuture future = ch.eventLoop().schedule(new Runnable() {
+            @Override
+            public void run() {
+                latch.countDown();
+            }
+        }, 1, TimeUnit.SECONDS);
+        future.addListener(new FutureListener() {
+            @Override
+            public void operationComplete(Future future) throws Exception {
+                latch.countDown();
+            }
+        });
+        long next = ch.runScheduledPendingTasks();
+        Assert.assertTrue(next > 0);
+        // Sleep for the nanoseconds but also give extra 50ms as the clock my not be very precise and so fail the test
+        // otherwise.
+        Thread.sleep(TimeUnit.NANOSECONDS.toMillis(next) + 50);
+        Assert.assertEquals(-1, ch.runScheduledPendingTasks());
+        latch.await();
+    }
+
+    @Test
+    public void testScheduledCancelled() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
+        ScheduledFuture<?> future = ch.eventLoop().schedule(new Runnable() {
+            @Override
+            public void run() { }
+        }, 1, TimeUnit.DAYS);
+        ch.finish();
+        Assert.assertTrue(future.isCancelled());
     }
 }
