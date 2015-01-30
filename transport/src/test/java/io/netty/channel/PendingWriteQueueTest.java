@@ -194,6 +194,56 @@ public class PendingWriteQueueTest {
         assertNull(channel.readOutbound());
     }
 
+    @Test
+    public void testRemoveAndFailAllReentrance() {
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
+        final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
+
+        ChannelPromise promise = channel.newPromise();
+        promise.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                queue.removeAndFailAll(new IllegalStateException());
+            }
+        });
+        queue.add(1L, promise);
+
+        ChannelPromise promise2 = channel.newPromise();
+        queue.add(2L, promise2);
+        queue.removeAndFailAll(new Exception());
+        assertFalse(promise.isSuccess());
+        assertFalse(promise2.isSuccess());
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testRemoveAndWriteAllReentrance() {
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
+        final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
+
+        ChannelPromise promise = channel.newPromise();
+        promise.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                queue.removeAndWriteAll();
+            }
+        });
+        queue.add(1L, promise);
+
+        ChannelPromise promise2 = channel.newPromise();
+        queue.add(2L, promise2);
+        queue.removeAndWriteAll();
+        channel.flush();
+        assertTrue(promise.isSuccess());
+        assertTrue(promise2.isSuccess());
+        assertTrue(channel.finish());
+
+        assertEquals(1L, channel.readOutbound());
+        assertEquals(2L, channel.readOutbound());
+        assertNull(channel.readOutbound());
+        assertNull(channel.readInbound());
+    }
+
     private static class TestHandler extends ChannelDuplexHandler {
         protected PendingWriteQueue queue;
         private int expectedSize;
