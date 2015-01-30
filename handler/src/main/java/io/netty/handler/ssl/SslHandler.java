@@ -414,7 +414,11 @@ public class SslHandler extends ByteToMessageDecoder {
             return;
         }
         if (pendingUnencryptedWrites.isEmpty()) {
-            pendingUnencryptedWrites.add(Unpooled.EMPTY_BUFFER, ctx.voidPromise());
+            // It's important to NOT use a voidPromise here as the user
+            // may want to add a ChannelFutureListener to the ChannelPromise later.
+            //
+            // See https://github.com/netty/netty/issues/3364
+            pendingUnencryptedWrites.add(Unpooled.EMPTY_BUFFER, ctx.newPromise());
         }
         if (!handshakePromise.isDone()) {
             flushedBeforeHandshake = true;
