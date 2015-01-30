@@ -84,7 +84,7 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
 
     @Override
     protected HttpMessage createInvalidMessage() {
-        return new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, "/bad-request", validateHeaders);
+        return new DefaultFullHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, "/bad-request", validateHeaders);
     }
 
     @Override
