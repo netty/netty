@@ -18,22 +18,33 @@ package io.netty.handler.codec.http2;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_UNSIGNED_INT;
 import static io.netty.handler.codec.http2.Http2TestUtil.as;
 import static io.netty.handler.codec.http2.Http2TestUtil.randomString;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelPromise;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.EventExecutor;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 /**
  * Integration tests for {@link DefaultHttp2FrameReader} and {@link DefaultHttp2FrameWriter}.
@@ -43,6 +54,8 @@ public class DefaultHttp2FrameIOTest {
     private DefaultHttp2FrameReader reader;
     private DefaultHttp2FrameWriter writer;
     private ByteBufAllocator alloc;
+    private CountDownLatch latch;
+    private ByteBuf buffer;
 
     @Mock
     private ChannelHandlerContext ctx;
@@ -53,13 +66,56 @@ public class DefaultHttp2FrameIOTest {
     @Mock
     private ChannelPromise promise;
 
+    @Mock
+    private Channel channel;
+
+    @Mock
+    private EventExecutor executor;
+
     @Before
     public void setup() {
         MockitoAnnotations.initMocks(this);
 
         alloc = UnpooledByteBufAllocator.DEFAULT;
+        buffer = alloc.buffer();
+        latch = new CountDownLatch(1);
 
+        when(executor.inEventLoop()).thenReturn(true);
         when(ctx.alloc()).thenReturn(alloc);
+        when(ctx.channel()).thenReturn(channel);
+        when(ctx.executor()).thenReturn(executor);
+        doAnswer(new Answer<ChannelPromise>() {
+            @Override
+            public ChannelPromise answer(InvocationOnMock invocation) throws Throwable {
+                return new DefaultChannelPromise(channel, executor);
+            }
+        }).when(ctx).newPromise();
+
+        doAnswer(new Answer<ChannelPromise>() {
+            @Override
+            public ChannelPromise answer(InvocationOnMock in) throws Throwable {
+                latch.countDown();
+                return promise;
+            }
+        }).when(promise).setSuccess();
+
+        doAnswer(new Answer<ChannelFuture>() {
+            @Override
+            public ChannelFuture answer(InvocationOnMock in) throws Throwable {
+                if (in.getArguments()[0] instanceof ByteBuf) {
+                    ByteBuf tmp = (ByteBuf) in.getArguments()[0];
+                    try {
+                        buffer.writeBytes(tmp);
+                    } finally {
+                        tmp.release();
+                    }
+                }
+                if (in.getArguments()[1] instanceof ChannelPromise) {
+                    return ((ChannelPromise) in.getArguments()[1]).setSuccess();
+                }
+                return null;
+            }
+        }).when(ctx).write(any(), any(ChannelPromise.class));
 
         reader = new DefaultHttp2FrameReader();
         writer = new DefaultHttp2FrameWriter();
@@ -452,10 +508,9 @@ public class DefaultHttp2FrameIOTest {
         }
     }
 
-    private ByteBuf captureWrite() {
-        ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
-        verify(ctx).write(captor.capture(), eq(promise));
-        return captor.getValue();
+    private ByteBuf captureWrite() throws InterruptedException {
+        assertTrue(latch.await(2, TimeUnit.SECONDS));
+        return buffer;
     }
 
     private ByteBuf dummyData() {
@@ -471,9 +526,8 @@ public class DefaultHttp2FrameIOTest {
     }
 
     private static Http2Headers dummyHeaders() {
-        return new DefaultHttp2Headers().method(as("GET")).scheme(as("https"))
-                .authority(as("example.org")).path(as("/some/path"))
-                .add(as("accept"), as("*/*"));
+        return new DefaultHttp2Headers().method(as("GET")).scheme(as("https")).authority(as("example.org"))
+                .path(as("/some/path")).add(as("accept"), as("*/*"));
     }
 
     private static Http2Headers largeHeaders() {

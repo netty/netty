@@ -19,9 +19,12 @@ import static io.netty.util.CharsetUtil.UTF_8;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.http2.Http2StreamRemovalPolicy.Action;
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * Constants and utility method used for encoding/decoding HTTP2 frames.
@@ -47,6 +50,18 @@ public final class Http2CodecUtil {
     public static final int INT_FIELD_LENGTH = 4;
     public static final short MAX_WEIGHT = 256;
     public static final short MIN_WEIGHT = 1;
+
+    private static final int MAX_PADDING_LENGTH_LENGTH = 1;
+    public static final int DATA_FRAME_HEADER_LENGTH = FRAME_HEADER_LENGTH + MAX_PADDING_LENGTH_LENGTH;
+    public static final int HEADERS_FRAME_HEADER_LENGTH =
+            FRAME_HEADER_LENGTH + MAX_PADDING_LENGTH_LENGTH + INT_FIELD_LENGTH + 1;
+    public static final int PRIORITY_FRAME_LENGTH = FRAME_HEADER_LENGTH + PRIORITY_ENTRY_LENGTH;
+    public static final int RST_STREAM_FRAME_LENGTH = FRAME_HEADER_LENGTH + INT_FIELD_LENGTH;
+    public static final int PUSH_PROMISE_FRAME_HEADER_LENGTH =
+            FRAME_HEADER_LENGTH + MAX_PADDING_LENGTH_LENGTH + INT_FIELD_LENGTH;
+    public static final int GO_AWAY_FRAME_HEADER_LENGTH = FRAME_HEADER_LENGTH + 2 * INT_FIELD_LENGTH;
+    public static final int WINDOW_UPDATE_FRAME_LENGTH = FRAME_HEADER_LENGTH + INT_FIELD_LENGTH;
+    public static final int CONTINUATION_FRAME_HEADER_LENGTH = FRAME_HEADER_LENGTH + MAX_PADDING_LENGTH_LENGTH;
 
     public static final int SETTINGS_HEADER_TABLE_SIZE = 1;
     public static final int SETTINGS_ENABLE_PUSH = 2;
@@ -183,10 +198,126 @@ public final class Http2CodecUtil {
     public static void writeFrameHeader(ByteBuf out, int payloadLength, byte type,
             Http2Flags flags, int streamId) {
         out.ensureWritable(FRAME_HEADER_LENGTH + payloadLength);
+        writeFrameHeaderInternal(out, payloadLength, type, flags, streamId);
+    }
+
+    static void writeFrameHeaderInternal(ByteBuf out, int payloadLength, byte type,
+            Http2Flags flags, int streamId) {
         out.writeMedium(payloadLength);
         out.writeByte(type);
         out.writeByte(flags.value());
         out.writeInt(streamId);
+    }
+
+    /**
+     * Provides the ability to associate the outcome of multiple {@link ChannelPromise}
+     * objects into a single {@link ChannelPromise} object.
+     */
+    static class SimpleChannelPromiseAggregator extends DefaultChannelPromise {
+        private final ChannelPromise promise;
+        private int expectedCount;
+        private int successfulCount;
+        private int failureCount;
+        private boolean doneAllocating;
+
+        SimpleChannelPromiseAggregator(ChannelPromise promise, Channel c, EventExecutor e) {
+            super(c, e);
+            assert promise != null;
+            this.promise = promise;
+        }
+
+        /**
+         * Allocate a new promise which will be used to aggregate the overall success of this promise aggregator.
+         * @return A new promise which will be aggregated.
+         * {@code null} if {@link #doneAllocatingPromises()} was previously called.
+         */
+        public ChannelPromise newPromise() {
+            if (doneAllocating) {
+                throw new IllegalStateException("Done allocating. No more promises can be allocated.");
+            }
+            ++expectedCount;
+            return this;
+        }
+
+        /**
+         * Signify that no more {@link #newPromise()} allocations will be made.
+         * The aggregation can not be successful until this method is called.
+         * @return The promise that is the aggregation of all promises allocated with {@link #newPromise()}.
+         */
+        public ChannelPromise doneAllocatingPromises() {
+            if (!doneAllocating) {
+                doneAllocating = true;
+                if (successfulCount == expectedCount) {
+                    promise.setSuccess();
+                    return super.setSuccess();
+                }
+            }
+            return this;
+        }
+
+        @Override
+        public boolean tryFailure(Throwable cause) {
+            if (allowNotificationEvent()) {
+                ++failureCount;
+                if (failureCount == 1) {
+                    promise.tryFailure(cause);
+                    return super.tryFailure(cause);
+                }
+                // TODO: We break the interface a bit here.
+                // Multiple failure events can be processed without issue because this is an aggregation.
+                return true;
+            }
+            return false;
+        }
+
+        /**
+         * Fail this object if it has not already been failed.
+         * <p>
+         * This method will NOT throw an {@link IllegalStateException} if called multiple times
+         * because that may be expected.
+         */
+        @Override
+        public ChannelPromise setFailure(Throwable cause) {
+            if (allowNotificationEvent()) {
+                ++failureCount;
+                if (failureCount == 1) {
+                    promise.setFailure(cause);
+                    return super.setFailure(cause);
+                }
+            }
+            return this;
+        }
+
+        private boolean allowNotificationEvent() {
+            return successfulCount + failureCount < expectedCount;
+        }
+
+        @Override
+        public ChannelPromise setSuccess(Void result) {
+            if (allowNotificationEvent()) {
+                ++successfulCount;
+                if (successfulCount == expectedCount && doneAllocating) {
+                    promise.setSuccess(result);
+                    return super.setSuccess(result);
+                }
+            }
+            return this;
+        }
+
+        @Override
+        public boolean trySuccess(Void result) {
+            if (allowNotificationEvent()) {
+                ++successfulCount;
+                if (successfulCount == expectedCount && doneAllocating) {
+                    promise.trySuccess(result);
+                    return super.trySuccess(result);
+                }
+                // TODO: We break the interface a bit here.
+                // Multiple success events can be processed without issue because this is an aggregation.
+                return true;
+            }
+            return false;
+        }
     }
 
     /**
