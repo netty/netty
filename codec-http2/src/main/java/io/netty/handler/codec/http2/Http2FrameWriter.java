@@ -129,7 +129,7 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      * @param ctx the context to use for writing.
      * @param ack indicates whether this is an ack of a PING frame previously received from the
      *            remote endpoint.
-     * @param data the payload of the frame.
+     * @param data the payload of the frame. This will be released by this method.
      * @param promise the promise for the write.
      * @return the future for the write.
      */
@@ -156,7 +156,7 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      * @param ctx the context to use for writing.
      * @param lastStreamId the last known stream of this endpoint.
      * @param errorCode the error code, if the connection was abnormally terminated.
-     * @param debugData application-defined debug data.
+     * @param debugData application-defined debug data. This will be released by this method.
      * @param promise the promise for the write.
      * @return the future for the write.
      */
@@ -183,7 +183,7 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      * @param frameType the frame type identifier.
      * @param streamId the stream for which to send the frame.
      * @param flags the flags to write for this frame.
-     * @param payload the payload to write for this frame.
+     * @param payload the payload to write for this frame. This will be released by this method.
      * @param promise the promise for the write.
      * @return the future for the write.
      */

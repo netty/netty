@@ -28,7 +28,7 @@ public interface Http2DataWriter {
      *
      * @param ctx the context to use for writing.
      * @param streamId the stream for which to send the frame.
-     * @param data the payload of the frame.
+     * @param data the payload of the frame. This will be released by this method.
      * @param padding the amount of padding to be added to the end of the frame
      * @param endStream indicates if this is the last frame to be sent for the stream.
      * @param promise the promise for the write.
