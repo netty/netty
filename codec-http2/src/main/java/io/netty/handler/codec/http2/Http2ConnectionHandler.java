@@ -23,6 +23,7 @@ import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.isStreamError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -38,12 +39,13 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Provides the default implementation for processing inbound frame events
- * and delegates to a {@link Http2FrameListener}
+ * Provides the default implementation for processing inbound frame events and delegates to a
+ * {@link Http2FrameListener}
  * <p>
  * This class will read HTTP/2 frames and delegate the events to a {@link Http2FrameListener}
  * <p>
- * This interface enforces inbound flow control functionality through {@link Http2InboundFlowController}
+ * This interface enforces inbound flow control functionality through
+ * {@link Http2LocalFlowController}
  */
 public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http2LifecycleManager,
         ChannelOutboundHandler {
@@ -293,14 +295,22 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      * @param future the future after which to close the channel.
      */
     @Override
-    public void closeStream(Http2Stream stream, ChannelFuture future) {
+    public void closeStream(final Http2Stream stream, ChannelFuture future) {
         stream.close();
 
-        // If this connection is closing and there are no longer any
-        // active streams, close after the current operation completes.
-        if (closeListener != null && connection().numActiveStreams() == 0) {
-            future.addListener(closeListener);
-        }
+        future.addListener(new ChannelFutureListener() {
+          @Override
+          public void operationComplete(ChannelFuture future) throws Exception {
+            // Deactivate this stream.
+            connection().deactivate(stream);
+
+            // If this connection is closing and there are no longer any
+            // active streams, close after the current operation completes.
+            if (closeListener != null && connection().numActiveStreams() == 0) {
+                closeListener.operationComplete(future);
+            }
+          }
+        });
     }
 
     /**

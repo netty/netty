@@ -121,9 +121,8 @@ public interface Http2Connection {
          * <li>The connection is marked as going away.</li>
          * </ul>
          * <p>
-         * The caller is expected to {@link Http2Stream#open()} the stream.
+         * The caller is expected to {@link Http2Stream#open(boolean)} the stream.
          * @param streamId The ID of the stream
-         * @see Http2Stream#open()
          * @see Http2Stream#open(boolean)
          */
         Http2Stream createStream(int streamId) throws Http2Exception;
@@ -232,15 +231,25 @@ public interface Http2Connection {
     Http2Stream connectionStream();
 
     /**
-     * Gets the number of streams that are currently either open or half-closed.
+     * Gets the number of streams that actively in use. It is possible for a stream to be closed
+     * but still be considered active (e.g. there is still pending data to be written).
      */
     int numActiveStreams();
 
     /**
-     * Gets all streams that are currently either open or half-closed. The returned collection is
+     * Gets all streams that are actively in use. The returned collection is
      * sorted by priority.
      */
     Collection<Http2Stream> activeStreams();
+
+    /**
+     * Indicates that the given stream is no longer actively in use. If this stream was active,
+     * after calling this method it will no longer appear in the list returned by
+     * {@link #activeStreams()} and {@link #numActiveStreams()} will be decremented. In addition,
+     * all listeners will be notified of this event via
+     * {@link Listener#streamInactive(Http2Stream)}.
+     */
+    void deactivate(Http2Stream stream);
 
     /**
      * Indicates whether or not the local endpoint for this connection is the server.
