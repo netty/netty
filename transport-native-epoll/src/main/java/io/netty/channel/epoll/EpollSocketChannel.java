@@ -37,6 +37,8 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
 
     EpollSocketChannel(Channel parent, int fd) {
         super(parent, fd);
+        // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
+        flags |= Native.EPOLLRDHUP;
         config = new EpollSocketChannelConfig(this);
         // Directly cache the remote and local addresses
         // See https://github.com/netty/netty/issues/2359
@@ -46,6 +48,8 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
 
     public EpollSocketChannel() {
         super(Native.socketStreamFd());
+        // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
+        flags |= Native.EPOLLRDHUP;
         config = new EpollSocketChannelConfig(this);
     }
 
