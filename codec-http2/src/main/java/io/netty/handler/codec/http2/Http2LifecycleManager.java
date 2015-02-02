@@ -27,7 +27,7 @@ public interface Http2LifecycleManager {
 
     /**
      * Closes the local side of the given stream. If this causes the stream to be closed, adds a
-     * hook to close the channel after the given future completes.
+     * hook to deactivate the stream and close the channel after the given future completes.
      *
      * @param stream the stream to be half closed.
      * @param future If closing, the future after which to close the channel.
@@ -36,7 +36,7 @@ public interface Http2LifecycleManager {
 
     /**
      * Closes the remote side of the given stream. If this causes the stream to be closed, adds a
-     * hook to close the channel after the given future completes.
+     * hook to deactivate the stream and close the channel after the given future completes.
      *
      * @param stream the stream to be half closed.
      * @param future If closing, the future after which to close the channel.
@@ -44,8 +44,8 @@ public interface Http2LifecycleManager {
     void closeRemoteSide(Http2Stream stream, ChannelFuture future);
 
     /**
-     * Closes the given stream and adds a hook to close the channel after the given future
-     * completes.
+     * Closes the given stream and adds a hook to deactivate the stream and close the channel after
+     * the given future completes.
      *
      * @param stream the stream to be closed.
      * @param future the future after which to close the channel.

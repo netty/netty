@@ -72,15 +72,6 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             }
 
             @Override
-            public void streamHalfClosed(Http2Stream stream) {
-                if (!stream.localSideOpen()) {
-                    // Any pending frames can never be written, clear and
-                    // write errors for any pending frames.
-                    state(stream).clear();
-                }
-            }
-
-            @Override
             public void streamInactive(Http2Stream stream) {
                 // Any pending frames can never be written, clear and
                 // write errors for any pending frames.
@@ -212,7 +203,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     /**
      * Writes as many pending bytes as possible, according to stream priority.
      */
-    private void writePendingBytes() throws Http2Exception {
+    private void writePendingBytes() {
         Http2Stream connectionStream = connection.connectionStream();
         int connectionWindow = state(connectionStream).window();
 
@@ -390,10 +381,11 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
 
         /**
-         * Returns the number of pending bytes for this node that will fit within the {@link #window}. This is used for
-         * the priority algorithm to determine the aggregate total for {@link #priorityBytes} at each node. Each node
-         * only takes into account it's stream window so that when a change occurs to the connection window, these
-         * values need not change (i.e. no tree traversal is required).
+         * Returns the number of pending bytes for this node that will fit within the
+         * {@link #window}. This is used for the priority algorithm to determine the aggregate
+         * number of bytes that can be written at each node. Each node only takes into account its
+         * stream window so that when a change occurs to the connection window, these values need
+         * not change (i.e. no tree traversal is required).
          */
         int streamableBytes() {
             return max(0, min(pendingBytes, window));
