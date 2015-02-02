@@ -46,8 +46,8 @@ public class ServerCookieEncoderTest {
         assertTrue(matcher.find());
         Date expiresDate = HttpHeaderDateFormat.get().parse(matcher.group(1));
         long diff = (expiresDate.getTime() - System.currentTimeMillis()) / 1000;
-        // 1 sec should be fine
-        assertTrue(Math.abs(diff - maxAge) <= 1);
+        // 2 secs should be fine
+        assertTrue(Math.abs(diff - maxAge) <= 2);
     }
 
     @Test
