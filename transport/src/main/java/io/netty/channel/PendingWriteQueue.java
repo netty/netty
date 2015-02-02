@@ -101,12 +101,11 @@ public final class PendingWriteQueue {
         }
         PendingWrite write = head;
         while (write != null) {
-            PendingWrite next = write.next;
             ReferenceCountUtil.safeRelease(write.msg);
             ChannelPromise promise = write.promise;
             recycle(write);
             safeFail(promise, cause);
-            write = next;
+            write = head;
         }
         assertEmpty();
     }
@@ -126,8 +125,8 @@ public final class PendingWriteQueue {
         }
         ReferenceCountUtil.safeRelease(write.msg);
         ChannelPromise promise = write.promise;
-        safeFail(promise, cause);
         recycle(write);
+        safeFail(promise, cause);
     }
 
     /**
@@ -151,13 +150,12 @@ public final class PendingWriteQueue {
         ChannelPromise p = ctx.newPromise();
         ChannelPromiseAggregator aggregator = new ChannelPromiseAggregator(p);
         while (write != null) {
-            PendingWrite next = write.next;
             Object msg = write.msg;
             ChannelPromise promise = write.promise;
             recycle(write);
             ctx.write(msg, promise);
             aggregator.add(promise);
-            write = next;
+            write = head;
         }
         assertEmpty();
         return p;

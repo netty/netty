@@ -20,7 +20,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
-import org.junit.Assert;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicReference;
@@ -35,7 +36,7 @@ public class PendingWriteQueueTest {
         assertWrite(new TestHandler() {
             @Override
             public void flush(ChannelHandlerContext ctx) throws Exception {
-                Assert.assertFalse("Should not be writable anymore", ctx.channel().isWritable());
+                assertFalse("Should not be writable anymore", ctx.channel().isWritable());
 
                 ChannelFuture future = queue.removeAndWrite();
                 future.addListener(new ChannelFutureListener() {
@@ -54,7 +55,7 @@ public class PendingWriteQueueTest {
         assertWrite(new TestHandler() {
             @Override
             public void flush(ChannelHandlerContext ctx) throws Exception {
-                Assert.assertFalse("Should not be writable anymore", ctx.channel().isWritable());
+                assertFalse("Should not be writable anymore", ctx.channel().isWritable());
 
                 ChannelFuture future = queue.removeAndWriteAll();
                 future.addListener(new ChannelFutureListener() {
@@ -140,6 +141,74 @@ public class PendingWriteQueueTest {
         assertThat(msg.refCnt(), is(0));
     }
 
+    // Promise handling can generate recursive calls of removeAndWriteAll().
+    // See https://github.com/netty/netty/issues/3367
+    @Test
+    public void shouldHandleRemoveAndWriteAllRecursion() {
+
+        assertRecursionFails(3, new ChannelHandlerAdapter() {
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
+                    throws Exception {
+                throw new TestException();
+            }
+        }, new TestHandler() {
+            @Override
+            public void flush(ChannelHandlerContext ctx) throws Exception {
+                queue.removeAndWriteAll();
+                super.flush(ctx);
+            }
+
+            @Override
+            public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+                flush(ctx);
+            }
+        });
+    }
+
+    // Promise handling can generate recursive calls of removeAndFailAll().
+    // See https://github.com/netty/netty/issues/3367
+    @Test
+    public void shouldHandleRemoveAndFailAllRecursion() {
+
+        assertRecursionFails(3, new ChannelHandlerAdapter() {
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
+                    throws Exception {
+                throw new TestException();
+            }
+        }, new TestHandler() {
+
+            private boolean failed;
+
+            @Override
+            public void flush(ChannelHandlerContext ctx) throws Exception {
+
+                ChannelFuture future;
+                while (!failed && (future = queue.removeAndWrite()) != null) {
+                    future.addListener(new GenericFutureListener<Future<? super Void>>() {
+                        @Override
+                        public void operationComplete(Future<? super Void> future) throws Exception {
+                            if (!future.isSuccess()) {
+                                failed = true;
+                            }
+                        }
+                    });
+                    super.flush(ctx);
+                }
+
+                if (failed) {
+                    queue.removeAndFailAll(new RuntimeException("Test Exception"));
+                }
+            }
+
+            @Override
+            public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+                flush(ctx);
+            }
+        });
+    }
+
     private static void assertWrite(ChannelHandler handler, int count) {
         final ByteBuf buffer = Unpooled.copiedBuffer("Test", CharsetUtil.US_ASCII);
         final EmbeddedChannel channel = new EmbeddedChannel(handler);
@@ -150,29 +219,29 @@ public class PendingWriteQueueTest {
         for (int i = 0; i < buffers.length; i++) {
             buffers[i] = buffer.duplicate().retain();
         }
-        Assert.assertTrue(channel.writeOutbound(buffers));
-        Assert.assertTrue(channel.finish());
+        assertTrue(channel.writeOutbound(buffers));
+        assertTrue(channel.finish());
         channel.closeFuture().syncUninterruptibly();
 
         for (int i = 0; i < buffers.length; i++) {
             assertBuffer(channel, buffer);
         }
         buffer.release();
-        Assert.assertNull(channel.readOutbound());
+        assertNull(channel.readOutbound());
     }
 
     private static void assertBuffer(EmbeddedChannel channel, ByteBuf buffer) {
         ByteBuf written = channel.readOutbound();
-        Assert.assertEquals(buffer, written);
+        assertEquals(buffer, written);
         written.release();
     }
 
     private static void assertQueueEmpty(PendingWriteQueue queue) {
-        Assert.assertTrue(queue.isEmpty());
-        Assert.assertEquals(0, queue.size());
-        Assert.assertNull(queue.current());
-        Assert.assertNull(queue.removeAndWrite());
-        Assert.assertNull(queue.removeAndWriteAll());
+        assertTrue(queue.isEmpty());
+        assertEquals(0, queue.size());
+        assertNull(queue.current());
+        assertNull(queue.removeAndWrite());
+        assertNull(queue.removeAndWriteAll());
     }
 
     private static void assertWriteFails(ChannelHandler handler, int count) {
@@ -183,16 +252,48 @@ public class PendingWriteQueueTest {
             buffers[i] = buffer.duplicate().retain();
         }
         try {
-            Assert.assertFalse(channel.writeOutbound(buffers));
-            Assert.fail();
+            assertFalse(channel.writeOutbound(buffers));
+            fail();
         } catch (Exception e) {
-            Assert.assertTrue(e instanceof TestException);
+            assertTrue(e instanceof TestException);
         }
-        Assert.assertFalse(channel.finish());
+        assertFalse(channel.finish());
         channel.closeFuture().syncUninterruptibly();
 
         buffer.release();
-        Assert.assertNull(channel.readOutbound());
+        assertNull(channel.readOutbound());
+    }
+
+    private static void assertRecursionFails(int count, ChannelHandler... handlers) {
+        final ByteBuf buffer = Unpooled.copiedBuffer("Test", CharsetUtil.US_ASCII);
+        final EmbeddedChannel channel = new EmbeddedChannel(handlers);
+
+        ByteBuf[] buffers = new ByteBuf[count];
+        for (int i = 0; i < buffers.length; i++) {
+            buffers[i] = buffer.duplicate().retain();
+        }
+
+        final ChannelPromise middlePromise = channel.newPromise().addListener(
+                new GenericFutureListener<Future<? super Void>>() {
+                    @Override
+                    public void operationComplete(Future<? super Void> future) throws Exception {
+                        if (!future.isSuccess()) {
+                            channel.close();
+                        }
+                    }
+                });
+        for (int i = 0; i < buffers.length; i++) {
+            if (i == count / 2) {
+                channel.write(buffers[i], middlePromise);
+            } else {
+                channel.write(buffers[i]);
+            }
+        }
+
+        channel.flush();
+        channel.finish();
+
+        buffer.release();
     }
 
     private static class TestHandler extends ChannelDuplexHandler {
@@ -203,15 +304,15 @@ public class PendingWriteQueueTest {
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             super.channelActive(ctx);
             assertQueueEmpty(queue);
-            Assert.assertTrue("Should be writable", ctx.channel().isWritable());
+            assertTrue("Should be writable", ctx.channel().isWritable());
         }
 
         @Override
         public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
             queue.add(msg, promise);
-            Assert.assertFalse(queue.isEmpty());
-            Assert.assertEquals(++ expectedSize, queue.size());
-            Assert.assertNotNull(queue.current());
+            assertFalse(queue.isEmpty());
+            assertEquals(++ expectedSize, queue.size());
+            assertNotNull(queue.current());
         }
 
         @Override
