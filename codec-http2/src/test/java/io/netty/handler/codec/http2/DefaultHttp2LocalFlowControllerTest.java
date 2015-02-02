@@ -273,7 +273,7 @@ public class DefaultHttp2LocalFlowControllerTest {
         controller.consumeBytes(ctx, stream(streamId), numBytes);
     }
 
-    private void verifyWindowUpdateSent(int streamId, int windowSizeIncrement) throws Http2Exception {
+    private void verifyWindowUpdateSent(int streamId, int windowSizeIncrement) {
         verify(frameWriter).writeWindowUpdate(eq(ctx), eq(streamId), eq(windowSizeIncrement), eq(promise));
     }
 

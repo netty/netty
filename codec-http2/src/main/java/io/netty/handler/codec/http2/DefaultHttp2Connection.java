@@ -140,6 +140,11 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     @Override
+    public void deactivate(Http2Stream stream) {
+      deactivateInternal((DefaultStream) stream);
+    }
+
+    @Override
     public Endpoint<Http2LocalFlowController> local() {
         return localEndpoint;
     }
@@ -195,7 +200,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         stream.parent().removeChild(stream);
     }
 
-    private void activate(DefaultStream stream) {
+    private void activateInternal(DefaultStream stream) {
         if (activeStreams.add(stream)) {
             // Update the number of active streams initiated by the endpoint.
             stream.createdBy().numActiveStreams++;
@@ -204,6 +209,21 @@ public class DefaultHttp2Connection implements Http2Connection {
             for (Listener listener : listeners) {
                 listener.streamActive(stream);
             }
+        }
+    }
+
+    private void deactivateInternal(DefaultStream stream) {
+        if (activeStreams.remove(stream)) {
+            // Update the number of active streams initiated by the endpoint.
+            stream.createdBy().numActiveStreams--;
+
+            // Notify the listeners.
+            for (Listener listener : listeners) {
+                listener.streamInactive(stream);
+            }
+
+            // Mark this stream for removal.
+            removalPolicy.markForRemoval(stream);
         }
     }
 
@@ -218,9 +238,6 @@ public class DefaultHttp2Connection implements Http2Connection {
         private IntObjectMap<DefaultStream> children = newChildMap();
         private int totalChildWeights;
         private boolean resetSent;
-        private boolean resetReceived;
-        private boolean endOfStreamSent;
-        private boolean endOfStreamReceived;
         private PropertyMap data;
 
         DefaultStream(int id) {
@@ -239,39 +256,6 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public boolean isEndOfStreamReceived() {
-            return endOfStreamReceived;
-        }
-
-        @Override
-        public Http2Stream endOfStreamReceived() {
-            endOfStreamReceived = true;
-            return this;
-        }
-
-        @Override
-        public boolean isEndOfStreamSent() {
-            return endOfStreamSent;
-        }
-
-        @Override
-        public Http2Stream endOfStreamSent() {
-            endOfStreamSent = true;
-            return this;
-        }
-
-        @Override
-        public boolean isResetReceived() {
-            return resetReceived;
-        }
-
-        @Override
-        public Http2Stream resetReceived() {
-            resetReceived = true;
-            return this;
-        }
-
-        @Override
         public boolean isResetSent() {
             return resetSent;
         }
@@ -280,11 +264,6 @@ public class DefaultHttp2Connection implements Http2Connection {
         public Http2Stream resetSent() {
             resetSent = true;
             return this;
-        }
-
-        @Override
-        public boolean isReset() {
-            return resetSent || resetReceived;
         }
 
         @Override
@@ -409,7 +388,7 @@ public class DefaultHttp2Connection implements Http2Connection {
                 throw streamError(id, PROTOCOL_ERROR, "Attempting to open a stream in an invalid state: " + state);
             }
 
-            activate(this);
+            activateInternal(this);
             return this;
         }
 
@@ -420,23 +399,8 @@ public class DefaultHttp2Connection implements Http2Connection {
             }
 
             state = CLOSED;
-            deactivate(this);
-
-            // Mark this stream for removal.
-            removalPolicy.markForRemoval(this);
+            deactivateInternal(this);
             return this;
-        }
-
-        private void deactivate(DefaultStream stream) {
-            if (activeStreams.remove(stream)) {
-                // Update the number of active streams initiated by the endpoint.
-                stream.createdBy().numActiveStreams--;
-
-                // Notify the listeners.
-                for (Listener listener : listeners) {
-                    listener.streamInactive(stream);
-                }
-            }
         }
 
         @Override

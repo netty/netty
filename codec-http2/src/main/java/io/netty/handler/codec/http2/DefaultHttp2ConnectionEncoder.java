@@ -155,12 +155,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             }
 
             stream = connection.requireStream(streamId);
-            if (stream.isResetSent()) {
-                throw new IllegalStateException("Sending data after sending RST_STREAM.");
-            }
-            if (stream.isEndOfStreamSent()) {
-                throw new IllegalStateException("Sending data after sending END_STREAM.");
-            }
 
             // Verify that the stream is in the appropriate state for sending DATA frames.
             switch (stream.state()) {
@@ -174,8 +168,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             }
 
             if (endOfStream) {
-                // Indicate that we have sent END_STREAM.
-                stream.endOfStreamSent();
+                lifecycleManager.closeLocalSide(stream, promise);
             }
         } catch (Throwable e) {
             data.release();
@@ -206,10 +199,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             Http2Stream stream = connection.stream(streamId);
             if (stream == null) {
                 stream = connection.createLocalStream(streamId);
-            } else if (stream.isResetSent()) {
-                throw new IllegalStateException("Sending headers after sending RST_STREAM.");
-            } else if (stream.isEndOfStreamSent()) {
-                throw new IllegalStateException("Sending headers after sending END_STREAM.");
             }
 
             switch (stream.state()) {
@@ -231,9 +220,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                     new FlowControlledHeaders(ctx, stream, headers, streamDependency, weight,
                             exclusive, padding, endOfStream, promise));
             if (endOfStream) {
-                // Flag delivery of EOS synchronously to prevent subsequent frames being enqueued in the flow
-                // controller.
-                stream.endOfStreamSent();
+                lifecycleManager.closeLocalSide(stream, promise);
             }
             return promise;
         } catch (Http2NoMoreStreamIdsException e) {
@@ -556,10 +543,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
-            if (future == promise && endOfStream) {
-                // Special case where we're listening to the original promise and need to close the stream.
-                lifecycleManager.closeLocalSide(stream, promise);
-            }
             if (!future.isSuccess()) {
                 error(future.cause());
             }
