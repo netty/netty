@@ -49,10 +49,10 @@ final class Native {
     }
 
     // EventLoop operations and constants
-    public static final int EPOLLIN = 0x01;
-    public static final int EPOLLOUT = 0x02;
-    public static final int EPOLLRDHUP = 0x04;
-    public static final int EPOLLET = 0x08;
+    public static final int EPOLLIN = epollin();
+    public static final int EPOLLOUT = epollout();
+    public static final int EPOLLRDHUP = epollrdhup();
+    public static final int EPOLLET = epollet();
 
     public static final int IOV_MAX = iovMax();
     public static final int UIO_MAX_IOV = uioMaxIov();
@@ -134,9 +134,18 @@ final class Native {
     public static native void eventFdWrite(int fd, long value);
     public static native void eventFdRead(int fd);
     public static native int epollCreate();
-    public static native int epollWait(int efd, long[] events, int timeout);
-    public static native void epollCtlAdd(int efd, final int fd, final int flags, final int id);
-    public static native void epollCtlMod(int efd, final int fd, final int flags, final int id);
+    public static int epollWait(int efd, EpollEventArray events, int timeout) throws IOException {
+        int ready = epollWait0(efd, events.memoryAddress(), events.length(), timeout);
+        if (ready < 0) {
+            throw newIOException("epoll_wait", ready);
+        }
+        return ready;
+    }
+    private static native int epollWait0(int efd, long address, int len, int timeout);
+
+    public static native void epollCtlAdd(int efd, final int fd, final int flags);
+
+    public static native void epollCtlMod(int efd, final int fd, final int flags);
     public static native void epollCtlDel(int efd, final int fd);
 
     private static native int errnoEBADF();
@@ -622,6 +631,15 @@ final class Native {
     private static native int iovMax();
 
     private static native int uioMaxIov();
+
+    // epoll_event related
+    public static native int sizeofEpollEvent();
+    public static native int offsetofEpollData();
+
+    private static native int epollin();
+    private static native int epollout();
+    private static native int epollrdhup();
+    private static native int epollet();
 
     private Native() {
         // utility
