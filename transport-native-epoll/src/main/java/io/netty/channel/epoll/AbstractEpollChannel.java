@@ -38,7 +38,6 @@ abstract class AbstractEpollChannel extends AbstractChannel {
     protected int flags = Native.EPOLLET;
 
     protected volatile boolean active;
-    int id;
 
     AbstractEpollChannel(int fd, int flag) {
         this(null, fd, flag, false);

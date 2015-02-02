@@ -30,6 +30,7 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <sys/utsname.h>
+#include <stddef.h>
 #include "io_netty_channel_epoll_Native.h"
 
 // optional
@@ -104,20 +105,12 @@ char* exceptionMessage(char* msg, int error) {
     return result;
 }
 
-jint epollCtl(JNIEnv* env, jint efd, int op, jint fd, jint flags, jint id) {
-    uint32_t events = (flags & EPOLL_EDGE) ? EPOLLET : 0;
-
-    if (flags & EPOLL_READ) {
-        events |= EPOLLIN | EPOLLRDHUP;
-    }
-    if (flags & EPOLL_WRITE) {
-        events |= EPOLLOUT;
-    }
+jint epollCtl(JNIEnv* env, jint efd, int op, jint fd, jint flags) {
+    uint32_t events = flags;
 
     struct epoll_event ev = {
-        .events = events,
-        // encode the id into the events
-        .data.u64 = (((uint64_t) id) << 32L)
+        .data.fd = fd,
+        .events = events
     };
 
     return epoll_ctl(efd, op, fd, &ev);
@@ -620,9 +613,8 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollCreate(JNIEnv* en
     return efd;
 }
 
-JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollWait(JNIEnv* env, jclass clazz, jint efd, jlongArray events, jint timeout) {
-    int len = (*env)->GetArrayLength(env, events);
-    struct epoll_event ev[len];
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollWait0(JNIEnv* env, jclass clazz, jint efd, jlong address, jint len, jint timeout) {
+    struct epoll_event *ev = (struct epoll_event*) address;
     int ready;
     int err;
     do {
@@ -631,60 +623,20 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollWait(JNIEnv* env,
     } while (ready == -1 && ((err = errno) == EINTR));
 
     if (ready < 0) {
-         throwIOException(env, exceptionMessage("epoll_wait() failed: ", err));
-         return -1;
+         return -err;
     }
-    if (ready == 0) {
-        // nothing ready for process
-        return 0;
-    }
-
-    jboolean isCopy;
-    // Use GetPrimitiveArrayCritical and ReleasePrimitiveArrayCritical to signal the VM that we really would like
-    // to not do a memory copy here. This is ok as we not do any blocking action here anyway.
-    // This is important as the VM may suspend GC for the time!
-    jlong* elements = (*env)->GetPrimitiveArrayCritical(env, events, &isCopy);
-    if (elements == NULL) {
-        // No memory left ?!?!?
-        throwOutOfMemoryError(env);
-        return -1;
-    }
-    int i;
-    for (i = 0; i < ready; i++) {
-        // store the ready ops and id
-        elements[i] = (jlong) ev[i].data.u64;
-        if (ev[i].events & EPOLLIN) {
-            elements[i] |= EPOLL_READ;
-        }
-        if (ev[i].events & EPOLLRDHUP) {
-            elements[i] |= EPOLL_RDHUP;
-        }
-        if (ev[i].events & EPOLLOUT) {
-            elements[i] |= EPOLL_WRITE;
-        }
-    }
-    jint mode;
-    // release again to prevent memory leak
-    if (isCopy) {
-        mode = 0;
-    } else {
-        // was just pinned so use JNI_ABORT to eliminate not needed copy.
-        mode = JNI_ABORT;
-    }
-    (*env)->ReleasePrimitiveArrayCritical(env, events, elements, mode);
-
     return ready;
 }
 
-JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_epollCtlAdd(JNIEnv* env, jclass clazz, jint efd, jint fd, jint flags, jint id) {
-    if (epollCtl(env, efd, EPOLL_CTL_ADD, fd, flags, id) < 0) {
+JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_epollCtlAdd(JNIEnv* env, jclass clazz, jint efd, jint fd, jint flags) {
+    if (epollCtl(env, efd, EPOLL_CTL_ADD, fd, flags) < 0) {
         int err = errno;
         throwRuntimeException(env, exceptionMessage("epoll_ctl() failed: ", err));
     }
 }
 
-JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_epollCtlMod(JNIEnv* env, jclass clazz, jint efd, jint fd, jint flags, jint id) {
-    if (epollCtl(env, efd, EPOLL_CTL_MOD, fd, flags, id) < 0) {
+JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_epollCtlMod(JNIEnv* env, jclass clazz, jint efd, jint fd, jint flags) {
+    if (epollCtl(env, efd, EPOLL_CTL_MOD, fd, flags) < 0) {
         int err = errno;
         throwRuntimeException(env, exceptionMessage("epoll_ctl() failed: ", err));
     }
@@ -1526,4 +1478,26 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_sendFd0(JNIEnv* env, j
     return -1;
 }
 
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollet(JNIEnv* env, jclass clazz) {
+    return EPOLLET;
+}
 
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollin(JNIEnv* env, jclass clazz) {
+    return EPOLLIN;
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollout(JNIEnv* env, jclass clazz) {
+    return EPOLLOUT;
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollrdhup(JNIEnv* env, jclass clazz) {
+    return EPOLLRDHUP;
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_sizeofEpollEvent(JNIEnv* env, jclass clazz) {
+    return sizeof(struct epoll_event);
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_offsetofEpollData(JNIEnv* env, jclass clazz) {
+    return offsetof(struct epoll_event, data);
+}
