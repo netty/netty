@@ -39,6 +39,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
@@ -50,11 +51,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -62,6 +58,10 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Tests for {@link DefaultHttp2ConnectionEncoder}
@@ -239,7 +239,7 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
-    public void dataLargerThanMaxFrameSizeShouldBeSplit() throws Http2Exception {
+    public void dataLargerThanMaxFrameSizeShouldBeSplit() {
         when(frameSizePolicy.maxFrameSize()).thenReturn(3);
         final ByteBuf data = dummyData();
         encoder.writeData(ctx, STREAM_ID, data, 0, true, promise);
@@ -254,7 +254,7 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
-    public void paddingSplitOverFrame() throws Http2Exception {
+    public void paddingSplitOverFrame() {
         when(frameSizePolicy.maxFrameSize()).thenReturn(5);
         final ByteBuf data = dummyData();
         encoder.writeData(ctx, STREAM_ID, data, 5, true, promise);
@@ -272,7 +272,7 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
-    public void frameShouldSplitPadding() throws Http2Exception {
+    public void frameShouldSplitPadding() {
         when(frameSizePolicy.maxFrameSize()).thenReturn(5);
         ByteBuf data = dummyData();
         encoder.writeData(ctx, STREAM_ID, data, 10, true, promise);
@@ -292,18 +292,18 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
-    public void emptyFrameShouldSplitPadding() throws Http2Exception {
+    public void emptyFrameShouldSplitPadding() {
         ByteBuf data = Unpooled.buffer(0);
         assertSplitPaddingOnEmptyBuffer(data);
         assertEquals(0, data.refCnt());
     }
 
     @Test
-    public void singletonEmptyBufferShouldSplitPadding() throws Http2Exception {
+    public void singletonEmptyBufferShouldSplitPadding() {
         assertSplitPaddingOnEmptyBuffer(Unpooled.EMPTY_BUFFER);
     }
 
-    private void assertSplitPaddingOnEmptyBuffer(ByteBuf data) throws Http2Exception {
+    private void assertSplitPaddingOnEmptyBuffer(ByteBuf data) {
         when(frameSizePolicy.maxFrameSize()).thenReturn(5);
         encoder.writeData(ctx, STREAM_ID, data, 10, true, promise);
         assertEquals(payloadCaptor.getValue().size(), 10);
