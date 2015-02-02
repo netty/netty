@@ -73,7 +73,10 @@ final class EpollEventLoop extends SingleThreadEventLoop {
         try {
             this.epollFd = epollFd = Native.epollCreate();
             this.eventFd = eventFd = Native.eventFd();
-            Native.epollCtlAdd(epollFd, eventFd, Native.EPOLLIN);
+            // IMPORTANT:
+            // It's important that this eventfd will always be added with EPOLLET as we not consume it's data
+            // in processReady(...).
+            Native.epollCtlAdd(epollFd, eventFd, Native.EPOLLIN | Native.EPOLLET);
             success = true;
         } finally {
             if (!success) {
@@ -99,8 +102,13 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     protected void wakeup(boolean inEventLoop) {
         if (!inEventLoop && WAKEN_UP_UPDATER.compareAndSet(this, 0, 1)) {
             // write to the evfd which will then wake-up epoll_wait(...)
-            Native.eventFdWrite(eventFd, 1L);
+            wakeupEpollWait();
         }
+    }
+
+    private void wakeupEpollWait() {
+        // write to the evfd which will then wake-up epoll_wait(...)
+        Native.eventFdWrite(eventFd, 0L);
     }
 
     /**
@@ -233,7 +241,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                     // (OK - no wake-up required).
 
                     if (wakenUp == 1) {
-                        Native.eventFdWrite(eventFd, 1L);
+                        wakeupEpollWait();
                     }
                 }
 
@@ -298,8 +306,11 @@ final class EpollEventLoop extends SingleThreadEventLoop {
         for (int i = 0; i < ready; i ++) {
             final int fd = events.fd(i);
             if (fd == eventFd) {
-                // consume wakeup event
-                Native.eventFdRead(eventFd);
+                // As we use EPOLLET here we don't need calling read on the eventfd as we will not be waken up again
+                // for this event. This means:
+                //  - not need for a syscall
+                //  - not need for crossing the boundary between Java and JNI.
+               continue;
             } else {
                 final long ev = events.events(i);
 
