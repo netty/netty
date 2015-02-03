@@ -16,6 +16,7 @@
 package io.netty.handler.codec.rtsp;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
@@ -84,7 +85,8 @@ public class RtspResponseDecoder extends RtspObjectDecoder {
 
     @Override
     protected HttpMessage createInvalidMessage() {
-        return new DefaultFullHttpResponse(RtspVersions.RTSP_1_0, UNKNOWN_STATUS, validateHeaders);
+        return new DefaultFullHttpResponse(
+                RtspVersions.RTSP_1_0, UNKNOWN_STATUS, Unpooled.EMPTY_BUFFER, validateHeaders);
     }
 
     @Override
