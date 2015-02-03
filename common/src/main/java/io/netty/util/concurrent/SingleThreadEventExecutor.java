@@ -20,7 +20,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Queue;
@@ -38,7 +37,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
  * Abstract base class for {@link EventExecutor}'s that execute all its submitted tasks in a single thread.
  *
  */
-public abstract class SingleThreadEventExecutor extends AbstractSchedulingEventExecutor {
+public abstract class SingleThreadEventExecutor extends AbstractScheduledEventExecutor {
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(SingleThreadEventExecutor.class);
@@ -69,7 +68,6 @@ public abstract class SingleThreadEventExecutor extends AbstractSchedulingEventE
 
     private final EventExecutorGroup parent;
     private final Queue<Runnable> taskQueue;
-
     private final Thread thread;
     private final Semaphore threadLock = new Semaphore(0);
     private final Set<Runnable> shutdownHooks = new LinkedHashSet<Runnable>();
@@ -212,7 +210,7 @@ public abstract class SingleThreadEventExecutor extends AbstractSchedulingEventE
 
         BlockingQueue<Runnable> taskQueue = (BlockingQueue<Runnable>) this.taskQueue;
         for (;;) {
-            ScheduledFutureTask<?> delayedTask = delayedTaskQueue.peek();
+            ScheduledFutureTask<?> delayedTask = peekScheduledTask();
             if (delayedTask == null) {
                 Runnable task = null;
                 try {
@@ -252,7 +250,7 @@ public abstract class SingleThreadEventExecutor extends AbstractSchedulingEventE
 
     private void fetchFromDelayedQueue() {
         if (hasScheduledTasks()) {
-            long nanoTime = AbstractSchedulingEventExecutor.nanoTime();
+            long nanoTime = AbstractScheduledEventExecutor.nanoTime();
             for (;;) {
                 Runnable delayedTask = pollScheduledTask(nanoTime);
                 if (delayedTask == null) {
@@ -387,7 +385,7 @@ public abstract class SingleThreadEventExecutor extends AbstractSchedulingEventE
      * Returns the amount of time left until the scheduled task with the closest dead line is executed.
      */
     protected long delayNanos(long currentTimeNanos) {
-        ScheduledFutureTask<?> delayedTask = delayedTaskQueue.peek();
+        ScheduledFutureTask<?> delayedTask = peekScheduledTask();
         if (delayedTask == null) {
             return SCHEDULE_PURGE_INTERVAL;
         }
@@ -716,8 +714,8 @@ public abstract class SingleThreadEventExecutor extends AbstractSchedulingEventE
     private void startThread() {
         if (STATE_UPDATER.get(this) == ST_NOT_STARTED) {
             if (STATE_UPDATER.compareAndSet(this, ST_NOT_STARTED, ST_STARTED)) {
-                delayedTaskQueue.add(new ScheduledFutureTask<Void>(
-                        this, delayedTaskQueue, Executors.<Void>callable(new PurgeTask(), null),
+                schedule(new ScheduledFutureTask<Void>(
+                        this, Executors.<Void>callable(new PurgeTask(), null),
                         ScheduledFutureTask.deadlineNanos(SCHEDULE_PURGE_INTERVAL), -SCHEDULE_PURGE_INTERVAL));
                 thread.start();
             }
@@ -727,13 +725,7 @@ public abstract class SingleThreadEventExecutor extends AbstractSchedulingEventE
     private final class PurgeTask implements Runnable {
         @Override
         public void run() {
-            Iterator<ScheduledFutureTask<?>> i = delayedTaskQueue.iterator();
-            while (i.hasNext()) {
-                ScheduledFutureTask<?> task = i.next();
-                if (task.isCancelled()) {
-                    i.remove();
-                }
-            }
+            purgeCancelledScheduledTasks();
         }
     }
 }
