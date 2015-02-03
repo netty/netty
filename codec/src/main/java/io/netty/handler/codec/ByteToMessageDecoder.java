@@ -53,9 +53,9 @@ import java.util.List;
  * If a custom frame decoder is required, then one needs to be careful when implementing
  * one with {@link ByteToMessageDecoder}. Ensure there are enough bytes in the buffer for a
  * complete frame by checking {@link ByteBuf#readableBytes()}. If there are not enough bytes
- * for a complete frame, return without modify the reader index to allow more bytes to arrive.
+ * for a complete frame, return without modifying the reader index to allow more bytes to arrive.
  * <p>
- * To check for complete frames without modify the reader index, use methods like {@link ByteBuf#getInt(int)}.
+ * To check for complete frames without modifying the reader index, use methods like {@link ByteBuf#getInt(int)}.
  * One <strong>MUST</strong> use the reader index when using methods like {@link ByteBuf#getInt(int)}.
  * For example calling <tt>in.getInt(0)</tt> is assuming the frame starts at the beginning of the buffer, which
  * is not always the case. Use <tt>in.getInt(in.readerIndex())</tt> instead.
