@@ -19,7 +19,7 @@ package io.netty.channel;
 import io.netty.util.concurrent.EventExecutorGroup;
 
 /**
- * Special {@link EventExecutorGroup} which allows to register {@link Channel}'s that get
+ * Special {@link EventExecutorGroup} which allows registering {@link Channel}s that get
  * processed for later selection during the event loop.
  */
 public interface EventLoopGroup extends EventExecutorGroup {
