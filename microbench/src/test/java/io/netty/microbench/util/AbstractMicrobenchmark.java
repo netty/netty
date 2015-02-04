@@ -15,37 +15,34 @@
  */
 package io.netty.microbench.util;
 
-import io.netty.util.ResourceLeakDetector;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.internal.SystemPropertyUtil;
-import org.junit.Test;
-import org.openjdk.jmh.annotations.Fork;
-import org.openjdk.jmh.annotations.Measurement;
-import org.openjdk.jmh.annotations.Scope;
-import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.annotations.Warmup;
-import org.openjdk.jmh.results.format.ResultFormatType;
-import org.openjdk.jmh.runner.Runner;
-import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
-import org.openjdk.jmh.runner.options.OptionsBuilder;
 
-import java.io.File;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Base class for all JMH benchmarks.
- */
-@Warmup(iterations = AbstractMicrobenchmark.DEFAULT_WARMUP_ITERATIONS)
-@Measurement(iterations = AbstractMicrobenchmark.DEFAULT_MEASURE_ITERATIONS)
-@Fork(AbstractMicrobenchmark.DEFAULT_FORKS)
-@State(Scope.Thread)
-public class AbstractMicrobenchmark {
+import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 
-    protected static final int DEFAULT_WARMUP_ITERATIONS = 10;
-    protected static final int DEFAULT_MEASURE_ITERATIONS = 10;
+/**
+ * Default implementation of the JMH microbenchmark adapter.  There may be context switches introduced by this harness.
+ */
+@Fork(AbstractMicrobenchmark.DEFAULT_FORKS)
+public class AbstractMicrobenchmark extends AbstractMicrobenchmarkBase {
+
     protected static final int DEFAULT_FORKS = 2;
+    protected static final String[] JVM_ARGS;
+
+    static {
+        final String[] customArgs = {
+        "-Xms768m", "-Xmx768m", "-XX:MaxDirectMemorySize=768m", "-Dharness.executor=CUSTOM",
+        "-Dharness.executor.class=io.netty.microbench.util.AbstractMicrobenchmark$HarnessExecutor" };
+
+        JVM_ARGS = new String[BASE_JVM_ARGS.length + customArgs.length];
+        System.arraycopy(BASE_JVM_ARGS, 0, JVM_ARGS, 0, BASE_JVM_ARGS.length);
+        System.arraycopy(customArgs, 0, JVM_ARGS, BASE_JVM_ARGS.length, customArgs.length);
+    }
 
     public static final class HarnessExecutor extends ThreadPoolExecutor {
         public HarnessExecutor(int maxThreads, String prefix) {
@@ -55,69 +52,22 @@ public class AbstractMicrobenchmark {
         }
     }
 
-    protected static final String[] JVM_ARGS = {
-        "-server", "-dsa", "-da", "-ea:io.netty...", "-Xms768m", "-Xmx768m",
-        "-XX:MaxDirectMemorySize=768m", "-XX:+AggressiveOpts", "-XX:+UseBiasedLocking",
-        "-XX:+UseFastAccessorMethods", "-XX:+UseStringCache", "-XX:+OptimizeStringConcat",
-        "-XX:+HeapDumpOnOutOfMemoryError", "-Dio.netty.noResourceLeakDetection",
-        "-Dharness.executor=CUSTOM",
-        "-Dharness.executor.class=io.netty.microbench.util.AbstractMicrobenchmark$HarnessExecutor"
-    };
-
-    static {
-        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.DISABLED);
+    @Override
+    protected String[] jvmArgs() {
+        return JVM_ARGS;
     }
 
-    @Test
-    public void run() throws Exception {
-        String className = getClass().getSimpleName();
-
-        ChainedOptionsBuilder runnerOptions = new OptionsBuilder()
-            .include(".*" + className + ".*")
-            .jvmArgs(JVM_ARGS);
-
-        if (getWarmupIterations() > 0) {
-            runnerOptions.warmupIterations(getWarmupIterations());
-        }
-
-        if (getMeasureIterations() > 0) {
-            runnerOptions.measurementIterations(getMeasureIterations());
-        }
+    protected ChainedOptionsBuilder newOptionsBuilder() throws Exception {
+        ChainedOptionsBuilder runnerOptions = super.newOptionsBuilder();
 
         if (getForks() > 0) {
             runnerOptions.forks(getForks());
         }
 
-        if (getReportDir() != null) {
-            String filePath = getReportDir() + className + ".json";
-            File file = new File(filePath);
-            if (file.exists()) {
-                file.delete();
-            } else {
-                file.getParentFile().mkdirs();
-                file.createNewFile();
-            }
-
-            runnerOptions.resultFormat(ResultFormatType.JSON);
-            runnerOptions.result(filePath);
-        }
-
-        new Runner(runnerOptions.build()).run();
-    }
-
-    protected int getWarmupIterations() {
-        return SystemPropertyUtil.getInt("warmupIterations", -1);
-    }
-
-    protected int getMeasureIterations() {
-        return SystemPropertyUtil.getInt("measureIterations", -1);
+        return runnerOptions;
     }
 
     protected int getForks() {
         return SystemPropertyUtil.getInt("forks", -1);
-    }
-
-    protected String getReportDir() {
-        return SystemPropertyUtil.get("perfReportDir");
     }
 }
