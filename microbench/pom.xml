@@ -31,7 +31,22 @@
   <properties>
     <!-- Skip tests by default; run only if -DskipTests=false is specified -->
     <skipTests>true</skipTests>
+    <epoll.arch>x86_64</epoll.arch>
   </properties>
+
+  <profiles>
+    <profile>
+      <id>linux</id>
+      <activation>
+        <os>
+          <family>linux</family>
+        </os>
+      </activation>
+      <properties>
+        <epoll.arch>${os.detected.arch}</epoll.arch>
+      </properties>
+    </profile>
+  </profiles>
 
   <dependencies>
     <dependency>
@@ -44,6 +59,17 @@
       <artifactId>netty-codec-http</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-http2</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+     <dependency>
+       <groupId>${project.groupId}</groupId>
+       <artifactId>netty-transport-native-epoll</artifactId>
+       <version>${project.version}</version>
+       <classifier>linux-${epoll.arch}</classifier>
+     </dependency>
     <dependency>
       <groupId>org.openjdk.jmh</groupId>
       <artifactId>jmh-core</artifactId>
@@ -79,6 +105,13 @@
         </configuration>
       </plugin>
     </plugins>
+    <extensions>
+      <extension>
+        <groupId>kr.motd.maven</groupId>
+        <artifactId>os-maven-plugin</artifactId>
+        <version>1.2.3.Final</version>
+      </extension>
+    </extensions>
   </build>
 </project>
 
