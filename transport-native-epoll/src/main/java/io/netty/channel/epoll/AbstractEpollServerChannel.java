@@ -20,6 +20,7 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
+import io.netty.channel.FileDescriptor;
 import io.netty.channel.ServerChannel;
 
 import java.net.InetSocketAddress;
@@ -30,6 +31,10 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
 
     protected AbstractEpollServerChannel(int fd) {
         super(fd, Native.EPOLLIN);
+    }
+
+    protected AbstractEpollServerChannel(FileDescriptor fd) {
+        super(null, fd, Native.EPOLLIN, Native.getSoError(fd.intValue()) == 0);
     }
 
     @Override

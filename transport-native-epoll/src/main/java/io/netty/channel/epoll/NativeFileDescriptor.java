@@ -19,11 +19,15 @@ import io.netty.channel.FileDescriptor;
 
 import java.io.IOException;
 
-final class EpollFileDescriptor implements FileDescriptor {
+/**
+ * Native {@link FileDescriptor} implementation which allows to wrap an {@code int} and provide a
+ * {@link FileDescriptor} for it.
+ */
+public final class NativeFileDescriptor implements FileDescriptor {
 
     private final int fd;
 
-    EpollFileDescriptor(int fd) {
+    public NativeFileDescriptor(int fd) {
         if (fd < 0) {
             throw new IllegalArgumentException("fd must be >= 0");
         }
@@ -52,11 +56,11 @@ final class EpollFileDescriptor implements FileDescriptor {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof EpollFileDescriptor)) {
+        if (!(o instanceof NativeFileDescriptor)) {
             return false;
         }
 
-        return fd == ((EpollFileDescriptor) o).fd;
+        return fd == ((NativeFileDescriptor) o).fd;
     }
 
     @Override

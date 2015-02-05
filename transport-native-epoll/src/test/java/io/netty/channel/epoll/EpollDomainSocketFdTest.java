@@ -71,7 +71,7 @@ public class EpollDomainSocketFdTest extends AbstractSocketTest {
         cb.handler(new ChannelInboundHandlerAdapter() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                EpollFileDescriptor fd = (EpollFileDescriptor) msg;
+                NativeFileDescriptor fd = (NativeFileDescriptor) msg;
                 queue.offer(fd);
             }
 
@@ -90,9 +90,9 @@ public class EpollDomainSocketFdTest extends AbstractSocketTest {
         cc.close().sync();
         sc.close().sync();
 
-        if (received instanceof EpollFileDescriptor) {
-            Assert.assertNotSame(EpollFileDescriptor.INVALID, received);
-            ((EpollFileDescriptor) received).close();
+        if (received instanceof NativeFileDescriptor) {
+            Assert.assertNotSame(NativeFileDescriptor.INVALID, received);
+            ((NativeFileDescriptor) received).close();
             Assert.assertNull(queue.poll());
         } else {
             throw (Throwable) received;
