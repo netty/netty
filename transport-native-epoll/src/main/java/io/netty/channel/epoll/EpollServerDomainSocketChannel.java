@@ -16,6 +16,7 @@
 package io.netty.channel.epoll;
 
 import io.netty.channel.Channel;
+import io.netty.channel.FileDescriptor;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -32,6 +33,13 @@ public final class EpollServerDomainSocketChannel extends AbstractEpollServerCha
 
     public EpollServerDomainSocketChannel() {
         super(Native.socketDomainFd());
+    }
+
+    /**
+     * Creates a new {@link EpollServerDomainSocketChannel} from an existing {@link FileDescriptor}.
+     */
+    public EpollServerDomainSocketChannel(FileDescriptor fd) {
+        super(fd);
     }
 
     @Override

@@ -19,6 +19,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
+import io.netty.channel.FileDescriptor;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -51,6 +52,19 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
     public EpollSocketChannel() {
         super(Native.socketStreamFd());
         config = new EpollSocketChannelConfig(this);
+    }
+
+    /**
+     * Creates a new {@link EpollSocketChannel} from an existing {@link FileDescriptor}.
+     */
+    public EpollSocketChannel(FileDescriptor fd) {
+        super(fd);
+        config = new EpollSocketChannelConfig(this);
+
+        // As we create an EpollSocketChannel from a FileDescriptor we should try to obtain the remote and local
+        // address from it. This is needed as the FileDescriptor may be bound/connected already.
+        remote = Native.remoteAddress(fd.intValue());
+        local = Native.localAddress(fd.intValue());
     }
 
     /**

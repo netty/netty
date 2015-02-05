@@ -67,6 +67,18 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         config = new EpollDatagramChannelConfig(this);
     }
 
+    /**
+     * Create a new {@link EpollDatagramChannel} from the given {@link FileDescriptor}.
+     */
+    public EpollDatagramChannel(FileDescriptor fd) {
+        super(null, fd, Native.EPOLLIN, true);
+        config = new EpollDatagramChannelConfig(this);
+
+        // As we create an EpollDatagramChannel from a FileDescriptor we should try to obtain the remote and local
+        // address from it. This is needed as the FileDescriptor may be bound already.
+        local = Native.localAddress(fd.intValue());
+    }
+
     @Override
     public InetSocketAddress remoteAddress() {
         return (InetSocketAddress) super.remoteAddress();
