@@ -574,6 +574,7 @@ final class Native {
     public static native int getTcpKeepIdle(int fd);
     public static native int getTcpKeepIntvl(int fd);
     public static native int getTcpKeepCnt(int fd);
+    public static native int getSoError(int fd);
 
     public static native void setKeepAlive(int fd, int keepAlive);
     public static native void setReceiveBufferSize(int fd, int receiveBufferSize);
