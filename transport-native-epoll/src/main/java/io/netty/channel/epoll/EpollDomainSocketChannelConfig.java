@@ -129,7 +129,7 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig {
      * {@link DomainSocketReadMode#BYTES} which means bytes will be read from the
      * {@link Channel} and passed through the pipeline. If
      * {@link DomainSocketReadMode#FILE_DESCRIPTORS} is used
-     * {@link EpollFileDescriptor}s will be passed through the {@link ChannelPipeline}.
+     * {@link NativeFileDescriptor}s will be passed through the {@link ChannelPipeline}.
      *
      * This setting can be modified on the fly if needed.
      */

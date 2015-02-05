@@ -37,6 +37,13 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel {
         super(parent, fd.intValue());
     }
 
+    /**
+     * Creates a new {@link EpollDomainSocketChannel} from an existing {@link FileDescriptor}
+     */
+    public EpollDomainSocketChannel(FileDescriptor fd) {
+        super(fd);
+    }
+
     EpollDomainSocketChannel(Channel parent, int fd) {
         super(parent, fd);
     }
@@ -100,7 +107,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel {
 
     @Override
     protected Object filterOutboundMessage(Object msg) {
-        if (msg instanceof EpollFileDescriptor) {
+        if (msg instanceof NativeFileDescriptor) {
             return msg;
         }
         return super.filterOutboundMessage(msg);
@@ -143,7 +150,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel {
                     readPending = false;
 
                     try {
-                        pipeline.fireChannelRead(new EpollFileDescriptor(socketFd));
+                        pipeline.fireChannelRead(new NativeFileDescriptor(socketFd));
                     } catch (Throwable t) {
                         // keep on reading as we use epoll ET and need to consume everything from the socket
                         pipeline.fireChannelReadComplete();

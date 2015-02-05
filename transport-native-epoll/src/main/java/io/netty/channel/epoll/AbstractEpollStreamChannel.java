@@ -29,6 +29,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoop;
+import io.netty.channel.FileDescriptor;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.util.internal.PlatformDependent;
@@ -59,6 +60,10 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
         super(fd, Native.EPOLLIN);
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
         flags |= Native.EPOLLRDHUP;
+    }
+
+    protected AbstractEpollStreamChannel(FileDescriptor fd) {
+        super(null, fd, Native.EPOLLIN, Native.getSoError(fd.intValue()) == 0);
     }
 
     @Override
