@@ -575,8 +575,8 @@ public final class OpenSslEngine extends SSLEngine {
         long error = SSL.getLastErrorNumber();
         if (OpenSsl.isError(error)) {
             String err = SSL.getErrorString(error);
-            if (logger.isInfoEnabled()) {
-                logger.info(
+            if (logger.isDebugEnabled()) {
+                logger.debug(
                         "SSL_read failed: primingReadResult: " + lastPrimingReadResult +
                                 "; OpenSSL error: '" + err + '\'');
             }
@@ -1167,8 +1167,8 @@ public final class OpenSslEngine extends SSLEngine {
             long error = SSL.getLastErrorNumber();
             if (OpenSsl.isError(error)) {
                 String err = SSL.getErrorString(error);
-                if (logger.isInfoEnabled()) {
-                    logger.info(
+                if (logger.isDebugEnabled()) {
+                    logger.debug(
                             "SSL_do_handshake failed: OpenSSL error: '" + err + '\'');
                 }
 
