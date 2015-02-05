@@ -1222,6 +1222,14 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_getSoLinger(JNIEnv* en
     }
 }
 
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_getSoError(JNIEnv* env, jclass clazz, jint fd) {
+    int optval = 0;
+    if (getOption(env, fd, SOL_SOCKET, SO_ERROR, &optval, sizeof(optval)) == -1) {
+        return optval;
+    }
+    return 0;
+}
+
 JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_getTrafficClass(JNIEnv* env, jclass clazz, jint fd) {
     int optval;
     if (getOption(env, fd, IPPROTO_IP, IP_TOS, &optval, sizeof(optval)) == -1) {

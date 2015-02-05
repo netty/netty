@@ -44,11 +44,18 @@ abstract class AbstractEpollChannel extends AbstractChannel {
     }
 
     AbstractEpollChannel(Channel parent, int fd, int flag, boolean active) {
+        this(parent, new NativeFileDescriptor(fd), flag, active);
+    }
+
+    AbstractEpollChannel(Channel parent, FileDescriptor fd, int flag, boolean active) {
         super(parent);
+        if (fd == null) {
+            throw new NullPointerException("fd");
+        }
         readFlag = flag;
         flags |= flag;
         this.active = active;
-        fileDescriptor = new EpollFileDescriptor(fd);
+        fileDescriptor = fd;
     }
 
     void setFlag(int flag) {
@@ -113,7 +120,7 @@ abstract class AbstractEpollChannel extends AbstractChannel {
 
     @Override
     public boolean isOpen() {
-        return fileDescriptor != EpollFileDescriptor.INVALID;
+        return fileDescriptor != FileDescriptor.INVALID;
     }
 
     @Override
