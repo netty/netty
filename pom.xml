@@ -31,7 +31,7 @@
   <name>Netty</name>
   <url>http://netty.io/</url>
   <description>
-    Netty is an asynchronous event-driven network application framework for 
+    Netty is an asynchronous event-driven network application framework for
     rapid development of maintainable high performance protocol servers and
     clients.
   </description>
@@ -521,7 +521,7 @@
       <dependency>
         <groupId>org.javassist</groupId>
         <artifactId>javassist</artifactId>
-        <version>3.18.0-GA</version>
+        <version>3.19.0-GA</version>
         <scope>compile</scope>
         <optional>true</optional>
       </dependency>
@@ -665,14 +665,14 @@
         </exclusions>
         <optional>true</optional>
       </dependency>
-      
+
       <!-- Metrics providers -->
       <dependency>
         <groupId>com.yammer.metrics</groupId>
         <artifactId>metrics-core</artifactId>
         <version>2.2.0</version>
       </dependency>
-      
+
       <!-- Common test dependencies -->
       <dependency>
         <groupId>junit</groupId>
@@ -1016,7 +1016,7 @@
             </configuration>
           </execution>
         </executions>
-      </plugin>             
+      </plugin>
       <plugin>
         <artifactId>maven-source-plugin</artifactId>
         <version>2.2.1</version>
@@ -1275,7 +1275,7 @@
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>build-helper-maven-plugin</artifactId>
           <version>1.8</version>
-        </plugin>               
+        </plugin>
         <plugin>
           <groupId>org.fusesource.hawtjni</groupId>
           <artifactId>maven-hawtjni-plugin</artifactId>
