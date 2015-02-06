@@ -235,14 +235,14 @@ abstract class AbstractEpollChannel extends AbstractChannel {
         return localReadAmount;
     }
 
-    protected final int doWriteBytes(ByteBuf buf) throws Exception {
+    protected final int doWriteBytes(ByteBuf buf, int writeSpinCount) throws Exception {
         int readableBytes = buf.readableBytes();
         int writtenBytes = 0;
         if (buf.hasMemoryAddress()) {
             long memoryAddress = buf.memoryAddress();
             int readerIndex = buf.readerIndex();
             int writerIndex = buf.writerIndex();
-            for (;;) {
+            for (int i = writeSpinCount - 1; i >= 0; i--) {
                 int localFlushedAmount = Native.writeAddress(
                         fileDescriptor.intValue(), memoryAddress, readerIndex, writerIndex);
                 if (localFlushedAmount > 0) {
@@ -252,9 +252,7 @@ abstract class AbstractEpollChannel extends AbstractChannel {
                     }
                     readerIndex += localFlushedAmount;
                 } else {
-                    // Returned EAGAIN need to set EPOLLOUT
-                    setFlag(Native.EPOLLOUT);
-                    return writtenBytes;
+                    break;
                 }
             }
         } else {
@@ -264,7 +262,7 @@ abstract class AbstractEpollChannel extends AbstractChannel {
             } else {
                 nioBuf = buf.nioBuffer();
             }
-            for (;;) {
+            for (int i = writeSpinCount - 1; i >= 0; i--) {
                 int pos = nioBuf.position();
                 int limit = nioBuf.limit();
                 int localFlushedAmount = Native.write(fileDescriptor.intValue(), nioBuf, pos, limit);
@@ -275,13 +273,15 @@ abstract class AbstractEpollChannel extends AbstractChannel {
                         return writtenBytes;
                     }
                 } else {
-                    // Returned EAGAIN need to set EPOLLOUT
-                    setFlag(Native.EPOLLOUT);
                     break;
                 }
             }
-            return writtenBytes;
         }
+        if (writtenBytes < readableBytes) {
+            // Returned EAGAIN need to set EPOLLOUT
+            setFlag(Native.EPOLLOUT);
+        }
+        return writtenBytes;
     }
 
     protected abstract class AbstractEpollUnsafe extends AbstractUnsafe {
