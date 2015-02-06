@@ -342,25 +342,14 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
         return outputShutdown || !isActive();
     }
 
-    protected ChannelFuture shutdownOutput0(final ChannelPromise promise) {
-        EventLoop loop = eventLoop();
-        if (loop.inEventLoop()) {
-            try {
-                Native.shutdown(fd().intValue(), false, true);
-                outputShutdown = true;
-                promise.setSuccess();
-            } catch (Throwable t) {
-                promise.setFailure(t);
-            }
-        } else {
-            loop.execute(new Runnable() {
-                @Override
-                public void run() {
-                    shutdownOutput0(promise);
-                }
-            });
+    protected void shutdownOutput0(final ChannelPromise promise) {
+        try {
+            Native.shutdown(fd().intValue(), false, true);
+            outputShutdown = true;
+            promise.setSuccess();
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
         }
-        return promise;
     }
 
     /**
