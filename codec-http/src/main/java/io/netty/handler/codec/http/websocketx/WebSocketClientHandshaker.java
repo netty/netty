@@ -326,7 +326,7 @@ public abstract class WebSocketClientHandshaker {
             p.addAfter(ctx.name(), aggregatorName, new HttpObjectAggregator(8192));
             p.addAfter(aggregatorName, "handshaker", new SimpleChannelInboundHandler<FullHttpResponse>() {
                 @Override
-                protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
+                protected void messageReceived(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
                     // Remove ourself and do the actual handshake
                     ctx.pipeline().remove(this);
                     try {
