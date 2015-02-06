@@ -18,11 +18,15 @@ package io.netty.channel.epoll;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.util.concurrent.GlobalEventExecutor;
+import io.netty.util.internal.OneTimeTask;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.concurrent.Executor;
 
 /**
  * {@link SocketChannel} implementation that uses linux EPOLL Edge-Triggered Mode for
@@ -123,12 +127,38 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
 
     @Override
     public ChannelFuture shutdownOutput(final ChannelPromise promise) {
-        return shutdownOutput0(promise);
+        Executor closeExecutor = ((EpollSocketChannelUnsafe) unsafe()).closeExecutor();
+        if (closeExecutor != null) {
+            closeExecutor.execute(new OneTimeTask() {
+                @Override
+                public void run() {
+                    shutdownOutput0(promise);
+                }
+            });
+        } else {
+            EventLoop loop = eventLoop();
+            if (loop.inEventLoop()) {
+                shutdownOutput0(promise);
+            } else {
+                loop.execute(new OneTimeTask() {
+                    @Override
+                    public void run() {
+                        shutdownOutput0(promise);
+                    }
+                });
+            }
+        }
+        return promise;
     }
 
     @Override
     public ServerSocketChannel parent() {
         return (ServerSocketChannel) super.parent();
+    }
+
+    @Override
+    protected AbstractEpollUnsafe newUnsafe() {
+        return new EpollSocketChannelUnsafe();
     }
 
     @Override
@@ -144,5 +174,15 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
             return true;
         }
         return false;
+    }
+
+    private final class EpollSocketChannelUnsafe extends EpollStreamUnsafe {
+        @Override
+        protected Executor closeExecutor() {
+            if (config().getSoLinger() > 0) {
+                return GlobalEventExecutor.INSTANCE;
+            }
+            return null;
+        }
     }
 }
