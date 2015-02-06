@@ -33,6 +33,17 @@
 #include <stddef.h>
 #include "io_netty_channel_epoll_Native.h"
 
+
+/**
+ * On older Linux kernels, epoll can't handle timeout
+ * values bigger than (LONG_MAX - 999ULL)/HZ.
+ *
+ * See:
+ *   - https://github.com/libevent/libevent/blob/master/epoll.c#L138
+ *   - http://cvs.schmorp.de/libev/ev_epoll.c?revision=1.68&view=markup
+ */
+#define MAX_EPOLL_TIMEOUT_MSEC (35*60*1000)
+
 // optional
 extern int accept4(int sockFd, struct sockaddr* addr, socklen_t* addrlen, int flags) __attribute__((weak));
 extern int epoll_create1(int flags) __attribute__((weak));
@@ -617,6 +628,11 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollWait0(JNIEnv* env
     struct epoll_event *ev = (struct epoll_event*) address;
     int ready;
     int err;
+
+    if (timeout > MAX_EPOLL_TIMEOUT_MSEC) {
+        // Workaround for bug in older linux kernels that can not handle bigger timeout then MAX_EPOLL_TIMEOUT_MSEC.
+        timeout = MAX_EPOLL_TIMEOUT_MSEC;
+    }
     do {
        ready = epoll_wait(efd, ev, len, timeout);
        // was interrupted try again.
