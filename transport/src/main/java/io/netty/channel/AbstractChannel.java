@@ -31,6 +31,7 @@ import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 
 /**
@@ -613,23 +614,60 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
+            if (outboundBuffer == null) {
+                // This means close() was called before so we just register a listener and return
+                closeFuture.addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        promise.setSuccess();
+                    }
+                });
+                return;
+            }
+
             if (closeFuture.isDone()) {
                 // Closed already.
                 safeSetSuccess(promise);
                 return;
             }
 
-            boolean wasActive = isActive();
-            ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
-            this.outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
-
-            Throwable error = null;
-            try {
-                doClose();
-            } catch (Throwable t) {
-                error = t;
+            final boolean wasActive = isActive();
+            final ChannelOutboundBuffer buffer = outboundBuffer;
+            outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
+            Executor closeExecutor = closeExecutor();
+            if (closeExecutor != null) {
+                closeExecutor.execute(new OneTimeTask() {
+                    @Override
+                    public void run() {
+                        Throwable cause = null;
+                        try {
+                            doClose();
+                        } catch (Throwable t) {
+                            cause = t;
+                        }
+                        final Throwable error = cause;
+                        // Call invokeLater so closeAndDeregister is executed in the EventLoop again!
+                        invokeLater(new OneTimeTask() {
+                            @Override
+                            public void run() {
+                                closeAndDeregister(buffer, wasActive, promise, error);
+                            }
+                        });
+                    }
+                });
+            } else {
+                Throwable error = null;
+                try {
+                    doClose();
+                } catch (Throwable t) {
+                    error = t;
+                }
+                closeAndDeregister(buffer, wasActive, promise, error);
             }
+        }
 
+        private void closeAndDeregister(ChannelOutboundBuffer outboundBuffer, final boolean wasActive,
+                                        ChannelPromise promise, Throwable error) {
             // Fail all the queued messages
             try {
                 outboundBuffer.failFlushed(CLOSED_CHANNEL_EXCEPTION);
@@ -881,6 +919,15 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             return cause;
+        }
+
+        /**
+         * @return {@link Executor} to execute {@link #doClose()} or {@code null} if it should be done in the
+         * {@link EventLoop}.
+         +
+         */
+        protected Executor closeExecutor() {
+            return null;
         }
     }
 

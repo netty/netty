@@ -28,6 +28,7 @@ import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.internal.OneTimeTask;
 
 import java.io.IOException;
@@ -38,6 +39,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
+import java.util.concurrent.Executor;
 
 /**
  * {@link io.netty.channel.socket.SocketChannel} which uses NIO selector based implementation.
@@ -147,23 +149,37 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     @Override
     public ChannelFuture shutdownOutput(final ChannelPromise promise) {
-        EventLoop loop = eventLoop();
-        if (loop.inEventLoop()) {
-            try {
-                javaChannel().socket().shutdownOutput();
-                promise.setSuccess();
-            } catch (Throwable t) {
-                promise.setFailure(t);
-            }
-        } else {
-            loop.execute(new OneTimeTask() {
+        Executor closeExecutor = ((NioSocketChannelUnsafe) unsafe()).closeExecutor();
+        if (closeExecutor != null) {
+            closeExecutor.execute(new OneTimeTask() {
                 @Override
                 public void run() {
-                    shutdownOutput(promise);
+                    shutdownOutput0(promise);
                 }
             });
+        } else {
+            EventLoop loop = eventLoop();
+            if (loop.inEventLoop()) {
+                shutdownOutput0(promise);
+            } else {
+                loop.execute(new OneTimeTask() {
+                    @Override
+                    public void run() {
+                        shutdownOutput0(promise);
+                    }
+                });
+            }
         }
         return promise;
+    }
+
+    private void shutdownOutput0(final ChannelPromise promise) {
+        try {
+            javaChannel().socket().shutdownOutput();
+            promise.setSuccess();
+        } catch (Throwable t) {
+            promise.setFailure(t);
+        }
     }
 
     @Override
@@ -304,6 +320,21 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                 incompleteWrite(setOpWrite);
                 break;
             }
+        }
+    }
+
+    @Override
+    protected AbstractNioUnsafe newUnsafe() {
+        return new NioSocketChannelUnsafe();
+    }
+
+    private final class NioSocketChannelUnsafe extends NioByteUnsafe {
+        @Override
+        protected Executor closeExecutor() {
+            if (config().getSoLinger() > 0) {
+                return GlobalEventExecutor.INSTANCE;
+            }
+            return null;
         }
     }
 
