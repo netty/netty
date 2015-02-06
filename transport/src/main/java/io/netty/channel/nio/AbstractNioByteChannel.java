@@ -57,7 +57,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         return new NioByteUnsafe();
     }
 
-    private final class NioByteUnsafe extends AbstractNioUnsafe {
+    protected class NioByteUnsafe extends AbstractNioUnsafe {
         private RecvByteBufAllocator.Handle allocHandle;
 
         private void closeOnRead(ChannelPipeline pipeline) {
@@ -91,7 +91,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         }
 
         @Override
-        public void read() {
+        public final void read() {
             final ChannelConfig config = config();
             if (!config.isAutoRead() && !isReadPending()) {
                 // ChannelConfig.setAutoRead(false) was called in the meantime
