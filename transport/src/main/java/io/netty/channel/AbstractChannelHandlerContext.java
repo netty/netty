@@ -213,6 +213,26 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private final AbstractChannel channel;
     private final DefaultChannelPipeline pipeline;
     private final String name;
+
+    /**
+     * Set when a user calls {@link #fireChannelRead(Object)} on this context.
+     * Cleared when a user calls {@link #fireChannelReadComplete()} on this context.
+     *
+     * See {@link #fireChannelReadComplete()} to understand how this flag is used.
+     */
+    private volatile boolean firedChannelRead;
+
+    /**
+     * Set when a user calls {@link #read()} on this context.
+     * Cleared when a user calls {@link #fireChannelReadComplete()} on this context.
+     *
+     * See {@link #fireChannelReadComplete()} to understand how this flag is used.
+     */
+    private volatile boolean invokedRead;
+
+    /**
+     * {@code true} if and only if this context has been removed from the pipeline.
+     */
     private boolean removed;
 
     final int skipFlags;
@@ -356,14 +376,51 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     public ChannelHandlerContext fireChannelRead(Object msg) {
         AbstractChannelHandlerContext next = findContextInbound();
         ReferenceCountUtil.touch(msg, next);
+        firedChannelRead = true;
         next.invoker().invokeChannelRead(next, msg);
         return this;
     }
 
     @Override
     public ChannelHandlerContext fireChannelReadComplete() {
-        AbstractChannelHandlerContext next = findContextInbound();
-        next.invoker().invokeChannelReadComplete(next);
+        /**
+         * If the handler of this context did not produce any messages via {@link #fireChannelRead(Object)},
+         * there's no reason to trigger {@code channelReadComplete()} even if the handler called this method.
+         *
+         * This is pretty common for the handlers that transform multiple messages into one message,
+         * such as byte-to-message decoder and message aggregators.
+         */
+        if (firedChannelRead) {
+            // The handler of this context produced a message, so we are OK to trigger this event.
+            firedChannelRead = false;
+            invokedRead = false;
+            AbstractChannelHandlerContext next = findContextInbound();
+            next.invoker().invokeChannelReadComplete(next);
+            return this;
+        }
+
+        /**
+         * At this point, we are sure the handler of this context did not produce anything and
+         * we suppressed the {@code channelReadComplete()} event.
+         *
+         * If the next handler invoked {@link #read()} to read something but nothing was produced
+         * by the handler of this context, someone has to issue another {@link #read()} operation
+         * until the handler of this context produces something.
+         *
+         * Why? Because otherwise the next handler will not receive {@code channelRead()} nor
+         * {@code channelReadComplete()} event at all for the {@link #read()} operation it issued.
+         */
+        if (invokedRead && !channel().config().isAutoRead()) {
+            /**
+             * The next (or upstream) handler invoked {@link #read()}, but it didn't get any
+             * {@code channelRead()} event. We should read once more, so that the handler of the current
+             * context have a chance to produce something.
+             */
+            read();
+        } else {
+            invokedRead = false;
+        }
+
         return this;
     }
 
@@ -451,6 +508,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     @Override
     public ChannelHandlerContext read() {
         AbstractChannelHandlerContext next = findContextOutbound();
+        invokedRead = true;
         next.invoker().invokeRead(next);
         return this;
     }
