@@ -540,19 +540,19 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test
-    public void testSurpressChannelReadComplete() throws Exception {
-        testSurpressChannelReadComplete0(false);
+    public void testSupressChannelReadComplete() throws Exception {
+        testSupressChannelReadComplete0(false);
     }
 
     @Test
-    public void testSurpressChannelReadCompleteDifferentExecutors() throws Exception {
-        testSurpressChannelReadComplete0(true);
+    public void testSupressChannelReadCompleteDifferentExecutors() throws Exception {
+        testSupressChannelReadComplete0(true);
     }
 
     // See:
     //  https://github.com/netty/netty/pull/3263
     //  https://github.com/netty/netty/pull/3272
-    private static void testSurpressChannelReadComplete0(boolean executors) throws Exception {
+    private static void testSupressChannelReadComplete0(boolean executors) throws Exception {
         final AtomicInteger read1 = new AtomicInteger();
         final AtomicInteger read2 = new AtomicInteger();
         final AtomicInteger readComplete1 = new AtomicInteger();
