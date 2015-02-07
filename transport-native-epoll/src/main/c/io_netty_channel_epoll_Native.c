@@ -78,25 +78,25 @@ static int socketType;
 static const char* ip4prefix = "::ffff:";
 
 // util methods
-void throwRuntimeException(JNIEnv* env, char* message) {
+static void throwRuntimeException(JNIEnv* env, char* message) {
     (*env)->ThrowNew(env, runtimeExceptionClass, message);
 }
 
-void throwIOException(JNIEnv* env, char* message) {
+static void throwIOException(JNIEnv* env, char* message) {
     (*env)->ThrowNew(env, ioExceptionClass, message);
 }
 
-void throwClosedChannelException(JNIEnv* env) {
+static void throwClosedChannelException(JNIEnv* env) {
     jobject exception = (*env)->NewObject(env, closedChannelExceptionClass, closedChannelExceptionMethodId);
     (*env)->Throw(env, exception);
 }
 
-void throwOutOfMemoryError(JNIEnv* env) {
+static void throwOutOfMemoryError(JNIEnv* env) {
     jclass exceptionClass = (*env)->FindClass(env, "java/lang/OutOfMemoryError");
     (*env)->ThrowNew(env, exceptionClass, "");
 }
 
-char* exceptionMessage(char* msg, int error) {
+static char* exceptionMessage(char* msg, int error) {
     char* err = strerror(error);
     char* result = malloc(strlen(msg) + strlen(err) + 1);
     strcpy(result, msg);
@@ -104,7 +104,7 @@ char* exceptionMessage(char* msg, int error) {
     return result;
 }
 
-jint epollCtl(JNIEnv* env, jint efd, int op, jint fd, jint flags, jint id) {
+static inline jint epollCtl(JNIEnv* env, jint efd, int op, jint fd, jint flags, jint id) {
     uint32_t events = (flags & EPOLL_EDGE) ? EPOLLET : 0;
 
     if (flags & EPOLL_READ) {
@@ -123,7 +123,7 @@ jint epollCtl(JNIEnv* env, jint efd, int op, jint fd, jint flags, jint id) {
     return epoll_ctl(efd, op, fd, &ev);
 }
 
-jint getOption(JNIEnv* env, jint fd, int level, int optname, void* optval, socklen_t optlen) {
+static inline jint getOption(JNIEnv* env, jint fd, int level, int optname, void* optval, socklen_t optlen) {
     int code;
     code = getsockopt(fd, level, optname, optval, &optlen);
     if (code == 0) {
@@ -134,7 +134,7 @@ jint getOption(JNIEnv* env, jint fd, int level, int optname, void* optval, sockl
     return code;
 }
 
-int setOption(JNIEnv* env, jint fd, int level, int optname, const void* optval, socklen_t len) {
+static inline int setOption(JNIEnv* env, jint fd, int level, int optname, const void* optval, socklen_t len) {
     int rc = setsockopt(fd, level, optname, optval, len);
     if (rc < 0) {
         int err = errno;
@@ -171,7 +171,7 @@ jobject createInetSocketAddress(JNIEnv* env, struct sockaddr_storage addr) {
     return socketAddr;
 }
 
-jbyteArray createInetSocketAddressArray(JNIEnv* env, struct sockaddr_storage addr) {
+static jbyteArray createInetSocketAddressArray(JNIEnv* env, struct sockaddr_storage addr) {
     int port;
     if (addr.ss_family == AF_INET) {
         struct sockaddr_in* s = (struct sockaddr_in*) &addr;
@@ -233,7 +233,7 @@ jbyteArray createInetSocketAddressArray(JNIEnv* env, struct sockaddr_storage add
     }
 }
 
-jobject createDatagramSocketAddress(JNIEnv* env, struct sockaddr_storage addr, int len) {
+static jobject createDatagramSocketAddress(JNIEnv* env, struct sockaddr_storage addr, int len) {
     char ipstr[INET6_ADDRSTRLEN];
     int port;
     jstring ipString;
@@ -262,7 +262,7 @@ jobject createDatagramSocketAddress(JNIEnv* env, struct sockaddr_storage addr, i
     return socketAddr;
 }
 
-int init_sockaddr(JNIEnv* env, jbyteArray address, jint scopeId, jint jport, struct sockaddr_storage* addr) {
+static int init_sockaddr(JNIEnv* env, jbyteArray address, jint scopeId, jint jport, struct sockaddr_storage* addr) {
     uint16_t port = htons((uint16_t) jport);
     // Use GetPrimitiveArrayCritical and ReleasePrimitiveArrayCritical to signal the VM that we really would like
     // to not do a memory copy here. This is ok as we not do any blocking action here anyway.
@@ -305,7 +305,7 @@ static int socket_type() {
     }
 }
 
-int init_in_addr(JNIEnv* env, jbyteArray address, struct in_addr* addr) {
+static int init_in_addr(JNIEnv* env, jbyteArray address, struct in_addr* addr) {
     // Use GetPrimitiveArrayCritical and ReleasePrimitiveArrayCritical to signal the VM that we really would like
     // to not do a memory copy here. This is ok as we not do any blocking action here anyway.
     // This is important as the VM may suspend GC for the time!
@@ -699,7 +699,7 @@ JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_epollCtlDel(JNIEnv* en
     }
 }
 
-jint _write(JNIEnv* env, jclass clazz, jint fd, void* buffer, jint pos, jint limit) {
+static inline jint _write(JNIEnv* env, jclass clazz, jint fd, void* buffer, jint pos, jint limit) {
     ssize_t res;
     int err;
     do {
@@ -726,7 +726,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_writeAddress0(JNIEnv* 
     return _write(env, clazz, fd, (void*) address, pos, limit);
 }
 
-jint _sendTo(JNIEnv* env, jint fd, void* buffer, jint pos, jint limit ,jbyteArray address, jint scopeId, jint port) {
+static inline jint _sendTo(JNIEnv* env, jint fd, void* buffer, jint pos, jint limit ,jbyteArray address, jint scopeId, jint port) {
     struct sockaddr_storage addr;
     if (init_sockaddr(env, address, scopeId, port, &addr) == -1) {
         return -1;
@@ -822,7 +822,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_sendmmsg0(JNIEnv* env,
     return (jint) res;
 }
 
-jobject recvFrom0(JNIEnv* env, jint fd, void* buffer, jint pos, jint limit) {
+static inline jobject recvFrom0(JNIEnv* env, jint fd, void* buffer, jint pos, jint limit) {
     struct sockaddr_storage addr;
     socklen_t addrlen = sizeof(addr);
     ssize_t res;
@@ -863,7 +863,7 @@ JNIEXPORT jobject JNICALL Java_io_netty_channel_epoll_Native_recvFromAddress(JNI
     return recvFrom0(env, fd, (void*) address, pos, limit);
 }
 
-jlong _writev(JNIEnv* env, jclass clazz, jint fd, struct iovec* iov, jint length) {
+static inline jlong _writev(JNIEnv* env, jclass clazz, jint fd, struct iovec* iov, jint length) {
     ssize_t res;
     int err;
     do {
@@ -923,7 +923,7 @@ JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_writevAddresses0(JNIE
     return _writev(env, clazz, fd, iov, length);
 }
 
-jint _read(JNIEnv* env, jclass clazz, jint fd, void* buffer, jint pos, jint limit) {
+static inline jint _read(JNIEnv* env, jclass clazz, jint fd, void* buffer, jint pos, jint limit) {
     ssize_t res;
     int err;
     do {
@@ -972,7 +972,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_shutdown0(JNIEnv* env,
     return 0;
 }
 
-jint socket0(JNIEnv* env, jclass clazz, int type) {
+static inline jint socket0(JNIEnv* env, jclass clazz, int type) {
     // TODO: Maybe also respect -Djava.net.preferIPv4Stack=true
     int fd = socket(socketType, type | SOCK_NONBLOCK, 0);
     if (fd == -1) {
