@@ -51,10 +51,14 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
 
     protected AbstractEpollStreamChannel(Channel parent, int fd) {
         super(parent, fd, Native.EPOLLIN, true);
+        // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
+        flags |= Native.EPOLLRDHUP;
     }
 
     protected AbstractEpollStreamChannel(int fd) {
         super(fd, Native.EPOLLIN);
+        // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
+        flags |= Native.EPOLLRDHUP;
     }
 
     @Override
