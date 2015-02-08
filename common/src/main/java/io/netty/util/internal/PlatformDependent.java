@@ -459,7 +459,7 @@ public final class PlatformDependent {
             return false;
         }
 
-        String[] ID_COMMANDS = { "/usr/bin/id", "/bin/id", "id", "/usr/xpg4/bin/id"};
+        String[] ID_COMMANDS = { "/usr/bin/id", "/bin/id", "/usr/xpg4/bin/id", "id"};
         Pattern UID_PATTERN = Pattern.compile("^(?:0|[1-9][0-9]*)$");
         for (String idCmd: ID_COMMANDS) {
             Process p = null;
