@@ -33,7 +33,6 @@
 #include <stddef.h>
 #include "io_netty_channel_epoll_Native.h"
 
-
 /**
  * On older Linux kernels, epoll can't handle timeout
  * values bigger than (LONG_MAX - 999ULL)/HZ.
@@ -633,6 +632,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollWait0(JNIEnv* env
         // Workaround for bug in older linux kernels that can not handle bigger timeout then MAX_EPOLL_TIMEOUT_MSEC.
         timeout = MAX_EPOLL_TIMEOUT_MSEC;
     }
+
     do {
        ready = epoll_wait(efd, ev, len, timeout);
        // was interrupted try again.
