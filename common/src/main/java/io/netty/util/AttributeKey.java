@@ -40,8 +40,21 @@ public final class AttributeKey<T> extends AbstractConstant<AttributeKey<T>> {
     }
 
     /**
-     * Shortcut of {@link #valueOf(String) valueOf(firstNameComponent.getName() + "#" + secondNameComponent)}.
+     * Returns {@code true} if a {@link AttributeKey} exists for the given {@code name}.
      */
+    public static boolean exists(String name) {
+        return pool.exists(name);
+    }
+
+    /**
+     * Creates a new {@link AttributeKey} for the given {@param name} or fail with an
+     * {@link IllegalArgumentException} if a {@link AttributeKey} for the given {@param name} exists.
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> AttributeKey<T> newInstance(String name) {
+        return (AttributeKey<T>) pool.newInstance(name);
+    }
+
     @SuppressWarnings("unchecked")
     public static <T> AttributeKey<T> valueOf(Class<?> firstNameComponent, String secondNameComponent) {
         return (AttributeKey<T>) pool.valueOf(firstNameComponent, secondNameComponent);
