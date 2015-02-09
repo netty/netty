@@ -18,6 +18,8 @@ package io.netty.util;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 /**
  * @deprecated Known to have problems with class loaders.
  *
@@ -39,12 +41,8 @@ public class UniqueName implements Comparable<UniqueName> {
      * @param args the arguments to process
      */
     public UniqueName(ConcurrentMap<String, Boolean> map, String name, Object... args) {
-        if (map == null) {
-            throw new NullPointerException("map");
-        }
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
+        checkNotNull(map, "map");
+
         if (args != null && args.length > 0) {
             validateArgs(args);
         }
@@ -52,9 +50,13 @@ public class UniqueName implements Comparable<UniqueName> {
         if (map.putIfAbsent(name, Boolean.TRUE) != null) {
             throw new IllegalArgumentException(String.format("'%s' is already in use", name));
         }
-
+        this.name = checkNotNull(name, "name");
         id = nextId.incrementAndGet();
-        this.name = name;
+    }
+
+    protected UniqueName(String name) {
+        this.name = checkNotNull(name, "name");
+        id = nextId.incrementAndGet();
     }
 
     /**
