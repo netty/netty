@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.handler.codec.xml;
 
 import io.netty.buffer.ByteBuf;
@@ -44,10 +43,8 @@ public class XmlFrameDecoderTest {
     private final List<String> xmlSamples;
 
     public XmlFrameDecoderTest() throws IOException, URISyntaxException {
-        xmlSamples = Arrays.asList(
-                sample("01"), sample("02"), sample("03"),
-                sample("04"), sample("05"), sample("06")
-        );
+        xmlSamples = Arrays.asList(sample("01"), sample("02"), sample("03"),
+                sample("04"), sample("05"), sample("06"), sample("07"));
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -78,7 +75,8 @@ public class XmlFrameDecoderTest {
     public void testDecodeWithInvalidContentBeforeXml() {
         XmlFrameDecoder decoder = new XmlFrameDecoder(1048576);
         EmbeddedChannel ch = new EmbeddedChannel(decoder);
-        ch.writeInbound(Unpooled.copiedBuffer("invalid XML<foo/>", CharsetUtil.UTF_8));
+        ch.writeInbound(Unpooled.copiedBuffer("invalid XML<foo/>",
+                CharsetUtil.UTF_8));
     }
 
     @Test
@@ -98,38 +96,38 @@ public class XmlFrameDecoderTest {
 
     @Test
     public void testDecodeShortValidXmlWithLeadingWhitespace02AndTrailingGarbage() {
-        testDecodeWithXml("  \n\r \t<xxx/>\ttrash", "<xxx/>", CorruptedFrameException.class);
+        testDecodeWithXml("  \n\r \t<xxx/>\ttrash", "<xxx/>",
+                CorruptedFrameException.class);
     }
 
     @Test
     public void testDecodeWithCDATABlock() {
-        final String xml = "<book>" +
-                "<![CDATA[K&R, a.k.a. Kernighan & Ritchie]]>" +
-                "</book>";
+        final String xml = "<book>"
+                + "<![CDATA[K&R, a.k.a. Kernighan & Ritchie]]>" + "</book>";
         testDecodeWithXml(xml, xml);
     }
 
     @Test
     public void testDecodeWithCDATABlockContainingNestedUnbalancedXml() {
         // <br> isn't closed, also <a> should have been </a>
-        final String xml = "<info>" +
-                "<![CDATA[Copyright 2012-2013,<br><a href=\"http://www.acme.com\">ACME Inc.<a>]]>" +
-                "</info>";
+        final String xml = "<info>"
+                + "<![CDATA[Copyright 2012-2013,<br><a href=\"http://www.acme.com\">ACME Inc.<a>]]>"
+                + "</info>";
         testDecodeWithXml(xml, xml);
     }
 
     @Test
     public void testDecodeWithTwoMessages() {
-        final String input = "<root xmlns=\"http://www.acme.com/acme\" status=\"loginok\" " +
-                "timestamp=\"1362410583776\"/>\n\n" +
-                "<root xmlns=\"http://www.acme.com/acme\" status=\"start\" time=\"0\" " +
-                "timestamp=\"1362410584794\">\n<child active=\"1\" status=\"started\" id=\"935449\" " +
-                "msgnr=\"2\"/>\n</root>";
-        final String frame1 = "<root xmlns=\"http://www.acme.com/acme\" status=\"loginok\" " +
-                "timestamp=\"1362410583776\"/>";
-        final String frame2 = "<root xmlns=\"http://www.acme.com/acme\" status=\"start\" time=\"0\" " +
-                "timestamp=\"1362410584794\">\n<child active=\"1\" status=\"started\" id=\"935449\" " +
-                "msgnr=\"2\"/>\n</root>";
+        final String input = "<root xmlns=\"http://www.acme.com/acme\" status=\"loginok\" "
+                + "timestamp=\"1362410583776\"/>\n\n"
+                + "<root xmlns=\"http://www.acme.com/acme\" status=\"start\" time=\"0\" "
+                + "timestamp=\"1362410584794\">\n<child active=\"1\" status=\"started\" id=\"935449\" "
+                + "msgnr=\"2\"/>\n</root>";
+        final String frame1 = "<root xmlns=\"http://www.acme.com/acme\" status=\"loginok\" "
+                + "timestamp=\"1362410583776\"/>";
+        final String frame2 = "<root xmlns=\"http://www.acme.com/acme\" status=\"start\" time=\"0\" "
+                + "timestamp=\"1362410584794\">\n<child active=\"1\" status=\"started\" id=\"935449\" "
+                + "msgnr=\"2\"/>\n</root>";
         testDecodeWithXml(input, frame1, frame2);
     }
 
@@ -142,27 +140,23 @@ public class XmlFrameDecoderTest {
 
     private static void testDecodeWithXml(String xml, Object... expected) {
         EmbeddedChannel ch = new EmbeddedChannel(new XmlFrameDecoder(1048576));
-        Exception cause = null;
-        try {
-            ch.writeInbound(Unpooled.copiedBuffer(xml, CharsetUtil.UTF_8));
-        } catch (Exception e) {
-            cause = e;
-        }
         List<Object> actual = new ArrayList<Object>();
-        for (;;) {
-            ByteBuf buf = ch.readInbound();
-            if (buf == null) {
-                break;
-            }
-            actual.add(buf.toString(CharsetUtil.UTF_8));
-            buf.release();
-        }
-
-        if (cause != null) {
-            actual.add(cause.getClass());
-        }
-
+        char[] chars = xml.toCharArray();
         try {
+            try {
+                for (int i = 0; i < chars.length; i++) {
+                    ch.writeInbound(Unpooled.copiedBuffer(
+                            ((Character) chars[i]).toString(),
+                            CharsetUtil.UTF_8));
+                    ByteBuf buf = ch.readInbound();
+                    if (buf != null) {
+                        actual.add(buf.toString(CharsetUtil.UTF_8));
+                        buf.release();
+                    }
+                }
+            } catch (Exception cause) {
+                actual.add(cause.getClass());
+            }
             List<Object> expectedList = new ArrayList<Object>();
             Collections.addAll(expectedList, expected);
             assertThat(actual, is(expectedList));
