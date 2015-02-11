@@ -70,7 +70,7 @@ import org.mockito.stubbing.Answer;
  * Testing the {@link HttpToHttp2ConnectionHandler} for {@link FullHttpRequest} objects into HTTP/2 frames
  */
 public class HttpToHttp2ConnectionHandlerTest {
-    private static final int WAIT_TIME_SECONDS = 500;
+    private static final int WAIT_TIME_SECONDS = 5;
 
     @Mock
     private Http2FrameListener clientListener;
