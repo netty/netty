@@ -19,9 +19,9 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
-import io.netty.channel.FileDescriptor;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.internal.OneTimeTask;
 
