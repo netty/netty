@@ -13,17 +13,16 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.epoll;
+package io.netty.channel.unix;
 
-public enum DomainSocketReadMode {
+import io.netty.channel.Channel;
 
+/**
+ * {@link Channel} that expose operations that are only present on {@code UNIX} like systems.
+ */
+public interface UnixChannel extends Channel {
     /**
-     * Read (@link ByteBuf)s from the {@link EpollSocketChannel}.
+     * Returns the {@link FileDescriptor} that is used by this {@link Channel}.
      */
-    BYTES,
-
-    /**
-     * Read (@link FileDscriptor)s from the {@link EpollSocketChannel}.
-     */
-    FILE_DESCRIPTORS
+    FileDescriptor fd();
 }

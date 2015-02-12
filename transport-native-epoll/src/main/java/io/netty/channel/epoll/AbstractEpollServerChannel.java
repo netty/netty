@@ -20,8 +20,8 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
-import io.netty.channel.FileDescriptor;
 import io.netty.channel.ServerChannel;
+import io.netty.channel.unix.FileDescriptor;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;

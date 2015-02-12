@@ -22,6 +22,8 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.unix.DomainSocketReadMode;
+import io.netty.channel.unix.FileDescriptor;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.AbstractSocketTest;
 import org.junit.Assert;
@@ -71,7 +73,7 @@ public class EpollDomainSocketFdTest extends AbstractSocketTest {
         cb.handler(new ChannelInboundHandlerAdapter() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                NativeFileDescriptor fd = (NativeFileDescriptor) msg;
+                FileDescriptor fd = (FileDescriptor) msg;
                 queue.offer(fd);
             }
 
@@ -90,9 +92,9 @@ public class EpollDomainSocketFdTest extends AbstractSocketTest {
         cc.close().sync();
         sc.close().sync();
 
-        if (received instanceof NativeFileDescriptor) {
-            Assert.assertNotSame(NativeFileDescriptor.INVALID, received);
-            ((NativeFileDescriptor) received).close();
+        if (received instanceof FileDescriptor) {
+            Assert.assertNotSame(FileDescriptor.INVALID, received);
+            ((FileDescriptor) received).close();
             Assert.assertNull(queue.poll());
         } else {
             throw (Throwable) received;

@@ -19,11 +19,13 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.FileDescriptor;
+import io.netty.channel.unix.DomainSocketAddress;
+import io.netty.channel.unix.DomainSocketChannel;
+import io.netty.channel.unix.FileDescriptor;
 
 import java.net.SocketAddress;
 
-public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel {
+public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel implements DomainSocketChannel {
     private final EpollDomainSocketChannelConfig config = new EpollDomainSocketChannelConfig(this);
 
     private volatile DomainSocketAddress local;
@@ -107,7 +109,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel {
 
     @Override
     protected Object filterOutboundMessage(Object msg) {
-        if (msg instanceof NativeFileDescriptor) {
+        if (msg instanceof FileDescriptor) {
             return msg;
         }
         return super.filterOutboundMessage(msg);
@@ -150,7 +152,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel {
                     readPending = false;
 
                     try {
-                        pipeline.fireChannelRead(new NativeFileDescriptor(socketFd));
+                        pipeline.fireChannelRead(new FileDescriptor(socketFd));
                     } catch (Throwable t) {
                         // keep on reading as we use epoll ET and need to consume everything from the socket
                         pipeline.fireChannelReadComplete();

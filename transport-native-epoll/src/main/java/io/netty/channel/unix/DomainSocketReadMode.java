@@ -13,34 +13,20 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
+package io.netty.channel.unix;
 
-import java.io.IOException;
-
-public interface FileDescriptor {
-
-    /**
-     * An invalid file descriptor which was closed before.
-     */
-    FileDescriptor INVALID = new FileDescriptor() {
-        @Override
-        public int intValue() {
-            throw new IllegalStateException("invalid file descriptor");
-        }
-
-        @Override
-        public void close() {
-            // NOOP
-        }
-    };
+/**
+ * Different modes of reading from a {@link DomainSocketChannel}.
+ */
+public enum DomainSocketReadMode {
 
     /**
-     * Return the int value of the filedescriptor.
+     * Read (@link ByteBuf)s from the {@link DomainSocketChannel}.
      */
-    int intValue();
+    BYTES,
 
     /**
-     * Close the file descriptor.
+     * Read (@link FileDscriptor)s from the {@link DomainSocketChannel}.
      */
-    void close() throws IOException;
+    FILE_DESCRIPTORS
 }

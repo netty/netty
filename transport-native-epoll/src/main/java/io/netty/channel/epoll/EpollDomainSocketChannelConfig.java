@@ -21,10 +21,13 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.unix.DomainSocketChannelConfig;
+import io.netty.channel.unix.DomainSocketReadMode;
 
 import java.util.Map;
 
-public final class EpollDomainSocketChannelConfig extends EpollChannelConfig {
+public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
+        implements DomainSocketChannelConfig {
     private volatile DomainSocketReadMode mode =
             DomainSocketReadMode.BYTES;
 
@@ -124,15 +127,7 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig {
         return this;
     }
 
-    /**
-     * Change the {@link DomainSocketReadMode} for the channel. The default is
-     * {@link DomainSocketReadMode#BYTES} which means bytes will be read from the
-     * {@link Channel} and passed through the pipeline. If
-     * {@link DomainSocketReadMode#FILE_DESCRIPTORS} is used
-     * {@link NativeFileDescriptor}s will be passed through the {@link ChannelPipeline}.
-     *
-     * This setting can be modified on the fly if needed.
-     */
+    @Override
     public EpollDomainSocketChannelConfig setReadMode(DomainSocketReadMode mode) {
         if (mode == null) {
             throw new NullPointerException("mode");
@@ -141,9 +136,7 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig {
         return this;
     }
 
-    /**
-     * Return the {@link DomainSocketReadMode} for the channel.
-     */
+    @Override
     public DomainSocketReadMode getReadMode() {
         return mode;
     }
