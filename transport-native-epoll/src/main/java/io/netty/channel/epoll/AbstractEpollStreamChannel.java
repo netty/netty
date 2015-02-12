@@ -28,10 +28,9 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.DefaultFileRegion;
-import io.netty.channel.EventLoop;
-import io.netty.channel.FileDescriptor;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 

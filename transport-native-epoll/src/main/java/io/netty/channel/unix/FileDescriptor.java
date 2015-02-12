@@ -13,9 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.epoll;
-
-import io.netty.channel.FileDescriptor;
+package io.netty.channel.unix;
 
 import java.io.IOException;
 
@@ -23,25 +21,44 @@ import java.io.IOException;
  * Native {@link FileDescriptor} implementation which allows to wrap an {@code int} and provide a
  * {@link FileDescriptor} for it.
  */
-public final class NativeFileDescriptor implements FileDescriptor {
+public class FileDescriptor {
 
     private final int fd;
 
-    public NativeFileDescriptor(int fd) {
+    public FileDescriptor(int fd) {
         if (fd < 0) {
             throw new IllegalArgumentException("fd must be >= 0");
         }
         this.fd = fd;
     }
 
-    @Override
+    /**
+     * An invalid file descriptor which was closed before.
+     */
+    public static final FileDescriptor INVALID = new FileDescriptor(0) {
+        @Override
+        public int intValue() {
+            throw new IllegalStateException("invalid file descriptor");
+        }
+
+        @Override
+        public void close() {
+            // NOOP
+        }
+    };
+
+    /**
+     * Return the int value of the filedescriptor.
+     */
     public int intValue() {
         return fd;
     }
 
-    @Override
+    /**
+     * Close the file descriptor.
+     */
     public void close() throws IOException {
-        Native.close(fd);
+        close(fd);
     }
 
     @Override
@@ -56,15 +73,17 @@ public final class NativeFileDescriptor implements FileDescriptor {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof NativeFileDescriptor)) {
+        if (!(o instanceof FileDescriptor)) {
             return false;
         }
 
-        return fd == ((NativeFileDescriptor) o).fd;
+        return fd == ((FileDescriptor) o).fd;
     }
 
     @Override
     public int hashCode() {
         return fd;
     }
+
+    private static native int close(int fd);
 }

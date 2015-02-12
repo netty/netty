@@ -16,6 +16,7 @@
 package io.netty.channel.epoll;
 
 import io.netty.channel.ChannelOption;
+import io.netty.channel.unix.DomainSocketReadMode;
 
 public final class EpollChannelOption<T> extends ChannelOption<T> {
 
