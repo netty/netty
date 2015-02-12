@@ -23,7 +23,8 @@ import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.EventLoop;
-import io.netty.channel.FileDescriptor;
+import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.OneTimeTask;
 
@@ -31,7 +32,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.UnresolvedAddressException;
 
-abstract class AbstractEpollChannel extends AbstractChannel {
+abstract class AbstractEpollChannel extends AbstractChannel implements UnixChannel {
     private static final ChannelMetadata DATA = new ChannelMetadata(false);
     private final int readFlag;
     private volatile FileDescriptor fileDescriptor;
@@ -44,7 +45,7 @@ abstract class AbstractEpollChannel extends AbstractChannel {
     }
 
     AbstractEpollChannel(Channel parent, int fd, int flag, boolean active) {
-        this(parent, new NativeFileDescriptor(fd), flag, active);
+        this(parent, new FileDescriptor(fd), flag, active);
     }
 
     AbstractEpollChannel(Channel parent, FileDescriptor fd, int flag, boolean active) {
@@ -76,9 +77,7 @@ abstract class AbstractEpollChannel extends AbstractChannel {
         return (flags & flag) != 0;
     }
 
-    /**
-     * Returns the {@link FileDescriptor} that is used by this {@link Channel}.
-     */
+    @Override
     public final FileDescriptor fd() {
         return fileDescriptor;
     }

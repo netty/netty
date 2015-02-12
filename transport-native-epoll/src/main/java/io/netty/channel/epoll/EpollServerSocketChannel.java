@@ -17,8 +17,8 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
-import io.netty.channel.FileDescriptor;
 import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.unix.FileDescriptor;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
