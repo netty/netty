@@ -25,11 +25,11 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultAddressedEnvelope;
-import io.netty.channel.FileDescriptor;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 

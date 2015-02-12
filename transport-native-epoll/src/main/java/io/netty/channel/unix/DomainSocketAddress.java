@@ -13,11 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.epoll;
+package io.netty.channel.unix;
 
 import java.io.File;
 import java.net.SocketAddress;
 
+/**
+ * A address for a
+ * <a href="http://en.wikipedia.org/wiki/Unix_domain_socket">Unix Domain Socket</a>.
+ */
 public final class DomainSocketAddress extends SocketAddress {
     private final String socketPath;
 

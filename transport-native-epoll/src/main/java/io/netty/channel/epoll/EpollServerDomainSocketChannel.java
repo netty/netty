@@ -16,7 +16,9 @@
 package io.netty.channel.epoll;
 
 import io.netty.channel.Channel;
-import io.netty.channel.FileDescriptor;
+import io.netty.channel.unix.DomainSocketAddress;
+import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.ServerDomainSocketChannel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -24,7 +26,8 @@ import java.io.File;
 import java.net.SocketAddress;
 
 
-public final class EpollServerDomainSocketChannel extends AbstractEpollServerChannel {
+public final class EpollServerDomainSocketChannel extends AbstractEpollServerChannel
+        implements ServerDomainSocketChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(
             EpollServerDomainSocketChannel.class);
 
