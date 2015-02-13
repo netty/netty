@@ -78,7 +78,9 @@ public class EmbeddedChannelTest {
         });
         long next = ch.runScheduledPendingTasks();
         Assert.assertTrue(next > 0);
-        Thread.sleep(TimeUnit.NANOSECONDS.toMillis(next));
+        // Sleep for the nanoseconds but also give extra 50ms as the clock my not be very precise and so fail the test
+        // otherwise.
+        Thread.sleep(TimeUnit.NANOSECONDS.toMillis(next) + 50);
         Assert.assertEquals(-1, ch.runScheduledPendingTasks());
         latch.await();
     }
