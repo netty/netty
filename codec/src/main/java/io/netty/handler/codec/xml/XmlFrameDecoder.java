@@ -152,7 +152,7 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
             in.skipBytes(in.readableBytes());
             reset();
             throw new TooLongFrameException(String.format(
-                    "Xml MaxFrameLength exceeds %d,%d", maxFrameLength, wrtIdx));
+                    "Xml MaxFrameLength exceeds(%d): %d", maxFrameLength, wrtIdx));
         }
         int idx = this.idx;
         if (idx > wrtIdx) {
