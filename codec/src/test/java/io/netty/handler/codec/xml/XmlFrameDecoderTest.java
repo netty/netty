@@ -142,27 +142,23 @@ public class XmlFrameDecoderTest {
 
     private static void testDecodeWithXml(String xml, Object... expected) {
         EmbeddedChannel ch = new EmbeddedChannel(new XmlFrameDecoder(1048576));
-        Exception cause = null;
-        try {
-            ch.writeInbound(Unpooled.copiedBuffer(xml, CharsetUtil.UTF_8));
-        } catch (Exception e) {
-            cause = e;
-        }
         List<Object> actual = new ArrayList<Object>();
-        for (;;) {
-            ByteBuf buf = ch.readInbound();
-            if (buf == null) {
-                break;
-            }
-            actual.add(buf.toString(CharsetUtil.UTF_8));
-            buf.release();
-        }
-
-        if (cause != null) {
-            actual.add(cause.getClass());
-        }
-
+        char[] chars = xml.toCharArray();
         try {
+            try {
+                for (int i = 0; i < chars.length; i++) {
+                    ch.writeInbound(Unpooled.copiedBuffer(
+                            ((Character) chars[i]).toString(),
+                            CharsetUtil.UTF_8));
+                    ByteBuf buf = ch.readInbound();
+                    if (buf != null) {
+                        actual.add(buf.toString(CharsetUtil.UTF_8));
+                        buf.release();
+                    }
+                }
+            } catch (Exception cause) {
+                actual.add(cause.getClass());
+            }
             List<Object> expectedList = new ArrayList<Object>();
             Collections.addAll(expectedList, expected);
             assertThat(actual, is(expectedList));
