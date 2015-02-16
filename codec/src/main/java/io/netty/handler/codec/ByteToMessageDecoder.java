@@ -99,7 +99,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
     /**
      * Cumulate {@link ByteBuf}s by add them to a {@link CompositeByteBuf} and so do no memory copy whenever possible.
      * Be aware that {@link CompositeByteBuf} use a more complex indexing implementation so depending on your use-case
-     * and the decoder implemention this may be slower then just use the {@link #MERGE_CUMULATOR}.
+     * and the decoder implementation this may be slower then just use the {@link #MERGE_CUMULATOR}.
      */
     public static final Cumulator COMPOSITE_CUMULATOR = new Cumulator() {
         @Override
@@ -197,7 +197,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
     public final void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         ByteBuf buf = internalBuffer();
         int readable = buf.readableBytes();
-        if (buf.isReadable()) {
+        if (readable > 0) {
             ByteBuf bytes = buf.readBytes(readable);
             buf.release();
             ctx.fireChannelRead(bytes);
