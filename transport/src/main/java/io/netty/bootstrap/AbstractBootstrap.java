@@ -183,6 +183,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * Allow to specify an initial attribute of the newly created {@link Channel}.  If the {@code value} is
      * {@code null}, the attribute of the specified {@code key} is removed.
      */
+    @SuppressWarnings("unchecked")
     public <T> B attr(AttributeKey<T> key, T value) {
         if (key == null) {
             throw new NullPointerException("key");
@@ -196,10 +197,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
                 attrs.put(key, value);
             }
         }
-
-        @SuppressWarnings("unchecked")
-        B b = (B) this;
-        return b;
+        return (B) this;
     }
 
     /**
