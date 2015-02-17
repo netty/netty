@@ -512,8 +512,8 @@
     <module>handler-proxy</module>
     <module>example</module>
     <module>testsuite</module>
+    <module>testsuite-osgi</module>
     <module>microbench</module>
-    <module>osgitests</module>
     <module>all</module>
     <module>tarball</module>
   </modules>
