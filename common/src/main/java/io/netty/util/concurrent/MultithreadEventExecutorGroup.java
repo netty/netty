@@ -38,10 +38,11 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
 
     /**
      * @param nEventExecutors           the number of {@link EventExecutor}s that will be used by this instance.
-     *                                  If {@code executor} is {@code null} this number will also be the parallelism
-     *                                  requested from the default executor. It is generally advised for the number
-     *                                  of {@link EventExecutor}s and the number of {@link Thread}s used by the
-     *                                  {@code executor} to lie very close together.
+     *                                  If {@code executorServiceFactory} is {@code null} this number will also be
+     *                                  the parallelism requested from the default {@link Executor}. It is generally
+     *                                  advised for the number of {@link EventExecutor}s and the number of
+     *                                  {@link Thread}s used by the {@code executorServiceFactory} to lie close
+     *                                  together.
      * @param executorServiceFactory    the {@link ExecutorServiceFactory} to use, or {@code null} if the default
      *                                  should be used.
      * @param args                      arguments which will passed to each {@link #newChild(Executor, Object...)} call.
@@ -58,9 +59,9 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
     /**
      * @param nEventExecutors   the number of {@link EventExecutor}s that will be used by this instance.
      *                          If {@code executor} is {@code null} this number will also be the parallelism
-     *                          requested from the default executor. It is generally advised for the number
+     *                          requested from the default {@link Executor}. It is generally advised for the number
      *                          of {@link EventExecutor}s and the number of {@link Thread}s used by the
-     *                          {@code executor} to lie very close together.
+     *                          {@code executor} to lie close together.
      * @param executor          the {@link Executor} to use, or {@code null} if the default should be used.
      * @param args              arguments which will passed to each {@link #newChild(Executor, Object...)} call
      */
