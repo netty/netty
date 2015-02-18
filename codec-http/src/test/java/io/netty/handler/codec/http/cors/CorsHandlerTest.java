@@ -155,9 +155,13 @@ public class CorsHandlerTest {
     @Test
     public void preflightRequestWithNullOrigin() {
         final String origin = "null";
-        final CorsConfig config = CorsConfig.withOrigin(origin).allowNullOrigin().build();
+        final CorsConfig config = CorsConfig.withOrigin(origin)
+                .allowNullOrigin()
+                .allowCredentials()
+                .build();
         final HttpResponse response = preflightRequest(config, origin, "content-type, xheader1");
         assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is(equalTo("*")));
+        assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_CREDENTIALS), is(nullValue()));
     }
 
     @Test
