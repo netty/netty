@@ -1347,6 +1347,10 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_errnoEPIPE(JNIEnv* env
     return EPIPE;
 }
 
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_errnoECONNRESET(JNIEnv* env, jclass clazz) {
+    return ECONNRESET;
+}
+
 JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_errnoEAGAIN(JNIEnv* env, jclass clazz) {
     return EAGAIN;
 }
