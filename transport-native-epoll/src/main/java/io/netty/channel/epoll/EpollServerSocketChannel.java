@@ -86,7 +86,7 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
     }
 
     @Override
-    protected Channel newChildChannel(int fd) throws Exception {
-        return new EpollSocketChannel(this, fd);
+    protected Channel newChildChannel(int fd, byte[] address, int offset, int len) throws Exception {
+        return new EpollSocketChannel(this, fd, Native.address(address, offset, len));
     }
 }

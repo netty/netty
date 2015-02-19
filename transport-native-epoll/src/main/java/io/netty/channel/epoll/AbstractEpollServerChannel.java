@@ -63,9 +63,13 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
         throw new UnsupportedOperationException();
     }
 
-    protected abstract Channel newChildChannel(int fd) throws Exception;
+    abstract Channel newChildChannel(int fd, byte[] remote, int offset, int len) throws Exception;
 
     final class EpollServerSocketUnsafe extends AbstractEpollUnsafe {
+        // Will hold the remote address after accept(...) was sucesssful.
+        // We need 24 bytes for the address as maximum + 1 byte for storing the length.
+        // So use 26 bytes as it's a power of two.
+        private final byte[] acceptedAddress = new byte[26];
 
         @Override
         public void connect(SocketAddress socketAddress, SocketAddress socketAddress2, ChannelPromise channelPromise) {
@@ -94,7 +98,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
                             ? Integer.MAX_VALUE : config.getMaxMessagesPerRead();
                     int messages = 0;
                     do {
-                        int socketFd = Native.accept(fd().intValue());
+                        int socketFd = Native.accept(fd().intValue(), acceptedAddress);
                         if (socketFd == -1) {
                             // this means everything was handled for now
                             break;
@@ -102,7 +106,8 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
                         readPending = false;
 
                         try {
-                            pipeline.fireChannelRead(newChildChannel(socketFd));
+                            int len = acceptedAddress[0];
+                            pipeline.fireChannelRead(newChildChannel(socketFd, acceptedAddress, 1, len));
                         } catch (Throwable t) {
                             // keep on reading as we use epoll ET and need to consume everything from the socket
                             pipeline.fireChannelReadComplete();
