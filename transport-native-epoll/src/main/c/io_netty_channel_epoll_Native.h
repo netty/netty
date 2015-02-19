@@ -108,6 +108,7 @@ jboolean Java_io_netty_channel_epoll_Native_isSupportingSendmmsg(JNIEnv* env, jc
 
 jint Java_io_netty_channel_epoll_Native_errnoEBADF(JNIEnv* env, jclass clazz);
 jint Java_io_netty_channel_epoll_Native_errnoEPIPE(JNIEnv* env, jclass clazz);
+jint Java_io_netty_channel_epoll_Native_errnoECONNRESET(JNIEnv* env, jclass clazz);
 jint Java_io_netty_channel_epoll_Native_errnoEAGAIN(JNIEnv* env, jclass clazz);
 jint Java_io_netty_channel_epoll_Native_errnoEWOULDBLOCK(JNIEnv* env, jclass clazz);
 jint Java_io_netty_channel_epoll_Native_errnoEINPROGRESS(JNIEnv* env, jclass clazz);
