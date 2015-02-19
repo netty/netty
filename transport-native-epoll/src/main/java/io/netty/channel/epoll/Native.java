@@ -65,6 +65,7 @@ final class Native {
     // As all our JNI methods return -errno on error we need to compare with the negative errno codes.
     private static final int ERRNO_EBADF_NEGATIVE = -errnoEBADF();
     private static final int ERRNO_EPIPE_NEGATIVE = -errnoEPIPE();
+    private static final int ERRNO_ECONNRESET_NEGATIVE = -errnoECONNRESET();
     private static final int ERRNO_EAGAIN_NEGATIVE = -errnoEAGAIN();
     private static final int ERRNO_EWOULDBLOCK_NEGATIVE = -errnoEWOULDBLOCK();
     private static final int ERRNO_EINPROGRESS_NEGATIVE = -errnoEINPROGRESS();
@@ -94,19 +95,27 @@ final class Native {
             // This is ok as strerror returns 'Unknown error i' when the message is not known.
             ERRORS[i] = strError(i);
         }
-        CONNECTION_RESET_EXCEPTION_WRITE = newConnectionResetException("write");
-        CONNECTION_RESET_EXCEPTION_WRITEV = newConnectionResetException("writev");
-        CONNECTION_RESET_EXCEPTION_READ = newConnectionResetException("read");
-        CONNECTION_RESET_EXCEPTION_SENDFILE = newConnectionResetException("sendfile");
-        CONNECTION_RESET_EXCEPTION_SENDTO = newConnectionResetException("sendto");
-        CONNECTION_RESET_EXCEPTION_SENDMSG = newConnectionResetException("sendmsg");
-        CONNECTION_RESET_EXCEPTION_SENDMMSG = newConnectionResetException("sendmmsg");
+
+        CONNECTION_RESET_EXCEPTION_READ = newConnectionResetException("syscall:read(...)",
+                ERRNO_ECONNRESET_NEGATIVE);
+        CONNECTION_RESET_EXCEPTION_WRITE = newConnectionResetException("syscall:write(...)",
+                ERRNO_EPIPE_NEGATIVE);
+        CONNECTION_RESET_EXCEPTION_WRITEV = newConnectionResetException("syscall:writev(...)",
+                ERRNO_EPIPE_NEGATIVE);
+        CONNECTION_RESET_EXCEPTION_SENDFILE = newConnectionResetException("syscall:sendfile(...)",
+                ERRNO_EPIPE_NEGATIVE);
+        CONNECTION_RESET_EXCEPTION_SENDTO = newConnectionResetException("syscall:sendto(...)",
+                ERRNO_EPIPE_NEGATIVE);
+        CONNECTION_RESET_EXCEPTION_SENDMSG = newConnectionResetException("syscall:sendmsg(...)",
+                ERRNO_EPIPE_NEGATIVE);
+        CONNECTION_RESET_EXCEPTION_SENDMMSG = newConnectionResetException("syscall:sendmmsg(...)",
+                ERRNO_EPIPE_NEGATIVE);
         CLOSED_CHANNEL_EXCEPTION = new ClosedChannelException();
         CLOSED_CHANNEL_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
     }
 
-    private static IOException newConnectionResetException(String method) {
-        IOException exception = newIOException(method, ERRNO_EPIPE_NEGATIVE);
+    private static IOException newConnectionResetException(String method, int errnoNegative) {
+        IOException exception = newIOException(method, errnoNegative);
         exception.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
         return exception;
     }
@@ -120,7 +129,7 @@ final class Native {
         if (err == ERRNO_EAGAIN_NEGATIVE || err == ERRNO_EWOULDBLOCK_NEGATIVE) {
             return 0;
         }
-        if (err == ERRNO_EPIPE_NEGATIVE) {
+        if (err == ERRNO_EPIPE_NEGATIVE || err == ERRNO_ECONNRESET_NEGATIVE) {
             throw resetCause;
         }
         if (err == ERRNO_EBADF_NEGATIVE) {
@@ -151,6 +160,8 @@ final class Native {
 
     private static native int errnoEBADF();
     private static native int errnoEPIPE();
+    private static native int errnoECONNRESET();
+
     private static native int errnoEAGAIN();
     private static native int errnoEWOULDBLOCK();
     private static native int errnoEINPROGRESS();
