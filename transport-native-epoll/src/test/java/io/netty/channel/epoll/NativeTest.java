@@ -32,7 +32,7 @@ public class NativeTest {
         ByteBuffer buffer = ByteBuffer.wrap(bytes);
         buffer.put(inetAddress.getAddress().getAddress());
         buffer.putInt(inetAddress.getPort());
-        Assert.assertEquals(inetAddress, Native.address(buffer.array()));
+        Assert.assertEquals(inetAddress, Native.address(buffer.array(), 0, bytes.length));
     }
 
     @Test
@@ -44,6 +44,6 @@ public class NativeTest {
         buffer.put(address.getAddress());
         buffer.putInt(address.getScopeId());
         buffer.putInt(inetAddress.getPort());
-        Assert.assertEquals(inetAddress, Native.address(buffer.array()));
+        Assert.assertEquals(inetAddress, Native.address(buffer.array(), 0, bytes.length));
     }
 }

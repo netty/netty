@@ -458,7 +458,7 @@ final class Native {
         if (addr == null) {
             return null;
         }
-        return address(addr);
+        return address(addr, 0, addr.length);
     }
 
     public static InetSocketAddress localAddress(int fd) {
@@ -468,11 +468,10 @@ final class Native {
         if (addr == null) {
             return null;
         }
-        return address(addr);
+        return address(addr, 0, addr.length);
     }
 
-    static InetSocketAddress address(byte[] addr) {
-        int len = addr.length;
+    static InetSocketAddress address(byte[] addr, int offset, int len) {
         // The last 4 bytes are always the port
         final int port = decodeInt(addr, len - 4);
         final InetAddress address;
@@ -484,7 +483,7 @@ final class Native {
                 // - 4  == port
                 case 8:
                     byte[] ipv4 = new byte[4];
-                    System.arraycopy(addr, 0, ipv4, 0, 4);
+                    System.arraycopy(addr, offset, ipv4, 0, 4);
                     address = InetAddress.getByAddress(ipv4);
                     break;
 
@@ -494,7 +493,7 @@ final class Native {
                 // - 4   == port
                 case 24:
                     byte[] ipv6 = new byte[16];
-                    System.arraycopy(addr, 0, ipv6, 0, 16);
+                    System.arraycopy(addr, offset, ipv6, 0, 16);
                     int scopeId = decodeInt(addr, len  - 8);
                     address = Inet6Address.getByAddress(null, ipv6, scopeId);
                     break;
@@ -507,7 +506,7 @@ final class Native {
         }
     }
 
-    private static int decodeInt(byte[] addr, int index) {
+    static int decodeInt(byte[] addr, int index) {
         return  (addr[index]     & 0xff) << 24 |
                 (addr[index + 1] & 0xff) << 16 |
                 (addr[index + 2] & 0xff) <<  8 |
@@ -517,8 +516,8 @@ final class Native {
     private static native byte[] remoteAddress0(int fd);
     private static native byte[] localAddress0(int fd);
 
-    public static int accept(int fd) throws IOException {
-        int res = accept0(fd);
+    public static int accept(int fd, byte[] addr) throws IOException {
+        int res = accept0(fd, addr);
         if (res >= 0) {
             return res;
         }
@@ -529,7 +528,7 @@ final class Native {
         throw newIOException("accept", res);
     }
 
-    private static native int accept0(int fd);
+    private static native int accept0(int fd, byte[] addr);
 
     public static int recvFd(int fd) throws IOException {
         int res = recvFd0(fd);
