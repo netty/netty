@@ -57,6 +57,7 @@ public class DefaultSocks5CommandResponseTest {
                 0x00
         };
         assertByteBufEquals(expected, buffer);
+        buffer.release();
     }
 
     /**
@@ -83,6 +84,7 @@ public class DefaultSocks5CommandResponseTest {
                 0x50
                 };
         assertByteBufEquals(expected, buffer);
+        buffer.release();
     }
 
     /**
@@ -106,6 +108,7 @@ public class DefaultSocks5CommandResponseTest {
                 0x50
         };
         assertByteBufEquals(expected, buffer);
+        buffer.release();
     }
 
     /**
