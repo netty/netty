@@ -210,8 +210,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
         BlockingQueue<Runnable> taskQueue = (BlockingQueue<Runnable>) this.taskQueue;
         for (;;) {
-            ScheduledFutureTask<?> delayedTask = peekScheduledTask();
-            if (delayedTask == null) {
+            ScheduledFutureTask<?> scheduledTask = peekScheduledTask();
+            if (scheduledTask == null) {
                 Runnable task = null;
                 try {
                     task = taskQueue.take();
@@ -223,7 +223,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 }
                 return task;
             } else {
-                long delayNanos = delayedTask.delayNanos();
+                long delayNanos = scheduledTask.delayNanos();
                 Runnable task = null;
                 if (delayNanos > 0) {
                     try {
@@ -233,11 +233,11 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                     }
                 }
                 if (task == null) {
-                    // We need to fetch the delayed tasks now as otherwise there may be a chance that
-                    // delayed tasks are never executed if there is always one task in the taskQueue.
+                    // We need to fetch the scheduled tasks now as otherwise there may be a chance that
+                    // scheduled tasks are never executed if there is always one task in the taskQueue.
                     // This is for example true for the read task of OIO Transport
                     // See https://github.com/netty/netty/issues/1614
-                    fetchFromDelayedQueue();
+                    fetchFromScheduledTaskQueue();
                     task = taskQueue.poll();
                 }
 
@@ -248,15 +248,15 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         }
     }
 
-    private void fetchFromDelayedQueue() {
+    private void fetchFromScheduledTaskQueue() {
         if (hasScheduledTasks()) {
             long nanoTime = AbstractScheduledEventExecutor.nanoTime();
             for (;;) {
-                Runnable delayedTask = pollScheduledTask(nanoTime);
-                if (delayedTask == null) {
+                Runnable scheduledTask = pollScheduledTask(nanoTime);
+                if (scheduledTask == null) {
                     break;
                 }
-                taskQueue.add(delayedTask);
+                taskQueue.add(scheduledTask);
             }
         }
     }
@@ -317,7 +317,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * @return {@code true} if and only if at least one task was run
      */
     protected boolean runAllTasks() {
-        fetchFromDelayedQueue();
+        fetchFromScheduledTaskQueue();
         Runnable task = pollTask();
         if (task == null) {
             return false;
@@ -343,7 +343,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * the tasks in the task queue and returns if it ran longer than {@code timeoutNanos}.
      */
     protected boolean runAllTasks(long timeoutNanos) {
-        fetchFromDelayedQueue();
+        fetchFromScheduledTaskQueue();
         Runnable task = pollTask();
         if (task == null) {
             return false;
@@ -385,12 +385,12 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * Returns the amount of time left until the scheduled task with the closest dead line is executed.
      */
     protected long delayNanos(long currentTimeNanos) {
-        ScheduledFutureTask<?> delayedTask = peekScheduledTask();
-        if (delayedTask == null) {
+        ScheduledFutureTask<?> scheduledTask = peekScheduledTask();
+        if (scheduledTask == null) {
             return SCHEDULE_PURGE_INTERVAL;
         }
 
-        return delayedTask.delayNanos(currentTimeNanos);
+        return scheduledTask.delayNanos(currentTimeNanos);
     }
 
     /**
