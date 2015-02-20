@@ -211,11 +211,6 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor {
         }
     }
 
-    @Override
-    boolean checkInEventLoop() {
-        return true;
-    }
-
     private void startThread() {
         if (started.compareAndSet(false, true)) {
             Thread t = threadFactory.newThread(taskRunner);

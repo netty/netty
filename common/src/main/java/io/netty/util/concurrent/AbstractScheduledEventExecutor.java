@@ -99,8 +99,6 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
      * Return the nanoseconds when the next scheduled task is ready to be run or {@code -1} if no task is scheduled.
      */
     protected final long nextScheduledTaskNano() {
-        assert checkInEventLoop();
-
         Queue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
         ScheduledFutureTask<?> scheduledTask = scheduledTaskQueue == null ? null : scheduledTaskQueue.peek();
         if (scheduledTask == null) {
@@ -110,8 +108,6 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     }
 
     final ScheduledFutureTask<?> peekScheduledTask() {
-        assert checkInEventLoop();
-
         Queue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
         if (scheduledTaskQueue == null) {
             return null;
@@ -123,8 +119,6 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
      * Returns {@code true} if a scheduled task is ready for processing.
      */
     protected final boolean hasScheduledTasks() {
-        assert checkInEventLoop();
-
         Queue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
         ScheduledFutureTask<?> scheduledTask = scheduledTaskQueue == null ? null : scheduledTaskQueue.peek();
         return scheduledTask != null && scheduledTask.deadlineNanos() <= nanoTime();
@@ -206,7 +200,6 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     }
 
     void purgeCancelledScheduledTasks() {
-        assert checkInEventLoop();
         Queue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
         if (isNullOrEmpty(scheduledTaskQueue)) {
             return;
@@ -218,9 +211,5 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
                 i.remove();
             }
         }
-    }
-
-    boolean checkInEventLoop() {
-        return inEventLoop();
     }
 }
