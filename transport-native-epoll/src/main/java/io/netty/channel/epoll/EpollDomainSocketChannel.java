@@ -131,14 +131,20 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
         }
 
         private void epollInReadFd() {
+            boolean edgeTriggered = isFlagSet(Native.EPOLLET);
             final ChannelConfig config = config();
+            if (!readPending && !edgeTriggered && !config.isAutoRead()) {
+                // ChannelConfig.setAutoRead(false) was called in the meantime
+                clearEpollIn0();
+                return;
+            }
+
             final ChannelPipeline pipeline = pipeline();
 
             try {
-                boolean edgeTriggered = isFlagSet(Native.EPOLLET);
                 // if edgeTriggered is used we need to read all messages as we are not notified again otherwise.
                 final int maxMessagesPerRead = edgeTriggered
-                        ? Integer.MAX_VALUE : config().getMaxMessagesPerRead();
+                        ? Integer.MAX_VALUE : config.getMaxMessagesPerRead();
                 int messages = 0;
                 do {
                     int socketFd = Native.recvFd(fd().intValue());
@@ -158,7 +164,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
                         pipeline.fireChannelReadComplete();
                         pipeline.fireExceptionCaught(t);
                     } finally {
-                        if (!edgeTriggered && !config().isAutoRead()) {
+                        if (!edgeTriggered && !config.isAutoRead()) {
                             // This is not using EPOLLET so we can stop reading
                             // ASAP as we will get notified again later with
                             // pending data
@@ -187,7 +193,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
                 // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
                 //
                 // See https://github.com/netty/netty/issues/2254
-                if (!config.isAutoRead() && !readPending) {
+                if (!readPending && !config.isAutoRead()) {
                     clearEpollIn0();
                 }
             }
