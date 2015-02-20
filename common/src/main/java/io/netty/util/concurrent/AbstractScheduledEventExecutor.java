@@ -58,10 +58,10 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
             return;
         }
 
-        final ScheduledFutureTask<?>[] delayedTasks =
+        final ScheduledFutureTask<?>[] scheduledTasks =
                 scheduledTaskQueue.toArray(new ScheduledFutureTask<?>[scheduledTaskQueue.size()]);
 
-        for (ScheduledFutureTask<?> task: delayedTasks) {
+        for (ScheduledFutureTask<?> task: scheduledTasks) {
             task.cancel(false);
         }
 
@@ -83,14 +83,14 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         assert inEventLoop();
 
         Queue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
-        ScheduledFutureTask<?> delayedTask = scheduledTaskQueue == null ? null : scheduledTaskQueue.peek();
-        if (delayedTask == null) {
+        ScheduledFutureTask<?> scheduledTask = scheduledTaskQueue == null ? null : scheduledTaskQueue.peek();
+        if (scheduledTask == null) {
             return null;
         }
 
-        if (delayedTask.deadlineNanos() <= nanoTime) {
+        if (scheduledTask.deadlineNanos() <= nanoTime) {
             scheduledTaskQueue.remove();
-            return delayedTask;
+            return scheduledTask;
         }
         return null;
     }
@@ -102,11 +102,11 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         assert checkInEventLoop();
 
         Queue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
-        ScheduledFutureTask<?> delayedTask = scheduledTaskQueue == null ? null : scheduledTaskQueue.peek();
-        if (delayedTask == null) {
+        ScheduledFutureTask<?> scheduledTask = scheduledTaskQueue == null ? null : scheduledTaskQueue.peek();
+        if (scheduledTask == null) {
             return -1;
         }
-        return Math.max(0, delayedTask.deadlineNanos() - nanoTime());
+        return Math.max(0, scheduledTask.deadlineNanos() - nanoTime());
     }
 
     final ScheduledFutureTask<?> peekScheduledTask() {
@@ -126,8 +126,8 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         assert checkInEventLoop();
 
         Queue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
-        ScheduledFutureTask<?> delayedTask = scheduledTaskQueue == null ? null : scheduledTaskQueue.peek();
-        return delayedTask != null && delayedTask.deadlineNanos() <= nanoTime();
+        ScheduledFutureTask<?> scheduledTask = scheduledTaskQueue == null ? null : scheduledTaskQueue.peek();
+        return scheduledTask != null && scheduledTask.deadlineNanos() <= nanoTime();
     }
 
     @Override
@@ -221,6 +221,6 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     }
 
     boolean checkInEventLoop() {
-        return true;
+        return inEventLoop();
     }
 }

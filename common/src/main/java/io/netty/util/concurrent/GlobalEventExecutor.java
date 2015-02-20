@@ -69,8 +69,8 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor {
     Runnable takeTask() {
         BlockingQueue<Runnable> taskQueue = this.taskQueue;
         for (;;) {
-            ScheduledFutureTask<?> delayedTask = peekScheduledTask();
-            if (delayedTask == null) {
+            ScheduledFutureTask<?> scheduledTask = peekScheduledTask();
+            if (scheduledTask == null) {
                 Runnable task = null;
                 try {
                     task = taskQueue.take();
@@ -79,7 +79,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor {
                 }
                 return task;
             } else {
-                long delayNanos = delayedTask.delayNanos();
+                long delayNanos = scheduledTask.delayNanos();
                 Runnable task;
                 if (delayNanos > 0) {
                     try {
@@ -92,7 +92,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor {
                 }
 
                 if (task == null) {
-                    fetchFromDelayedQueue();
+                    fetchFromScheduledTaskQueue();
                     task = taskQueue.poll();
                 }
 
@@ -103,15 +103,15 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor {
         }
     }
 
-    private void fetchFromDelayedQueue() {
+    private void fetchFromScheduledTaskQueue() {
         if (hasScheduledTasks()) {
             long nanoTime = AbstractScheduledEventExecutor.nanoTime();
             for (;;) {
-                Runnable delayedTask = pollScheduledTask(nanoTime);
-                if (delayedTask == null) {
+                Runnable scheduledTask = pollScheduledTask(nanoTime);
+                if (scheduledTask == null) {
                     break;
                 }
-                taskQueue.add(delayedTask);
+                taskQueue.add(scheduledTask);
             }
         }
     }
@@ -241,9 +241,9 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor {
                     }
                 }
 
-                Queue<ScheduledFutureTask<?>> delayedTaskQueue = scheduledTaskQueue;
+                Queue<ScheduledFutureTask<?>> scheduledTaskQueue = GlobalEventExecutor.this.scheduledTaskQueue;
                 // Terminate if there is no task in the queue (except the purge task).
-                if (taskQueue.isEmpty() && (delayedTaskQueue == null || delayedTaskQueue.size() == 1)) {
+                if (taskQueue.isEmpty() && (scheduledTaskQueue == null || scheduledTaskQueue.size() == 1)) {
                     // Mark the current thread as stopped.
                     // The following CAS must always success and must be uncontended,
                     // because only one thread should be running at the same time.
@@ -251,7 +251,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor {
                     assert stopped;
 
                     // Check if there are pending entries added by execute() or schedule*() while we do CAS above.
-                    if (taskQueue.isEmpty() && (delayedTaskQueue == null || delayedTaskQueue.size() == 1)) {
+                    if (taskQueue.isEmpty() && (scheduledTaskQueue == null || scheduledTaskQueue.size() == 1)) {
                         // A) No new task was added and thus there's nothing to handle
                         //    -> safe to terminate because there's nothing left to do
                         // B) A new thread started and handled all the new tasks.
