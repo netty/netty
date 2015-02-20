@@ -18,6 +18,7 @@ package io.netty.channel.epoll;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.AddressedEnvelope;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
@@ -507,21 +508,27 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
         @Override
         void epollInReady() {
+            assert eventLoop().inEventLoop();
             DatagramChannelConfig config = config();
+            boolean edgeTriggered = isFlagSet(Native.EPOLLET);
+
+            if (!readPending && !edgeTriggered && !config.isAutoRead()) {
+                // ChannelConfig.setAutoRead(false) was called in the meantime
+                clearEpollIn0();
+                return;
+            }
+
             RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
             if (allocHandle == null) {
                 this.allocHandle = allocHandle = config.getRecvByteBufAllocator().newHandle();
             }
 
-            assert eventLoop().inEventLoop();
-
             final ChannelPipeline pipeline = pipeline();
             Throwable exception = null;
             try {
-                boolean edgeTriggered = isFlagSet(Native.EPOLLET);
                 // if edgeTriggered is used we need to read all messages as we are not notified again otherwise.
                 final int maxMessagesPerRead = edgeTriggered
-                        ? Integer.MAX_VALUE : config().getMaxMessagesPerRead();
+                        ? Integer.MAX_VALUE : config.getMaxMessagesPerRead();
                 int messages = 0;
                 do {
                     ByteBuf data = null;
@@ -558,7 +565,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         if (data != null) {
                             data.release();
                         }
-                        if (!edgeTriggered && !config().isAutoRead()) {
+                        if (!edgeTriggered && !config.isAutoRead()) {
                             // This is not using EPOLLET so we can stop reading
                             // ASAP as we will get notified again later with
                             // pending data
@@ -585,7 +592,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
                 //
                 // See https://github.com/netty/netty/issues/2254
-                if (!config().isAutoRead() && !readPending) {
+                if (!readPending && !config.isAutoRead()) {
                     clearEpollIn();
                 }
             }
