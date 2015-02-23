@@ -312,16 +312,23 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                     boolean write = (ev & Native.EPOLLOUT) != 0;
 
                     AbstractEpollUnsafe unsafe = (AbstractEpollUnsafe) ch.unsafe();
-                    if (write) {
+
+                    if (close) {
+                        unsafe.epollRdHupReady();
+                    }
+
+                    // We need to check if the channel is still open before try to trigger the
+                    // callbacks as otherwise we may trigger an IllegalStateException when try
+                    // to access the file descriptor.
+                    //
+                    // See https://github.com/netty/netty/issues/3443
+                    if (write && ch.isOpen()) {
                         // force flush of data as the epoll is writable again
                         unsafe.epollOutReady();
                     }
-                    if (read) {
+                    if (read && ch.isOpen()) {
                         // Something is ready to read, so consume it now
                         unsafe.epollInReady();
-                    }
-                    if (close) {
-                        unsafe.epollRdHupReady();
                     }
                 } else {
                     // We received an event for an fd which we not use anymore. Remove it from the epoll_event set.
