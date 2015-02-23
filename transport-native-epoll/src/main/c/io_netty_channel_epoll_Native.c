@@ -197,17 +197,13 @@ static inline void initInetSocketAddressArray(JNIEnv* env, struct sockaddr_stora
         port = ntohs(s->sin_port);
 
         // Encode address and port into the array
-        unsigned char a[8];
-        a[0] = s->sin_addr.s_addr >> 24;
-        a[1] = s->sin_addr.s_addr >> 16;
-        a[2] = s->sin_addr.s_addr >> 8;
-        a[3] = s->sin_addr.s_addr;
-        a[4] = port >> 24;
-        a[5] = port >> 16;
-        a[6] = port >> 8;
-        a[7] = port;
-
-        (*env)->SetByteArrayRegion(env, bArray, offset, 8, (jbyte*) &a);
+        unsigned char a[4];
+        a[0] = port >> 24;
+        a[1] = port >> 16;
+        a[2] = port >> 8;
+        a[3] = port;
+        (*env)->SetByteArrayRegion(env, bArray, offset, 4, (jbyte*) &s->sin_addr.s_addr);
+        (*env)->SetByteArrayRegion(env, bArray, offset + 4, 4, (jbyte*) &a);
     } else {
         struct sockaddr_in6* s = (struct sockaddr_in6*) &addr;
         port = ntohs(s->sin6_port);
