@@ -473,7 +473,7 @@ final class Native {
 
     static InetSocketAddress address(byte[] addr, int offset, int len) {
         // The last 4 bytes are always the port
-        final int port = decodeInt(addr, len - 4);
+        final int port = decodeInt(addr, offset + len - 4);
         final InetAddress address;
 
         try {
@@ -494,7 +494,7 @@ final class Native {
                 case 24:
                     byte[] ipv6 = new byte[16];
                     System.arraycopy(addr, offset, ipv6, 0, 16);
-                    int scopeId = decodeInt(addr, len  - 8);
+                    int scopeId = decodeInt(addr, offset + len  - 8);
                     address = Inet6Address.getByAddress(null, ipv6, scopeId);
                     break;
                 default:
