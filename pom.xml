@@ -539,6 +539,11 @@
 
       <!-- SPDY and HTTP/2 - completely optional -->
       <dependency>
+        <groupId>com.twitter</groupId>
+        <artifactId>hpack</artifactId>
+        <version>0.10.1</version>
+      </dependency>
+      <dependency>
         <groupId>org.eclipse.jetty.npn</groupId>
         <artifactId>npn-api</artifactId>
         <version>1.1.1.v20141010</version>
@@ -557,11 +562,6 @@
         <groupId>org.mortbay.jetty.alpn</groupId>
         <artifactId>alpn-boot</artifactId>
         <version>${jetty.alpn.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.twitter</groupId>
-        <artifactId>hpack</artifactId>
-        <version>0.10.0</version>
       </dependency>
 
       <!-- Google Protocol Buffers - completely optional -->
