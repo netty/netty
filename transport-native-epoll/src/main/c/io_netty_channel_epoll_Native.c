@@ -145,17 +145,17 @@ static inline int setOption(JNIEnv* env, jint fd, int level, int optname, const 
     return rc;
 }
 
-jobject createInetSocketAddress(JNIEnv* env, struct sockaddr_storage addr) {
+jobject createInetSocketAddress(JNIEnv* env, const struct sockaddr_storage* addr) {
     char ipstr[INET6_ADDRSTRLEN];
     int port;
     jstring ipString;
-    if (addr.ss_family == AF_INET) {
-        struct sockaddr_in* s = (struct sockaddr_in*) &addr;
+    if (addr->ss_family == AF_INET) {
+        struct sockaddr_in* s = (struct sockaddr_in*) addr;
         port = ntohs(s->sin_port);
         inet_ntop(AF_INET, &s->sin_addr, ipstr, sizeof ipstr);
         ipString = (*env)->NewStringUTF(env, ipstr);
     } else {
-        struct sockaddr_in6* s = (struct sockaddr_in6*) &addr;
+        struct sockaddr_in6* s = (struct sockaddr_in6*) addr;
         port = ntohs(s->sin6_port);
         inet_ntop(AF_INET6, &s->sin6_addr, ipstr, sizeof ipstr);
         if (strncasecmp(ipstr, ip4prefix, 7) == 0) {
@@ -174,11 +174,11 @@ jobject createInetSocketAddress(JNIEnv* env, struct sockaddr_storage addr) {
 }
 
 
-static inline int addressLength(struct sockaddr_storage addr) {
-    if (addr.ss_family == AF_INET) {
+static inline int addressLength(const struct sockaddr_storage* addr) {
+    if (addr->ss_family == AF_INET) {
         return 8;
     } else {
-        struct sockaddr_in6* s = (struct sockaddr_in6*) &addr;
+        struct sockaddr_in6* s = (struct sockaddr_in6*) addr;
         if (s->sin6_addr.s6_addr[0] == 0x00 && s->sin6_addr.s6_addr[1] == 0x00 && s->sin6_addr.s6_addr[2] == 0x00 && s->sin6_addr.s6_addr[3] == 0x00 && s->sin6_addr.s6_addr[4] == 0x00
                 && s->sin6_addr.s6_addr[5] == 0x00 && s->sin6_addr.s6_addr[6] == 0x00 && s->sin6_addr.s6_addr[7] == 0x00 && s->sin6_addr.s6_addr[8] == 0x00 && s->sin6_addr.s6_addr[9] == 0x00
                  && s->sin6_addr.s6_addr[10] == 0xff && s->sin6_addr.s6_addr[11] == 0xff) {
@@ -190,10 +190,10 @@ static inline int addressLength(struct sockaddr_storage addr) {
     }
 }
 
-static inline void initInetSocketAddressArray(JNIEnv* env, struct sockaddr_storage addr, jbyteArray bArray, int offset, int len) {
+static inline void initInetSocketAddressArray(JNIEnv* env, const struct sockaddr_storage* addr, jbyteArray bArray, int offset, int len) {
     int port;
-    if (addr.ss_family == AF_INET) {
-        struct sockaddr_in* s = (struct sockaddr_in*) &addr;
+    if (addr->ss_family == AF_INET) {
+        struct sockaddr_in* s = (struct sockaddr_in*) addr;
         port = ntohs(s->sin_port);
 
         // Encode address and port into the array
@@ -205,7 +205,7 @@ static inline void initInetSocketAddressArray(JNIEnv* env, struct sockaddr_stora
         (*env)->SetByteArrayRegion(env, bArray, offset, 4, (jbyte*) &s->sin_addr.s_addr);
         (*env)->SetByteArrayRegion(env, bArray, offset + 4, 4, (jbyte*) &a);
     } else {
-        struct sockaddr_in6* s = (struct sockaddr_in6*) &addr;
+        struct sockaddr_in6* s = (struct sockaddr_in6*) addr;
         port = ntohs(s->sin6_port);
 
         if (len == 8) {
@@ -238,7 +238,7 @@ static inline void initInetSocketAddressArray(JNIEnv* env, struct sockaddr_stora
     }
 }
 
-static jbyteArray createInetSocketAddressArray(JNIEnv* env, struct sockaddr_storage addr) {
+static jbyteArray createInetSocketAddressArray(JNIEnv* env, const struct sockaddr_storage* addr) {
     int len = addressLength(addr);
     jbyteArray bArray = (*env)->NewByteArray(env, len);
 
@@ -246,17 +246,17 @@ static jbyteArray createInetSocketAddressArray(JNIEnv* env, struct sockaddr_stor
     return bArray;
 }
 
-static jobject createDatagramSocketAddress(JNIEnv* env, struct sockaddr_storage addr, int len) {
+static jobject createDatagramSocketAddress(JNIEnv* env, const struct sockaddr_storage* addr, int len) {
     char ipstr[INET6_ADDRSTRLEN];
     int port;
     jstring ipString;
-    if (addr.ss_family == AF_INET) {
-        struct sockaddr_in* s = (struct sockaddr_in*) &addr;
+    if (addr->ss_family == AF_INET) {
+        struct sockaddr_in* s = (struct sockaddr_in*) addr;
         port = ntohs(s->sin_port);
         inet_ntop(AF_INET, &s->sin_addr, ipstr, sizeof ipstr);
         ipString = (*env)->NewStringUTF(env, ipstr);
     } else {
-        struct sockaddr_in6* s = (struct sockaddr_in6*) &addr;
+        struct sockaddr_in6* s = (struct sockaddr_in6*) addr;
         port = ntohs(s->sin6_port);
         inet_ntop(AF_INET6, &s->sin6_addr, ipstr, sizeof ipstr);
 
@@ -275,7 +275,7 @@ static jobject createDatagramSocketAddress(JNIEnv* env, struct sockaddr_storage 
     return socketAddr;
 }
 
-static int init_sockaddr(JNIEnv* env, jbyteArray address, jint scopeId, jint jport, struct sockaddr_storage* addr) {
+static int init_sockaddr(JNIEnv* env, jbyteArray address, jint scopeId, jint jport, const struct sockaddr_storage* addr) {
     uint16_t port = htons((uint16_t) jport);
     // Use GetPrimitiveArrayCritical and ReleasePrimitiveArrayCritical to signal the VM that we really would like
     // to not do a memory copy here. This is ok as we not do any blocking action here anyway.
@@ -705,7 +705,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_writeAddress0(JNIEnv* 
     return _write(env, clazz, fd, (void*) address, pos, limit);
 }
 
-static inline jint _sendTo(JNIEnv* env, jint fd, void* buffer, jint pos, jint limit ,jbyteArray address, jint scopeId, jint port) {
+static inline jint _sendTo(JNIEnv* env, jint fd, void* buffer, jint pos, jint limit, jbyteArray address, jint scopeId, jint port) {
     struct sockaddr_storage addr;
     if (init_sockaddr(env, address, scopeId, port, &addr) == -1) {
         return -1;
@@ -825,7 +825,7 @@ static inline jobject recvFrom0(JNIEnv* env, jint fd, void* buffer, jint pos, ji
         return NULL;
     }
 
-    return createDatagramSocketAddress(env, addr, res);
+    return createDatagramSocketAddress(env, &addr, res);
 }
 
 JNIEXPORT jobject JNICALL Java_io_netty_channel_epoll_Native_recvFrom(JNIEnv* env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit) {
@@ -1048,11 +1048,11 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_accept0(JNIEnv* env, j
         return -err;
     }
 
-    int len = addressLength(addr);
+    int len = addressLength(&addr);
 
     // Fill in remote address details
     (*env)->SetByteArrayRegion(env, acceptedAddress, 0, 4, (jbyte*) &len);
-    initInetSocketAddressArray(env, addr, acceptedAddress, 1, len);
+    initInetSocketAddressArray(env, &addr, acceptedAddress, 1, len);
 
     if (accept4)  {
         return socketFd;
@@ -1109,7 +1109,7 @@ JNIEXPORT jbyteArray JNICALL Java_io_netty_channel_epoll_Native_remoteAddress0(J
     if (getpeername(fd, (struct sockaddr*) &addr, &len) == -1) {
         return NULL;
     }
-    return createInetSocketAddressArray(env, addr);
+    return createInetSocketAddressArray(env, &addr);
 }
 
 JNIEXPORT jbyteArray JNICALL Java_io_netty_channel_epoll_Native_localAddress0(JNIEnv* env, jclass clazz, jint fd) {
@@ -1120,7 +1120,7 @@ JNIEXPORT jbyteArray JNICALL Java_io_netty_channel_epoll_Native_localAddress0(JN
     if (getsockname(fd, (struct sockaddr*) &addr, &len) == -1) {
         return NULL;
     }
-    return createInetSocketAddressArray(env, addr);
+    return createInetSocketAddressArray(env, &addr);
 }
 
 JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setReuseAddress(JNIEnv* env, jclass clazz, jint fd, jint optval) {
