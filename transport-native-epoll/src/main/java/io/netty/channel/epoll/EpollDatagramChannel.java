@@ -483,6 +483,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             boolean success = false;
             try {
                 try {
+                    boolean wasActive = isActive();
                     InetSocketAddress remoteAddress = (InetSocketAddress) remote;
                     if (local != null) {
                         InetSocketAddress localAddress = (InetSocketAddress) local;
@@ -493,6 +494,12 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                     EpollDatagramChannel.this.remote = remoteAddress;
                     EpollDatagramChannel.this.local = Native.localAddress(fd().intValue());
                     success = true;
+
+                    // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
+                    // because what happened is what happened.
+                    if (!wasActive && isActive()) {
+                        pipeline().fireChannelActive();
+                    }
                 } finally {
                     if (!success) {
                         doClose();
