@@ -24,6 +24,7 @@ import java.io.IOException;
 public class FileDescriptor {
 
     private final int fd;
+    private volatile boolean open = true;
 
     public FileDescriptor(int fd) {
         if (fd < 0) {
@@ -31,21 +32,6 @@ public class FileDescriptor {
         }
         this.fd = fd;
     }
-
-    /**
-     * An invalid file descriptor which was closed before.
-     */
-    public static final FileDescriptor INVALID = new FileDescriptor(0) {
-        @Override
-        public int intValue() {
-            throw new IllegalStateException("invalid file descriptor");
-        }
-
-        @Override
-        public void close() {
-            // NOOP
-        }
-    };
 
     /**
      * Return the int value of the filedescriptor.
@@ -58,7 +44,15 @@ public class FileDescriptor {
      * Close the file descriptor.
      */
     public void close() throws IOException {
+        open = false;
         close(fd);
+    }
+
+    /**
+     * Returns {@code true} if the file descriptor is open.
+     */
+    public boolean isOpen() {
+        return open;
     }
 
     @Override
