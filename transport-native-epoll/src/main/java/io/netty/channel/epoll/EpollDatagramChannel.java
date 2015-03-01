@@ -18,7 +18,6 @@ package io.netty.channel.epoll;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.AddressedEnvelope;
-import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
@@ -98,7 +97,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     @Override
     @SuppressWarnings("deprecation")
     public boolean isActive() {
-        return fd() != FileDescriptor.INVALID &&
+        return fd().isOpen() &&
                 (config.getOption(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) && isRegistered()
                         || active);
     }
