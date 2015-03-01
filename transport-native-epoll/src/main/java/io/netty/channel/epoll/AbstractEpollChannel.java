@@ -35,7 +35,7 @@ import java.nio.channels.UnresolvedAddressException;
 abstract class AbstractEpollChannel extends AbstractChannel implements UnixChannel {
     private static final ChannelMetadata DATA = new ChannelMetadata(false);
     private final int readFlag;
-    private volatile FileDescriptor fileDescriptor;
+    private final FileDescriptor fileDescriptor;
     protected int flags = Native.EPOLLET;
 
     protected volatile boolean active;
@@ -103,8 +103,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         doDeregister();
 
         FileDescriptor fd = fileDescriptor;
-        fileDescriptor = FileDescriptor.INVALID;
-        Native.close(fd.intValue());
+        fd.close();
     }
 
     @Override
@@ -119,7 +118,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     @Override
     public boolean isOpen() {
-        return fileDescriptor != FileDescriptor.INVALID;
+        return fileDescriptor.isOpen();
     }
 
     @Override

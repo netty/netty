@@ -93,8 +93,10 @@ public class EpollDomainSocketFdTest extends AbstractSocketTest {
         sc.close().sync();
 
         if (received instanceof FileDescriptor) {
-            Assert.assertNotSame(FileDescriptor.INVALID, received);
-            ((FileDescriptor) received).close();
+            FileDescriptor fd = (FileDescriptor) received;
+            Assert.assertTrue(fd.isOpen());
+            fd.close();
+            Assert.assertFalse(fd.isOpen());
             Assert.assertNull(queue.poll());
         } else {
             throw (Throwable) received;
