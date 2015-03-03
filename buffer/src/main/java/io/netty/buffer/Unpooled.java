@@ -67,12 +67,6 @@ import java.util.List;
  * between the original data and the copied buffer.  Various copy methods are
  * provided and their name is all {@code copiedBuffer()}.  It is also convenient
  * to use this operation to merge multiple buffers into one buffer.
- *
- * <h3>Miscellaneous utility methods</h3>
- *
- * This class also provides various utility methods to help implementation
- * of a new buffer type, generation of hex dump and swapping an integer's
- * byte order.
  */
 public final class Unpooled {
 
