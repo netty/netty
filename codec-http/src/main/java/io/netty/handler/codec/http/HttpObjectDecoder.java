@@ -214,7 +214,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             currentState = State.READ_HEADER;
             // fall-through
         } catch (Exception e) {
-            out.add(invalidMessage(e));
+            out.add(invalidMessage(buffer, e));
             return;
         }
         case READ_HEADER: try {
@@ -261,7 +261,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 return;
             }
         } catch (Exception e) {
-            out.add(invalidMessage(e));
+            out.add(invalidMessage(buffer, e));
             return;
         }
         case READ_VARIABLE_LENGTH_CONTENT: {
@@ -320,7 +320,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             currentState = State.READ_CHUNKED_CONTENT;
             // fall-through
         } catch (Exception e) {
-            out.add(invalidChunk(e));
+            out.add(invalidChunk(buffer, e));
             return;
         }
         case READ_CHUNKED_CONTENT: {
@@ -363,7 +363,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             resetNow();
             return;
         } catch (Exception e) {
-            out.add(invalidChunk(e));
+            out.add(invalidChunk(buffer, e));
             return;
         }
         case BAD_MESSAGE: {
@@ -468,8 +468,13 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         currentState = State.SKIP_CONTROL_CHARS;
     }
 
-    private HttpMessage invalidMessage(Exception cause) {
+    private HttpMessage invalidMessage(ByteBuf in, Exception cause) {
         currentState = State.BAD_MESSAGE;
+
+        // Advance the readerIndex so that ByteToMessageDecoder does not complain
+        // when we produced an invalid message without consuming anything.
+        in.skipBytes(in.readableBytes());
+
         if (message != null) {
             message.setDecoderResult(DecoderResult.failure(cause));
         } else {
@@ -482,8 +487,13 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         return ret;
     }
 
-    private HttpContent invalidChunk(Exception cause) {
+    private HttpContent invalidChunk(ByteBuf in, Exception cause) {
         currentState = State.BAD_MESSAGE;
+
+        // Advance the readerIndex so that ByteToMessageDecoder does not complain
+        // when we produced an invalid message without consuming anything.
+        in.skipBytes(in.readableBytes());
+
         HttpContent chunk = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER);
         chunk.setDecoderResult(DecoderResult.failure(cause));
         message = null;
@@ -735,9 +745,11 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
 
         public AppendableCharSequence parse(ByteBuf buffer) {
+            final int oldSize = size;
             seq.reset();
             int i = buffer.forEachByte(this);
             if (i == -1) {
+                size = oldSize;
                 return null;
             }
             buffer.readerIndex(i + 1);
@@ -757,14 +769,15 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             if (nextByte == HttpConstants.LF) {
                 return false;
             }
-            if (size >= maxLength) {
+
+            if (++ size > maxLength) {
                 // TODO: Respond with Bad Request and discard the traffic
                 //    or close the connection.
                 //       No need to notify the upstream handlers - just log.
                 //       If decoding a response, just throw an exception.
                 throw newException(maxLength);
             }
-            size++;
+
             seq.append(nextByte);
             return true;
         }
