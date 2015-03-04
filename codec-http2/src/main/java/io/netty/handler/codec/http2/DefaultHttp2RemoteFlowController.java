@@ -23,11 +23,12 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http2.Http2Stream.State;
 
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.Queue;
+import java.util.Deque;
 
 /**
  * Basic implementation of {@link Http2RemoteFlowController}.
@@ -73,9 +74,27 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
             @Override
             public void streamInactive(Http2Stream stream) {
-                // Any pending frames can never be written, clear and
+                // Any pending frames can never be written, cancel and
                 // write errors for any pending frames.
-                state(stream).clear();
+                state(stream).cancel();
+            }
+
+            @Override
+            public void streamHalfClosed(Http2Stream stream) {
+                if (State.HALF_CLOSED_LOCAL.equals(stream.state())) {
+                    /**
+                     * When this method is called there should not be any
+                     * pending frames left if the API is used correctly. However,
+                     * it is possible that a erroneous application can sneak
+                     * in a frame even after having already written a frame with the
+                     * END_STREAM flag set, as the stream state might not transition
+                     * immediately to HALF_CLOSED_LOCAL / CLOSED due to flow control
+                     * delaying the write.
+                     *
+                     * This is to cancel any such illegal writes.
+                     */
+                     state(stream).cancel();
+                }
             }
 
             @Override
@@ -156,13 +175,19 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
         // Save the context. We'll use this later when we write pending bytes.
         this.ctx = ctx;
+        FlowState state;
         try {
-            FlowState state = state(stream);
+            state = state(stream);
             state.newFrame(payload);
-            state.writeBytes(state.writableWindow());
+        } catch (Throwable t) {
+            payload.error(t);
+            return;
+        }
+        state.writeBytes(state.writableWindow());
+        try {
             flush();
-        } catch (Throwable e) {
-            payload.error(e);
+        } catch (Throwable t) {
+            payload.error(t);
         }
     }
 
@@ -228,7 +253,6 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             return 0;
         }
         int bytesAllocated = 0;
-
         // If the number of streamable bytes for this tree will fit in the connection window
         // then there is no need to prioritize the bytes...everyone sends what they have
         if (state.streamableBytesForTree() <= connectionWindow) {
@@ -312,12 +336,16 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
      * The outbound flow control state for a single stream.
      */
     final class FlowState {
-        private final Queue<Frame> pendingWriteQueue;
+        private final Deque<Frame> pendingWriteQueue;
         private final Http2Stream stream;
         private int window;
         private int pendingBytes;
         private int streamableBytesForTree;
         private int allocated;
+        // Set to true while a frame is being written, false otherwise.
+        private boolean writing;
+        // Set to true if cancel() was called.
+        private boolean cancelled;
 
         FlowState(Http2Stream stream, int initialWindowSize) {
             this.stream = stream;
@@ -422,7 +450,13 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         /**
          * Clears the pending queue and writes errors for each remaining frame.
          */
-        void clear() {
+        void cancel() {
+            cancelled = true;
+            // Ensure that the queue can't be modified while
+            // we are writing.
+            if (writing) {
+                return;
+            }
             for (;;) {
                 Frame frame = pendingWriteQueue.poll();
                 if (frame == null) {
@@ -496,19 +530,52 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
              */
             int write(int allowedBytes) {
                 int before = payload.size();
-                needFlush |= payload.write(Math.max(0, allowedBytes));
-                int writtenBytes = before - payload.size();
+                int writtenBytes = 0;
                 try {
-                    connectionState().incrementStreamWindow(-writtenBytes);
-                    incrementStreamWindow(-writtenBytes);
+                    if (writing) {
+                        throw new IllegalStateException("write is not re-entrant");
+                    }
+                    // Write the portion of the frame.
+                    writing = true;
+                    needFlush |= payload.write(Math.max(0, allowedBytes));
+                    if (!cancelled && payload.size() == 0) {
+                        // This frame has been fully written, remove this frame
+                        // and notify the payload. Since we remove this frame
+                        // first, we're guaranteed that its error method will not
+                        // be called when we call cancel.
+                        pendingWriteQueue.remove();
+                        payload.writeComplete();
+                    }
+                } catch (Throwable e) {
+                    // Mark the state as cancelled, we'll clear the pending queue
+                    // via cancel() below.
+                    cancelled = true;
+                } finally {
+                    writing = false;
+                    // Make sure we always decrement the flow control windows
+                    // by the bytes written.
+                    writtenBytes = before - payload.size();
+                    decrementFlowControlWindow(writtenBytes);
+                    decrementPendingBytes(writtenBytes);
+                    // If a cancellation occurred while writing, call cancel again to
+                    // clear and error all of the pending writes.
+                    if (cancelled) {
+                        cancel();
+                    }
+                }
+                return writtenBytes;
+            }
+
+            /**
+             * Decrement the per stream and connection flow control window by {@code bytes}.
+             */
+            void decrementFlowControlWindow(int bytes) {
+                try {
+                    connectionState().incrementStreamWindow(-bytes);
+                    incrementStreamWindow(-bytes);
                 } catch (Http2Exception e) { // Should never get here since we're decrementing.
                     throw new RuntimeException("Invalid window state when writing frame: " + e.getMessage(), e);
                 }
-                decrementPendingBytes(writtenBytes);
-                if (payload.size() == 0) {
-                    pendingWriteQueue.remove();
-                }
-                return writtenBytes;
             }
 
             /**
