@@ -32,7 +32,7 @@ public class HttpResponseDecoderTest {
 
     /**
      * The size of headers should be calculated correctly even if a single header is split into multiple fragments.
-     * @see https://github.com/netty/netty/issues/3445
+     * @see <a href="https://github.com/netty/netty/issues/3445">#3445</a>
      */
     @Test
     public void testMaxHeaderSize1() {
@@ -64,7 +64,7 @@ public class HttpResponseDecoderTest {
     }
 
     /**
-     * Complementary test case of {@link #testHeaderReplay()}. When it actually exceeds the maximum, it should fail.
+     * Complementary test case of {@link #testMaxHeaderSize1()}. When it actually exceeds the maximum, it should fail.
      */
     @Test
     public void testMaxHeaderSize2() {
