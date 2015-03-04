@@ -166,10 +166,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                     throw new IllegalStateException(String.format(
                             "Stream %d in unexpected state: %s", stream.id(), stream.state()));
             }
-
-            if (endOfStream) {
-                lifecycleManager.closeLocalSide(stream, promise);
-            }
         } catch (Throwable e) {
             data.release();
             return promise.setFailure(e);
@@ -219,9 +215,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             flowController().sendFlowControlled(ctx, stream,
                     new FlowControlledHeaders(ctx, stream, headers, streamDependency, weight,
                             exclusive, padding, endOfStream, promise));
-            if (endOfStream) {
-                lifecycleManager.closeLocalSide(stream, promise);
-            }
             return promise;
         } catch (Http2NoMoreStreamIdsException e) {
             lifecycleManager.onException(ctx, e);
@@ -427,16 +420,16 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
         @Override
         public boolean write(int allowedBytes) {
-            if (data == null) {
-                return false;
-            }
-            if (allowedBytes == 0 && size() != 0) {
-                // No point writing an empty DATA frame, wait for a bigger allowance.
-                return false;
-            }
-            int maxFrameSize = frameWriter().configuration().frameSizePolicy().maxFrameSize();
+            int bytesWritten = 0;
             try {
-                int bytesWritten = 0;
+                if (data == null) {
+                    return false;
+                }
+                if (allowedBytes == 0 && size != 0) {
+                    // No point writing an empty DATA frame, wait for a bigger allowance.
+                    return false;
+                }
+                int maxFrameSize = frameWriter().configuration().frameSizePolicy().maxFrameSize();
                 do {
                     int allowedFrameSize = Math.min(maxFrameSize, allowedBytes - bytesWritten);
                     ByteBuf toWrite;
@@ -465,13 +458,11 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                         writePromise.addListener(this);
                     }
                     frameWriter().writeData(ctx, stream.id(), toWrite, writeablePadding,
-                            size == bytesWritten && endOfStream, writePromise);
+                        size == bytesWritten && endOfStream, writePromise);
                 } while (size != bytesWritten && allowedBytes > bytesWritten);
-                size -= bytesWritten;
                 return true;
-            } catch (Throwable e) {
-                error(e);
-                return false;
+            } finally {
+                size -= bytesWritten;
             }
         }
     }
@@ -538,7 +529,15 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             this.endOfStream = endOfStream;
             this.stream = stream;
             this.promise = promise;
+            // Ensure error() gets called in case something goes wrong after the frame is passed to Netty.
             promise.addListener(this);
+        }
+
+        @Override
+        public void writeComplete() {
+            if (endOfStream) {
+                lifecycleManager.closeLocalSide(stream, promise);
+            }
         }
 
         @Override
