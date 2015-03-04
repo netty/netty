@@ -73,10 +73,27 @@ public class DefaultAttributeMapTest {
     public void testSetRemove() {
         AttributeKey<Integer> key = AttributeKey.valueOf("key");
 
-        map.attr(key).set(1);
-        assertSame(1, map.attr(key).getAndRemove());
+        Attribute<Integer> attr = map.attr(key);
+        attr.set(1);
+        assertSame(1, attr.getAndRemove());
 
-        map.attr(key).set(2);
-        assertSame(2, map.attr(key).get());
+        Attribute<Integer> attr2 = map.attr(key);
+        attr2.set(2);
+        assertSame(2, attr2.get());
+        assertNotSame(attr, attr2);
+    }
+
+    @Test
+    public void testGetAndSetWithNull() {
+        AttributeKey<Integer> key = AttributeKey.valueOf("key");
+
+        Attribute<Integer> attr = map.attr(key);
+        attr.set(1);
+        assertSame(1, attr.getAndSet(null));
+
+        Attribute<Integer> attr2 = map.attr(key);
+        attr2.set(2);
+        assertSame(2, attr2.get());
+        assertSame(attr, attr2);
     }
 }
