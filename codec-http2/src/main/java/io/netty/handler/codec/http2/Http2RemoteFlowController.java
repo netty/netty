@@ -52,18 +52,37 @@ public interface Http2RemoteFlowController extends Http2FlowController {
         int size();
 
         /**
-         * Signal an error and release any retained buffers.
+         * Called to indicate that an error occurred before this object could be completely written.
+         * <p>
+         * The {@link Http2RemoteFlowController} will make exactly one call to either {@link #error(Throwable)} or
+         * {@link #writeComplete()}.
+         * </p>
+         *
          * @param cause of the error.
          */
         void error(Throwable cause);
+
+        /**
+         * Called after this object has been successfully written.
+         * <p>
+         * The {@link Http2RemoteFlowController} will make exactly one call to either {@link #error(Throwable)} or
+         * {@link #writeComplete()}.
+         * </p>
+         */
+        void writeComplete();
 
         /**
          * Writes up to {@code allowedBytes} of the encapsulated payload to the stream. Note that
          * a value of 0 may be passed which will allow payloads with flow-control size == 0 to be
          * written. The flow-controller may call this method multiple times with different values until
          * the payload is fully written.
+         * <p>
+         * When an exception is thrown the {@link Http2RemoteFlowController} will make a call to
+         * {@link #error(Throwable)}.
+         * </p>
          *
          * @param allowedBytes an upper bound on the number of bytes the payload can write at this time.
+         * @throws Exception if an error occurs. The method must not call {@link #error(Throwable)} by itself.
          * @return {@code true} if a flush is required, {@code false} otherwise.
          */
         boolean write(int allowedBytes);
