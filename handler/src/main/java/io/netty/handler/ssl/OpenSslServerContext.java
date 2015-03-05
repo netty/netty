@@ -64,11 +64,14 @@ public final class OpenSslServerContext extends OpenSslContext {
      *                    {@code null} if it's not password-protected.
      */
     public OpenSslServerContext(File certChainFile, File keyFile, String keyPassword) throws SSLException {
-        this(certChainFile, keyFile, keyPassword, null, null,
-            OpenSslDefaultApplicationProtocolNegotiator.INSTANCE, 0, 0);
+        this(certChainFile, keyFile, keyPassword, null, null, IdentityCipherSuiteFilter.INSTANCE,
+            NONE_PROTOCOL_NEGOTIATOR, 0, 0);
     }
 
     /**
+     * @deprecated use {@link #OpenSslServerContext(
+     *             File, File, String, Iterable, CipherSuiteFilter, ApplicationProtocolConfig, long, long)}
+     *
      * Creates a new instance.
      *
      * @param certChainFile an X.509 certificate chain file in PEM format
@@ -83,12 +86,13 @@ public final class OpenSslServerContext extends OpenSslContext {
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                       {@code 0} to use the default value.
      */
+    @Deprecated
     public OpenSslServerContext(
             File certChainFile, File keyFile, String keyPassword,
             Iterable<String> ciphers, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
         this(certChainFile, keyFile, keyPassword, null, ciphers,
-            toNegotiator(apn, false), sessionCacheSize, sessionTimeout);
+            toNegotiator(apn), sessionCacheSize, sessionTimeout);
     }
 
     /**
@@ -105,13 +109,17 @@ public final class OpenSslServerContext extends OpenSslContext {
      *                         {@code 0} to use the default value.
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                       {@code 0} to use the default value.
+     * @deprecated use {@link #OpenSslServerContext(
+     *             File, File, String, TrustManagerFactory, Iterable,
+     *             CipherSuiteFilter, ApplicationProtocolConfig, long, long)}
      */
+    @Deprecated
     public OpenSslServerContext(
             File certChainFile, File keyFile, String keyPassword, TrustManagerFactory trustManagerFactory,
             Iterable<String> ciphers, ApplicationProtocolConfig config,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
         this(certChainFile, keyFile, keyPassword, trustManagerFactory, ciphers,
-                toNegotiator(config, true), sessionCacheSize, sessionTimeout);
+                toNegotiator(config), sessionCacheSize, sessionTimeout);
     }
 
     /**
@@ -128,14 +136,89 @@ public final class OpenSslServerContext extends OpenSslContext {
      *                         {@code 0} to use the default value.
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                       {@code 0} to use the default value.
+     * @deprecated use {@link #OpenSslServerContext(
+     *             File, File, String, TrustManagerFactory, Iterable,
+     *             CipherSuiteFilter, OpenSslApplicationProtocolNegotiator, long, long)}
      */
+    @Deprecated
     public OpenSslServerContext(
             File certChainFile, File keyFile, String keyPassword, TrustManagerFactory trustManagerFactory,
             Iterable<String> ciphers, OpenSslApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
+        this(certChainFile, keyFile, keyPassword, trustManagerFactory, ciphers,
+                IdentityCipherSuiteFilter.INSTANCE, apn, sessionCacheSize, sessionTimeout);
+    }
 
-         super(ciphers, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_SERVER);
-         OpenSsl.ensureAvailability();
+    /**
+     * Creates a new instance.
+     *
+     * @param certChainFile an X.509 certificate chain file in PEM format
+     * @param keyFile a PKCS#8 private key file in PEM format
+     * @param keyPassword the password of the {@code keyFile}.
+     *                    {@code null} if it's not password-protected.
+     * @param ciphers the cipher suites to enable, in the order of preference.
+     *                {@code null} to use the default cipher suites.
+     * @param cipherFilter a filter to apply over the supplied list of ciphers
+     * @param apn Provides a means to configure parameters related to application protocol negotiation.
+     * @param sessionCacheSize the size of the cache used for storing SSL session objects.
+     *                         {@code 0} to use the default value.
+     * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
+     *                       {@code 0} to use the default value.
+     */
+    public OpenSslServerContext(
+            File certChainFile, File keyFile, String keyPassword,
+            Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
+            long sessionCacheSize, long sessionTimeout) throws SSLException {
+        this(certChainFile, keyFile, keyPassword, null, ciphers, cipherFilter,
+                toNegotiator(apn), sessionCacheSize, sessionTimeout);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param certChainFile an X.509 certificate chain file in PEM format
+     * @param keyFile a PKCS#8 private key file in PEM format
+     * @param keyPassword the password of the {@code keyFile}.
+     *                    {@code null} if it's not password-protected.
+     * @param ciphers the cipher suites to enable, in the order of preference.
+     *                {@code null} to use the default cipher suites.
+     * @param cipherFilter a filter to apply over the supplied list of ciphers
+     * @param config Application protocol config.
+     * @param sessionCacheSize the size of the cache used for storing SSL session objects.
+     *                         {@code 0} to use the default value.
+     * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
+     *                       {@code 0} to use the default value.
+     */
+    public OpenSslServerContext(
+            File certChainFile, File keyFile, String keyPassword, TrustManagerFactory trustManagerFactory,
+            Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig config,
+            long sessionCacheSize, long sessionTimeout) throws SSLException {
+        this(certChainFile, keyFile, keyPassword, trustManagerFactory, ciphers, cipherFilter,
+                toNegotiator(config), sessionCacheSize, sessionTimeout);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param certChainFile an X.509 certificate chain file in PEM format
+     * @param keyFile a PKCS#8 private key file in PEM format
+     * @param keyPassword the password of the {@code keyFile}.
+     *                    {@code null} if it's not password-protected.
+     * @param ciphers the cipher suites to enable, in the order of preference.
+     *                {@code null} to use the default cipher suites.
+     * @param cipherFilter a filter to apply over the supplied list of ciphers
+     * @param apn Application protocol negotiator.
+     * @param sessionCacheSize the size of the cache used for storing SSL session objects.
+     *                         {@code 0} to use the default value.
+     * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
+     *                       {@code 0} to use the default value.
+     */
+    public OpenSslServerContext(
+            File certChainFile, File keyFile, String keyPassword, TrustManagerFactory trustManagerFactory,
+            Iterable<String> ciphers, CipherSuiteFilter cipherFilter, OpenSslApplicationProtocolNegotiator apn,
+            long sessionCacheSize, long sessionTimeout) throws SSLException {
+        super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_SERVER);
+        OpenSsl.ensureAvailability();
 
         checkNotNull(certChainFile, "certChainFile");
         if (!certChainFile.isFile()) {

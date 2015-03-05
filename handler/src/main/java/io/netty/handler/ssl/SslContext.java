@@ -262,7 +262,7 @@ public abstract class SslContext {
         case OPENSSL:
             return new OpenSslServerContext(
                     keyCertChainFile, keyFile, keyPassword, trustManagerFactory,
-                    ciphers, apn, sessionCacheSize, sessionTimeout);
+                    ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
         default:
             throw new Error(provider.toString());
         }
@@ -485,7 +485,8 @@ public abstract class SslContext {
                         keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
             case OPENSSL:
                 return new OpenSslClientContext(
-                        trustCertChainFile, trustManagerFactory, ciphers, apn, sessionCacheSize, sessionTimeout);
+                        trustCertChainFile, trustManagerFactory, ciphers, cipherFilter, apn,
+                        sessionCacheSize, sessionTimeout);
         }
         // Should never happen!!
         throw new Error();

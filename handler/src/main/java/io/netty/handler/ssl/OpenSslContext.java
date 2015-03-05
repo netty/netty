@@ -31,12 +31,15 @@ import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
+import static io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 
 public abstract class OpenSslContext extends SslContext {
 
@@ -48,16 +51,38 @@ public abstract class OpenSslContext extends SslContext {
     protected static final int VERIFY_DEPTH = 10;
 
     private final long aprPool;
-    @SuppressWarnings("unused")
+    @SuppressWarnings({ "unused", "FieldMayBeFinal" })
     private volatile int aprPoolDestroyed;
-    private final List<String> ciphers = new ArrayList<String>();
-    private final List<String> unmodifiableCiphers = Collections.unmodifiableList(ciphers);
+    private final List<String> unmodifiableCiphers;
     private final long sessionCacheSize;
     private final long sessionTimeout;
     private final OpenSslApplicationProtocolNegotiator apn;
     /** The OpenSSL SSL_CTX object */
     protected final long ctx;
     private final int mode;
+
+    static final OpenSslApplicationProtocolNegotiator NONE_PROTOCOL_NEGOTIATOR =
+            new OpenSslApplicationProtocolNegotiator() {
+                @Override
+                public ApplicationProtocolConfig.Protocol protocol() {
+                    return ApplicationProtocolConfig.Protocol.NONE;
+                }
+
+                @Override
+                public List<String> protocols() {
+                    return Collections.emptyList();
+                }
+
+                @Override
+                public SelectorFailureBehavior selectorFailureBehavior() {
+                    return SelectorFailureBehavior.CHOOSE_MY_LAST_PROTOCOL;
+                }
+
+                @Override
+                public SelectedListenerFailureBehavior selectedListenerFailureBehavior() {
+                    return SelectedListenerFailureBehavior.ACCEPT;
+                }
+            };
 
     static {
         List<String> ciphers = new ArrayList<String>();
@@ -86,12 +111,13 @@ public abstract class OpenSslContext extends SslContext {
         DESTROY_UPDATER = updater;
     }
 
-    OpenSslContext(Iterable<String> ciphers, ApplicationProtocolConfig apnCfg, long sessionCacheSize,
-                   long sessionTimeout, int mode) throws SSLException {
-        this(ciphers, toNegotiator(apnCfg, mode == SSL.SSL_MODE_SERVER), sessionCacheSize, sessionTimeout, mode);
+    OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apnCfg,
+                   long sessionCacheSize, long sessionTimeout, int mode) throws SSLException {
+        this(ciphers, cipherFilter, toNegotiator(apnCfg), sessionCacheSize, sessionTimeout, mode);
     }
 
-    OpenSslContext(Iterable<String> ciphers, OpenSslApplicationProtocolNegotiator apn, long sessionCacheSize,
+    OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
+                   OpenSslApplicationProtocolNegotiator apn, long sessionCacheSize,
                    long sessionTimeout, int mode) throws SSLException {
         OpenSsl.ensureAvailability();
 
@@ -100,22 +126,26 @@ public abstract class OpenSslContext extends SslContext {
         }
         this.mode = mode;
 
+        final List<String> convertedCiphers;
         if (ciphers == null) {
-            ciphers = DEFAULT_CIPHERS;
+            convertedCiphers = null;
+        } else {
+            convertedCiphers = new ArrayList<String>();
+            for (String c: ciphers) {
+                if (c == null) {
+                    break;
+                }
+
+                String converted = CipherSuiteConverter.toOpenSsl(c);
+                if (converted != null) {
+                    c = converted;
+                }
+                convertedCiphers.add(c);
+            }
         }
 
-        for (String c: ciphers) {
-            if (c == null) {
-                break;
-            }
-
-            String converted = CipherSuiteConverter.toOpenSsl(c);
-            if (converted != null) {
-                c = converted;
-            }
-
-            this.ciphers.add(c);
-        }
+        unmodifiableCiphers = Arrays.asList(checkNotNull(cipherFilter, "cipherFilter").filterCipherSuites(
+                convertedCiphers, DEFAULT_CIPHERS, OpenSsl.availableCipherSuites()));
 
         this.apn = checkNotNull(apn, "apn");
 
@@ -142,25 +172,33 @@ public abstract class OpenSslContext extends SslContext {
 
                 /* List the ciphers that are permitted to negotiate. */
                 try {
-                    SSLContext.setCipherSuite(ctx, CipherSuiteConverter.toOpenSsl(this.ciphers));
+                    SSLContext.setCipherSuite(ctx, CipherSuiteConverter.toOpenSsl(unmodifiableCiphers));
                 } catch (SSLException e) {
                     throw e;
                 } catch (Exception e) {
-                    throw new SSLException("failed to set cipher suite: " + this.ciphers, e);
+                    throw new SSLException("failed to set cipher suite: " + unmodifiableCiphers, e);
                 }
 
                 List<String> nextProtoList = apn.protocols();
                 /* Set next protocols for next protocol negotiation extension, if specified */
                 if (!nextProtoList.isEmpty()) {
-                    // Convert the protocol list into a comma-separated string.
-                    StringBuilder nextProtocolBuf = new StringBuilder();
-                    for (String p: nextProtoList) {
-                        nextProtocolBuf.append(p);
-                        nextProtocolBuf.append(',');
-                    }
-                    nextProtocolBuf.setLength(nextProtocolBuf.length() - 1);
+                    String[] protocols = nextProtoList.toArray(new String[nextProtoList.size()]);
+                    int selectorBehavior = opensslSelectorFailureBehavior(apn.selectorFailureBehavior());
 
-                    SSLContext.setNextProtos(ctx, nextProtocolBuf.toString());
+                    switch (apn.protocol()) {
+                    case NPN:
+                        SSLContext.setNpnProtos(ctx, protocols, selectorBehavior);
+                        break;
+                    case ALPN:
+                        SSLContext.setAlpnProtos(ctx, protocols, selectorBehavior);
+                        break;
+                    case NPN_AND_ALPN:
+                        SSLContext.setNpnProtos(ctx, protocols, selectorBehavior);
+                        SSLContext.setAlpnProtos(ctx, protocols, selectorBehavior);
+                        break;
+                    default:
+                        throw new Error();
+                    }
                 }
 
                 /* Set session cache size, if specified */
@@ -190,6 +228,17 @@ public abstract class OpenSslContext extends SslContext {
             if (!success) {
                 destroyPools();
             }
+        }
+    }
+
+    private static int opensslSelectorFailureBehavior(SelectorFailureBehavior behavior) {
+        switch (behavior) {
+        case NO_ADVERTISE:
+            return SSL.SSL_SELECTOR_FAILURE_NO_ADVERTISE;
+        case CHOOSE_MY_LAST_PROTOCOL:
+            return SSL.SSL_SELECTOR_FAILURE_CHOOSE_MY_LAST_PROTOCOL;
+        default:
+            throw new Error();
         }
     }
 
@@ -228,15 +277,8 @@ public abstract class OpenSslContext extends SslContext {
      */
     @Override
     public final SSLEngine newEngine(ByteBufAllocator alloc) {
-        List<String> protos = applicationProtocolNegotiator().protocols();
         OpenSslEngineMap engineMap = engineMap();
-        final OpenSslEngine engine;
-        if (protos.isEmpty()) {
-            engine = new OpenSslEngine(ctx, alloc, null, isClient(), sessionContext(), engineMap);
-        } else {
-            engine = new OpenSslEngine(ctx, alloc, protos.get(protos.size() - 1), isClient(),
-                    sessionContext(), engineMap);
-        }
+        final OpenSslEngine engine = new OpenSslEngine(ctx, alloc, isClient(), sessionContext(), apn, engineMap);
         engineMap.add(engine);
         return engine;
     }
@@ -312,35 +354,41 @@ public abstract class OpenSslContext extends SslContext {
      * Translate a {@link ApplicationProtocolConfig} object to a
      * {@link OpenSslApplicationProtocolNegotiator} object.
      * @param config The configuration which defines the translation
-     * @param isServer {@code true} if a server {@code false} otherwise.
      * @return The results of the translation
      */
-    static OpenSslApplicationProtocolNegotiator toNegotiator(ApplicationProtocolConfig config,
-                                                             boolean isServer) {
+    static OpenSslApplicationProtocolNegotiator toNegotiator(ApplicationProtocolConfig config) {
         if (config == null) {
-            return OpenSslDefaultApplicationProtocolNegotiator.INSTANCE;
+            return NONE_PROTOCOL_NEGOTIATOR;
         }
 
         switch (config.protocol()) {
-            case NONE:
-                return OpenSslDefaultApplicationProtocolNegotiator.INSTANCE;
-            case NPN:
-                if (isServer) {
-                    switch (config.selectedListenerFailureBehavior()) {
-                        case CHOOSE_MY_LAST_PROTOCOL:
-                            return new OpenSslNpnApplicationProtocolNegotiator(config.supportedProtocols());
-                        default:
-                            throw new UnsupportedOperationException(
-                                    new StringBuilder("OpenSSL provider does not support ")
-                                            .append(config.selectedListenerFailureBehavior())
-                                            .append(" behavior").toString());
-                    }
-                } else {
-                    throw new UnsupportedOperationException("OpenSSL provider does not support client mode");
+        case NONE:
+            return NONE_PROTOCOL_NEGOTIATOR;
+        case ALPN:
+        case NPN:
+        case NPN_AND_ALPN:
+            switch (config.selectedListenerFailureBehavior()) {
+            case CHOOSE_MY_LAST_PROTOCOL:
+            case ACCEPT:
+                switch (config.selectorFailureBehavior()) {
+                case CHOOSE_MY_LAST_PROTOCOL:
+                case NO_ADVERTISE:
+                    return new OpenSslDefaultApplicationProtocolNegotiator(
+                            config);
+                default:
+                    throw new UnsupportedOperationException(
+                            new StringBuilder("OpenSSL provider does not support ")
+                                    .append(config.selectorFailureBehavior())
+                                    .append(" behavior").toString());
                 }
             default:
-                throw new UnsupportedOperationException(new StringBuilder("OpenSSL provider does not support ")
-                        .append(config.protocol()).append(" protocol").toString());
+                throw new UnsupportedOperationException(
+                        new StringBuilder("OpenSSL provider does not support ")
+                                .append(config.selectedListenerFailureBehavior())
+                                .append(" behavior").toString());
+            }
+        default:
+            throw new Error();
         }
     }
 

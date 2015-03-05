@@ -15,21 +15,36 @@
  */
 package io.netty.handler.ssl;
 
-import java.util.Collections;
 import java.util.List;
 
-/**
- * Provides no {@link ApplicationProtocolNegotiator} functionality for OpenSSL.
- */
-final class OpenSslDefaultApplicationProtocolNegotiator implements OpenSslApplicationProtocolNegotiator {
-    static final OpenSslDefaultApplicationProtocolNegotiator INSTANCE =
-            new OpenSslDefaultApplicationProtocolNegotiator();
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
-    private OpenSslDefaultApplicationProtocolNegotiator() {
+/**
+ * OpenSSL {@link ApplicationProtocolNegotiator} for ALPN and NPN.
+ */
+public final class OpenSslDefaultApplicationProtocolNegotiator implements OpenSslApplicationProtocolNegotiator {
+    private final ApplicationProtocolConfig config;
+    public OpenSslDefaultApplicationProtocolNegotiator(ApplicationProtocolConfig config) {
+        this.config = checkNotNull(config, "config");
     }
 
     @Override
     public List<String> protocols() {
-        return Collections.emptyList();
+        return config.supportedProtocols();
+    }
+
+    @Override
+    public ApplicationProtocolConfig.Protocol protocol() {
+        return config.protocol();
+    }
+
+    @Override
+    public ApplicationProtocolConfig.SelectorFailureBehavior selectorFailureBehavior() {
+        return config.selectorFailureBehavior();
+    }
+
+    @Override
+    public ApplicationProtocolConfig.SelectedListenerFailureBehavior selectedListenerFailureBehavior() {
+        return config.selectedListenerFailureBehavior();
     }
 }
