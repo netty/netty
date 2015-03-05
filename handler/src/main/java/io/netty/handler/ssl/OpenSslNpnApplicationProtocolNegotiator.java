@@ -22,7 +22,10 @@ import java.util.List;
 
 /**
  * OpenSSL {@link ApplicationProtocolNegotiator} for NPN.
+ *
+ * @deprecated use {@link OpenSslDefaultApplicationProtocolNegotiator}
  */
+@Deprecated
 public final class OpenSslNpnApplicationProtocolNegotiator implements OpenSslApplicationProtocolNegotiator {
     private final List<String> protocols;
 
@@ -35,7 +38,22 @@ public final class OpenSslNpnApplicationProtocolNegotiator implements OpenSslApp
     }
 
     @Override
+    public ApplicationProtocolConfig.Protocol protocol() {
+        return ApplicationProtocolConfig.Protocol.NPN;
+    }
+
+    @Override
     public List<String> protocols() {
         return protocols;
+    }
+
+    @Override
+    public ApplicationProtocolConfig.SelectorFailureBehavior selectorFailureBehavior() {
+        return ApplicationProtocolConfig.SelectorFailureBehavior.CHOOSE_MY_LAST_PROTOCOL;
+    }
+
+    @Override
+    public ApplicationProtocolConfig.SelectedListenerFailureBehavior selectedListenerFailureBehavior() {
+        return ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT;
     }
 }

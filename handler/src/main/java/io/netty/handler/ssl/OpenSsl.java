@@ -114,6 +114,14 @@ public final class OpenSsl {
     }
 
     /**
+     * Returns {@code true} if the used version of openssl supports
+     * <a href="https://tools.ietf.org/html/rfc7301">ALPN</a>.
+     */
+    public static boolean isAlpnSupported() {
+        return isAvailable() && SSL.version() >= 0x10002000L;
+    }
+
+    /**
      * Ensure that <a href="http://netty.io/wiki/forked-tomcat-native.html">{@code netty-tcnative}</a> and
      * its OpenSSL support are available.
      *

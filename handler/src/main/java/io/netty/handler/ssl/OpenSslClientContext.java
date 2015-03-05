@@ -45,7 +45,7 @@ public final class OpenSslClientContext extends OpenSslContext {
      * Creates a new instance.
      */
     public OpenSslClientContext() throws SSLException {
-        this(null, null, null, null, 0, 0);
+        this(null, null, null, IdentityCipherSuiteFilter.INSTANCE, null, 0, 0);
     }
 
     /**
@@ -79,10 +79,13 @@ public final class OpenSslClientContext extends OpenSslContext {
      *                            {@code null} to use the default.
      */
     public OpenSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory) throws SSLException {
-        this(certChainFile, trustManagerFactory, null, null, 0, 0);
+        this(certChainFile, trustManagerFactory, null, IdentityCipherSuiteFilter.INSTANCE, null, 0, 0);
     }
 
     /**
+     * @deprecated use {@link #OpenSslClientContext(File, TrustManagerFactory, Iterable,
+     *             CipherSuiteFilter, ApplicationProtocolConfig, long, long)}
+     *
      * Creates a new instance.
      *
      * @param certChainFile an X.509 certificate chain file in PEM format
@@ -97,10 +100,35 @@ public final class OpenSslClientContext extends OpenSslContext {
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                       {@code 0} to use the default value.
      */
+    @Deprecated
     public OpenSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory, Iterable<String> ciphers,
                                 ApplicationProtocolConfig apn, long sessionCacheSize, long sessionTimeout)
             throws SSLException {
-        super(ciphers, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_CLIENT);
+        this(certChainFile, trustManagerFactory, ciphers, IdentityCipherSuiteFilter.INSTANCE,
+                apn, sessionCacheSize, sessionTimeout);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param certChainFile an X.509 certificate chain file in PEM format
+     * @param trustManagerFactory the {@link TrustManagerFactory} that provides the {@link TrustManager}s
+     *                            that verifies the certificates sent from servers.
+     *                            {@code null} to use the default..
+     * @param ciphers the cipher suites to enable, in the order of preference.
+     *                {@code null} to use the default cipher suites.
+     * @param cipherFilter a filter to apply over the supplied list of ciphers
+     * @param apn Provides a means to configure parameters related to application protocol negotiation.
+     * @param sessionCacheSize the size of the cache used for storing SSL session objects.
+     *                         {@code 0} to use the default value.
+     * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
+     *                       {@code 0} to use the default value.
+     */
+    public OpenSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory, Iterable<String> ciphers,
+                                CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
+                                long sessionCacheSize, long sessionTimeout)
+            throws SSLException {
+        super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_CLIENT);
         boolean success = false;
         try {
             if (certChainFile != null && !certChainFile.isFile()) {
