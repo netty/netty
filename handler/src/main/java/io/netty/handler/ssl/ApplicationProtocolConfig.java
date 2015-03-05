@@ -79,6 +79,9 @@ public final class ApplicationProtocolConfig {
         if (protocol == Protocol.NONE) {
             throw new IllegalArgumentException("protocol (" + Protocol.NONE + ") must not be " + Protocol.NONE + '.');
         }
+        if (supportedProtocols.isEmpty()) {
+            throw new IllegalArgumentException("supportedProtocols must be not empty");
+        }
     }
 
     /**

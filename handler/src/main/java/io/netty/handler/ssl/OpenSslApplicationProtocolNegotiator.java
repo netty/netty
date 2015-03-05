@@ -19,10 +19,19 @@ package io.netty.handler.ssl;
  * OpenSSL version of {@link ApplicationProtocolNegotiator}.
  */
 public interface OpenSslApplicationProtocolNegotiator extends ApplicationProtocolNegotiator {
-    // The current need for this interface is primarily for consistency with the JDK provider
-    // How the OpenSsl provider will provide extensibility to control the application selection
-    // and notification algorithms is not yet known (JNI, pure java, tcnative hooks, etc...).
-    // OpenSSL itself is currently not in compliance with the specification for the 2 supported
-    // protocols (ALPN, NPN) with respect to allowing the handshakes to fail during the application
-    // protocol negotiation process.  Issue https://github.com/openssl/openssl/issues/188 has been created for this.
+
+    /**
+     * Returns the {@link ApplicationProtocolConfig.Protocol} which should be used.
+     */
+    ApplicationProtocolConfig.Protocol protocol();
+
+    /**
+     * Get the desired behavior for the peer who selects the application protocol.
+     */
+    ApplicationProtocolConfig.SelectorFailureBehavior selectorFailureBehavior();
+
+    /**
+     * Get the desired behavior for the peer who is notified of the selected protocol.
+     */
+    ApplicationProtocolConfig.SelectedListenerFailureBehavior selectedListenerFailureBehavior();
 }
