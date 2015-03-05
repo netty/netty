@@ -61,8 +61,8 @@ public final class SpdyServer {
                 ssc.certificate(), ssc.privateKey(), null, null, IdentityCipherSuiteFilter.INSTANCE,
                 new ApplicationProtocolConfig(
                         Protocol.NPN,
-                        SelectorFailureBehavior.FATAL_ALERT,
-                        SelectedListenerFailureBehavior.FATAL_ALERT,
+                        SelectorFailureBehavior.CHOOSE_MY_LAST_PROTOCOL,
+                        SelectedListenerFailureBehavior.CHOOSE_MY_LAST_PROTOCOL,
                         SelectedProtocol.SPDY_3_1.protocolName(),
                         SelectedProtocol.HTTP_1_1.protocolName()),
                 0, 0);
