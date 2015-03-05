@@ -67,7 +67,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
      * Creates a new instance.
      *
      * @param maxContentLength
-     *        the maximum length of the aggregated content.
+     *        the maximum length of the aggregated content in bytes.
      *        If the length of the aggregated content exceeds this value,
      *        a {@link TooLongFrameException} will be raised.
      */
