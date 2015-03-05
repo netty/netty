@@ -135,7 +135,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     protected abstract boolean isAggregated(I msg) throws Exception;
 
     /**
-     * Returns the maximum allowed length of the aggregated message.
+     * Returns the maximum allowed length of the aggregated message in bytes.
      */
     public final int maxContentLength() {
         return maxContentLength;
