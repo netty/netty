@@ -331,7 +331,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     private final class NioSocketChannelUnsafe extends NioByteUnsafe {
         @Override
         protected Executor closeExecutor() {
-            if (config().getSoLinger() > 0) {
+            if (javaChannel().isOpen() && config().getSoLinger() > 0) {
                 return GlobalEventExecutor.INSTANCE;
             }
             return null;
