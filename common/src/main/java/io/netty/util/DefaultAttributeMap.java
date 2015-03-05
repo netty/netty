@@ -172,6 +172,11 @@ public class DefaultAttributeMap implements AttributeMap {
                     if (next != null) {
                         next.prev = prev;
                     }
+
+                    // Null out prev and next - this will guard against multiple remove0() calls which may corrupt
+                    // the linked list for the bucket.
+                    prev = null;
+                    next = null;
                 }
             }
         }
