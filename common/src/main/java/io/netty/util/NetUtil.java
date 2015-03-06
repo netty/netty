@@ -116,6 +116,11 @@ public final class NetUtil {
     private static final int IPV4_SEPARATORS = 3;
 
     /**
+     * {@code true} if ipv4 should be used on a system that supports ipv4 and ipv6.
+     */
+    private static final boolean IPV4_PREFERRED = Boolean.getBoolean("java.net.preferIPv4Stack");
+
+    /**
      * The logger being used by this class
      */
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NetUtil.class);
@@ -258,6 +263,13 @@ public final class NetUtil {
         }
 
         SOMAXCONN = somaxconn;
+    }
+
+    /**
+     * Returns {@code true} if ipv4 should be prefered on a system that supports ipv4 and ipv6.
+     */
+    public static boolean isIpV4StackPreferred() {
+        return IPV4_PREFERRED;
     }
 
     /**
