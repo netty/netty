@@ -84,6 +84,8 @@ jmethodID closedChannelExceptionMethodId = NULL;
 jclass inetSocketAddressClass = NULL;
 jclass datagramSocketAddressClass = NULL;
 jclass nativeDatagramPacketClass = NULL;
+jclass netUtilClass = NULL;
+jmethodID netUtilClassIpv4PreferredMethodId = NULL;
 
 static int socketType;
 static const char* ip4prefix = "::ffff:";
@@ -305,7 +307,13 @@ static int init_sockaddr(JNIEnv* env, jbyteArray address, jint scopeId, jint jpo
     return 0;
 }
 
-static int socket_type() {
+static int socket_type(JNIEnv* env) {
+    jboolean ipv4Preferred = (*env)->CallStaticBooleanMethod(env, netUtilClass, netUtilClassIpv4PreferredMethodId);
+
+    if (ipv4Preferred) {
+        // User asked to use ipv4 explicitly.
+        return AF_INET;
+    }
     int fd = socket(AF_INET6, SOCK_STREAM | SOCK_NONBLOCK, 0);
     if (fd == -1) {
         if (errno == EAFNOSUPPORT) {
@@ -343,6 +351,24 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     if ((*vm)->GetEnv(vm, (void**) &env, JNI_VERSION_1_6) != JNI_OK) {
         return JNI_ERR;
     } else {
+        jclass localNetUtilClass = (*env)->FindClass(env, "io/netty/util/NetUtil" );
+        if (localNetUtilClass == NULL) {
+            // pending exception...
+            return JNI_ERR;
+        }
+        netUtilClass = (jclass) (*env)->NewGlobalRef(env, localNetUtilClass);
+        if (netUtilClass == NULL) {
+            // out-of-memory!
+            throwOutOfMemoryError(env);
+            return JNI_ERR;
+        }
+
+        netUtilClassIpv4PreferredMethodId = (*env)->GetStaticMethodID(env, netUtilClass, "isIpV4StackPreferred", "()Z" );
+        if (netUtilClassIpv4PreferredMethodId == NULL) {
+            // position method was not found.. something is wrong so bail out
+            throwRuntimeException(env, "failed to get method ID: NetUild.isIpV4StackPreferred()");
+            return JNI_ERR;
+        }
         // cache classes that are used within other jni methods for performance reasons
         jclass localClosedChannelExceptionClass = (*env)->FindClass(env, "java/nio/channels/ClosedChannelException");
         if (localClosedChannelExceptionClass == NULL) {
@@ -509,7 +535,7 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
             throwRuntimeException(env, "failed to get method ID: InetSocketAddress.<init>(String, int)");
             return JNI_ERR;
         }
-        socketType = socket_type();
+        socketType = socket_type(env);
 
         datagramSocketAddrMethodId = (*env)->GetMethodID(env, datagramSocketAddressClass, "<init>", "(Ljava/lang/String;II)V");
         if (datagramSocketAddrMethodId == NULL) {
@@ -574,6 +600,9 @@ void JNI_OnUnload(JavaVM* vm, void* reserved) {
         }
         if (datagramSocketAddressClass != NULL) {
             (*env)->DeleteGlobalRef(env, datagramSocketAddressClass);
+        }
+        if (netUtilClass != NULL) {
+            (*env)->DeleteGlobalRef(env, netUtilClass);
         }
     }
 }
@@ -952,7 +981,6 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_shutdown0(JNIEnv* env,
 }
 
 static inline jint socket0(JNIEnv* env, jclass clazz, int type) {
-    // TODO: Maybe also respect -Djava.net.preferIPv4Stack=true
     int fd = socket(socketType, type | SOCK_NONBLOCK, 0);
     if (fd == -1) {
         return -errno;
