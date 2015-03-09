@@ -90,7 +90,7 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
      * @param executor   the {@link Executor} to use, or {@code null} if the default should be used.
      * @param maxEventsAtOnce   the maximum number of epoll events to handle per epollWait(...).
      *
-     * @deprecated  Use {@link #EpollEventLoopGroup(int)}, {@link #EpollEventLoopGroup(int)} or
+     * @deprecated  Use {@link #EpollEventLoopGroup(int)} or
      *              {@link #EpollEventLoopGroup(int, Executor)}
      */
     @Deprecated
@@ -108,7 +108,7 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
      *                                 should be used.
      * @param maxEventsAtOnce   the maximum number of epoll events to handle per epollWait(...).
      *
-     * @deprecated  Use {@link #EpollEventLoopGroup(int)}, {@link #EpollEventLoopGroup(int)} or
+     * @deprecated  Use {@link #EpollEventLoopGroup(int)} or
      *              {@link #EpollEventLoopGroup(int, ExecutorServiceFactory)}
      */
     @Deprecated
