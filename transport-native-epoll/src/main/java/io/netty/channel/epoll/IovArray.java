@@ -16,10 +16,11 @@
 package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.ChannelOutboundBuffer.MessageProcessor;
-import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
+
+import java.nio.ByteBuffer;
 
 /**
  * Represent an array of struct array and so can be passed directly over via JNI without the need to do any more
@@ -49,37 +50,30 @@ final class IovArray implements MessageProcessor {
      */
     private static final int IOV_SIZE = 2 * ADDRESS_SIZE;
 
-    /** The needed memory to hold up to {@link Native#IOV_MAX} iov entries, where {@link Native#IOV_MAX} signified
+    /**
+     * The needed memory to hold up to {@link Native#IOV_MAX} iov entries, where {@link Native#IOV_MAX} signified
      * the maximum number of {@code iovec} structs that can be passed to {@code writev(...)}.
      */
     private static final int CAPACITY = Native.IOV_MAX * IOV_SIZE;
-
-    private static final FastThreadLocal<IovArray> ARRAY = new FastThreadLocal<IovArray>() {
-        @Override
-        protected IovArray initialValue() throws Exception {
-            return new IovArray();
-        }
-
-        @Override
-        protected void onRemoval(IovArray value) throws Exception {
-            // free the direct memory now
-            PlatformDependent.freeMemory(value.memoryAddress);
-        }
-    };
 
     private final long memoryAddress;
     private int count;
     private long size;
 
-    private IovArray() {
+    IovArray() {
         memoryAddress = PlatformDependent.allocateMemory(CAPACITY);
+    }
+
+    void clear() {
+        count = 0;
+        size = 0;
     }
 
     /**
      * Try to add the given {@link ByteBuf}. Returns {@code true} on success,
      * {@code false} otherwise.
      */
-    private boolean add(ByteBuf buf) {
+    boolean add(ByteBuf buf) {
         if (count == Native.IOV_MAX) {
             // No more room!
             return false;
@@ -95,6 +89,15 @@ final class IovArray implements MessageProcessor {
 
         final long addr = buf.memoryAddress();
         final int offset = buf.readerIndex();
+        add(addr, offset, len);
+        return true;
+    }
+
+    private void add(long addr, int offset, int len) {
+        if (len == 0) {
+            // No need to add an empty buffer.
+            return;
+        }
 
         final long baseOffset = memoryAddress(count++);
         final long lengthOffset = baseOffset + ADDRESS_SIZE;
@@ -110,6 +113,30 @@ final class IovArray implements MessageProcessor {
         }
 
         size += len;
+    }
+
+    /**
+     * Try to add the given {@link CompositeByteBuf}. Returns {@code true} on success,
+     * {@code false} otherwise.
+     */
+    boolean add(CompositeByteBuf buf) {
+        ByteBuffer[] buffers = buf.nioBuffers();
+        if (count + buffers.length >= Native.IOV_MAX) {
+            // No more room!
+            return false;
+        }
+        for (int i = 0; i < buffers.length; i++) {
+            ByteBuffer nioBuffer = buffers[i];
+            int offset = nioBuffer.position();
+            int len = nioBuffer.limit() - nioBuffer.position();
+            if (len == 0) {
+                // No need to add an empty buffer so just continue
+                continue;
+            }
+            long addr = PlatformDependent.directBufferAddress(nioBuffer);
+
+            add(addr, offset, len);
+        }
         return true;
     }
 
@@ -164,19 +191,22 @@ final class IovArray implements MessageProcessor {
         return memoryAddress + IOV_SIZE * offset;
     }
 
-    @Override
-    public boolean processMessage(Object msg) throws Exception {
-        return msg instanceof ByteBuf && add((ByteBuf) msg);
+    /**
+     * Release the {@link IovArray}. Once release further using of it may crash the JVM!
+     */
+    void release() {
+        PlatformDependent.freeMemory(memoryAddress);
     }
 
-    /**
-     * Returns a {@link IovArray} which is filled with the flushed messages of {@link ChannelOutboundBuffer}.
-     */
-    static IovArray get(ChannelOutboundBuffer buffer) throws Exception {
-        IovArray array = ARRAY.get();
-        array.size = 0;
-        array.count = 0;
-        buffer.forEachFlushedMessage(array);
-        return array;
+    @Override
+    public boolean processMessage(Object msg) throws Exception {
+        if (msg instanceof ByteBuf) {
+            if (msg instanceof CompositeByteBuf) {
+                return add((CompositeByteBuf) msg);
+            } else {
+                return add((ByteBuf) msg);
+            }
+        }
+        return false;
     }
 }

@@ -19,43 +19,101 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.ExecutorServiceFactory;
 
 import java.util.concurrent.Executor;
-import java.util.concurrent.ThreadFactory;
+
 
 /**
- * {@link EventLoopGroup} which uses epoll under the covers. Because of this
- * it only works on linux.
+ * A {@link MultithreadEventLoopGroup} which uses <a href="http://en.wikipedia.org/wiki/Epoll">epoll</a> under the
+ * covers. This {@link EventLoopGroup} works only on Linux systems!
  */
 public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
 
     /**
-     * Create a new instance using the default number of threads and the default {@link ThreadFactory}.
+     * Create a new instance that uses twice as many {@link EventLoop}s as there processors/cores
+     * available, as well as the default {@link Executor}.
+     *
+     * @see io.netty.util.concurrent.DefaultExecutorServiceFactory
      */
     public EpollEventLoopGroup() {
         this(0);
     }
 
     /**
-     * Create a new instance using the specified number of threads and the default {@link ThreadFactory}.
+     * Create a new instance that uses the default {@link Executor}.
+     *
+     * @see io.netty.util.concurrent.DefaultExecutorServiceFactory
+     *
+     * @param nEventLoops   the number of {@link EventLoop}s that will be used by this instance.
+     *                      If {@code executor} is {@code null} this number will also be the parallelism
+     *                      requested from the default executor. It is generally advised for the number
+     *                      of {@link EventLoop}s and the number of {@link Thread}s used by the
      */
-    public EpollEventLoopGroup(int nThreads) {
-        this(nThreads, null);
+    public EpollEventLoopGroup(int nEventLoops) {
+        this(nEventLoops, (Executor) null);
     }
 
     /**
-     * Create a new instance using the specified number of threads and the given {@link ThreadFactory}.
+     * @param nEventLoops   the number of {@link EventLoop}s that will be used by this instance.
+     *                      If {@code executor} is {@code null} this number will also be the parallelism
+     *                      requested from the default executor. It is generally advised for the number
+     *                      of {@link EventLoop}s and the number of {@link Thread}s used by the
+     *                      {@code executor} to lie very close together.
+     * @param executor  the {@link Executor} to use, or {@code null} if the default should be used.
      */
-    public EpollEventLoopGroup(int nThreads, ThreadFactory threadFactory) {
-        this(nThreads, threadFactory, 128);
+    @SuppressWarnings("deprecation")
+    public EpollEventLoopGroup(int nEventLoops, Executor executor) {
+        this(nEventLoops, executor, 0);
     }
 
     /**
-     * Create a new instance using the specified number of threads, the given {@link ThreadFactory} and the given
-     * maximal amount of epoll events to handle per epollWait(...).
+     * @param nEventLoops   the number of {@link EventLoop}s that will be used by this instance.
+     *                      If {@code executor} is {@code null} this number will also be the parallelism
+     *                      requested from the default executor. It is generally advised for the number
+     *                      of {@link EventLoop}s and the number of {@link Thread}s used by the
+     *                      {@code executor} to lie very close together.
+     * @param executorServiceFactory   the {@link ExecutorServiceFactory} to use, or {@code null} if the
+     *                                 default should be used.
      */
-    public EpollEventLoopGroup(int nThreads, ThreadFactory threadFactory, int maxEventsAtOnce) {
-        super(nThreads, threadFactory, maxEventsAtOnce);
+    @SuppressWarnings("deprecation")
+    public EpollEventLoopGroup(int nEventLoops, ExecutorServiceFactory executorServiceFactory) {
+        this(nEventLoops, executorServiceFactory, 0);
+    }
+
+    /**
+     * @param nEventLoops   the number of {@link EventLoop}s that will be used by this instance.
+     *                      If {@code executor} is {@code null} this number will also be the parallelism
+     *                      requested from the default executor. It is generally advised for the number
+     *                      of {@link EventLoop}s and the number of {@link Thread}s used by the
+     *                      {@code executor} to lie very close together.
+     * @param executor   the {@link Executor} to use, or {@code null} if the default should be used.
+     * @param maxEventsAtOnce   the maximum number of epoll events to handle per epollWait(...).
+     *
+     * @deprecated  Use {@link #EpollEventLoopGroup(int)}, {@link #EpollEventLoopGroup(int)} or
+     *              {@link #EpollEventLoopGroup(int, Executor)}
+     */
+    @Deprecated
+    public EpollEventLoopGroup(int nEventLoops, Executor executor, int maxEventsAtOnce) {
+        super(nEventLoops, executor, maxEventsAtOnce);
+    }
+
+    /**
+     * @param nEventLoops   the number of {@link EventLoop}s that will be used by this instance.
+     *                      If {@code executor} is {@code null} this number will also be the parallelism
+     *                      requested from the default executor. It is generally advised for the number
+     *                      of {@link EventLoop}s and the number of {@link Thread}s used by the
+     *                      {@code executor} to lie very close together.
+     * @param executorServiceFactory   the {@link ExecutorServiceFactory} to use, or {@code null} if the default
+     *                                 should be used.
+     * @param maxEventsAtOnce   the maximum number of epoll events to handle per epollWait(...).
+     *
+     * @deprecated  Use {@link #EpollEventLoopGroup(int)}, {@link #EpollEventLoopGroup(int)} or
+     *              {@link #EpollEventLoopGroup(int, ExecutorServiceFactory)}
+     */
+    @Deprecated
+    public EpollEventLoopGroup(int nEventLoops, ExecutorServiceFactory executorServiceFactory, int maxEventsAtOnce) {
+        super(nEventLoops, executorServiceFactory, maxEventsAtOnce);
     }
 
     /**

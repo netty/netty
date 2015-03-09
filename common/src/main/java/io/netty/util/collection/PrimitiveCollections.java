@@ -16,6 +16,7 @@ package io.netty.util.collection;
 
 import io.netty.util.internal.EmptyArrays;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -109,6 +110,11 @@ public final class PrimitiveCollections {
         public Object[] values(Class<Object> clazz) {
             return EmptyArrays.EMPTY_OBJECTS;
         }
+
+        @Override
+        public Collection<Object> values() {
+            return Collections.emptyList();
+        }
     }
 
     /**
@@ -187,6 +193,11 @@ public final class PrimitiveCollections {
         @Override
         public V[] values(Class<V> clazz) {
             return map.values(clazz);
+        }
+
+        @Override
+        public Collection<V> values() {
+            return map.values();
         }
 
         /**

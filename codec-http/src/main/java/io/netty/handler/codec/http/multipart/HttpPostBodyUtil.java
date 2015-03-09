@@ -16,9 +16,7 @@
 package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.util.CharsetUtil;
-
-import java.nio.charset.Charset;
+import io.netty.handler.codec.http.HttpHeaderValues;
 
 /**
  * Shared Static object between HttpMessageDecoder, HttpPostRequestDecoder and HttpPostRequestEncoder
@@ -26,54 +24,16 @@ import java.nio.charset.Charset;
 final class HttpPostBodyUtil {
 
     public static final int chunkSize = 8096;
-    /**
-     * HTTP content disposition header name.
-     */
-    public static final String CONTENT_DISPOSITION = "Content-Disposition";
-
-    public static final String NAME = "name";
-
-    public static final String FILENAME = "filename";
-
-    /**
-     * Content-disposition value for form data.
-     */
-    public static final String FORM_DATA = "form-data";
-
-    /**
-     * Content-disposition value for file attachment.
-     */
-    public static final String ATTACHMENT = "attachment";
-
-    /**
-     * Content-disposition value for file attachment.
-     */
-    public static final String FILE = "file";
-
-    /**
-     * HTTP content type body attribute for multiple uploads.
-     */
-    public static final String MULTIPART_MIXED = "multipart/mixed";
-
-    /**
-     * Charset for 8BIT
-     */
-    public static final Charset ISO_8859_1 = CharsetUtil.ISO_8859_1;
-
-    /**
-     * Charset for 7BIT
-     */
-    public static final Charset US_ASCII = CharsetUtil.US_ASCII;
 
     /**
      * Default Content-Type in binary form
      */
-    public static final String DEFAULT_BINARY_CONTENT_TYPE = "application/octet-stream";
+    public static final String DEFAULT_BINARY_CONTENT_TYPE = HttpHeaderValues.APPLICATION_OCTET_STREAM.toString();
 
     /**
      * Default Content-Type in Text form
      */
-    public static final String DEFAULT_TEXT_CONTENT_TYPE = "text/plain";
+    public static final String DEFAULT_TEXT_CONTENT_TYPE = HttpHeaderValues.TEXT_PLAIN.toString();
 
     /**
      * Allowed mechanism for multipart

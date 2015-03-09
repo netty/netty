@@ -15,6 +15,7 @@
 package io.netty.example.http2.server;
 
 import io.netty.channel.ChannelHandler;
+import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2OrHttpChooser;
 
 import javax.net.ssl.SSLEngine;
@@ -37,9 +38,12 @@ public class Http2OrHttpHandler extends Http2OrHttpChooser {
     @Override
     protected SelectedProtocol getProtocol(SSLEngine engine) {
         String[] protocol = engine.getSession().getProtocol().split(":");
-        SelectedProtocol selectedProtocol = SelectedProtocol.protocol(protocol[1]);
-        System.err.println("Selected Protocol is " + selectedProtocol);
-        return selectedProtocol;
+        if (protocol != null && protocol.length > 1) {
+            SelectedProtocol selectedProtocol = SelectedProtocol.protocol(protocol[1]);
+            System.err.println("Selected Protocol is " + selectedProtocol);
+            return selectedProtocol;
+        }
+        return SelectedProtocol.UNKNOWN;
     }
 
     @Override
@@ -48,7 +52,7 @@ public class Http2OrHttpHandler extends Http2OrHttpChooser {
     }
 
     @Override
-    protected ChannelHandler createHttp2RequestHandler() {
+    protected Http2ConnectionHandler createHttp2RequestHandler() {
         return new HelloWorldHttp2Handler();
     }
 }

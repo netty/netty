@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>5.0.0.Alpha2-SNAPSHOT</version>
+    <version>5.0.0.Alpha3-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-codec</artifactId>
@@ -52,6 +52,16 @@
     <dependency>
       <groupId>com.ning</groupId>
       <artifactId>compress-lzf</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>net.jpountz.lz4</groupId>
+      <artifactId>lz4</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.github.jponge</groupId>
+      <artifactId>lzma-java</artifactId>
       <optional>true</optional>
     </dependency>
 

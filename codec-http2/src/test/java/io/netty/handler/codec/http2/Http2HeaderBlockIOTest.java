@@ -15,6 +15,8 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2TestUtil.as;
+import static io.netty.handler.codec.http2.Http2TestUtil.randomString;
 import static org.junit.Assert.assertEquals;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -46,49 +48,39 @@ public class Http2HeaderBlockIOTest {
 
     @Test
     public void roundtripShouldBeSuccessful() throws Http2Exception {
-        Http2Headers in =
-                new DefaultHttp2Headers.Builder().method("GET").scheme("https")
-                        .authority("example.org").path("/some/path/resource2")
-                        .add("accept", "image/png").add("cache-control", "no-cache")
-                        .add("custom", "value1").add("custom", "value2")
-                        .add("custom", "value3").add("custom", "custom4").build();
+        Http2Headers in = headers();
         assertRoundtripSuccessful(in);
     }
 
     @Test
     public void successiveCallsShouldSucceed() throws Http2Exception {
         Http2Headers in =
-                new DefaultHttp2Headers.Builder().method("GET").scheme("https")
-                        .authority("example.org").path("/some/path")
-                        .add("accept", "*/*").build();
+                new DefaultHttp2Headers().method(as("GET")).scheme(as("https"))
+                        .authority(as("example.org")).path(as("/some/path"))
+                        .add(as("accept"), as("*/*"));
         assertRoundtripSuccessful(in);
 
         in =
-                new DefaultHttp2Headers.Builder().method("GET").scheme("https")
-                        .authority("example.org").path("/some/path/resource1")
-                        .add("accept", "image/jpeg").add("cache-control", "no-cache")
-                        .build();
+                new DefaultHttp2Headers().method(as("GET")).scheme(as("https"))
+                        .authority(as("example.org")).path(as("/some/path/resource1"))
+                        .add(as("accept"), as("image/jpeg"))
+                        .add(as("cache-control"), as("no-cache"));
         assertRoundtripSuccessful(in);
 
         in =
-                new DefaultHttp2Headers.Builder().method("GET").scheme("https")
-                        .authority("example.org").path("/some/path/resource2")
-                        .add("accept", "image/png").add("cache-control", "no-cache")
-                        .build();
+                new DefaultHttp2Headers().method(as("GET")).scheme(as("https"))
+                        .authority(as("example.org")).path(as("/some/path/resource2"))
+                        .add(as("accept"), as("image/png"))
+                        .add(as("cache-control"), as("no-cache"));
         assertRoundtripSuccessful(in);
     }
 
     @Test
     public void setMaxHeaderSizeShouldBeSuccessful() throws Http2Exception {
-        encoder.maxHeaderTableSize(10);
-        Http2Headers in =
-                new DefaultHttp2Headers.Builder().method("GET").scheme("https")
-                        .authority("example.org").path("/some/path/resource2")
-                        .add("accept", "image/png").add("cache-control", "no-cache")
-                        .add("custom", "value1").add("custom", "value2")
-                        .add("custom", "value3").add("custom", "custom4").build();
+        encoder.headerTable().maxHeaderTableSize(10);
+        Http2Headers in = headers();
         assertRoundtripSuccessful(in);
-        assertEquals(10, decoder.maxHeaderTableSize());
+        assertEquals(10, decoder.headerTable().maxHeaderTableSize());
     }
 
     private void assertRoundtripSuccessful(Http2Headers in) throws Http2Exception {
@@ -96,5 +88,14 @@ public class Http2HeaderBlockIOTest {
 
         Http2Headers out = decoder.decodeHeaders(buffer);
         assertEquals(in, out);
+    }
+
+    private static Http2Headers headers() {
+        return new DefaultHttp2Headers().method(as("GET")).scheme(as("https"))
+        .authority(as("example.org")).path(as("/some/path/resource2"))
+                .add(as("accept"), as("image/png")).add(as("cache-control"), as("no-cache"))
+                .add(as("custom"), as("value1")).add(as("custom"), as("value2"))
+                .add(as("custom"), as("value3")).add(as("custom"), as("custom4"))
+                .add(randomString(), randomString());
     }
 }

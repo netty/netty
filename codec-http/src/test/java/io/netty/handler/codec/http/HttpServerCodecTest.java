@@ -21,7 +21,6 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
@@ -92,7 +91,7 @@ public class HttpServerCodecTest {
 
         // Ensure the aggregator generates a full request.
         FullHttpRequest req = ch.readInbound();
-        assertThat(req.headers().get(CONTENT_LENGTH), is("1"));
+        assertThat(req.headers().getAndConvert(HttpHeaderNames.CONTENT_LENGTH), is("1"));
         assertThat(req.content().readableBytes(), is(1));
         assertThat(req.content().readByte(), is((byte) 42));
         req.release();
@@ -103,12 +102,13 @@ public class HttpServerCodecTest {
         // Send the actual response.
         FullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CREATED);
         res.content().writeBytes("OK".getBytes(CharsetUtil.UTF_8));
-        res.headers().set(CONTENT_LENGTH, 2);
+        res.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 2);
         ch.writeOutbound(res);
 
         // Ensure the encoder handles the response after handling 100 Continue.
         ByteBuf encodedRes = ch.readOutbound();
-        assertThat(encodedRes.toString(CharsetUtil.UTF_8), is("HTTP/1.1 201 Created\r\nContent-Length: 2\r\n\r\nOK"));
+        assertThat(encodedRes.toString(CharsetUtil.UTF_8),
+                   is("HTTP/1.1 201 Created\r\n" + HttpHeaderNames.CONTENT_LENGTH + ": 2\r\n\r\nOK"));
         encodedRes.release();
 
         ch.finish();

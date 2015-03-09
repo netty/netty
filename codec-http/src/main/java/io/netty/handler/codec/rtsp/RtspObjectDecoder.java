@@ -52,7 +52,7 @@ public abstract class RtspObjectDecoder extends HttpObjectDecoder {
 
     /**
      * Creates a new instance with the default
-     * {@code maxInitialLineLength (4096}}, {@code maxHeaderSize (8192)}, and
+     * {@code maxInitialLineLength (4096)}, {@code maxHeaderSize (8192)}, and
      * {@code maxContentLength (8192)}.
      */
     protected RtspObjectDecoder() {
@@ -79,7 +79,7 @@ public abstract class RtspObjectDecoder extends HttpObjectDecoder {
         if (empty) {
             return true;
         }
-        if (!msg.headers().contains(RtspHeaders.Names.CONTENT_LENGTH)) {
+        if (!msg.headers().contains(RtspHeaderNames.CONTENT_LENGTH)) {
             return true;
         }
         return empty;

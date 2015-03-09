@@ -18,9 +18,9 @@ package io.netty.bootstrap;
 import io.netty.channel.Channel;
 
 /**
- * Factory that creates a new {@link Channel} on {@link Bootstrap#bind()}, {@link Bootstrap#connect()}, and
- * {@link ServerBootstrap#bind()}.
+ * @deprecated Use {@link io.netty.channel.ChannelFactory} instead.
  */
+@Deprecated
 public interface ChannelFactory<T extends Channel> {
     /**
      * Creates a new channel.

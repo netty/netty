@@ -35,6 +35,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketClientCompressionHandler;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 import java.io.BufferedReader;
@@ -83,8 +84,7 @@ public final class WebSocketClient {
         final boolean ssl = "wss".equalsIgnoreCase(scheme);
         final SslContext sslCtx;
         if (ssl) {
-            SelfSignedCertificate ssc = new SelfSignedCertificate();
-            sslCtx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
+            sslCtx = SslContext.newClientContext(InsecureTrustManagerFactory.INSTANCE);
         } else {
             sslCtx = null;
         }

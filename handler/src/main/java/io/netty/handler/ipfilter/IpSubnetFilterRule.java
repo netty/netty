@@ -110,7 +110,17 @@ public final class IpSubnetFilterRule implements IpFilterRule {
         }
 
         private static int prefixToSubnetMask(int cidrPrefix) {
-            return -1 << 32 - cidrPrefix;
+            /**
+             * Perform the shift on a long and downcast it to int afterwards.
+             * This is necessary to handle a cidrPrefix of zero correctly.
+             * The left shift operator on an int only uses the five least
+             * significant bits of the right-hand operand. Thus -1 << 32 evaluates
+             * to -1 instead of 0. The left shift operator applied on a long
+             * uses the six least significant bits.
+             *
+             * Also see https://github.com/netty/netty/issues/2767
+             */
+            return (int) ((-1L << 32 - cidrPrefix) & 0xffffffff);
         }
     }
 

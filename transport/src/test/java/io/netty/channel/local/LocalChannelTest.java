@@ -190,29 +190,29 @@ public class LocalChannelTest {
         final EventLoopGroup serverGroup = new DefaultEventLoopGroup(1);
         final EventLoopGroup clientGroup = new DefaultEventLoopGroup(1) {
             @Override
-            protected EventLoop newChild(Executor threadFactory, Object... args)
+            protected EventLoop newChild(Executor executor, Object... args)
                     throws Exception {
-                return new SingleThreadEventLoop(this, threadFactory, true) {
+                return new SingleThreadEventLoop(this, executor, true) {
                     @Override
                     protected void run() {
-                        for (;;) {
-                            Runnable task = takeTask();
-                            if (task != null) {
-                                /* Only slow down the anonymous class in LocalChannel#doRegister() */
-                                if (task.getClass().getEnclosingClass() == LocalChannel.class) {
-                                    try {
-                                        closeLatch.await();
-                                    } catch (InterruptedException e) {
-                                        throw new Error(e);
-                                    }
+                        Runnable task = takeTask();
+                        if (task != null) {
+                            /* Only slow down the anonymous class in LocalChannel#doRegister() */
+                            if (task.getClass().getEnclosingClass() == LocalChannel.class) {
+                                try {
+                                    closeLatch.await();
+                                } catch (InterruptedException e) {
+                                    throw new Error(e);
                                 }
-                                task.run();
-                                updateLastExecutionTime();
                             }
+                            task.run();
+                            updateLastExecutionTime();
+                        }
 
-                            if (confirmShutdown()) {
-                                break;
-                            }
+                        if (confirmShutdown()) {
+                            cleanupAndTerminate(true);
+                        } else {
+                            scheduleExecution();
                         }
                     }
                 };

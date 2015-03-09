@@ -903,10 +903,6 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf slice(int index, int length) {
-        if (length == 0) {
-            return Unpooled.EMPTY_BUFFER;
-        }
-
         return new SlicedByteBuf(this, index, length);
     }
 
@@ -1076,23 +1072,18 @@ public abstract class AbstractByteBuf extends ByteBuf {
             return StringUtil.simpleClassName(this) + "(freed)";
         }
 
-        StringBuilder buf = new StringBuilder();
-        buf.append(StringUtil.simpleClassName(this));
-        buf.append("(ridx: ");
-        buf.append(readerIndex);
-        buf.append(", widx: ");
-        buf.append(writerIndex);
-        buf.append(", cap: ");
-        buf.append(capacity());
+        StringBuilder buf = new StringBuilder()
+            .append(StringUtil.simpleClassName(this))
+            .append("(ridx: ").append(readerIndex)
+            .append(", widx: ").append(writerIndex)
+            .append(", cap: ").append(capacity());
         if (maxCapacity != Integer.MAX_VALUE) {
-            buf.append('/');
-            buf.append(maxCapacity);
+            buf.append('/').append(maxCapacity);
         }
 
         ByteBuf unwrapped = unwrap();
         if (unwrapped != null) {
-            buf.append(", unwrapped: ");
-            buf.append(unwrapped);
+            buf.append(", unwrapped: ").append(unwrapped);
         }
         buf.append(')');
         return buf.toString();

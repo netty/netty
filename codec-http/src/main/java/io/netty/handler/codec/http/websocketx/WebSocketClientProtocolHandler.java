@@ -43,6 +43,11 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
     private final boolean handleCloseFrames;
 
     /**
+     * Returns the used handshaker
+     */
+    public WebSocketClientHandshaker handshaker() { return handshaker; }
+
+    /**
      * Events that are fired to notify about handshake status
      */
     public enum ClientHandshakeStateEvent {
@@ -73,12 +78,45 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      *            Maximum length of a frame's payload
      * @param handleCloseFrames
      *            {@code true} if close frames should not be forwarded and just close the channel
+     * @param performMasking
+     *            Whether to mask all written websocket frames. This must be set to true in order to be fully compatible
+     *            with the websocket specifications. Client applications that communicate with a non-standard server
+     *            which doesn't require masking might set this to false to achieve a higher performance.
+     * @param allowMaskMismatch
+     *            Allows to loosen the masking requirement on received frames. When this is set to false then also
+     *            frames which are not masked properly according to the standard will still be accepted.
+     */
+    public WebSocketClientProtocolHandler(URI webSocketURL, WebSocketVersion version, String subprotocol,
+                                          boolean allowExtensions, HttpHeaders customHeaders,
+                                          int maxFramePayloadLength, boolean handleCloseFrames,
+                                          boolean performMasking, boolean allowMaskMismatch) {
+        this(WebSocketClientHandshakerFactory.newHandshaker(webSocketURL, version, subprotocol,
+                                                            allowExtensions, customHeaders, maxFramePayloadLength,
+                                                            performMasking, allowMaskMismatch), handleCloseFrames);
+    }
+
+    /**
+     * Base constructor
+     *
+     * @param webSocketURL
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param version
+     *            Version of web socket specification to use to connect to the server
+     * @param subprotocol
+     *            Sub protocol request sent to the server.
+     * @param customHeaders
+     *            Map of custom headers to add to the client request
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload
+     * @param handleCloseFrames
+     *            {@code true} if close frames should not be forwarded and just close the channel
      */
     public WebSocketClientProtocolHandler(URI webSocketURL, WebSocketVersion version, String subprotocol,
                                                    boolean allowExtensions, HttpHeaders customHeaders,
                                                    int maxFramePayloadLength, boolean handleCloseFrames) {
-        this(WebSocketClientHandshakerFactory.newHandshaker(webSocketURL, version, subprotocol,
-                allowExtensions, customHeaders, maxFramePayloadLength), handleCloseFrames);
+        this(webSocketURL, version, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength,
+             handleCloseFrames, true, false);
     }
 
     /**

@@ -32,7 +32,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     protected int offset;
     protected int length;
     int maxLength;
-
+    Thread initThread;
     private ByteBuffer tmpNioBuf;
 
     @SuppressWarnings("unchecked")
@@ -53,6 +53,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
         this.maxLength = maxLength;
         setIndex(0, 0);
         tmpNioBuf = null;
+        initThread = Thread.currentThread();
     }
 
     void initUnpooled(PoolChunk<T> chunk, int length) {
@@ -65,6 +66,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
         this.length = maxLength = length;
         setIndex(0, 0);
         tmpNioBuf = null;
+        initThread = Thread.currentThread();
     }
 
     @Override
@@ -142,7 +144,9 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
             final long handle = this.handle;
             this.handle = -1;
             memory = null;
-            chunk.arena.free(chunk, handle, maxLength);
+            boolean sameThread = initThread == Thread.currentThread();
+            initThread = null;
+            chunk.arena.free(chunk, handle, maxLength, sameThread);
             recycle();
         }
     }

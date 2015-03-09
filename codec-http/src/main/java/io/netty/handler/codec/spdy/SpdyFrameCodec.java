@@ -111,7 +111,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder implements SpdyFrameDec
         } else if (msg instanceof SpdySynStreamFrame) {
 
             SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
-            ByteBuf headerBlock = spdyHeaderBlockEncoder.encode(spdySynStreamFrame);
+            ByteBuf headerBlock = spdyHeaderBlockEncoder.encode(ctx.alloc(), spdySynStreamFrame);
             try {
                 frame = spdyFrameEncoder.encodeSynStreamFrame(
                         ctx.alloc(),
@@ -130,7 +130,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder implements SpdyFrameDec
         } else if (msg instanceof SpdySynReplyFrame) {
 
             SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
-            ByteBuf headerBlock = spdyHeaderBlockEncoder.encode(spdySynReplyFrame);
+            ByteBuf headerBlock = spdyHeaderBlockEncoder.encode(ctx.alloc(), spdySynReplyFrame);
             try {
                 frame = spdyFrameEncoder.encodeSynReplyFrame(
                         ctx.alloc(),
@@ -184,7 +184,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder implements SpdyFrameDec
         } else if (msg instanceof SpdyHeadersFrame) {
 
             SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
-            ByteBuf headerBlock = spdyHeaderBlockEncoder.encode(spdyHeadersFrame);
+            ByteBuf headerBlock = spdyHeaderBlockEncoder.encode(ctx.alloc(), spdyHeadersFrame);
             try {
                 frame = spdyFrameEncoder.encodeHeadersFrame(
                         ctx.alloc(),
@@ -285,7 +285,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder implements SpdyFrameDec
     @Override
     public void readHeaderBlock(ByteBuf headerBlock) {
         try {
-            spdyHeaderBlockDecoder.decode(headerBlock, spdyHeadersFrame);
+            spdyHeaderBlockDecoder.decode(ctx.alloc(), headerBlock, spdyHeadersFrame);
         } catch (Exception e) {
             ctx.fireExceptionCaught(e);
         } finally {

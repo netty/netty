@@ -20,6 +20,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.util.List;
@@ -69,11 +70,24 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             buf = ctx.alloc().buffer();
             // Encode the message.
             encodeInitialLine(buf, m);
-            m.headers().forEachEntry(new HttpHeadersEncoder(buf));
+            encodeHeaders(m.headers(), buf);
             buf.writeBytes(CRLF);
             state = HttpHeaderUtil.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
         }
+
+        // Bypass the encoder in case of an empty buffer, so that the following idiom works:
+        //
+        //     ch.write(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+        //
+        // See https://github.com/netty/netty/issues/2983 for more information.
+
+        if (msg instanceof ByteBuf && !((ByteBuf) msg).isReadable()) {
+            out.add(EMPTY_BUFFER);
+            return;
+        }
+
         if (msg instanceof HttpContent || msg instanceof ByteBuf || msg instanceof FileRegion) {
+
             if (state == ST_INIT) {
                 throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
             }
@@ -119,6 +133,13 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         }
     }
 
+    /**
+     * Encode the {@link HttpHeaders} into a {@link ByteBuf}.
+     */
+    protected void encodeHeaders(HttpHeaders headers, ByteBuf buf) throws Exception {
+        headers.forEachEntry(new HttpHeadersEncoder(buf));
+    }
+
     private void encodeChunkedContent(ChannelHandlerContext ctx, Object msg, long contentLength, List<Object> out) {
         if (contentLength > 0) {
             byte[] length = Long.toHexString(contentLength).getBytes(CharsetUtil.US_ASCII);
@@ -137,7 +158,12 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             } else {
                 ByteBuf buf = ctx.alloc().buffer();
                 buf.writeBytes(ZERO_CRLF);
-                headers.forEachEntry(new HttpHeadersEncoder(buf));
+                try {
+                    encodeHeaders(headers, buf);
+                } catch (Exception ex) {
+                    buf.release();
+                    PlatformDependent.throwException(ex);
+                }
                 buf.writeBytes(CRLF);
                 out.add(buf);
             }

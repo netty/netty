@@ -59,7 +59,8 @@ public class ThreadPerChannelEventLoop extends SingleThreadEventLoop {
                     ch.unsafe().close(ch.unsafe().voidPromise());
                 }
                 if (confirmShutdown()) {
-                    break;
+                    cleanupAndTerminate(true);
+                    return;
                 }
             } else {
                 if (ch != null) {

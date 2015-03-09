@@ -20,15 +20,16 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 import static io.netty.handler.codec.http.HttpMethod.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
+import static io.netty.util.ReferenceCountUtil.*;
 
 /**
  * Handles <a href="http://www.w3.org/TR/cors/">Cross Origin Resource Sharing</a> (CORS) requests.
@@ -39,6 +40,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.*;
 public class CorsHandler extends ChannelHandlerAdapter {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(CorsHandler.class);
+    private static final String ANY_ORIGIN = "*";
     private final CorsConfig config;
 
     private HttpRequest request;
@@ -64,7 +66,7 @@ public class CorsHandler extends ChannelHandlerAdapter {
     }
 
     private void handlePreflight(final ChannelHandlerContext ctx, final HttpRequest request) {
-        final HttpResponse response = new DefaultFullHttpResponse(request.protocolVersion(), OK);
+        final HttpResponse response = new DefaultFullHttpResponse(request.protocolVersion(), OK, true, true);
         if (setOrigin(response)) {
             setAllowMethods(response);
             setAllowHeaders(response);
@@ -72,6 +74,7 @@ public class CorsHandler extends ChannelHandlerAdapter {
             setMaxAge(response);
             setPreflightHeaders(response);
         }
+        release(request);
         ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
     }
 
@@ -86,7 +89,7 @@ public class CorsHandler extends ChannelHandlerAdapter {
     }
 
     private boolean setOrigin(final HttpResponse response) {
-        final String origin = request.headers().get(ORIGIN);
+        final CharSequence origin = request.headers().get(HttpHeaderNames.ORIGIN);
         if (origin != null) {
             if ("null".equals(origin) && config.isNullOriginAllowed()) {
                 setAnyOrigin(response);
@@ -116,7 +119,7 @@ public class CorsHandler extends ChannelHandlerAdapter {
             return true;
         }
 
-        final String origin = request.headers().get(ORIGIN);
+        final CharSequence origin = request.headers().get(HttpHeaderNames.ORIGIN);
         if (origin == null) {
             // Not a CORS request so we cannot validate it. It may be a non CORS request.
             return true;
@@ -130,50 +133,51 @@ public class CorsHandler extends ChannelHandlerAdapter {
     }
 
     private void echoRequestOrigin(final HttpResponse response) {
-        setOrigin(response, request.headers().get(ORIGIN));
+        setOrigin(response, request.headers().get(HttpHeaderNames.ORIGIN));
     }
 
     private static void setVaryHeader(final HttpResponse response) {
-        response.headers().set(VARY, ORIGIN);
+        response.headers().set(HttpHeaderNames.VARY, HttpHeaderNames.ORIGIN);
     }
 
     private static void setAnyOrigin(final HttpResponse response) {
-        setOrigin(response, "*");
+        setOrigin(response, ANY_ORIGIN);
     }
 
-    private static void setOrigin(final HttpResponse response, final String origin) {
-        response.headers().set(ACCESS_CONTROL_ALLOW_ORIGIN, origin);
+    private static void setOrigin(final HttpResponse response, final CharSequence origin) {
+        response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, origin);
     }
 
     private void setAllowCredentials(final HttpResponse response) {
-        if (config.isCredentialsAllowed()) {
-            response.headers().set(ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
+        if (config.isCredentialsAllowed()
+                && !response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN).equals(ANY_ORIGIN)) {
+            response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
         }
     }
 
     private static boolean isPreflightRequest(final HttpRequest request) {
         final HttpHeaders headers = request.headers();
         return request.method().equals(OPTIONS) &&
-                headers.contains(ORIGIN) &&
-                headers.contains(ACCESS_CONTROL_REQUEST_METHOD);
+                headers.contains(HttpHeaderNames.ORIGIN) &&
+                headers.contains(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD);
     }
 
     private void setExposeHeaders(final HttpResponse response) {
         if (!config.exposedHeaders().isEmpty()) {
-            response.headers().set(ACCESS_CONTROL_EXPOSE_HEADERS, config.exposedHeaders());
+            response.headers().set(HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS, config.exposedHeaders());
         }
     }
 
     private void setAllowMethods(final HttpResponse response) {
-        response.headers().set(ACCESS_CONTROL_ALLOW_METHODS, config.allowedRequestMethods());
+        response.headers().setObject(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS, config.allowedRequestMethods());
     }
 
     private void setAllowHeaders(final HttpResponse response) {
-        response.headers().set(ACCESS_CONTROL_ALLOW_HEADERS, config.allowedRequestHeaders());
+        response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, config.allowedRequestHeaders());
     }
 
     private void setMaxAge(final HttpResponse response) {
-        response.headers().set(ACCESS_CONTROL_MAX_AGE, config.maxAge());
+        response.headers().setLong(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE, config.maxAge());
     }
 
     @Override
@@ -199,6 +203,7 @@ public class CorsHandler extends ChannelHandlerAdapter {
     private static void forbidden(final ChannelHandlerContext ctx, final HttpRequest request) {
         ctx.writeAndFlush(new DefaultFullHttpResponse(request.protocolVersion(), FORBIDDEN))
                 .addListener(ChannelFutureListener.CLOSE);
+        release(request);
     }
 }
 

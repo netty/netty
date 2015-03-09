@@ -34,7 +34,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
-import java.net.ConnectException;
 import java.net.SocketAddress;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectableChannel;
@@ -103,11 +102,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     protected SelectableChannel javaChannel() {
         return ch;
-    }
-
-    @Override
-    public NioEventLoop eventLoop() {
-        return (NioEventLoop) super.eventLoop();
     }
 
     /**
@@ -233,12 +227,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     });
                 }
             } catch (Throwable t) {
-                if (t instanceof ConnectException) {
-                    Throwable newT = new ConnectException(t.getMessage() + ": " + remoteAddress);
-                    newT.setStackTrace(t.getStackTrace());
-                    t = newT;
-                }
-                promise.tryFailure(t);
+                promise.tryFailure(annotateConnectException(t, remoteAddress));
                 closeIfClosed();
             }
         }
@@ -287,13 +276,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                 doFinishConnect();
                 fulfillConnectPromise(connectPromise, wasActive);
             } catch (Throwable t) {
-                if (t instanceof ConnectException) {
-                    Throwable newT = new ConnectException(t.getMessage() + ": " + requestedRemoteAddress);
-                    newT.setStackTrace(t.getStackTrace());
-                    t = newT;
-                }
-
-                fulfillConnectPromise(connectPromise, t);
+                fulfillConnectPromise(connectPromise, annotateConnectException(t, requestedRemoteAddress));
             } finally {
                 // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
                 // See https://github.com/netty/netty/issues/1770
@@ -337,13 +320,13 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         boolean selected = false;
         for (;;) {
             try {
-                selectionKey = javaChannel().register(eventLoop().selector, 0, this);
+                selectionKey = javaChannel().register(((NioEventLoop) eventLoop().unwrap()).selector, 0, this);
                 return;
             } catch (CancelledKeyException e) {
                 if (!selected) {
                     // Force the Selector to select now as the "canceled" SelectionKey may still be
                     // cached and not removed because no Select.select(..) operation was called yet.
-                    eventLoop().selectNow();
+                    ((NioEventLoop) eventLoop().unwrap()).selectNow();
                     selected = true;
                 } else {
                     // We forced a select operation on the selector before but the SelectionKey is still cached
@@ -356,7 +339,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     @Override
     protected void doDeregister() throws Exception {
-        eventLoop().cancel(selectionKey());
+        ((NioEventLoop) eventLoop().unwrap()).cancel(selectionKey());
     }
 
     @Override

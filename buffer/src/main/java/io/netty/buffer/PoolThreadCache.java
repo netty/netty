@@ -445,10 +445,14 @@ final class PoolThreadCache {
             for (; free > 0; free--) {
                 if (!freeEntry(entries[i])) {
                     // all freed
-                    return;
+                    break;
                 }
                 i = nextIdx(i);
             }
+
+            // Update head to point to te correct entry
+            // See https://github.com/netty/netty/issues/2924
+            head = i;
         }
 
         @SuppressWarnings({ "unchecked", "rawtypes" })

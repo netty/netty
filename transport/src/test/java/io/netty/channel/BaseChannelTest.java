@@ -64,9 +64,19 @@ class BaseChannelTest {
         return buf;
     }
 
-    void assertLog(String expected) {
+    void assertLog(String firstExpected, String... otherExpected) {
         String actual = loggingHandler.getLog();
-        assertEquals(expected, actual);
+        if (firstExpected.equals(actual)) {
+            return;
+        }
+        for (String e: otherExpected) {
+            if (e.equals(actual)) {
+                return;
+            }
+        }
+
+        // Let the comparison fail with the first expectation.
+        assertEquals(firstExpected, actual);
     }
 
     void clearLog() {

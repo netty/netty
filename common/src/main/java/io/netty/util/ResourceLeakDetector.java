@@ -211,11 +211,13 @@ public final class ResourceLeakDetector<T> {
                     logger.error("LEAK: {}.release() was not called before it's garbage-collected. " +
                             "Enable advanced leak reporting to find out where the leak occurred. " +
                             "To enable advanced leak reporting, " +
-                            "specify the JVM option '-D{}={}' or call {}.setLevel()",
+                            "specify the JVM option '-D{}={}' or call {}.setLevel() " +
+                            "See http://netty.io/wiki/reference-counted-objects.html for more information.",
                             resourceType, PROP_LEVEL, Level.ADVANCED.name().toLowerCase(), simpleClassName(this));
                 } else {
                     logger.error(
-                            "LEAK: {}.release() was not called before it's garbage-collected.{}",
+                            "LEAK: {}.release() was not called before it's garbage-collected. " +
+                            "See http://netty.io/wiki/reference-counted-objects.html for more information.{}",
                             resourceType, records);
                 }
             }
@@ -299,6 +301,7 @@ public final class ResourceLeakDetector<T> {
             return false;
         }
 
+        @Override
         public String toString() {
             if (creationRecord == null) {
                 return "";
@@ -309,27 +312,27 @@ public final class ResourceLeakDetector<T> {
                 array = lastRecords.toArray();
             }
 
-            StringBuilder buf = new StringBuilder(16384);
-            buf.append(NEWLINE);
-            buf.append("Recent access records: ");
-            buf.append(array.length);
-            buf.append(NEWLINE);
+            StringBuilder buf = new StringBuilder(16384)
+                .append(NEWLINE)
+                .append("Recent access records: ")
+                .append(array.length)
+                .append(NEWLINE);
 
             if (array.length > 0) {
                 for (int i = array.length - 1; i >= 0; i --) {
-                    buf.append('#');
-                    buf.append(i + 1);
-                    buf.append(':');
-                    buf.append(NEWLINE);
-                    buf.append(array[i]);
+                    buf.append('#')
+                       .append(i + 1)
+                       .append(':')
+                       .append(NEWLINE)
+                       .append(array[i]);
                 }
             }
 
-            buf.append("Created at:");
-            buf.append(NEWLINE);
-            buf.append(creationRecord);
-            buf.setLength(buf.length() - NEWLINE.length());
+            buf.append("Created at:")
+               .append(NEWLINE)
+               .append(creationRecord);
 
+            buf.setLength(buf.length() - NEWLINE.length());
             return buf.toString();
         }
     }

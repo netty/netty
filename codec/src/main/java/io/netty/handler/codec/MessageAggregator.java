@@ -135,7 +135,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     protected abstract boolean isAggregated(I msg) throws Exception;
 
     /**
-     * Returns the maximum allowed length of the aggregated message.
+     * Returns the maximum allowed length of the aggregated message in bytes.
      */
     public final int maxContentLength() {
         return maxContentLength;
@@ -238,7 +238,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
             }
 
             // A streamed message - initialize the cumulative buffer, and wait for incoming chunks.
-            CompositeByteBuf content = Unpooled.compositeBuffer(maxCumulationBufferComponents);
+            CompositeByteBuf content = ctx.alloc().compositeBuffer(maxCumulationBufferComponents);
             if (m instanceof ByteBufHolder) {
                 appendPartialContent(content, ((ByteBufHolder) m).content());
             }

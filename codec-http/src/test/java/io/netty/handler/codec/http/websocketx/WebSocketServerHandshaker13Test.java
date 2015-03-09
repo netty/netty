@@ -19,7 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpHeaders.Names;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
@@ -30,7 +31,6 @@ import io.netty.util.ReferenceCountUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
-import static io.netty.handler.codec.http.HttpHeaders.Values.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 
 public class WebSocketServerHandshaker13Test {
@@ -51,20 +51,20 @@ public class WebSocketServerHandshaker13Test {
 
         FullHttpRequest req = ReferenceCountUtil.releaseLater(
                 new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, "/chat"));
-        req.headers().set(Names.HOST, "server.example.com");
-        req.headers().set(Names.UPGRADE, WEBSOCKET.toString().toLowerCase());
-        req.headers().set(Names.CONNECTION, "Upgrade");
-        req.headers().set(Names.SEC_WEBSOCKET_KEY, "dGhlIHNhbXBsZSBub25jZQ==");
-        req.headers().set(Names.SEC_WEBSOCKET_ORIGIN, "http://example.com");
-        req.headers().set(Names.SEC_WEBSOCKET_PROTOCOL, "chat, superchat");
-        req.headers().set(Names.SEC_WEBSOCKET_VERSION, "13");
+        req.headers().set(HttpHeaderNames.HOST, "server.example.com");
+        req.headers().set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET);
+        req.headers().set(HttpHeaderNames.CONNECTION, "Upgrade");
+        req.headers().set(HttpHeaderNames.SEC_WEBSOCKET_KEY, "dGhlIHNhbXBsZSBub25jZQ==");
+        req.headers().set(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN, "http://example.com");
+        req.headers().set(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, "chat, superchat");
+        req.headers().set(HttpHeaderNames.SEC_WEBSOCKET_VERSION, "13");
 
         if (subProtocol) {
             new WebSocketServerHandshaker13(
-                    "ws://example.com/chat", "chat", false, Integer.MAX_VALUE).handshake(ch, req);
+                    "ws://example.com/chat", "chat", false, Integer.MAX_VALUE, false).handshake(ch, req);
         } else {
             new WebSocketServerHandshaker13(
-                    "ws://example.com/chat", null, false, Integer.MAX_VALUE).handshake(ch, req);
+                    "ws://example.com/chat", null, false, Integer.MAX_VALUE, false).handshake(ch, req);
         }
 
         ByteBuf resBuf = ch.readOutbound();
@@ -74,11 +74,11 @@ public class WebSocketServerHandshaker13Test {
         HttpResponse res = ch2.readInbound();
 
         Assert.assertEquals(
-                "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", res.headers().get(Names.SEC_WEBSOCKET_ACCEPT));
+                "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT));
         if (subProtocol) {
-            Assert.assertEquals("chat", res.headers().get(Names.SEC_WEBSOCKET_PROTOCOL));
+            Assert.assertEquals("chat", res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL));
         } else {
-            Assert.assertNull(res.headers().get(Names.SEC_WEBSOCKET_PROTOCOL));
+            Assert.assertNull(res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL));
         }
         ReferenceCountUtil.release(res);
     }

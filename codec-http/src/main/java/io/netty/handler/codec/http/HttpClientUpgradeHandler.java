@@ -16,13 +16,13 @@ package io.netty.handler.codec.http;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.AsciiString;
 
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.util.ReferenceCountUtil.*;
 
@@ -177,12 +177,12 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator {
                 return;
             }
 
-            String upgradeHeader = response.headers().get(UPGRADE);
+            CharSequence upgradeHeader = response.headers().get(HttpHeaderNames.UPGRADE);
             if (upgradeHeader == null) {
                 throw new IllegalStateException(
                         "Switching Protocols response missing UPGRADE header");
             }
-            if (!upgradeCodec.protocol().equalsIgnoreCase(upgradeHeader)) {
+            if (!AsciiString.equalsIgnoreCase(upgradeCodec.protocol(), upgradeHeader)) {
                 throw new IllegalStateException(
                         "Switching Protocols response with unexpected UPGRADE protocol: "
                                 + upgradeHeader);
@@ -216,7 +216,7 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator {
      */
     private void setUpgradeRequestHeaders(ChannelHandlerContext ctx, HttpRequest request) {
         // Set the UPGRADE header on the request.
-        request.headers().set(UPGRADE, upgradeCodec.protocol());
+        request.headers().set(HttpHeaderNames.UPGRADE, upgradeCodec.protocol());
 
         // Add all protocol-specific headers to the request.
         Set<String> connectionParts = new LinkedHashSet<String>(2);
@@ -228,7 +228,7 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator {
             builder.append(part);
             builder.append(',');
         }
-        builder.append(UPGRADE);
-        request.headers().set(CONNECTION, builder.toString());
+        builder.append(HttpHeaderNames.UPGRADE);
+        request.headers().set(HttpHeaderNames.CONNECTION, builder.toString());
     }
 }

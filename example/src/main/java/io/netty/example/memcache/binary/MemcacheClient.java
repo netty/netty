@@ -25,14 +25,20 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http2.Http2OrHttpChooser.SelectedProtocol;
+import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.codec.memcache.binary.BinaryMemcacheClientCodec;
 import io.netty.handler.codec.memcache.binary.BinaryMemcacheObjectAggregator;
+import io.netty.handler.ssl.ApplicationProtocolConfig;
+import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
+import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
+import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslProvider;
+import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.util.Arrays;
 
 /**
  * Simple memcache client that demonstrates get and set commands against a memcache server.
@@ -47,9 +53,17 @@ public final class MemcacheClient {
         // Configure SSL.
         final SslContext sslCtx;
         if (SSL) {
-            sslCtx = SslContext.newClientContext(
-                    null, InsecureTrustManagerFactory.INSTANCE, null,
-                    Arrays.asList(SelectedProtocol.HTTP_2.protocolName(), SelectedProtocol.HTTP_1_1.protocolName()),
+            sslCtx = SslContext.newClientContext(SslProvider.JDK,
+                    null, InsecureTrustManagerFactory.INSTANCE, Http2SecurityUtil.CIPHERS,
+                    /* NOTE: the following filter may not include all ciphers required by the HTTP/2 specification
+                     * Please refer to the HTTP/2 specification for cipher requirements. */
+                    SupportedCipherSuiteFilter.INSTANCE,
+                    new ApplicationProtocolConfig(
+                            Protocol.ALPN,
+                            SelectorFailureBehavior.FATAL_ALERT,
+                            SelectedListenerFailureBehavior.FATAL_ALERT,
+                            SelectedProtocol.HTTP_2.protocolName(),
+                            SelectedProtocol.HTTP_1_1.protocolName()),
                     0, 0);
         } else {
             sslCtx = null;

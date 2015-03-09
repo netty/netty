@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static io.netty.handler.codec.mqtt.MqttCodecUtil.*;
-import static io.netty.handler.codec.mqtt.MqttVersion.*;
 
 /**
  * Decodes Mqtt messages from bytes, following
@@ -203,15 +202,15 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
 
     private static Result<MqttConnectVariableHeader> decodeConnectionVariableHeader(ByteBuf buffer) {
         final Result<String> protoString = decodeString(buffer);
-        if (!PROTOCOL_NAME.equals(protoString.value)) {
-            throw new DecoderException("missing " + PROTOCOL_NAME + " signature");
-        }
-
         int numberOfBytesConsumed = protoString.numberOfBytesConsumed;
 
-        final byte version = buffer.readByte();
+        final byte protocolLevel = buffer.readByte();
+        numberOfBytesConsumed += 1;
+
+        final MqttVersion mqttVersion = MqttVersion.fromProtocolNameAndLevel(protoString.value, protocolLevel);
+
         final int b1 = buffer.readUnsignedByte();
-        numberOfBytesConsumed += 2;
+        numberOfBytesConsumed += 1;
 
         final Result<Integer> keepAlive = decodeMsbLsb(buffer);
         numberOfBytesConsumed += keepAlive.numberOfBytesConsumed;
@@ -224,8 +223,8 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
         final boolean cleanSession = (b1 & 0x02) == 0x02;
 
         final MqttConnectVariableHeader mqttConnectVariableHeader = new MqttConnectVariableHeader(
-                PROTOCOL_NAME,
-                version,
+                mqttVersion.protocolName(),
+                mqttVersion.protocolLevel(),
                 hasUserName,
                 hasPassword,
                 willRetain,
@@ -321,8 +320,10 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
             MqttConnectVariableHeader mqttConnectVariableHeader) {
         final Result<String> decodedClientId = decodeString(buffer);
         final String decodedClientIdValue = decodedClientId.value;
-        if (!isValidClientId(decodedClientIdValue)) {
-            throw new DecoderException("invalid clientIdentifier: " + decodedClientIdValue);
+        final MqttVersion mqttVersion = MqttVersion.fromProtocolNameAndLevel(mqttConnectVariableHeader.name(),
+                (byte) mqttConnectVariableHeader.version());
+        if (!isValidClientId(mqttVersion, decodedClientIdValue)) {
+            throw new MqttIdentifierRejectedException("invalid clientIdentifier: " + decodedClientIdValue);
         }
         int numberOfBytesConsumed = decodedClientId.numberOfBytesConsumed;
 

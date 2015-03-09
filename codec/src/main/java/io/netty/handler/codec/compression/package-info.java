@@ -21,4 +21,3 @@
  * <a href="http://code.google.com/p/snappy/">Snappy</a>.
  */
 package io.netty.handler.codec.compression;
-// TODO Implement lzma handler

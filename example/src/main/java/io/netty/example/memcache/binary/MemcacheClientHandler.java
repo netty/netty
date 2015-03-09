@@ -54,6 +54,7 @@ public class MemcacheClientHandler extends ChannelHandlerAdapter {
 
             ByteBuf content = Unpooled.wrappedBuffer(value.getBytes(CharsetUtil.UTF_8));
             ByteBuf extras = ctx.alloc().buffer(8);
+            extras.writeZero(8);
 
             BinaryMemcacheRequest req = new DefaultFullBinaryMemcacheRequest(key, extras, content);
             req.setOpcode(BinaryMemcacheOpcodes.SET);

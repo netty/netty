@@ -22,8 +22,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderUtil;
-import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.ssl.SslHandler;
@@ -41,13 +41,15 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelHandlerAdapter {
     private final String subprotocols;
     private final boolean allowExtensions;
     private final int maxFramePayloadSize;
+    private final boolean allowMaskMismatch;
 
     WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols,
-            boolean allowExtensions, int maxFrameSize) {
+            boolean allowExtensions, int maxFrameSize, boolean allowMaskMismatch) {
         this.websocketPath = websocketPath;
         this.subprotocols = subprotocols;
         this.allowExtensions = allowExtensions;
         maxFramePayloadSize = maxFrameSize;
+        this.allowMaskMismatch = allowMaskMismatch;
     }
 
     @Override
@@ -61,7 +63,7 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelHandlerAdapter {
 
             final WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
                     getWebSocketLocation(ctx.pipeline(), req, websocketPath), subprotocols,
-                            allowExtensions, maxFramePayloadSize);
+                            allowExtensions, maxFramePayloadSize, allowMaskMismatch);
             final WebSocketServerHandshaker handshaker = wsFactory.newHandshaker(req);
             if (handshaker == null) {
                 WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
@@ -100,7 +102,7 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelHandlerAdapter {
             // SSL in use so use Secure WebSockets
             protocol = "wss";
         }
-        return protocol + "://" + req.headers().get(HttpHeaders.Names.HOST) + path;
+        return protocol + "://" + req.headers().get(HttpHeaderNames.HOST) + path;
     }
 
 }

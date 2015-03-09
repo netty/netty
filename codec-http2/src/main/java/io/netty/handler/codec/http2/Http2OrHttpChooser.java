@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.TLS_UPGRADE_PROTOCOL_NAME;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -36,11 +37,9 @@ import javax.net.ssl.SSLEngine;
  */
 public abstract class Http2OrHttpChooser extends ByteToMessageDecoder {
 
-    // TODO: Replace with generic NPN handler
-
     public enum SelectedProtocol {
         /** Must be updated to match the HTTP/2 draft number. */
-        HTTP_2("h2-13"),
+        HTTP_2(TLS_UPGRADE_PROTOCOL_NAME),
         HTTP_1_1("http/1.1"),
         HTTP_1_0("http/1.0"),
         UNKNOWN("Unknown");
@@ -149,9 +148,8 @@ public abstract class Http2OrHttpChooser extends ByteToMessageDecoder {
     protected abstract ChannelHandler createHttp1RequestHandler();
 
     /**
-     * Create the {@link io.netty.channel.ChannelHandler} that is responsible for handling the http
-     * responses when the when the {@link SelectedProtocol} was {@link SelectedProtocol#HTTP_2}. The
-     * returned class should be a subclass of {@link AbstractHttp2ConnectionHandler}.
+     * Create the {@link ChannelHandler} that is responsible for handling the http responses
+     * when the when the {@link SelectedProtocol} was {@link SelectedProtocol#HTTP_2}.
      */
-    protected abstract ChannelHandler createHttp2RequestHandler();
+    protected abstract Http2ConnectionHandler createHttp2RequestHandler();
 }

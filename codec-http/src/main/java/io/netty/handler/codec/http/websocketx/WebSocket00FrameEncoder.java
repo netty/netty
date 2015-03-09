@@ -48,8 +48,9 @@ public class WebSocket00FrameEncoder extends MessageToMessageEncoder<WebSocketFr
             out.add(data.retain());
             out.add(_0XFF.duplicate());
         } else if (msg instanceof CloseWebSocketFrame) {
-            // Close frame
-            out.add(_0XFF_0X00);
+            // Close frame, needs to call duplicate to allow multiple writes.
+            // See https://github.com/netty/netty/issues/2768
+            out.add(_0XFF_0X00.duplicate());
         } else {
             // Binary frame
             ByteBuf data = msg.content();

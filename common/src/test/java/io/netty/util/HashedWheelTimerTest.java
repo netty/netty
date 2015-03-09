@@ -131,7 +131,7 @@ public class HashedWheelTimerTest {
     public void testExecutionOnTime() throws InterruptedException {
         int tickDuration = 200;
         int timeout = 125;
-        int maxTimeout = tickDuration + timeout + tickDuration;
+        int maxTimeout = 2 * (tickDuration + timeout);
         final HashedWheelTimer timer = new HashedWheelTimer(tickDuration, TimeUnit.MILLISECONDS);
         final BlockingQueue<Long> queue = new LinkedBlockingQueue<Long>();
 

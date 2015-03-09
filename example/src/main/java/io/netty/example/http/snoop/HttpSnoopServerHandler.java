@@ -22,16 +22,17 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.Cookie;
-import io.netty.handler.codec.http.CookieDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderUtil;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.QueryStringDecoder;
+import io.netty.handler.codec.http.ServerCookieDecoder;
 import io.netty.handler.codec.http.ServerCookieEncoder;
 import io.netty.util.CharsetUtil;
 
@@ -40,7 +41,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.*;
+import static io.netty.handler.codec.http.HttpHeaderNames.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 
@@ -74,9 +75,9 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
 
             HttpHeaders headers = request.headers();
             if (!headers.isEmpty()) {
-                for (Map.Entry<String, String> h: headers) {
-                    String key = h.getKey();
-                    String value = h.getValue();
+                for (Map.Entry<CharSequence, CharSequence> h: headers) {
+                    CharSequence key = h.getKey();
+                    CharSequence value = h.getValue();
                     buf.append("HEADER: ").append(key).append(" = ").append(value).append("\r\n");
                 }
                 buf.append("\r\n");
@@ -115,8 +116,8 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
                 LastHttpContent trailer = (LastHttpContent) msg;
                 if (!trailer.trailingHeaders().isEmpty()) {
                     buf.append("\r\n");
-                    for (String name: trailer.trailingHeaders().names()) {
-                        for (String value: trailer.trailingHeaders().getAll(name)) {
+                    for (CharSequence name: trailer.trailingHeaders().names()) {
+                        for (CharSequence value: trailer.trailingHeaders().getAll(name)) {
                             buf.append("TRAILING HEADER: ");
                             buf.append(name).append(" = ").append(value).append("\r\n");
                         }
@@ -155,16 +156,16 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
 
         if (keepAlive) {
             // Add 'Content-Length' header only for a keep-alive connection.
-            response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
+            response.headers().setInt(CONTENT_LENGTH, response.content().readableBytes());
             // Add keep alive header as per:
             // - http://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Connection
-            response.headers().set(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
+            response.headers().set(CONNECTION, HttpHeaderValues.KEEP_ALIVE);
         }
 
         // Encode the cookie.
-        String cookieString = request.headers().get(COOKIE);
+        String cookieString = request.headers().getAndConvert(COOKIE);
         if (cookieString != null) {
-            Set<Cookie> cookies = CookieDecoder.decode(cookieString);
+            Set<Cookie> cookies = ServerCookieDecoder.decode(cookieString);
             if (!cookies.isEmpty()) {
                 // Reset the cookies if necessary.
                 for (Cookie cookie: cookies) {

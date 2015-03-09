@@ -187,15 +187,18 @@ abstract class PoolArena<T> {
         buf.initUnpooled(newUnpooledChunk(reqCapacity), reqCapacity);
     }
 
-    void free(PoolChunk<T> chunk, long handle, int normCapacity) {
+    void free(PoolChunk<T> chunk, long handle, int normCapacity, boolean sameThreads) {
         if (chunk.unpooled) {
             destroyChunk(chunk);
         } else {
-            PoolThreadCache cache = parent.threadCache.get();
-            if (cache.add(this, chunk, handle, normCapacity)) {
-                // cached so not free it.
-                return;
+            if (sameThreads) {
+                PoolThreadCache cache = parent.threadCache.get();
+                if (cache.add(this, chunk, handle, normCapacity)) {
+                    // cached so not free it.
+                    return;
+                }
             }
+
             synchronized (this) {
                 chunk.parent.free(chunk, handle);
             }
@@ -295,7 +298,7 @@ abstract class PoolArena<T> {
         buf.setIndex(readerIndex, writerIndex);
 
         if (freeOldMemory) {
-            free(oldChunk, oldHandle, oldMaxLength);
+            free(oldChunk, oldHandle, oldMaxLength, buf.initThread == Thread.currentThread());
         }
     }
 
@@ -306,41 +309,41 @@ abstract class PoolArena<T> {
     protected abstract void destroyChunk(PoolChunk<T> chunk);
 
     public synchronized String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append("Chunk(s) at 0~25%:");
-        buf.append(StringUtil.NEWLINE);
-        buf.append(qInit);
-        buf.append(StringUtil.NEWLINE);
-        buf.append("Chunk(s) at 0~50%:");
-        buf.append(StringUtil.NEWLINE);
-        buf.append(q000);
-        buf.append(StringUtil.NEWLINE);
-        buf.append("Chunk(s) at 25~75%:");
-        buf.append(StringUtil.NEWLINE);
-        buf.append(q025);
-        buf.append(StringUtil.NEWLINE);
-        buf.append("Chunk(s) at 50~100%:");
-        buf.append(StringUtil.NEWLINE);
-        buf.append(q050);
-        buf.append(StringUtil.NEWLINE);
-        buf.append("Chunk(s) at 75~100%:");
-        buf.append(StringUtil.NEWLINE);
-        buf.append(q075);
-        buf.append(StringUtil.NEWLINE);
-        buf.append("Chunk(s) at 100%:");
-        buf.append(StringUtil.NEWLINE);
-        buf.append(q100);
-        buf.append(StringUtil.NEWLINE);
-        buf.append("tiny subpages:");
+        StringBuilder buf = new StringBuilder()
+            .append("Chunk(s) at 0~25%:")
+            .append(StringUtil.NEWLINE)
+            .append(qInit)
+            .append(StringUtil.NEWLINE)
+            .append("Chunk(s) at 0~50%:")
+            .append(StringUtil.NEWLINE)
+            .append(q000)
+            .append(StringUtil.NEWLINE)
+            .append("Chunk(s) at 25~75%:")
+            .append(StringUtil.NEWLINE)
+            .append(q025)
+            .append(StringUtil.NEWLINE)
+            .append("Chunk(s) at 50~100%:")
+            .append(StringUtil.NEWLINE)
+            .append(q050)
+            .append(StringUtil.NEWLINE)
+            .append("Chunk(s) at 75~100%:")
+            .append(StringUtil.NEWLINE)
+            .append(q075)
+            .append(StringUtil.NEWLINE)
+            .append("Chunk(s) at 100%:")
+            .append(StringUtil.NEWLINE)
+            .append(q100)
+            .append(StringUtil.NEWLINE)
+            .append("tiny subpages:");
         for (int i = 1; i < tinySubpagePools.length; i ++) {
             PoolSubpage<T> head = tinySubpagePools[i];
             if (head.next == head) {
                 continue;
             }
 
-            buf.append(StringUtil.NEWLINE);
-            buf.append(i);
-            buf.append(": ");
+            buf.append(StringUtil.NEWLINE)
+               .append(i)
+               .append(": ");
             PoolSubpage<T> s = head.next;
             for (;;) {
                 buf.append(s);
@@ -350,17 +353,17 @@ abstract class PoolArena<T> {
                 }
             }
         }
-        buf.append(StringUtil.NEWLINE);
-        buf.append("small subpages:");
+        buf.append(StringUtil.NEWLINE)
+           .append("small subpages:");
         for (int i = 1; i < smallSubpagePools.length; i ++) {
             PoolSubpage<T> head = smallSubpagePools[i];
             if (head.next == head) {
                 continue;
             }
 
-            buf.append(StringUtil.NEWLINE);
-            buf.append(i);
-            buf.append(": ");
+            buf.append(StringUtil.NEWLINE)
+               .append(i)
+               .append(": ");
             PoolSubpage<T> s = head.next;
             for (;;) {
                 buf.append(s);

@@ -55,7 +55,7 @@ public class LocalTransportThreadModelTest2 {
         serverBootstrap.bind(new LocalAddress(LOCAL_CHANNEL)).sync();
 
         int count = 100;
-        for (int i = 1; i < count + 1; i ++) {
+        for (int i = 1; i < count + 1; i++) {
             Channel ch = clientBootstrap.connect().sync().channel();
 
             // SPIN until we get what we are looking for.

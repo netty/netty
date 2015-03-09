@@ -38,4 +38,9 @@ public abstract class AbstractEventLoop extends AbstractEventExecutor implements
     public EventLoop next() {
         return (EventLoop) super.next();
     }
+
+    @Override
+    public EventLoop unwrap() {
+        return this;
+    }
 }

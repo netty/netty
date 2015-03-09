@@ -70,4 +70,211 @@ public class StringUtilTest {
     public void splitWithDelimiterAtBeginning() {
         assertArrayEquals(new String[] { "", "foo", "bar" }, split("#foo#bar", '#'));
     }
+
+    @Test
+    public void splitMaxPart() {
+        assertArrayEquals(new String[] { "foo", "bar:bar2" }, split("foo:bar:bar2", ':', 2));
+        assertArrayEquals(new String[] { "foo", "bar", "bar2" }, split("foo:bar:bar2", ':', 3));
+    }
+
+    @Test
+    public void substringAfterTest() {
+        assertEquals("bar:bar2", substringAfter("foo:bar:bar2", ':'));
+    }
+
+    @Test (expected = NullPointerException.class)
+    public void escapeCsvNull() {
+        StringUtil.escapeCsv(null);
+    }
+
+    @Test
+    public void escapeCsvEmpty() {
+        CharSequence value = "";
+        CharSequence expected = value;
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvUnquoted() {
+        CharSequence value = "something";
+        CharSequence expected = value;
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvAlreadyQuoted() {
+        CharSequence value = "\"something\"";
+        CharSequence expected = "\"something\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithQuote() {
+        CharSequence value = "s\"";
+        CharSequence expected = "\"s\"\"\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithQuoteInMiddle() {
+        CharSequence value = "some text\"and more text";
+        CharSequence expected = "\"some text\"\"and more text\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithQuoteInMiddleAlreadyQuoted() {
+        CharSequence value = "\"some text\"and more text\"";
+        CharSequence expected = "\"some text\"\"and more text\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithQuotedWords() {
+        CharSequence value = "\"foo\"\"goo\"";
+        CharSequence expected = "\"foo\"\"goo\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithAlreadyEscapedQuote() {
+        CharSequence value = "foo\"\"goo";
+        CharSequence expected = "foo\"\"goo";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvEndingWithQuote() {
+        CharSequence value = "some\"";
+        CharSequence expected = "\"some\"\"\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithSingleQuote() {
+        CharSequence value = "\"";
+        CharSequence expected = "\"\"\"\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithSingleQuoteAndCharacter() {
+        CharSequence value = "\"f";
+        CharSequence expected = "\"\"\"f\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvAlreadyEscapedQuote() {
+        CharSequence value = "\"some\"\"";
+        CharSequence expected = "\"some\"\"\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvQuoted() {
+        CharSequence value = "\"foo,goo\"";
+        CharSequence expected = value;
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithLineFeed() {
+        CharSequence value = "some text\n more text";
+        CharSequence expected = "\"some text\n more text\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithSingleLineFeedCharacter() {
+        CharSequence value = "\n";
+        CharSequence expected = "\"\n\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithMultipleLineFeedCharacter() {
+        CharSequence value = "\n\n";
+        CharSequence expected = "\"\n\n\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithQuotedAndLineFeedCharacter() {
+        CharSequence value = " \" \n ";
+        CharSequence expected = "\" \"\" \n \"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithLineFeedAtEnd() {
+        CharSequence value = "testing\n";
+        CharSequence expected = "\"testing\n\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithComma() {
+        CharSequence value = "test,ing";
+        CharSequence expected = "\"test,ing\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithSingleComma() {
+        CharSequence value = ",";
+        CharSequence expected = "\",\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithSingleCarriageReturn() {
+        CharSequence value = "\r";
+        CharSequence expected = "\"\r\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithMultipleCarriageReturn() {
+        CharSequence value = "\r\r";
+        CharSequence expected = "\"\r\r\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithCarriageReturn() {
+        CharSequence value = "some text\r more text";
+        CharSequence expected = "\"some text\r more text\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithQuotedAndCarriageReturnCharacter() {
+        CharSequence value = "\"\r";
+        CharSequence expected = "\"\"\"\r\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithCarriageReturnAtEnd() {
+        CharSequence value = "testing\r";
+        CharSequence expected = "\"testing\r\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithCRLFCharacter() {
+        CharSequence value = "\r\n";
+        CharSequence expected = "\"\r\n\"";
+        escapeCsv(value, expected);
+    }
+
+    private static void escapeCsv(CharSequence value, CharSequence expected) {
+        CharSequence escapedValue = value;
+        for (int i = 0; i < 10; ++i) {
+            escapedValue = StringUtil.escapeCsv(escapedValue);
+            assertEquals(expected, escapedValue.toString());
+        }
+    }
+
 }

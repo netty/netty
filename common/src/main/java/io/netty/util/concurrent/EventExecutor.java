@@ -20,8 +20,8 @@ import java.util.Set;
 /**
  * The {@link EventExecutor} is a special {@link EventExecutorGroup} which comes
  * with some handy methods to see if a {@link Thread} is executed in a event loop.
- * Beside this it also extends the {@link EventExecutorGroup} to allow a generic way to
- * access methods.
+ * Besides this, it also extends the {@link EventExecutorGroup} to allow for a generic
+ * way to access methods.
  *
  */
 public interface EventExecutor extends EventExecutorGroup {
@@ -53,6 +53,25 @@ public interface EventExecutor extends EventExecutorGroup {
      * {@code false} otherwise.
      */
     boolean inEventLoop(Thread thread);
+
+    /**
+     * Returns an {@link EventExecutor} that is not a {@link WrappedEventExecutor}.
+     *
+     * <ul>
+     *     <li>
+     *         A {@link WrappedEventExecutor} implementing this method must return the underlying
+     *         {@link EventExecutor} while making sure that it's not a {@link WrappedEventExecutor}
+     *         (e.g. by multiple calls to {@link #unwrap()}).
+     *     </li>
+     *     <li>
+     *         An {@link EventExecutor} that is not a {@link WrappedEventExecutor} must return a reference to itself.
+     *     </li>
+     *     <li>
+     *         This method must not return null.
+     *     </li>
+     * </ul>
+     */
+    EventExecutor unwrap();
 
     /**
      * Return a new {@link Promise}.

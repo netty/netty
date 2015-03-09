@@ -65,13 +65,14 @@ public class MqttFixedHeader {
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append('[');
-        builder.append("messageType=").append(messageType);
-        builder.append(", isDup=").append(isDup);
-        builder.append(", qosLevel=").append(qosLevel);
-        builder.append(", isRetain=").append(isRetain);
-        builder.append(", remainingLength=").append(remainingLength);
-        builder.append(']');
-        return builder.toString();
+        return new StringBuilder(StringUtil.simpleClassName(this))
+            .append('[')
+            .append("messageType=").append(messageType)
+            .append(", isDup=").append(isDup)
+            .append(", qosLevel=").append(qosLevel)
+            .append(", isRetain=").append(isRetain)
+            .append(", remainingLength=").append(remainingLength)
+            .append(']')
+            .toString();
     }
 }

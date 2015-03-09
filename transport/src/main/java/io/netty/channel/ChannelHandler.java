@@ -82,7 +82,7 @@ import java.net.SocketAddress;
  * <pre>
  * // Create a new handler instance per channel.
  * // See {@link ChannelInitializer#initChannel(Channel)}.
- * public class DataServerInitializer extends {@link ChannelInitializer}&lt{@link Channel}&gt {
+ * public class DataServerInitializer extends {@link ChannelInitializer}&lt;{@link Channel}&gt; {
  *     {@code @Override}
  *     public void initChannel({@link Channel} channel) {
  *         channel.pipeline().addLast("handler", <b>new DataServerHandler()</b>);
@@ -104,12 +104,12 @@ import java.net.SocketAddress;
  *
  * {@code @Sharable}
  * public class DataServerHandler extends {@link SimpleChannelInboundHandler}&lt;Message&gt; {
- *     private final {@link AttributeKey}&lt{@link Boolean}&gt auth =
+ *     private final {@link AttributeKey}&lt;{@link Boolean}&gt; auth =
  *           {@link AttributeKey#valueOf(String) AttributeKey.valueOf("auth")};
  *
  *     {@code @Override}
  *     protected void messageReceived({@link ChannelHandlerContext} ctx, Message message) {
- *         {@link Attribute}&lt{@link Boolean}&gt attr = ctx.attr(auth);
+ *         {@link Attribute}&lt;{@link Boolean}&gt; attr = ctx.attr(auth);
  *         {@link Channel} ch = ctx.channel();
  *
  *         if (message instanceof LoginMessage) {
@@ -129,7 +129,7 @@ import java.net.SocketAddress;
  * Now that the state of the handler is attached to the {@link ChannelHandlerContext}, you can add the
  * same handler instance to different pipelines:
  * <pre>
- * public class DataServerInitializer extends {@link ChannelInitializer}&lt{@link Channel}&gt {
+ * public class DataServerInitializer extends {@link ChannelInitializer}&lt;{@link Channel}&gt; {
  *
  *     private static final DataServerHandler <b>SHARED</b> = new DataServerHandler();
  *

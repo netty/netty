@@ -28,9 +28,9 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaderUtil;
 import io.netty.handler.codec.http.HttpChunkedInput;
-import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpHeaderUtil;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -53,7 +53,7 @@ import java.util.Locale;
 import java.util.TimeZone;
 import java.util.regex.Pattern;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.*;
+import static io.netty.handler.codec.http.HttpHeaderNames.*;
 import static io.netty.handler.codec.http.HttpMethod.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
@@ -150,7 +150,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         }
 
         // Cache Validation
-        String ifModifiedSince = request.headers().get(IF_MODIFIED_SINCE);
+        String ifModifiedSince = request.headers().getAndConvert(IF_MODIFIED_SINCE);
         if (ifModifiedSince != null && !ifModifiedSince.isEmpty()) {
             SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
             Date ifModifiedSinceDate = dateFormatter.parse(ifModifiedSince);
@@ -179,7 +179,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         setContentTypeHeader(response, file);
         setDateAndCacheHeaders(response, file);
         if (HttpHeaderUtil.isKeepAlive(request)) {
-            response.headers().set(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
+            response.headers().set(CONNECTION, HttpHeaderValues.KEEP_ALIVE);
         }
 
         // Write the initial line and the header.
@@ -187,13 +187,18 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
 
         // Write the content.
         ChannelFuture sendFileFuture;
+        ChannelFuture lastContentFuture;
         if (ctx.pipeline().get(SslHandler.class) == null) {
             sendFileFuture =
                     ctx.write(new DefaultFileRegion(raf.getChannel(), 0, fileLength), ctx.newProgressivePromise());
+            // Write the end marker.
+            lastContentFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
         } else {
             sendFileFuture =
                     ctx.write(new HttpChunkedInput(new ChunkedFile(raf, 0, fileLength, 8192)),
                             ctx.newProgressivePromise());
+            // HttpChunkedInput will write the end marker (LastHttpContent) for us.
+            lastContentFuture = sendFileFuture;
         }
 
         sendFileFuture.addListener(new ChannelProgressiveFutureListener() {
@@ -211,9 +216,6 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
                 System.err.println(future.channel() + " Transfer complete.");
             }
         });
-
-        // Write the end marker
-        ChannelFuture lastContentFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 
         // Decide whether to close the connection or not.
         if (!HttpHeaderUtil.isKeepAlive(request)) {
@@ -240,7 +242,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             throw new Error(e);
         }
 
-        if (!uri.startsWith("/")) {
+        if (uri.isEmpty() || uri.charAt(0) != '/') {
             return null;
         }
 
@@ -251,7 +253,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         // You will have to do something serious in the production environment.
         if (uri.contains(File.separator + '.') ||
             uri.contains('.' + File.separator) ||
-            uri.startsWith(".") || uri.endsWith(".") ||
+            uri.charAt(0) == '.' || uri.charAt(uri.length() - 1) == '.' ||
             INSECURE_URI.matcher(uri).matches()) {
             return null;
         }
@@ -266,21 +268,20 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK);
         response.headers().set(CONTENT_TYPE, "text/html; charset=UTF-8");
 
-        StringBuilder buf = new StringBuilder();
         String dirPath = dir.getPath();
+        StringBuilder buf = new StringBuilder()
+            .append("<!DOCTYPE html>\r\n")
+            .append("<html><head><title>")
+            .append("Listing of: ")
+            .append(dirPath)
+            .append("</title></head><body>\r\n")
 
-        buf.append("<!DOCTYPE html>\r\n");
-        buf.append("<html><head><title>");
-        buf.append("Listing of: ");
-        buf.append(dirPath);
-        buf.append("</title></head><body>\r\n");
+            .append("<h3>Listing of: ")
+            .append(dirPath)
+            .append("</h3>\r\n")
 
-        buf.append("<h3>Listing of: ");
-        buf.append(dirPath);
-        buf.append("</h3>\r\n");
-
-        buf.append("<ul>");
-        buf.append("<li><a href=\"../\">..</a></li>\r\n");
+            .append("<ul>")
+            .append("<li><a href=\"../\">..</a></li>\r\n");
 
         for (File f: dir.listFiles()) {
             if (f.isHidden() || !f.canRead()) {
@@ -292,11 +293,11 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
                 continue;
             }
 
-            buf.append("<li><a href=\"");
-            buf.append(name);
-            buf.append("\">");
-            buf.append(name);
-            buf.append("</a></li>\r\n");
+            buf.append("<li><a href=\"")
+               .append(name)
+               .append("\">")
+               .append(name)
+               .append("</a></li>\r\n");
         }
 
         buf.append("</ul></body></html>\r\n");

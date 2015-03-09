@@ -22,6 +22,7 @@ import io.netty.handler.codec.AsciiHeadersEncoder.NewlineType;
 import io.netty.handler.codec.AsciiHeadersEncoder.SeparatorType;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.PlatformDependent;
 
 import java.util.List;
 
@@ -65,7 +66,12 @@ public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe>
 
         buf.writeBytes(frame.command().toString().getBytes(CharsetUtil.US_ASCII));
         buf.writeByte(StompConstants.LF);
-        frame.headers().forEachEntry(new AsciiHeadersEncoder(buf, SeparatorType.COLON, NewlineType.LF));
+        try {
+            frame.headers().forEachEntry(new AsciiHeadersEncoder(buf, SeparatorType.COLON, NewlineType.LF));
+        } catch (Exception ex) {
+            buf.release();
+            PlatformDependent.throwException(ex);
+        }
         buf.writeByte(StompConstants.LF);
         return buf;
     }

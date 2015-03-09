@@ -28,7 +28,7 @@ public class HttpHeaderUtilTest {
     @Test
     public void testRemoveTransferEncodingIgnoreCase() {
         HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        message.headers().set(HttpHeaders.Names.TRANSFER_ENCODING, "Chunked");
+        message.headers().set(HttpHeaderNames.TRANSFER_ENCODING, "Chunked");
         assertFalse(message.headers().isEmpty());
         HttpHeaderUtil.setTransferEncodingChunked(message, false);
         assertTrue(message.headers().isEmpty());
@@ -43,7 +43,7 @@ public class HttpHeaderUtilTest {
 
         assertEquals("1", headers.get("Foo"));
 
-        List<String> values = headers.getAll("Foo");
+        List<CharSequence> values = headers.getAll("Foo");
         assertEquals(2, values.size());
         assertEquals("1", values.get(0));
         assertEquals("2", values.get(1));

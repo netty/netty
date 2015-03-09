@@ -120,16 +120,18 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                 return;
             }
             FileOutputStream outputStream = new FileOutputStream(file);
-            FileChannel localfileChannel = outputStream.getChannel();
-            ByteBuffer byteBuffer = buffer.nioBuffer();
-            int written = 0;
-            while (written < size) {
-                written += localfileChannel.write(byteBuffer);
+            try {
+                FileChannel localfileChannel = outputStream.getChannel();
+                ByteBuffer byteBuffer = buffer.nioBuffer();
+                int written = 0;
+                while (written < size) {
+                    written += localfileChannel.write(byteBuffer);
+                }
+                buffer.readerIndex(buffer.readerIndex() + written);
+                localfileChannel.force(false);
+            } finally {
+                outputStream.close();
             }
-            buffer.readerIndex(buffer.readerIndex() + written);
-            localfileChannel.force(false);
-            localfileChannel.close();
-            outputStream.close();
             setCompleted();
         } finally {
             // Release the buffer as it was retained before and we not need a reference to it at all
@@ -210,19 +212,22 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         }
         file = tempFile();
         FileOutputStream outputStream = new FileOutputStream(file);
-        FileChannel localfileChannel = outputStream.getChannel();
-        byte[] bytes = new byte[4096 * 4];
-        ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
-        int read = inputStream.read(bytes);
         int written = 0;
-        while (read > 0) {
-            byteBuffer.position(read).flip();
-            written += localfileChannel.write(byteBuffer);
-            checkSize(written);
-            read = inputStream.read(bytes);
+        try {
+            FileChannel localfileChannel = outputStream.getChannel();
+            byte[] bytes = new byte[4096 * 4];
+            ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
+            int read = inputStream.read(bytes);
+            while (read > 0) {
+                byteBuffer.position(read).flip();
+                written += localfileChannel.write(byteBuffer);
+                checkSize(written);
+                read = inputStream.read(bytes);
+            }
+            localfileChannel.force(false);
+        } finally {
+            outputStream.close();
         }
-        localfileChannel.force(false);
-        localfileChannel.close();
         size = written;
         if (definedSize > 0 && definedSize < size) {
             if (!file.delete()) {
@@ -279,7 +284,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             return EMPTY_BUFFER;
         }
         if (fileChannel == null) {
-            FileInputStream  inputStream = new FileInputStream(file);
+            FileInputStream inputStream = new FileInputStream(file);
             fileChannel = inputStream.getChannel();
         }
         int read = 0;
@@ -337,20 +342,51 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         }
         if (!file.renameTo(dest)) {
             // must copy
-            FileInputStream inputStream = new FileInputStream(file);
-            FileOutputStream outputStream = new FileOutputStream(dest);
-            FileChannel in = inputStream.getChannel();
-            FileChannel out = outputStream.getChannel();
-            int chunkSize = 8196;
+            IOException exception = null;
+            FileInputStream inputStream = null;
+            FileOutputStream outputStream = null;
+            long chunkSize = 8196;
             long position = 0;
-            while (position < size) {
-                if (chunkSize < size - position) {
-                    chunkSize = (int) (size - position);
+            try {
+                inputStream = new FileInputStream(file);
+                outputStream = new FileOutputStream(dest);
+                FileChannel in = inputStream.getChannel();
+                FileChannel out = outputStream.getChannel();
+                while (position < size) {
+                    if (chunkSize < size - position) {
+                        chunkSize = size - position;
+                    }
+                    position += in.transferTo(position, chunkSize , out);
                 }
-                position += in.transferTo(position, chunkSize , out);
+            } catch (IOException e) {
+                exception = e;
+            } finally {
+                if (inputStream != null) {
+                    try {
+                        inputStream.close();
+                    } catch (IOException e) {
+                        if (exception == null) { // Choose to report the first exception
+                            exception = e;
+                        } else {
+                            logger.warn("Multiple exceptions detected, the following will be suppressed {}", e);
+                        }
+                    }
+                }
+                if (outputStream != null) {
+                    try {
+                        outputStream.close();
+                    } catch (IOException e) {
+                        if (exception == null) { // Choose to report the first exception
+                            exception = e;
+                        } else {
+                            logger.warn("Multiple exceptions detected, the following will be suppressed {}", e);
+                        }
+                    }
+                }
             }
-            in.close();
-            out.close();
+            if (exception != null) {
+                throw exception;
+            }
             if (position == size) {
                 if (!file.delete()) {
                     logger.warn("Failed to delete: {}", file);
@@ -381,14 +417,17 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                     "File too big to be loaded in memory");
         }
         FileInputStream inputStream = new FileInputStream(src);
-        FileChannel fileChannel = inputStream.getChannel();
         byte[] array = new byte[(int) srcsize];
-        ByteBuffer byteBuffer = ByteBuffer.wrap(array);
-        int read = 0;
-        while (read < srcsize) {
-            read += fileChannel.read(byteBuffer);
+        try {
+            FileChannel fileChannel = inputStream.getChannel();
+            ByteBuffer byteBuffer = ByteBuffer.wrap(array);
+            int read = 0;
+            while (read < srcsize) {
+                read += fileChannel.read(byteBuffer);
+            }
+        } finally {
+            inputStream.close();
         }
-        fileChannel.close();
         return array;
     }
 

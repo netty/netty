@@ -44,11 +44,15 @@ public class StompSubframeDecoderTest {
         ByteBuf incoming = Unpooled.buffer();
         incoming.writeBytes(StompTestConstants.CONNECT_FRAME.getBytes());
         channel.writeInbound(incoming);
+
         StompHeadersSubframe frame = channel.readInbound();
         assertNotNull(frame);
         assertEquals(StompCommand.CONNECT, frame.command());
+
         StompContentSubframe content = channel.readInbound();
         assertSame(LastStompContentSubframe.EMPTY_LAST_CONTENT, content);
+        content.release();
+
         Object o = channel.readInbound();
         assertNull(o);
     }
@@ -58,13 +62,17 @@ public class StompSubframeDecoderTest {
         ByteBuf incoming = Unpooled.buffer();
         incoming.writeBytes(StompTestConstants.SEND_FRAME_2.getBytes());
         channel.writeInbound(incoming);
+
         StompHeadersSubframe frame = channel.readInbound();
         assertNotNull(frame);
         assertEquals(StompCommand.SEND, frame.command());
+
         StompContentSubframe content = channel.readInbound();
         assertTrue(content instanceof LastStompContentSubframe);
         String s = content.content().toString(CharsetUtil.UTF_8);
         assertEquals("hello, queue a!!!", s);
+        content.release();
+
         assertNull(channel.readInbound());
     }
 
@@ -73,13 +81,17 @@ public class StompSubframeDecoderTest {
         ByteBuf incoming = Unpooled.buffer();
         incoming.writeBytes(StompTestConstants.SEND_FRAME_1.getBytes());
         channel.writeInbound(incoming);
+
         StompHeadersSubframe frame = channel.readInbound();
         assertNotNull(frame);
         assertEquals(StompCommand.SEND, frame.command());
+
         StompContentSubframe content = channel.readInbound();
         assertTrue(content instanceof LastStompContentSubframe);
         String s = content.content().toString(CharsetUtil.UTF_8);
         assertEquals("hello, queue a!", s);
+        content.release();
+
         assertNull(channel.readInbound());
     }
 
@@ -90,24 +102,30 @@ public class StompSubframeDecoderTest {
         ByteBuf incoming = Unpooled.buffer();
         incoming.writeBytes(StompTestConstants.SEND_FRAME_2.getBytes());
         channel.writeInbound(incoming);
+
         StompHeadersSubframe frame = channel.readInbound();
         assertNotNull(frame);
         assertEquals(StompCommand.SEND, frame.command());
+
         StompContentSubframe content = channel.readInbound();
         String s = content.content().toString(CharsetUtil.UTF_8);
         assertEquals("hello", s);
+        content.release();
 
         content = channel.readInbound();
         s = content.content().toString(CharsetUtil.UTF_8);
         assertEquals(", que", s);
+        content.release();
 
         content = channel.readInbound();
         s = content.content().toString(CharsetUtil.UTF_8);
         assertEquals("ue a!", s);
+        content.release();
 
         content = channel.readInbound();
         s = content.content().toString(CharsetUtil.UTF_8);
         assertEquals("!!", s);
+        content.release();
 
         assertNull(channel.readInbound());
     }
@@ -122,14 +140,19 @@ public class StompSubframeDecoderTest {
         StompHeadersSubframe frame = channel.readInbound();
         assertNotNull(frame);
         assertEquals(StompCommand.CONNECT, frame.command());
+
         StompContentSubframe content = channel.readInbound();
         assertSame(LastStompContentSubframe.EMPTY_LAST_CONTENT, content);
+        content.release();
 
         StompHeadersSubframe frame2 = channel.readInbound();
         assertNotNull(frame2);
         assertEquals(StompCommand.CONNECTED, frame2.command());
+
         StompContentSubframe content2 = channel.readInbound();
         assertSame(LastStompContentSubframe.EMPTY_LAST_CONTENT, content2);
+        content2.release();
+
         assertNull(channel.readInbound());
     }
 }

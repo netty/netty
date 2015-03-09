@@ -31,18 +31,19 @@ public enum Http2Error {
     COMPRESSION_ERROR(0x9),
     CONNECT_ERROR(0xA),
     ENHANCE_YOUR_CALM(0xB),
-    INADEQUATE_SECURITY(0xC);
+    INADEQUATE_SECURITY(0xC),
+    HTTP_1_1_REQUIRED(0xD);
 
-    private final int code;
+    private final long code;
 
-    Http2Error(int code) {
+    Http2Error(long code) {
         this.code = code;
     }
 
     /**
      * Gets the code for this error used on the wire.
      */
-    public int code() {
+    public long code() {
         return code;
     }
 }

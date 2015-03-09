@@ -18,7 +18,8 @@ package io.netty.handler.codec.http.multipart;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.internal.StringUtil;
 
@@ -139,8 +140,8 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
      * @return True if the request is a Multipart request
      */
     public static boolean isMultipart(HttpRequest request) {
-        if (request.headers().contains(HttpHeaders.Names.CONTENT_TYPE)) {
-            return getMultipartDataBoundary(request.headers().get(HttpHeaders.Names.CONTENT_TYPE)) != null;
+        if (request.headers().contains(HttpHeaderNames.CONTENT_TYPE)) {
+            return getMultipartDataBoundary(request.headers().getAndConvert(HttpHeaderNames.CONTENT_TYPE)) != null;
         } else {
             return false;
         }
@@ -155,39 +156,39 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
         // Check if Post using "multipart/form-data; boundary=--89421926422648 [; charset=xxx]"
         String[] headerContentType = splitHeaderContentType(contentType);
         if (headerContentType[0].toLowerCase().startsWith(
-                HttpHeaders.Values.MULTIPART_FORM_DATA.toString())) {
+                HttpHeaderValues.MULTIPART_FORM_DATA.toString())) {
             int mrank;
             int crank;
             if (headerContentType[1].toLowerCase().startsWith(
-                    HttpHeaders.Values.BOUNDARY.toString())) {
+                    HttpHeaderValues.BOUNDARY.toString())) {
                 mrank = 1;
                 crank = 2;
             } else if (headerContentType[2].toLowerCase().startsWith(
-                    HttpHeaders.Values.BOUNDARY.toString())) {
+                    HttpHeaderValues.BOUNDARY.toString())) {
                 mrank = 2;
                 crank = 1;
             } else {
                 return null;
             }
-            String[] boundary = StringUtil.split(headerContentType[mrank], '=');
-            if (boundary.length != 2) {
+            String boundary = StringUtil.substringAfter(headerContentType[mrank], '=');
+            if (boundary == null) {
                 throw new ErrorDataDecoderException("Needs a boundary value");
             }
-            if (boundary[1].charAt(0) == '"') {
-                String bound = boundary[1].trim();
+            if (boundary.charAt(0) == '"') {
+                String bound = boundary.trim();
                 int index = bound.length() - 1;
                 if (bound.charAt(index) == '"') {
-                    boundary[1] = bound.substring(1, index);
+                    boundary = bound.substring(1, index);
                 }
             }
             if (headerContentType[crank].toLowerCase().startsWith(
-                    HttpHeaders.Values.CHARSET.toString())) {
-                String[] charset = StringUtil.split(headerContentType[crank], '=');
-                if (charset.length > 1) {
-                    return new String[] {"--" + boundary[1], charset[1]};
+                    HttpHeaderValues.CHARSET.toString())) {
+                String charset = StringUtil.substringAfter(headerContentType[crank], '=');
+                if (charset != null) {
+                    return new String[] {"--" + boundary, charset};
                 }
             }
-            return new String[] {"--" + boundary[1]};
+            return new String[] {"--" + boundary};
         }
         return null;
     }

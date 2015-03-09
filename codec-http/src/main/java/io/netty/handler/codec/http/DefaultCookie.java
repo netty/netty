@@ -28,6 +28,7 @@ public class DefaultCookie implements Cookie {
 
     private final String name;
     private String value;
+    private String rawValue;
     private String domain;
     private String path;
     private String comment;
@@ -93,6 +94,19 @@ public class DefaultCookie implements Cookie {
             throw new NullPointerException("value");
         }
         this.value = value;
+    }
+
+    @Override
+    public String rawValue() {
+        return rawValue;
+    }
+
+    @Override
+    public void setRawValue(String rawValue) {
+        if (value == null) {
+            throw new NullPointerException("rawValue");
+        }
+        this.rawValue = rawValue;
     }
 
     @Override
@@ -308,26 +322,26 @@ public class DefaultCookie implements Cookie {
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append(name());
-        buf.append('=');
-        buf.append(value());
+        StringBuilder buf = new StringBuilder()
+            .append(name())
+            .append('=')
+            .append(value());
         if (domain() != null) {
-            buf.append(", domain=");
-            buf.append(domain());
+            buf.append(", domain=")
+               .append(domain());
         }
         if (path() != null) {
-            buf.append(", path=");
-            buf.append(path());
+            buf.append(", path=")
+               .append(path());
         }
         if (comment() != null) {
-            buf.append(", comment=");
-            buf.append(comment());
+            buf.append(", comment=")
+               .append(comment());
         }
         if (maxAge() >= 0) {
-            buf.append(", maxAge=");
-            buf.append(maxAge());
-            buf.append('s');
+            buf.append(", maxAge=")
+               .append(maxAge())
+               .append('s');
         }
         if (isSecure()) {
             buf.append(", secure");

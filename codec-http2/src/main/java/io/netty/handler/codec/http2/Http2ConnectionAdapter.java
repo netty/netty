@@ -40,14 +40,18 @@ public class Http2ConnectionAdapter implements Http2Connection.Listener {
     }
 
     @Override
-    public void streamPriorityChanged(Http2Stream stream, Http2Stream previousParent) {
-    }
-
-    @Override
-    public void streamPrioritySubtreeChanged(Http2Stream stream, Http2Stream subtreeRoot) {
-    }
-
-    @Override
     public void goingAway() {
+    }
+
+    @Override
+    public void priorityTreeParentChanged(Http2Stream stream, Http2Stream oldParent) {
+    }
+
+    @Override
+    public void priorityTreeParentChanging(Http2Stream stream, Http2Stream newParent) {
+    }
+
+    @Override
+    public void onWeightChanged(Http2Stream stream, short oldWeight) {
     }
 }

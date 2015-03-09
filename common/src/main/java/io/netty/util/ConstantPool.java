@@ -16,6 +16,8 @@
 
 package io.netty.util;
 
+import io.netty.util.internal.ObjectUtil;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -69,6 +71,43 @@ public abstract class ConstantPool<T extends Constant<T>> {
                 nextId ++;
             }
 
+            return c;
+        }
+    }
+
+    /**
+     * Returns {@code true} if a {@link AttributeKey} exists for the given {@code name}.
+     */
+    public boolean exists(String name) {
+        ObjectUtil.checkNotNull(name, "name");
+        synchronized (constants) {
+            return constants.containsKey(name);
+        }
+    }
+
+    /**
+     * Creates a new {@link Constant} for the given {@param name} or fail with an
+     * {@link IllegalArgumentException} if a {@link Constant} for the given {@param name} exists.
+     */
+    @SuppressWarnings("unchecked")
+    public T newInstance(String name) {
+        if (name == null) {
+            throw new NullPointerException("name");
+        }
+
+        if (name.isEmpty()) {
+            throw new IllegalArgumentException("empty name");
+        }
+
+        synchronized (constants) {
+            T c = constants.get(name);
+            if (c == null) {
+                c = newConstant(nextId, name);
+                constants.put(name, c);
+                nextId ++;
+            } else {
+                throw new IllegalArgumentException(String.format("'%s' is already in use", name));
+            }
             return c;
         }
     }

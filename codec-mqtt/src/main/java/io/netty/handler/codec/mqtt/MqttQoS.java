@@ -18,7 +18,8 @@ package io.netty.handler.codec.mqtt;
 public enum MqttQoS {
     AT_MOST_ONCE(0),
     AT_LEAST_ONCE(1),
-    EXACTLY_ONCE(2);
+    EXACTLY_ONCE(2),
+    FAILURE(0x80);
 
     private final int value;
 

@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>5.0.0.Alpha2-SNAPSHOT</version>
+    <version>5.0.0.Alpha3-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-testsuite</artifactId>
@@ -30,29 +30,9 @@
 
   <dependencies>
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.easymock</groupId>
-      <artifactId>easymock</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.easymock</groupId>
-      <artifactId>easymockclassextension</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.jmock</groupId>
-      <artifactId>jmock-junit4</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>${project.groupId}</groupId>
-        <artifactId>netty-transport-sctp</artifactId>
-        <version>${project.version}</version>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-transport-sctp</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -74,6 +54,50 @@
       <artifactId>netty-tcnative</artifactId>
       <classifier>${os.detected.classifier}</classifier>
       <optional>true</optional>
+    </dependency>
+
+    <!-- Required for generating a compressed heap dump file -->
+    <dependency>
+      <groupId>org.tukaani</groupId>
+      <artifactId>xz</artifactId>
+    </dependency>
+
+    <!-- Testing frameworks and related dependencies -->
+    <!-- NOTE: Keep these dependencies in sync with the parent POM's common test dependencies. -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest-library</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.easymock</groupId>
+      <artifactId>easymock</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.easymock</groupId>
+      <artifactId>easymockclassextension</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jmock</groupId>
+      <artifactId>jmock-junit4</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <scope>compile</scope>
     </dependency>
   </dependencies>
 
@@ -98,15 +122,11 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <executions>
-          <execution>
-            <goals>
-              <goal>test-jar</goal>
-            </goals>
-          </execution>
-        </executions>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <testSourceDirectory>${project.build.sourceDirectory}</testSourceDirectory>
+          <testClassesDirectory>${project.build.outputDirectory}</testClassesDirectory>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>me.normanmaurer.maven.autobahntestsuite</groupId>
@@ -117,7 +137,7 @@
           <cases>
             <case>*</case>
           </cases>
-          <excludeCases/>
+          <excludeCases />
           <failOnNonStrict>false</failOnNonStrict>
           <skip>${skipAutobahnTestsuite}</skip>
         </configuration>
@@ -132,6 +152,5 @@
       </plugin>
     </plugins>
   </build>
-
 </project>
 

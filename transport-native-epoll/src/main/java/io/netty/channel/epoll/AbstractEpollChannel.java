@@ -23,31 +23,67 @@ import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.EventLoop;
+import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.OneTimeTask;
 
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.UnresolvedAddressException;
 
-abstract class AbstractEpollChannel extends AbstractChannel {
+abstract class AbstractEpollChannel extends AbstractChannel implements UnixChannel {
     private static final ChannelMetadata DATA = new ChannelMetadata(false);
     private final int readFlag;
-    protected int flags;
+    private final FileDescriptor fileDescriptor;
+    protected int flags = Native.EPOLLET;
+
     protected volatile boolean active;
-    volatile int fd;
-    int id;
 
     AbstractEpollChannel(int fd, int flag) {
         this(null, fd, flag, false);
     }
 
     AbstractEpollChannel(Channel parent, int fd, int flag, boolean active) {
+        this(parent, new FileDescriptor(fd), flag, active);
+    }
+
+    AbstractEpollChannel(Channel parent, FileDescriptor fd, int flag, boolean active) {
         super(parent);
-        this.fd = fd;
+        if (fd == null) {
+            throw new NullPointerException("fd");
+        }
         readFlag = flag;
         flags |= flag;
         this.active = active;
+        fileDescriptor = fd;
     }
+
+    void setFlag(int flag) {
+        if (!isFlagSet(flag)) {
+            flags |= flag;
+            modifyEvents();
+        }
+    }
+
+    void clearFlag(int flag) {
+        if (isFlagSet(flag)) {
+            flags &= ~flag;
+            modifyEvents();
+        }
+    }
+
+    boolean isFlagSet(int flag) {
+        return (flags & flag) != 0;
+    }
+
+    @Override
+    public final FileDescriptor fd() {
+        return fileDescriptor;
+    }
+
+    @Override
+    public abstract EpollChannelConfig config();
 
     @Override
     public boolean isActive() {
@@ -66,19 +102,8 @@ abstract class AbstractEpollChannel extends AbstractChannel {
         // deregister from epoll now
         doDeregister();
 
-        int fd = this.fd;
-        this.fd = -1;
-        Native.close(fd);
-    }
-
-    @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
-    }
-
-    @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
+        FileDescriptor fd = fileDescriptor;
+        fd.close();
     }
 
     @Override
@@ -93,12 +118,12 @@ abstract class AbstractEpollChannel extends AbstractChannel {
 
     @Override
     public boolean isOpen() {
-        return fd != -1;
+        return fileDescriptor.isOpen();
     }
 
     @Override
     protected void doDeregister() throws Exception {
-        ((EpollEventLoop) eventLoop()).remove(this);
+        ((EpollEventLoop) eventLoop().unwrap()).remove(this);
     }
 
     @Override
@@ -106,10 +131,7 @@ abstract class AbstractEpollChannel extends AbstractChannel {
         // Channel.read() or ChannelHandlerContext.read() was called
         ((AbstractEpollUnsafe) unsafe()).readPending = true;
 
-        if ((flags & readFlag) == 0) {
-            flags |= readFlag;
-            modifyEvents();
-        }
+        setFlag(readFlag);
     }
 
     final void clearEpollIn() {
@@ -138,30 +160,15 @@ abstract class AbstractEpollChannel extends AbstractChannel {
         }
     }
 
-    protected final void setEpollOut() {
-        if ((flags & Native.EPOLLOUT) == 0) {
-            flags |= Native.EPOLLOUT;
-            modifyEvents();
-        }
-    }
-
-    protected final void clearEpollOut() {
-        if ((flags & Native.EPOLLOUT) != 0) {
-            flags &= ~Native.EPOLLOUT;
-            modifyEvents();
-        }
-    }
-
     private void modifyEvents() {
-        if (isOpen()) {
-            ((EpollEventLoop) eventLoop()).modify(this);
+        if (isOpen() && isRegistered()) {
+            ((EpollEventLoop) eventLoop().unwrap()).modify(this);
         }
     }
 
     @Override
     protected void doRegister() throws Exception {
-        EpollEventLoop loop = (EpollEventLoop) eventLoop();
-        loop.add(this);
+        ((EpollEventLoop) eventLoop().unwrap()).add(this);
     }
 
     @Override
@@ -214,6 +221,74 @@ abstract class AbstractEpollChannel extends AbstractChannel {
         }
     }
 
+    /**
+     * Read bytes into the given {@link ByteBuf} and return the amount.
+     */
+    protected final int doReadBytes(ByteBuf byteBuf) throws Exception {
+        int writerIndex = byteBuf.writerIndex();
+        int localReadAmount;
+        if (byteBuf.hasMemoryAddress()) {
+            localReadAmount = Native.readAddress(
+                    fileDescriptor.intValue(), byteBuf.memoryAddress(), writerIndex, byteBuf.capacity());
+        } else {
+            ByteBuffer buf = byteBuf.internalNioBuffer(writerIndex, byteBuf.writableBytes());
+            localReadAmount = Native.read(fileDescriptor.intValue(), buf, buf.position(), buf.limit());
+        }
+        if (localReadAmount > 0) {
+            byteBuf.writerIndex(writerIndex + localReadAmount);
+        }
+        return localReadAmount;
+    }
+
+    protected final int doWriteBytes(ByteBuf buf, int writeSpinCount) throws Exception {
+        int readableBytes = buf.readableBytes();
+        int writtenBytes = 0;
+        if (buf.hasMemoryAddress()) {
+            long memoryAddress = buf.memoryAddress();
+            int readerIndex = buf.readerIndex();
+            int writerIndex = buf.writerIndex();
+            for (int i = writeSpinCount - 1; i >= 0; i--) {
+                int localFlushedAmount = Native.writeAddress(
+                        fileDescriptor.intValue(), memoryAddress, readerIndex, writerIndex);
+                if (localFlushedAmount > 0) {
+                    writtenBytes += localFlushedAmount;
+                    if (writtenBytes == readableBytes) {
+                        return writtenBytes;
+                    }
+                    readerIndex += localFlushedAmount;
+                } else {
+                    break;
+                }
+            }
+        } else {
+            ByteBuffer nioBuf;
+            if (buf.nioBufferCount() == 1) {
+                nioBuf = buf.internalNioBuffer(buf.readerIndex(), buf.readableBytes());
+            } else {
+                nioBuf = buf.nioBuffer();
+            }
+            for (int i = writeSpinCount - 1; i >= 0; i--) {
+                int pos = nioBuf.position();
+                int limit = nioBuf.limit();
+                int localFlushedAmount = Native.write(fileDescriptor.intValue(), nioBuf, pos, limit);
+                if (localFlushedAmount > 0) {
+                    nioBuf.position(pos + localFlushedAmount);
+                    writtenBytes += localFlushedAmount;
+                    if (writtenBytes == readableBytes) {
+                        return writtenBytes;
+                    }
+                } else {
+                    break;
+                }
+            }
+        }
+        if (writtenBytes < readableBytes) {
+            // Returned EAGAIN need to set EPOLLOUT
+            setFlag(Native.EPOLLOUT);
+        }
+        return writtenBytes;
+    }
+
     protected abstract class AbstractEpollUnsafe extends AbstractUnsafe {
         protected boolean readPending;
 
@@ -234,7 +309,7 @@ abstract class AbstractEpollChannel extends AbstractChannel {
             // Flush immediately only when there's no pending flush.
             // If there's a pending flush operation, event loop will call forceFlush() later,
             // and thus there's no need to call it now.
-            if (isFlushPending()) {
+            if (isFlagSet(Native.EPOLLOUT)) {
                 return;
             }
             super.flush0();
@@ -248,15 +323,8 @@ abstract class AbstractEpollChannel extends AbstractChannel {
             super.flush0();
         }
 
-        private boolean isFlushPending() {
-            return (flags & Native.EPOLLOUT) != 0;
-        }
-
         protected final void clearEpollIn0() {
-            if ((flags & readFlag) != 0) {
-                flags &= ~readFlag;
-                modifyEvents();
-            }
+            clearFlag(readFlag);
         }
     }
 }

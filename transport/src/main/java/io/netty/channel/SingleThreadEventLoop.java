@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 
 import java.util.concurrent.Executor;
@@ -27,10 +28,6 @@ import java.util.concurrent.ThreadFactory;
 public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor implements EventLoop {
 
     private final ChannelHandlerInvoker invoker = new DefaultChannelHandlerInvoker(this);
-
-    protected SingleThreadEventLoop(EventLoopGroup parent, ThreadFactory threadFactory, boolean addTaskWakesUp) {
-        super(parent, threadFactory, addTaskWakesUp);
-    }
 
     protected SingleThreadEventLoop(EventLoopGroup parent, Executor executor, boolean addTaskWakesUp) {
         super(parent, executor, addTaskWakesUp);
@@ -72,6 +69,11 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     @Override
     protected boolean wakesUpForTask(Runnable task) {
         return !(task instanceof NonWakeupRunnable);
+    }
+
+    @Override
+    public EventLoop unwrap() {
+        return this;
     }
 
     /**

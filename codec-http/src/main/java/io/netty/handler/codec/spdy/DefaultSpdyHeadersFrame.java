@@ -79,17 +79,17 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyStreamFrame
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append(StringUtil.simpleClassName(this));
-        buf.append("(last: ");
-        buf.append(isLast());
-        buf.append(')');
-        buf.append(StringUtil.NEWLINE);
-        buf.append("--> Stream-ID = ");
-        buf.append(streamId());
-        buf.append(StringUtil.NEWLINE);
-        buf.append("--> Headers:");
-        buf.append(StringUtil.NEWLINE);
+        StringBuilder buf = new StringBuilder()
+            .append(StringUtil.simpleClassName(this))
+            .append("(last: ")
+            .append(isLast())
+            .append(')')
+            .append(StringUtil.NEWLINE)
+            .append("--> Stream-ID = ")
+            .append(streamId())
+            .append(StringUtil.NEWLINE)
+            .append("--> Headers:")
+            .append(StringUtil.NEWLINE);
         appendHeaders(buf);
 
         // Remove the last newline.
@@ -98,7 +98,7 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyStreamFrame
     }
 
     protected void appendHeaders(StringBuilder buf) {
-        for (Map.Entry<String, String> e: headers()) {
+        for (Map.Entry<CharSequence, CharSequence> e: headers()) {
             buf.append("    ");
             buf.append(e.getKey());
             buf.append(": ");

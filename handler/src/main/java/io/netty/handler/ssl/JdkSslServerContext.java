@@ -16,35 +16,16 @@
 
 package io.netty.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufInputStream;
+import java.io.File;
 
-import javax.crypto.Cipher;
-import javax.crypto.EncryptedPrivateKeyInfo;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.PBEKeySpec;
+import javax.net.ssl.KeyManager;
+
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSessionContext;
-import java.io.File;
-import java.io.IOException;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.KeyFactory;
-import java.security.KeyStore;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.Security;
-import java.security.cert.Certificate;
-import java.security.cert.CertificateFactory;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
 
 /**
  * A server-side {@link SslContext} which uses JDK's SSL/TLS implementation.
@@ -52,7 +33,6 @@ import java.util.List;
 public final class JdkSslServerContext extends JdkSslContext {
 
     private final SSLContext ctx;
-    private final List<String> nextProtocols;
 
     /**
      * Creates a new instance.
@@ -73,7 +53,8 @@ public final class JdkSslServerContext extends JdkSslContext {
      *                    {@code null} if it's not password-protected.
      */
     public JdkSslServerContext(File certChainFile, File keyFile, String keyPassword) throws SSLException {
-        this(certChainFile, keyFile, keyPassword, null, null, 0, 0);
+        this(certChainFile, keyFile, keyPassword, null, IdentityCipherSuiteFilter.INSTANCE,
+                JdkDefaultApplicationProtocolNegotiator.INSTANCE, 0, 0);
     }
 
     /**
@@ -85,8 +66,8 @@ public final class JdkSslServerContext extends JdkSslContext {
      *                    {@code null} if it's not password-protected.
      * @param ciphers the cipher suites to enable, in the order of preference.
      *                {@code null} to use the default cipher suites.
-     * @param nextProtocols the application layer protocols to accept, in the order of preference.
-     *                      {@code null} to disable TLS NPN/ALPN extension.
+     * @param cipherFilter a filter to apply over the supplied list of ciphers
+     * @param apn Provides a means to configure parameters related to application protocol negotiation.
      * @param sessionCacheSize the size of the cache used for storing SSL session objects.
      *                         {@code 0} to use the default value.
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
@@ -94,87 +75,118 @@ public final class JdkSslServerContext extends JdkSslContext {
      */
     public JdkSslServerContext(
             File certChainFile, File keyFile, String keyPassword,
-            Iterable<String> ciphers, Iterable<String> nextProtocols,
+            Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
+        this(certChainFile, keyFile, keyPassword, ciphers, cipherFilter,
+                toNegotiator(apn, true), sessionCacheSize, sessionTimeout);
+    }
 
-        super(ciphers);
+    /**
+     * Creates a new instance.
+     *
+     * @param certChainFile an X.509 certificate chain file in PEM format
+     * @param keyFile a PKCS#8 private key file in PEM format
+     * @param keyPassword the password of the {@code keyFile}.
+     *                    {@code null} if it's not password-protected.
+     * @param ciphers the cipher suites to enable, in the order of preference.
+     *                {@code null} to use the default cipher suites.
+     * @param cipherFilter a filter to apply over the supplied list of ciphers
+     * @param apn Application Protocol Negotiator object.
+     * @param sessionCacheSize the size of the cache used for storing SSL session objects.
+     *                         {@code 0} to use the default value.
+     * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
+     *                       {@code 0} to use the default value.
+     */
+    public JdkSslServerContext(
+            File certChainFile, File keyFile, String keyPassword,
+            Iterable<String> ciphers, CipherSuiteFilter cipherFilter, JdkApplicationProtocolNegotiator apn,
+            long sessionCacheSize, long sessionTimeout) throws SSLException {
+        this(null, null, certChainFile, keyFile, keyPassword, null,
+                ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
+    }
 
-        if (certChainFile == null) {
-            throw new NullPointerException("certChainFile");
-        }
-        if (keyFile == null) {
-            throw new NullPointerException("keyFile");
-        }
+    /**
+     * Creates a new instance.
+     * @param trustCertChainFile an X.509 certificate chain file in PEM format.
+     *                      This provides the certificate chains used for mutual authentication.
+     *                      {@code null} to use the system default
+     * @param trustManagerFactory the {@link TrustManagerFactory} that provides the {@link TrustManager}s
+     *                            that verifies the certificates sent from clients.
+     *                            {@code null} to use the default or the results of parsing {@code trustCertChainFile}.
+     * @param keyCertChainFile an X.509 certificate chain file in PEM format
+     * @param keyFile a PKCS#8 private key file in PEM format
+     * @param keyPassword the password of the {@code keyFile}.
+     *                    {@code null} if it's not password-protected.
+     * @param keyManagerFactory the {@link KeyManagerFactory} that provides the {@link KeyManager}s
+     *                          that is used to encrypt data being sent to clients.
+     *                          {@code null} to use the default or the results of parsing
+     *                          {@code keyCertChainFile} and {@code keyFile}.
+     * @param ciphers the cipher suites to enable, in the order of preference.
+     *                {@code null} to use the default cipher suites.
+     * @param cipherFilter a filter to apply over the supplied list of ciphers
+     *                Only required if {@code provider} is {@link SslProvider#JDK}
+     * @param apn Provides a means to configure parameters related to application protocol negotiation.
+     * @param sessionCacheSize the size of the cache used for storing SSL session objects.
+     *                         {@code 0} to use the default value.
+     * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
+     *                       {@code 0} to use the default value.
+     */
+    public JdkSslServerContext(File trustCertChainFile, TrustManagerFactory trustManagerFactory,
+            File keyCertChainFile, File keyFile, String keyPassword, KeyManagerFactory keyManagerFactory,
+            Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
+            long sessionCacheSize, long sessionTimeout) throws SSLException {
+        this(trustCertChainFile, trustManagerFactory, keyCertChainFile, keyFile, keyPassword, keyManagerFactory,
+                ciphers, cipherFilter, toNegotiator(apn, true), sessionCacheSize, sessionTimeout);
+    }
 
-        if (keyPassword == null) {
-            keyPassword = "";
-        }
-
-        if (nextProtocols != null && nextProtocols.iterator().hasNext()) {
-            if (!JettyNpnSslEngine.isAvailable()) {
-                throw new SSLException("NPN/ALPN unsupported: " + nextProtocols);
-            }
-
-            List<String> list = new ArrayList<String>();
-            for (String p: nextProtocols) {
-                if (p == null) {
-                    break;
-                }
-                list.add(p);
-            }
-
-            this.nextProtocols = Collections.unmodifiableList(list);
-        } else {
-            this.nextProtocols = Collections.emptyList();
-        }
-
-        String algorithm = Security.getProperty("ssl.KeyManagerFactory.algorithm");
-        if (algorithm == null) {
-            algorithm = "SunX509";
+    /**
+     * Creates a new instance.
+     * @param trustCertChainFile an X.509 certificate chain file in PEM format.
+     *                      This provides the certificate chains used for mutual authentication.
+     *                      {@code null} to use the system default
+     * @param trustManagerFactory the {@link TrustManagerFactory} that provides the {@link TrustManager}s
+     *                            that verifies the certificates sent from clients.
+     *                            {@code null} to use the default or the results of parsing {@code trustCertChainFile}
+     * @param keyCertChainFile an X.509 certificate chain file in PEM format
+     * @param keyFile a PKCS#8 private key file in PEM format
+     * @param keyPassword the password of the {@code keyFile}.
+     *                    {@code null} if it's not password-protected.
+     * @param keyManagerFactory the {@link KeyManagerFactory} that provides the {@link KeyManager}s
+     *                          that is used to encrypt data being sent to clients.
+     *                          {@code null} to use the default or the results of parsing
+     *                          {@code keyCertChainFile} and {@code keyFile}.
+     * @param ciphers the cipher suites to enable, in the order of preference.
+     *                {@code null} to use the default cipher suites.
+     * @param cipherFilter a filter to apply over the supplied list of ciphers
+     *                Only required if {@code provider} is {@link SslProvider#JDK}
+     * @param apn Application Protocol Negotiator object.
+     * @param sessionCacheSize the size of the cache used for storing SSL session objects.
+     *                         {@code 0} to use the default value.
+     * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
+     *                       {@code 0} to use the default value.
+     */
+    public JdkSslServerContext(File trustCertChainFile, TrustManagerFactory trustManagerFactory,
+            File keyCertChainFile, File keyFile, String keyPassword, KeyManagerFactory keyManagerFactory,
+            Iterable<String> ciphers, CipherSuiteFilter cipherFilter, JdkApplicationProtocolNegotiator apn,
+            long sessionCacheSize, long sessionTimeout) throws SSLException {
+        super(ciphers, cipherFilter, apn);
+        if (keyFile == null && keyManagerFactory == null) {
+            throw new NullPointerException("keyFile, keyManagerFactory");
         }
 
         try {
-            KeyStore ks = KeyStore.getInstance("JKS");
-            ks.load(null, null);
-            CertificateFactory cf = CertificateFactory.getInstance("X.509");
-            KeyFactory rsaKF = KeyFactory.getInstance("RSA");
-            KeyFactory dsaKF = KeyFactory.getInstance("DSA");
-
-            ByteBuf encodedKeyBuf = PemReader.readPrivateKey(keyFile);
-            byte[] encodedKey = new byte[encodedKeyBuf.readableBytes()];
-            encodedKeyBuf.readBytes(encodedKey).release();
-
-            char[] keyPasswordChars = keyPassword.toCharArray();
-            PKCS8EncodedKeySpec encodedKeySpec = generateKeySpec(keyPasswordChars, encodedKey);
-
-            PrivateKey key;
-            try {
-                key = rsaKF.generatePrivate(encodedKeySpec);
-            } catch (InvalidKeySpecException ignore) {
-                key = dsaKF.generatePrivate(encodedKeySpec);
+            if (trustCertChainFile != null) {
+                trustManagerFactory = buildTrustManagerFactory(trustCertChainFile, trustManagerFactory);
             }
-
-            List<Certificate> certChain = new ArrayList<Certificate>();
-            ByteBuf[] certs = PemReader.readCertificates(certChainFile);
-            try {
-                for (ByteBuf buf: certs) {
-                    certChain.add(cf.generateCertificate(new ByteBufInputStream(buf)));
-                }
-            } finally {
-                for (ByteBuf buf: certs) {
-                    buf.release();
-                }
+            if (keyFile != null) {
+                keyManagerFactory = buildKeyManagerFactory(keyCertChainFile, keyFile, keyPassword, keyManagerFactory);
             }
-
-            ks.setKeyEntry("key", key, keyPasswordChars, certChain.toArray(new Certificate[certChain.size()]));
-
-            // Set up key manager factory to use our key store
-            KeyManagerFactory kmf = KeyManagerFactory.getInstance(algorithm);
-            kmf.init(ks, keyPasswordChars);
 
             // Initialize the SSLContext to work with our key managers.
             ctx = SSLContext.getInstance(PROTOCOL);
-            ctx.init(kmf.getKeyManagers(), null, null);
+            ctx.init(keyManagerFactory.getKeyManagers(),
+                     trustManagerFactory == null ? null : trustManagerFactory.getTrustManagers(),
+                     null);
 
             SSLSessionContext sessCtx = ctx.getServerSessionContext();
             if (sessionCacheSize > 0) {
@@ -194,47 +206,7 @@ public final class JdkSslServerContext extends JdkSslContext {
     }
 
     @Override
-    public List<String> nextProtocols() {
-        return nextProtocols;
-    }
-
-    @Override
     public SSLContext context() {
         return ctx;
-    }
-
-    /**
-     * Generates a key specification for an (encrypted) private key.
-     *
-     * @param password characters, if {@code null} or empty an unencrypted key is assumed
-     * @param key bytes of the DER encoded private key
-     *
-     * @return a key specification
-     *
-     * @throws IOException if parsing {@code key} fails
-     * @throws NoSuchAlgorithmException if the algorithm used to encrypt {@code key} is unkown
-     * @throws NoSuchPaddingException if the padding scheme specified in the decryption algorithm is unkown
-     * @throws InvalidKeySpecException if the decryption key based on {@code password} cannot be generated
-     * @throws InvalidKeyException if the decryption key based on {@code password} cannot be used to decrypt
-     *                             {@code key}
-     * @throws InvalidAlgorithmParameterException if decryption algorithm parameters are somehow faulty
-     */
-    private static PKCS8EncodedKeySpec generateKeySpec(char[] password, byte[] key)
-            throws IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException,
-                   InvalidKeyException, InvalidAlgorithmParameterException {
-
-        if (password == null || password.length == 0) {
-            return new PKCS8EncodedKeySpec(key);
-        }
-
-        EncryptedPrivateKeyInfo encryptedPrivateKeyInfo = new EncryptedPrivateKeyInfo(key);
-        SecretKeyFactory keyFactory = SecretKeyFactory.getInstance(encryptedPrivateKeyInfo.getAlgName());
-        PBEKeySpec pbeKeySpec = new PBEKeySpec(password);
-        SecretKey pbeKey = keyFactory.generateSecret(pbeKeySpec);
-
-        Cipher cipher = Cipher.getInstance(encryptedPrivateKeyInfo.getAlgName());
-        cipher.init(Cipher.DECRYPT_MODE, pbeKey, encryptedPrivateKeyInfo.getAlgParameters());
-
-        return encryptedPrivateKeyInfo.getKeySpec(cipher);
     }
 }

@@ -16,6 +16,7 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.After;
@@ -68,7 +69,7 @@ public class SpdyHeaderBlockZlibDecoderTest {
         headerBlock.writeInt(5); // length of value
         headerBlock.writeBytes(valueBytes);
         headerBlock.writeBytes(zlibSyncFlush);
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
         decoder.endHeaderBlock(frame);
 
         assertFalse(headerBlock.isReadable());
@@ -98,7 +99,7 @@ public class SpdyHeaderBlockZlibDecoderTest {
         int readableBytes = headerBlock.readableBytes();
         for (int i = 0; i < readableBytes; i++) {
             ByteBuf headerBlockSegment = headerBlock.slice(i, 1);
-            decoder.decode(headerBlockSegment, frame);
+            decoder.decode(ByteBufAllocator.DEFAULT, headerBlockSegment, frame);
             assertFalse(headerBlockSegment.isReadable());
         }
         decoder.endHeaderBlock(frame);
@@ -126,7 +127,7 @@ public class SpdyHeaderBlockZlibDecoderTest {
         }
         headerBlock.writeInt(0); // length of value
         headerBlock.writeBytes(zlibSyncFlush);
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
         decoder.endHeaderBlock(frame);
 
         assertFalse(headerBlock.isReadable());
@@ -152,7 +153,7 @@ public class SpdyHeaderBlockZlibDecoderTest {
             headerBlock.writeByte('v');
         }
         headerBlock.writeBytes(zlibSyncFlush);
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
         decoder.endHeaderBlock(frame);
 
         assertFalse(headerBlock.isReadable());
@@ -181,7 +182,7 @@ public class SpdyHeaderBlockZlibDecoderTest {
         headerBlock.writeByte(0x03); // adler-32 checksum
         headerBlock.writeByte(0xc9); // adler-32 checksum
         headerBlock.writeByte(0); // Data following zlib stream
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
     }
 
     @Test(expected = SpdyProtocolException.class)
@@ -194,7 +195,7 @@ public class SpdyHeaderBlockZlibDecoderTest {
         headerBlock.writeByte(0x03); // Unknown dictionary
         headerBlock.writeByte(0x04); // Unknown dictionary
         headerBlock.writeByte(0); // Non-compressed block
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
     }
 
     @Test(expected = SpdyProtocolException.class)
@@ -206,6 +207,6 @@ public class SpdyHeaderBlockZlibDecoderTest {
         headerBlock.writeByte(0x00); // little-endian length (0)
         headerBlock.writeByte(0x00); // invalid one's compliment
         headerBlock.writeByte(0x00); // invalid one's compliment
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
     }
 }

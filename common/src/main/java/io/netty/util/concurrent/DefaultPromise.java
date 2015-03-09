@@ -44,7 +44,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         CANCELLATION_CAUSE_HOLDER.cause.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
     }
 
-    private final EventExecutor executor;
+    EventExecutor executor;
 
     private volatile Object result;
 
@@ -471,6 +471,10 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     private boolean setFailure0(Throwable cause) {
+        if (cause == null) {
+            throw new NullPointerException("cause");
+        }
+
         if (isDone()) {
             return false;
         }
@@ -802,10 +806,10 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     protected StringBuilder toStringBuilder() {
-        StringBuilder buf = new StringBuilder(64);
-        buf.append(StringUtil.simpleClassName(this));
-        buf.append('@');
-        buf.append(Integer.toHexString(hashCode()));
+        StringBuilder buf = new StringBuilder(64)
+            .append(StringUtil.simpleClassName(this))
+            .append('@')
+            .append(Integer.toHexString(hashCode()));
 
         Object result = this.result;
         if (result == SUCCESS) {
@@ -813,9 +817,9 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         } else if (result == UNCANCELLABLE) {
             buf.append("(uncancellable)");
         } else if (result instanceof CauseHolder) {
-            buf.append("(failure(");
-            buf.append(((CauseHolder) result).cause);
-            buf.append(')');
+            buf.append("(failure(")
+               .append(((CauseHolder) result).cause)
+               .append(')');
         } else {
             buf.append("(incomplete)");
         }

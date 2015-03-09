@@ -22,15 +22,19 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.spdy.SpdyOrHttpChooser.SelectedProtocol;
+import io.netty.handler.ssl.ApplicationProtocolConfig;
+import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
+import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
+import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
+import io.netty.handler.ssl.IdentityCipherSuiteFilter;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-
-import java.util.Arrays;
 
 /**
  * An SPDY client that allows you to send HTTP GET to a SPDY server.
@@ -54,8 +58,13 @@ public final class SpdyClient {
     public static void main(String[] args) throws Exception {
         // Configure SSL.
         final SslContext sslCtx = SslContext.newClientContext(
-                null, InsecureTrustManagerFactory.INSTANCE, null,
-                Arrays.asList(SelectedProtocol.SPDY_3_1.protocolName(), SelectedProtocol.HTTP_1_1.protocolName()),
+                null, InsecureTrustManagerFactory.INSTANCE, null, IdentityCipherSuiteFilter.INSTANCE,
+                new ApplicationProtocolConfig(
+                        Protocol.NPN,
+                        SelectorFailureBehavior.FATAL_ALERT,
+                        SelectedListenerFailureBehavior.FATAL_ALERT,
+                        SelectedProtocol.SPDY_3_1.protocolName(),
+                        SelectedProtocol.HTTP_1_1.protocolName()),
                 0, 0);
 
         HttpResponseClientHandler httpResponseHandler = new HttpResponseClientHandler();
@@ -75,8 +84,8 @@ public final class SpdyClient {
 
             // Create a GET request.
             HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "");
-            request.headers().set(HttpHeaders.Names.HOST, HOST);
-            request.headers().set(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
+            request.headers().set(HttpHeaderNames.HOST, HOST);
+            request.headers().set(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
 
             // Send the GET request.
             channel.writeAndFlush(request).sync();

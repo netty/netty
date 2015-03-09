@@ -2,6 +2,7 @@
 .project
 .classpath
 .settings
+bin/
 
 # IntelliJ IDEA project files and directories
 *.iml

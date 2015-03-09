@@ -27,7 +27,6 @@ import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.SingleThreadEventExecutor;
 import io.netty.util.internal.InternalThreadLocalMap;
 
 import java.net.SocketAddress;
@@ -182,7 +181,7 @@ public class LocalChannel extends AbstractChannel {
                 }
             });
         }
-        ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
+        ((SingleThreadEventLoop) eventLoop().unwrap()).addShutdownHook(shutdownHook);
     }
 
     @Override
@@ -238,7 +237,7 @@ public class LocalChannel extends AbstractChannel {
     @Override
     protected void doDeregister() throws Exception {
         // Just remove the shutdownHook as this Channel may be closed later or registered to another EventLoop
-        ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
+        ((SingleThreadEventLoop) eventLoop().unwrap()).removeShutdownHook(shutdownHook);
     }
 
     @Override

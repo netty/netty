@@ -21,9 +21,11 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_SETTINGS_HEADER;
 import static io.netty.handler.codec.http2.Http2CodecUtil.writeFrameHeader;
 import static io.netty.handler.codec.http2.Http2FrameTypes.SETTINGS;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -43,9 +45,8 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
             Collections.singletonList(HTTP_UPGRADE_SETTINGS_HEADER);
 
     private final String handlerName;
-    private final AbstractHttp2ConnectionHandler connectionHandler;
+    private final Http2ConnectionHandler connectionHandler;
     private final Http2FrameReader frameReader;
-    private Http2Settings settings;
 
     /**
      * Creates the codec using a default name for the connection handler when adding to the
@@ -53,7 +54,7 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
      *
      * @param connectionHandler the HTTP/2 connection handler.
      */
-    public Http2ServerUpgradeCodec(AbstractHttp2ConnectionHandler connectionHandler) {
+    public Http2ServerUpgradeCodec(Http2ConnectionHandler connectionHandler) {
         this("http2ConnectionHandler", connectionHandler);
     }
 
@@ -63,16 +64,9 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
      * @param handlerName the name of the HTTP/2 connection handler to be used in the pipeline.
      * @param connectionHandler the HTTP/2 connection handler.
      */
-    public Http2ServerUpgradeCodec(String handlerName,
-            AbstractHttp2ConnectionHandler connectionHandler) {
-        if (handlerName == null) {
-            throw new NullPointerException("handlerName");
-        }
-        if (connectionHandler == null) {
-            throw new NullPointerException("connectionHandler");
-        }
-        this.handlerName = handlerName;
-        this.connectionHandler = connectionHandler;
+    public Http2ServerUpgradeCodec(String handlerName, Http2ConnectionHandler connectionHandler) {
+        this.handlerName = checkNotNull(handlerName, "handlerName");
+        this.connectionHandler = checkNotNull(connectionHandler, "connectionHandler");
         frameReader = new DefaultHttp2FrameReader();
     }
 
@@ -92,8 +86,12 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
         try {
             // Decode the HTTP2-Settings header and set the settings on the handler to make
             // sure everything is fine with the request.
-            String settingsHeader = upgradeRequest.headers().get(HTTP_UPGRADE_SETTINGS_HEADER);
-            settings = decodeSettingsHeader(ctx, settingsHeader);
+            List<CharSequence> upgradeHeaders = upgradeRequest.headers().getAll(HTTP_UPGRADE_SETTINGS_HEADER);
+            if (upgradeHeaders.isEmpty() || upgradeHeaders.size() > 1) {
+                throw new IllegalArgumentException("There must be 1 and only 1 "
+                        + HTTP_UPGRADE_SETTINGS_HEADER + " header.");
+            }
+            Http2Settings settings = decodeSettingsHeader(ctx, upgradeHeaders.get(0));
             connectionHandler.onHttpServerUpgrade(settings);
             // Everything looks good, no need to modify the response.
         } catch (Throwable e) {
@@ -114,9 +112,9 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
     /**
      * Decodes the settings header and returns a {@link Http2Settings} object.
      */
-    private Http2Settings decodeSettingsHeader(ChannelHandlerContext ctx, String settingsHeader)
+    private Http2Settings decodeSettingsHeader(ChannelHandlerContext ctx, CharSequence settingsHeader)
             throws Http2Exception {
-        ByteBuf header = Unpooled.wrappedBuffer(settingsHeader.getBytes(CharsetUtil.UTF_8));
+        ByteBuf header = Unpooled.wrappedBuffer(AsciiString.getBytes(settingsHeader, CharsetUtil.UTF_8));
         try {
             // Decode the SETTINGS payload.
             ByteBuf payload = Base64.decode(header, URL_SAFE);
@@ -139,8 +137,7 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
             final Http2Settings decodedSettings = new Http2Settings();
             frameReader.readFrame(ctx, frame, new Http2FrameAdapter() {
                 @Override
-                public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings)
-                        throws Http2Exception {
+                public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) {
                     decodedSettings.copyFrom(settings);
                 }
             });

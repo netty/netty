@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,33 +15,49 @@
  */
 package io.netty.handler.codec.http;
 
+import static io.netty.handler.codec.http.CookieEncoderUtil.*;
+
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
-import static io.netty.handler.codec.http.CookieEncoderUtil.*;
-
 /**
- * Encodes server-side {@link Cookie}s into HTTP header values.  This encoder can encode
- * the HTTP cookie version 0, 1, and 2.
+ * A <a href="http://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie encoder to be used server side,
+ * so some fields are sent (Version is typically ignored).
+ *
+ * As Netty's Cookie merges Expires and MaxAge into one single field, only Max-Age field is sent.
+ *
+ * Note that multiple cookies are supposed to be sent at once in a single "Set-Cookie" header.
+ *
  * <pre>
  * // Example
  * {@link HttpRequest} req = ...;
- * res.setHeader("Set-Cookie", {@link ServerCookieEncoder}.encode("JSESSIONID", "1234"));
+ * res.setHeader("Cookie", {@link ServerCookieEncoder}.encode("JSESSIONID", "1234"));
  * </pre>
  *
- * @see CookieDecoder
+ * @see ServerCookieDecoder
  */
 public final class ServerCookieEncoder {
 
     /**
-     * Encodes the specified cookie into an HTTP header value.
+     * Encodes the specified cookie name-value pair into a Set-Cookie header value.
+     *
+     * @param name the cookie name
+     * @param value the cookie value
+     * @return a single Set-Cookie header value
      */
     public static String encode(String name, String value) {
         return encode(new DefaultCookie(name, value));
     }
 
+    /**
+     * Encodes the specified cookie into a Set-Cookie header value.
+     *
+     * @param cookie the cookie
+     * @return a single Set-Cookie header value
+     */
     public static String encode(Cookie cookie) {
         if (cookie == null) {
             throw new NullPointerException("cookie");
@@ -49,33 +65,20 @@ public final class ServerCookieEncoder {
 
         StringBuilder buf = stringBuilder();
 
-        add(buf, cookie.name(), cookie.value());
+        addUnquoted(buf, cookie.name(), cookie.value());
 
         if (cookie.maxAge() != Long.MIN_VALUE) {
-            if (cookie.version() == 0) {
-                addUnquoted(buf, CookieHeaderNames.EXPIRES,
-                        HttpHeaderDateFormat.get().format(
-                                new Date(System.currentTimeMillis() +
-                                         cookie.maxAge() * 1000L)));
-            } else {
-                add(buf, CookieHeaderNames.MAX_AGE, cookie.maxAge());
-            }
+            add(buf, CookieHeaderNames.MAX_AGE, cookie.maxAge());
+            Date expires = new Date(cookie.maxAge() * 1000 + System.currentTimeMillis());
+            addUnquoted(buf, CookieHeaderNames.EXPIRES, HttpHeaderDateFormat.get().format(expires));
         }
 
         if (cookie.path() != null) {
-            if (cookie.version() > 0) {
-                add(buf, CookieHeaderNames.PATH, cookie.path());
-            } else {
-                addUnquoted(buf, CookieHeaderNames.PATH, cookie.path());
-            }
+            addUnquoted(buf, CookieHeaderNames.PATH, cookie.path());
         }
 
         if (cookie.domain() != null) {
-            if (cookie.version() > 0) {
-                add(buf, CookieHeaderNames.DOMAIN, cookie.domain());
-            } else {
-                addUnquoted(buf, CookieHeaderNames.DOMAIN, cookie.domain());
-            }
+            addUnquoted(buf, CookieHeaderNames.DOMAIN, cookie.domain());
         }
         if (cookie.isSecure()) {
             buf.append(CookieHeaderNames.SECURE);
@@ -87,46 +90,27 @@ public final class ServerCookieEncoder {
             buf.append((char) HttpConstants.SEMICOLON);
             buf.append((char) HttpConstants.SP);
         }
-        if (cookie.version() >= 1) {
-            if (cookie.comment() != null) {
-                add(buf, CookieHeaderNames.COMMENT, cookie.comment());
-            }
-
-            add(buf, CookieHeaderNames.VERSION, 1);
-
-            if (cookie.commentUrl() != null) {
-                addQuoted(buf, CookieHeaderNames.COMMENTURL, cookie.commentUrl());
-            }
-
-            if (!cookie.ports().isEmpty()) {
-                buf.append(CookieHeaderNames.PORT);
-                buf.append((char) HttpConstants.EQUALS);
-                buf.append((char) HttpConstants.DOUBLE_QUOTE);
-                for (int port: cookie.ports()) {
-                    buf.append(port);
-                    buf.append((char) HttpConstants.COMMA);
-                }
-                buf.setCharAt(buf.length() - 1, (char) HttpConstants.DOUBLE_QUOTE);
-                buf.append((char) HttpConstants.SEMICOLON);
-                buf.append((char) HttpConstants.SP);
-            }
-            if (cookie.isDiscard()) {
-                buf.append(CookieHeaderNames.DISCARD);
-                buf.append((char) HttpConstants.SEMICOLON);
-                buf.append((char) HttpConstants.SP);
-            }
-        }
 
         return stripTrailingSeparator(buf);
     }
 
+    /**
+     * Batch encodes cookies into Set-Cookie header values.
+     *
+     * @param cookies a bunch of cookies
+     * @return the corresponding bunch of Set-Cookie headers
+     */
     public static List<String> encode(Cookie... cookies) {
         if (cookies == null) {
             throw new NullPointerException("cookies");
         }
 
+        if (cookies.length == 0) {
+            return Collections.emptyList();
+        }
+
         List<String> encoded = new ArrayList<String>(cookies.length);
-        for (Cookie c: cookies) {
+        for (Cookie c : cookies) {
             if (c == null) {
                 break;
             }
@@ -135,13 +119,23 @@ public final class ServerCookieEncoder {
         return encoded;
     }
 
+    /**
+     * Batch encodes cookies into Set-Cookie header values.
+     *
+     * @param cookies a bunch of cookies
+     * @return the corresponding bunch of Set-Cookie headers
+     */
     public static List<String> encode(Collection<Cookie> cookies) {
         if (cookies == null) {
             throw new NullPointerException("cookies");
         }
 
+        if (cookies.isEmpty()) {
+            return Collections.emptyList();
+        }
+
         List<String> encoded = new ArrayList<String>(cookies.size());
-        for (Cookie c: cookies) {
+        for (Cookie c : cookies) {
             if (c == null) {
                 break;
             }
@@ -150,13 +144,23 @@ public final class ServerCookieEncoder {
         return encoded;
     }
 
+    /**
+     * Batch encodes cookies into Set-Cookie header values.
+     *
+     * @param cookies a bunch of cookies
+     * @return the corresponding bunch of Set-Cookie headers
+     */
     public static List<String> encode(Iterable<Cookie> cookies) {
         if (cookies == null) {
             throw new NullPointerException("cookies");
         }
 
+        if (!cookies.iterator().hasNext()) {
+            return Collections.emptyList();
+        }
+
         List<String> encoded = new ArrayList<String>();
-        for (Cookie c: cookies) {
+        for (Cookie c : cookies) {
             if (c == null) {
                 break;
             }

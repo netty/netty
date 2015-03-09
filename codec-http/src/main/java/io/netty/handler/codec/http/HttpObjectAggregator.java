@@ -58,14 +58,14 @@ public class HttpObjectAggregator
             HttpVersion.HTTP_1_1, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, Unpooled.EMPTY_BUFFER);
 
     static {
-        TOO_LARGE.headers().set(HttpHeaders.Names.CONTENT_LENGTH, 0);
+        TOO_LARGE.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
     }
 
     /**
      * Creates a new instance.
      *
      * @param maxContentLength
-     *        the maximum length of the aggregated content.
+     *        the maximum length of the aggregated content in bytes.
      *        If the length of the aggregated content exceeds this value,
      *        {@link #handleOversizedMessage(ChannelHandlerContext, HttpMessage)}
      *        will be called.
@@ -140,10 +140,17 @@ public class HttpObjectAggregator
 
     @Override
     protected void finishAggregation(FullHttpMessage aggregated) throws Exception {
-        // Set the 'Content-Length' header.
-        aggregated.headers().set(
-                HttpHeaders.Names.CONTENT_LENGTH,
-                String.valueOf(aggregated.content().readableBytes()));
+        // Set the 'Content-Length' header. If one isn't already set.
+        // This is important as HEAD responses will use a 'Content-Length' header which
+        // does not match the actual body, but the number of bytes that would be
+        // transmitted if a GET would have been used.
+        //
+        // See rfc2616 14.13 Content-Length
+        if (!HttpHeaderUtil.isContentLengthSet(aggregated)) {
+            aggregated.headers().set(
+                    HttpHeaderNames.CONTENT_LENGTH,
+                    String.valueOf(aggregated.content().readableBytes()));
+        }
     }
 
     @Override
@@ -161,10 +168,9 @@ public class HttpObjectAggregator
             });
 
             // If the client started to send data already, close because it's impossible to recover.
-            // If 'Expect: 100-continue' is missing, close becuase it's impossible to recover.
-            // If keep-alive is off, no need to leave the connection open.
+            // If keep-alive is off and 'Expect: 100-continue' is missing, no need to leave the connection open.
             if (oversized instanceof FullHttpMessage ||
-                    !HttpHeaderUtil.is100ContinueExpected(oversized) || !HttpHeaderUtil.isKeepAlive(oversized)) {
+                !HttpHeaderUtil.is100ContinueExpected(oversized) && !HttpHeaderUtil.isKeepAlive(oversized)) {
                 future.addListener(ChannelFutureListener.CLOSE);
             }
 
@@ -186,17 +192,23 @@ public class HttpObjectAggregator
         protected final HttpMessage message;
         private HttpHeaders trailingHeaders;
 
-        private AggregatedFullHttpMessage(HttpMessage message, ByteBuf content, HttpHeaders trailingHeaders) {
+        AggregatedFullHttpMessage(HttpMessage message, ByteBuf content, HttpHeaders trailingHeaders) {
             super(content);
             this.message = message;
             this.trailingHeaders = trailingHeaders;
         }
+
         @Override
         public HttpHeaders trailingHeaders() {
-            return trailingHeaders;
+            HttpHeaders trailingHeaders = this.trailingHeaders;
+            if (trailingHeaders == null) {
+                return EmptyHttpHeaders.INSTANCE;
+            } else {
+                return trailingHeaders;
+            }
         }
 
-        public void setTrailingHeaders(HttpHeaders trailingHeaders) {
+        void setTrailingHeaders(HttpHeaders trailingHeaders) {
             this.trailingHeaders = trailingHeaders;
         }
 
@@ -259,17 +271,43 @@ public class HttpObjectAggregator
 
     private static final class AggregatedFullHttpRequest extends AggregatedFullHttpMessage implements FullHttpRequest {
 
-        private AggregatedFullHttpRequest(HttpRequest request, ByteBuf content, HttpHeaders trailingHeaders) {
+        AggregatedFullHttpRequest(HttpRequest request, ByteBuf content, HttpHeaders trailingHeaders) {
             super(request, content, trailingHeaders);
+        }
+
+        /**
+         * Copy this object
+         *
+         * @param copyContent
+         * <ul>
+         * <li>{@code true} if this object's {@link #content()} should be used to copy.</li>
+         * <li>{@code false} if {@code newContent} should be used instead.</li>
+         * </ul>
+         * @param newContent
+         * <ul>
+         * <li>if {@code copyContent} is false then this will be used in the copy's content.</li>
+         * <li>if {@code null} then a default buffer of 0 size will be selected</li>
+         * </ul>
+         * @return A copy of this object
+         */
+        private FullHttpRequest copy(boolean copyContent, ByteBuf newContent) {
+            DefaultFullHttpRequest copy = new DefaultFullHttpRequest(
+                    protocolVersion(), method(), uri(),
+                    copyContent ? content().copy() :
+                        newContent == null ? Unpooled.buffer(0) : newContent);
+            copy.headers().set(headers());
+            copy.trailingHeaders().set(trailingHeaders());
+            return copy;
+        }
+
+        @Override
+        public FullHttpRequest copy(ByteBuf newContent) {
+            return copy(false, newContent);
         }
 
         @Override
         public FullHttpRequest copy() {
-            DefaultFullHttpRequest copy = new DefaultFullHttpRequest(
-                    protocolVersion(), method(), uri(), content().copy());
-            copy.headers().set(headers());
-            copy.trailingHeaders().set(trailingHeaders());
-            return copy;
+            return copy(true, null);
         }
 
         @Override
@@ -332,21 +370,53 @@ public class HttpObjectAggregator
             super.setProtocolVersion(version);
             return this;
         }
+
+        @Override
+        public String toString() {
+            return HttpMessageUtil.appendFullRequest(new StringBuilder(256), this).toString();
+        }
     }
 
     private static final class AggregatedFullHttpResponse extends AggregatedFullHttpMessage
             implements FullHttpResponse {
-        private AggregatedFullHttpResponse(HttpResponse message, ByteBuf content, HttpHeaders trailingHeaders) {
+
+        AggregatedFullHttpResponse(HttpResponse message, ByteBuf content, HttpHeaders trailingHeaders) {
             super(message, content, trailingHeaders);
+        }
+
+        /**
+         * Copy this object
+         *
+         * @param copyContent
+         * <ul>
+         * <li>{@code true} if this object's {@link #content()} should be used to copy.</li>
+         * <li>{@code false} if {@code newContent} should be used instead.</li>
+         * </ul>
+         * @param newContent
+         * <ul>
+         * <li>if {@code copyContent} is false then this will be used in the copy's content.</li>
+         * <li>if {@code null} then a default buffer of 0 size will be selected</li>
+         * </ul>
+         * @return A copy of this object
+         */
+        private FullHttpResponse copy(boolean copyContent, ByteBuf newContent) {
+            DefaultFullHttpResponse copy = new DefaultFullHttpResponse(
+                    protocolVersion(), status(),
+                    copyContent ? content().copy() :
+                        newContent == null ? Unpooled.buffer(0) : newContent);
+            copy.headers().set(headers());
+            copy.trailingHeaders().set(trailingHeaders());
+            return copy;
+        }
+
+        @Override
+        public FullHttpResponse copy(ByteBuf newContent) {
+            return copy(false, newContent);
         }
 
         @Override
         public FullHttpResponse copy() {
-            DefaultFullHttpResponse copy = new DefaultFullHttpResponse(
-                    protocolVersion(), status(), content().copy());
-            copy.headers().set(headers());
-            copy.trailingHeaders().set(trailingHeaders());
-            return copy;
+            return copy(true, null);
         }
 
         @Override
@@ -397,6 +467,11 @@ public class HttpObjectAggregator
         public FullHttpResponse touch() {
             super.touch();
             return this;
+        }
+
+        @Override
+        public String toString() {
+            return HttpMessageUtil.appendFullResponse(new StringBuilder(256), this).toString();
         }
     }
 }

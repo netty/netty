@@ -21,6 +21,15 @@ import io.netty.buffer.ByteBuf;
  * Encodes {@link Http2Headers} into HPACK-encoded headers blocks.
  */
 public interface Http2HeadersEncoder {
+    /**
+     * Configuration related elements for the {@link Http2HeadersEncoder} interface
+     */
+    interface Configuration {
+        /**
+         * Access the Http2HeaderTable for this {@link Http2HeadersEncoder}
+         */
+        Http2HeaderTable headerTable();
+    }
 
     /**
      * Encodes the given headers and writes the output headers block to the given output buffer.
@@ -31,12 +40,7 @@ public interface Http2HeadersEncoder {
     void encodeHeaders(Http2Headers headers, ByteBuf buffer) throws Http2Exception;
 
     /**
-     * Updates the maximum header table size for this encoder.
+     * Get the {@link Configuration} for this {@link Http2HeadersEncoder}
      */
-    void maxHeaderTableSize(int size) throws Http2Exception;
-
-    /**
-     * Gets the current maximum value for the header table size.
-     */
-    int maxHeaderTableSize();
+    Configuration configuration();
 }

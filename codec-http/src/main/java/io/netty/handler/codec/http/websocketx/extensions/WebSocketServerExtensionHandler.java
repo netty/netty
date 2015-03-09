@@ -20,7 +20,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 
@@ -69,7 +69,7 @@ public class WebSocketServerExtensionHandler extends ChannelHandlerAdapter {
             HttpRequest request = (HttpRequest) msg;
 
             if (WebSocketExtensionUtil.isWebsocketUpgrade(request)) {
-                String extensionsHeader = request.headers().get(HttpHeaders.Names.SEC_WEBSOCKET_EXTENSIONS);
+                String extensionsHeader = request.headers().getAndConvert(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
 
                 if (extensionsHeader != null) {
                     List<WebSocketExtensionData> extensions =
@@ -107,7 +107,7 @@ public class WebSocketServerExtensionHandler extends ChannelHandlerAdapter {
         if (msg instanceof HttpResponse &&
                 WebSocketExtensionUtil.isWebsocketUpgrade((HttpResponse) msg) && validExtensions != null) {
             HttpResponse response = (HttpResponse) msg;
-            String headerValue = response.headers().get(HttpHeaders.Names.SEC_WEBSOCKET_EXTENSIONS);
+            String headerValue = response.headers().getAndConvert(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
 
             for (WebSocketServerExtension extension : validExtensions) {
                 WebSocketExtensionData extensionData = extension.newReponseData();
@@ -132,7 +132,7 @@ public class WebSocketServerExtensionHandler extends ChannelHandlerAdapter {
             });
 
             if (headerValue != null) {
-                response.headers().set(HttpHeaders.Names.SEC_WEBSOCKET_EXTENSIONS, headerValue);
+                response.headers().set(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS, headerValue);
             }
         }
 

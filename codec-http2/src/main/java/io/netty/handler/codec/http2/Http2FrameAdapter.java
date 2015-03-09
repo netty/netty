@@ -18,24 +18,25 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 
 /**
- * Convenience class that provides no-op implementations for all methods of {@link Http2FrameObserver}.
+ * Convenience class that provides no-op implementations for all methods of {@link Http2FrameListener}.
  */
-public class Http2FrameAdapter implements Http2FrameObserver {
+public class Http2FrameAdapter implements Http2FrameListener {
 
     @Override
-    public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
-            boolean endOfStream, boolean endOfSegment) throws Http2Exception {
+    public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
+            boolean endOfStream) throws Http2Exception {
+        return data.readableBytes() + padding;
     }
 
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-            int padding, boolean endStream, boolean endSegment) throws Http2Exception {
+            int padding, boolean endStream) throws Http2Exception {
     }
 
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-            int streamDependency, short weight, boolean exclusive, int padding, boolean endStream,
-            boolean endSegment) throws Http2Exception {
+            int streamDependency, short weight, boolean exclusive, int padding, boolean endStream)
+            throws Http2Exception {
     }
 
     @Override

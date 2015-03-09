@@ -22,12 +22,17 @@ import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakHint;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.concurrent.PausableEventExecutor;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
-
 import java.net.SocketAddress;
 import java.util.WeakHashMap;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
+/**
+ * Abstract base class for {@link ChannelHandlerContext} implementations.
+ */
 abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, ResourceLeakHint {
 
     // This class keeps an integer member field 'skipFlags' whose each bit tells if the corresponding handler method
@@ -76,17 +81,28 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             MASK_FLUSH;
 
     /**
-     * Cache the result of the costly generation of {@link #skipFlags} in the partitioned synchronized
-     * {@link WeakHashMap}.
+     * Cache the result of the costly generation of {@link #skipFlags} in a thread-local {@link WeakHashMap}.
      */
-    @SuppressWarnings("unchecked")
-    private static final WeakHashMap<Class<?>, Integer>[] skipFlagsCache =
-            new WeakHashMap[Runtime.getRuntime().availableProcessors()];
+    private static final FastThreadLocal<WeakHashMap<Class<?>, Integer>> skipFlagsCache =
+            new FastThreadLocal<WeakHashMap<Class<?>, Integer>>() {
+                @Override
+                protected WeakHashMap<Class<?>, Integer> initialValue() throws Exception {
+                    return new WeakHashMap<Class<?>, Integer>();
+                }
+            };
+
+    private static final AtomicReferenceFieldUpdater<AbstractChannelHandlerContext, PausableChannelEventExecutor>
+            WRAPPED_EVENTEXECUTOR_UPDATER;
 
     static {
-        for (int i = 0; i < skipFlagsCache.length; i ++) {
-            skipFlagsCache[i] = new WeakHashMap<Class<?>, Integer>();
+        AtomicReferenceFieldUpdater<AbstractChannelHandlerContext, PausableChannelEventExecutor> updater =
+               PlatformDependent.newAtomicReferenceFieldUpdater(
+                       AbstractChannelHandlerContext.class, "wrappedEventLoop");
+        if (updater == null) {
+            updater = AtomicReferenceFieldUpdater.newUpdater(
+                    AbstractChannelHandlerContext.class, PausableChannelEventExecutor.class, "wrappedEventLoop");
         }
+        WRAPPED_EVENTEXECUTOR_UPDATER = updater;
     }
 
     /**
@@ -95,18 +111,15 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
      * Otherwise, it delegates to {@link #skipFlags0(Class)} to get it.
      */
     static int skipFlags(ChannelHandler handler) {
-        WeakHashMap<Class<?>, Integer> cache =
-                skipFlagsCache[(int) (Thread.currentThread().getId() % skipFlagsCache.length)];
+        WeakHashMap<Class<?>, Integer> cache = skipFlagsCache.get();
         Class<? extends ChannelHandler> handlerType = handler.getClass();
         int flagsVal;
-        synchronized (cache) {
-            Integer flags = cache.get(handlerType);
-            if (flags != null) {
-                flagsVal = flags;
-            } else {
-                flagsVal = skipFlags0(handlerType);
-                cache.put(handlerType, Integer.valueOf(flagsVal));
-            }
+        Integer flags = cache.get(handlerType);
+        if (flags != null) {
+            flagsVal = flags;
+        } else {
+            flagsVal = skipFlags0(handlerType);
+            cache.put(handlerType, Integer.valueOf(flagsVal));
         }
 
         return flagsVal;
@@ -200,6 +213,35 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private final AbstractChannel channel;
     private final DefaultChannelPipeline pipeline;
     private final String name;
+
+    /**
+     * Set when the {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object)} of
+     * this context's handler is invoked.
+     * Cleared when a user calls {@link #fireChannelReadComplete()} on this context.
+     *
+     * See {@link #fireChannelReadComplete()} to understand how this flag is used.
+     */
+    boolean invokedThisChannelRead;
+
+    /**
+     * Set when a user calls {@link #fireChannelRead(Object)} on this context.
+     * Cleared when a user calls {@link #fireChannelReadComplete()} on this context.
+     *
+     * See {@link #fireChannelReadComplete()} to understand how this flag is used.
+     */
+    private volatile boolean invokedNextChannelRead;
+
+    /**
+     * Set when a user calls {@link #read()} on this context.
+     * Cleared when a user calls {@link #fireChannelReadComplete()} on this context.
+     *
+     * See {@link #fireChannelReadComplete()} to understand how this flag is used.
+     */
+    private volatile boolean invokedPrevRead;
+
+    /**
+     * {@code true} if and only if this context has been removed from the pipeline.
+     */
     private boolean removed;
 
     final int skipFlags;
@@ -217,6 +259,12 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     volatile Runnable invokeFlushTask;
     volatile Runnable invokeChannelWritableStateChangedTask;
 
+    /**
+     * Wrapped {@link EventLoop} and {@link ChannelHandlerInvoker} to support {@link Channel#deregister()}.
+     */
+    @SuppressWarnings("UnusedDeclaration")
+    private volatile PausableChannelEventExecutor wrappedEventLoop;
+
     AbstractChannelHandlerContext(
             DefaultChannelPipeline pipeline, ChannelHandlerInvoker invoker, String name, int skipFlags) {
 
@@ -231,33 +279,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         this.skipFlags = skipFlags;
     }
 
-    /** Invocation initiated by {@link DefaultChannelPipeline#teardownAll()}}. */
-    void teardown() {
-        EventExecutor executor = executor();
-        if (executor.inEventLoop()) {
-            teardown0();
-        } else {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    teardown0();
-                }
-            });
-        }
-    }
-
-    private void teardown0() {
-        AbstractChannelHandlerContext prev = this.prev;
-        if (prev != null) {
-            synchronized (pipeline) {
-                pipeline.remove0(this);
-            }
-            prev.teardown();
-        }
-    }
-
     @Override
-    public Channel channel() {
+    public final Channel channel() {
         return channel;
     }
 
@@ -272,16 +295,33 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     @Override
-    public EventExecutor executor() {
-        return invoker().executor();
+    public final EventExecutor executor() {
+        if (invoker == null) {
+            return channel().eventLoop();
+        } else {
+            return wrappedEventLoop();
+        }
     }
 
     @Override
-    public ChannelHandlerInvoker invoker() {
+    public final ChannelHandlerInvoker invoker() {
         if (invoker == null) {
-            return channel.unsafe().invoker();
+            return channel().eventLoop().asInvoker();
+        } else {
+            return wrappedEventLoop();
         }
-        return invoker;
+    }
+
+    private PausableChannelEventExecutor wrappedEventLoop() {
+        PausableChannelEventExecutor wrapped = wrappedEventLoop;
+        if (wrapped == null) {
+            wrapped = new PausableChannelEventExecutor0();
+            if (!WRAPPED_EVENTEXECUTOR_UPDATER.compareAndSet(this, null, wrapped)) {
+                // Set in the meantime so we need to issue another volatile read
+                return wrappedEventLoop;
+            }
+        }
+        return wrapped;
     }
 
     @Override
@@ -345,14 +385,56 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     public ChannelHandlerContext fireChannelRead(Object msg) {
         AbstractChannelHandlerContext next = findContextInbound();
         ReferenceCountUtil.touch(msg, next);
+        invokedNextChannelRead = true;
         next.invoker().invokeChannelRead(next, msg);
         return this;
     }
 
     @Override
     public ChannelHandlerContext fireChannelReadComplete() {
-        AbstractChannelHandlerContext next = findContextInbound();
-        next.invoker().invokeChannelReadComplete(next);
+        /**
+         * If the handler of this context did not produce any messages via {@link #fireChannelRead(Object)},
+         * there's no reason to trigger {@code channelReadComplete()} even if the handler called this method.
+         *
+         * This is pretty common for the handlers that transform multiple messages into one message,
+         * such as byte-to-message decoder and message aggregators.
+         *
+         * Only one exception is when nobody invoked the channelRead() method of this context's handler.
+         * It means the handler has been added later dynamically.
+         */
+        if (invokedNextChannelRead ||  // The handler of this context produced a message, or
+            !invokedThisChannelRead) { // it is not required to produce a message to trigger the event.
+
+            invokedNextChannelRead = false;
+            invokedPrevRead = false;
+
+            AbstractChannelHandlerContext next = findContextInbound();
+            next.invoker().invokeChannelReadComplete(next);
+            return this;
+        }
+
+        /**
+         * At this point, we are sure the handler of this context did not produce anything and
+         * we suppressed the {@code channelReadComplete()} event.
+         *
+         * If the next handler invoked {@link #read()} to read something but nothing was produced
+         * by the handler of this context, someone has to issue another {@link #read()} operation
+         * until the handler of this context produces something.
+         *
+         * Why? Because otherwise the next handler will not receive {@code channelRead()} nor
+         * {@code channelReadComplete()} event at all for the {@link #read()} operation it issued.
+         */
+        if (invokedPrevRead && !channel().config().isAutoRead()) {
+            /**
+             * The next (or upstream) handler invoked {@link #read()}, but it didn't get any
+             * {@code channelRead()} event. We should read once more, so that the handler of the current
+             * context have a chance to produce something.
+             */
+            read();
+        } else {
+            invokedPrevRead = false;
+        }
+
         return this;
     }
 
@@ -440,6 +522,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     @Override
     public ChannelHandlerContext read() {
         AbstractChannelHandlerContext next = findContextOutbound();
+        invokedPrevRead = true;
         next.invoker().invokeRead(next);
         return this;
     }
@@ -542,5 +625,46 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     @Override
     public String toString() {
         return StringUtil.simpleClassName(ChannelHandlerContext.class) + '(' + name + ", " + channel + ')';
+    }
+
+    private final class PausableChannelEventExecutor0 extends PausableChannelEventExecutor {
+
+        @Override
+        public void rejectNewTasks() {
+            /**
+             * This cast is correct because {@link #channel()} always returns an {@link AbstractChannel} and
+             * {@link AbstractChannel#eventLoop()} always returns a {@link PausableChannelEventExecutor}.
+             */
+            ((PausableEventExecutor) channel().eventLoop()).rejectNewTasks();
+        }
+
+        @Override
+        public void acceptNewTasks() {
+            ((PausableEventExecutor) channel().eventLoop()).acceptNewTasks();
+        }
+
+        @Override
+        public boolean isAcceptingNewTasks() {
+            return ((PausableEventExecutor) channel().eventLoop()).isAcceptingNewTasks();
+        }
+
+        @Override
+        public Channel channel() {
+            return AbstractChannelHandlerContext.this.channel();
+        }
+
+        @Override
+        public EventExecutor unwrap() {
+            return unwrapInvoker().executor();
+        }
+
+        @Override
+        public ChannelHandlerInvoker unwrapInvoker() {
+            /**
+             * {@link #invoker} can not be {@code null}, because {@link PausableChannelEventExecutor0} will only be
+             * instantiated if {@link #invoker} is not {@code null}.
+             */
+            return invoker;
+        }
     }
 }

@@ -46,14 +46,18 @@ public interface Http2Stream {
     State state();
 
     /**
-     * Verifies that the stream is in one of the given allowed states.
+     * Add this stream to {@link Http2Connection#activeStreams()} and transition state to:
+     * <ul>
+     * <li>{@link State#OPEN} if {@link #state()} is {@link State#IDLE} and {@code halfClosed} is {@code false}.</li>
+     * <li>{@link State#HALF_CLOSED_LOCAL} if {@link #state()} is {@link State#IDLE} and {@code halfClosed}
+     * is {@code true} and the stream is local.</li>
+     * <li>{@link State#HALF_CLOSED_REMOTE} if {@link #state()} is {@link State#IDLE} and {@code halfClosed}
+     * is {@code true} and the stream is remote.</li>
+     * <li>{@link State#RESERVED_LOCAL} if {@link #state()} is {@link State#HALF_CLOSED_REMOTE}.</li>
+     * <li>{@link State#RESERVED_REMOTE} if {@link #state()} is {@link State#HALF_CLOSED_LOCAL}.</li>
+     * </ul>
      */
-    Http2Stream verifyState(Http2Error error, State... allowedStates) throws Http2Exception;
-
-    /**
-     * If this is a reserved push stream, opens the stream for push in one direction.
-     */
-    Http2Stream openForPush() throws Http2Exception;
+    Http2Stream open(boolean halfClosed) throws Http2Exception;
 
     /**
      * Closes the stream.
@@ -73,32 +77,15 @@ public interface Http2Stream {
     Http2Stream closeRemoteSide();
 
     /**
-     * Indicates whether a RST_STREAM frame has been received from the remote endpoint for this stream.
+     * Indicates whether a {@code RST_STREAM} frame has been sent from the local endpoint for this stream.
      */
-    boolean isTerminateReceived();
+    boolean isResetSent();
 
     /**
-     * Sets the flag indicating that a RST_STREAM frame has been received from the remote endpoint
+     * Sets the flag indicating that a {@code RST_STREAM} frame has been sent from the local endpoint
      * for this stream. This does not affect the stream state.
      */
-    void terminateReceived();
-
-    /**
-     * Indicates whether a RST_STREAM frame has been sent from the local endpoint for this stream.
-     */
-    boolean isTerminateSent();
-
-    /**
-     * Sets the flag indicating that a RST_STREAM frame has been sent from the local endpoint
-     * for this stream. This does not affect the stream state.
-     */
-    void terminateSent();
-
-    /**
-     * Indicates whether or not this stream has been terminated. This is a short form for
-     * {@link #isTerminateSent()} || {@link #isTerminateReceived()}.
-     */
-    boolean isTerminated();
+    Http2Stream resetSent();
 
     /**
      * Indicates whether the remote side of this stream is open (i.e. the state is either
@@ -114,33 +101,19 @@ public interface Http2Stream {
 
     /**
      * Associates the application-defined data with this stream.
+     * @return The value that was previously associated with {@code key}, or {@code null} if there was none.
      */
-    void data(Object data);
+    Object setProperty(Object key, Object value);
 
     /**
      * Returns application-defined data if any was associated with this stream.
      */
-    <T> T data();
+    <V> V getProperty(Object key);
 
     /**
-     * Gets the in-bound flow control state for this stream.
+     * Returns and removes application-defined data if any was associated with this stream.
      */
-    FlowState inboundFlow();
-
-    /**
-     * Sets the in-bound flow control state for this stream.
-     */
-    void inboundFlow(FlowState state);
-
-    /**
-     * Gets the out-bound flow control window for this stream.
-     */
-    FlowState outboundFlow();
-
-    /**
-     * Sets the out-bound flow control window for this stream.
-     */
-    void outboundFlow(FlowState state);
+    <V> V removeProperty(Object key);
 
     /**
      * Updates an priority for this stream. Calling this method may affect the straucture of the
@@ -155,8 +128,7 @@ public interface Http2Stream {
      *            This only applies if the stream has a parent.
      * @return this stream.
      */
-    Http2Stream setPriority(int parentStreamId, short weight, boolean exclusive)
-            throws Http2Exception;
+    Http2Stream setPriority(int parentStreamId, short weight, boolean exclusive) throws Http2Exception;
 
     /**
      * Indicates whether or not this stream is the root node of the priority tree.

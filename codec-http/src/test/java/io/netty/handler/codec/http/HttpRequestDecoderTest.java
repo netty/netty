@@ -98,7 +98,7 @@ public class HttpRequestDecoderTest {
     }
 
     private static void checkHeader(HttpHeaders headers, String name, String value) {
-        List<String> header1 = headers.getAll(name);
+        List<CharSequence> header1 = headers.getAll(name);
         assertEquals(1, header1.size());
         assertEquals(value, header1.get(0));
     }

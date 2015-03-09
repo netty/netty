@@ -15,21 +15,18 @@
  */
 package io.netty.handler.codec.http.websocketx.extensions;
 
-import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionTestUtil.*;
-import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.CodecException;
-import io.netty.handler.codec.http.HttpHeaders.Names;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.websocketx.WebSocketFrame;
+import org.junit.Test;
 
 import java.util.Collections;
 import java.util.List;
 
-import org.junit.Test;
+import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionTestUtil.*;
+import static org.easymock.EasyMock.*;
+import static org.junit.Assert.*;
 
 public class WebSocketServerExtensionHandlerTest {
 
@@ -79,14 +76,14 @@ public class WebSocketServerExtensionHandlerTest {
 
         HttpResponse res2 = ch.readOutbound();
         List<WebSocketExtensionData> resExts = WebSocketExtensionUtil.extractExtensions(
-                res2.headers().get(Names.SEC_WEBSOCKET_EXTENSIONS));
+                res2.headers().getAndConvert(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
 
         // test
         assertEquals(1, resExts.size());
         assertEquals("main", resExts.get(0).name());
         assertTrue(resExts.get(0).parameters().isEmpty());
-        assertTrue(ch.pipeline().get(DummyDecoder.class) != null);
-        assertTrue(ch.pipeline().get(DummyEncoder.class) != null);
+        assertNotNull(ch.pipeline().get(DummyDecoder.class));
+        assertNotNull(ch.pipeline().get(DummyEncoder.class));
     }
 
     @Test
@@ -130,16 +127,16 @@ public class WebSocketServerExtensionHandlerTest {
 
         HttpResponse res2 = ch.readOutbound();
         List<WebSocketExtensionData> resExts = WebSocketExtensionUtil.extractExtensions(
-                res2.headers().get(Names.SEC_WEBSOCKET_EXTENSIONS));
+                res2.headers().getAndConvert(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
 
         // test
         assertEquals(2, resExts.size());
         assertEquals("main", resExts.get(0).name());
         assertEquals("fallback", resExts.get(1).name());
-        assertTrue(ch.pipeline().get(DummyDecoder.class) != null);
-        assertTrue(ch.pipeline().get(DummyEncoder.class) != null);
-        assertTrue(ch.pipeline().get(Dummy2Decoder.class) != null);
-        assertTrue(ch.pipeline().get(Dummy2Encoder.class) != null);
+        assertNotNull(ch.pipeline().get(DummyDecoder.class));
+        assertNotNull(ch.pipeline().get(DummyEncoder.class));
+        assertNotNull(ch.pipeline().get(Dummy2Decoder.class));
+        assertNotNull(ch.pipeline().get(Dummy2Encoder.class));
     }
 
     @Test
@@ -170,7 +167,7 @@ public class WebSocketServerExtensionHandlerTest {
         HttpResponse res2 = ch.readOutbound();
 
         // test
-        assertFalse(res2.headers().contains(Names.SEC_WEBSOCKET_EXTENSIONS));
+        assertFalse(res2.headers().contains(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
     }
 
 }

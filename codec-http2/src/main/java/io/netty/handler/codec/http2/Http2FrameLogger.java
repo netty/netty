@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -40,36 +41,29 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
     }
 
     public Http2FrameLogger(InternalLogLevel level, InternalLogger logger) {
-        if (level == null) {
-            throw new NullPointerException("level");
-        }
-        if (logger == null) {
-            throw new NullPointerException("logger");
-        }
-        this.level = level;
-        this.logger = logger;
+        this.level = checkNotNull(level, "level");
+        this.logger = checkNotNull(logger, "logger");
     }
 
     public void logData(Direction direction, int streamId, ByteBuf data, int padding,
-            boolean endStream, boolean endSegment) {
+            boolean endStream) {
         log(direction,
-                "DATA: streamId=%d, padding=%d, endStream=%b, endSegment=%b, length=%d, bytes=%s",
-                streamId, padding, endStream, endSegment, data.readableBytes(), ByteBufUtil.hexDump(data));
+                "DATA: streamId=%d, padding=%d, endStream=%b, length=%d, bytes=%s",
+                streamId, padding, endStream, data.readableBytes(), ByteBufUtil.hexDump(data));
     }
 
     public void logHeaders(Direction direction, int streamId, Http2Headers headers, int padding,
-            boolean endStream, boolean endSegment) {
-        log(direction, "HEADERS: streamId:%d, headers=%s, padding=%d, endStream=%b, endSegment=%b",
-                streamId, headers, padding, endStream, endSegment);
+            boolean endStream) {
+        log(direction, "HEADERS: streamId:%d, headers=%s, padding=%d, endStream=%b",
+                streamId, headers, padding, endStream);
     }
 
     public void logHeaders(Direction direction, int streamId, Http2Headers headers,
-            int streamDependency, short weight, boolean exclusive, int padding, boolean endStream,
-            boolean endSegment) {
+            int streamDependency, short weight, boolean exclusive, int padding, boolean endStream) {
         log(direction,
                 "HEADERS: streamId:%d, headers=%s, streamDependency=%d, weight=%d, exclusive=%b, "
-                        + "padding=%d, endStream=%b, endSegment=%b", streamId, headers,
-                streamDependency, weight, exclusive, padding, endStream, endSegment);
+                        + "padding=%d, endStream=%b", streamId, headers,
+                streamDependency, weight, exclusive, padding, endStream);
     }
 
     public void logPriority(Direction direction, int streamId, int streamDependency, short weight,
@@ -121,11 +115,12 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
 
     private void log(Direction direction, String format, Object... args) {
         if (logger.isEnabled(level)) {
-            StringBuilder b = new StringBuilder("\n----------------");
-            b.append(direction.name());
-            b.append("--------------------\n");
-            b.append(String.format(format, args));
-            b.append("\n------------------------------------");
+            StringBuilder b = new StringBuilder(200);
+            b.append("\n----------------")
+             .append(direction.name())
+             .append("--------------------\n")
+             .append(String.format(format, args))
+             .append("\n------------------------------------");
             logger.log(level, b.toString());
         }
     }

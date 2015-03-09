@@ -21,9 +21,9 @@ import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpHeaders.Names;
-import io.netty.handler.codec.http.HttpHeaders.Values;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
@@ -42,6 +42,8 @@ import java.nio.ByteBuffer;
  * </p>
  */
 public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
+
+    private static final AsciiString WEBSOCKET = new AsciiString("WebSocket");
 
     private ByteBuf expectedChallengeResponseBytes;
 
@@ -136,9 +138,9 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         // Format request
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, path);
         HttpHeaders headers = request.headers();
-        headers.add(Names.UPGRADE, Values.WEBSOCKET)
-               .add(Names.CONNECTION, Values.UPGRADE)
-               .add(Names.HOST, wsURL.getHost());
+        headers.add(HttpHeaderNames.UPGRADE, WEBSOCKET)
+               .add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
+               .add(HttpHeaderNames.HOST, wsURL.getHost());
 
         int wsPort = wsURL.getPort();
         String originValue = "http://" + wsURL.getHost();
@@ -148,13 +150,13 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
             originValue = originValue + ':' + wsPort;
         }
 
-        headers.add(Names.ORIGIN, originValue)
-               .add(Names.SEC_WEBSOCKET_KEY1, key1)
-               .add(Names.SEC_WEBSOCKET_KEY2, key2);
+        headers.add(HttpHeaderNames.ORIGIN, originValue)
+               .add(HttpHeaderNames.SEC_WEBSOCKET_KEY1, key1)
+               .add(HttpHeaderNames.SEC_WEBSOCKET_KEY2, key2);
 
         String expectedSubprotocol = expectedSubprotocol();
         if (expectedSubprotocol != null && !expectedSubprotocol.isEmpty()) {
-            headers.add(Names.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
+            headers.add(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
         }
 
         if (customHeaders != null) {
@@ -163,7 +165,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 
         // Set Content-Length to workaround some known defect.
         // See also: http://www.ietf.org/mail-archive/web/hybi/current/msg02149.html
-        headers.set(Names.CONTENT_LENGTH, key3.length);
+        headers.setInt(HttpHeaderNames.CONTENT_LENGTH, key3.length);
         request.content().writeBytes(key3);
         return request;
     }
@@ -198,14 +200,14 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 
         HttpHeaders headers = response.headers();
 
-        String upgrade = headers.get(Names.UPGRADE);
-        if (!AsciiString.equalsIgnoreCase(Values.WEBSOCKET, upgrade)) {
+        CharSequence upgrade = headers.get(HttpHeaderNames.UPGRADE);
+        if (!WEBSOCKET.equalsIgnoreCase(upgrade)) {
             throw new WebSocketHandshakeException("Invalid handshake response upgrade: "
                     + upgrade);
         }
 
-        String connection = headers.get(Names.CONNECTION);
-        if (!AsciiString.equalsIgnoreCase(Values.UPGRADE, connection)) {
+        CharSequence connection = headers.get(HttpHeaderNames.CONNECTION);
+        if (!HttpHeaderValues.UPGRADE.equalsIgnoreCase(connection)) {
             throw new WebSocketHandshakeException("Invalid handshake response connection: "
                     + connection);
         }

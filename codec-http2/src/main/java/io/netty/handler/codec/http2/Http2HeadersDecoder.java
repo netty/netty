@@ -21,6 +21,15 @@ import io.netty.buffer.ByteBuf;
  * Decodes HPACK-encoded headers blocks into {@link Http2Headers}.
  */
 public interface Http2HeadersDecoder {
+    /**
+     * Configuration related elements for the {@link Http2HeadersDecoder} interface
+     */
+    interface Configuration {
+        /**
+         * Access the Http2HeaderTable for this {@link Http2HeadersDecoder}
+         */
+        Http2HeaderTable headerTable();
+    }
 
     /**
      * Decodes the given headers block and returns the headers.
@@ -28,12 +37,7 @@ public interface Http2HeadersDecoder {
     Http2Headers decodeHeaders(ByteBuf headerBlock) throws Http2Exception;
 
     /**
-     * Sets the new max header table size for this decoder.
+     * Get the {@link Configuration} for this {@link Http2HeadersDecoder}
      */
-    void maxHeaderTableSize(int size);
-
-    /**
-     * Gets the maximum header table size for this decoder.
-     */
-    int maxHeaderTableSize();
+    Configuration configuration();
 }

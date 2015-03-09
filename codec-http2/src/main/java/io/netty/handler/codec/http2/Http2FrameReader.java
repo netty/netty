@@ -22,26 +22,35 @@ import java.io.Closeable;
 
 /**
  * Reads HTTP/2 frames from an input {@link ByteBuf} and notifies the specified
- * {@link Http2FrameObserver} when frames are complete.
+ * {@link Http2FrameListener} when frames are complete.
  */
 public interface Http2FrameReader extends Closeable {
+    /**
+     * Configuration specific to {@link Http2FrameReader}
+     */
+    interface Configuration {
+        /**
+         * Get the {@link Http2HeaderTable} for this {@link Http2FrameReader}
+         */
+        Http2HeaderTable headerTable();
+
+        /**
+         * Get the {@link Http2FrameSizePolicy} for this {@link Http2FrameReader}
+         */
+        Http2FrameSizePolicy frameSizePolicy();
+    }
 
     /**
      * Attempts to read the next frame from the input buffer. If enough data is available to fully
-     * read the frame, notifies the observer of the read frame.
+     * read the frame, notifies the listener of the read frame.
      */
-    void readFrame(ChannelHandlerContext ctx, ByteBuf input, Http2FrameObserver observer)
+    void readFrame(ChannelHandlerContext ctx, ByteBuf input, Http2FrameListener listener)
             throws Http2Exception;
 
     /**
-     * Sets the maximum size of the HPACK header table used for decoding HTTP/2 headers.
+     * Get the configuration related elements for this {@link Http2FrameReader}
      */
-    void maxHeaderTableSize(long max);
-
-    /**
-     * Gets the maximum size of the HPACK header table used for decoding HTTP/2 headers.
-     */
-    long maxHeaderTableSize();
+    Configuration configuration();
 
     /**
      * Closes this reader and frees any allocated resources.

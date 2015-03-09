@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>5.0.0.Alpha2-SNAPSHOT</version>
+    <version>5.0.0.Alpha3-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-example</artifactId>
@@ -42,6 +42,11 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-handler</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-handler-proxy</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -76,7 +81,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-tcnative</artifactId>
-      <classifier>${os.detected.classifier}</classifier>
+        <classifier>${os.detected.classifier}</classifier>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty.npn</groupId>
@@ -107,6 +112,11 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-transport-rxtx</artifactId>
       <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <scope>runtime</scope>
     </dependency>
   </dependencies>
 

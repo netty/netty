@@ -24,6 +24,14 @@ final class CookieEncoderUtil {
         return InternalThreadLocalMap.get().stringBuilder();
     }
 
+    /**
+     * @param buf a buffer where some cookies were maybe encoded
+     * @return the buffer String without the trailing separator, or null if no cookie was appended.
+     */
+    static String stripTrailingSeparatorOrNull(StringBuilder buf) {
+        return buf.length() == 0 ? null : stripTrailingSeparator(buf);
+    }
+
     static String stripTrailingSeparator(StringBuilder buf) {
         if (buf.length() > 0) {
             buf.setLength(buf.length() - 2);
@@ -31,45 +39,10 @@ final class CookieEncoderUtil {
         return buf.toString();
     }
 
-    static void add(StringBuilder sb, String name, String val) {
-        if (val == null) {
-            addQuoted(sb, name, "");
-            return;
-        }
-
-        for (int i = 0; i < val.length(); i ++) {
-            char c = val.charAt(i);
-            switch (c) {
-            case '\t': case ' ': case '"': case '(':  case ')': case ',':
-            case '/':  case ':': case ';': case '<':  case '=': case '>':
-            case '?':  case '@': case '[': case '\\': case ']':
-            case '{':  case '}':
-                addQuoted(sb, name, val);
-                return;
-            }
-        }
-
-        addUnquoted(sb, name, val);
-    }
-
     static void addUnquoted(StringBuilder sb, String name, String val) {
         sb.append(name);
         sb.append((char) HttpConstants.EQUALS);
         sb.append(val);
-        sb.append((char) HttpConstants.SEMICOLON);
-        sb.append((char) HttpConstants.SP);
-    }
-
-    static void addQuoted(StringBuilder sb, String name, String val) {
-        if (val == null) {
-            val = "";
-        }
-
-        sb.append(name);
-        sb.append((char) HttpConstants.EQUALS);
-        sb.append((char) HttpConstants.DOUBLE_QUOTE);
-        sb.append(val.replace("\\", "\\\\").replace("\"", "\\\""));
-        sb.append((char) HttpConstants.DOUBLE_QUOTE);
         sb.append((char) HttpConstants.SEMICOLON);
         sb.append((char) HttpConstants.SP);
     }

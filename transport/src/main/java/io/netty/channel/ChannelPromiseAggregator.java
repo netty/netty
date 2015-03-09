@@ -16,79 +16,19 @@
 
 package io.netty.channel;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
-
+import io.netty.util.concurrent.PromiseAggregator;
 
 /**
  * Class which is used to consolidate multiple channel futures into one, by
  * listening to the individual futures and producing an aggregated result
  * (success/failure) when all futures have completed.
  */
-public final class ChannelPromiseAggregator implements ChannelFutureListener {
+public final class ChannelPromiseAggregator
+    extends PromiseAggregator<Void, ChannelFuture>
+    implements ChannelFutureListener {
 
-    private final ChannelPromise aggregatePromise;
-    private Set<ChannelPromise> pendingPromises;
-
-    /**
-     * Instance an new {@link ChannelPromiseAggregator}
-     *
-     * @param aggregatePromise  the {@link ChannelPromise} to notify
-     */
     public ChannelPromiseAggregator(ChannelPromise aggregatePromise) {
-        if (aggregatePromise == null) {
-            throw new NullPointerException("aggregatePromise");
-        }
-        this.aggregatePromise = aggregatePromise;
+        super(aggregatePromise);
     }
 
-    /**
-     * Add the given {@link ChannelPromise}s to the aggregator.
-     */
-    public ChannelPromiseAggregator add(ChannelPromise... promises) {
-        if (promises == null) {
-            throw new NullPointerException("promises");
-        }
-        if (promises.length == 0) {
-            return this;
-        }
-        synchronized (this) {
-            if (pendingPromises == null) {
-                int size;
-                if (promises.length > 1) {
-                    size = promises.length;
-                } else {
-                    size = 2;
-                }
-                pendingPromises = new LinkedHashSet<ChannelPromise>(size);
-            }
-            for (ChannelPromise p: promises) {
-                if (p == null) {
-                    continue;
-                }
-                pendingPromises.add(p);
-                p.addListener(this);
-            }
-        }
-        return this;
-    }
-
-    @Override
-    public synchronized void operationComplete(ChannelFuture future) throws Exception {
-        if (pendingPromises == null) {
-            aggregatePromise.setSuccess();
-        } else {
-            pendingPromises.remove(future);
-            if (!future.isSuccess()) {
-                aggregatePromise.setFailure(future.cause());
-                for (ChannelPromise pendingFuture : pendingPromises) {
-                    pendingFuture.setFailure(future.cause());
-                }
-            } else {
-                if (pendingPromises.isEmpty()) {
-                    aggregatePromise.setSuccess();
-                }
-            }
-        }
-    }
 }

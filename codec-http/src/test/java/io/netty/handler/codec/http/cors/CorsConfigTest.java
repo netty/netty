@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http.cors;
 
-import io.netty.handler.codec.http.HttpHeaders.Names;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import org.junit.Test;
 
@@ -95,20 +95,20 @@ public class CorsConfigTest {
     @Test
     public void preflightResponseHeadersSingleValue() {
         final CorsConfig cors = withAnyOrigin().preflightResponseHeader("SingleValue", "value").build();
-        assertThat(cors.preflightResponseHeaders().get("SingleValue"), equalTo("value"));
+        assertThat(cors.preflightResponseHeaders().getAndConvert("SingleValue"), equalTo("value"));
     }
 
     @Test
     public void preflightResponseHeadersMultipleValues() {
         final CorsConfig cors = withAnyOrigin().preflightResponseHeader("MultipleValues", "value1", "value2").build();
-        assertThat(cors.preflightResponseHeaders().getAll("MultipleValues"), hasItems("value1", "value2"));
+        assertThat(cors.preflightResponseHeaders().getAllAndConvert("MultipleValues"), hasItems("value1", "value2"));
     }
 
     @Test
     public void defaultPreflightResponseHeaders() {
         final CorsConfig cors = withAnyOrigin().build();
-        assertThat(cors.preflightResponseHeaders().get(Names.DATE), is(notNullValue()));
-        assertThat(cors.preflightResponseHeaders().get(Names.CONTENT_LENGTH), is("0"));
+        assertThat(cors.preflightResponseHeaders().get(HttpHeaderNames.DATE), is(notNullValue()));
+        assertThat(cors.preflightResponseHeaders().getAndConvert(HttpHeaderNames.CONTENT_LENGTH), is("0"));
     }
 
     @Test

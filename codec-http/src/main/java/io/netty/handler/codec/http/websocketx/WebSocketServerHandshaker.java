@@ -21,19 +21,23 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContentCompressor;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.nio.channels.ClosedChannelException;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -43,6 +47,11 @@ import java.util.Set;
  */
 public abstract class WebSocketServerHandshaker {
     protected static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketServerHandshaker.class);
+    private static final ClosedChannelException CLOSED_CHANNEL_EXCEPTION = new ClosedChannelException();
+
+    static {
+        CLOSED_CHANNEL_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+    }
 
     private final String uri;
 
@@ -197,6 +206,94 @@ public abstract class WebSocketServerHandshaker {
                 }
             }
         });
+        return promise;
+    }
+
+    /**
+     * Performs the opening handshake. When call this method you <strong>MUST NOT</strong> retain the
+     * {@link FullHttpRequest} which is passed in.
+     *
+     * @param channel
+     *              Channel
+     * @param req
+     *              HTTP Request
+     * @return future
+     *              The {@link ChannelFuture} which is notified once the opening handshake completes
+     */
+    public ChannelFuture handshake(Channel channel, HttpRequest req) {
+        return handshake(channel, req, null, channel.newPromise());
+    }
+
+    /**
+     * Performs the opening handshake
+     *
+     * When call this method you <strong>MUST NOT</strong> retain the {@link HttpRequest} which is passed in.
+     *
+     * @param channel
+     *            Channel
+     * @param req
+     *            HTTP Request
+     * @param responseHeaders
+     *            Extra headers to add to the handshake response or {@code null} if no extra headers should be added
+     * @param promise
+     *            the {@link ChannelPromise} to be notified when the opening handshake is done
+     * @return future
+     *            the {@link ChannelFuture} which is notified when the opening handshake is done
+     */
+    public final ChannelFuture handshake(final Channel channel, HttpRequest req,
+                                         final HttpHeaders responseHeaders, final ChannelPromise promise) {
+
+        if (req instanceof FullHttpRequest) {
+            return handshake(channel, (FullHttpRequest) req, responseHeaders, promise);
+        }
+        if (logger.isDebugEnabled()) {
+            logger.debug("{} WebSocket version {} server handshake", channel, version());
+        }
+        ChannelPipeline p = channel.pipeline();
+        ChannelHandlerContext ctx = p.context(HttpRequestDecoder.class);
+        if (ctx == null) {
+            // this means the user use a HttpServerCodec
+            ctx = p.context(HttpServerCodec.class);
+            if (ctx == null) {
+                promise.setFailure(
+                        new IllegalStateException("No HttpDecoder and no HttpServerCodec in the pipeline"));
+                return promise;
+            }
+        }
+        // Add aggregator and ensure we feed the HttpRequest so it is aggregated. A limit o 8192 should be more then
+        // enough for the websockets handshake payload.
+        //
+        // TODO: Make handshake work without HttpObjectAggregator at all.
+        String aggregatorName = "httpAggregator";
+        p.addAfter(ctx.name(), aggregatorName, new HttpObjectAggregator(8192));
+        p.addAfter(aggregatorName, "handshaker", new SimpleChannelInboundHandler<FullHttpRequest>() {
+            @Override
+            protected void messageReceived(ChannelHandlerContext ctx, FullHttpRequest msg) throws Exception {
+                // Remove ourself and do the actual handshake
+                ctx.pipeline().remove(this);
+                handshake(channel, msg, responseHeaders, promise);
+            }
+
+            @Override
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                // Remove ourself and fail the handshake promise.
+                ctx.pipeline().remove(this);
+                promise.tryFailure(cause);
+                ctx.fireExceptionCaught(cause);
+            }
+
+            @Override
+            public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                // Fail promise if Channel was closed
+                promise.tryFailure(CLOSED_CHANNEL_EXCEPTION);
+                ctx.fireChannelInactive();
+            }
+        });
+        try {
+            ctx.fireChannelRead(ReferenceCountUtil.retain(req));
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+        }
         return promise;
     }
 

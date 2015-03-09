@@ -21,12 +21,15 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.util.concurrent.EventExecutorGroup;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Test;
@@ -38,6 +41,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
@@ -546,6 +550,287 @@ public class DefaultChannelPipelineTest {
     public void testLastHandlerEmptyPipeline() throws Exception {
         ChannelPipeline pipeline = new LocalChannel().pipeline();
         assertNull(pipeline.last());
+    }
+
+    @Test
+    public void testSupressChannelReadComplete() throws Exception {
+        testSupressChannelReadComplete0(false);
+    }
+
+    @Test
+    public void testSupressChannelReadCompleteDifferentExecutors() throws Exception {
+        testSupressChannelReadComplete0(true);
+    }
+
+    // See:
+    //  https://github.com/netty/netty/pull/3263
+    //  https://github.com/netty/netty/pull/3272
+    private static void testSupressChannelReadComplete0(boolean executors) throws Exception {
+        final AtomicInteger read1 = new AtomicInteger();
+        final AtomicInteger read2 = new AtomicInteger();
+        final AtomicInteger readComplete1 = new AtomicInteger();
+        final AtomicInteger readComplete2 = new AtomicInteger();
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        final EventExecutorGroup group = executors ? new DefaultEventExecutorGroup(2) : null;
+
+        EmbeddedChannel ch = new EmbeddedChannel(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ch.pipeline().addLast(group, new ChannelHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                        if (read1.incrementAndGet() == 1) {
+                            return;
+                        }
+                        ctx.fireChannelRead(msg);
+                    }
+
+                    @Override
+                    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                        readComplete1.incrementAndGet();
+                        ctx.fireChannelReadComplete();
+                    }
+                });
+                ch.pipeline().addLast(group, new ChannelHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                        read2.incrementAndGet();
+                        ctx.fireChannelRead(msg);
+                    }
+
+                    @Override
+                    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                        readComplete2.incrementAndGet();
+                        ctx.fireChannelReadComplete();
+                    }
+
+                    @Override
+                    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                        latch.countDown();
+                    }
+                });
+            }
+        });
+
+        ch.writeInbound(1);
+        ch.writeInbound(2);
+        ch.writeInbound(3);
+        ch.finish();
+        latch.await();
+        assertEquals(3, read1.get());
+        assertEquals(3, readComplete1.get());
+
+        assertEquals(2, read2.get());
+        assertEquals(2, readComplete2.get());
+
+        assertEquals(2, ch.readInbound());
+        assertEquals(3, ch.readInbound());
+        assertNull(ch.readInbound());
+
+        if (group != null) {
+            group.shutdownGracefully();
+        }
+    }
+
+    /**
+     * {@link ChannelHandler#channelReadComplete(ChannelHandlerContext)} should not be suppressed
+     * when a handler has just been added and thus had no chance to get the previous
+     * {@link ChannelHandler#channelRead(ChannelHandlerContext, Object)}.
+     */
+    @Test
+    public void testProhibitChannelReadCompleteSuppression() throws Exception {
+        final AtomicInteger readComplete = new AtomicInteger();
+
+        EmbeddedChannel ch = new EmbeddedChannel(new ChannelHandlerAdapter() {
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                ctx.fireChannelRead(msg);
+
+                // Add a new handler *after* channelRead() is triggered, so that
+                // the new handler does not handle channelRead() at all.
+                ctx.pipeline().addAfter(ctx.name(), "newHandler", new ChannelHandlerAdapter() {
+                    @Override
+                    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                        readComplete.incrementAndGet();
+                    }
+                });
+            }
+
+            @Override
+            public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                ctx.fireChannelReadComplete();
+            }
+        });
+
+        ChannelPipeline p = ch.pipeline();
+        p.fireChannelRead(Boolean.TRUE);
+        p.fireChannelReadComplete();
+        ch.finish();
+
+        assertEquals(1, readComplete.get());
+    }
+
+    @Test
+    public void testChannelReadTriggered() {
+        final AtomicInteger read1 = new AtomicInteger();
+        final AtomicInteger channelRead1 = new AtomicInteger();
+        final AtomicInteger channelReadComplete1 = new AtomicInteger();
+        final AtomicInteger read2 = new AtomicInteger();
+        final AtomicInteger channelRead2 = new AtomicInteger();
+        final AtomicInteger channelReadComplete2 = new AtomicInteger();
+        final AtomicInteger read3 = new AtomicInteger();
+        final AtomicInteger channelRead3 = new AtomicInteger();
+        final AtomicInteger channelReadComplete3 = new AtomicInteger();
+
+        EmbeddedChannel ch = new EmbeddedChannel(new ChannelHandlerAdapter() {
+            @Override
+            public void read(ChannelHandlerContext ctx) throws Exception {
+                read1.incrementAndGet();
+                ctx.read();
+            }
+
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                channelRead1.incrementAndGet();
+                ctx.fireChannelRead(msg);
+            }
+
+            @Override
+            public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                channelReadComplete1.incrementAndGet();
+                ctx.fireChannelReadComplete();
+            }
+        }, new ChannelHandlerAdapter() {
+            @Override
+            public void read(ChannelHandlerContext ctx) throws Exception {
+                read2.incrementAndGet();
+                ctx.read();
+            }
+
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                // Consume
+                channelRead2.incrementAndGet();
+            }
+
+            @Override
+            public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                channelReadComplete2.incrementAndGet();
+                ctx.fireChannelReadComplete();
+            }
+        }, new ChannelHandlerAdapter() {
+            @Override
+            public void read(ChannelHandlerContext ctx) throws Exception {
+                read3.incrementAndGet();
+                ctx.read();
+            }
+
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                channelRead3.incrementAndGet();
+                ctx.fireChannelRead(msg);
+            }
+
+            @Override
+            public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                channelReadComplete3.incrementAndGet();
+                ctx.fireChannelReadComplete();
+            }
+        });
+
+        ch.config().setAutoRead(false);
+
+        ch.writeInbound(1);
+        ch.writeInbound(2);
+        ch.writeInbound(3);
+        ch.finish();
+        assertEquals(4, read1.get());
+        assertEquals(3, channelRead1.get());
+        assertEquals(3, channelReadComplete1.get());
+
+        assertEquals(1, read2.get());
+        assertEquals(3, channelRead2.get());
+        assertEquals(3, channelReadComplete1.get());
+
+        assertEquals(1, read3.get());
+        assertEquals(0, channelRead3.get());
+        assertEquals(0, channelReadComplete3.get());
+
+        assertNull(ch.readInbound());
+    }
+
+    @Test
+    public void testChannelReadNotTriggeredWhenLast() throws Exception {
+        final AtomicInteger read1 = new AtomicInteger();
+        final AtomicInteger channelRead1 = new AtomicInteger();
+        final AtomicInteger channelReadComplete1 = new AtomicInteger();
+        final AtomicInteger read2 = new AtomicInteger();
+        final AtomicInteger channelRead2 = new AtomicInteger();
+        final AtomicInteger channelReadComplete2 = new AtomicInteger();
+
+        EmbeddedChannel ch = new EmbeddedChannel(new ChannelHandlerAdapter());
+
+        // Ensure pipeline is really empty
+        ChannelPipeline pipeline = ch.pipeline();
+        while (pipeline.first() != null) {
+            pipeline.removeFirst();
+        }
+
+        pipeline.addLast(new ChannelHandlerAdapter() {
+            @Override
+            public void read(ChannelHandlerContext ctx) throws Exception {
+                read1.incrementAndGet();
+                ctx.read();
+            }
+
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                channelRead1.incrementAndGet();
+                ctx.fireChannelRead(msg);
+            }
+
+            @Override
+            public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                channelReadComplete1.incrementAndGet();
+                ctx.fireChannelReadComplete();
+            }
+        }, new ChannelHandlerAdapter() {
+            @Override
+            public void read(ChannelHandlerContext ctx) throws Exception {
+                read2.incrementAndGet();
+                ctx.read();
+            }
+
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                // Consume
+                channelRead2.incrementAndGet();
+            }
+
+            @Override
+            public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                channelReadComplete2.incrementAndGet();
+                ctx.fireChannelReadComplete();
+            }
+        });
+
+        ch.config().setAutoRead(false);
+
+        ch.writeInbound(1);
+        ch.writeInbound(2);
+        ch.writeInbound(3);
+        ch.finish();
+        assertEquals(0, read1.get());
+        assertEquals(3, channelRead1.get());
+        assertEquals(3, channelReadComplete1.get());
+
+        assertEquals(0, read2.get());
+        assertEquals(3, channelRead2.get());
+        assertEquals(3, channelReadComplete1.get());
+
+        assertNull(ch.readInbound());
     }
 
     private static int next(AbstractChannelHandlerContext ctx) {

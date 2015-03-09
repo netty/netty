@@ -279,12 +279,17 @@ public class JZlibEncoder extends ZlibEncoder {
     @Override
     protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
         if (finished) {
+            out.writeBytes(in);
+            return;
+        }
+
+        int inputLength = in.readableBytes();
+        if (inputLength == 0) {
             return;
         }
 
         try {
             // Configure input.
-            int inputLength = in.readableBytes();
             boolean inHasArray = in.hasArray();
             z.avail_in = inputLength;
             if (inHasArray) {

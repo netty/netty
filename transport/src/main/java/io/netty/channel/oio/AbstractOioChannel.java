@@ -21,7 +21,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.ThreadPerChannelEventLoop;
 
-import java.net.ConnectException;
 import java.net.SocketAddress;
 
 /**
@@ -75,12 +74,7 @@ public abstract class AbstractOioChannel extends AbstractChannel {
                     pipeline().fireChannelActive();
                 }
             } catch (Throwable t) {
-                if (t instanceof ConnectException) {
-                    Throwable newT = new ConnectException(t.getMessage() + ": " + remoteAddress);
-                    newT.setStackTrace(t.getStackTrace());
-                    t = newT;
-                }
-                safeSetFailure(promise, t);
+                safeSetFailure(promise, annotateConnectException(t, remoteAddress));
                 closeIfClosed();
             }
         }

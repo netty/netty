@@ -16,6 +16,7 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 
 import java.util.zip.Deflater;
@@ -52,10 +53,20 @@ class SpdyHeaderBlockZlibEncoder extends SpdyHeaderBlockRawEncoder {
         return len;
     }
 
-    private void encode(ByteBuf compressed) {
-        while (compressInto(compressed)) {
-            // Although unlikely, it's possible that the compressed size is larger than the decompressed size
-            compressed.ensureWritable(compressed.capacity() << 1);
+    private ByteBuf encode(ByteBufAllocator alloc, int len) {
+        ByteBuf compressed = alloc.heapBuffer(len);
+        boolean release = true;
+        try {
+            while (compressInto(compressed)) {
+                // Although unlikely, it's possible that the compressed size is larger than the decompressed size
+                compressed.ensureWritable(compressed.capacity() << 1);
+            }
+            release = false;
+            return compressed;
+        } finally {
+            if (release) {
+                compressed.release();
+            }
         }
     }
 
@@ -69,7 +80,7 @@ class SpdyHeaderBlockZlibEncoder extends SpdyHeaderBlockRawEncoder {
     }
 
     @Override
-    public ByteBuf encode(SpdyHeadersFrame frame) throws Exception {
+    public ByteBuf encode(ByteBufAllocator alloc, SpdyHeadersFrame frame) throws Exception {
         if (frame == null) {
             throw new IllegalArgumentException("frame");
         }
@@ -78,17 +89,17 @@ class SpdyHeaderBlockZlibEncoder extends SpdyHeaderBlockRawEncoder {
             return Unpooled.EMPTY_BUFFER;
         }
 
-        ByteBuf decompressed = super.encode(frame);
-        if (decompressed.readableBytes() == 0) {
-            return Unpooled.EMPTY_BUFFER;
+        ByteBuf decompressed = super.encode(alloc, frame);
+        try {
+            if (!decompressed.isReadable()) {
+                return Unpooled.EMPTY_BUFFER;
+            }
+
+            int len = setInput(decompressed);
+            return encode(alloc, len);
+        } finally {
+            decompressed.release();
         }
-
-        ByteBuf compressed = decompressed.alloc().heapBuffer(decompressed.readableBytes());
-        int len = setInput(decompressed);
-        encode(compressed);
-        decompressed.skipBytes(len);
-
-        return compressed;
     }
 
     @Override
