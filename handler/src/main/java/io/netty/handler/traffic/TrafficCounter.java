@@ -25,19 +25,17 @@ import java.util.concurrent.atomic.AtomicLong;
 
 
 /**
- * TrafficCounter is associated with {@link AbstractTrafficShapingHandler}.
- *
- * <p>A <tt>TrafficCounter</tt> counts the read and written bytes such that the
- * {@link AbstractTrafficShapingHandler} can limit the traffic, globally or per channel.</p>
- *
- * <p>It computes the statistics for both read and written every {@link #checkInterval}, and calls
- * back to its parent {@link AbstractTrafficShapingHandler#doAccounting} method.  If the checkInterval
- * is set to 0, no accounting will be done and statistics will only be computed at each receive or
- * write operation.</p>
+ * Counts the number of read and written bytes for rate-limiting traffic.
+ * <p>
+ * It computes the statistics for both inbound and outbound traffic periodically at the given
+ * {@code checkInterval}, and calls the {@link AbstractTrafficShapingHandler#doAccounting(TrafficCounter)} method back.
+ * If the {@code checkInterval} is {@code 0}, no accounting will be done and statistics will only be computed at each
+ * receive or write operation.
+ * </p>
  */
 public class TrafficCounter {
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(TrafficCounter.class);
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(TrafficCounter.class);
 
     /**
      * @return the time in ms using nanoTime, so not real EPOCH time but elapsed time in ms.
@@ -166,41 +164,17 @@ public class TrafficCounter {
      * Class to implement monitoring at fix delay
      *
      */
-    private static class TrafficMonitoringTask implements Runnable {
-        /**
-         * The associated TrafficShapingHandler
-         */
-        private final AbstractTrafficShapingHandler trafficShapingHandler1;
-
-        /**
-         * The associated TrafficCounter
-         */
-        private final TrafficCounter counter;
-
-        /**
-         * @param trafficShapingHandler
-         *            The parent handler to which this task needs to callback to for accounting.
-         * @param counter
-         *            The parent TrafficCounter that we need to reset the statistics for.
-         */
-        protected TrafficMonitoringTask(
-                AbstractTrafficShapingHandler trafficShapingHandler,
-                TrafficCounter counter) {
-            trafficShapingHandler1 = trafficShapingHandler;
-            this.counter = counter;
-        }
-
+    private final class TrafficMonitoringTask implements Runnable {
         @Override
         public void run() {
-            if (!counter.monitorActive) {
+            if (!monitorActive) {
                 return;
             }
-            counter.resetAccounting(milliSecondFromNano());
-            if (trafficShapingHandler1 != null) {
-                trafficShapingHandler1.doAccounting(counter);
+            resetAccounting(milliSecondFromNano());
+            if (trafficShapingHandler != null) {
+                trafficShapingHandler.doAccounting(TrafficCounter.this);
             }
-            counter.scheduledFuture = counter.executor.schedule(this, counter.checkInterval.get(),
-                                                                TimeUnit.MILLISECONDS);
+            scheduledFuture = executor.schedule(this, checkInterval.get(), TimeUnit.MILLISECONDS);
         }
     }
 
@@ -216,7 +190,7 @@ public class TrafficCounter {
         // if executor is null, it means it is piloted by a GlobalChannelTrafficCounter, so no executor
         if (localCheckInterval > 0 && executor != null) {
             monitorActive = true;
-            monitor = new TrafficMonitoringTask(trafficShapingHandler, this);
+            monitor = new TrafficMonitoringTask();
             scheduledFuture =
                 executor.schedule(monitor, localCheckInterval, TimeUnit.MILLISECONDS);
         }
@@ -265,6 +239,33 @@ public class TrafficCounter {
     }
 
     /**
+     * Constructor with the {@link AbstractTrafficShapingHandler} that hosts it, the {@link ScheduledExecutorService}
+     * to use, its name, the checkInterval between two computations in milliseconds.
+     *
+     * @param executor
+     *            the underlying executor service for scheduling checks, might be null when used
+     * from {@link GlobalChannelTrafficCounter}.
+     * @param name
+     *            the name given to this monitor.
+     * @param checkInterval
+     *            the checkInterval in millisecond between two computations.
+     */
+    public TrafficCounter(ScheduledExecutorService executor, String name, long checkInterval) {
+        if (executor == null) {
+            throw new NullPointerException("executor");
+        }
+        if (name == null) {
+            throw new NullPointerException("name");
+        }
+
+        trafficShapingHandler = null;
+        this.executor = executor;
+        this.name = name;
+
+        init(checkInterval);
+    }
+
+    /**
      * Constructor with the {@link AbstractTrafficShapingHandler} that hosts it, the Timer to use, its
      * name, the checkInterval between two computations in millisecond.
      *
@@ -278,14 +279,28 @@ public class TrafficCounter {
      * @param checkInterval
      *            the checkInterval in millisecond between two computations.
      */
-    public TrafficCounter(AbstractTrafficShapingHandler trafficShapingHandler, ScheduledExecutorService executor,
+    public TrafficCounter(
+            AbstractTrafficShapingHandler trafficShapingHandler, ScheduledExecutorService executor,
             String name, long checkInterval) {
+
         if (trafficShapingHandler == null) {
-            throw new IllegalArgumentException("TrafficShapingHandler must not be null");
+            throw new IllegalArgumentException("trafficShapingHandler");
         }
+        if (executor == null) {
+            throw new NullPointerException("executor");
+        }
+        if (name == null) {
+            throw new NullPointerException("name");
+        }
+
         this.trafficShapingHandler = trafficShapingHandler;
         this.executor = executor;
         this.name = name;
+
+        init(checkInterval);
+    }
+
+    private void init(long checkInterval) {
         // absolute time: informative only
         lastCumulativeTime = System.currentTimeMillis();
         writingTime = milliSecondFromNano();
