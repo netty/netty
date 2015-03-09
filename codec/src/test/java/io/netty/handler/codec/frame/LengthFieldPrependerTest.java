@@ -25,6 +25,8 @@ import org.junit.Test;
 
 import static io.netty.buffer.Unpooled.*;
 import static org.hamcrest.core.Is.*;
+import java.nio.ByteOrder;
+
 import static org.junit.Assert.*;
 
 public class LengthFieldPrependerTest {
@@ -73,4 +75,22 @@ public class LengthFieldPrependerTest {
             // Expected
         }
     }
+
+    @Test
+    public void testPrependLengthInLittleEndian() throws Exception {
+        final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(ByteOrder.LITTLE_ENDIAN, 4, 0, false));
+        ch.writeOutbound(msg);
+        ByteBuf buf = (ByteBuf) ch.readOutbound();
+        assertEquals(5, buf.readableBytes());
+        byte[] writtenBytes = new byte[buf.readableBytes()];
+        buf.getBytes(0, writtenBytes);
+        assertEquals(1, writtenBytes[0]);
+        assertEquals(0, writtenBytes[1]);
+        assertEquals(0, writtenBytes[2]);
+        assertEquals(0, writtenBytes[3]);
+        assertEquals('A', writtenBytes[4]);
+        buf.release();
+        assertFalse("The channel must have been completely read", ch.finish());
+    }
+
 }

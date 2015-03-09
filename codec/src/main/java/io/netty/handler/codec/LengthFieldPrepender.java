@@ -18,7 +18,9 @@ package io.netty.handler.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.util.internal.ObjectUtil;
 
+import java.nio.ByteOrder;
 
 /**
  * An encoder that prepends the length of the message.  The length value is
@@ -49,6 +51,7 @@ import io.netty.channel.ChannelHandlerContext;
 @Sharable
 public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
 
+    private final ByteOrder byteOrder;
     private final int lengthFieldLength;
     private final boolean lengthIncludesLengthFieldLength;
     private final int lengthAdjustment;
@@ -114,6 +117,28 @@ public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
      *         if {@code lengthFieldLength} is not 1, 2, 3, 4, or 8
      */
     public LengthFieldPrepender(int lengthFieldLength, int lengthAdjustment, boolean lengthIncludesLengthFieldLength) {
+        this(ByteOrder.BIG_ENDIAN, lengthFieldLength, lengthAdjustment, lengthIncludesLengthFieldLength);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param byteOrder         the {@link ByteOrder} of the length field
+     * @param lengthFieldLength the length of the prepended length field.
+     *                          Only 1, 2, 3, 4, and 8 are allowed.
+     * @param lengthAdjustment  the compensation value to add to the value
+     *                          of the length field
+     * @param lengthIncludesLengthFieldLength
+     *                          if {@code true}, the length of the prepended
+     *                          length field is added to the value of the
+     *                          prepended length field.
+     *
+     * @throws IllegalArgumentException
+     *         if {@code lengthFieldLength} is not 1, 2, 3, 4, or 8
+     */
+    public LengthFieldPrepender(
+            ByteOrder byteOrder, int lengthFieldLength,
+            int lengthAdjustment, boolean lengthIncludesLengthFieldLength) {
         if (lengthFieldLength != 1 && lengthFieldLength != 2 &&
             lengthFieldLength != 3 && lengthFieldLength != 4 &&
             lengthFieldLength != 8) {
@@ -121,7 +146,9 @@ public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
                     "lengthFieldLength must be either 1, 2, 3, 4, or 8: " +
                     lengthFieldLength);
         }
+        ObjectUtil.checkNotNull(byteOrder, "byteOrder");
 
+        this.byteOrder = byteOrder;
         this.lengthFieldLength = lengthFieldLength;
         this.lengthIncludesLengthFieldLength = lengthIncludesLengthFieldLength;
         this.lengthAdjustment = lengthAdjustment;
@@ -172,5 +199,10 @@ public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
         }
 
         out.writeBytes(msg, msg.readerIndex(), msg.readableBytes());
+    }
+
+    @Override
+    protected ByteBuf allocateBuffer(ChannelHandlerContext ctx, ByteBuf msg, boolean preferDirect) throws Exception {
+        return super.allocateBuffer(ctx, msg, preferDirect).order(byteOrder);
     }
 }
