@@ -82,7 +82,6 @@ public interface Http2RemoteFlowController extends Http2FlowController {
          * </p>
          *
          * @param allowedBytes an upper bound on the number of bytes the payload can write at this time.
-         * @throws Exception if an error occurs. The method must not call {@link #error(Throwable)} by itself.
          * @return {@code true} if a flush is required, {@code false} otherwise.
          */
         boolean write(int allowedBytes);

@@ -174,7 +174,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
         // Save the context. We'll use this later when we write pending bytes.
         this.ctx = ctx;
-        FlowState state;
+        final FlowState state;
         try {
             state = state(stream);
             state.enqueueFrame(frame);
@@ -449,6 +449,15 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          * Clears the pending queue and writes errors for each remaining frame.
          */
         void cancel() {
+            cancel(null);
+        }
+
+        /**
+         * Clears the pending queue and writes errors for each remaining frame.
+         *
+         * @param cause the {@link Throwable} that caused this method to be invoked.
+         */
+        void cancel(Throwable cause) {
             cancelled = true;
             // Ensure that the queue can't be modified while
             // we are writing.
@@ -460,7 +469,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                 if (frame == null) {
                     break;
                 }
-                writeError(frame, streamError(stream.id(), INTERNAL_ERROR,
+                writeError(frame, streamError(stream.id(), INTERNAL_ERROR, cause,
                                               "Stream closed before write could take place"));
             }
         }
@@ -492,6 +501,9 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         int write(FlowControlled frame, int allowedBytes) {
             int before = frame.size();
             int writtenBytes = 0;
+            // In case an exception is thrown we want to
+            // remember it and pass it to cancel(Throwable).
+            Throwable cause = null;
             try {
                 assert !writing;
 
@@ -506,10 +518,11 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                     pendingWriteQueue.remove();
                     frame.writeComplete();
                 }
-            } catch (Throwable e) {
+            } catch (Throwable t) {
                 // Mark the state as cancelled, we'll clear the pending queue
                 // via cancel() below.
                 cancelled = true;
+                cause = t;
             } finally {
                 writing = false;
                 // Make sure we always decrement the flow control windows
@@ -520,7 +533,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                 // If a cancellation occurred while writing, call cancel again to
                 // clear and error all of the pending writes.
                 if (cancelled) {
-                    cancel();
+                    cancel(cause);
                 }
             }
             return writtenBytes;
