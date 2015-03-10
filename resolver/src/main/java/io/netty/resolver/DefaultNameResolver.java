@@ -41,10 +41,10 @@ public class DefaultNameResolver extends SimpleNameResolver<InetSocketAddress> {
     @Override
     protected void doResolve(InetSocketAddress unresolvedAddress, Promise<InetSocketAddress> promise) throws Exception {
         try {
-            promise.setSuccess(
-                    new InetSocketAddress(
-                            InetAddress.getByName(unresolvedAddress.getHostString()),
-                            unresolvedAddress.getPort()));
+            // Note that InetSocketAddress.getHostName() will never incur a reverse lookup here,
+            // because an unresolved address always has a host name.
+            promise.setSuccess(new InetSocketAddress(
+                    InetAddress.getByName(unresolvedAddress.getHostName()), unresolvedAddress.getPort()));
         } catch (UnknownHostException e) {
             promise.setFailure(e);
         }
