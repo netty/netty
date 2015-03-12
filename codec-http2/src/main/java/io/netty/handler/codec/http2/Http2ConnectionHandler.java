@@ -208,19 +208,12 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
     }
 
-    /**
-     * Closes the local side of the given stream. If this causes the stream to be closed, adds a
-     * hook to close the channel after the given future completes.
-     *
-     * @param stream the stream to be half closed.
-     * @param future If closing, the future after which to close the channel.
-     */
     @Override
-    public void closeLocalSide(Http2Stream stream, ChannelFuture future) {
+    public void closeForWriting(Http2Stream stream, ChannelFuture future) {
         switch (stream.state()) {
             case HALF_CLOSED_LOCAL:
             case OPEN:
-                stream.closeLocalSide();
+                stream.closeForWriting();
                 break;
             default:
                 closeStream(stream, future);
@@ -228,19 +221,12 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
     }
 
-    /**
-     * Closes the remote side of the given stream. If this causes the stream to be closed, adds a
-     * hook to close the channel after the given future completes.
-     *
-     * @param stream the stream to be half closed.
-     * @param future If closing, the future after which to close the channel.
-     */
     @Override
-    public void closeRemoteSide(Http2Stream stream, ChannelFuture future) {
+    public void closeForReading(Http2Stream stream, ChannelFuture future) {
         switch (stream.state()) {
             case HALF_CLOSED_REMOTE:
             case OPEN:
-                stream.closeRemoteSide();
+                stream.closeForReading();
                 break;
             default:
                 closeStream(stream, future);

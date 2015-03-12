@@ -26,22 +26,22 @@ import io.netty.channel.ChannelPromise;
 public interface Http2LifecycleManager {
 
     /**
-     * Closes the local side of the given stream. If this causes the stream to be closed, adds a
+     * Closes the given stream for writing (i.e. closes the local side). If this causes the stream to be closed, adds a
      * hook to deactivate the stream and close the channel after the given future completes.
      *
      * @param stream the stream to be half closed.
      * @param future If closing, the future after which to close the channel.
      */
-    void closeLocalSide(Http2Stream stream, ChannelFuture future);
+    void closeForWriting(Http2Stream stream, ChannelFuture future);
 
     /**
-     * Closes the remote side of the given stream. If this causes the stream to be closed, adds a
+     * Closes the given stream for reading (i.e. closes the remote side). If this causes the stream to be closed, adds a
      * hook to deactivate the stream and close the channel after the given future completes.
      *
      * @param stream the stream to be half closed.
      * @param future If closing, the future after which to close the channel.
      */
-    void closeRemoteSide(Http2Stream stream, ChannelFuture future);
+    void closeForReading(Http2Stream stream, ChannelFuture future);
 
     /**
      * Closes the given stream and adds a hook to deactivate the stream and close the channel after
