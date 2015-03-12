@@ -152,8 +152,7 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
 
         // Otherwise just log the first 64 bytes.
         int length = Math.min(buf.readableBytes(), BUFFER_LENGTH_THRESHOLD);
-        ByteBuf slice = buf.slice(0, length);
-        return ByteBufUtil.hexDump(slice) + "...";
+        return ByteBufUtil.hexDump(buf, buf.readerIndex(), length) + "...";
     }
 
     private void log(Direction direction, String format, Object... args) {
