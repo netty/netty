@@ -33,6 +33,7 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
         OUTBOUND
     }
 
+    private static final int BUFFER_LENGTH_THRESHOLD = 64;
     private final InternalLogger logger;
     private final InternalLogLevel level;
 
@@ -47,81 +48,121 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
 
     public void logData(Direction direction, int streamId, ByteBuf data, int padding,
             boolean endStream) {
-        log(direction,
-                "DATA: streamId=%d, padding=%d, endStream=%b, length=%d, bytes=%s",
-                streamId, padding, endStream, data.readableBytes(), ByteBufUtil.hexDump(data));
+        if (enabled()) {
+            log(direction,
+                    "DATA: streamId=%d, padding=%d, endStream=%b, length=%d, bytes=%s",
+                    streamId, padding, endStream, data.readableBytes(), toString(data));
+        }
     }
 
     public void logHeaders(Direction direction, int streamId, Http2Headers headers, int padding,
             boolean endStream) {
-        log(direction, "HEADERS: streamId:%d, headers=%s, padding=%d, endStream=%b",
-                streamId, headers, padding, endStream);
+        if (enabled()) {
+            log(direction, "HEADERS: streamId:%d, headers=%s, padding=%d, endStream=%b",
+                    streamId, headers, padding, endStream);
+        }
     }
 
     public void logHeaders(Direction direction, int streamId, Http2Headers headers,
             int streamDependency, short weight, boolean exclusive, int padding, boolean endStream) {
-        log(direction,
-                "HEADERS: streamId:%d, headers=%s, streamDependency=%d, weight=%d, exclusive=%b, "
-                        + "padding=%d, endStream=%b", streamId, headers,
-                streamDependency, weight, exclusive, padding, endStream);
+        if (enabled()) {
+            log(direction,
+                    "HEADERS: streamId:%d, headers=%s, streamDependency=%d, weight=%d, exclusive=%b, "
+                            + "padding=%d, endStream=%b", streamId, headers,
+                    streamDependency, weight, exclusive, padding, endStream);
+        }
     }
 
     public void logPriority(Direction direction, int streamId, int streamDependency, short weight,
             boolean exclusive) {
-        log(direction, "PRIORITY: streamId=%d, streamDependency=%d, weight=%d, exclusive=%b",
-                streamId, streamDependency, weight, exclusive);
+        if (enabled()) {
+            log(direction, "PRIORITY: streamId=%d, streamDependency=%d, weight=%d, exclusive=%b",
+                    streamId, streamDependency, weight, exclusive);
+        }
     }
 
     public void logRstStream(Direction direction, int streamId, long errorCode) {
-        log(direction, "RST_STREAM: streamId=%d, errorCode=%d", streamId, errorCode);
+        if (enabled()) {
+            log(direction, "RST_STREAM: streamId=%d, errorCode=%d", streamId, errorCode);
+        }
     }
 
     public void logSettingsAck(Direction direction) {
-        log(direction, "SETTINGS ack=true");
+        if (enabled()) {
+            log(direction, "SETTINGS ack=true");
+        }
     }
 
     public void logSettings(Direction direction, Http2Settings settings) {
-        log(direction, "SETTINGS: ack=false, settings=%s", settings);
+        if (enabled()) {
+            log(direction, "SETTINGS: ack=false, settings=%s", settings);
+        }
     }
 
     public void logPing(Direction direction, ByteBuf data) {
-        log(direction, "PING: ack=false, length=%d, bytes=%s", data.readableBytes(), ByteBufUtil.hexDump(data));
+        if (enabled()) {
+            log(direction, "PING: ack=false, length=%d, bytes=%s", data.readableBytes(), toString(data));
+        }
     }
 
     public void logPingAck(Direction direction, ByteBuf data) {
-        log(direction, "PING: ack=true, length=%d, bytes=%s", data.readableBytes(), ByteBufUtil.hexDump(data));
+        if (enabled()) {
+            log(direction, "PING: ack=true, length=%d, bytes=%s", data.readableBytes(), toString(data));
+        }
     }
 
     public void logPushPromise(Direction direction, int streamId, int promisedStreamId,
             Http2Headers headers, int padding) {
-        log(direction, "PUSH_PROMISE: streamId=%d, promisedStreamId=%d, headers=%s, padding=%d",
-                streamId, promisedStreamId, headers, padding);
+        if (enabled()) {
+            log(direction, "PUSH_PROMISE: streamId=%d, promisedStreamId=%d, headers=%s, padding=%d",
+                    streamId, promisedStreamId, headers, padding);
+        }
     }
 
     public void logGoAway(Direction direction, int lastStreamId, long errorCode, ByteBuf debugData) {
-        log(direction, "GO_AWAY: lastStreamId=%d, errorCode=%d, length=%d, bytes=%s", lastStreamId,
-                errorCode, debugData.readableBytes(), ByteBufUtil.hexDump(debugData));
+        if (enabled()) {
+            log(direction, "GO_AWAY: lastStreamId=%d, errorCode=%d, length=%d, bytes=%s", lastStreamId,
+                    errorCode, debugData.readableBytes(), toString(debugData));
+        }
     }
 
     public void logWindowsUpdate(Direction direction, int streamId, int windowSizeIncrement) {
-        log(direction, "WINDOW_UPDATE: streamId=%d, windowSizeIncrement=%d", streamId,
-                windowSizeIncrement);
+        if (enabled()) {
+            log(direction, "WINDOW_UPDATE: streamId=%d, windowSizeIncrement=%d", streamId,
+                    windowSizeIncrement);
+        }
     }
 
     public void logUnknownFrame(Direction direction, byte frameType, int streamId, Http2Flags flags, ByteBuf data) {
-        log(direction, "UNKNOWN: frameType=%d, streamId=%d, flags=%d, length=%d, bytes=%s",
-                frameType & 0xFF, streamId, flags.value(), data.readableBytes(), ByteBufUtil.hexDump(data));
+        if (enabled()) {
+            log(direction, "UNKNOWN: frameType=%d, streamId=%d, flags=%d, length=%d, bytes=%s",
+                    frameType & 0xFF, streamId, flags.value(), data.readableBytes(), toString(data));
+        }
+    }
+
+    private boolean enabled() {
+        return logger.isEnabled(level);
+    }
+
+    private String toString(ByteBuf buf) {
+        if (level == InternalLogLevel.TRACE || buf.readableBytes() <= BUFFER_LENGTH_THRESHOLD) {
+            // Log the entire buffer.
+            return ByteBufUtil.hexDump(buf);
+        }
+
+        // Otherwise just log the first 64 bytes.
+        int length = Math.min(buf.readableBytes(), BUFFER_LENGTH_THRESHOLD);
+        ByteBuf slice = buf.slice(0, length);
+        return ByteBufUtil.hexDump(slice) + "...";
     }
 
     private void log(Direction direction, String format, Object... args) {
-        if (logger.isEnabled(level)) {
-            StringBuilder b = new StringBuilder(200);
-            b.append("\n----------------")
-             .append(direction.name())
-             .append("--------------------\n")
-             .append(String.format(format, args))
-             .append("\n------------------------------------");
-            logger.log(level, b.toString());
-        }
+        StringBuilder b = new StringBuilder(200);
+        b.append("\n----------------")
+                .append(direction.name())
+                .append("--------------------\n")
+                .append(String.format(format, args))
+                .append("\n------------------------------------");
+        logger.log(level, b.toString());
     }
 }
