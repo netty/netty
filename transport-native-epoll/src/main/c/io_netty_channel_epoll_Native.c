@@ -351,6 +351,18 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     if ((*vm)->GetEnv(vm, (void**) &env, JNI_VERSION_1_6) != JNI_OK) {
         return JNI_ERR;
     } else {
+        jclass localRuntimeExceptionClass = (*env)->FindClass(env, "java/lang/RuntimeException");
+        if (localRuntimeExceptionClass == NULL) {
+            // pending exception...
+            return JNI_ERR;
+        }
+        runtimeExceptionClass = (jclass) (*env)->NewGlobalRef(env, localRuntimeExceptionClass);
+        if (runtimeExceptionClass == NULL) {
+            // out-of-memory!
+            throwOutOfMemoryError(env);
+            return JNI_ERR;
+        }
+
         jclass localNetUtilClass = (*env)->FindClass(env, "io/netty/util/NetUtil" );
         if (localNetUtilClass == NULL) {
             // pending exception...
@@ -384,17 +396,6 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
         closedChannelExceptionMethodId = (*env)->GetMethodID(env, closedChannelExceptionClass, "<init>", "()V");
         if (closedChannelExceptionMethodId == NULL) {
             throwRuntimeException(env, "failed to get method ID: ClosedChannelException.<init>()");
-            return JNI_ERR;
-        }
-        jclass localRuntimeExceptionClass = (*env)->FindClass(env, "java/lang/RuntimeException");
-        if (localRuntimeExceptionClass == NULL) {
-            // pending exception...
-            return JNI_ERR;
-        }
-        runtimeExceptionClass = (jclass) (*env)->NewGlobalRef(env, localRuntimeExceptionClass);
-        if (runtimeExceptionClass == NULL) {
-            // out-of-memory!
-            throwOutOfMemoryError(env);
             return JNI_ERR;
         }
 
