@@ -17,15 +17,13 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.apache.tomcat.jni.CertificateVerifier;
 import org.apache.tomcat.jni.SSL;
 import org.apache.tomcat.jni.SSLContext;
 
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
 import javax.security.auth.x500.X500Principal;
 import java.io.File;
@@ -40,8 +38,8 @@ import java.security.cert.X509Certificate;
  * A client-side {@link SslContext} which uses OpenSSL's SSL/TLS implementation.
  */
 public final class OpenSslClientContext extends OpenSslContext {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(OpenSslClientContext.class);
     private final OpenSslSessionContext sessionContext;
+    private final OpenSslEngineMap engineMap;
 
     /**
      * Creates a new instance.
@@ -132,19 +130,26 @@ public final class OpenSslClientContext extends OpenSslContext {
                     initTrustManagerFactory(certChainFile, trustManagerFactory);
                     final X509TrustManager manager = chooseTrustManager(trustManagerFactory.getTrustManagers());
 
-                    SSLContext.setCertVerifyCallback(ctx, new CertificateVerifier() {
-                        @Override
-                        public boolean verify(long ssl, byte[][] chain, String auth) {
-                            X509Certificate[] peerCerts = certificates(chain);
-                            try {
-                                manager.checkServerTrusted(peerCerts, auth);
-                                return true;
-                            } catch (Exception e) {
-                                logger.debug("verification of certificate failed", e);
+                    engineMap = newEngineMap(manager);
+
+                    // Use this to prevent an error when running on java < 7
+                    if (useExtendedTrustManager(manager)) {
+                        final X509ExtendedTrustManager extendedManager = (X509ExtendedTrustManager) manager;
+                        SSLContext.setCertVerifyCallback(ctx, new AbstractCertificateVerifier() {
+                            @Override
+                            void verify(long ssl, X509Certificate[] peerCerts, String auth) throws Exception {
+                                OpenSslEngine engine = engineMap.remove(ssl);
+                                extendedManager.checkServerTrusted(peerCerts, auth, engine);
                             }
-                            return false;
-                        }
-                    });
+                        });
+                    } else {
+                        SSLContext.setCertVerifyCallback(ctx, new AbstractCertificateVerifier() {
+                            @Override
+                            void verify(long ssl, X509Certificate[] peerCerts, String auth) throws Exception {
+                                manager.checkServerTrusted(peerCerts, auth);
+                            }
+                        });
+                    }
                 } catch (Exception e) {
                     throw new SSLException("unable to setup trustmanager", e);
                 }
@@ -183,6 +188,11 @@ public final class OpenSslClientContext extends OpenSslContext {
     @Override
     public OpenSslSessionContext sessionContext() {
         return sessionContext;
+    }
+
+    @Override
+    OpenSslEngineMap engineMap() {
+        return engineMap;
     }
 
     // No cache is currently supported for client side mode.
