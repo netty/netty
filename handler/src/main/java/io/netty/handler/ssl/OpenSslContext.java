@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.apache.tomcat.jni.CertificateVerifier;
 import org.apache.tomcat.jni.Pool;
 import org.apache.tomcat.jni.SSL;
 import org.apache.tomcat.jni.SSLContext;
@@ -26,11 +27,13 @@ import org.apache.tomcat.jni.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -226,12 +229,19 @@ public abstract class OpenSslContext extends SslContext {
     @Override
     public final SSLEngine newEngine(ByteBufAllocator alloc) {
         List<String> protos = applicationProtocolNegotiator().protocols();
+        OpenSslEngineMap engineMap = engineMap();
+        final OpenSslEngine engine;
         if (protos.isEmpty()) {
-            return new OpenSslEngine(ctx, alloc, null, isClient(), sessionContext());
+            engine = new OpenSslEngine(ctx, alloc, null, isClient(), sessionContext(), engineMap);
         } else {
-            return new OpenSslEngine(ctx, alloc, protos.get(protos.size() - 1), isClient(), sessionContext());
+            engine = new OpenSslEngine(ctx, alloc, protos.get(protos.size() - 1), isClient(),
+                    sessionContext(), engineMap);
         }
+        engineMap.add(engine);
+        return engine;
     }
+
+    abstract OpenSslEngineMap engineMap();
 
     /**
      * Returns the {@code SSL_CTX} object of this context.
@@ -290,7 +300,7 @@ public abstract class OpenSslContext extends SslContext {
     }
 
     protected static X509TrustManager chooseTrustManager(TrustManager[] managers) {
-        for (TrustManager m: managers) {
+        for (TrustManager m : managers) {
             if (m instanceof X509TrustManager) {
                 return (X509TrustManager) m;
             }
@@ -331,6 +341,46 @@ public abstract class OpenSslContext extends SslContext {
             default:
                 throw new UnsupportedOperationException(new StringBuilder("OpenSSL provider does not support ")
                         .append(config.protocol()).append(" protocol").toString());
+        }
+    }
+
+    static OpenSslEngineMap newEngineMap(X509TrustManager trustManager) {
+        if (useExtendedTrustManager(trustManager)) {
+            return new DefaultOpenSslEngineMap();
+        }
+        return OpenSslEngineMap.EMPTY;
+    }
+
+    static boolean useExtendedTrustManager(X509TrustManager trustManager) {
+         return PlatformDependent.javaVersion() >= 7 && trustManager instanceof X509ExtendedTrustManager;
+    }
+
+    abstract static class AbstractCertificateVerifier implements CertificateVerifier {
+        @Override
+        public final boolean verify(long ssl, byte[][] chain, String auth) {
+            X509Certificate[] peerCerts = certificates(chain);
+            try {
+                verify(ssl, peerCerts, auth);
+                return true;
+            } catch (Exception e) {
+                logger.debug("verification of certificate failed", e);
+            }
+            return false;
+        }
+
+        abstract void verify(long ssl, X509Certificate[] peerCerts, String auth) throws Exception;
+    }
+
+    private static final class DefaultOpenSslEngineMap implements OpenSslEngineMap {
+        private final Map<Long, OpenSslEngine> engines = PlatformDependent.newConcurrentHashMap();
+        @Override
+        public OpenSslEngine remove(long ssl) {
+            return engines.remove(ssl);
+        }
+
+        @Override
+        public void add(OpenSslEngine engine) {
+            engines.put(engine.ssl(), engine);
         }
     }
 }
