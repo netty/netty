@@ -21,7 +21,7 @@ import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionLi
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
 import io.netty.util.internal.PlatformDependent;
 
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 import javax.net.ssl.SSLEngine;
@@ -88,7 +88,8 @@ final class JdkNpnSslEngine extends JdkSslEngine {
             });
         } else {
             final ProtocolSelector protocolSelector = checkNotNull(applicationNegotiator.protocolSelectorFactory()
-                    .newSelector(this, new HashSet<String>(applicationNegotiator.protocols())), "protocolSelector");
+                    .newSelector(this, new LinkedHashSet<String>(applicationNegotiator.protocols())),
+                    "protocolSelector");
             NextProtoNego.put(engine, new ClientProvider() {
                 @Override
                 public boolean supports() {

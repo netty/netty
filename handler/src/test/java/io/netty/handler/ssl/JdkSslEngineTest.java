@@ -17,6 +17,7 @@ package io.netty.handler.ssl;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeNoException;
 import static org.mockito.Mockito.verify;
@@ -61,7 +62,8 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 public class JdkSslEngineTest {
-    private static final String APPLICATION_LEVEL_PROTOCOL = "my-protocol";
+    private static final String PREFERRED_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http2";
+    private static final String FALLBACK_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http1_1";
     private static final String APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE = "my-protocol-FOO";
 
     @Mock
@@ -123,6 +125,7 @@ public class JdkSslEngineTest {
         clientChannel = null;
         serverChannel = null;
         serverConnectedChannel = null;
+        serverException = null;
     }
 
     @Test
@@ -135,7 +138,7 @@ public class JdkSslEngineTest {
                 throw new RuntimeException("NPN not on classpath");
             }
             JdkApplicationProtocolNegotiator apn = new JdkNpnApplicationProtocolNegotiator(true, true,
-                    APPLICATION_LEVEL_PROTOCOL);
+                    PREFERRED_APPLICATION_LEVEL_PROTOCOL);
             mySetup(apn);
             runTest();
         } catch (RuntimeException e) {
@@ -155,7 +158,7 @@ public class JdkSslEngineTest {
                 throw new RuntimeException("NPN not on classpath");
             }
             JdkApplicationProtocolNegotiator clientApn = new JdkNpnApplicationProtocolNegotiator(false, false,
-                    APPLICATION_LEVEL_PROTOCOL);
+                    PREFERRED_APPLICATION_LEVEL_PROTOCOL);
             JdkApplicationProtocolNegotiator serverApn = new JdkNpnApplicationProtocolNegotiator(false, false,
                     APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE);
             mySetup(serverApn, clientApn);
@@ -177,7 +180,7 @@ public class JdkSslEngineTest {
                 throw new RuntimeException("NPN not on classpath");
             }
             JdkApplicationProtocolNegotiator clientApn = new JdkNpnApplicationProtocolNegotiator(true, true,
-                    APPLICATION_LEVEL_PROTOCOL);
+                    PREFERRED_APPLICATION_LEVEL_PROTOCOL);
             JdkApplicationProtocolNegotiator serverApn = new JdkNpnApplicationProtocolNegotiator(false, false,
                     APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE);
             mySetup(serverApn, clientApn);
@@ -200,7 +203,7 @@ public class JdkSslEngineTest {
                 throw new RuntimeException("NPN not on classpath");
             }
             JdkApplicationProtocolNegotiator clientApn = new JdkNpnApplicationProtocolNegotiator(false, false,
-                    APPLICATION_LEVEL_PROTOCOL);
+                    PREFERRED_APPLICATION_LEVEL_PROTOCOL);
             JdkApplicationProtocolNegotiator serverApn = new JdkNpnApplicationProtocolNegotiator(true, true,
                     APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE);
             mySetup(serverApn, clientApn);
@@ -223,7 +226,7 @@ public class JdkSslEngineTest {
                 throw new RuntimeException("ALPN not on classpath");
             }
             JdkApplicationProtocolNegotiator apn = new JdkAlpnApplicationProtocolNegotiator(true, true,
-                    APPLICATION_LEVEL_PROTOCOL);
+                    PREFERRED_APPLICATION_LEVEL_PROTOCOL);
             mySetup(apn);
             runTest();
         } catch (Exception e) {
@@ -243,7 +246,7 @@ public class JdkSslEngineTest {
                 throw new RuntimeException("ALPN not on classpath");
             }
             JdkApplicationProtocolNegotiator clientApn = new JdkAlpnApplicationProtocolNegotiator(false, false,
-                    APPLICATION_LEVEL_PROTOCOL);
+                    PREFERRED_APPLICATION_LEVEL_PROTOCOL);
             JdkApplicationProtocolNegotiator serverApn = new JdkAlpnApplicationProtocolNegotiator(false, false,
                     APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE);
             mySetup(serverApn, clientApn);
@@ -265,12 +268,37 @@ public class JdkSslEngineTest {
                 throw new RuntimeException("ALPN not on classpath");
             }
             JdkApplicationProtocolNegotiator clientApn = new JdkAlpnApplicationProtocolNegotiator(false, false,
-                    APPLICATION_LEVEL_PROTOCOL);
+                    PREFERRED_APPLICATION_LEVEL_PROTOCOL);
             JdkApplicationProtocolNegotiator serverApn = new JdkAlpnApplicationProtocolNegotiator(true, true,
                     APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE);
             mySetup(serverApn, clientApn);
             assertTrue(serverLatch.await(2, TimeUnit.SECONDS));
             assertTrue(serverException instanceof SSLHandshakeException);
+        } catch (Exception e) {
+            // ALPN availability is dependent on the java version. If ALPN is not available because of
+            // java version incompatibility don't fail the test, but instead just skip the test
+            assumeNoException(e);
+        }
+    }
+
+    @Test
+    public void testAlpnCompatibleProtocolsDifferentClientOrder() throws Exception {
+        try {
+            // Typical code will not have to check this, but will get a initialization error on class load.
+            // Check in this test just in case we have multiple tests that just the class and we already ignored the
+            // initialization error.
+            if (!JdkAlpnSslEngine.isAvailable()) {
+                throw new RuntimeException("ALPN not on classpath");
+            }
+            // Even the preferred application protocol appears second in the client's list, it will be picked
+            // because it's the first one on server's list.
+            JdkApplicationProtocolNegotiator clientApn = new JdkAlpnApplicationProtocolNegotiator(false, false,
+                FALLBACK_APPLICATION_LEVEL_PROTOCOL, PREFERRED_APPLICATION_LEVEL_PROTOCOL);
+            JdkApplicationProtocolNegotiator serverApn = new JdkAlpnApplicationProtocolNegotiator(true, true,
+                PREFERRED_APPLICATION_LEVEL_PROTOCOL, FALLBACK_APPLICATION_LEVEL_PROTOCOL);
+            mySetup(serverApn, clientApn);
+            assertNull(serverException);
+            runTest(PREFERRED_APPLICATION_LEVEL_PROTOCOL);
         } catch (Exception e) {
             // ALPN availability is dependent on the java version. If ALPN is not available because of
             // java version incompatibility don't fail the test, but instead just skip the test
@@ -288,7 +316,7 @@ public class JdkSslEngineTest {
                 throw new RuntimeException("ALPN not on classpath");
             }
             JdkApplicationProtocolNegotiator clientApn = new JdkAlpnApplicationProtocolNegotiator(true, true,
-                    APPLICATION_LEVEL_PROTOCOL);
+                    PREFERRED_APPLICATION_LEVEL_PROTOCOL);
             JdkApplicationProtocolNegotiator serverApn = new JdkAlpnApplicationProtocolNegotiator(
                     new ProtocolSelectorFactory() {
                         @Override
@@ -514,7 +542,7 @@ public class JdkSslEngineTest {
     }
 
     private void runTest() throws Exception {
-        runTest(APPLICATION_LEVEL_PROTOCOL);
+        runTest(PREFERRED_APPLICATION_LEVEL_PROTOCOL);
     }
 
     private void runTest(String expectedApplicationProtocol) throws Exception {

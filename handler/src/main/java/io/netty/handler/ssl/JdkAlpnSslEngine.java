@@ -20,7 +20,7 @@ import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionLi
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
 import io.netty.util.internal.PlatformDependent;
 
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 import javax.net.ssl.SSLEngine;
@@ -64,7 +64,8 @@ final class JdkAlpnSslEngine extends JdkSslEngine {
 
         if (server) {
             final ProtocolSelector protocolSelector = checkNotNull(applicationNegotiator.protocolSelectorFactory()
-                    .newSelector(this, new HashSet<String>(applicationNegotiator.protocols())), "protocolSelector");
+                    .newSelector(this, new LinkedHashSet<String>(applicationNegotiator.protocols())),
+                    "protocolSelector");
             ALPN.put(engine, new ServerProvider() {
                 @Override
                 public String select(List<String> protocols) {
