@@ -255,39 +255,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         return lifecycleManager.writeRstStream(ctx, streamId, errorCode, promise);
     }
 
-    /**
-     * Writes a RST_STREAM frame to the remote endpoint.
-     * @param ctx the context to use for writing.
-     * @param streamId the stream for which to send the frame.
-     * @param errorCode the error code indicating the nature of the failure.
-     * @param promise the promise for the write.
-     * @param writeIfNoStream
-     * <ul>
-     * <li>{@code true} will force a write of a RST_STREAM even if the stream object does not exist locally.</li>
-     * <li>{@code false} will only send a RST_STREAM only if the stream is known about locally</li>
-     * </ul>
-     * @return the future for the write.
-     */
-    public ChannelFuture writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
-            ChannelPromise promise, boolean writeIfNoStream) {
-        Http2Stream stream = connection.stream(streamId);
-        if (stream == null && !writeIfNoStream) {
-            // The stream may already have been closed ... ignore.
-            promise.setSuccess();
-            return promise;
-        }
-
-        ChannelFuture future = frameWriter.writeRstStream(ctx, streamId, errorCode, promise);
-        ctx.flush();
-
-        if (stream != null) {
-            stream.resetSent();
-            lifecycleManager.closeStream(stream, promise);
-        }
-
-        return future;
-    }
-
     @Override
     public ChannelFuture writeSettings(ChannelHandlerContext ctx, Http2Settings settings,
             ChannelPromise promise) {
