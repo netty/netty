@@ -142,9 +142,8 @@ class JdkBaseApplicationProtocolNegotiator implements JdkApplicationProtocolNego
 
         @Override
         public String select(List<String> protocols) throws Exception {
-            for (int i = 0; i < protocols.size(); ++i) {
-                String p = protocols.get(i);
-                if (supportedProtocols.contains(p)) {
+            for (String p : supportedProtocols) {
+                if (protocols.contains(p)) {
                     jettyWrapper.getSession().setApplicationProtocol(p);
                     return p;
                 }
