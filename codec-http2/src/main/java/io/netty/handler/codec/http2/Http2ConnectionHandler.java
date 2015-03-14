@@ -15,7 +15,6 @@
 package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
-import static io.netty.handler.codec.http2.Http2CodecUtil.PING_FRAME_PAYLOAD_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static io.netty.handler.codec.http2.Http2CodecUtil.getEmbeddedHttp2Exception;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
@@ -24,7 +23,6 @@ import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.isStreamError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -318,6 +316,10 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             // If this connection is closing and there are no longer any
             // active streams, close after the current operation completes.
             if (closeListener != null && connection().numActiveStreams() == 0) {
+                ChannelFutureListener closeListener = Http2ConnectionHandler.this.closeListener;
+                // This method could be called multiple times
+                // and we don't want to notify the closeListener multiple times
+                Http2ConnectionHandler.this.closeListener = null;
                 closeListener.operationComplete(future);
             }
           }
@@ -378,16 +380,32 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      * Writes a {@code RST_STREAM} frame to the remote endpoint and updates the connection state appropriately.
      */
     @Override
-    public ChannelFuture writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
-            ChannelPromise promise) {
-        Http2Stream stream = connection().stream(streamId);
+    public ChannelFuture writeRstStream(final ChannelHandlerContext ctx, int streamId, long errorCode,
+            final ChannelPromise promise) {
+        final Http2Stream stream = connection().stream(streamId);
+        if (stream == null || stream.isResetSent()) {
+            // Don't write a RST_STREAM frame if we are not aware of the stream, or if we have already written one.
+            return promise.setSuccess();
+        }
+
         ChannelFuture future = frameWriter().writeRstStream(ctx, streamId, errorCode, promise);
         ctx.flush();
 
-        if (stream != null) {
-            stream.resetSent();
-            closeStream(stream, promise);
-        }
+        // Synchronously set the resetSent flag to prevent any subsequent calls
+        // from resulting in multiple reset frames being sent.
+        stream.resetSent();
+
+        future.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                if (future.isSuccess()) {
+                    closeStream(stream, promise);
+                } else {
+                    // The connection will be closed and so no need to change the resetSent flag to false.
+                    onConnectionError(ctx, future.cause(), null);
+                }
+            }
+        });
 
         return future;
     }
