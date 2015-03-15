@@ -143,7 +143,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         Http2HeaderTable headerTable = config.headerTable();
         Http2FrameSizePolicy frameSizePolicy = config.frameSizePolicy();
         settings.initialWindowSize(flowController().initialWindowSize());
-        settings.maxConcurrentStreams(connection.remote().maxStreams());
+        settings.maxConcurrentStreams(connection.remote().maxConcurrentStreams());
         settings.headerTableSize(headerTable.maxHeaderTableSize());
         settings.maxFrameSize(frameSizePolicy.maxFrameSize());
         settings.maxHeaderListSize(headerTable.maxHeaderListSize());
@@ -170,7 +170,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         Long maxConcurrentStreams = settings.maxConcurrentStreams();
         if (maxConcurrentStreams != null) {
             int value = (int) Math.min(maxConcurrentStreams, Integer.MAX_VALUE);
-            connection.remote().maxStreams(value);
+            connection.remote().maxConcurrentStreams(value);
         }
 
         Long headerTableSize = settings.headerTableSize();
@@ -428,7 +428,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             Long maxConcurrentStreams = settings.maxConcurrentStreams();
             if (maxConcurrentStreams != null) {
                 int value = (int) Math.min(maxConcurrentStreams, Integer.MAX_VALUE);
-                connection.remote().maxStreams(value);
+                connection.remote().maxConcurrentStreams(value);
             }
 
             Long headerTableSize = settings.headerTableSize();

@@ -163,7 +163,7 @@ public class DefaultHttp2ConnectionTest {
 
     @Test(expected = Http2Exception.class)
     public void maxAllowedStreamsExceededShouldThrow() throws Http2Exception {
-        server.local().maxStreams(0);
+        server.local().maxConcurrentStreams(0);
         server.local().createStream(2).open(true);
     }
 

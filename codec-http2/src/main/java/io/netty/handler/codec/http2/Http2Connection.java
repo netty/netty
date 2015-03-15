@@ -106,18 +106,18 @@ public interface Http2Connection {
         boolean createdStreamId(int streamId);
 
         /**
-         * Indicates whether or not this endpoint is currently accepting new streams. This will be
-         * be false if {@link #numActiveStreams()} + 1 >= {@link #maxStreams()} or if the stream IDs
+         * Indicates whether or not this endpoint is currently allowed to create new streams. This will be
+         * be false if {@link #numConcurrentStreams()} + 1 >= {@link #maxConcurrentStreams()} or if the stream IDs
          * for this endpoint have been exhausted (i.e. {@link #nextStreamId()} < 0).
          */
-        boolean acceptingNewStreams();
+        boolean canCreateStream();
 
         /**
          * Creates a stream initiated by this endpoint. This could fail for the following reasons:
          * <ul>
          * <li>The requested stream ID is not the next sequential ID for this endpoint.</li>
          * <li>The stream already exists.</li>
-         * <li>The number of concurrent streams is above the allowed threshold for this endpoint.</li>
+         * <li>{@link #canCreateStream()} is {@code false}.</li>
          * <li>The connection is marked as going away.</li>
          * </ul>
          * <p>
@@ -164,17 +164,21 @@ public interface Http2Connection {
         /**
          * Gets the number of currently active streams that were created by this endpoint.
          */
-        int numActiveStreams();
+        int numConcurrentStreams();
 
         /**
-         * Gets the maximum number of concurrent streams allowed by this endpoint.
+         * Gets the maximum number of streams (created by this endpoint) that are allowed to be active at once.
+         * This is the {@code SETTINGS_MAX_CONCURRENT_STREAMS} value sent from the opposite endpoint to
+         * restrict stream creation by this endpoint.
          */
-        int maxStreams();
+        int maxConcurrentStreams();
 
         /**
-         * Sets the maximum number of concurrent streams allowed by this endpoint.
+         * Sets the maximum number of streams (created by this endpoint) that are allowed to be active at once.
+         * This is the {@code SETTINGS_MAX_CONCURRENT_STREAMS} value sent from the opposite endpoint to
+         * restrict stream creation by this endpoint.
          */
-        void maxStreams(int maxStreams);
+        void maxConcurrentStreams(int maxConcurrentStreams);
 
         /**
          * Gets the ID of the stream last successfully created by this endpoint.

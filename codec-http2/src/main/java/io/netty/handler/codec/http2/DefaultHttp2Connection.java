@@ -730,7 +730,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public boolean acceptingNewStreams() {
+        public boolean canCreateStream() {
             return nextStreamId() > 0 && numActiveStreams + 1 <= maxStreams;
         }
 
@@ -808,18 +808,18 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public int numActiveStreams() {
+        public int numConcurrentStreams() {
             return numActiveStreams;
         }
 
         @Override
-        public int maxStreams() {
+        public int maxConcurrentStreams() {
             return maxStreams;
         }
 
         @Override
-        public void maxStreams(int maxStreams) {
-            this.maxStreams = maxStreams;
+        public void maxConcurrentStreams(int maxConcurrentStreams) {
+            this.maxStreams = maxConcurrentStreams;
         }
 
         @Override
@@ -866,7 +866,7 @@ public class DefaultHttp2Connection implements Http2Connection {
                 throw connectionError(PROTOCOL_ERROR, "Cannot create a stream since the connection is going away");
             }
             verifyStreamId(streamId);
-            if (!acceptingNewStreams()) {
+            if (!canCreateStream()) {
                 throw connectionError(REFUSED_STREAM, "Maximum streams exceeded for this endpoint.");
             }
         }

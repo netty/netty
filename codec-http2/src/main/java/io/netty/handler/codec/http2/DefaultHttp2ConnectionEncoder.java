@@ -121,7 +121,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
         Long maxConcurrentStreams = settings.maxConcurrentStreams();
         if (maxConcurrentStreams != null) {
-            connection.local().maxStreams((int) Math.min(maxConcurrentStreams, Integer.MAX_VALUE));
+            connection.local().maxConcurrentStreams((int) Math.min(maxConcurrentStreams, Integer.MAX_VALUE));
         }
 
         Long headerTableSize = settings.headerTableSize();
