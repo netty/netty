@@ -203,7 +203,7 @@ public class DefaultHttp2Connection implements Http2Connection {
     private void activateInternal(DefaultStream stream) {
         if (activeStreams.add(stream)) {
             // Update the number of active streams initiated by the endpoint.
-            stream.createdBy().numActiveStreams++;
+            stream.createdBy().numConcurrentStreams++;
 
             // Notify the listeners.
             for (Listener listener : listeners) {
@@ -215,7 +215,7 @@ public class DefaultHttp2Connection implements Http2Connection {
     private void deactivateInternal(DefaultStream stream) {
         if (activeStreams.remove(stream)) {
             // Update the number of active streams initiated by the endpoint.
-            stream.createdBy().numActiveStreams--;
+            stream.createdBy().numConcurrentStreams--;
 
             // Notify the listeners.
             for (Listener listener : listeners) {
@@ -633,8 +633,7 @@ public class DefaultHttp2Connection implements Http2Connection {
      * @param events The events (top down order) which have changed
      */
     private void notifyParentChanged(List<ParentChangedEvent> events) {
-        for (int i = 0; i < events.size(); ++i) {
-            ParentChangedEvent event = events.get(i);
+        for (ParentChangedEvent event : events) {
             for (Listener l : listeners) {
                 event.notifyListener(l);
             }
@@ -691,16 +690,8 @@ public class DefaultHttp2Connection implements Http2Connection {
         private int lastKnownStream = -1;
         private boolean pushToAllowed = true;
         private F flowController;
-
-        /**
-         * The maximum number of active streams allowed to be created by this endpoint.
-         */
-        private int maxStreams;
-
-        /**
-         * The current number of active streams created by this endpoint.
-         */
-        private int numActiveStreams;
+        private int numConcurrentStreams;
+        private int maxConcurrentStreams;
 
         DefaultEndpoint(boolean server) {
             this.server = server;
@@ -713,7 +704,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
             // Push is disallowed by default for servers and allowed for clients.
             pushToAllowed = !server;
-            maxStreams = Integer.MAX_VALUE;
+            maxConcurrentStreams = Integer.MAX_VALUE;
         }
 
         @Override
@@ -731,7 +722,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public boolean canCreateStream() {
-            return nextStreamId() > 0 && numActiveStreams + 1 <= maxStreams;
+            return nextStreamId() > 0 && numConcurrentStreams + 1 <= maxConcurrentStreams;
         }
 
         @Override
@@ -809,17 +800,17 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public int numConcurrentStreams() {
-            return numActiveStreams;
+            return numConcurrentStreams;
         }
 
         @Override
         public int maxConcurrentStreams() {
-            return maxStreams;
+            return maxConcurrentStreams;
         }
 
         @Override
         public void maxConcurrentStreams(int maxConcurrentStreams) {
-            this.maxStreams = maxConcurrentStreams;
+            this.maxConcurrentStreams = maxConcurrentStreams;
         }
 
         @Override
