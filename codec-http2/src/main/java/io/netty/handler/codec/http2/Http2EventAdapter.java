@@ -96,7 +96,7 @@ public class Http2EventAdapter implements Http2Connection.Listener, Http2FrameLi
     }
 
     @Override
-    public void streamInactive(Http2Stream stream) {
+    public void streamClosed(Http2Stream stream) {
     }
 
     @Override

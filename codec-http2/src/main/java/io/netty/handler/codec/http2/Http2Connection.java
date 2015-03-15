@@ -28,26 +28,26 @@ public interface Http2Connection {
     interface Listener {
         /**
          * Notifies the listener that the given stream was added to the connection. This stream may
-         * not yet be active (i.e. open/half-closed).
+         * not yet be active (i.e. {@code OPEN} or {@code HALF CLOSED}).
          */
         void streamAdded(Http2Stream stream);
 
         /**
-         * Notifies the listener that the given stream was made active (i.e. open in at least one
-         * direction).
+         * Notifies the listener that the given stream was made active (i.e. {@code OPEN} or {@code HALF CLOSED}).
          */
         void streamActive(Http2Stream stream);
 
         /**
-         * Notifies the listener that the given stream is now half-closed. The stream can be
-         * inspected to determine which side is closed.
+         * Notifies the listener that the given stream is now {@code HALF CLOSED}. The stream can be
+         * inspected to determine which side is {@code CLOSED}.
          */
         void streamHalfClosed(Http2Stream stream);
 
         /**
-         * Notifies the listener that the given stream is now closed in both directions.
+         * Notifies the listener that the given stream is now {@code CLOSED} in both directions and will no longer
+         * be returned by {@link #activeStreams()}.
          */
-        void streamInactive(Http2Stream stream);
+        void streamClosed(Http2Stream stream);
 
         /**
          * Notifies the listener that the given stream has now been removed from the connection and
@@ -106,18 +106,18 @@ public interface Http2Connection {
         boolean createdStreamId(int streamId);
 
         /**
-         * Indicates whether or not this endpoint is currently accepting new streams. This will be
-         * be false if {@link #numActiveStreams()} + 1 >= {@link #maxStreams()} or if the stream IDs
+         * Indicates whether or not this endpoint is currently allowed to create new streams. This will be
+         * be false if {@link #numActiveStreams()} + 1 >= {@link #maxActiveStreams()} or if the stream IDs
          * for this endpoint have been exhausted (i.e. {@link #nextStreamId()} < 0).
          */
-        boolean acceptingNewStreams();
+        boolean canCreateStream();
 
         /**
          * Creates a stream initiated by this endpoint. This could fail for the following reasons:
          * <ul>
          * <li>The requested stream ID is not the next sequential ID for this endpoint.</li>
          * <li>The stream already exists.</li>
-         * <li>The number of concurrent streams is above the allowed threshold for this endpoint.</li>
+         * <li>{@link #canCreateStream()} is {@code false}.</li>
          * <li>The connection is marked as going away.</li>
          * </ul>
          * <p>
@@ -135,7 +135,7 @@ public interface Http2Connection {
          * <li>The requested stream ID is not the next sequential stream ID for this endpoint.</li>
          * <li>The number of concurrent streams is above the allowed threshold for this endpoint.</li>
          * <li>The connection is marked as going away.</li>
-         * <li>The parent stream ID does not exist or is not open from the side sending the push
+         * <li>The parent stream ID does not exist or is not {@code OPEN} from the side sending the push
          * promise.</li>
          * <li>Could not set a valid priority for the new stream.</li>
          * </ul>
@@ -162,19 +162,24 @@ public interface Http2Connection {
         boolean allowPushTo();
 
         /**
-         * Gets the number of currently active streams that were created by this endpoint.
+         * Gets the number of active streams (i.e. {@code OPEN} or {@code HALF CLOSED}) that were created by this
+         * endpoint.
          */
         int numActiveStreams();
 
         /**
-         * Gets the maximum number of concurrent streams allowed by this endpoint.
+         * Gets the maximum number of streams (created by this endpoint) that are allowed to be active at
+         * the same time. This is the {@code SETTINGS_MAX_CONCURRENT_STREAMS} value sent from the opposite endpoint to
+         * restrict stream creation by this endpoint.
          */
-        int maxStreams();
+        int maxActiveStreams();
 
         /**
-         * Sets the maximum number of concurrent streams allowed by this endpoint.
+         * Sets the maximum number of streams (created by this endpoint) that are allowed to be active at once.
+         * This is the {@code SETTINGS_MAX_CONCURRENT_STREAMS} value sent from the opposite endpoint to
+         * restrict stream creation by this endpoint.
          */
-        void maxStreams(int maxStreams);
+        void maxActiveStreams(int maxActiveStreams);
 
         /**
          * Gets the ID of the stream last successfully created by this endpoint.
@@ -231,25 +236,15 @@ public interface Http2Connection {
     Http2Stream connectionStream();
 
     /**
-     * Gets the number of streams that actively in use. It is possible for a stream to be closed
-     * but still be considered active (e.g. there is still pending data to be written).
+     * Gets the number of streams that are actively in use (i.e. {@code OPEN} or {@code HALF CLOSED}).
      */
     int numActiveStreams();
 
     /**
-     * Gets all streams that are actively in use. The returned collection is
+     * Gets all streams that are actively in use (i.e. {@code OPEN} or {@code HALF CLOSED}). The returned collection is
      * sorted by priority.
      */
     Collection<Http2Stream> activeStreams();
-
-    /**
-     * Indicates that the given stream is no longer actively in use. If this stream was active,
-     * after calling this method it will no longer appear in the list returned by
-     * {@link #activeStreams()} and {@link #numActiveStreams()} will be decremented. In addition,
-     * all listeners will be notified of this event via
-     * {@link Listener#streamInactive(Http2Stream)}.
-     */
-    void deactivate(Http2Stream stream);
 
     /**
      * Indicates whether or not the local endpoint for this connection is the server.
@@ -262,21 +257,9 @@ public interface Http2Connection {
     Endpoint<Http2LocalFlowController> local();
 
     /**
-     * Creates a new stream initiated by the local endpoint
-     * @see Endpoint#createStream(int)
-     */
-    Http2Stream createLocalStream(int streamId) throws Http2Exception;
-
-    /**
      * Gets a view of this connection from the remote {@link Endpoint}.
      */
     Endpoint<Http2RemoteFlowController> remote();
-
-    /**
-     * Creates a new stream initiated by the remote endpoint.
-     * @see Endpoint#createStream(int)
-     */
-    Http2Stream createRemoteStream(int streamId) throws Http2Exception;
 
     /**
      * Indicates whether or not a {@code GOAWAY} was received from the remote endpoint.

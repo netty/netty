@@ -73,7 +73,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             }
 
             @Override
-            public void streamInactive(Http2Stream stream) {
+            public void streamClosed(Http2Stream stream) {
                 // Any pending frames can never be written, cancel and
                 // write errors for any pending frames.
                 state(stream).cancel();
