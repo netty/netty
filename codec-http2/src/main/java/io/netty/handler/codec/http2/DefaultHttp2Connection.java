@@ -140,11 +140,6 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     @Override
-    public void deactivate(Http2Stream stream) {
-      deactivateInternal((DefaultStream) stream);
-    }
-
-    @Override
     public Endpoint<Http2LocalFlowController> local() {
         return localEndpoint;
     }
@@ -157,16 +152,6 @@ public class DefaultHttp2Connection implements Http2Connection {
     @Override
     public boolean isGoAway() {
         return goAwaySent() || goAwayReceived();
-    }
-
-    @Override
-    public Http2Stream createLocalStream(int streamId) throws Http2Exception {
-        return local().createStream(streamId);
-    }
-
-    @Override
-    public Http2Stream createRemoteStream(int streamId) throws Http2Exception {
-        return remote().createStream(streamId);
     }
 
     @Override
@@ -198,33 +183,6 @@ public class DefaultHttp2Connection implements Http2Connection {
         // Remove it from the map and priority tree.
         streamMap.remove(stream.id());
         stream.parent().removeChild(stream);
-    }
-
-    private void activateInternal(DefaultStream stream) {
-        if (activeStreams.add(stream)) {
-            // Update the number of active streams initiated by the endpoint.
-            stream.createdBy().numConcurrentStreams++;
-
-            // Notify the listeners.
-            for (Listener listener : listeners) {
-                listener.streamActive(stream);
-            }
-        }
-    }
-
-    private void deactivateInternal(DefaultStream stream) {
-        if (activeStreams.remove(stream)) {
-            // Update the number of active streams initiated by the endpoint.
-            stream.createdBy().numConcurrentStreams--;
-
-            // Notify the listeners.
-            for (Listener listener : listeners) {
-                listener.streamInactive(stream);
-            }
-
-            // Mark this stream for removal.
-            removalPolicy.markForRemoval(stream);
-        }
     }
 
     /**
@@ -388,7 +346,15 @@ public class DefaultHttp2Connection implements Http2Connection {
                 throw streamError(id, PROTOCOL_ERROR, "Attempting to open a stream in an invalid state: " + state);
             }
 
-            activateInternal(this);
+            if (activeStreams.add(this)) {
+                // Update the number of active streams initiated by the endpoint.
+                createdBy().numActiveStreams++;
+
+                // Notify the listeners.
+                for (Listener listener : listeners) {
+                    listener.streamActive(this);
+                }
+            }
             return this;
         }
 
@@ -399,7 +365,20 @@ public class DefaultHttp2Connection implements Http2Connection {
             }
 
             state = CLOSED;
-            deactivateInternal(this);
+            if (activeStreams.remove(this)) {
+                try {
+                    // Update the number of active streams initiated by the endpoint.
+                    createdBy().numActiveStreams--;
+
+                    // Notify the listeners.
+                    for (Listener listener : listeners) {
+                        listener.streamClosed(this);
+                    }
+                } finally {
+                    // Mark this stream for removal.
+                    removalPolicy.markForRemoval(this);
+                }
+            }
             return this;
         }
 
@@ -690,8 +669,8 @@ public class DefaultHttp2Connection implements Http2Connection {
         private int lastKnownStream = -1;
         private boolean pushToAllowed = true;
         private F flowController;
-        private int numConcurrentStreams;
-        private int maxConcurrentStreams;
+        private int numActiveStreams;
+        private int maxActiveStreams;
 
         DefaultEndpoint(boolean server) {
             this.server = server;
@@ -704,7 +683,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
             // Push is disallowed by default for servers and allowed for clients.
             pushToAllowed = !server;
-            maxConcurrentStreams = Integer.MAX_VALUE;
+            maxActiveStreams = Integer.MAX_VALUE;
         }
 
         @Override
@@ -722,7 +701,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public boolean canCreateStream() {
-            return nextStreamId() > 0 && numConcurrentStreams + 1 <= maxConcurrentStreams;
+            return nextStreamId() > 0 && numActiveStreams + 1 <= maxActiveStreams;
         }
 
         @Override
@@ -799,18 +778,18 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public int numConcurrentStreams() {
-            return numConcurrentStreams;
+        public int numActiveStreams() {
+            return numActiveStreams;
         }
 
         @Override
-        public int maxConcurrentStreams() {
-            return maxConcurrentStreams;
+        public int maxActiveStreams() {
+            return maxActiveStreams;
         }
 
         @Override
-        public void maxConcurrentStreams(int maxConcurrentStreams) {
-            this.maxConcurrentStreams = maxConcurrentStreams;
+        public void maxActiveStreams(int maxActiveStreams) {
+            this.maxActiveStreams = maxActiveStreams;
         }
 
         @Override

@@ -163,7 +163,7 @@ public class DefaultHttp2ConnectionTest {
 
     @Test(expected = Http2Exception.class)
     public void maxAllowedStreamsExceededShouldThrow() throws Http2Exception {
-        server.local().maxConcurrentStreams(0);
+        server.local().maxActiveStreams(0);
         server.local().createStream(2).open(true);
     }
 
@@ -214,12 +214,12 @@ public class DefaultHttp2ConnectionTest {
 
     @Test(expected = Http2Exception.class)
     public void localStreamInvalidStreamIdShouldThrow() throws Http2Exception {
-        client.createLocalStream(Integer.MAX_VALUE + 2).open(false);
+        client.local().createStream(Integer.MAX_VALUE + 2).open(false);
     }
 
     @Test(expected = Http2Exception.class)
     public void remoteStreamInvalidStreamIdShouldThrow() throws Http2Exception {
-        client.createRemoteStream(Integer.MAX_VALUE + 1).open(false);
+        client.remote().createStream(Integer.MAX_VALUE + 1).open(false);
     }
 
     @Test

@@ -111,20 +111,6 @@ public class Http2ConnectionHandlerTest {
         when(connection.local()).thenReturn(local);
         when(connection.activeStreams()).thenReturn(Collections.singletonList(stream));
         when(stream.open(anyBoolean())).thenReturn(stream);
-        doAnswer(new Answer<Http2Stream>() {
-            @Override
-            public Http2Stream answer(InvocationOnMock invocation) throws Throwable {
-                Object[] args = invocation.getArguments();
-                return local.createStream((Integer) args[0]);
-            }
-        }).when(connection).createLocalStream(anyInt());
-        doAnswer(new Answer<Http2Stream>() {
-            @Override
-            public Http2Stream answer(InvocationOnMock invocation) throws Throwable {
-                Object[] args = invocation.getArguments();
-                return remote.createStream((Integer) args[0]);
-            }
-        }).when(connection).createRemoteStream(anyInt());
         when(encoder.writeSettings(eq(ctx), any(Http2Settings.class), eq(promise))).thenReturn(future);
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(ctx.channel()).thenReturn(channel);
