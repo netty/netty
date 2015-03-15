@@ -121,7 +121,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
         Long maxConcurrentStreams = settings.maxConcurrentStreams();
         if (maxConcurrentStreams != null) {
-            connection.local().maxStreams((int) Math.min(maxConcurrentStreams, Integer.MAX_VALUE));
+            connection.local().maxActiveStreams((int) Math.min(maxConcurrentStreams, Integer.MAX_VALUE));
         }
 
         Long headerTableSize = settings.headerTableSize();
@@ -194,7 +194,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             }
             Http2Stream stream = connection.stream(streamId);
             if (stream == null) {
-                stream = connection.createLocalStream(streamId);
+                stream = connection.local().createStream(streamId);
             }
 
             switch (stream.state()) {
@@ -235,7 +235,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             // Update the priority on this stream.
             Http2Stream stream = connection.stream(streamId);
             if (stream == null) {
-                stream = connection.createLocalStream(streamId);
+                stream = connection.local().createStream(streamId);
             }
 
             stream.setPriority(streamDependency, weight, exclusive);

@@ -128,20 +128,6 @@ public class DefaultHttp2ConnectionDecoderTest {
         when(local.flowController()).thenReturn(localFlow);
         when(encoder.flowController()).thenReturn(remoteFlow);
         when(connection.remote()).thenReturn(remote);
-        doAnswer(new Answer<Http2Stream>() {
-            @Override
-            public Http2Stream answer(InvocationOnMock invocation) throws Throwable {
-                Object[] args = invocation.getArguments();
-                return local.createStream((Integer) args[0]);
-            }
-        }).when(connection).createLocalStream(anyInt());
-        doAnswer(new Answer<Http2Stream>() {
-            @Override
-            public Http2Stream answer(InvocationOnMock invocation) throws Throwable {
-                Object[] args = invocation.getArguments();
-                return remote.createStream((Integer) args[0]);
-            }
-        }).when(connection).createRemoteStream(anyInt());
         when(local.createStream(eq(STREAM_ID))).thenReturn(stream);
         when(local.reservePushStream(eq(PUSH_STREAM_ID), eq(stream))).thenReturn(pushStream);
         when(remote.createStream(eq(STREAM_ID))).thenReturn(stream);
@@ -389,7 +375,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         decode().onPriorityRead(ctx, STREAM_ID, 0, (short) 255, true);
         verify(stream).setPriority(eq(0), eq((short) 255), eq(true));
         verify(listener).onPriorityRead(eq(ctx), eq(STREAM_ID), eq(0), eq((short) 255), eq(true));
-        verify(connection).createRemoteStream(STREAM_ID);
+        verify(remote).createStream(STREAM_ID);
         verify(stream, never()).open(anyBoolean());
     }
 

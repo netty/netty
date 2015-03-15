@@ -32,7 +32,7 @@ public class Http2ConnectionAdapter implements Http2Connection.Listener {
     }
 
     @Override
-    public void streamInactive(Http2Stream stream) {
+    public void streamClosed(Http2Stream stream) {
     }
 
     @Override

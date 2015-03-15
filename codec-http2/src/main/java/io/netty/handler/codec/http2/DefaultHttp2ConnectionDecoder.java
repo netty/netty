@@ -143,7 +143,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         Http2HeaderTable headerTable = config.headerTable();
         Http2FrameSizePolicy frameSizePolicy = config.frameSizePolicy();
         settings.initialWindowSize(flowController().initialWindowSize());
-        settings.maxConcurrentStreams(connection.remote().maxStreams());
+        settings.maxConcurrentStreams(connection.remote().maxActiveStreams());
         settings.headerTableSize(headerTable.maxHeaderTableSize());
         settings.maxFrameSize(frameSizePolicy.maxFrameSize());
         settings.maxHeaderListSize(headerTable.maxHeaderListSize());
@@ -170,7 +170,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         Long maxConcurrentStreams = settings.maxConcurrentStreams();
         if (maxConcurrentStreams != null) {
             int value = (int) Math.min(maxConcurrentStreams, Integer.MAX_VALUE);
-            connection.remote().maxStreams(value);
+            connection.remote().maxActiveStreams(value);
         }
 
         Long headerTableSize = settings.headerTableSize();
@@ -322,7 +322,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             }
 
             if (stream == null) {
-                stream = connection.createRemoteStream(streamId).open(endOfStream);
+                stream = connection.remote().createStream(streamId).open(endOfStream);
             } else {
                 switch (stream.state()) {
                     case RESERVED_REMOTE:
@@ -371,7 +371,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             if (stream == null) {
                 // PRIORITY frames always identify a stream. This means that if a PRIORITY frame is the
                 // first frame to be received for a stream that we must create the stream.
-                stream = connection.createRemoteStream(streamId);
+                stream = connection.remote().createStream(streamId);
             }
 
             // This call will create a stream for streamDependency if necessary.
@@ -428,7 +428,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             Long maxConcurrentStreams = settings.maxConcurrentStreams();
             if (maxConcurrentStreams != null) {
                 int value = (int) Math.min(maxConcurrentStreams, Integer.MAX_VALUE);
-                connection.remote().maxStreams(value);
+                connection.remote().maxActiveStreams(value);
             }
 
             Long headerTableSize = settings.headerTableSize();
