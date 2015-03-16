@@ -16,6 +16,7 @@
 package io.netty.resolver.dns;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -27,13 +28,14 @@ import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.InternetProtocolFamily;
-import io.netty.handler.codec.dns.DnsClass;
-import io.netty.handler.codec.dns.DnsQueryEncoder;
+import io.netty.handler.codec.dns.DatagramDnsQueryEncoder;
+import io.netty.handler.codec.dns.DatagramDnsResponse;
+import io.netty.handler.codec.dns.DatagramDnsResponseDecoder;
+import io.netty.handler.codec.dns.DnsSection;
 import io.netty.handler.codec.dns.DnsQuestion;
-import io.netty.handler.codec.dns.DnsResource;
+import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.DnsResponseCode;
-import io.netty.handler.codec.dns.DnsResponseDecoder;
 import io.netty.resolver.NameResolver;
 import io.netty.resolver.SimpleNameResolver;
 import io.netty.util.ReferenceCountUtil;
@@ -83,8 +85,8 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
         }
     }
 
-    private static final DnsResponseDecoder DECODER = new DnsResponseDecoder();
-    private static final DnsQueryEncoder ENCODER = new DnsQueryEncoder();
+    private static final DatagramDnsResponseDecoder DECODER = new DatagramDnsResponseDecoder();
+    private static final DatagramDnsQueryEncoder ENCODER = new DatagramDnsQueryEncoder();
 
     final Iterable<InetSocketAddress> nameServerAddresses;
     final ChannelFuture bindFuture;
@@ -117,7 +119,6 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
     private volatile int maxQueriesPerResolve = 8;
 
     private volatile int maxPayloadSize;
-    private volatile DnsClass maxPayloadSizeClass; // EDNS uses the CLASS field as the payload size field.
 
     /**
      * Creates a new DNS-based name resolver that communicates with a single DNS server.
@@ -580,14 +581,9 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
         }
 
         this.maxPayloadSize = maxPayloadSize;
-        maxPayloadSizeClass = DnsClass.valueOf(maxPayloadSize);
         ch.config().setRecvByteBufAllocator(new FixedRecvByteBufAllocator(maxPayloadSize));
 
         return this;
-    }
-
-    DnsClass maxPayloadSizeClass() {
-        return maxPayloadSizeClass;
     }
 
     /**
@@ -662,21 +658,23 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
     /**
      * Sends a DNS query with the specified question.
      */
-    public Future<DnsResponse> query(DnsQuestion question) {
+    public Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query(DnsQuestion question) {
         return query(nameServerAddresses, question);
     }
 
     /**
      * Sends a DNS query with the specified question.
      */
-    public Future<DnsResponse> query(DnsQuestion question, Promise<DnsResponse> promise) {
+    public Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query(
+            DnsQuestion question, Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
         return query(nameServerAddresses, question, promise);
     }
 
     /**
      * Sends a DNS query with the specified question using the specified name server list.
      */
-    public Future<DnsResponse> query(Iterable<InetSocketAddress> nameServerAddresses, DnsQuestion question) {
+    public Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query(
+            Iterable<InetSocketAddress> nameServerAddresses, DnsQuestion question) {
         if (nameServerAddresses == null) {
             throw new NullPointerException("nameServerAddresses");
         }
@@ -693,15 +691,18 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
                 return eventLoop.newFailedFuture(cachedResult.cause);
             }
         } else {
-            return query0(nameServerAddresses, question, eventLoop.<DnsResponse>newPromise());
+            return query0(
+                    nameServerAddresses, question,
+                    eventLoop.<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>>newPromise());
         }
     }
 
     /**
      * Sends a DNS query with the specified question using the specified name server list.
      */
-    public Future<DnsResponse> query(
-            Iterable<InetSocketAddress> nameServerAddresses, DnsQuestion question, Promise<DnsResponse> promise) {
+    public Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query(
+            Iterable<InetSocketAddress> nameServerAddresses, DnsQuestion question,
+            Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
 
         if (nameServerAddresses == null) {
             throw new NullPointerException("nameServerAddresses");
@@ -716,23 +717,25 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
         final DnsCacheEntry cachedResult = queryCache.get(question);
         if (cachedResult != null) {
             if (cachedResult.response != null) {
-                return promise.setSuccess(cachedResult.response.retain());
+                return cast(promise).setSuccess(cachedResult.response.retain());
             } else {
-                return promise.setFailure(cachedResult.cause);
+                return cast(promise).setFailure(cachedResult.cause);
             }
         } else {
             return query0(nameServerAddresses, question, promise);
         }
     }
 
-    private Future<DnsResponse> query0(
-            Iterable<InetSocketAddress> nameServerAddresses, DnsQuestion question, Promise<DnsResponse> promise) {
+    private Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query0(
+            Iterable<InetSocketAddress> nameServerAddresses, DnsQuestion question,
+            Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
 
+        final Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> castPromise = cast(promise);
         try {
-            new DnsQueryContext(this, nameServerAddresses, question, promise).query();
-            return promise;
+            new DnsQueryContext(this, nameServerAddresses, question, castPromise).query();
+            return castPromise;
         } catch (Exception e) {
-            return promise.setFailure(e);
+            return castPromise.setFailure(e);
         }
     }
 
@@ -762,12 +765,22 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    private static Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> cast(Promise<?> promise) {
+        return (Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>>) promise;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static AddressedEnvelope<DnsResponse, InetSocketAddress> cast(AddressedEnvelope<?, ?> envelope) {
+        return (AddressedEnvelope<DnsResponse, InetSocketAddress>) envelope;
+    }
+
     private final class DnsResponseHandler extends ChannelInboundHandlerAdapter {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             try {
-                final DnsResponse res = (DnsResponse) msg;
-                final int queryId = res.header().id();
+                final DatagramDnsResponse res = (DatagramDnsResponse) msg;
+                final int queryId = res.id();
 
                 if (logger.isDebugEnabled()) {
                     logger.debug("{} RECEIVED: [{}: {}], {}", ch, queryId, res.sender(), res);
@@ -782,14 +795,13 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
                     return;
                 }
 
-                final List<DnsQuestion> questions = res.questions();
-                if (questions.size() != 1) {
+                if (res.count(DnsSection.QUESTION) != 1) {
                     logger.warn("Received a DNS response with invalid number of questions: {}", res);
                     return;
                 }
 
                 final DnsQuestion q = qCtx.question();
-                if (!q.equals(questions.get(0))) {
+                if (!q.equals(res.recordAt(DnsSection.QUESTION))) {
                     logger.warn("Received a mismatching DNS response: {}", res);
                     return;
                 }
@@ -800,26 +812,26 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
                     timeoutFuture.cancel(false);
                 }
 
-                if (res.header().responseCode() == DnsResponseCode.NOERROR) {
+                if (res.code() == DnsResponseCode.NOERROR) {
                     cache(q, res);
                     promises.set(queryId, null);
 
-                    Promise<DnsResponse> qPromise = qCtx.promise();
+                    Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> qPromise = qCtx.promise();
                     if (qPromise.setUncancellable()) {
-                        qPromise.setSuccess(res.retain());
+                        qPromise.setSuccess(cast(res.retain()));
                     }
                 } else {
                     qCtx.retry(res.sender(),
-                               "response code: " + res.header().responseCode() +
-                               " with " + res.answers().size() + " answer(s) and " +
-                               res.authorityResources().size() + " authority resource(s)");
+                               "response code: " + res.code() +
+                               " with " + res.count(DnsSection.ANSWER) + " answer(s) and " +
+                               res.count(DnsSection.AUTHORITY) + " authority resource(s)");
                 }
             } finally {
                 ReferenceCountUtil.safeRelease(msg);
             }
         }
 
-        private void cache(DnsQuestion question, DnsResponse res) {
+        private void cache(DnsQuestion question, AddressedEnvelope<? extends DnsResponse, InetSocketAddress> res) {
             final int maxTtl = maxTtl();
             if (maxTtl == 0) {
                 return;
@@ -827,8 +839,11 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
 
             long ttl = Long.MAX_VALUE;
             // Find the smallest TTL value returned by the server.
-            for (DnsResource r: res.answers()) {
-                long rTtl = r.timeToLive();
+            final DnsResponse resc = res.content();
+            final int answerCount = resc.count(DnsSection.ANSWER);
+            for (int i = 0; i < answerCount; i ++) {
+                final DnsRecord r = resc.recordAt(DnsSection.ANSWER, i);
+                final long rTtl = r.timeToLive();
                 if (ttl > rTtl) {
                     ttl = rTtl;
                 }
@@ -847,12 +862,13 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
     }
 
     static final class DnsCacheEntry {
-        final DnsResponse response;
+        final AddressedEnvelope<DnsResponse, InetSocketAddress> response;
         final Throwable cause;
         volatile ScheduledFuture<?> expirationFuture;
 
-        DnsCacheEntry(DnsResponse response) {
-            this.response = response.retain();
+        @SuppressWarnings("unchecked")
+        DnsCacheEntry(AddressedEnvelope<? extends DnsResponse, InetSocketAddress> response) {
+            this.response = (AddressedEnvelope<DnsResponse, InetSocketAddress>) response.retain();
             cause = null;
         }
 
@@ -862,7 +878,7 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
         }
 
         void release() {
-            DnsResponse response = this.response;
+            AddressedEnvelope<DnsResponse, InetSocketAddress> response = this.response;
             if (response != null) {
                 ReferenceCountUtil.safeRelease(response);
             }
