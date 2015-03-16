@@ -17,15 +17,18 @@ package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.CorruptedFrameException;
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.net.InetSocketAddress;
+
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.*;
 
 public class DnsResponseTest {
 
@@ -69,25 +72,23 @@ public class DnsResponseTest {
 
     @Test
     public void readResponseTest() throws Exception {
-        EmbeddedChannel embedder = new EmbeddedChannel(new DnsResponseDecoder());
+        EmbeddedChannel embedder = new EmbeddedChannel(new DatagramDnsResponseDecoder());
         for (byte[] p: packets) {
             ByteBuf packet = embedder.alloc().buffer(512).writeBytes(p);
             embedder.writeInbound(new DatagramPacket(packet, null, new InetSocketAddress(0)));
-            DnsResponse decoded = embedder.readInbound();
+            AddressedEnvelope<DnsResponse, InetSocketAddress> envelope = embedder.readInbound();
+            assertThat(envelope, is(instanceOf(DatagramDnsResponse.class)));
+            DnsResponse response = envelope.content();
+            assertThat(response, is(sameInstance((Object) envelope)));
+
             ByteBuf raw = Unpooled.wrappedBuffer(p);
-            Assert.assertEquals("Invalid id, expected: " + raw.getUnsignedShort(0) + ", actual: "
-                    + decoded.header().id(), raw.getUnsignedShort(0), decoded.header().id());
-            Assert.assertEquals("Invalid resource count,  expected: " + raw.getUnsignedShort(4) + ", actual: "
-                    + decoded.questions().size(), raw.getUnsignedShort(4), decoded.questions().size());
-            Assert.assertEquals("Invalid resource count,  expected: " + raw.getUnsignedShort(6) + ", actual: "
-                    + decoded.answers().size(), raw.getUnsignedShort(6), decoded.answers().size());
-            Assert.assertEquals("Invalid resource count,  expected: " + raw.getUnsignedShort(8) + ", actual: "
-                    + decoded.authorityResources().size(), raw.getUnsignedShort(8), decoded.authorityResources()
-                    .size());
-            Assert.assertEquals("Invalid resource count,  expected: " + raw.getUnsignedShort(10) + ", actual: "
-                    + decoded.additionalResources().size(), raw.getUnsignedShort(10),
-                    decoded.additionalResources().size());
-            decoded.release();
+            assertThat(response.id(), is(raw.getUnsignedShort(0)));
+            assertThat(response.count(DnsSection.QUESTION), is(raw.getUnsignedShort(4)));
+            assertThat(response.count(DnsSection.ANSWER), is(raw.getUnsignedShort(6)));
+            assertThat(response.count(DnsSection.AUTHORITY), is(raw.getUnsignedShort(8)));
+            assertThat(response.count(DnsSection.ADDITIONAL), is(raw.getUnsignedShort(10)));
+
+            envelope.release();
         }
     }
 
@@ -96,7 +97,7 @@ public class DnsResponseTest {
 
     @Test
     public void readMalormedResponseTest() throws Exception {
-        EmbeddedChannel embedder = new EmbeddedChannel(new DnsResponseDecoder());
+        EmbeddedChannel embedder = new EmbeddedChannel(new DatagramDnsResponseDecoder());
         ByteBuf packet = embedder.alloc().buffer(512).writeBytes(malformedLoopPacket);
         exception.expect(CorruptedFrameException.class);
         embedder.writeInbound(new DatagramPacket(packet, null, new InetSocketAddress(0)));

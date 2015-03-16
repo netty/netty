@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,7 +15,6 @@
  */
 
 /**
- * DNS codec information for writing to and reading from a DNS server.
- * Includes decoders and classes for representing messages and resources.
+ * DNS codec.
  */
 package io.netty.handler.codec.dns;
