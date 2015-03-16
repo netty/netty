@@ -43,6 +43,10 @@ public class DefaultAddressedEnvelope<M, A extends SocketAddress> implements Add
             throw new NullPointerException("message");
         }
 
+        if (recipient == null && sender == null) {
+            throw new NullPointerException("recipient and sender");
+        }
+
         this.message = message;
         this.sender = sender;
         this.recipient = recipient;

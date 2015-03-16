@@ -15,13 +15,28 @@
  */
 package io.netty.handler.codec.dns;
 
+import io.netty.buffer.ByteBuf;
+
 /**
- * A DNS question.
+ * Encodes a {@link DnsRecord} into binary representation.
+ *
+ * @see DatagramDnsQueryEncoder
  */
-public interface DnsQuestion extends DnsRecord {
+public interface DnsRecordEncoder {
+
+    DnsRecordEncoder DEFAULT = new DefaultDnsRecordEncoder();
+
     /**
-     * An unused property. This method will always return {@code 0}.
+     * Encodes a {@link DnsQuestion}.
+     *
+     * @param out the output buffer where the encoded question will be written to
      */
-    @Override
-    long timeToLive();
+    void encodeQuestion(DnsQuestion question, ByteBuf out) throws Exception;
+
+    /**
+     * Encodes a {@link DnsRecord}.
+     *
+     * @param out the output buffer where the encoded record will be written to
+     */
+    void encodeRecord(DnsRecord record, ByteBuf out) throws Exception;
 }

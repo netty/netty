@@ -15,13 +15,28 @@
  */
 package io.netty.handler.codec.dns;
 
+import io.netty.buffer.ByteBuf;
+
 /**
- * A DNS question.
+ * Decodes a DNS record into its object representation.
+ *
+ * @see DatagramDnsResponseDecoder
  */
-public interface DnsQuestion extends DnsRecord {
+public interface DnsRecordDecoder {
+
+    DnsRecordDecoder DEFAULT = new DefaultDnsRecordDecoder();
+
     /**
-     * An unused property. This method will always return {@code 0}.
+     * Decodes a DNS question into its object representation.
+     *
+     * @param in the input buffer which contains a DNS question at its reader index
      */
-    @Override
-    long timeToLive();
+    DnsQuestion decodeQuestion(ByteBuf in) throws Exception;
+
+    /**
+     * Decodes a DNS record into its object representation.
+     *
+     * @param in the input buffer which contains a DNS record at its reader index
+     */
+    <T extends DnsRecord> T decodeRecord(ByteBuf in) throws Exception;
 }
