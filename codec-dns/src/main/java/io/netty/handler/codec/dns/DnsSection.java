@@ -16,12 +16,23 @@
 package io.netty.handler.codec.dns;
 
 /**
- * A DNS question.
+ * Represents a section of a {@link DnsMessage}.
  */
-public interface DnsQuestion extends DnsRecord {
+public enum DnsSection {
     /**
-     * An unused property. This method will always return {@code 0}.
+     * The section that contains {@link DnsQuestion}s.
      */
-    @Override
-    long timeToLive();
+    QUESTION,
+    /**
+     * The section that contains the answer {@link DnsRecord}s.
+     */
+    ANSWER,
+    /**
+     * The section that contains the authority {@link DnsRecord}s.
+     */
+    AUTHORITY,
+    /**
+     * The section that contains the additional {@link DnsRecord}s.
+     */
+    ADDITIONAL
 }

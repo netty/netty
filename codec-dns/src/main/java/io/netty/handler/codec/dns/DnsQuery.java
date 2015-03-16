@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,89 +15,46 @@
  */
 package io.netty.handler.codec.dns;
 
-import java.net.InetSocketAddress;
-
 /**
- * A DNS query packet which is sent to a server to receive a DNS response packet
- * with information answering a DnsQuery's questions.
+ * A DNS query message.
  */
-public class DnsQuery extends DnsMessage {
-
-    private final InetSocketAddress recipient;
-
-    /**
-     * Constructs a DNS query. By default recursion will be toggled on.
-     */
-    public DnsQuery(int id, InetSocketAddress recipient) {
-        super(id);
-        if (recipient == null) {
-            throw new NullPointerException("recipient");
-        }
-        this.recipient = recipient;
-    }
-
-    /**
-     * Return the {@link InetSocketAddress} of the recipient of the {@link DnsQuery}
-     */
-    public InetSocketAddress recipient() {
-        return recipient;
-    }
+public interface DnsQuery extends DnsMessage {
+    @Override
+    DnsQuery setId(int id);
 
     @Override
-    public DnsQuery addAnswer(DnsResource answer) {
-        super.addAnswer(answer);
-        return this;
-    }
+    DnsQuery setOpCode(DnsOpCode opCode);
 
     @Override
-    public DnsQuery addQuestion(DnsQuestion question) {
-        super.addQuestion(question);
-        return this;
-    }
+    DnsQuery setRecursionDesired(boolean recursionDesired);
 
     @Override
-    public DnsQuery addAuthorityResource(DnsResource resource) {
-        super.addAuthorityResource(resource);
-        return this;
-    }
+    DnsQuery setZ(int z);
 
     @Override
-    public DnsQuery addAdditionalResource(DnsResource resource) {
-        super.addAdditionalResource(resource);
-        return this;
-    }
+    DnsQuery setRecord(DnsSection section, DnsRecord record);
 
     @Override
-    public DnsQuery touch(Object hint) {
-        super.touch(hint);
-        return this;
-    }
+    DnsQuery addRecord(DnsSection section, DnsRecord record);
 
     @Override
-    public DnsQuery retain() {
-        super.retain();
-        return this;
-    }
+    DnsQuery addRecord(DnsSection section, int index, DnsRecord record);
 
     @Override
-    public DnsQuery retain(int increment) {
-        super.retain(increment);
-        return this;
-    }
+    DnsQuery clear(DnsSection section);
 
     @Override
-    public DnsQuery touch() {
-        super.touch();
-        return this;
-    }
+    DnsQuery clear();
 
     @Override
-    public DnsQueryHeader header() {
-        return (DnsQueryHeader) super.header();
-    }
+    DnsQuery touch();
 
     @Override
-    protected DnsQueryHeader newHeader(int id) {
-        return new DnsQueryHeader(this, id);
-    }
+    DnsQuery touch(Object hint);
+
+    @Override
+    DnsQuery retain();
+
+    @Override
+    DnsQuery retain(int increment);
 }

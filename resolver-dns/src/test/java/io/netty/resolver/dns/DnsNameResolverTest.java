@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,18 +13,21 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.resolver.dns;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
+import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
-import io.netty.handler.codec.dns.DnsQuestion;
-import io.netty.handler.codec.dns.DnsResource;
+import io.netty.handler.codec.dns.DefaultDnsQuestion;
+import io.netty.handler.codec.dns.DnsSection;
+import io.netty.handler.codec.dns.DnsRecord;
+import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.DnsResponseCode;
-import io.netty.handler.codec.dns.DnsType;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.ThreadLocalRandom;
@@ -181,7 +184,7 @@ public class DnsNameResolverTest {
                 EXCLUSIONS_RESOLVE_A,
                 "akamaihd.net",
                 "googleusercontent.com",
-                "");
+                StringUtil.EMPTY_STRING);
     }
 
     /**
@@ -236,7 +239,7 @@ public class DnsNameResolverTest {
                 "people.com.cn",
                 "googleusercontent.com",
                 "blogspot.in",
-                "");
+                StringUtil.EMPTY_STRING);
     }
 
     private static final EventLoopGroup group = new NioEventLoopGroup(1);
@@ -368,8 +371,8 @@ public class DnsNameResolverTest {
     public void testQueryMx() throws Exception {
         assertThat(resolver.isRecursionDesired(), is(true));
 
-        Map<String, Future<DnsResponse>> futures =
-                new LinkedHashMap<String, Future<DnsResponse>>();
+        Map<String, Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>> futures =
+                new LinkedHashMap<String, Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>>();
         for (String name: DOMAINS) {
             if (EXCLUSIONS_QUERY_MX.contains(name)) {
                 continue;
@@ -378,30 +381,36 @@ public class DnsNameResolverTest {
             queryMx(futures, name);
         }
 
-        for (Entry<String, Future<DnsResponse>> e: futures.entrySet()) {
+        for (Entry<String, Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>> e: futures.entrySet()) {
             String hostname = e.getKey();
-            DnsResponse response = e.getValue().sync().getNow();
+            AddressedEnvelope<DnsResponse, InetSocketAddress> envelope = e.getValue().sync().getNow();
+            DnsResponse response = envelope.content();
 
-            assertThat(response.header().responseCode(), is(DnsResponseCode.NOERROR));
-            List<DnsResource> mxList = new ArrayList<DnsResource>();
-            for (DnsResource r: response.answers()) {
-                if (r.type() == DnsType.MX) {
+            assertThat(response.code(), is(DnsResponseCode.NOERROR));
+
+            final int answerCount = response.count(DnsSection.ANSWER);
+            final List<DnsRecord> mxList = new ArrayList<DnsRecord>(answerCount);
+            for (int i = 0; i < answerCount; i ++) {
+                final DnsRecord r = response.recordAt(DnsSection.ANSWER, i);
+                if (r.type() == DnsRecordType.MX) {
                     mxList.add(r);
                 }
             }
 
             assertThat(mxList.size(), is(greaterThan(0)));
             StringBuilder buf = new StringBuilder();
-            for (DnsResource r: mxList) {
+            for (DnsRecord r: mxList) {
+                ByteBuf recordContent = ((ByteBufHolder) r).content();
+
                 buf.append(StringUtil.NEWLINE);
                 buf.append('\t');
                 buf.append(r.name());
                 buf.append(' ');
-                buf.append(r.type());
+                buf.append(r.type().name());
                 buf.append(' ');
-                buf.append(r.content().readUnsignedShort());
+                buf.append(recordContent.readUnsignedShort());
                 buf.append(' ');
-                buf.append(DnsNameResolverContext.decodeDomainName(r.content()));
+                buf.append(DnsNameResolverContext.decodeDomainName(recordContent));
             }
 
             logger.info("{} has the following MX records:{}", hostname, buf);
@@ -409,14 +418,17 @@ public class DnsNameResolverTest {
         }
     }
 
-    private static void resolve(Map<InetSocketAddress, Future<InetSocketAddress>> futures, String hostname) {
+    private static void resolve(
+            Map<InetSocketAddress, Future<InetSocketAddress>> futures, String hostname) {
         InetSocketAddress unresolved =
                 InetSocketAddress.createUnresolved(hostname, ThreadLocalRandom.current().nextInt(65536));
 
         futures.put(unresolved, resolver.resolve(unresolved));
     }
 
-    private static void queryMx(Map<String, Future<DnsResponse>> futures, String hostname) throws Exception {
-        futures.put(hostname, resolver.query(new DnsQuestion(hostname, DnsType.MX)));
+    private static void queryMx(
+            Map<String, Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>> futures,
+            String hostname) throws Exception {
+        futures.put(hostname, resolver.query(new DefaultDnsQuestion(hostname, DnsRecordType.MX)));
     }
 }

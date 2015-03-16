@@ -25,13 +25,13 @@ import java.util.List;
 
 import static org.junit.Assert.*;
 
-public class DnsTypeTest {
+public class DnsRecordTypeTest {
 
-    private static List<DnsType> allTypes() throws Exception {
-        List<DnsType> result = new ArrayList<DnsType>();
-        for (Field field : DnsType.class.getFields()) {
-            if ((field.getModifiers() & Modifier.STATIC) != 0 && field.getType() == DnsType.class) {
-                result.add((DnsType) field.get(null));
+    private static List<DnsRecordType> allTypes() throws Exception {
+        List<DnsRecordType> result = new ArrayList<DnsRecordType>();
+        for (Field field : DnsRecordType.class.getFields()) {
+            if ((field.getModifiers() & Modifier.STATIC) != 0 && field.getType() == DnsRecordType.class) {
+                result.add((DnsRecordType) field.get(null));
             }
         }
         assertFalse(result.isEmpty());
@@ -41,26 +41,26 @@ public class DnsTypeTest {
     @Test
     public void testSanity() throws Exception {
         assertEquals("More than one type has the same int value",
-                allTypes().size(), new HashSet<DnsType>(allTypes()).size());
+                allTypes().size(), new HashSet<DnsRecordType>(allTypes()).size());
     }
 
     /**
-     * Test of hashCode method, of class DnsType.
+     * Test of hashCode method, of class DnsRecordType.
      */
     @Test
     public void testHashCode() throws Exception {
-        for (DnsType t : allTypes()) {
+        for (DnsRecordType t : allTypes()) {
             assertEquals(t.intValue(), t.hashCode());
         }
     }
 
     /**
-     * Test of equals method, of class DnsType.
+     * Test of equals method, of class DnsRecordType.
      */
     @Test
     public void testEquals() throws Exception {
-        for (DnsType t1 : allTypes()) {
-            for (DnsType t2 : allTypes()) {
+        for (DnsRecordType t1 : allTypes()) {
+            for (DnsRecordType t2 : allTypes()) {
                 if (t1 != t2) {
                     assertNotEquals(t1, t2);
                 }
@@ -69,15 +69,15 @@ public class DnsTypeTest {
     }
 
     /**
-     * Test of find method, of class DnsType.
+     * Test of find method, of class DnsRecordType.
      */
     @Test
     public void testFind() throws Exception {
-        for (DnsType t : allTypes()) {
-            DnsType found = DnsType.valueOf(t.intValue());
+        for (DnsRecordType t : allTypes()) {
+            DnsRecordType found = DnsRecordType.valueOf(t.intValue());
             assertSame(t, found);
-            found = DnsType.valueOf(t.toString());
-            assertSame(t.toString(), t, found);
+            found = DnsRecordType.valueOf(t.name());
+            assertSame(t.name(), t, found);
         }
     }
 }
