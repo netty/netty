@@ -612,7 +612,8 @@ public class DefaultHttp2Connection implements Http2Connection {
      * @param events The events (top down order) which have changed
      */
     private void notifyParentChanged(List<ParentChangedEvent> events) {
-        for (ParentChangedEvent event : events) {
+        for (int i = 0; i < events.size(); ++i) {
+            ParentChangedEvent event = events.get(i);
             for (Listener l : listeners) {
                 event.notifyListener(l);
             }

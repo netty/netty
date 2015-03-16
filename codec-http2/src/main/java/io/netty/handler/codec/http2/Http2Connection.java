@@ -28,24 +28,23 @@ public interface Http2Connection {
     interface Listener {
         /**
          * Notifies the listener that the given stream was added to the connection. This stream may
-         * not yet be active (i.e. open/half-closed).
+         * not yet be active (i.e. {@code OPEN} or {@code HALF CLOSED}).
          */
         void streamAdded(Http2Stream stream);
 
         /**
-         * Notifies the listener that the given stream was made active (i.e. open in at least one
-         * direction).
+         * Notifies the listener that the given stream was made active (i.e. {@code OPEN} or {@code HALF CLOSED}).
          */
         void streamActive(Http2Stream stream);
 
         /**
-         * Notifies the listener that the given stream is now half-closed. The stream can be
-         * inspected to determine which side is closed.
+         * Notifies the listener that the given stream is now {@code HALF CLOSED}. The stream can be
+         * inspected to determine which side is {@code CLOSED}.
          */
         void streamHalfClosed(Http2Stream stream);
 
         /**
-         * Notifies the listener that the given stream is now closed in both directions and will no longer
+         * Notifies the listener that the given stream is now {@code CLOSED} in both directions and will no longer
          * be returned by {@link #activeStreams()}.
          */
         void streamClosed(Http2Stream stream);
@@ -136,7 +135,7 @@ public interface Http2Connection {
          * <li>The requested stream ID is not the next sequential stream ID for this endpoint.</li>
          * <li>The number of concurrent streams is above the allowed threshold for this endpoint.</li>
          * <li>The connection is marked as going away.</li>
-         * <li>The parent stream ID does not exist or is not open from the side sending the push
+         * <li>The parent stream ID does not exist or is not {@code OPEN} from the side sending the push
          * promise.</li>
          * <li>Could not set a valid priority for the new stream.</li>
          * </ul>
@@ -163,7 +162,8 @@ public interface Http2Connection {
         boolean allowPushTo();
 
         /**
-         * Gets the number of active streams (i.e. open or half-closed) that were created by this endpoint.
+         * Gets the number of active streams (i.e. {@code OPEN} or {@code HALF CLOSED}) that were created by this
+         * endpoint.
          */
         int numActiveStreams();
 
@@ -236,12 +236,12 @@ public interface Http2Connection {
     Http2Stream connectionStream();
 
     /**
-     * Gets the number of streams that are actively in use (i.e. open or half-closed).
+     * Gets the number of streams that are actively in use (i.e. {@code OPEN} or {@code HALF CLOSED}).
      */
     int numActiveStreams();
 
     /**
-     * Gets all streams that are actively in use (i.e. open or half-closed). The returned collection is
+     * Gets all streams that are actively in use (i.e. {@code OPEN} or {@code HALF CLOSED}). The returned collection is
      * sorted by priority.
      */
     Collection<Http2Stream> activeStreams();
