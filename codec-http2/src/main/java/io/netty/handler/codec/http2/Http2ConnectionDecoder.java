@@ -32,7 +32,6 @@ public interface Http2ConnectionDecoder extends Closeable {
      * Builder for new instances of {@link Http2ConnectionDecoder}.
      */
     interface Builder {
-
         /**
          * Sets the {@link Http2Connection} to be used when building the decoder.
          */
@@ -62,6 +61,11 @@ public interface Http2ConnectionDecoder extends Closeable {
          * Sets the {@link Http2ConnectionEncoder} used when building the decoder.
          */
         Builder encoder(Http2ConnectionEncoder encoder);
+
+        /**
+         * Sets the {@link Http2PromisedRequestVerifier} used when building the decoder.
+         */
+        Builder requestVerifier(Http2PromisedRequestVerifier requestVerifier);
 
         /**
          * Creates a new decoder instance.
