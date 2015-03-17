@@ -16,9 +16,11 @@
 package io.netty.handler.codec.http2;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.handler.logging.LogLevel;
 import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -37,11 +39,19 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
     private final InternalLogger logger;
     private final InternalLogLevel level;
 
-    public Http2FrameLogger(InternalLogLevel level) {
-        this(level, InternalLoggerFactory.getInstance(Http2FrameLogger.class));
+    public Http2FrameLogger(LogLevel level) {
+        this(level.toInternalLevel(), InternalLoggerFactory.getInstance(Http2FrameLogger.class));
     }
 
-    public Http2FrameLogger(InternalLogLevel level, InternalLogger logger) {
+    public Http2FrameLogger(LogLevel level, String name) {
+        this(level.toInternalLevel(), InternalLoggerFactory.getInstance(name));
+    }
+
+    public Http2FrameLogger(LogLevel level, Class<?> clazz) {
+        this(level.toInternalLevel(), InternalLoggerFactory.getInstance(clazz));
+    }
+
+    private Http2FrameLogger(InternalLogLevel level, InternalLogger logger) {
         this.level = checkNotNull(level, "level");
         this.logger = checkNotNull(logger, "logger");
     }

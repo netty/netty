@@ -34,11 +34,13 @@ public enum LogLevel {
     }
 
     /**
-     * Converts the specified {@link LogLevel} to its {@link InternalLogLevel} variant.
+     * For internal use only.
+     *
+     * <p/>Converts the specified {@link LogLevel} to its {@link InternalLogLevel} variant.
      *
      * @return the converted level.
      */
-    InternalLogLevel toInternalLevel() {
+    public InternalLogLevel toInternalLevel() {
         return internalLevel;
     }
 }
