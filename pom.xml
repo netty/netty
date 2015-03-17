@@ -582,6 +582,12 @@
         <scope>compile</scope>
         <optional>true</optional>
       </dependency>
+      <!-- OS Detection for loading the native libraries -->
+      <dependency>
+        <groupId>kr.motd.maven</groupId>
+        <artifactId>os-maven-plugin</artifactId>
+        <version>1.2.3.Final</version>
+      </dependency>
 
       <!--
         Bouncy Castle - completely optional, only needed when:

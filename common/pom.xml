@@ -53,6 +53,10 @@
       <artifactId>log4j</artifactId>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>kr.motd.maven</groupId>
+      <artifactId>os-maven-plugin</artifactId>
+    </dependency>
   </dependencies>
 </project>
 

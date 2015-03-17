@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
-import java.util.Locale;
 
 /**
  * Helper class to load JNI resources.
@@ -36,10 +35,15 @@ public final class NativeLibraryLoader {
 
     private static final String NATIVE_RESOURCE_HOME = "META-INF/native/";
     private static final String OSNAME;
+    private static final String OSARCH;
+    private static final String OSCLASSIFIER;
     private static final File WORKDIR;
 
     static {
-        OSNAME = SystemPropertyUtil.get("os.name", "").toLowerCase(Locale.US).replaceAll("[^a-z0-9]+", "");
+        OsDetector osDetector = new OsDetector();
+        OSNAME = osDetector.getOsName();
+        OSARCH = osDetector.getOsArch();
+        OSCLASSIFIER = osDetector.getOsClassifier();
 
         String workdir = SystemPropertyUtil.get("io.netty.native.workdir");
         if (workdir != null) {
@@ -144,7 +148,7 @@ public final class NativeLibraryLoader {
     }
 
     private static boolean isOSX() {
-        return OSNAME.startsWith("macosx") || OSNAME.startsWith("osx");
+        return OSNAME.startsWith("osx");
     }
 
     /**
@@ -152,15 +156,14 @@ public final class NativeLibraryLoader {
      */
     public static void load(String name, ClassLoader loader) {
         String libname = System.mapLibraryName(name);
-        String path = NATIVE_RESOURCE_HOME + libname;
 
-        URL url = loader.getResource(path);
-        if (url == null && isOSX()) {
-            if (path.endsWith(".jnilib")) {
-                url = loader.getResource(NATIVE_RESOURCE_HOME + "lib" + name + ".dynlib");
-            } else {
-                url = loader.getResource(NATIVE_RESOURCE_HOME + "lib" + name + ".jnilib");
-            }
+        // First, attempt to load the library based on the detected os/arch
+        String detectedOsPath = NATIVE_RESOURCE_HOME + OSCLASSIFIER + "/" + libname;
+        URL url = getLibraryUrl(loader, detectedOsPath);
+        if (url == null) {
+            // Fallback to the legacy path
+            String legacyPath = NATIVE_RESOURCE_HOME + libname;
+            url = getLibraryUrl(loader, legacyPath);
         }
 
         if (url == null) {
@@ -220,6 +223,26 @@ public final class NativeLibraryLoader {
                 }
             }
         }
+    }
+
+    private static URL getLibraryUrl(ClassLoader loader, String path) {
+        URL url = loader.getResource(path);
+        if (url == null && isOSX()) {
+            // OSX libraries may have a jnilib or a dylib suffix.
+            if (path.endsWith(".jnilib")) {
+                url = loader.getResource(replaceSuffix(path, ".jnilib", ".dylib"));
+            } else {
+                url = loader.getResource(replaceSuffix(path, ".dylib", ".jnilib"));
+            }
+        }
+        return url;
+    }
+
+    private static String replaceSuffix(String path, String suffix, String replace) {
+        if (!path.endsWith(suffix)) {
+            return path;
+        }
+        return path.substring(0, path.length() - suffix.length()) + replace;
     }
 
     private NativeLibraryLoader() {
