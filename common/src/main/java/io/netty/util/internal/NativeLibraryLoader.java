@@ -41,9 +41,9 @@ public final class NativeLibraryLoader {
 
     static {
         OsDetector osDetector = new OsDetector();
-        OSNAME = osDetector.getOsName();
-        OSARCH = osDetector.getOsArch();
-        OSCLASSIFIER = osDetector.getOsClassifier();
+        OSNAME = osDetector.osName();
+        OSARCH = osDetector.osArch();
+        OSCLASSIFIER = osDetector.osClassifier();
 
         String workdir = SystemPropertyUtil.get("io.netty.native.workdir");
         if (workdir != null) {
@@ -159,11 +159,11 @@ public final class NativeLibraryLoader {
 
         // First, attempt to load the library based on the detected os/arch
         String detectedOsPath = NATIVE_RESOURCE_HOME + OSCLASSIFIER + "/" + libname;
-        URL url = getLibraryUrl(loader, detectedOsPath);
+        URL url = libraryUrl(loader, detectedOsPath);
         if (url == null) {
             // Fallback to the legacy path
             String legacyPath = NATIVE_RESOURCE_HOME + libname;
-            url = getLibraryUrl(loader, legacyPath);
+            url = libraryUrl(loader, legacyPath);
         }
 
         if (url == null) {
@@ -225,7 +225,7 @@ public final class NativeLibraryLoader {
         }
     }
 
-    private static URL getLibraryUrl(ClassLoader loader, String path) {
+    private static URL libraryUrl(ClassLoader loader, String path) {
         URL url = loader.getResource(path);
         if (url == null && isOSX()) {
             // OSX libraries may have a jnilib or a dylib suffix.

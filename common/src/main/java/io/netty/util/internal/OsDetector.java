@@ -23,9 +23,9 @@ import kr.motd.maven.os.Detector;
 
 
 /**
- * Use the same OS name and architecture detection and normalization logic as netty/tcnative
+ * Use the same OS name and architecture detection and normalization logic as netty/tcnative.
  */
-public class OsDetector extends Detector {
+public final class OsDetector extends Detector {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OsDetector.class);
 
     private final String osName;
@@ -39,15 +39,15 @@ public class OsDetector extends Detector {
         osClassifier = System.getProperty("os.detected.classifier");
     }
 
-    public String getOsName() {
+    public String osName() {
         return osName;
     }
 
-    public String getOsArch() {
+    public String osArch() {
         return osArch;
     }
 
-    public String getOsClassifier() {
+    public String osClassifier() {
         return osClassifier;
     }
 
