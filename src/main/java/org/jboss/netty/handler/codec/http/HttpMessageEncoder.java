@@ -171,8 +171,15 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
 
     protected static void encodeAscii(String s, ChannelBuffer buf) {
         for (int i = 0; i < s.length(); i++) {
-            buf.writeByte(s.charAt(i));
+            buf.writeByte(c2b(s.charAt(i)));
         }
+    }
+
+    private static byte c2b(char c) {
+        if (c > 255) {
+            return '?';
+        }
+        return (byte) c;
     }
 
     protected abstract void encodeInitialLine(ChannelBuffer buf, HttpMessage message) throws Exception;
