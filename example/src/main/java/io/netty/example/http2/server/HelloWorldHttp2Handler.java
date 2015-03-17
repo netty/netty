@@ -19,7 +19,8 @@ import static io.netty.buffer.Unpooled.copiedBuffer;
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.example.http2.Http2ExampleUtil.UPGRADE_RESPONSE_HEADER;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
-import static io.netty.util.internal.logging.InternalLogLevel.INFO;
+import static io.netty.handler.logging.LogLevel.INFO;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.AsciiString;
@@ -40,15 +41,13 @@ import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.Http2InboundFrameLogger;
 import io.netty.handler.codec.http2.Http2OutboundFrameLogger;
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
 /**
  * A simple handler that responds with the message "Hello World!".
  */
 public class HelloWorldHttp2Handler extends Http2ConnectionHandler {
 
-    private static final Http2FrameLogger logger = new Http2FrameLogger(INFO,
-            InternalLoggerFactory.getInstance(HelloWorldHttp2Handler.class));
+    private static final Http2FrameLogger logger = new Http2FrameLogger(INFO, HelloWorldHttp2Handler.class);
     static final ByteBuf RESPONSE_BYTES = unreleasableBuffer(copiedBuffer("Hello World", CharsetUtil.UTF_8));
 
     public HelloWorldHttp2Handler() {
