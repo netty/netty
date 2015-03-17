@@ -41,14 +41,14 @@ public final class SocksAuthRequest extends SocksRequest {
             throw new NullPointerException("username");
         }
         if (!asciiEncoder.canEncode(username) || !asciiEncoder.canEncode(password)) {
-            throw new IllegalArgumentException(" username: " + username + " or password: " + password +
-                    " values should be in pure ascii");
+            throw new IllegalArgumentException(
+                    "username: " + username + " or password: **** values should be in pure ascii");
         }
         if (username.length() > 255) {
-            throw new IllegalArgumentException(username + " exceeds 255 char limit");
+            throw new IllegalArgumentException("username: " + username + " exceeds 255 char limit");
         }
         if (password.length() > 255) {
-            throw new IllegalArgumentException(password + " exceeds 255 char limit");
+            throw new IllegalArgumentException("password: **** exceeds 255 char limit");
         }
         this.username = username;
         this.password = password;
