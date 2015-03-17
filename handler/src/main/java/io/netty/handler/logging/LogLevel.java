@@ -38,7 +38,7 @@ public enum LogLevel {
      *
      * @return the converted level.
      */
-    InternalLogLevel toInternalLevel() {
+    public InternalLogLevel toInternalLevel() {
         return internalLevel;
     }
 }

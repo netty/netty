@@ -14,7 +14,8 @@
  */
 package io.netty.example.http2.client;
 
-import static io.netty.util.internal.logging.InternalLogLevel.INFO;
+import static io.netty.handler.logging.LogLevel.INFO;
+
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -39,14 +40,12 @@ import io.netty.handler.codec.http2.Http2OutboundFrameLogger;
 import io.netty.handler.codec.http2.HttpToHttp2ConnectionHandler;
 import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapter;
 import io.netty.handler.ssl.SslContext;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
 /**
  * Configures the client pipeline to support HTTP/2 frames.
  */
 public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
-    private static final Http2FrameLogger logger =
-                    new Http2FrameLogger(INFO, InternalLoggerFactory.getInstance(Http2ClientInitializer.class));
+    private static final Http2FrameLogger logger = new Http2FrameLogger(INFO, Http2ClientInitializer.class);
 
     private final SslContext sslCtx;
     private final int maxContentLength;
