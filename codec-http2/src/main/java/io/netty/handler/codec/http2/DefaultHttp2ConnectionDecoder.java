@@ -19,6 +19,7 @@ import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
+import static io.netty.handler.codec.http2.Http2PromisedRequestVerifier.ALWAYS_VERIFY;
 import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
@@ -42,6 +43,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     private final Http2ConnectionEncoder encoder;
     private final Http2FrameReader frameReader;
     private final Http2FrameListener listener;
+    private final Http2PromisedRequestVerifier requestVerifier;
     private boolean prefaceReceived;
 
     /**
@@ -53,6 +55,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         private Http2ConnectionEncoder encoder;
         private Http2FrameReader frameReader;
         private Http2FrameListener listener;
+        private Http2PromisedRequestVerifier requestVerifier = ALWAYS_VERIFY;
 
         @Override
         public Builder connection(Http2Connection connection) {
@@ -90,6 +93,12 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         }
 
         @Override
+        public Http2ConnectionDecoder.Builder requestVerifier(Http2PromisedRequestVerifier requestVerifier) {
+            this.requestVerifier = requestVerifier;
+            return this;
+        }
+
+        @Override
         public Http2ConnectionDecoder build() {
             return new DefaultHttp2ConnectionDecoder(this);
         }
@@ -105,6 +114,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         lifecycleManager = checkNotNull(builder.lifecycleManager, "lifecycleManager");
         encoder = checkNotNull(builder.encoder, "encoder");
         listener = checkNotNull(builder.listener, "listener");
+        requestVerifier = checkNotNull(builder.requestVerifier, "requestVerifier");
         if (connection.local().flowController() == null) {
             connection.local().flowController(
                     new DefaultHttp2LocalFlowController(connection, encoder.frameWriter()));
@@ -506,6 +516,22 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                   throw connectionError(PROTOCOL_ERROR,
                       "Stream %d in unexpected state for receiving push promise: %s",
                       parentStream.id(), parentStream.state());
+            }
+
+            if (!requestVerifier.isAuthoritative(ctx, headers)) {
+                throw streamError(promisedStreamId, PROTOCOL_ERROR,
+                        "Promised request on stream %d for promised stream %d is not authoritative",
+                        streamId, promisedStreamId);
+            }
+            if (!requestVerifier.isCacheable(headers)) {
+                throw streamError(promisedStreamId, PROTOCOL_ERROR,
+                        "Promised request on stream %d for promised stream %d is not known to be cacheable",
+                        streamId, promisedStreamId);
+            }
+            if (!requestVerifier.isSafe(headers)) {
+                throw streamError(promisedStreamId, PROTOCOL_ERROR,
+                        "Promised request on stream %d for promised stream %d is not known to be safe",
+                        streamId, promisedStreamId);
             }
 
             // Reserve the push stream based with a priority based on the current stream's priority.
