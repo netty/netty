@@ -19,118 +19,94 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.util.ReferenceCountUtil;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
-public class FastLzIntegrationTest extends IntegrationTest {
+public class FastLzIntegrationTest extends AbstractIntegrationTest {
 
-    public static class TestWithChecksum extends IntegrationTest {
+    public static class TestWithChecksum extends AbstractIntegrationTest {
 
         @Override
-        protected EmbeddedChannel createEncoderEmbeddedChannel() {
+        protected EmbeddedChannel createEncoder() {
             return new EmbeddedChannel(new FastLzFrameEncoder(true));
         }
 
         @Override
-        protected EmbeddedChannel createDecoderEmbeddedChannel() {
+        protected EmbeddedChannel createDecoder() {
             return new EmbeddedChannel(new FastLzFrameDecoder(true));
         }
     }
 
-    public static class TestRandomChecksum extends IntegrationTest {
+    public static class TestRandomChecksum extends AbstractIntegrationTest {
 
         @Override
-        protected EmbeddedChannel createEncoderEmbeddedChannel() {
+        protected EmbeddedChannel createEncoder() {
             return new EmbeddedChannel(new FastLzFrameEncoder(rand.nextBoolean()));
         }
 
         @Override
-        protected EmbeddedChannel createDecoderEmbeddedChannel() {
+        protected EmbeddedChannel createDecoder() {
             return new EmbeddedChannel(new FastLzFrameDecoder(rand.nextBoolean()));
         }
     }
 
     @Override
-    protected EmbeddedChannel createEncoderEmbeddedChannel() {
+    protected EmbeddedChannel createEncoder() {
         return new EmbeddedChannel(new FastLzFrameEncoder(rand.nextBoolean()));
     }
 
     @Override
-    protected EmbeddedChannel createDecoderEmbeddedChannel() {
+    protected EmbeddedChannel createDecoder() {
         return new EmbeddedChannel(new FastLzFrameDecoder(rand.nextBoolean()));
     }
 
     @Override   // test batched flow of data
     protected void testIdentity(final byte[] data) {
         final ByteBuf original = Unpooled.wrappedBuffer(data);
-        final EmbeddedChannel encoder = createEncoderEmbeddedChannel();
-        final EmbeddedChannel decoder = createDecoderEmbeddedChannel();
 
-        try {
-            int written = 0, length = rand.nextInt(100);
-            while (written + length < data.length) {
-                ByteBuf in = Unpooled.wrappedBuffer(data, written, length);
-                encoder.writeOutbound(in);
-                written += length;
-                length = rand.nextInt(100);
-            }
-            ByteBuf in = Unpooled.wrappedBuffer(data, written, data.length - written);
+        int written = 0, length = rand.nextInt(100);
+        while (written + length < data.length) {
+            ByteBuf in = Unpooled.wrappedBuffer(data, written, length);
             encoder.writeOutbound(in);
-            encoder.finish();
-
-            ByteBuf msg;
-            final CompositeByteBuf compressed = Unpooled.compositeBuffer();
-            while ((msg = encoder.readOutbound()) != null) {
-                compressed.addComponent(msg);
-                compressed.writerIndex(compressed.writerIndex() + msg.readableBytes());
-            }
-            assertThat(compressed, is(notNullValue()));
-
-            final byte[] compressedArray = new byte[compressed.readableBytes()];
-            compressed.readBytes(compressedArray);
-            written = 0;
+            written += length;
             length = rand.nextInt(100);
-            while (written + length < compressedArray.length) {
-                in = Unpooled.wrappedBuffer(compressedArray, written, length);
-                decoder.writeInbound(in);
-                written += length;
-                length = rand.nextInt(100);
-            }
-            in = Unpooled.wrappedBuffer(compressedArray, written, compressedArray.length - written);
-            decoder.writeInbound(in);
-
-            assertFalse(compressed.isReadable());
-            final CompositeByteBuf decompressed = Unpooled.compositeBuffer();
-            while ((msg = decoder.readInbound()) != null) {
-                decompressed.addComponent(msg);
-                decompressed.writerIndex(decompressed.writerIndex() + msg.readableBytes());
-            }
-            assertEquals(original, decompressed);
-
-            compressed.release();
-            decompressed.release();
-            original.release();
-        } finally {
-            encoder.close();
-            decoder.close();
-
-            for (;;) {
-                Object msg = encoder.readOutbound();
-                if (msg == null) {
-                    break;
-                }
-                ReferenceCountUtil.release(msg);
-            }
-
-            for (;;) {
-                Object msg = decoder.readInbound();
-                if (msg == null) {
-                    break;
-                }
-                ReferenceCountUtil.release(msg);
-            }
         }
+        ByteBuf in = Unpooled.wrappedBuffer(data, written, data.length - written);
+        encoder.writeOutbound(in);
+        encoder.finish();
+
+        ByteBuf msg;
+        final CompositeByteBuf compressed = Unpooled.compositeBuffer();
+        while ((msg = encoder.readOutbound()) != null) {
+            compressed.addComponent(msg);
+            compressed.writerIndex(compressed.writerIndex() + msg.readableBytes());
+        }
+        assertThat(compressed, is(notNullValue()));
+
+        final byte[] compressedArray = new byte[compressed.readableBytes()];
+        compressed.readBytes(compressedArray);
+        written = 0;
+        length = rand.nextInt(100);
+        while (written + length < compressedArray.length) {
+            in = Unpooled.wrappedBuffer(compressedArray, written, length);
+            decoder.writeInbound(in);
+            written += length;
+            length = rand.nextInt(100);
+        }
+        in = Unpooled.wrappedBuffer(compressedArray, written, compressedArray.length - written);
+        decoder.writeInbound(in);
+
+        assertFalse(compressed.isReadable());
+        final CompositeByteBuf decompressed = Unpooled.compositeBuffer();
+        while ((msg = decoder.readInbound()) != null) {
+            decompressed.addComponent(msg);
+            decompressed.writerIndex(decompressed.writerIndex() + msg.readableBytes());
+        }
+        assertEquals(original, decompressed);
+
+        compressed.release();
+        decompressed.release();
+        original.release();
     }
 }
