@@ -328,14 +328,13 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     public ChannelFuture writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
             ChannelPromise promise) {
         Http2Stream stream = connection().stream(streamId);
+        if (stream == null) {
+            return promise.setSuccess(null);
+        }
         ChannelFuture future = frameWriter().writeRstStream(ctx, streamId, errorCode, promise);
         ctx.flush();
-
-        if (stream != null) {
-            stream.resetSent();
-            closeStream(stream, promise);
-        }
-
+        stream.resetSent();
+        closeStream(stream, promise);
         return future;
     }
 
@@ -348,7 +347,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         Http2Connection connection = connection();
         if (connection.isGoAway()) {
             debugData.release();
-            return ctx.newSucceededFuture();
+            return promise.setSuccess(null);
         }
 
         ChannelFuture future = frameWriter().writeGoAway(ctx, lastStreamId, errorCode, debugData, promise);
