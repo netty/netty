@@ -20,126 +20,82 @@ import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.util.internal.ThreadLocalRandom;
 import lzma.sdk.lzma.Decoder;
 import lzma.streams.LzmaInputStream;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.experimental.theories.FromDataPoints;
+import org.junit.experimental.theories.Theory;
 
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.Assert.*;
 
-public class LzmaFrameEncoderTest {
+public class LzmaFrameEncoderTest extends AbstractEncoderTest {
 
-    private static final ThreadLocalRandom rand;
-
-    private static final byte[] BYTES_SMALL = new byte[256];
-    private static final byte[] BYTES_LARGE = new byte[256000];
-
-    static {
-        rand = ThreadLocalRandom.current();
-        rand.nextBytes(BYTES_SMALL);
-        rand.nextBytes(BYTES_LARGE);
-    }
-
-    private EmbeddedChannel channel;
-
-    @Before
+    @Override
     public void initChannel() {
         channel = new EmbeddedChannel(new LzmaFrameEncoder());
     }
 
-    private static void testCompression(final EmbeddedChannel channel, final byte[] data) throws Exception {
-        ByteBuf in = Unpooled.wrappedBuffer(data);
-        assertTrue(channel.writeOutbound(in));
-        assertTrue(channel.finish());
-
-        byte[] uncompressed = uncompress(channel, data.length);
-
-        assertArrayEquals(data, uncompressed);
+    @Theory
+    @Override
+    public void testCompressionOfBatchedFlowOfData(@FromDataPoints("smallData") ByteBuf data) throws Exception {
+        testCompressionOfBatchedFlow(data);
     }
 
-    @Test
-    public void testCompressionOfSmallChunkOfData() throws Exception {
-        testCompression(channel, BYTES_SMALL);
-    }
-
-    @Test
-    public void testCompressionOfLargeChunkOfData() throws Exception {
-        testCompression(channel, BYTES_LARGE);
-    }
-
-    @Test
-    public void testCompressionOfBatchedFlowOfData() throws Exception {
-        final byte[] data = BYTES_SMALL;
-
+    @Override
+    protected void testCompressionOfBatchedFlow(final ByteBuf data) throws Exception {
+        List<Integer> originalLengths = new ArrayList<Integer>();
+        final int dataLength = data.readableBytes();
         int written = 0, length = rand.nextInt(50);
-        while (written + length < data.length) {
-            ByteBuf in = Unpooled.wrappedBuffer(data, written, length);
-            assertTrue(channel.writeOutbound(in));
+        while (written + length < dataLength) {
+            ByteBuf in = data.slice(written, length);
+            assertTrue(channel.writeOutbound(in.retain()));
             written += length;
+            originalLengths.add(length);
             length = rand.nextInt(50);
         }
-        ByteBuf in = Unpooled.wrappedBuffer(data, written, data.length - written);
-        assertTrue(channel.writeOutbound(in));
+        length = dataLength - written;
+        ByteBuf in = data.slice(written, dataLength - written);
+        originalLengths.add(length);
+        assertTrue(channel.writeOutbound(in.retain()));
         assertTrue(channel.finish());
 
-        byte[] uncompressed = new byte[data.length];
-        int outOffset = 0;
-
+        CompositeByteBuf decompressed = Unpooled.compositeBuffer();
         ByteBuf msg;
+        int i = 0;
         while ((msg = channel.readOutbound()) != null) {
-            InputStream is = new ByteBufInputStream(msg);
-            LzmaInputStream lzmaIs = new LzmaInputStream(is, new Decoder());
-            for (;;) {
-                int read = lzmaIs.read(uncompressed, outOffset, data.length - outOffset);
-                if (read > 0) {
-                    outOffset += read;
-                } else {
-                    break;
-                }
-            }
-            assertEquals(0, is.available());
-            assertEquals(-1, is.read());
-
-            is.close();
-            lzmaIs.close();
+            ByteBuf decompressedMsg = decompress(msg, originalLengths.get(i++));
+            decompressed.addComponent(decompressedMsg);
+            decompressed.writerIndex(decompressed.writerIndex() + decompressedMsg.readableBytes());
             msg.release();
         }
+        assertEquals(originalLengths.size(), i);
+        assertEquals(data, decompressed);
 
-        assertArrayEquals(data, uncompressed);
+        decompressed.release();
+        data.release();
     }
 
-    private static byte[] uncompress(EmbeddedChannel channel, int length) throws Exception {
-        CompositeByteBuf out = Unpooled.compositeBuffer();
-        ByteBuf msg;
-        while ((msg = channel.readOutbound()) != null) {
-            out.addComponent(msg);
-            out.writerIndex(out.writerIndex() + msg.readableBytes());
-        }
-
-        InputStream is = new ByteBufInputStream(out);
+    @Override
+    protected ByteBuf decompress(ByteBuf compressed, int originalLength) throws Exception {
+        InputStream is = new ByteBufInputStream(compressed);
         LzmaInputStream lzmaIs = new LzmaInputStream(is, new Decoder());
-        byte[] uncompressed = new byte[length];
-        int remaining = length;
+
+        byte[] decompressed = new byte[originalLength];
+        int remaining = originalLength;
         while (remaining > 0) {
-            int read = lzmaIs.read(uncompressed, length - remaining, remaining);
+            int read = lzmaIs.read(decompressed, originalLength - remaining, remaining);
             if (read > 0) {
                 remaining -= read;
             } else {
                 break;
             }
         }
-
-        assertEquals(0, is.available());
-        assertEquals(-1, is.read());
         assertEquals(-1, lzmaIs.read());
-
-        is.close();
         lzmaIs.close();
-        out.release();
 
-        return uncompressed;
+        return Unpooled.wrappedBuffer(decompressed);
     }
 }

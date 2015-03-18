@@ -77,9 +77,9 @@ public class SnappyFrameEncoderTest {
             'n', 'e', 't', 't', 'y'
         });
 
-        channel.writeOutbound(in.copy());
-        in.readerIndex(0); // rewind the buffer to write the same data
-        channel.writeOutbound(in.copy());
+        channel.writeOutbound(in.retain());
+        in.resetReaderIndex(); // rewind the buffer to write the same data
+        channel.writeOutbound(in);
         assertTrue(channel.finish());
 
         ByteBuf expected = Unpooled.wrappedBuffer(new byte[] {
@@ -98,7 +98,6 @@ public class SnappyFrameEncoderTest {
             actual.writerIndex(actual.writerIndex() + m.readableBytes());
         }
         assertEquals(releaseLater(expected), releaseLater(actual));
-        in.release();
     }
 
     /**

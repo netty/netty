@@ -17,15 +17,15 @@ package io.netty.handler.codec.compression;
 
 import io.netty.channel.embedded.EmbeddedChannel;
 
-public class Lz4FrameIntegrationTest extends IntegrationTest {
+public class Lz4FrameIntegrationTest extends AbstractIntegrationTest {
 
     @Override
-    protected EmbeddedChannel createEncoderEmbeddedChannel() {
+    protected EmbeddedChannel createEncoder() {
         return new EmbeddedChannel(new Lz4FrameEncoder());
     }
 
     @Override
-    protected EmbeddedChannel createDecoderEmbeddedChannel() {
+    protected EmbeddedChannel createDecoder() {
         return new EmbeddedChannel(new Lz4FrameDecoder());
     }
 }

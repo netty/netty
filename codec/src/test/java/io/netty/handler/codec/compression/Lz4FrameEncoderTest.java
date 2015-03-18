@@ -16,108 +16,40 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.util.internal.ThreadLocalRandom;
 import net.jpountz.lz4.LZ4BlockInputStream;
-import org.junit.Before;
-import org.junit.Test;
 
-import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 
 import static org.junit.Assert.*;
 
-public class Lz4FrameEncoderTest {
+public class Lz4FrameEncoderTest extends AbstractEncoderTest {
 
-    private static final ThreadLocalRandom rand;
-
-    private static final byte[] BYTES_SMALL = new byte[256];
-    private static final byte[] BYTES_LARGE = new byte[256000];
-
-    static {
-        rand = ThreadLocalRandom.current();
-        //fill arrays with compressible data
-        for (int i = 0; i < BYTES_SMALL.length; i++) {
-            BYTES_SMALL[i] = i % 4 != 0 ? 0 : (byte) rand.nextInt();
-        }
-        for (int i = 0; i < BYTES_LARGE.length; i++) {
-            BYTES_LARGE[i] = i % 4 != 0 ? 0 : (byte) rand.nextInt();
-        }
-    }
-
-    private EmbeddedChannel channel;
-
-    @Before
+    @Override
     public void initChannel() {
         channel = new EmbeddedChannel(new Lz4FrameEncoder());
     }
 
-    private static void testCompression(final EmbeddedChannel channel, final byte[] data) throws Exception {
-        ByteBuf in = Unpooled.wrappedBuffer(data);
-        channel.writeOutbound(in);
-        channel.finish();
-
-        final byte[] uncompressed = uncompress(channel, data.length);
-
-        assertArrayEquals(data, uncompressed);
-    }
-
-    @Test
-    public void testCompressionOfSmallChunkOfData() throws Exception {
-        testCompression(channel, BYTES_SMALL);
-    }
-
-    @Test
-    public void testCompressionOfLargeChunkOfData() throws Exception {
-        testCompression(channel, BYTES_LARGE);
-    }
-
-    @Test
-    public void testCompressionOfBatchedFlowOfData() throws Exception {
-        final byte[] data = BYTES_LARGE;
-
-        int written = 0, length = rand.nextInt(1, 100);
-        while (written + length < data.length) {
-            ByteBuf in = Unpooled.wrappedBuffer(data, written, length);
-            channel.writeOutbound(in);
-            written += length;
-            length = rand.nextInt(1, 100);
-        }
-        ByteBuf in = Unpooled.wrappedBuffer(data, written, data.length - written);
-        channel.writeOutbound(in);
-        channel.finish();
-
-        final byte[] uncompressed = uncompress(channel, data.length);
-
-        assertArrayEquals(data, uncompressed);
-    }
-
-    private static byte[] uncompress(EmbeddedChannel channel, int originalLength) throws Exception {
-        CompositeByteBuf out = Unpooled.compositeBuffer();
-        ByteBuf msg;
-        while ((msg = channel.readOutbound()) != null) {
-            out.addComponent(msg);
-            out.writerIndex(out.writerIndex() + msg.readableBytes());
-        }
-
-        byte[] compressed = new byte[out.readableBytes()];
-        out.readBytes(compressed);
-        out.release();
-
-        ByteArrayInputStream is = new ByteArrayInputStream(compressed);
+    @Override
+    protected ByteBuf decompress(ByteBuf compressed, int originalLength) throws Exception {
+        InputStream is = new ByteBufInputStream(compressed);
         LZ4BlockInputStream lz4Is = new LZ4BlockInputStream(is);
-        byte[] uncompressed = new byte[originalLength];
+
+        byte[] decompressed = new byte[originalLength];
         int remaining = originalLength;
         while (remaining > 0) {
-            int read = lz4Is.read(uncompressed, originalLength - remaining, remaining);
+            int read = lz4Is.read(decompressed, originalLength - remaining, remaining);
             if (read > 0) {
                 remaining -= read;
             } else {
                 break;
             }
         }
+        assertEquals(-1, lz4Is.read());
+        lz4Is.close();
 
-        return uncompressed;
+        return Unpooled.wrappedBuffer(decompressed);
     }
 }
