@@ -117,22 +117,27 @@ public class Http2ConnectionHandlerTest {
         when(ctx.newSucceededFuture()).thenReturn(future);
         when(ctx.newPromise()).thenReturn(promise);
         when(ctx.write(any())).thenReturn(future);
-
-        handler = newHandler();
     }
 
-    private Http2ConnectionHandler newHandler() {
-        return new Http2ConnectionHandler(decoderBuilder, encoderBuilder);
+    private Http2ConnectionHandler newHandler() throws Exception {
+        Http2ConnectionHandler handler = new Http2ConnectionHandler(decoderBuilder, encoderBuilder);
+        handler.handlerAdded(ctx);
+        return handler;
     }
 
     @After
     public void tearDown() throws Exception {
-        handler.handlerRemoved(ctx);
+        if (handler != null) {
+            handler.handlerRemoved(ctx);
+        }
     }
 
     @Test
     public void clientShouldSendClientPrefaceStringWhenActive() throws Exception {
         when(connection.isServer()).thenReturn(false);
+        when(channel.isActive()).thenReturn(false);
+        handler = newHandler();
+        when(channel.isActive()).thenReturn(true);
         handler.channelActive(ctx);
         verify(ctx).write(eq(connectionPrefaceBuf()));
     }
@@ -140,6 +145,9 @@ public class Http2ConnectionHandlerTest {
     @Test
     public void serverShouldNotSendClientPrefaceStringWhenActive() throws Exception {
         when(connection.isServer()).thenReturn(true);
+        when(channel.isActive()).thenReturn(false);
+        handler = newHandler();
+        when(channel.isActive()).thenReturn(true);
         handler.channelActive(ctx);
         verify(ctx, never()).write(eq(connectionPrefaceBuf()));
     }
@@ -158,18 +166,21 @@ public class Http2ConnectionHandlerTest {
     @Test
     public void serverReceivingValidClientPrefaceStringShouldContinueReadingFrames() throws Exception {
         when(connection.isServer()).thenReturn(true);
+        handler = newHandler();
         handler.channelRead(ctx, connectionPrefaceBuf());
         verify(decoder).decodeFrame(eq(ctx), any(ByteBuf.class), Matchers.<List<Object>>any());
     }
 
     @Test
     public void channelInactiveShouldCloseStreams() throws Exception {
+        handler = newHandler();
         handler.channelInactive(ctx);
         verify(stream).close();
     }
 
     @Test
     public void connectionErrorShouldStartShutdown() throws Exception {
+        handler = newHandler();
         Http2Exception e = new Http2Exception(PROTOCOL_ERROR);
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
         handler.exceptionCaught(ctx, e);
@@ -177,5 +188,15 @@ public class Http2ConnectionHandlerTest {
         verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID), eq(PROTOCOL_ERROR.code()),
                 captor.capture(), eq(promise));
         captor.getValue().release();
+    }
+
+    @Test
+    public void encoderAndDecoderAreClosedOnChannelInactive() throws Exception {
+        handler = newHandler();
+        handler.channelActive(ctx);
+        when(channel.isActive()).thenReturn(false);
+        handler.channelInactive(ctx);
+        verify(encoder).close();
+        verify(decoder).close();
     }
 }
