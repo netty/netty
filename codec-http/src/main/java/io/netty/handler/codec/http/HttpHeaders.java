@@ -1383,8 +1383,15 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     static void encodeAscii0(CharSequence seq, ByteBuf buf) {
         int length = seq.length();
         for (int i = 0 ; i < length; i++) {
-            buf.writeByte((byte) seq.charAt(i));
+            buf.writeByte(c2b(seq.charAt(i)));
         }
+    }
+
+    private static byte c2b(char c) {
+        if (c > 255) {
+            return '?';
+        }
+        return (byte) c;
     }
 
     /**
