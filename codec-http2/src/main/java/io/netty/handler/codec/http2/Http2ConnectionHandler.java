@@ -15,6 +15,7 @@
 package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
+import static io.netty.handler.codec.http2.Http2CodecUtil.PING_FRAME_PAYLOAD_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static io.netty.handler.codec.http2.Http2CodecUtil.getEmbeddedHttp2Exception;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
@@ -96,8 +97,6 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         if (encoder.connection() != decoder.connection()) {
             throw new IllegalArgumentException("Encoder and Decoder do not share the same connection object");
         }
-
-        clientPrefaceString = clientPrefaceString(encoder.connection());
     }
 
     public Http2Connection connection() {
@@ -156,14 +155,21 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        clientPrefaceString = clientPrefaceString(encoder.connection());
         // This handler was just added to the context. In case it was handled after
         // the connection became active, send the connection preface now.
         sendPreface(ctx);
     }
 
+    /**
+     * Releases the {@code clientPrefaceString}. Any active streams will be left in the open.
+     */
     @Override
     protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
-        dispose();
+        if (clientPrefaceString != null) {
+            clientPrefaceString.release();
+            clientPrefaceString = null;
+        }
     }
 
     @Override
@@ -187,10 +193,18 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        ChannelFuture future = ctx.newSucceededFuture();
-        final Collection<Http2Stream> streams = connection().activeStreams();
-        for (Http2Stream s : streams.toArray(new Http2Stream[streams.size()])) {
-            closeStream(s, future);
+        try {
+            ChannelFuture future = ctx.newSucceededFuture();
+            final Collection<Http2Stream> streams = connection().activeStreams();
+            for (Http2Stream s : streams.toArray(new Http2Stream[streams.size()])) {
+                closeStream(s, future);
+            }
+        } finally {
+            try {
+                encoder().close();
+            } finally {
+                decoder().close();
+            }
         }
         super.channelInactive(ctx);
     }
@@ -409,18 +423,6 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         // Both client and server must send their initial settings.
         encoder.writeSettings(ctx, decoder.localSettings(), ctx.newPromise()).addListener(
                 ChannelFutureListener.CLOSE_ON_FAILURE);
-    }
-
-    /**
-     * Disposes of all resources.
-     */
-    private void dispose() {
-        encoder.close();
-        decoder.close();
-        if (clientPrefaceString != null) {
-            clientPrefaceString.release();
-            clientPrefaceString = null;
-        }
     }
 
     /**
