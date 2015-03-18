@@ -41,7 +41,7 @@ public class ChannelHandlerAdapter implements ChannelHandler {
          * {@link WeakHashMap} instances per {@link Thread} is good enough for us and the number of
          * {@link Thread}s are quite limited anyway.
          *
-         * See <a href="See https://github.com/netty/netty/issues/2289">#2289</a>.
+         * See <a href="https://github.com/netty/netty/issues/2289">#2289</a>.
          */
         Class<?> clazz = getClass();
         Map<Class<?>, Boolean> cache = InternalThreadLocalMap.get().handlerSharableCache();
