@@ -16,23 +16,17 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.util.internal.ThreadLocalRandom;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
-import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 
 import static io.netty.handler.codec.compression.Bzip2Constants.*;
-import static org.junit.Assert.*;
 
-public class Bzip2DecoderTest {
+public class Bzip2DecoderTest extends AbstractDecoderTest {
 
     private static final byte[] DATA = { 0x42, 0x5A, 0x68, 0x37, 0x31, 0x41, 0x59, 0x26, 0x53,
                                          0x59, 0x77, 0x7B, (byte) 0xCA, (byte) 0xC0, 0x00, 0x00,
@@ -41,23 +35,10 @@ public class Bzip2DecoderTest {
                                          (byte) 0x89, (byte) 0x99, (byte) 0xC5, (byte) 0xDC, (byte) 0x91,
                                          0x4E, 0x14, 0x24, 0x1D, (byte) 0xDE, (byte) 0xF2, (byte) 0xB0, 0x00 };
 
-    private static final ThreadLocalRandom rand;
-
-    private static final byte[] BYTES_SMALL = new byte[256];
-    private static final byte[] BYTES_LARGE = new byte[MAX_BLOCK_SIZE * BASE_BLOCK_SIZE + 256];
-
-    static {
-        rand = ThreadLocalRandom.current();
-        rand.nextBytes(BYTES_SMALL);
-        rand.nextBytes(BYTES_LARGE);
+    public Bzip2DecoderTest() throws Exception {
     }
 
-    @Rule
-    public ExpectedException expected = ExpectedException.none();
-
-    private EmbeddedChannel channel;
-
-    @Before
+    @Override
     public void initChannel() {
         channel = new EmbeddedChannel(new Bzip2Decoder());
     }
@@ -123,19 +104,7 @@ public class Bzip2DecoderTest {
         final byte[] data = Arrays.copyOf(DATA, DATA.length);
         data[41] = (byte) 0xDD;
 
-        ByteBuf in = Unpooled.wrappedBuffer(data);
-        try {
-            channel.writeInbound(in);
-        } finally {
-            for (;;) {
-                ByteBuf inflated = channel.readInbound();
-                if (inflated == null) {
-                    break;
-                }
-                inflated.release();
-            }
-            channel.finish();
-        }
+        tryDecodeAndCatchBufLeaks(channel, Unpooled.wrappedBuffer(data));
     }
 
     @Test
@@ -186,75 +155,13 @@ public class Bzip2DecoderTest {
         channel.writeInbound(in);
     }
 
-    private static void testDecompression(final EmbeddedChannel channel, final byte[] data) throws Exception {
+    @Override
+    protected byte[] compress(byte[] data) throws Exception {
         ByteArrayOutputStream os = new ByteArrayOutputStream();
-        BZip2CompressorOutputStream bZip2Os = new BZip2CompressorOutputStream(os, randomBlockSize());
+        BZip2CompressorOutputStream bZip2Os = new BZip2CompressorOutputStream(os, MIN_BLOCK_SIZE);
         bZip2Os.write(data);
         bZip2Os.close();
 
-        ByteBuf compressed = Unpooled.wrappedBuffer(os.toByteArray());
-        channel.writeInbound(compressed);
-
-        ByteBuf uncompressed = readUncompressed(channel);
-        ByteBuf dataBuf = Unpooled.wrappedBuffer(data);
-
-        assertEquals(dataBuf, uncompressed);
-
-        uncompressed.release();
-        dataBuf.release();
-    }
-
-    @Test
-    public void testDecompressionOfSmallChunkOfData() throws Exception {
-        testDecompression(channel, BYTES_SMALL);
-    }
-
-    @Test
-    public void testDecompressionOfLargeChunkOfData() throws Exception {
-        testDecompression(channel, BYTES_LARGE);
-    }
-
-    @Test
-    public void testDecompressionOfBatchedFlowOfData() throws Exception {
-        final byte[] data = BYTES_LARGE;
-
-        ByteArrayOutputStream os = new ByteArrayOutputStream();
-        BZip2CompressorOutputStream bZip2Os = new BZip2CompressorOutputStream(os, randomBlockSize());
-        bZip2Os.write(data);
-        bZip2Os.close();
-
-        final byte[] compressedArray = os.toByteArray();
-        int written = 0, length = rand.nextInt(100);
-        while (written + length < compressedArray.length) {
-            ByteBuf compressed = Unpooled.wrappedBuffer(compressedArray, written, length);
-            channel.writeInbound(compressed);
-            written += length;
-            length = rand.nextInt(100);
-        }
-        ByteBuf compressed = Unpooled.wrappedBuffer(compressedArray, written, compressedArray.length - written);
-        channel.writeInbound(compressed);
-
-        ByteBuf uncompressed = readUncompressed(channel);
-        ByteBuf dataBuf = Unpooled.wrappedBuffer(data);
-
-        assertEquals(dataBuf, uncompressed);
-
-        uncompressed.release();
-        dataBuf.release();
-    }
-
-    private static ByteBuf readUncompressed(EmbeddedChannel channel) throws Exception {
-        CompositeByteBuf uncompressed = Unpooled.compositeBuffer();
-        ByteBuf msg;
-        while ((msg = channel.readInbound()) != null) {
-            uncompressed.addComponent(msg);
-            uncompressed.writerIndex(uncompressed.writerIndex() + msg.readableBytes());
-        }
-
-        return uncompressed;
-    }
-
-    private static int randomBlockSize() {
-        return rand.nextInt(MIN_BLOCK_SIZE, MAX_BLOCK_SIZE + 1);
+        return os.toByteArray();
     }
 }

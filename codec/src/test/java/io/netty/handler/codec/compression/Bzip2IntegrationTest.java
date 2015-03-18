@@ -18,15 +18,15 @@ package io.netty.handler.codec.compression;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Test;
 
-public class Bzip2IntegrationTest extends IntegrationTest {
+public class Bzip2IntegrationTest extends AbstractIntegrationTest {
 
     @Override
-    protected EmbeddedChannel createEncoderEmbeddedChannel() {
+    protected EmbeddedChannel createEncoder() {
         return new EmbeddedChannel(new Bzip2Encoder());
     }
 
     @Override
-    protected EmbeddedChannel createDecoderEmbeddedChannel() {
+    protected EmbeddedChannel createDecoder() {
         return new EmbeddedChannel(new Bzip2Decoder());
     }
 

@@ -23,6 +23,8 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ThreadLocalRandom;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -30,12 +32,42 @@ import java.util.Arrays;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
-public abstract class IntegrationTest {
+public abstract class AbstractIntegrationTest {
 
     protected static final ThreadLocalRandom rand = ThreadLocalRandom.current();
 
-    protected abstract EmbeddedChannel createEncoderEmbeddedChannel();
-    protected abstract EmbeddedChannel createDecoderEmbeddedChannel();
+    protected EmbeddedChannel encoder;
+    protected EmbeddedChannel decoder;
+
+    protected abstract EmbeddedChannel createEncoder();
+    protected abstract EmbeddedChannel createDecoder();
+
+    @Before
+    public void initChannels() throws Exception {
+        encoder = createEncoder();
+        decoder = createDecoder();
+    }
+
+    @After
+    public void closeChannels() throws Exception {
+        encoder.close();
+        for (;;) {
+            Object msg = encoder.readOutbound();
+            if (msg == null) {
+                break;
+            }
+            ReferenceCountUtil.release(msg);
+        }
+
+        decoder.close();
+        for (;;) {
+            Object msg = decoder.readInbound();
+            if (msg == null) {
+                break;
+            }
+            ReferenceCountUtil.release(msg);
+        }
+    }
 
     @Test
     public void testEmpty() throws Exception {
@@ -112,51 +144,28 @@ public abstract class IntegrationTest {
 
     protected void testIdentity(final byte[] data) {
         final ByteBuf in = Unpooled.wrappedBuffer(data);
-        final EmbeddedChannel encoder = createEncoderEmbeddedChannel();
-        final EmbeddedChannel decoder = createDecoderEmbeddedChannel();
-        try {
-            ByteBuf msg;
+        assertTrue(encoder.writeOutbound(in.retain()));
+        assertTrue(encoder.finish());
 
-            encoder.writeOutbound(in.copy());
-            encoder.finish();
-            final CompositeByteBuf compressed = Unpooled.compositeBuffer();
-            while ((msg = encoder.readOutbound()) != null) {
-                compressed.addComponent(msg);
-                compressed.writerIndex(compressed.writerIndex() + msg.readableBytes());
-            }
-            assertThat(compressed, is(notNullValue()));
-
-            decoder.writeInbound(compressed.retain());
-            assertFalse(compressed.isReadable());
-            final CompositeByteBuf decompressed = Unpooled.compositeBuffer();
-            while ((msg = decoder.readInbound()) != null) {
-                decompressed.addComponent(msg);
-                decompressed.writerIndex(decompressed.writerIndex() + msg.readableBytes());
-            }
-            assertEquals(in, decompressed);
-
-            compressed.release();
-            decompressed.release();
-            in.release();
-        } finally {
-            encoder.close();
-            decoder.close();
-
-            for (;;) {
-                Object msg = encoder.readOutbound();
-                if (msg == null) {
-                    break;
-                }
-                ReferenceCountUtil.release(msg);
-            }
-
-            for (;;) {
-                Object msg = decoder.readInbound();
-                if (msg == null) {
-                    break;
-                }
-                ReferenceCountUtil.release(msg);
-            }
+        final CompositeByteBuf compressed = Unpooled.compositeBuffer();
+        ByteBuf msg;
+        while ((msg = encoder.readOutbound()) != null) {
+            compressed.addComponent(msg);
+            compressed.writerIndex(compressed.writerIndex() + msg.readableBytes());
         }
+        assertThat(compressed, is(notNullValue()));
+
+        decoder.writeInbound(compressed.retain());
+        assertFalse(compressed.isReadable());
+        final CompositeByteBuf decompressed = Unpooled.compositeBuffer();
+        while ((msg = decoder.readInbound()) != null) {
+            decompressed.addComponent(msg);
+            decompressed.writerIndex(decompressed.writerIndex() + msg.readableBytes());
+        }
+        assertEquals(in.resetReaderIndex(), decompressed);
+
+        compressed.release();
+        decompressed.release();
+        in.release();
     }
 }

@@ -755,7 +755,7 @@
         <scope>test</scope>
       </dependency>
 
-      <!-- Test dependency for Bzip2Decoder -->
+      <!-- Test dependency for Bzip2 compression codec -->
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-compress</artifactId>

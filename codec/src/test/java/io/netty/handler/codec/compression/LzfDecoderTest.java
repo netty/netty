@@ -17,44 +17,18 @@ package io.netty.handler.codec.compression;
 
 import com.ning.compress.lzf.LZFEncoder;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.util.internal.ThreadLocalRandom;
-import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
-import static com.ning.compress.lzf.LZFChunk.BYTE_Z;
-import static com.ning.compress.lzf.LZFChunk.BYTE_V;
-import static com.ning.compress.lzf.LZFChunk.BLOCK_TYPE_NON_COMPRESSED;
-import static org.junit.Assert.*;
+import static com.ning.compress.lzf.LZFChunk.*;
 
-public class LzfDecoderTest {
+public class LzfDecoderTest extends AbstractDecoderTest {
 
-    private static final ThreadLocalRandom rand;
-
-    private static final byte[] BYTES_SMALL = new byte[256];
-    private static final byte[] BYTES_LARGE = new byte[256000];
-
-    static {
-        rand = ThreadLocalRandom.current();
-        //fill arrays with compressible data
-        for (int i = 0; i < BYTES_SMALL.length; i++) {
-            BYTES_SMALL[i] = i % 4 != 0 ? 0 : (byte) rand.nextInt();
-        }
-        for (int i = 0; i < BYTES_LARGE.length; i++) {
-            BYTES_LARGE[i] = i % 4 != 0 ? 0 : (byte) rand.nextInt();
-        }
+    public LzfDecoderTest() throws Exception {
     }
 
-    @Rule
-    public ExpectedException expected = ExpectedException.none();
-
-    private EmbeddedChannel channel;
-
-    @Before
+    @Override
     public void initChannel() {
         channel = new EmbeddedChannel(new LzfDecoder());
     }
@@ -86,63 +60,8 @@ public class LzfDecoderTest {
         channel.writeInbound(in);
     }
 
-    private static void testDecompression(final EmbeddedChannel channel, final byte[] data) throws Exception {
-        byte[] compressedArray = LZFEncoder.encode(data);
-        ByteBuf compressed = Unpooled.wrappedBuffer(compressedArray);
-
-        channel.writeInbound(compressed);
-
-        ByteBuf uncompressed = readUncompressed(channel);
-        ByteBuf dataBuf = Unpooled.wrappedBuffer(data);
-
-        assertEquals(dataBuf, uncompressed);
-
-        uncompressed.release();
-        dataBuf.release();
-    }
-
-    @Test
-    public void testDecompressionOfSmallChunkOfData() throws Exception {
-        testDecompression(channel, BYTES_SMALL);
-    }
-
-    @Test
-    public void testDecompressionOfLargeChunkOfData() throws Exception {
-        testDecompression(channel, BYTES_LARGE);
-    }
-
-    @Test
-    public void testDecompressionOfBatchedFlowOfData() throws Exception {
-        final byte[] data = BYTES_LARGE;
-
-        byte[] compressedArray = LZFEncoder.encode(data);
-        int written = 0, length = rand.nextInt(100);
-        while (written + length < compressedArray.length) {
-            ByteBuf compressed = Unpooled.wrappedBuffer(compressedArray, written, length);
-            channel.writeInbound(compressed);
-            written += length;
-            length = rand.nextInt(100);
-        }
-        ByteBuf compressed = Unpooled.wrappedBuffer(compressedArray, written, compressedArray.length - written);
-        channel.writeInbound(compressed);
-
-        ByteBuf uncompressed = readUncompressed(channel);
-        ByteBuf dataBuf = Unpooled.wrappedBuffer(data);
-
-        assertEquals(dataBuf, uncompressed);
-
-        uncompressed.release();
-        dataBuf.release();
-    }
-
-    private static ByteBuf readUncompressed(EmbeddedChannel channel) throws Exception {
-        CompositeByteBuf uncompressed = Unpooled.compositeBuffer();
-        ByteBuf msg;
-        while ((msg = channel.readInbound()) != null) {
-            uncompressed.addComponent(msg);
-            uncompressed.writerIndex(uncompressed.writerIndex() + msg.readableBytes());
-        }
-
-        return uncompressed;
+    @Override
+    protected byte[] compress(byte[] data) throws Exception {
+        return LZFEncoder.encode(data);
     }
 }
