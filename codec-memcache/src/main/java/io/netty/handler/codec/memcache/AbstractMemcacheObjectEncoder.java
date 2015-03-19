@@ -45,6 +45,7 @@ public abstract class AbstractMemcacheObjectEncoder<M extends MemcacheMessage> e
             @SuppressWarnings({ "unchecked", "CastConflictsWithInstanceof" })
             final M m = (M) msg;
             out.add(encodeMessage(ctx, m));
+            return;
         }
 
         if (msg instanceof MemcacheContent || msg instanceof ByteBuf || msg instanceof FileRegion) {
