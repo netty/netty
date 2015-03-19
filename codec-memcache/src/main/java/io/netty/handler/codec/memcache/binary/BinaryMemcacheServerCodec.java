@@ -20,7 +20,7 @@ import io.netty.channel.ChannelHandlerAppender;
 /**
  * The full server codec that combines the correct encoder and decoder.
  * <p/>
- * Use this codec if you need to implement a server that speaks the memache binary protocol.
+ * Use this codec if you need to implement a server that speaks the memcache binary protocol.
  * Internally, it combines the {@link BinaryMemcacheRequestDecoder} and the
  * {@link BinaryMemcacheResponseEncoder} to request decoding and response encoding.
  */
