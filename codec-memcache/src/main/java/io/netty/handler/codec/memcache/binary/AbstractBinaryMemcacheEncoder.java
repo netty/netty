@@ -22,7 +22,7 @@ import io.netty.handler.codec.memcache.AbstractMemcacheObjectEncoder;
 import io.netty.util.CharsetUtil;
 
 /**
- * A {@link MessageToByteEncoder} that encodes binary memache messages into bytes.
+ * A {@link MessageToByteEncoder} that encodes binary memcache messages into bytes.
  */
 public abstract class AbstractBinaryMemcacheEncoder<M extends BinaryMemcacheMessage>
     extends AbstractMemcacheObjectEncoder<M> {
