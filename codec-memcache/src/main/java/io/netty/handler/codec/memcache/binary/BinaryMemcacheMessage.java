@@ -137,7 +137,7 @@ public interface BinaryMemcacheMessage extends MemcacheMessage {
     /**
      * Sets the opaque value.
      *
-     * @param opaque the opqaue value to use.
+     * @param opaque the opaque value to use.
      */
     BinaryMemcacheMessage setOpaque(int opaque);
 
