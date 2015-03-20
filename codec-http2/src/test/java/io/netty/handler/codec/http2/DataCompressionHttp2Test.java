@@ -271,7 +271,7 @@ public class DataCompressionHttp2Test {
 
         serverConnection.addListener(new Http2ConnectionAdapter() {
             @Override
-            public void streamHalfClosed(Http2Stream stream) {
+            public void onStreamHalfClosed(Http2Stream stream) {
                 serverLatch.countDown();
             }
         });

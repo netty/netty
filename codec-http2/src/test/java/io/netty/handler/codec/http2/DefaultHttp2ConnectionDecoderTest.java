@@ -491,7 +491,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     @Test
     public void goAwayShouldReadShouldUpdateConnectionState() throws Exception {
         decode().onGoAwayRead(ctx, 1, 2L, EMPTY_BUFFER);
-        verify(connection).goAwayReceived(1);
+        verify(connection).goAwayReceived(eq(1), eq(2L), eq(EMPTY_BUFFER));
         verify(listener).onGoAwayRead(eq(ctx), eq(1), eq(2L), eq(EMPTY_BUFFER));
     }
 

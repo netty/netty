@@ -64,12 +64,12 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         // Register for notification of new streams.
         connection.addListener(new Http2ConnectionAdapter() {
             @Override
-            public void streamAdded(Http2Stream stream) {
+            public void onStreamAdded(Http2Stream stream) {
                 stream.setProperty(FlowState.class, new FlowState(stream, 0));
             }
 
             @Override
-            public void streamActive(Http2Stream stream) {
+            public void onStreamActive(Http2Stream stream) {
                 // Need to be sure the stream's initial window is adjusted for SETTINGS
                 // frames which may have been exchanged while it was in IDLE
                 state(stream).window(initialWindowSize);

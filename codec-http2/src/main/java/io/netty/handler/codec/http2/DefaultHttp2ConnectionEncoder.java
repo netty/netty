@@ -112,7 +112,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             final boolean endOfStream, ChannelPromise promise) {
         final Http2Stream stream;
         try {
-            if (connection.isGoAway()) {
+            if (connection.goAwayReceived() || connection.goAwaySent()) {
                 throw new IllegalStateException("Sending data after connection going away.");
             }
 
@@ -151,7 +151,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             final boolean exclusive, final int padding, final boolean endOfStream,
             final ChannelPromise promise) {
         try {
-            if (connection.isGoAway()) {
+            if (connection.goAwayReceived() || connection.goAwaySent()) {
                 throw connectionError(PROTOCOL_ERROR, "Sending headers after connection going away.");
             }
             Http2Stream stream = connection.stream(streamId);
@@ -190,7 +190,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     public ChannelFuture writePriority(ChannelHandlerContext ctx, int streamId, int streamDependency, short weight,
             boolean exclusive, ChannelPromise promise) {
         try {
-            if (connection.isGoAway()) {
+            if (connection.goAwayReceived() || connection.goAwaySent()) {
                 throw connectionError(PROTOCOL_ERROR, "Sending priority after connection going away.");
             }
 
@@ -227,7 +227,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             ChannelPromise promise) {
         outstandingLocalSettingsQueue.add(settings);
         try {
-            if (connection.isGoAway()) {
+            if (connection.goAwayReceived() || connection.goAwaySent()) {
                 throw connectionError(PROTOCOL_ERROR, "Sending settings after connection going away.");
             }
 
@@ -254,7 +254,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     @Override
     public ChannelFuture writePing(ChannelHandlerContext ctx, boolean ack, ByteBuf data,
             ChannelPromise promise) {
-        if (connection.isGoAway()) {
+        if (connection.goAwayReceived() || connection.goAwaySent()) {
             data.release();
             return promise.setFailure(connectionError(PROTOCOL_ERROR, "Sending ping after connection going away."));
         }
@@ -268,7 +268,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     public ChannelFuture writePushPromise(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
             Http2Headers headers, int padding, ChannelPromise promise) {
         try {
-            if (connection.isGoAway()) {
+            if (connection.goAwayReceived() || connection.goAwaySent()) {
                 throw connectionError(PROTOCOL_ERROR, "Sending push promise after connection going away.");
             }
 

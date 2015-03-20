@@ -546,15 +546,16 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     public ChannelFuture writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData,
             ChannelPromise promise) {
         Http2Connection connection = connection();
-        if (connection.isGoAway()) {
+        if (connection.goAwayReceived() || connection.goAwaySent()) {
             debugData.release();
             return ctx.newSucceededFuture();
         }
 
+        connection.goAwaySent(lastStreamId, errorCode, debugData);
+
         ChannelFuture future = frameWriter().writeGoAway(ctx, lastStreamId, errorCode, debugData, promise);
         ctx.flush();
 
-        connection.goAwaySent(lastStreamId);
         return future;
     }
 
@@ -563,7 +564,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      */
     private ChannelFuture writeGoAway(ChannelHandlerContext ctx, Http2Exception cause) {
         Http2Connection connection = connection();
-        if (connection.isGoAway()) {
+        if (connection.goAwayReceived() || connection.goAwaySent()) {
             return ctx.newSucceededFuture();
         }
 
