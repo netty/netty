@@ -112,12 +112,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             final boolean endOfStream, ChannelPromise promise) {
         final Http2Stream stream;
         try {
-            if (connection.goAwayReceived() || connection.goAwaySent()) {
-                throw new IllegalStateException("Sending data after connection going away.");
-            }
-
             stream = connection.requireStream(streamId);
-
             // Verify that the stream is in the appropriate state for sending DATA frames.
             switch (stream.state()) {
                 case OPEN:
@@ -151,9 +146,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             final boolean exclusive, final int padding, final boolean endOfStream,
             final ChannelPromise promise) {
         try {
-            if (connection.goAwayReceived() || connection.goAwaySent()) {
-                throw connectionError(PROTOCOL_ERROR, "Sending headers after connection going away.");
-            }
             Http2Stream stream = connection.stream(streamId);
             if (stream == null) {
                 stream = connection.local().createStream(streamId);
@@ -190,10 +182,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     public ChannelFuture writePriority(ChannelHandlerContext ctx, int streamId, int streamDependency, short weight,
             boolean exclusive, ChannelPromise promise) {
         try {
-            if (connection.goAwayReceived() || connection.goAwaySent()) {
-                throw connectionError(PROTOCOL_ERROR, "Sending priority after connection going away.");
-            }
-
             // Update the priority on this stream.
             Http2Stream stream = connection.stream(streamId);
             if (stream == null) {
@@ -227,10 +215,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             ChannelPromise promise) {
         outstandingLocalSettingsQueue.add(settings);
         try {
-            if (connection.goAwayReceived() || connection.goAwaySent()) {
-                throw connectionError(PROTOCOL_ERROR, "Sending settings after connection going away.");
-            }
-
             Boolean pushEnabled = settings.pushEnabled();
             if (pushEnabled != null && connection.isServer()) {
                 throw connectionError(PROTOCOL_ERROR, "Server sending SETTINGS frame with ENABLE_PUSH specified");
@@ -252,13 +236,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     }
 
     @Override
-    public ChannelFuture writePing(ChannelHandlerContext ctx, boolean ack, ByteBuf data,
-            ChannelPromise promise) {
-        if (connection.goAwayReceived() || connection.goAwaySent()) {
-            data.release();
-            return promise.setFailure(connectionError(PROTOCOL_ERROR, "Sending ping after connection going away."));
-        }
-
+    public ChannelFuture writePing(ChannelHandlerContext ctx, boolean ack, ByteBuf data, ChannelPromise promise) {
         ChannelFuture future = frameWriter.writePing(ctx, ack, data, promise);
         ctx.flush();
         return future;
@@ -268,12 +246,12 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     public ChannelFuture writePushPromise(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
             Http2Headers headers, int padding, ChannelPromise promise) {
         try {
-            if (connection.goAwayReceived() || connection.goAwaySent()) {
-                throw connectionError(PROTOCOL_ERROR, "Sending push promise after connection going away.");
+            if (connection.goAwayReceived()) {
+                throw connectionError(PROTOCOL_ERROR, "Sending PUSH_PROMISE after GO_AWAY received.");
             }
 
-            // Reserve the promised stream.
             Http2Stream stream = connection.requireStream(streamId);
+            // Reserve the promised stream.
             connection.local().reservePushStream(promisedStreamId, stream);
         } catch (Throwable e) {
             return promise.setFailure(e);
