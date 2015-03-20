@@ -201,7 +201,7 @@ public class DefaultHttp2ConnectionEncoderTest {
 
     @Test
     public void dataWriteAfterGoAwayShouldFail() throws Exception {
-        when(connection.isGoAway()).thenReturn(true);
+        when(connection.goAwayReceived()).thenReturn(true);
         final ByteBuf data = dummyData();
         try {
             ChannelFuture future = encoder.writeData(ctx, STREAM_ID, data, 0, true, promise);
@@ -304,7 +304,7 @@ public class DefaultHttp2ConnectionEncoderTest {
 
     @Test
     public void headersWriteAfterGoAwayShouldFail() throws Exception {
-        when(connection.isGoAway()).thenReturn(true);
+        when(connection.goAwayReceived()).thenReturn(true);
         ChannelFuture future = encoder.writeHeaders(
                 ctx, 5, EmptyHttp2Headers.INSTANCE, 0, (short) 255, false, 0, false, promise);
         verify(local, never()).createStream(anyInt());
@@ -345,7 +345,7 @@ public class DefaultHttp2ConnectionEncoderTest {
 
     @Test
     public void pushPromiseWriteAfterGoAwayShouldFail() throws Exception {
-        when(connection.isGoAway()).thenReturn(true);
+        when(connection.goAwayReceived()).thenReturn(true);
         ChannelFuture future =
                 encoder.writePushPromise(ctx, STREAM_ID, PUSH_STREAM_ID,
                                          EmptyHttp2Headers.INSTANCE, 0, promise);
@@ -362,7 +362,7 @@ public class DefaultHttp2ConnectionEncoderTest {
 
     @Test
     public void priorityWriteAfterGoAwayShouldFail() throws Exception {
-        when(connection.isGoAway()).thenReturn(true);
+        when(connection.goAwayReceived()).thenReturn(true);
         ChannelFuture future = encoder.writePriority(ctx, STREAM_ID, 0, (short) 255, true, promise);
         assertTrue(future.awaitUninterruptibly().cause() instanceof Http2Exception);
     }
@@ -426,7 +426,7 @@ public class DefaultHttp2ConnectionEncoderTest {
 
     @Test
     public void pingWriteAfterGoAwayShouldFail() throws Exception {
-        when(connection.isGoAway()).thenReturn(true);
+        when(connection.goAwayReceived()).thenReturn(true);
         ChannelFuture future = encoder.writePing(ctx, false, emptyPingBuf(), promise);
         assertTrue(future.awaitUninterruptibly().cause() instanceof Http2Exception);
     }
@@ -439,7 +439,7 @@ public class DefaultHttp2ConnectionEncoderTest {
 
     @Test
     public void settingsWriteAfterGoAwayShouldFail() throws Exception {
-        when(connection.isGoAway()).thenReturn(true);
+        when(connection.goAwayReceived()).thenReturn(true);
         ChannelFuture future = encoder.writeSettings(ctx, new Http2Settings(), promise);
         assertTrue(future.awaitUninterruptibly().cause() instanceof Http2Exception);
     }

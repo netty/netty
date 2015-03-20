@@ -33,6 +33,8 @@ import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
+import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http2.Http2StreamRemovalPolicy.Action;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
@@ -151,18 +153,19 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     @Override
-    public boolean isGoAway() {
-        return goAwaySent() || goAwayReceived();
-    }
-
-    @Override
     public boolean goAwayReceived() {
         return localEndpoint.lastKnownStream >= 0;
     }
 
     @Override
-    public void goAwayReceived(int lastKnownStream) {
+    public void goAwayReceived(int lastKnownStream, long errorCode, ByteBuf debugData) {
+        boolean alreadyNotified = goAwayReceived();
         localEndpoint.lastKnownStream(lastKnownStream);
+        if (!alreadyNotified) {
+            for (Listener listener : listeners) {
+                listener.onGoAwayReceived(errorCode, debugData);
+            }
+        }
     }
 
     @Override
@@ -171,14 +174,20 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     @Override
-    public void goAwaySent(int lastKnownStream) {
+    public void goAwaySent(int lastKnownStream, long errorCode, ByteBuf debugData) {
+        boolean alreadyNotified = goAwaySent();
         remoteEndpoint.lastKnownStream(lastKnownStream);
+        if (!alreadyNotified) {
+            for (Listener listener : listeners) {
+                listener.onGoAwaySent(errorCode, debugData);
+            }
+        }
     }
 
     private void removeStream(DefaultStream stream) {
         // Notify the listeners of the event first.
         for (Listener listener : listeners) {
-            listener.streamRemoved(stream);
+            listener.onStreamRemoved(stream);
         }
 
         // Remove it from the map and priority tree.
@@ -353,7 +362,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
                 // Notify the listeners.
                 for (Listener listener : listeners) {
-                    listener.streamActive(this);
+                    listener.onStreamActive(this);
                 }
             }
             return this;
@@ -373,7 +382,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
                     // Notify the listeners.
                     for (Listener listener : listeners) {
-                        listener.streamClosed(this);
+                        listener.onStreamClosed(this);
                     }
                 } finally {
                     // Mark this stream for removal.
@@ -417,7 +426,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         private void notifyHalfClosed(Http2Stream stream) {
             for (Listener listener : listeners) {
-                listener.streamHalfClosed(stream);
+                listener.onStreamHalfClosed(stream);
             }
         }
 
@@ -604,7 +613,7 @@ public class DefaultHttp2Connection implements Http2Connection {
          * @param l The listener to notify
          */
         public void notifyListener(Listener l) {
-            l.priorityTreeParentChanged(stream, oldParent);
+            l.onPriorityTreeParentChanged(stream, oldParent);
         }
     }
 
@@ -623,7 +632,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
     private void notifyParentChanging(Http2Stream stream, Http2Stream newParent) {
         for (Listener l : listeners) {
-            l.priorityTreeParentChanging(stream, newParent);
+            l.onPriorityTreeParentChanging(stream, newParent);
         }
     }
 
@@ -759,7 +768,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
             // Notify the listeners of the event.
             for (Listener listener : listeners) {
-                listener.streamAdded(stream);
+                listener.onStreamAdded(stream);
             }
 
             notifyParentChanged(events);
@@ -804,17 +813,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         private void lastKnownStream(int lastKnownStream) {
-            boolean alreadyNotified = isGoAway();
             this.lastKnownStream = lastKnownStream;
-            if (!alreadyNotified) {
-                notifyGoingAway();
-            }
-        }
-
-        private void notifyGoingAway() {
-            for (Listener listener : listeners) {
-                listener.goingAway();
-            }
         }
 
         @Override
@@ -833,7 +832,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         private void checkNewStreamAllowed(int streamId) throws Http2Exception {
-            if (isGoAway()) {
+            if (goAwaySent() || goAwayReceived()) {
                 throw connectionError(PROTOCOL_ERROR, "Cannot create a stream since the connection is going away");
             }
             if (streamId < 0) {

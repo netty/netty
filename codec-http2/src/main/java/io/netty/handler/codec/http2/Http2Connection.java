@@ -15,6 +15,8 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.buffer.ByteBuf;
+
 import java.util.Collection;
 
 /**
@@ -30,31 +32,31 @@ public interface Http2Connection {
          * Notifies the listener that the given stream was added to the connection. This stream may
          * not yet be active (i.e. {@code OPEN} or {@code HALF CLOSED}).
          */
-        void streamAdded(Http2Stream stream);
+        void onStreamAdded(Http2Stream stream);
 
         /**
          * Notifies the listener that the given stream was made active (i.e. {@code OPEN} or {@code HALF CLOSED}).
          */
-        void streamActive(Http2Stream stream);
+        void onStreamActive(Http2Stream stream);
 
         /**
          * Notifies the listener that the given stream is now {@code HALF CLOSED}. The stream can be
          * inspected to determine which side is {@code CLOSED}.
          */
-        void streamHalfClosed(Http2Stream stream);
+        void onStreamHalfClosed(Http2Stream stream);
 
         /**
          * Notifies the listener that the given stream is now {@code CLOSED} in both directions and will no longer
          * be returned by {@link #activeStreams()}.
          */
-        void streamClosed(Http2Stream stream);
+        void onStreamClosed(Http2Stream stream);
 
         /**
          * Notifies the listener that the given stream has now been removed from the connection and
          * will no longer be returned via {@link Http2Connection#stream(int)}. The connection may
          * maintain inactive streams for some time before removing them.
          */
-        void streamRemoved(Http2Stream stream);
+        void onStreamRemoved(Http2Stream stream);
 
         /**
          * Notifies the listener that a priority tree parent change has occurred. This method will be invoked
@@ -64,7 +66,7 @@ public interface Http2Connection {
          * @param stream The stream which had a parent change (new parent and children will be steady state)
          * @param oldParent The old parent which {@code stream} used to be a child of (may be {@code null})
          */
-        void priorityTreeParentChanged(Http2Stream stream, Http2Stream oldParent);
+        void onPriorityTreeParentChanged(Http2Stream stream, Http2Stream oldParent);
 
         /**
          * Notifies the listener that a parent dependency is about to change
@@ -73,7 +75,7 @@ public interface Http2Connection {
          * @param stream The stream which the parent is about to change to {@code newParent}
          * @param newParent The stream which will be the parent of {@code stream}
          */
-        void priorityTreeParentChanging(Http2Stream stream, Http2Stream newParent);
+        void onPriorityTreeParentChanging(Http2Stream stream, Http2Stream newParent);
 
         /**
          * Notifies the listener that the weight has changed for {@code stream}
@@ -83,9 +85,18 @@ public interface Http2Connection {
         void onWeightChanged(Http2Stream stream, short oldWeight);
 
         /**
-         * Called when a GO_AWAY frame has either been sent or received for the connection.
+         * Called when a {@code GOAWAY} frame was sent for the connection.
          */
-        void goingAway();
+        void onGoAwaySent(long errorCode, ByteBuf debugData);
+
+        /**
+         * Called when a {@code GOAWAY} was received from the remote endpoint. This
+         * event handler duplicates {@link Http2FrameListener#onGoAwayRead(io.netty.channel.ChannelHandlerContext,
+         * int, long, io.netty.buffer.ByteBuf)} but is added here in order to simplify application logic
+         * for handling {@code GOAWAY} in a uniform way. An application should generally not handle both events, but if
+         * it does this method is called first, before notifying the {@link Http2FrameListener}.
+         */
+        void onGoAwayReceived(long errorCode, ByteBuf debugData);
     }
 
     /**
@@ -269,7 +280,7 @@ public interface Http2Connection {
     /**
      * Indicates that a {@code GOAWAY} was received from the remote endpoint and sets the last known stream.
      */
-    void goAwayReceived(int lastKnownStream);
+    void goAwayReceived(int lastKnownStream, long errorCode, ByteBuf message);
 
     /**
      * Indicates whether or not a {@code GOAWAY} was sent to the remote endpoint.
@@ -279,10 +290,5 @@ public interface Http2Connection {
     /**
      * Indicates that a {@code GOAWAY} was sent to the remote endpoint and sets the last known stream.
      */
-    void goAwaySent(int lastKnownStream);
-
-    /**
-     * Indicates whether or not either endpoint has received a GOAWAY.
-     */
-    boolean isGoAway();
+    void goAwaySent(int lastKnownStream, long errorCode, ByteBuf message);
 }

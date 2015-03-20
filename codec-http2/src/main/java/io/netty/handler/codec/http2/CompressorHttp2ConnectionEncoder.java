@@ -40,7 +40,7 @@ import io.netty.handler.codec.compression.ZlibWrapper;
 public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionEncoder {
     private static final Http2ConnectionAdapter CLEAN_UP_LISTENER = new Http2ConnectionAdapter() {
         @Override
-        public void streamRemoved(Http2Stream stream) {
+        public void onStreamRemoved(Http2Stream stream) {
             final EmbeddedChannel compressor = stream.getProperty(CompressorHttp2ConnectionEncoder.class);
             if (compressor != null) {
                 cleanup(stream, compressor);

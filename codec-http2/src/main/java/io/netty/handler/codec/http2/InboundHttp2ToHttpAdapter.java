@@ -155,7 +155,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
     }
 
     @Override
-    public void streamRemoved(Http2Stream stream) {
+    public void onStreamRemoved(Http2Stream stream) {
         removeMessage(stream.id());
     }
 

@@ -14,41 +14,47 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.buffer.ByteBuf;
+
 /**
  * Provides empty implementations of all {@link Http2Connection.Listener} methods.
  */
 public class Http2ConnectionAdapter implements Http2Connection.Listener {
 
     @Override
-    public void streamAdded(Http2Stream stream) {
+    public void onStreamAdded(Http2Stream stream) {
     }
 
     @Override
-    public void streamActive(Http2Stream stream) {
+    public void onStreamActive(Http2Stream stream) {
     }
 
     @Override
-    public void streamHalfClosed(Http2Stream stream) {
+    public void onStreamHalfClosed(Http2Stream stream) {
     }
 
     @Override
-    public void streamClosed(Http2Stream stream) {
+    public void onStreamClosed(Http2Stream stream) {
     }
 
     @Override
-    public void streamRemoved(Http2Stream stream) {
+    public void onStreamRemoved(Http2Stream stream) {
     }
 
     @Override
-    public void goingAway() {
+    public void onGoAwaySent(long errorCode, ByteBuf debugData) {
     }
 
     @Override
-    public void priorityTreeParentChanged(Http2Stream stream, Http2Stream oldParent) {
+    public void onGoAwayReceived(long errorCode, ByteBuf debugData) {
     }
 
     @Override
-    public void priorityTreeParentChanging(Http2Stream stream, Http2Stream newParent) {
+    public void onPriorityTreeParentChanged(Http2Stream stream, Http2Stream oldParent) {
+    }
+
+    @Override
+    public void onPriorityTreeParentChanging(Http2Stream stream, Http2Stream newParent) {
     }
 
     @Override
