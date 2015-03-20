@@ -86,7 +86,7 @@ public interface Channel extends AttributeMap, Comparable<Channel> {
     ChannelId id();
 
     /**
-     * Return the {@link EventLoop} this {@link Channel} was registered too.
+     * Return the {@link EventLoop} this {@link Channel} was registered to.
      */
     EventLoop eventLoop();
 
@@ -104,7 +104,7 @@ public interface Channel extends AttributeMap, Comparable<Channel> {
     ChannelConfig config();
 
     /**
-     * Returns {@code true} if the {@link Channel} is open an may get active later
+     * Returns {@code true} if the {@link Channel} is open and may get active later
      */
     boolean isOpen();
 
@@ -170,7 +170,7 @@ public interface Channel extends AttributeMap, Comparable<Channel> {
     Unsafe unsafe();
 
     /**
-     * Return the assigned {@link ChannelPipeline}
+     * Return the assigned {@link ChannelPipeline}.
      */
     ChannelPipeline pipeline();
 
@@ -185,7 +185,7 @@ public interface Channel extends AttributeMap, Comparable<Channel> {
     ChannelPromise newPromise();
 
     /**
-     * Return an new {@link ChannelProgressivePromise}
+     * Return an new {@link ChannelProgressivePromise}.
      */
     ChannelProgressivePromise newProgressivePromise();
 
