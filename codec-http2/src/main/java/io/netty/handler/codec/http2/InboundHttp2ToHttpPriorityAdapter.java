@@ -166,7 +166,7 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
     }
 
     @Override
-    public void priorityTreeParentChanged(Http2Stream stream, Http2Stream oldParent) {
+    public void onPriorityTreeParentChanged(Http2Stream stream, Http2Stream oldParent) {
         Http2Stream parent = stream.parent();
         FullHttpMessage msg = messageMap.get(stream.id());
         if (msg == null) {

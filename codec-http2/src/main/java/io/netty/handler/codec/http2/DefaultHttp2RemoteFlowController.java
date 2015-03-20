@@ -48,27 +48,27 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         // Register for notification of new streams.
         connection.addListener(new Http2ConnectionAdapter() {
             @Override
-            public void streamAdded(Http2Stream stream) {
+            public void onStreamAdded(Http2Stream stream) {
                 // Just add a new flow state to the stream.
                 stream.setProperty(FlowState.class, new FlowState(stream, 0));
             }
 
             @Override
-            public void streamActive(Http2Stream stream) {
+            public void onStreamActive(Http2Stream stream) {
                 // Need to be sure the stream's initial window is adjusted for SETTINGS
                 // frames which may have been exchanged while it was in IDLE
                 state(stream).window(initialWindowSize);
             }
 
             @Override
-            public void streamClosed(Http2Stream stream) {
+            public void onStreamClosed(Http2Stream stream) {
                 // Any pending frames can never be written, cancel and
                 // write errors for any pending frames.
                 state(stream).cancel();
             }
 
             @Override
-            public void streamHalfClosed(Http2Stream stream) {
+            public void onStreamHalfClosed(Http2Stream stream) {
                 if (State.HALF_CLOSED_LOCAL.equals(stream.state())) {
                     /**
                      * When this method is called there should not be any
@@ -86,7 +86,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             }
 
             @Override
-            public void priorityTreeParentChanged(Http2Stream stream, Http2Stream oldParent) {
+            public void onPriorityTreeParentChanged(Http2Stream stream, Http2Stream oldParent) {
                 Http2Stream parent = stream.parent();
                 if (parent != null) {
                     int delta = state(stream).streamableBytesForTree();
@@ -97,7 +97,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             }
 
             @Override
-            public void priorityTreeParentChanging(Http2Stream stream, Http2Stream newParent) {
+            public void onPriorityTreeParentChanging(Http2Stream stream, Http2Stream newParent) {
                 Http2Stream parent = stream.parent();
                 if (parent != null) {
                     int delta = -state(stream).streamableBytesForTree();

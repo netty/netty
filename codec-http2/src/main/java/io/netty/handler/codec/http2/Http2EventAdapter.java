@@ -84,31 +84,31 @@ public class Http2EventAdapter implements Http2Connection.Listener, Http2FrameLi
     }
 
     @Override
-    public void streamAdded(Http2Stream stream) {
+    public void onStreamAdded(Http2Stream stream) {
     }
 
     @Override
-    public void streamActive(Http2Stream stream) {
+    public void onStreamActive(Http2Stream stream) {
     }
 
     @Override
-    public void streamHalfClosed(Http2Stream stream) {
+    public void onStreamHalfClosed(Http2Stream stream) {
     }
 
     @Override
-    public void streamClosed(Http2Stream stream) {
+    public void onStreamClosed(Http2Stream stream) {
     }
 
     @Override
-    public void streamRemoved(Http2Stream stream) {
+    public void onStreamRemoved(Http2Stream stream) {
     }
 
     @Override
-    public void priorityTreeParentChanged(Http2Stream stream, Http2Stream oldParent) {
+    public void onPriorityTreeParentChanged(Http2Stream stream, Http2Stream oldParent) {
     }
 
     @Override
-    public void priorityTreeParentChanging(Http2Stream stream, Http2Stream newParent) {
+    public void onPriorityTreeParentChanging(Http2Stream stream, Http2Stream newParent) {
     }
 
     @Override
@@ -116,6 +116,10 @@ public class Http2EventAdapter implements Http2Connection.Listener, Http2FrameLi
     }
 
     @Override
-    public void goingAway() {
+    public void onGoAwaySent(int lastStreamId, long errorCode, ByteBuf debugData) {
+    }
+
+    @Override
+    public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
     }
 }
