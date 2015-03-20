@@ -171,6 +171,18 @@
       </properties>
     </profile>
     <profile>
+      <id>alpn-8u31</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.8.0_31</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.alpn.version>8.1.3.v20150130</jetty.alpn.version>
+      </properties>
+    </profile>
+    <profile>
       <id>linux</id>
       <activation>
         <os>
@@ -230,8 +242,9 @@
     </profile>
 
     <!--
-      Profiles that assigns proper Jetty npn-boot version.
+      Profiles that assigns proper Jetty npn-boot and alpn-boot version.
       See: http://www.eclipse.org/jetty/documentation/current/npn-chapter.html#npn-versions
+      See: http://www.eclipse.org/jetty/documentation/current/alpn-chapter.html#alpn-versions
     -->
     <profile>
       <id>npn-7u9</id>
@@ -330,7 +343,7 @@
       </properties>
     </profile>
     <profile>
-      <id>npn-7u40</id>
+      <id>npn-alpn-7u40</id>
       <activation>
         <property>
           <name>java.version</name>
@@ -343,7 +356,7 @@
       </properties>
     </profile>
     <profile>
-      <id>npn-7u45</id>
+      <id>npn-alpn-7u45</id>
       <activation>
         <property>
           <name>java.version</name>
@@ -356,7 +369,7 @@
       </properties>
     </profile>
     <profile>
-      <id>npn-7u51</id>
+      <id>npn-alpn-7u51</id>
       <activation>
         <property>
           <name>java.version</name>
@@ -447,6 +460,32 @@
       </properties>
     </profile>
     <profile>
+      <id>npn-alpn-7u75</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_75</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.10.v20150130</jetty.npn.version>
+        <jetty.alpn.version>7.1.3.v20150130</jetty.alpn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-alpn-7u76</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_76</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.10.v20150130</jetty.npn.version>
+        <jetty.alpn.version>7.1.3.v20150130</jetty.alpn.version>
+      </properties>
+    </profile>
+    <profile>
       <!--
       This profile exists because either ALPN or NPN can exits on the class path at once, but not both.
       The JDK version is typically used to distinguish which should be used but there is some overlap
@@ -469,9 +508,9 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <jboss.marshalling.version>1.3.18.GA</jboss.marshalling.version>
-    <jetty.npn.version>1.1.9.v20141016</jetty.npn.version>
+    <jetty.npn.version>1.1.10.v20150130</jetty.npn.version>
     <jetty.npn.path>${settings.localRepository}/org/mortbay/jetty/npn/npn-boot/${jetty.npn.version}/npn-boot-${jetty.npn.version}.jar</jetty.npn.path>
-    <jetty.alpn.version>8.1.2.v20141202</jetty.alpn.version>
+    <jetty.alpn.version>8.1.3.v20150130</jetty.alpn.version>
     <jetty.alpn.path>${settings.localRepository}/org/mortbay/jetty/alpn/alpn-boot/${jetty.alpn.version}/alpn-boot-${jetty.alpn.version}.jar</jetty.alpn.path>
     <argLine.common>
       -server
@@ -483,6 +522,7 @@
       -XX:+OptimizeStringConcat
       -XX:+HeapDumpOnOutOfMemoryError
     </argLine.common>
+    <!-- Default to ALPN. Then classpath is used to refine selection. See forcenpn profile to force NPN -->
     <argLine.bootcp>-Xbootclasspath/p:${jetty.alpn.path}</argLine.bootcp>
     <argLine.leak>-verbose:gc</argLine.leak> <!-- Overridden when 'leak' profile is active -->
     <argLine.coverage>-D_</argLine.coverage> <!-- Overridden when 'coverage' profile is active -->
@@ -934,6 +974,18 @@
               <groupId>org.mortbay.jetty.npn</groupId>
               <artifactId>npn-boot</artifactId>
               <version>${jetty.npn.version}</version>
+            </configuration>
+          </execution>
+          <execution>
+            <id>get-alpn-boot</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>get</goal>
+            </goals>
+            <configuration>
+              <groupId>org.mortbay.jetty.alpn</groupId>
+              <artifactId>alpn-boot</artifactId>
+              <version>${jetty.alpn.version}</version>
             </configuration>
           </execution>
         </executions>
