@@ -97,7 +97,7 @@ public interface Http2Connection {
          * Called when a {@code GOAWAY} was received from the remote endpoint. This event handler duplicates {@link
          * Http2FrameListener#onGoAwayRead(io.netty.channel.ChannelHandlerContext, int, long, io.netty.buffer.ByteBuf)}
          * but is added here in order to simplify application logic for handling {@code GOAWAY} in a uniform way. An
-         * application should generally not handle both events, but if it does this method is called first, before
+         * application should generally not handle both events, but if it does this method is called second, after
          * notifying the {@link Http2FrameListener}.
          *
          * @param lastStreamId the last known stream of the remote endpoint.
@@ -206,9 +206,8 @@ public interface Http2Connection {
         int lastStreamCreated();
 
         /**
-         * Gets the last stream created by this endpoint that is "known" by the opposite endpoint.
          * If a GOAWAY was received for this endpoint, this will be the last stream ID from the
-         * GOAWAY frame. Otherwise, this will be same as {@link #lastStreamCreated()}.
+         * GOAWAY frame. Otherwise, this will be {@code -1}.
          */
         int lastKnownStream();
 

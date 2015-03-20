@@ -18,13 +18,17 @@ import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.emptyPingBuf;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.util.CharsetUtil.UTF_8;
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
@@ -35,8 +39,10 @@ import static org.mockito.Matchers.anyShort;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -200,20 +206,6 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
-    public void dataWriteAfterGoAwayShouldFail() throws Exception {
-        when(connection.goAwayReceived()).thenReturn(true);
-        final ByteBuf data = dummyData();
-        try {
-            ChannelFuture future = encoder.writeData(ctx, STREAM_ID, data, 0, true, promise);
-            assertTrue(future.awaitUninterruptibly().cause() instanceof IllegalStateException);
-        } finally {
-            while (data.refCnt() > 0) {
-                data.release();
-            }
-        }
-    }
-
-    @Test
     public void dataWriteShouldSucceed() throws Exception {
         final ByteBuf data = dummyData();
         encoder.writeData(ctx, STREAM_ID, data, 0, true, promise);
@@ -303,18 +295,6 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
-    public void headersWriteAfterGoAwayShouldFail() throws Exception {
-        when(connection.goAwayReceived()).thenReturn(true);
-        ChannelFuture future = encoder.writeHeaders(
-                ctx, 5, EmptyHttp2Headers.INSTANCE, 0, (short) 255, false, 0, false, promise);
-        verify(local, never()).createStream(anyInt());
-        verify(stream, never()).open(anyBoolean());
-        verify(writer, never()).writeHeaders(eq(ctx), anyInt(), any(Http2Headers.class), anyInt(), anyBoolean(),
-                                             eq(promise));
-        assertTrue(future.awaitUninterruptibly().cause() instanceof Http2Exception);
-    }
-
-    @Test
     public void headersWriteForUnknownStreamShouldCreateStream() throws Exception {
         int streamId = 5;
         when(stream.id()).thenReturn(streamId);
@@ -344,11 +324,10 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
-    public void pushPromiseWriteAfterGoAwayShouldFail() throws Exception {
+    public void pushPromiseWriteAfterGoAwayReceivedShouldFail() throws Exception {
         when(connection.goAwayReceived()).thenReturn(true);
-        ChannelFuture future =
-                encoder.writePushPromise(ctx, STREAM_ID, PUSH_STREAM_ID,
-                                         EmptyHttp2Headers.INSTANCE, 0, promise);
+        ChannelFuture future =  encoder.writePushPromise(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0,
+                                                         promise);
         assertTrue(future.awaitUninterruptibly().cause() instanceof Http2Exception);
     }
 
@@ -361,10 +340,10 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
-    public void priorityWriteAfterGoAwayShouldFail() throws Exception {
+    public void priorityWriteAfterGoAwayShouldSucceed() throws Exception {
         when(connection.goAwayReceived()).thenReturn(true);
-        ChannelFuture future = encoder.writePriority(ctx, STREAM_ID, 0, (short) 255, true, promise);
-        assertTrue(future.awaitUninterruptibly().cause() instanceof Http2Exception);
+        encoder.writePriority(ctx, STREAM_ID, 0, (short) 255, true, promise);
+        verify(writer).writePriority(eq(ctx), eq(STREAM_ID), eq(0), eq((short) 255), eq(true), eq(promise));
     }
 
     @Test
@@ -425,10 +404,10 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
-    public void pingWriteAfterGoAwayShouldFail() throws Exception {
+    public void pingWriteAfterGoAwayShouldSucceed() throws Exception {
         when(connection.goAwayReceived()).thenReturn(true);
-        ChannelFuture future = encoder.writePing(ctx, false, emptyPingBuf(), promise);
-        assertTrue(future.awaitUninterruptibly().cause() instanceof Http2Exception);
+        encoder.writePing(ctx, false, emptyPingBuf(), promise);
+        verify(writer).writePing(eq(ctx), eq(false), eq(emptyPingBuf()), eq(promise));
     }
 
     @Test
@@ -438,10 +417,10 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
-    public void settingsWriteAfterGoAwayShouldFail() throws Exception {
+    public void settingsWriteAfterGoAwayShouldSucceed() throws Exception {
         when(connection.goAwayReceived()).thenReturn(true);
-        ChannelFuture future = encoder.writeSettings(ctx, new Http2Settings(), promise);
-        assertTrue(future.awaitUninterruptibly().cause() instanceof Http2Exception);
+        encoder.writeSettings(ctx, new Http2Settings(), promise);
+        verify(writer).writeSettings(eq(ctx), any(Http2Settings.class), eq(promise));
     }
 
     @Test
@@ -499,6 +478,70 @@ public class DefaultHttp2ConnectionEncoderTest {
 
         promise.trySuccess();
         verify(lifecycleManager).closeStreamLocal(eq(stream), eq(promise));
+    }
+
+    @Test
+    public void encoderDelegatesGoAwayToLifeCycleManager() {
+        encoder.writeGoAway(ctx, STREAM_ID, Http2Error.INTERNAL_ERROR.code(), null, promise);
+        verify(lifecycleManager).goAway(eq(ctx), eq(STREAM_ID), eq(Http2Error.INTERNAL_ERROR.code()),
+                                        eq((ByteBuf) null), eq(promise));
+        verifyNoMoreInteractions(writer);
+    }
+
+    @Test
+    public void dataWriteToClosedStreamShouldFail() {
+        when(stream.state()).thenReturn(CLOSED);
+        ByteBuf data = mock(ByteBuf.class);
+        encoder.writeData(ctx, STREAM_ID, data, 0, false, promise);
+        assertTrue(promise.isDone());
+        assertFalse(promise.isSuccess());
+        assertThat(promise.cause(), instanceOf(IllegalStateException.class));
+        verify(data).release();
+    }
+
+    @Test
+    public void dataWriteToHalfClosedLocalStreamShouldFail() {
+        when(stream.state()).thenReturn(HALF_CLOSED_LOCAL);
+        ByteBuf data = mock(ByteBuf.class);
+        encoder.writeData(ctx, STREAM_ID, data, 0, false, promise);
+        assertTrue(promise.isDone());
+        assertFalse(promise.isSuccess());
+        assertThat(promise.cause(), instanceOf(IllegalStateException.class));
+        verify(data).release();
+    }
+
+    @Test
+    public void canWriteDataFrameAfterGoAwaySent() {
+        when(connection.goAwaySent()).thenReturn(true);
+        when(remote.lastKnownStream()).thenReturn(0);
+        ByteBuf data = mock(ByteBuf.class);
+        encoder.writeData(ctx, STREAM_ID, data, 0, false, promise);
+        verify(remoteFlow).sendFlowControlled(eq(ctx), eq(stream), any(FlowControlled.class));
+    }
+
+    @Test
+    public void canWriteHeaderFrameAfterGoAwaySent() {
+        when(connection.goAwaySent()).thenReturn(true);
+        when(remote.lastKnownStream()).thenReturn(0);
+        encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false, promise);
+        verify(remoteFlow).sendFlowControlled(eq(ctx), eq(stream), any(FlowControlled.class));
+    }
+
+    @Test
+    public void canWriteDataFrameAfterGoAwayReceived() {
+        when(connection.goAwayReceived()).thenReturn(true);
+        when(local.lastKnownStream()).thenReturn(STREAM_ID);
+        ByteBuf data = mock(ByteBuf.class);
+        encoder.writeData(ctx, STREAM_ID, data, 0, false, promise);
+        verify(remoteFlow).sendFlowControlled(eq(ctx), eq(stream), any(FlowControlled.class));
+    }
+
+    @Test
+    public void canWriteHeaderFrameAfterGoAwayReceived() {
+        when(connection.goAwayReceived()).thenReturn(true);
+        when(local.lastKnownStream()).thenReturn(STREAM_ID);
+        encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false, promise);
+        verify(remoteFlow).sendFlowControlled(eq(ctx), eq(stream), any(FlowControlled.class));
     }
 
     private void mockSendFlowControlledWriteEverything() {

@@ -163,11 +163,15 @@ public class DefaultHttp2Connection implements Http2Connection {
 
     @Override
     public void goAwayReceived(int lastKnownStream, long errorCode, ByteBuf debugData) {
-        boolean alreadyNotified = goAwayReceived();
         localEndpoint.lastKnownStream(lastKnownStream);
-        if (!alreadyNotified) {
-            for (int i = 0; i < listeners.size(); i++) {
-                listeners.get(i).onGoAwayReceived(lastKnownStream, errorCode, debugData);
+        for (Listener listener : listeners) {
+            listener.onGoAwayReceived(lastKnownStream, errorCode, debugData);
+        }
+
+        Http2Stream[] streams = new Http2Stream[numActiveStreams()];
+        for (Http2Stream stream : activeStreams().toArray(streams)) {
+            if (stream.id() > lastKnownStream && localEndpoint.createdStreamId(stream.id())) {
+                stream.close();
             }
         }
     }
@@ -179,11 +183,15 @@ public class DefaultHttp2Connection implements Http2Connection {
 
     @Override
     public void goAwaySent(int lastKnownStream, long errorCode, ByteBuf debugData) {
-        boolean alreadyNotified = goAwaySent();
         remoteEndpoint.lastKnownStream(lastKnownStream);
-        if (!alreadyNotified) {
-            for (int i = 0; i < listeners.size(); i++) {
-                listeners.get(i).onGoAwaySent(lastKnownStream, errorCode, debugData);
+        for (Listener listener : listeners) {
+            listener.onGoAwaySent(lastKnownStream, errorCode, debugData);
+        }
+
+        Http2Stream[] streams = new Http2Stream[numActiveStreams()];
+        for (Http2Stream stream : activeStreams().toArray(streams)) {
+            if (stream.id() > lastKnownStream && remoteEndpoint.createdStreamId(stream.id())) {
+                stream.close();
             }
         }
     }
@@ -911,7 +919,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public int lastKnownStream() {
-            return lastKnownStream >= 0 ? lastKnownStream : lastStreamCreated;
+            return lastKnownStream;
         }
 
         private void lastKnownStream(int lastKnownStream) {
@@ -934,8 +942,10 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         private void checkNewStreamAllowed(int streamId) throws Http2Exception {
-            if (goAwaySent() || goAwayReceived()) {
-                throw connectionError(PROTOCOL_ERROR, "Cannot create a stream since the connection is going away");
+            if (goAwayReceived() && streamId > localEndpoint.lastKnownStream()) {
+                throw connectionError(PROTOCOL_ERROR, "Cannot create stream %d since this endpoint has received a " +
+                                                      "GOAWAY frame with last stream id %d.", streamId,
+                                                      localEndpoint.lastKnownStream());
             }
             if (streamId < 0) {
                 throw new Http2NoMoreStreamIdsException();
