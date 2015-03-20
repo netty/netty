@@ -169,7 +169,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     void onGoAwayRead0(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
             throws Http2Exception {
         // Don't allow any more connections to be created.
-        connection.goAwayReceived(lastStreamId);
+        connection.goAwayReceived(lastStreamId, errorCode, debugData);
 
         listener.onGoAwayRead(ctx, lastStreamId, errorCode, debugData);
     }

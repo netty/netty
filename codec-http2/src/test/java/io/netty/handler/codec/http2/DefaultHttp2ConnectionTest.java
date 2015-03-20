@@ -30,6 +30,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http2.Http2Connection.Endpoint;
 import io.netty.handler.codec.http2.Http2Stream.State;
 
@@ -176,7 +178,7 @@ public class DefaultHttp2ConnectionTest {
 
     @Test(expected = Http2Exception.class)
     public void goAwayReceivedShouldDisallowCreation() throws Http2Exception {
-        server.goAwayReceived(0);
+        server.goAwayReceived(0, 1L, Unpooled.EMPTY_BUFFER);
         server.remote().createStream(3).open(true);
     }
 
@@ -321,10 +323,10 @@ public class DefaultHttp2ConnectionTest {
         streamD.setPriority(streamD.parent().id(), newWeight, false);
         verify(clientListener).onWeightChanged(eq(streamD), eq(oldWeight));
         assertEquals(streamD.weight(), newWeight);
-        verify(clientListener, never()).priorityTreeParentChanging(any(Http2Stream.class),
-                        any(Http2Stream.class));
-        verify(clientListener, never()).priorityTreeParentChanged(any(Http2Stream.class),
-                        any(Http2Stream.class));
+        verify(clientListener, never()).onPriorityTreeParentChanging(any(Http2Stream.class),
+                any(Http2Stream.class));
+        verify(clientListener, never()).onPriorityTreeParentChanged(any(Http2Stream.class),
+                any(Http2Stream.class));
     }
 
     @Test
@@ -552,8 +554,8 @@ public class DefaultHttp2ConnectionTest {
         assertSame(expectedArg1.size(), expectedArg2.size());
         ArgumentCaptor<Http2Stream> arg1Captor = ArgumentCaptor.forClass(Http2Stream.class);
         ArgumentCaptor<Http2Stream> arg2Captor = ArgumentCaptor.forClass(Http2Stream.class);
-        verify(clientListener, times(expectedArg1.size())).priorityTreeParentChanging(arg1Captor.capture(),
-                        arg2Captor.capture());
+        verify(clientListener, times(expectedArg1.size())).onPriorityTreeParentChanging(arg1Captor.capture(),
+                arg2Captor.capture());
         List<Http2Stream> capturedArg1 = arg1Captor.getAllValues();
         List<Http2Stream> capturedArg2 = arg2Captor.getAllValues();
         assertSame(capturedArg1.size(), capturedArg2.size());
@@ -568,8 +570,8 @@ public class DefaultHttp2ConnectionTest {
         assertSame(expectedArg1.size(), expectedArg2.size());
         ArgumentCaptor<Http2Stream> arg1Captor = ArgumentCaptor.forClass(Http2Stream.class);
         ArgumentCaptor<Http2Stream> arg2Captor = ArgumentCaptor.forClass(Http2Stream.class);
-        verify(clientListener, times(expectedArg1.size())).priorityTreeParentChanged(arg1Captor.capture(),
-                        arg2Captor.capture());
+        verify(clientListener, times(expectedArg1.size())).onPriorityTreeParentChanged(arg1Captor.capture(),
+                arg2Captor.capture());
         List<Http2Stream> capturedArg1 = arg1Captor.getAllValues();
         List<Http2Stream> capturedArg2 = arg2Captor.getAllValues();
         assertSame(capturedArg1.size(), capturedArg2.size());
@@ -597,10 +599,10 @@ public class DefaultHttp2ConnectionTest {
     }
 
     private void verifyParentChanging(Http2Stream stream, Http2Stream newParent) {
-        verify(clientListener).priorityTreeParentChanging(streamEq(stream), streamEq(newParent));
+        verify(clientListener).onPriorityTreeParentChanging(streamEq(stream), streamEq(newParent));
     }
 
     private void verifyParentChanged(Http2Stream stream, Http2Stream oldParent) {
-        verify(clientListener).priorityTreeParentChanged(streamEq(stream), streamEq(oldParent));
+        verify(clientListener).onPriorityTreeParentChanged(streamEq(stream), streamEq(oldParent));
     }
 }

@@ -40,7 +40,7 @@ import io.netty.handler.codec.compression.ZlibWrapper;
 public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecorator {
     private static final Http2ConnectionAdapter CLEAN_UP_LISTENER = new Http2ConnectionAdapter() {
         @Override
-        public void streamRemoved(Http2Stream stream) {
+        public void onStreamRemoved(Http2Stream stream) {
             final Http2Decompressor decompressor = decompressor(stream);
             if (decompressor != null) {
                 cleanup(stream, decompressor);
