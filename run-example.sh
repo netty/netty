@@ -16,6 +16,8 @@ EXAMPLE_MAP=(
   'http-upload-server:io.netty.example.http.upload.HttpUploadServer'
   'websocket-client:io.netty.example.http.websocketx.client.WebSocketClient'
   'websocket-server:io.netty.example.http.websocketx.server.WebSocketServer'
+  'http2-client:io.netty.example.http2.client.Http2Client'
+  'http2-server:io.netty.example.http2.server.Http2Server'
   'spdy-client:io.netty.example.spdy.client.SpdyClient'
   'spdy-server:io.netty.example.spdy.server.SpdyServer'
   'worldclock-client:io.netty.example.worldclock.WorldClockClient'
@@ -38,9 +40,15 @@ EXAMPLE_MAP=(
   'localecho:io.netty.example.localecho.LocalEcho'
 )
 
+NEEDS_NPN_MAP=(
+  'spdy-client'
+  'spdy-server'
+)
+
 EXAMPLE=''
 EXAMPLE_CLASS=''
 EXAMPLE_ARGS='-D_'
+FORCE_NPN=''
 I=0
 
 while [[ $# -gt 0 ]]; do
@@ -91,7 +99,13 @@ if [[ -z "$EXAMPLE" ]] || [[ -z "$EXAMPLE_CLASS" ]] || [[ $# -ne 0 ]]; then
   exit 1
 fi
 
+for E in "${NEEDS_NPN_MAP[@]}"; do
+  if [[ "$EXAMPLE" = "$E" ]]; then
+    FORCE_NPN='true'
+    break
+  fi
+done
+
 cd "`dirname "$0"`"/example
 echo "[INFO] Running: $EXAMPLE ($EXAMPLE_CLASS $EXAMPLE_ARGS)"
-exec mvn -q -nsu compile exec:exec -Dcheckstyle.skip=true -DargLine.example="$EXAMPLE_ARGS" -DexampleClass="$EXAMPLE_CLASS"
-
+exec mvn -q -nsu compile exec:exec -Dcheckstyle.skip=true -Dforcenpn="$FORCE_NPN" -DargLine.example="$EXAMPLE_ARGS" -DexampleClass="$EXAMPLE_CLASS"
