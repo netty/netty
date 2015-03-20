@@ -75,6 +75,45 @@ public class DefaultHttp2ConnectionTest {
     }
 
     @Test
+    public void goAwayReceivedShouldCloseStreamsGreaterThanLastStream() throws Exception {
+        Http2Stream stream1 = client.local().createStream(3).open(false);
+        Http2Stream stream2 = client.local().createStream(5).open(false);
+        Http2Stream remoteStream = client.remote().createStream(4).open(false);
+
+        assertEquals(State.OPEN, stream1.state());
+        assertEquals(State.OPEN, stream2.state());
+
+        client.goAwayReceived(3, 8, null);
+
+        assertEquals(State.OPEN, stream1.state());
+        assertEquals(State.CLOSED, stream2.state());
+        assertEquals(State.OPEN, remoteStream.state());
+        assertEquals(3, client.local().lastKnownStream());
+        assertEquals(5, client.local().lastStreamCreated());
+        // The remote endpoint must not be affected by a received GOAWAY frame.
+        assertEquals(-1, client.remote().lastKnownStream());
+        assertEquals(State.OPEN, remoteStream.state());
+    }
+
+    @Test
+    public void goAwaySentShouldCloseStreamsGreaterThanLastStream() throws Exception {
+        Http2Stream stream1 = server.remote().createStream(3).open(false);
+        Http2Stream stream2 = server.remote().createStream(5).open(false);
+        Http2Stream localStream = server.local().createStream(4).open(false);
+
+        server.goAwaySent(3, 8, null);
+
+        assertEquals(State.OPEN, stream1.state());
+        assertEquals(State.CLOSED, stream2.state());
+
+        assertEquals(3, server.remote().lastKnownStream());
+        assertEquals(5, server.remote().lastStreamCreated());
+        // The local endpoint must not be affected by a sent GOAWAY frame.
+        assertEquals(-1, server.local().lastKnownStream());
+        assertEquals(State.OPEN, localStream.state());
+    }
+
+    @Test
     public void serverCreateStreamShouldSucceed() throws Http2Exception {
         Http2Stream stream = server.local().createStream(2).open(false);
         assertEquals(2, stream.id());
