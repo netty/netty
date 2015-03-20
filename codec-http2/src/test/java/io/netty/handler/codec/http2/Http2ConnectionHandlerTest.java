@@ -22,6 +22,7 @@ import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
 import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
@@ -29,16 +30,17 @@ import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
@@ -272,7 +274,7 @@ public class Http2ConnectionHandlerTest {
             @Override
             public ChannelFuture answer(InvocationOnMock invocation) throws Throwable {
                 Object[] args = invocation.getArguments();
-                ChannelFutureListener listener = (ChannelFutureListener) args[0];
+                GenericFutureListener<ChannelFuture> listener = (GenericFutureListener<ChannelFuture>) args[0];
                 // Simulate that all streams have become inactive by the time the future completes.
                 when(connection.activeStreams()).thenReturn(Collections.<Http2Stream>emptyList());
                 when(connection.numActiveStreams()).thenReturn(0);
@@ -286,5 +288,50 @@ public class Http2ConnectionHandlerTest {
         // Simulate another stream close call being made after the context should already be closed.
         handler.closeStream(stream, future);
         verify(ctx, times(1)).close(any(ChannelPromise.class));
+    }
+
+    public void canSendGoAwayFrame() throws Exception {
+        handler = newHandler();
+        ByteBuf data = mock(ByteBuf.class);
+        long errorCode = Http2Error.INTERNAL_ERROR.code();
+        handler.goAway(ctx, STREAM_ID, errorCode, data, promise);
+
+        verify(connection).goAwaySent(eq(STREAM_ID), eq(errorCode), eq(data));
+        verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID), eq(errorCode), eq(data), eq(promise));
+    }
+
+    @Test
+    public void canSendGoAwayFramesWithDecreasingLastStreamIds() throws Exception {
+        handler = newHandler();
+        ByteBuf data = mock(ByteBuf.class);
+        long errorCode = Http2Error.INTERNAL_ERROR.code();
+
+        handler.goAway(ctx, STREAM_ID + 2, errorCode, data, promise);
+        verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID + 2), eq(errorCode), eq(data), eq(promise));
+        verify(connection).goAwaySent(eq(STREAM_ID + 2), eq(errorCode), eq(data));
+        handler.goAway(ctx, STREAM_ID, errorCode, data, promise);
+        verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID), eq(errorCode), eq(data), eq(promise));
+        verify(connection).goAwaySent(eq(STREAM_ID), eq(errorCode), eq(data));
+    }
+
+    @Test
+    public void cannotSendGoAwayFrameWithIncreasingLastStreamIds() throws Exception {
+        handler = newHandler();
+        ByteBuf data = mock(ByteBuf.class);
+        long errorCode = Http2Error.INTERNAL_ERROR.code();
+
+        handler.goAway(ctx, STREAM_ID, errorCode, data, promise);
+        verify(connection).goAwaySent(eq(STREAM_ID), eq(errorCode), eq(data));
+        verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID), eq(errorCode), eq(data), eq(promise));
+        // The frameWriter is only mocked, so it should not have interacted with the promise.
+        assertFalse(promise.isDone());
+
+        when(connection.goAwaySent()).thenReturn(true);
+        when(remote.lastKnownStream()).thenReturn(STREAM_ID);
+        handler.goAway(ctx, STREAM_ID + 2, errorCode, data, promise);
+        assertTrue(promise.isDone());
+        assertFalse(promise.isSuccess());
+        verify(data).release();
+        verifyNoMoreInteractions(frameWriter);
     }
 }

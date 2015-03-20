@@ -23,6 +23,8 @@ import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.isStreamError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.lang.String.format;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelFuture;
@@ -33,6 +35,9 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
+import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
 import java.util.Collection;
@@ -53,6 +58,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     private final Http2ConnectionEncoder encoder;
     private ChannelFutureListener closeListener;
     private BaseDecoder byteDecoder;
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Http2ConnectionHandler.class);
 
     public Http2ConnectionHandler(boolean server, Http2FrameListener listener) {
         this(new DefaultHttp2Connection(server), listener);
@@ -530,36 +536,47 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     @Override
-    public ChannelFuture goAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode,
-            ByteBuf debugData, ChannelPromise promise) {
-        Http2Connection connection = connection();
-        if (connection.goAwayReceived() || connection.goAwaySent()) {
+    public ChannelFuture goAway(final ChannelHandlerContext ctx, final int lastStreamId, final long errorCode,
+                                final ByteBuf debugData, ChannelPromise promise) {
+        try {
+            final Http2Connection connection = connection();
+            if (connection.goAwaySent() && connection.remote().lastKnownStream() < lastStreamId) {
+                throw connectionError(PROTOCOL_ERROR, "Last stream identifier must not increase between " +
+                                                      "sending multiple GOAWAY frames (was '%d', is '%d').",
+                                                      connection.remote().lastKnownStream(),
+                                                      lastStreamId);
+            }
+            connection.goAwaySent(lastStreamId, errorCode, debugData);
+
+            ChannelFuture future = frameWriter().writeGoAway(ctx, lastStreamId, errorCode, debugData, promise);
+            ctx.flush();
+
+            future.addListener(new GenericFutureListener<ChannelFuture>() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    if (!future.isSuccess()) {
+                        String msg = format("Sending GOAWAY failed: lastStreamId '%d', errorCode '%d', " +
+                                            "debugData '%s'.", lastStreamId, errorCode, debugData);
+                        logger.error(msg, future.cause());
+                        ctx.channel().close();
+                    }
+                }
+            });
+
+            return future;
+        } catch (Http2Exception e) {
             debugData.release();
-            return ctx.newSucceededFuture();
+            return promise.setFailure(e);
         }
-
-        connection.goAwaySent(lastStreamId, errorCode, debugData);
-
-        ChannelFuture future = frameWriter().writeGoAway(ctx, lastStreamId, errorCode, debugData, promise);
-        ctx.flush();
-
-        return future;
     }
 
     /**
      * Close the remote endpoint with with a {@code GO_AWAY} frame.
      */
     private ChannelFuture goAway(ChannelHandlerContext ctx, Http2Exception cause) {
-        Http2Connection connection = connection();
-        if (connection.goAwayReceived() || connection.goAwaySent()) {
-            return ctx.newSucceededFuture();
-        }
-
-        // The connection isn't alredy going away, send the GO_AWAY frame now to start
-        // the process.
         long errorCode = cause != null ? cause.error().code() : NO_ERROR.code();
         ByteBuf debugData = Http2CodecUtil.toByteBuf(ctx, cause);
-        int lastKnownStream = connection.remote().lastStreamCreated();
+        int lastKnownStream = connection().remote().lastStreamCreated();
         return goAway(ctx, lastKnownStream, errorCode, debugData, ctx.newPromise());
     }
 

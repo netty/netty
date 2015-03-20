@@ -168,10 +168,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
     void onGoAwayRead0(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
             throws Http2Exception {
-        // Don't allow any more connections to be created.
-        connection.goAwayReceived(lastStreamId, errorCode, debugData);
-
         listener.onGoAwayRead(ctx, lastStreamId, errorCode, debugData);
+        connection.goAwayReceived(lastStreamId, errorCode, debugData);
     }
 
     void onUnknownFrame0(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
@@ -186,53 +184,42 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         @Override
         public int onDataRead(final ChannelHandlerContext ctx, int streamId, ByteBuf data,
                 int padding, boolean endOfStream) throws Http2Exception {
-            // Check if we received a data frame for a stream which is half-closed
             Http2Stream stream = connection.requireStream(streamId);
+            Http2LocalFlowController flowController = flowController();
+            int bytesToReturn = data.readableBytes() + padding;
 
-            verifyGoAwayNotReceived();
+            if (stream.isResetSent() || streamCreatedAfterGoAwaySent(stream)) {
+                // Count the frame towards the connection flow control window and don't process it further.
+                flowController.receiveFlowControlledFrame(ctx, stream, data, padding, endOfStream);
+                flowController.consumeBytes(ctx, stream, bytesToReturn);
 
-            // We should ignore this frame if RST_STREAM was sent or if GO_AWAY was sent with a
-            // lower stream ID.
-            boolean shouldIgnore = shouldIgnoreFrame(stream, false);
+                // Since no bytes are consumed, return them all.
+                return bytesToReturn;
+            }
+
             Http2Exception error = null;
             switch (stream.state()) {
                 case OPEN:
                 case HALF_CLOSED_LOCAL:
                     break;
                 case HALF_CLOSED_REMOTE:
-                    // Always fail the stream if we've more data after the remote endpoint half-closed.
+                case CLOSED:
                     error = streamError(stream.id(), STREAM_CLOSED, "Stream %d in unexpected state: %s",
                         stream.id(), stream.state());
                     break;
-                case CLOSED:
-                    if (!shouldIgnore) {
-                        error = streamError(stream.id(), STREAM_CLOSED, "Stream %d in unexpected state: %s",
-                                stream.id(), stream.state());
-                    }
-                    break;
                 default:
-                    if (!shouldIgnore) {
-                        error = streamError(stream.id(), PROTOCOL_ERROR,
-                                "Stream %d in unexpected state: %s", stream.id(), stream.state());
-                    }
+                    error = streamError(stream.id(), PROTOCOL_ERROR,
+                        "Stream %d in unexpected state: %s", stream.id(), stream.state());
                     break;
             }
 
-            int bytesToReturn = data.readableBytes() + padding;
             int unconsumedBytes = unconsumedBytes(stream);
-            Http2LocalFlowController flowController = flowController();
             try {
-                // If we should apply flow control, do so now.
                 flowController.receiveFlowControlledFrame(ctx, stream, data, padding, endOfStream);
                 // Update the unconsumed bytes after flow control is applied.
                 unconsumedBytes = unconsumedBytes(stream);
 
-                // If we should ignore this frame, do so now.
-                if (shouldIgnore) {
-                    return bytesToReturn;
-                }
-
-                // If the stream was in an invalid state to receive the frame, throw the error.
+                // If the stream is in an invalid state to receive the frame, throw the error.
                 if (error != null) {
                     throw error;
                 }
@@ -256,7 +243,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 bytesToReturn -= delta;
                 throw e;
             } finally {
-                // If appropriate, returned the processed bytes to the flow controller.
+                // If appropriate, return the processed bytes to the flow controller.
                 if (bytesToReturn > 0) {
                     flowController.consumeBytes(ctx, stream, bytesToReturn);
                 }
@@ -277,14 +264,12 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int streamDependency,
                 short weight, boolean exclusive, int padding, boolean endOfStream) throws Http2Exception {
             Http2Stream stream = connection.stream(streamId);
-            verifyGoAwayNotReceived();
-            if (shouldIgnoreFrame(stream, false)) {
-                // Ignore this frame.
-                return;
-            }
 
             if (stream == null) {
                 stream = connection.remote().createStream(streamId).open(endOfStream);
+            } else if (stream.isResetSent() || streamCreatedAfterGoAwaySent(stream)) {
+                // Ignore this frame.
+                return;
             } else {
                 switch (stream.state()) {
                     case RESERVED_REMOTE:
@@ -297,9 +282,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                         break;
                     case HALF_CLOSED_REMOTE:
                     case CLOSED:
-                        // Stream error.
                         throw streamError(stream.id(), STREAM_CLOSED, "Stream %d in unexpected state: %s",
-                                stream.id(), stream.state());
+                                          stream.id(), stream.state());
                     default:
                         // Connection error.
                         throw connectionError(PROTOCOL_ERROR, "Stream %d in unexpected state: %s", stream.id(),
@@ -316,8 +300,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 // In this case we should ignore the exception and allow the frame to be sent.
             }
 
-            listener.onHeadersRead(ctx, streamId, headers,
-                    streamDependency, weight, exclusive, padding, endOfStream);
+            listener.onHeadersRead(ctx, streamId, headers, streamDependency, weight, exclusive, padding, endOfStream);
 
             // If the headers completes this stream, close it.
             if (endOfStream) {
@@ -329,17 +312,15 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         public void onPriorityRead(ChannelHandlerContext ctx, int streamId, int streamDependency, short weight,
                 boolean exclusive) throws Http2Exception {
             Http2Stream stream = connection.stream(streamId);
-            verifyGoAwayNotReceived();
-            if (shouldIgnoreFrame(stream, true)) {
-                // Ignore this frame.
-                return;
-            }
 
             try {
                 if (stream == null) {
                     // PRIORITY frames always identify a stream. This means that if a PRIORITY frame is the
                     // first frame to be received for a stream that we must create the stream.
                     stream = connection.remote().createStream(streamId);
+                } else if (streamCreatedAfterGoAwaySent(stream)) {
+                    // Ignore this frame.
+                    return;
                 }
 
                 // This call will create a stream for streamDependency if necessary.
@@ -356,6 +337,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         @Override
         public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
             Http2Stream stream = connection.requireStream(streamId);
+
             switch(stream.state()) {
             case IDLE:
                 throw connectionError(PROTOCOL_ERROR, "RST_STREAM received for IDLE stream %d", streamId);
@@ -453,9 +435,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
                 Http2Headers headers, int padding) throws Http2Exception {
             Http2Stream parentStream = connection.requireStream(streamId);
-            verifyGoAwayNotReceived();
-            if (shouldIgnoreFrame(parentStream, false)) {
-                // Ignore frames for any stream created after we sent a go-away.
+
+            if (streamCreatedAfterGoAwaySent(parentStream)) {
                 return;
             }
 
@@ -503,13 +484,12 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         public void onWindowUpdateRead(ChannelHandlerContext ctx, int streamId, int windowSizeIncrement)
                 throws Http2Exception {
             Http2Stream stream = connection.requireStream(streamId);
-            verifyGoAwayNotReceived();
-            if (stream.state() == CLOSED || shouldIgnoreFrame(stream, false)) {
-                // Ignore frames for any stream created after we sent a go-away.
+
+            if (stream.state() == CLOSED || streamCreatedAfterGoAwaySent(stream)) {
                 return;
             }
 
-            // Update the outbound flow controller.
+            // Update the outbound flow control window.
             encoder.flowController().incrementWindowSize(ctx, stream, windowSizeIncrement);
 
             listener.onWindowUpdateRead(ctx, streamId, windowSizeIncrement);
@@ -521,31 +501,10 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             onUnknownFrame0(ctx, frameType, streamId, flags, payload);
         }
 
-        /**
-         * Indicates whether or not frames for the given stream should be ignored based on the state of the
-         * stream/connection.
-         */
-        private boolean shouldIgnoreFrame(Http2Stream stream, boolean allowResetSent) {
-            if (connection.goAwaySent() &&
-                    (stream == null || connection.remote().lastStreamCreated() <= stream.id())) {
-                // Frames from streams created after we sent a go-away should be ignored.
-                // Frames for the connection stream ID (i.e. 0) will always be allowed.
-                return true;
-            }
-
-            // Also ignore inbound frames after we sent a RST_STREAM frame.
-            return stream != null && !allowResetSent && stream.isResetSent();
-        }
-
-        /**
-         * Verifies that a GO_AWAY frame was not previously received from the remote endpoint. If it was, throws a
-         * connection error.
-         */
-        private void verifyGoAwayNotReceived() throws Http2Exception {
-            if (connection.goAwayReceived()) {
-                // Connection error.
-                throw connectionError(PROTOCOL_ERROR, "Received frames after receiving GO_AWAY");
-            }
+        private boolean streamCreatedAfterGoAwaySent(Http2Stream stream) {
+            // Ignore inbound frames after a GOAWAY was sent and the stream id is greater than
+            // the last stream id set in the GOAWAY frame.
+            return connection().goAwaySent() && stream.id() > connection().remote().lastKnownStream();
         }
     }
 
