@@ -24,6 +24,7 @@ import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.isStreamError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -50,9 +51,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         ChannelOutboundHandler {
     private final Http2ConnectionDecoder decoder;
     private final Http2ConnectionEncoder encoder;
-    private ByteBuf clientPrefaceString;
-    private boolean prefaceSent;
     private ChannelFutureListener closeListener;
+    private BaseDecoder byteDecoder;
 
     public Http2ConnectionHandler(boolean server, Http2FrameListener listener) {
         this(new DefaultHttp2Connection(server), listener);
@@ -112,6 +112,10 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         return encoder;
     }
 
+    private boolean prefaceSent() {
+        return byteDecoder != null && byteDecoder.prefaceSent();
+    }
+
     /**
      * Handles the client-side (cleartext) upgrade from HTTP to HTTP/2.
      * Reserves local stream 1 for the HTTP/2 response.
@@ -120,7 +124,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         if (connection().isServer()) {
             throw connectionError(PROTOCOL_ERROR, "Client-side HTTP upgrade requested for a server");
         }
-        if (prefaceSent || decoder.prefaceReceived()) {
+        if (prefaceSent() || decoder.prefaceReceived()) {
             throw connectionError(PROTOCOL_ERROR, "HTTP upgrade must occur before HTTP/2 preface is sent or received");
         }
 
@@ -136,7 +140,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         if (!connection().isServer()) {
             throw connectionError(PROTOCOL_ERROR, "Server-side HTTP upgrade requested for a client");
         }
-        if (prefaceSent || decoder.prefaceReceived()) {
+        if (prefaceSent() || decoder.prefaceReceived()) {
             throw connectionError(PROTOCOL_ERROR, "HTTP upgrade must occur before HTTP/2 preface is sent or received");
         }
 
@@ -147,30 +151,189 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         connection().remote().createStream(HTTP_UPGRADE_STREAM_ID).open(true);
     }
 
-    @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        // The channel just became active - send the connection preface to the remote endpoint.
-        sendPreface(ctx);
-        super.channelActive(ctx);
+    private abstract class BaseDecoder {
+        public abstract void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception;
+        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception { }
+        public void channelActive(ChannelHandlerContext ctx) throws Exception { }
+
+        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+            try {
+                ChannelFuture future = ctx.newSucceededFuture();
+                final Collection<Http2Stream> streams = connection().activeStreams();
+                for (Http2Stream s : streams.toArray(new Http2Stream[streams.size()])) {
+                    closeStream(s, future);
+                }
+            } finally {
+                try {
+                    encoder().close();
+                } finally {
+                    decoder().close();
+                }
+            }
+        }
+
+        /**
+         * Determine if the HTTP/2 connection preface been sent.
+         */
+        public boolean prefaceSent() {
+            return true;
+        }
+    }
+
+    private final class PrefaceDecoder extends BaseDecoder {
+        private ByteBuf clientPrefaceString;
+        private boolean prefaceSent;
+
+        public PrefaceDecoder(ChannelHandlerContext ctx) {
+            clientPrefaceString = clientPrefaceString(encoder.connection());
+            // This handler was just added to the context. In case it was handled after
+            // the connection became active, send the connection preface now.
+            sendPreface(ctx);
+        }
+
+        @Override
+        public boolean prefaceSent() {
+            return prefaceSent;
+        }
+
+        @Override
+        public void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+            try {
+                if (readClientPrefaceString(in)) {
+                    // After the preface is read, it is time to hand over control to the post initialized decoder.
+                    Http2ConnectionHandler.this.byteDecoder = new FrameDecoder();
+                    Http2ConnectionHandler.this.byteDecoder.decode(ctx, in, out);
+                }
+            } catch (Throwable e) {
+                onException(ctx, e);
+            }
+        }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            // The channel just became active - send the connection preface to the remote endpoint.
+            sendPreface(ctx);
+        }
+
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+            cleanup();
+            super.channelInactive(ctx);
+        }
+
+        /**
+         * Releases the {@code clientPrefaceString}. Any active streams will be left in the open.
+         */
+        @Override
+        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+            cleanup();
+        }
+
+        /**
+         * Releases the {@code clientPrefaceString}. Any active streams will be left in the open.
+         */
+        private void cleanup() {
+            if (clientPrefaceString != null) {
+                clientPrefaceString.release();
+                clientPrefaceString = null;
+            }
+        }
+
+        /**
+         * Decodes the client connection preface string from the input buffer.
+         *
+         * @return {@code true} if processing of the client preface string is complete. Since client preface strings can
+         *         only be received by servers, returns true immediately for client endpoints.
+         */
+        private boolean readClientPrefaceString(ByteBuf in) throws Http2Exception {
+            if (clientPrefaceString == null) {
+                return true;
+            }
+
+            int prefaceRemaining = clientPrefaceString.readableBytes();
+            int bytesRead = Math.min(in.readableBytes(), prefaceRemaining);
+
+            // If the input so far doesn't match the preface, break the connection.
+            if (bytesRead == 0 || !ByteBufUtil.equals(in, in.readerIndex(),
+                    clientPrefaceString, clientPrefaceString.readerIndex(), bytesRead)) {
+                throw connectionError(PROTOCOL_ERROR, "HTTP/2 client preface string missing or corrupt.");
+            }
+            in.skipBytes(bytesRead);
+            clientPrefaceString.skipBytes(bytesRead);
+
+            if (!clientPrefaceString.isReadable()) {
+                // Entire preface has been read.
+                clientPrefaceString.release();
+                clientPrefaceString = null;
+                return true;
+            }
+            return false;
+        }
+
+        /**
+         * Sends the HTTP/2 connection preface upon establishment of the connection, if not already sent.
+         */
+        private void sendPreface(ChannelHandlerContext ctx) {
+            if (prefaceSent || !ctx.channel().isActive()) {
+                return;
+            }
+
+            prefaceSent = true;
+
+            if (!connection().isServer()) {
+                // Clients must send the preface string as the first bytes on the connection.
+                ctx.write(connectionPrefaceBuf()).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+            }
+
+            // Both client and server must send their initial settings.
+            encoder.writeSettings(ctx, decoder.localSettings(), ctx.newPromise()).addListener(
+                    ChannelFutureListener.CLOSE_ON_FAILURE);
+        }
+    }
+
+    private final class FrameDecoder extends BaseDecoder {
+        @Override
+        public void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+            try {
+                decoder.decodeFrame(ctx, in, out);
+            } catch (Throwable e) {
+                onException(ctx, e);
+            }
+        }
     }
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        clientPrefaceString = clientPrefaceString(encoder.connection());
-        // This handler was just added to the context. In case it was handled after
-        // the connection became active, send the connection preface now.
-        sendPreface(ctx);
+        byteDecoder = new PrefaceDecoder(ctx);
     }
 
-    /**
-     * Releases the {@code clientPrefaceString}. Any active streams will be left in the open.
-     */
     @Override
     protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
-        if (clientPrefaceString != null) {
-            clientPrefaceString.release();
-            clientPrefaceString = null;
+        if (byteDecoder != null) {
+            byteDecoder.handlerRemoved(ctx);
+            byteDecoder = null;
         }
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        if (byteDecoder == null) {
+            byteDecoder = new PrefaceDecoder(ctx);
+        }
+        byteDecoder.channelActive(ctx);
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        if (byteDecoder != null) {
+            byteDecoder.channelInactive(ctx);
+            byteDecoder = null;
+        }
+    }
+
+    @Override
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        byteDecoder.decode(ctx, in, out);
     }
 
     @Override
@@ -226,24 +389,6 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     @Override
     public void flush(ChannelHandlerContext ctx) throws Exception {
         ctx.flush();
-    }
-
-    @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        try {
-            ChannelFuture future = ctx.newSucceededFuture();
-            final Collection<Http2Stream> streams = connection().activeStreams();
-            for (Http2Stream s : streams.toArray(new Http2Stream[streams.size()])) {
-                closeStream(s, future);
-            }
-        } finally {
-            try {
-                encoder().close();
-            } finally {
-                decoder().close();
-            }
-        }
-        super.channelInactive(ctx);
     }
 
     /**
@@ -318,7 +463,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             if (closeListener != null && connection().numActiveStreams() == 0) {
                 ChannelFutureListener closeListener = Http2ConnectionHandler.this.closeListener;
                 // This method could be called multiple times
-                // and we don't want to notify the closeListener multiple times
+                // and we don't want to notify the closeListener multiple times.
                 Http2ConnectionHandler.this.closeListener = null;
                 closeListener.operationComplete(future);
             }
@@ -444,76 +589,6 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         ByteBuf debugData = Http2CodecUtil.toByteBuf(ctx, cause);
         int lastKnownStream = connection.remote().lastStreamCreated();
         return writeGoAway(ctx, lastKnownStream, errorCode, debugData, ctx.newPromise());
-    }
-
-    @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        try {
-            // Read the remaining of the client preface string if we haven't already.
-            // If this is a client endpoint, always returns true.
-            if (!readClientPrefaceString(in)) {
-                // Still processing the client preface.
-                return;
-            }
-
-            decoder.decodeFrame(ctx, in, out);
-        } catch (Throwable e) {
-            onException(ctx, e);
-        }
-    }
-
-    /**
-     * Sends the HTTP/2 connection preface upon establishment of the connection, if not already sent.
-     */
-    private void sendPreface(final ChannelHandlerContext ctx) {
-        if (prefaceSent || !ctx.channel().isActive()) {
-            return;
-        }
-
-        prefaceSent = true;
-
-        if (!connection().isServer()) {
-            // Clients must send the preface string as the first bytes on the connection.
-            ctx.write(connectionPrefaceBuf()).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
-        }
-
-        // Both client and server must send their initial settings.
-        encoder.writeSettings(ctx, decoder.localSettings(), ctx.newPromise()).addListener(
-                ChannelFutureListener.CLOSE_ON_FAILURE);
-    }
-
-    /**
-     * Decodes the client connection preface string from the input buffer.
-     *
-     * @return {@code true} if processing of the client preface string is complete. Since client preface strings can
-     *         only be received by servers, returns true immediately for client endpoints.
-     */
-    private boolean readClientPrefaceString(ByteBuf in) throws Http2Exception {
-        if (clientPrefaceString == null) {
-            return true;
-        }
-
-        int prefaceRemaining = clientPrefaceString.readableBytes();
-        int bytesRead = Math.min(in.readableBytes(), prefaceRemaining);
-
-        // Read the portion of the input up to the length of the preface, if reached.
-        ByteBuf sourceSlice = in.readSlice(bytesRead);
-
-        // Read the same number of bytes from the preface buffer.
-        ByteBuf prefaceSlice = clientPrefaceString.readSlice(bytesRead);
-
-        // If the input so far doesn't match the preface, break the connection.
-        if (bytesRead == 0 || !prefaceSlice.equals(sourceSlice)) {
-            throw connectionError(PROTOCOL_ERROR, "HTTP/2 client preface string missing or corrupt.");
-        }
-
-        if (!clientPrefaceString.isReadable()) {
-            // Entire preface has been read.
-            clientPrefaceString.release();
-            clientPrefaceString = null;
-            return true;
-        }
-        return false;
     }
 
     /**
