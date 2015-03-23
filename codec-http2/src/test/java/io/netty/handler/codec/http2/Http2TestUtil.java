@@ -247,7 +247,7 @@ final class Http2TestUtil {
 
                 @Override
                 public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
-                        ByteBuf payload) {
+                        ByteBuf payload) throws Http2Exception {
                     listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
                     latch.countDown();
                 }
@@ -373,7 +373,7 @@ final class Http2TestUtil {
 
         @Override
         public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
-                ByteBuf payload) {
+                ByteBuf payload) throws Http2Exception {
             listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
             messageLatch.countDown();
         }

@@ -20,7 +20,6 @@ import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.example.http2.Http2ExampleUtil.UPGRADE_RESPONSE_HEADER;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.logging.LogLevel.INFO;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.AsciiString;
@@ -79,7 +78,8 @@ public class HelloWorldHttp2Handler extends Http2ConnectionHandler {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        super.exceptionCaught(ctx, cause);
         cause.printStackTrace();
         ctx.close();
     }

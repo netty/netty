@@ -15,12 +15,74 @@
  */
 package io.netty.buffer;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+
+import java.util.Random;
+
 import org.junit.Assert;
 import org.junit.Test;
 
 public class ByteBufUtilTest {
+    @Test
+    public void equalsBufferSubsections() {
+        byte[] b1 = new byte[128];
+        byte[] b2 = new byte[256];
+        Random rand = new Random();
+        rand.nextBytes(b1);
+        rand.nextBytes(b2);
+        final int iB1 = b1.length / 2;
+        final int iB2 = iB1 + b1.length;
+        final int length = b1.length - iB1;
+        System.arraycopy(b1, iB1, b2, iB2, length);
+        assertTrue(ByteBufUtil.equals(Unpooled.wrappedBuffer(b1), iB1, Unpooled.wrappedBuffer(b2), iB2, length));
+    }
+
+    @Test
+    public void notEqualsBufferSubsections() {
+        byte[] b1 = new byte[50];
+        byte[] b2 = new byte[256];
+        Random rand = new Random();
+        rand.nextBytes(b1);
+        rand.nextBytes(b2);
+        final int iB1 = b1.length / 2;
+        final int iB2 = iB1 + b1.length;
+        final int length = b1.length - iB1;
+        System.arraycopy(b1, iB1, b2, iB2, length - 1);
+        assertFalse(ByteBufUtil.equals(Unpooled.wrappedBuffer(b1), iB1, Unpooled.wrappedBuffer(b2), iB2, length));
+    }
+
+    @Test
+    public void notEqualsBufferOverflow() {
+        byte[] b1 = new byte[8];
+        byte[] b2 = new byte[16];
+        Random rand = new Random();
+        rand.nextBytes(b1);
+        rand.nextBytes(b2);
+        final int iB1 = b1.length / 2;
+        final int iB2 = iB1 + b1.length;
+        final int length = b1.length - iB1;
+        System.arraycopy(b1, iB1, b2, iB2, length - 1);
+        assertFalse(ByteBufUtil.equals(Unpooled.wrappedBuffer(b1), iB1, Unpooled.wrappedBuffer(b2), iB2,
+                Math.max(b1.length, b2.length) * 2));
+    }
+
+    @Test (expected = IllegalArgumentException.class)
+    public void notEqualsBufferUnderflow() {
+        byte[] b1 = new byte[8];
+        byte[] b2 = new byte[16];
+        Random rand = new Random();
+        rand.nextBytes(b1);
+        rand.nextBytes(b2);
+        final int iB1 = b1.length / 2;
+        final int iB2 = iB1 + b1.length;
+        final int length = b1.length - iB1;
+        System.arraycopy(b1, iB1, b2, iB2, length - 1);
+        assertFalse(ByteBufUtil.equals(Unpooled.wrappedBuffer(b1), iB1, Unpooled.wrappedBuffer(b2), iB2,
+                -1));
+    }
 
     @Test
     public void testWriteUsAscii() {

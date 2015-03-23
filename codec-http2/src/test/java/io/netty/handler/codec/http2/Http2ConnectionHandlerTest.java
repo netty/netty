@@ -34,6 +34,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -178,8 +179,41 @@ public class Http2ConnectionHandlerTest {
     public void serverReceivingValidClientPrefaceStringShouldContinueReadingFrames() throws Exception {
         when(connection.isServer()).thenReturn(true);
         handler = newHandler();
+        ByteBuf preface = connectionPrefaceBuf();
+        ByteBuf prefacePlusSome = Unpooled.wrappedBuffer(new byte[preface.readableBytes() + 1]);
+        prefacePlusSome.resetWriterIndex().writeBytes(preface).writeByte(0);
+        handler.channelRead(ctx, prefacePlusSome);
+        verify(decoder, times(2)).decodeFrame(eq(ctx), any(ByteBuf.class), Matchers.<List<Object>>any());
+    }
+
+    @Test
+    public void serverReceivingValidClientPrefaceStringShouldOnlyReadWholeFrame() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        handler = newHandler();
         handler.channelRead(ctx, connectionPrefaceBuf());
-        verify(decoder).decodeFrame(eq(ctx), any(ByteBuf.class), Matchers.<List<Object>>any());
+        verify(decoder).decodeFrame(any(ChannelHandlerContext.class),
+                any(ByteBuf.class), Matchers.<List<Object>>any());
+    }
+
+    @Test
+    public void verifyChannelHandlerCanBeReusedInPipeline() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        handler = newHandler();
+        // Only read the connection preface...after preface is read internal state of Http2ConnectionHandler
+        // is expected to change relative to the pipeline.
+        ByteBuf preface = connectionPrefaceBuf();
+        verify(decoder, never()).decodeFrame(any(ChannelHandlerContext.class),
+                any(ByteBuf.class), Matchers.<List<Object>>any());
+
+        // Now remove and add the handler...this is setting up the test condition.
+        handler.handlerRemoved(ctx);
+        handler.handlerAdded(ctx);
+
+        // Now verify we can continue as normal, reading connection preface plus more.
+        ByteBuf prefacePlusSome = Unpooled.wrappedBuffer(new byte[preface.readableBytes() + 1]);
+        prefacePlusSome.resetWriterIndex().writeBytes(preface).writeByte(0);
+        handler.channelRead(ctx, prefacePlusSome);
+        verify(decoder, times(2)).decodeFrame(eq(ctx), any(ByteBuf.class), Matchers.<List<Object>>any());
     }
 
     @Test
