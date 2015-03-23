@@ -568,7 +568,8 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                 listener);
     }
 
-    private void readUnknownFrame(ChannelHandlerContext ctx, ByteBuf payload, Http2FrameListener listener) {
+    private void readUnknownFrame(ChannelHandlerContext ctx, ByteBuf payload, Http2FrameListener listener)
+            throws Http2Exception {
         payload = payload.readSlice(payload.readableBytes());
         listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
     }

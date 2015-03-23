@@ -37,14 +37,13 @@ import java.util.List;
  * {@link Http2LocalFlowController}
  */
 public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
-    private final Http2FrameListener internalFrameListener = new FrameReadListener();
+    private Http2FrameListener internalFrameListener = new PrefaceFrameListener();
     private final Http2Connection connection;
     private final Http2LifecycleManager lifecycleManager;
     private final Http2ConnectionEncoder encoder;
     private final Http2FrameReader frameReader;
     private final Http2FrameListener listener;
     private final Http2PromisedRequestVerifier requestVerifier;
-    private boolean prefaceReceived;
 
     /**
      * Builder for instances of {@link DefaultHttp2ConnectionDecoder}.
@@ -138,7 +137,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
     @Override
     public boolean prefaceReceived() {
-        return prefaceReceived;
+        return FrameReadListener.class == internalFrameListener.getClass();
     }
 
     @Override
@@ -213,16 +212,26 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         return flowController().unconsumedBytes(stream);
     }
 
+    void onGoAwayRead0(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
+            throws Http2Exception {
+        // Don't allow any more connections to be created.
+        connection.goAwayReceived(lastStreamId);
+
+        listener.onGoAwayRead(ctx, lastStreamId, errorCode, debugData);
+    }
+
+    void onUnknownFrame0(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
+            ByteBuf payload) throws Http2Exception {
+        listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
+    }
+
     /**
      * Handles all inbound frames from the network.
      */
     private final class FrameReadListener implements Http2FrameListener {
-
         @Override
         public int onDataRead(final ChannelHandlerContext ctx, int streamId, ByteBuf data,
                 int padding, boolean endOfStream) throws Http2Exception {
-            verifyPrefaceReceived();
-
             // Check if we received a data frame for a stream which is half-closed
             Http2Stream stream = connection.requireStream(streamId);
 
@@ -304,15 +313,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             }
         }
 
-        /**
-         * Verifies that the HTTP/2 connection preface has been received from the remote endpoint.
-         */
-        private void verifyPrefaceReceived() throws Http2Exception {
-            if (!prefaceReceived) {
-                throw connectionError(PROTOCOL_ERROR, "Received non-SETTINGS as first frame.");
-            }
-        }
-
         @Override
         public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
                 boolean endOfStream) throws Http2Exception {
@@ -322,8 +322,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         @Override
         public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int streamDependency,
                 short weight, boolean exclusive, int padding, boolean endOfStream) throws Http2Exception {
-            verifyPrefaceReceived();
-
             Http2Stream stream = connection.stream(streamId);
             verifyGoAwayNotReceived();
             if (shouldIgnoreFrame(stream, false)) {
@@ -369,8 +367,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         @Override
         public void onPriorityRead(ChannelHandlerContext ctx, int streamId, int streamDependency, short weight,
                 boolean exclusive) throws Http2Exception {
-            verifyPrefaceReceived();
-
             Http2Stream stream = connection.stream(streamId);
             verifyGoAwayNotReceived();
             if (shouldIgnoreFrame(stream, true)) {
@@ -393,8 +389,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
         @Override
         public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
-            verifyPrefaceReceived();
-
             Http2Stream stream = connection.requireStream(streamId);
             if (stream.state() == CLOSED) {
                 // RstStream frames must be ignored for closed streams.
@@ -408,9 +402,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
         @Override
         public void onSettingsAckRead(ChannelHandlerContext ctx) throws Http2Exception {
-            verifyPrefaceReceived();
-            // Apply oldest outstanding local settings here. This is a synchronization point
-            // between endpoints.
+            // Apply oldest outstanding local settings here. This is a synchronization point between endpoints.
             Http2Settings settings = encoder.pollSentSettings();
 
             if (settings != null) {
@@ -469,16 +461,11 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             // Acknowledge receipt of the settings.
             encoder.writeSettingsAck(ctx, ctx.newPromise());
 
-            // We've received at least one non-ack settings frame from the remote endpoint.
-            prefaceReceived = true;
-
             listener.onSettingsRead(ctx, settings);
         }
 
         @Override
         public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
-            verifyPrefaceReceived();
-
             // Send an ack back to the remote client.
             // Need to retain the buffer here since it will be released after the write completes.
             encoder.writePing(ctx, true, data.retain(), ctx.newPromise());
@@ -489,16 +476,12 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
         @Override
         public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
-            verifyPrefaceReceived();
-
             listener.onPingAckRead(ctx, data);
         }
 
         @Override
         public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
                 Http2Headers headers, int padding) throws Http2Exception {
-            verifyPrefaceReceived();
-
             Http2Stream parentStream = connection.requireStream(streamId);
             verifyGoAwayNotReceived();
             if (shouldIgnoreFrame(parentStream, false)) {
@@ -543,17 +526,12 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         @Override
         public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
                 throws Http2Exception {
-            // Don't allow any more connections to be created.
-            connection.goAwayReceived(lastStreamId);
-
-            listener.onGoAwayRead(ctx, lastStreamId, errorCode, debugData);
+            onGoAwayRead0(ctx, lastStreamId, errorCode, debugData);
         }
 
         @Override
         public void onWindowUpdateRead(ChannelHandlerContext ctx, int streamId, int windowSizeIncrement)
                 throws Http2Exception {
-            verifyPrefaceReceived();
-
             Http2Stream stream = connection.requireStream(streamId);
             verifyGoAwayNotReceived();
             if (stream.state() == CLOSED || shouldIgnoreFrame(stream, false)) {
@@ -569,8 +547,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
         @Override
         public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
-                ByteBuf payload) {
-            listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
+                ByteBuf payload) throws Http2Exception {
+            onUnknownFrame0(ctx, frameType, streamId, flags, payload);
         }
 
         /**
@@ -598,6 +576,109 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 // Connection error.
                 throw connectionError(PROTOCOL_ERROR, "Received frames after receiving GO_AWAY");
             }
+        }
+    }
+
+    private final class PrefaceFrameListener implements Http2FrameListener {
+        /**
+         * Verifies that the HTTP/2 connection preface has been received from the remote endpoint.
+         * It is possible that the current call to
+         * {@link Http2FrameReader#readFrame(ChannelHandlerContext, ByteBuf, Http2FrameListener)} will have multiple
+         * frames to dispatch. So it may be OK for this class to get legitimate frames for the first readFrame.
+         */
+        private void verifyPrefaceReceived() throws Http2Exception {
+            if (!prefaceReceived()) {
+                throw connectionError(PROTOCOL_ERROR, "Received non-SETTINGS as first frame.");
+            }
+        }
+
+        @Override
+        public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
+                throws Http2Exception {
+            verifyPrefaceReceived();
+            return internalFrameListener.onDataRead(ctx, streamId, data, padding, endOfStream);
+        }
+
+        @Override
+        public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
+                boolean endOfStream) throws Http2Exception {
+            verifyPrefaceReceived();
+            internalFrameListener.onHeadersRead(ctx, streamId, headers, padding, endOfStream);
+        }
+
+        @Override
+        public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int streamDependency,
+                short weight, boolean exclusive, int padding, boolean endOfStream) throws Http2Exception {
+            verifyPrefaceReceived();
+            internalFrameListener.onHeadersRead(ctx, streamId, headers, streamDependency, weight,
+                    exclusive, padding, endOfStream);
+        }
+
+        @Override
+        public void onPriorityRead(ChannelHandlerContext ctx, int streamId, int streamDependency, short weight,
+                boolean exclusive) throws Http2Exception {
+            verifyPrefaceReceived();
+            internalFrameListener.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);
+        }
+
+        @Override
+        public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
+            verifyPrefaceReceived();
+            internalFrameListener.onRstStreamRead(ctx, streamId, errorCode);
+        }
+
+        @Override
+        public void onSettingsAckRead(ChannelHandlerContext ctx) throws Http2Exception {
+            verifyPrefaceReceived();
+            internalFrameListener.onSettingsAckRead(ctx);
+        }
+
+        @Override
+        public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) throws Http2Exception {
+            // The first settings should change the internalFrameListener to the "real" listener
+            // that expects the preface to be verified.
+            if (!prefaceReceived()) {
+                internalFrameListener = new FrameReadListener();
+            }
+            internalFrameListener.onSettingsRead(ctx, settings);
+        }
+
+        @Override
+        public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
+            verifyPrefaceReceived();
+            internalFrameListener.onPingRead(ctx, data);
+        }
+
+        @Override
+        public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
+            verifyPrefaceReceived();
+            internalFrameListener.onPingAckRead(ctx, data);
+        }
+
+        @Override
+        public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
+                Http2Headers headers, int padding) throws Http2Exception {
+            verifyPrefaceReceived();
+            internalFrameListener.onPushPromiseRead(ctx, streamId, promisedStreamId, headers, padding);
+        }
+
+        @Override
+        public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
+                throws Http2Exception {
+            onGoAwayRead0(ctx, lastStreamId, errorCode, debugData);
+        }
+
+        @Override
+        public void onWindowUpdateRead(ChannelHandlerContext ctx, int streamId, int windowSizeIncrement)
+                throws Http2Exception {
+            verifyPrefaceReceived();
+            internalFrameListener.onWindowUpdateRead(ctx, streamId, windowSizeIncrement);
+        }
+
+        @Override
+        public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
+                ByteBuf payload) throws Http2Exception {
+            onUnknownFrame0(ctx, frameType, streamId, flags, payload);
         }
     }
 }
