@@ -178,7 +178,55 @@ public final class ByteBufUtil {
 
     /**
      * Returns {@code true} if and only if the two specified buffers are
-     * identical to each other as described in {@code ChannelBuffer#equals(Object)}.
+     * identical to each other for {@code length} bytes starting at {@code aStartIndex}
+     * index for the {@code a} buffer and {@code bStartIndex} index for the {@code b} buffer.
+     * A more compact way to express this is:
+     * <p>
+     * {@code a[aStartIndex : aStartIndex + length] == b[bStartIndex : bStartIndex + length]}
+     */
+    public static boolean equals(ByteBuf a, int aStartIndex, ByteBuf b, int bStartIndex, int length) {
+        if (aStartIndex < 0 || bStartIndex < 0 || length < 0) {
+            throw new IllegalArgumentException("All indexes and lengths must be non-negative");
+        }
+        if (a.writerIndex() - length < aStartIndex || b.writerIndex() - length < bStartIndex) {
+            return false;
+        }
+
+        final int longCount = length >>> 3;
+        final int byteCount = length & 7;
+
+        if (a.order() == b.order()) {
+            for (int i = longCount; i > 0; i --) {
+                if (a.getLong(aStartIndex) != b.getLong(bStartIndex)) {
+                    return false;
+                }
+                aStartIndex += 8;
+                bStartIndex += 8;
+            }
+        } else {
+            for (int i = longCount; i > 0; i --) {
+                if (a.getLong(aStartIndex) != swapLong(b.getLong(bStartIndex))) {
+                    return false;
+                }
+                aStartIndex += 8;
+                bStartIndex += 8;
+            }
+        }
+
+        for (int i = byteCount; i > 0; i --) {
+            if (a.getByte(aStartIndex) != b.getByte(bStartIndex)) {
+                return false;
+            }
+            aStartIndex ++;
+            bStartIndex ++;
+        }
+
+        return true;
+    }
+
+    /**
+     * Returns {@code true} if and only if the two specified buffers are
+     * identical to each other as described in {@link ByteBuf#equals(Object)}.
      * This method is useful when implementing a new buffer type.
      */
     public static boolean equals(ByteBuf bufferA, ByteBuf bufferB) {
@@ -186,40 +234,7 @@ public final class ByteBufUtil {
         if (aLen != bufferB.readableBytes()) {
             return false;
         }
-
-        final int longCount = aLen >>> 3;
-        final int byteCount = aLen & 7;
-
-        int aIndex = bufferA.readerIndex();
-        int bIndex = bufferB.readerIndex();
-
-        if (bufferA.order() == bufferB.order()) {
-            for (int i = longCount; i > 0; i --) {
-                if (bufferA.getLong(aIndex) != bufferB.getLong(bIndex)) {
-                    return false;
-                }
-                aIndex += 8;
-                bIndex += 8;
-            }
-        } else {
-            for (int i = longCount; i > 0; i --) {
-                if (bufferA.getLong(aIndex) != swapLong(bufferB.getLong(bIndex))) {
-                    return false;
-                }
-                aIndex += 8;
-                bIndex += 8;
-            }
-        }
-
-        for (int i = byteCount; i > 0; i --) {
-            if (bufferA.getByte(aIndex) != bufferB.getByte(bIndex)) {
-                return false;
-            }
-            aIndex ++;
-            bIndex ++;
-        }
-
-        return true;
+        return equals(bufferA, bufferA.readerIndex(), bufferB, bufferB.readerIndex(), aLen);
     }
 
     /**

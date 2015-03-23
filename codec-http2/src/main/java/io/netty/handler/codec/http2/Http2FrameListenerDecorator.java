@@ -97,7 +97,7 @@ public class Http2FrameListenerDecorator implements Http2FrameListener {
 
     @Override
     public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
-            ByteBuf payload) {
+            ByteBuf payload) throws Http2Exception {
         listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
     }
 }

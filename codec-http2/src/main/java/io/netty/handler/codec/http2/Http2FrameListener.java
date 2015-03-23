@@ -211,5 +211,6 @@ public interface Http2FrameListener {
      * @param flags the flags in the frame header.
      * @param payload the payload of the frame.
      */
-    void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags, ByteBuf payload);
+    void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags, ByteBuf payload)
+            throws Http2Exception;
 }
