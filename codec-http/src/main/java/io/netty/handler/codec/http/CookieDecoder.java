@@ -31,7 +31,7 @@ import java.util.TreeSet;
  * <pre>
  * {@link HttpRequest} req = ...;
  * String value = req.getHeader("Cookie");
- * Set&lt;{@link Cookie}&gt; cookies = new {@link CookieDecoder}().decode(value);
+ * Set&lt;{@link Cookie}&gt; cookies = {@link CookieDecoder}.decode(value);
  * </pre>
  *
  * @see ClientCookieEncoder
