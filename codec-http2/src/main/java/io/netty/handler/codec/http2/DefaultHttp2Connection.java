@@ -81,7 +81,6 @@ public class DefaultHttp2Connection implements Http2Connection {
      *            the policy to be used for removal of closed stream.
      */
     public DefaultHttp2Connection(boolean server, Http2StreamRemovalPolicy removalPolicy) {
-
         this.removalPolicy = checkNotNull(removalPolicy, "removalPolicy");
         localEndpoint = new DefaultEndpoint<Http2LocalFlowController>(server);
         remoteEndpoint = new DefaultEndpoint<Http2RemoteFlowController>(!server);
@@ -184,15 +183,25 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
     }
 
-    private void removeStream(DefaultStream stream) {
-        // Notify the listeners of the event first.
-        for (Listener listener : listeners) {
-            listener.onStreamRemoved(stream);
-        }
+    /**
+     * Closed streams may stay in the priority tree if they have dependents that are in prioritizable states.
+     * When a stream is requested to be removed we can only actually remove that stream when there are no more
+     * prioritizable children.
+     * (see [1] {@link Http2Stream#prioritizableForTree()} and [2] {@link DefaultStream#removeChild(DefaultStream)}).
+     * When a priority tree edge changes we also have to re-evaluate viable nodes
+     * (see [3] {@link DefaultStream#takeChild(DefaultStream, boolean, List)}).
+     * @param stream The stream to remove.
+     */
+    void removeStream(DefaultStream stream) {
+        // [1] Check if this stream can be removed because it has no prioritizable descendants.
+        if (stream.parent().removeChild(stream)) {
+            // Remove it from the map and priority tree.
+            streamMap.remove(stream.id());
 
-        // Remove it from the map and priority tree.
-        streamMap.remove(stream.id());
-        stream.parent().removeChild(stream);
+            for (Listener listener : listeners) {
+                listener.onStreamRemoved(stream);
+            }
+        }
     }
 
     /**
@@ -205,6 +214,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         private DefaultStream parent;
         private IntObjectMap<DefaultStream> children = newChildMap();
         private int totalChildWeights;
+        private int prioritizableForTree = 1;
         private boolean resetSent;
         private PropertyMap data;
 
@@ -235,17 +245,17 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public Object setProperty(Object key, Object value) {
+        public final Object setProperty(Object key, Object value) {
             return data.put(key, value);
         }
 
         @Override
-        public <V> V getProperty(Object key) {
+        public final <V> V getProperty(Object key) {
             return data.get(key);
         }
 
         @Override
-        public <V> V removeProperty(Object key) {
+        public final <V> V removeProperty(Object key) {
             return data.remove(key);
         }
 
@@ -267,6 +277,11 @@ public class DefaultHttp2Connection implements Http2Connection {
         @Override
         public final DefaultStream parent() {
             return parent;
+        }
+
+        @Override
+        public final int prioritizableForTree() {
+            return prioritizableForTree;
         }
 
         @Override
@@ -325,10 +340,10 @@ public class DefaultHttp2Connection implements Http2Connection {
             // Already have a priority. Re-prioritize the stream.
             weight(weight);
 
-            if (newParent != parent() || exclusive) {
-                List<ParentChangedEvent> events;
+            if (newParent != parent() || (exclusive && newParent.numChildren() != 1)) {
+                final List<ParentChangedEvent> events;
                 if (newParent.isDescendantOf(this)) {
-                    events = new ArrayList<ParentChangedEvent>(2 + (exclusive ? newParent.numChildren(): 0));
+                    events = new ArrayList<ParentChangedEvent>(2 + (exclusive ? newParent.numChildren() : 0));
                     parent.takeChild(newParent, false, events);
                 } else {
                     events = new ArrayList<ParentChangedEvent>(1 + (exclusive ? newParent.numChildren() : 0));
@@ -375,6 +390,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             }
 
             state = CLOSED;
+            decrementPrioritizableForTree(1);
             if (activeStreams.remove(this)) {
                 try {
                     // Update the number of active streams initiated by the endpoint.
@@ -424,6 +440,59 @@ public class DefaultHttp2Connection implements Http2Connection {
             return this;
         }
 
+        /**
+         * Recursively increment the {@link #prioritizableForTree} for this object up the parent links until
+         * either we go past the root or {@code oldParent} is encountered.
+         * @param amt The amount to increment by. This must be positive.
+         * @param oldParent The previous parent for this stream.
+         */
+        private void incrementPrioritizableForTree(int amt, Http2Stream oldParent) {
+            if (amt != 0) {
+                incrementPrioritizableForTree0(amt, oldParent);
+            }
+        }
+
+        /**
+         * Direct calls to this method are discouraged.
+         * Instead use {@link #incrementPrioritizableForTree(int, Http2Stream)}.
+         */
+        private void incrementPrioritizableForTree0(int amt, Http2Stream oldParent) {
+            assert amt > 0;
+            prioritizableForTree += amt;
+            if (parent != null && parent != oldParent) {
+                parent.incrementPrioritizableForTree(amt, oldParent);
+            }
+        }
+
+        /**
+         * Recursively increment the {@link #prioritizableForTree} for this object up the parent links until
+         * either we go past the root.
+         * @param amt The amount to decrement by. This must be positive.
+         */
+        private void decrementPrioritizableForTree(int amt) {
+            if (amt != 0) {
+                decrementPrioritizableForTree0(amt);
+            }
+        }
+
+        /**
+         * Direct calls to this method are discouraged. Instead use {@link #decrementPrioritizableForTree(int)}.
+         */
+        private void decrementPrioritizableForTree0(int amt) {
+            assert amt > 0;
+            prioritizableForTree -= amt;
+            if (parent != null) {
+                parent.decrementPrioritizableForTree(amt);
+            }
+        }
+
+        /**
+         * Determine if this node by itself is considered to be valid in the priority tree.
+         */
+        private boolean isPrioritizable() {
+            return state != CLOSED;
+        }
+
         private void notifyHalfClosed(Http2Stream stream) {
             for (Listener listener : listeners) {
                 listener.onStreamHalfClosed(stream);
@@ -464,6 +533,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         final IntObjectMap<DefaultStream> removeAllChildren() {
             totalChildWeights = 0;
+            prioritizableForTree = isPrioritizable() ? 1 : 0;
             IntObjectMap<DefaultStream> prevChildren = children;
             children = newChildMap();
             return prevChildren;
@@ -481,8 +551,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
             if (exclusive && !children.isEmpty()) {
                 // If it was requested that this child be the exclusive dependency of this node,
-                // move any previous children to the child node, becoming grand children
-                // of this node.
+                // move any previous children to the child node, becoming grand children of this node.
                 for (DefaultStream grandchild : removeAllChildren().values()) {
                     child.takeChild(grandchild, false, events);
                 }
@@ -490,31 +559,44 @@ public class DefaultHttp2Connection implements Http2Connection {
 
             if (children.put(child.id(), child) == null) {
                 totalChildWeights += child.weight();
+                incrementPrioritizableForTree(child.prioritizableForTree(), oldParent);
             }
 
             if (oldParent != null && oldParent.children.remove(child.id()) != null) {
                 oldParent.totalChildWeights -= child.weight();
+                if (!child.isDescendantOf(oldParent)) {
+                    oldParent.decrementPrioritizableForTree(child.prioritizableForTree());
+                    if (oldParent.prioritizableForTree() == 0) {
+                        removeStream(oldParent);
+                    }
+                }
             }
         }
 
         /**
          * Removes the child priority and moves any of its dependencies to being direct dependencies on this node.
          */
-        final void removeChild(DefaultStream child) {
-            if (children.remove(child.id()) != null) {
-                List<ParentChangedEvent> events = new ArrayList<ParentChangedEvent>(1 + child.children.size());
+        final boolean removeChild(DefaultStream child) {
+            if (child.prioritizableForTree() == 0 && children.remove(child.id()) != null) {
+                List<ParentChangedEvent> events = new ArrayList<ParentChangedEvent>(1 + child.numChildren());
                 events.add(new ParentChangedEvent(child, child.parent()));
                 notifyParentChanging(child, null);
                 child.parent = null;
                 totalChildWeights -= child.weight();
+                decrementPrioritizableForTree(child.prioritizableForTree());
 
                 // Move up any grand children to be directly dependent on this node.
                 for (DefaultStream grandchild : child.children.values()) {
                     takeChild(grandchild, false, events);
                 }
 
+                if (prioritizableForTree() == 0) {
+                    removeStream(this);
+                }
                 notifyParentChanged(events);
+                return true;
             }
+            return false;
         }
     }
 
@@ -642,6 +724,16 @@ public class DefaultHttp2Connection implements Http2Connection {
     private final class ConnectionStream extends DefaultStream {
         ConnectionStream() {
             super(CONNECTION_STREAM_ID);
+        }
+
+        @Override
+        public boolean isResetSent() {
+            return false;
+        }
+
+        @Override
+        public Http2Stream resetSent() {
+            throw new UnsupportedOperationException();
         }
 
         @Override

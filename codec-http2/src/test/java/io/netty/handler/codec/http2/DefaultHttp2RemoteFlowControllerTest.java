@@ -932,7 +932,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
     }
 
     /**
-     * In this test, we block all streams and remove a node from the priority tree and verify
+     * In this test, we block all streams and close an internal stream in the priority tree but tree should not change
      *
      * <pre>
      *        [0]
@@ -941,17 +941,9 @@ public class DefaultHttp2RemoteFlowControllerTest {
      *      / \
      *     C   D
      * </pre>
-     *
-     * After the tree shift:
-     *
-     * <pre>
-     *        [0]
-     *       / | \
-     *      C  D  B
-     * </pre>
      */
     @Test
-    public void subTreeBytesShouldBeCorrectWithRemoval() throws Http2Exception {
+    public void subTreeBytesShouldBeCorrectWithInternalStreamClose() throws Http2Exception {
         // Block the connection
         exhaustStreamWindow(CONNECTION_STREAM_ID);
 
@@ -987,11 +979,78 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B, STREAM_C, STREAM_D)),
                 streamableBytesForTree(stream0));
-        assertEquals(0, streamableBytesForTree(streamA));
+        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_C, STREAM_D)),
+                streamableBytesForTree(streamA));
         assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B)),
                 streamableBytesForTree(streamB));
         assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_C)),
                 streamableBytesForTree(streamC));
+        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_D)),
+                streamableBytesForTree(streamD));
+    }
+
+    /**
+     * In this test, we block all streams and close a leaf stream in the priority tree and verify
+     *
+     * <pre>
+     *        [0]
+     *        / \
+     *       A   B
+     *      / \
+     *     C   D
+     * </pre>
+     *
+     * After the close:
+     * <pre>
+     *        [0]
+     *        / \
+     *       A   B
+     *       |
+     *       D
+     * </pre>
+     */
+    @Test
+    public void subTreeBytesShouldBeCorrectWithLeafStreamClose() throws Http2Exception {
+        // Block the connection
+        exhaustStreamWindow(CONNECTION_STREAM_ID);
+
+        Http2Stream stream0 = connection.connectionStream();
+        Http2Stream streamA = connection.stream(STREAM_A);
+        Http2Stream streamB = connection.stream(STREAM_B);
+        Http2Stream streamC = connection.stream(STREAM_C);
+        Http2Stream streamD = connection.stream(STREAM_D);
+
+        // Send a bunch of data on each stream.
+        final IntObjectMap<Integer> streamSizes = new IntObjectHashMap<Integer>(4);
+        streamSizes.put(STREAM_A, 400);
+        streamSizes.put(STREAM_B, 500);
+        streamSizes.put(STREAM_C, 600);
+        streamSizes.put(STREAM_D, 700);
+
+        FakeFlowControlled dataA = new FakeFlowControlled(streamSizes.get(STREAM_A));
+        FakeFlowControlled dataB = new FakeFlowControlled(streamSizes.get(STREAM_B));
+        FakeFlowControlled dataC = new FakeFlowControlled(streamSizes.get(STREAM_C));
+        FakeFlowControlled dataD = new FakeFlowControlled(streamSizes.get(STREAM_D));
+
+        sendData(STREAM_A, dataA);
+        sendData(STREAM_B, dataB);
+        sendData(STREAM_C, dataC);
+        sendData(STREAM_D, dataD);
+
+        dataA.assertNotWritten();
+        dataB.assertNotWritten();
+        dataC.assertNotWritten();
+        dataD.assertNotWritten();
+
+        streamC.close();
+
+        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_A, STREAM_B, STREAM_D)),
+                streamableBytesForTree(stream0));
+        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_A, STREAM_D)),
+                streamableBytesForTree(streamA));
+        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B)),
+                streamableBytesForTree(streamB));
+        assertEquals(0, streamableBytesForTree(streamC));
         assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_D)),
                 streamableBytesForTree(streamD));
     }
