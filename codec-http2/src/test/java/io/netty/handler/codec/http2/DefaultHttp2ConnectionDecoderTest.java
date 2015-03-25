@@ -45,6 +45,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
+import io.netty.handler.codec.http2.Http2Exception.ClosedStreamCreationException;
 
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -377,6 +378,40 @@ public class DefaultHttp2ConnectionDecoderTest {
         verify(listener).onPriorityRead(eq(ctx), eq(STREAM_ID), eq(0), eq((short) 255), eq(true));
         verify(remote).createStream(STREAM_ID);
         verify(stream, never()).open(anyBoolean());
+    }
+
+    @Test
+    public void priorityReadOnPreviouslyExistingStreamShouldSucceed() throws Exception {
+        doAnswer(new Answer<Http2Stream>() {
+            @Override
+            public Http2Stream answer(InvocationOnMock in) throws Throwable {
+                throw new ClosedStreamCreationException(Http2Error.INTERNAL_ERROR);
+            }
+        }).when(remote).createStream(eq(STREAM_ID));
+        when(connection.stream(STREAM_ID)).thenReturn(null);
+        when(connection.requireStream(STREAM_ID)).thenReturn(null);
+        // Just return the stream object as the connection stream to ensure the dependent stream "exists"
+        when(connection.stream(0)).thenReturn(stream);
+        when(connection.requireStream(0)).thenReturn(stream);
+        decode().onPriorityRead(ctx, STREAM_ID, 0, (short) 255, true);
+        verify(stream, never()).setPriority(anyInt(), anyShort(), anyBoolean());
+        verify(listener).onPriorityRead(eq(ctx), eq(STREAM_ID), eq(0), eq((short) 255), eq(true));
+        verify(remote).createStream(STREAM_ID);
+    }
+
+    @Test
+    public void priorityReadOnPreviouslyParentExistingStreamShouldSucceed() throws Exception {
+        doAnswer(new Answer<Http2Stream>() {
+            @Override
+            public Http2Stream answer(InvocationOnMock in) throws Throwable {
+                throw new ClosedStreamCreationException(Http2Error.INTERNAL_ERROR);
+            }
+        }).when(stream).setPriority(eq(0), eq((short) 255), eq(true));
+        when(connection.stream(STREAM_ID)).thenReturn(stream);
+        when(connection.requireStream(STREAM_ID)).thenReturn(stream);
+        decode().onPriorityRead(ctx, STREAM_ID, 0, (short) 255, true);
+        verify(stream).setPriority(eq(0), eq((short) 255), eq(true));
+        verify(listener).onPriorityRead(eq(ctx), eq(STREAM_ID), eq(0), eq((short) 255), eq(true));
     }
 
     @Test

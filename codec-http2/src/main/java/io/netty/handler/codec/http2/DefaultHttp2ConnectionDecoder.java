@@ -24,6 +24,7 @@ import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http2.Http2Exception.ClosedStreamCreationException;
 
 import java.util.List;
 
@@ -374,15 +375,20 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 return;
             }
 
-            if (stream == null) {
-                // PRIORITY frames always identify a stream. This means that if a PRIORITY frame is the
-                // first frame to be received for a stream that we must create the stream.
-                stream = connection.remote().createStream(streamId);
-            }
+            try {
+                if (stream == null) {
+                    // PRIORITY frames always identify a stream. This means that if a PRIORITY frame is the
+                    // first frame to be received for a stream that we must create the stream.
+                    stream = connection.remote().createStream(streamId);
+                }
 
-            // This call will create a stream for streamDependency if necessary.
-            // For this reason it must be done before notifying the listener.
-            stream.setPriority(streamDependency, weight, exclusive);
+                // This call will create a stream for streamDependency if necessary.
+                // For this reason it must be done before notifying the listener.
+                stream.setPriority(streamDependency, weight, exclusive);
+            } catch (ClosedStreamCreationException ignored) {
+                // It is possible that either the stream for this frame or the parent stream is closed.
+                // In this case we should ignore the exception and allow the frame to be sent.
+            }
 
             listener.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);
         }
