@@ -24,6 +24,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http2.Http2Exception.ClosedStreamCreationException;
 import io.netty.util.ReferenceCountUtil;
 
 import java.util.ArrayDeque;
@@ -238,9 +239,14 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                 stream = connection.local().createStream(streamId);
             }
 
+            // The set priority operation must be done before sending the frame. The parent may not yet exist
+            // and the priority tree may also be modified before sending.
             stream.setPriority(streamDependency, weight, exclusive);
-        } catch (Throwable e) {
-            return promise.setFailure(e);
+        } catch (ClosedStreamCreationException ignored) {
+            // It is possible that either the stream for this frame or the parent stream is closed.
+            // In this case we should ignore the exception and allow the frame to be sent.
+        } catch (Throwable t) {
+            return promise.setFailure(t);
         }
 
         ChannelFuture future = frameWriter.writePriority(ctx, streamId, streamDependency, weight, exclusive, promise);
