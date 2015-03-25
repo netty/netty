@@ -22,6 +22,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.immediateRemovalPolicy;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.REFUSED_STREAM;
+import static io.netty.handler.codec.http2.Http2Exception.closedStreamError;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
@@ -689,8 +690,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public int nextStreamId() {
-            // For manually created client-side streams, 1 is reserved for HTTP upgrade, so
-            // start at 3.
+            // For manually created client-side streams, 1 is reserved for HTTP upgrade, so start at 3.
             return nextStreamId > 1 ? nextStreamId : nextStreamId + 2;
         }
 
@@ -836,23 +836,21 @@ public class DefaultHttp2Connection implements Http2Connection {
             if (isGoAway()) {
                 throw connectionError(PROTOCOL_ERROR, "Cannot create a stream since the connection is going away");
             }
-            verifyStreamId(streamId);
-            if (!canCreateStream()) {
-                throw connectionError(REFUSED_STREAM, "Maximum streams exceeded for this endpoint.");
-            }
-        }
-
-        private void verifyStreamId(int streamId) throws Http2Exception {
             if (streamId < 0) {
                 throw new Http2NoMoreStreamIdsException();
-            }
-            if (streamId < nextStreamId) {
-                throw connectionError(PROTOCOL_ERROR, "Request stream %d is behind the next expected stream %d",
-                        streamId, nextStreamId);
             }
             if (!createdStreamId(streamId)) {
                 throw connectionError(PROTOCOL_ERROR, "Request stream %d is not correct for %s connection",
                         streamId, server ? "server" : "client");
+            }
+            // This check must be after all id validated checks, but before the max streams check because it may be
+            // recoverable to some degree for handling frames which can be sent on closed streams.
+            if (streamId < nextStreamId) {
+                throw closedStreamError(PROTOCOL_ERROR, "Request stream %d is behind the next expected stream %d",
+                        streamId, nextStreamId);
+            }
+            if (!canCreateStream()) {
+                throw connectionError(REFUSED_STREAM, "Maximum streams exceeded for this endpoint.");
             }
         }
 
