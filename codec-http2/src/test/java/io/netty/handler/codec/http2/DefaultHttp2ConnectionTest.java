@@ -15,13 +15,13 @@
 
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyShort;
 import static org.mockito.Matchers.eq;
@@ -242,6 +242,7 @@ public class DefaultHttp2ConnectionTest {
     public void prioritizeShouldUseDefaults() throws Exception {
         Http2Stream stream = client.local().createStream(1).open(false);
         assertEquals(1, client.connectionStream().numChildren());
+        assertEquals(2, client.connectionStream().prioritizableForTree());
         assertEquals(stream, client.connectionStream().child(1));
         assertEquals(DEFAULT_PRIORITY_WEIGHT, stream.weight());
         assertEquals(0, stream.parent().id());
@@ -253,6 +254,7 @@ public class DefaultHttp2ConnectionTest {
         Http2Stream stream = client.local().createStream(1).open(false);
         stream.setPriority(0, DEFAULT_PRIORITY_WEIGHT, false);
         assertEquals(1, client.connectionStream().numChildren());
+        assertEquals(2, client.connectionStream().prioritizableForTree());
         assertEquals(stream, client.connectionStream().child(1));
         assertEquals(DEFAULT_PRIORITY_WEIGHT, stream.weight());
         assertEquals(0, stream.parent().id());
@@ -275,6 +277,7 @@ public class DefaultHttp2ConnectionTest {
         // Level 0
         Http2Stream p = client.connectionStream();
         assertEquals(1, p.numChildren());
+        assertEquals(5, p.prioritizableForTree());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
 
         // Level 1
@@ -282,6 +285,7 @@ public class DefaultHttp2ConnectionTest {
         assertNotNull(p);
         assertEquals(0, p.parent().id());
         assertEquals(1, p.numChildren());
+        assertEquals(4, p.prioritizableForTree());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
 
         // Level 2
@@ -289,6 +293,7 @@ public class DefaultHttp2ConnectionTest {
         assertNotNull(p);
         assertEquals(streamA.id(), p.parent().id());
         assertEquals(2, p.numChildren());
+        assertEquals(3, p.prioritizableForTree());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
 
         // Level 3
@@ -296,11 +301,13 @@ public class DefaultHttp2ConnectionTest {
         assertNotNull(p);
         assertEquals(streamD.id(), p.parent().id());
         assertEquals(0, p.numChildren());
+        assertEquals(1, p.prioritizableForTree());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
         p = p.parent().child(streamC.id());
         assertNotNull(p);
         assertEquals(streamD.id(), p.parent().id());
         assertEquals(0, p.numChildren());
+        assertEquals(1, p.prioritizableForTree());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
     }
 
@@ -327,10 +334,108 @@ public class DefaultHttp2ConnectionTest {
                 any(Http2Stream.class));
         verify(clientListener, never()).onPriorityTreeParentChanged(any(Http2Stream.class),
                 any(Http2Stream.class));
+        assertEquals(5, client.connectionStream().prioritizableForTree());
+        assertEquals(4, streamA.prioritizableForTree());
+        assertEquals(1, streamB.prioritizableForTree());
+        assertEquals(1, streamC.prioritizableForTree());
+        assertEquals(3, streamD.prioritizableForTree());
     }
 
     @Test
-    public void removeShouldRestructureTree() throws Exception {
+    public void sameNodeDependentShouldNotStackOverflowNorChangePrioritizableForTree() throws Http2Exception {
+        Http2Stream streamA = client.local().createStream(1).open(false);
+        Http2Stream streamB = client.local().createStream(3).open(false);
+        Http2Stream streamC = client.local().createStream(5).open(false);
+        Http2Stream streamD = client.local().createStream(7).open(false);
+
+        streamB.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        streamC.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        streamD.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, true);
+
+        boolean[] exclusive = new boolean[] {true, false};
+        short[] weights = new short[] { DEFAULT_PRIORITY_WEIGHT, 100, 200, streamD.weight() };
+
+        assertEquals(4, client.numActiveStreams());
+
+        Http2Stream connectionStream = client.connectionStream();
+        assertEquals(5, connectionStream.prioritizableForTree());
+        assertEquals(4, streamA.prioritizableForTree());
+        assertEquals(1, streamB.prioritizableForTree());
+        assertEquals(1, streamC.prioritizableForTree());
+        assertEquals(3, streamD.prioritizableForTree());
+
+        // The goal is to call setPriority with the same parent and vary the parameters
+        // we were at one point adding a circular depends to the tree and then throwing
+        // a StackOverflow due to infinite recursive operation.
+        for (int j = 0; j < weights.length; ++j) {
+            for (int i = 0; i < exclusive.length; ++i) {
+                streamD.setPriority(streamA.id(), weights[j], exclusive[i]);
+                assertEquals(5, connectionStream.prioritizableForTree());
+                assertEquals(4, streamA.prioritizableForTree());
+                assertEquals(1, streamB.prioritizableForTree());
+                assertEquals(1, streamC.prioritizableForTree());
+                assertEquals(3, streamD.prioritizableForTree());
+            }
+        }
+    }
+
+    @Test
+    public void multipleCircularDependencyShouldUpdatePrioritizable() throws Http2Exception {
+        Http2Stream streamA = client.local().createStream(1).open(false);
+        Http2Stream streamB = client.local().createStream(3).open(false);
+        Http2Stream streamC = client.local().createStream(5).open(false);
+        Http2Stream streamD = client.local().createStream(7).open(false);
+
+        streamB.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        streamC.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        streamD.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, true);
+
+        assertEquals(4, client.numActiveStreams());
+
+        Http2Stream connectionStream = client.connectionStream();
+        assertEquals(5, connectionStream.prioritizableForTree());
+        assertEquals(4, streamA.prioritizableForTree());
+        assertEquals(1, streamB.prioritizableForTree());
+        assertEquals(1, streamC.prioritizableForTree());
+        assertEquals(3, streamD.prioritizableForTree());
+
+        // Bring B to the root
+        streamA.setPriority(streamB.id(), DEFAULT_PRIORITY_WEIGHT, true);
+        assertEquals(5, connectionStream.prioritizableForTree());
+        assertEquals(3, streamA.prioritizableForTree());
+        assertEquals(4, streamB.prioritizableForTree());
+        assertEquals(1, streamC.prioritizableForTree());
+        assertEquals(2, streamD.prioritizableForTree());
+
+        // Move all streams to be children of B
+        streamC.setPriority(streamB.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        streamD.setPriority(streamB.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        assertEquals(5, connectionStream.prioritizableForTree());
+        assertEquals(1, streamA.prioritizableForTree());
+        assertEquals(4, streamB.prioritizableForTree());
+        assertEquals(1, streamC.prioritizableForTree());
+        assertEquals(1, streamD.prioritizableForTree());
+
+        // Move A back to the root
+        streamB.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, true);
+        assertEquals(5, connectionStream.prioritizableForTree());
+        assertEquals(4, streamA.prioritizableForTree());
+        assertEquals(3, streamB.prioritizableForTree());
+        assertEquals(1, streamC.prioritizableForTree());
+        assertEquals(1, streamD.prioritizableForTree());
+
+        // Move all streams to be children of A
+        streamC.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        streamD.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        assertEquals(5, connectionStream.prioritizableForTree());
+        assertEquals(4, streamA.prioritizableForTree());
+        assertEquals(1, streamB.prioritizableForTree());
+        assertEquals(1, streamC.prioritizableForTree());
+        assertEquals(1, streamD.prioritizableForTree());
+    }
+
+    @Test
+    public void removeWithPrioritizableDependentsShouldNotRestructureTree() throws Exception {
         Http2Stream streamA = client.local().createStream(1).open(false);
         Http2Stream streamB = client.local().createStream(3).open(false);
         Http2Stream streamC = client.local().createStream(5).open(false);
@@ -345,27 +450,166 @@ public class DefaultHttp2ConnectionTest {
 
         // Level 0
         Http2Stream p = client.connectionStream();
+        assertEquals(4, p.prioritizableForTree());
         assertEquals(1, p.numChildren());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
 
         // Level 1
         p = p.child(streamA.id());
         assertNotNull(p);
+        assertEquals(3, p.prioritizableForTree());
         assertEquals(0, p.parent().id());
-        assertEquals(2, p.numChildren());
+        assertEquals(1, p.numChildren());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
 
         // Level 2
+        p = p.child(streamB.id());
+        assertNotNull(p);
+        assertEquals(2, p.prioritizableForTree());
+        assertEquals(streamA.id(), p.parent().id());
+        assertEquals(2, p.numChildren());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+
+        // Level 3
         p = p.child(streamC.id());
         assertNotNull(p);
-        assertEquals(streamA.id(), p.parent().id());
+        assertEquals(1, p.prioritizableForTree());
+        assertEquals(streamB.id(), p.parent().id());
         assertEquals(0, p.numChildren());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
         p = p.parent().child(streamD.id());
         assertNotNull(p);
-        assertEquals(streamA.id(), p.parent().id());
+        assertEquals(1, p.prioritizableForTree());
+        assertEquals(streamB.id(), p.parent().id());
         assertEquals(0, p.numChildren());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+    }
+
+    @Test
+    public void closeWithNoPrioritizableDependentsShouldRestructureTree() throws Exception {
+        Http2Stream streamA = client.local().createStream(1).open(false);
+        Http2Stream streamB = client.local().createStream(3).open(false);
+        Http2Stream streamC = client.local().createStream(5).open(false);
+        Http2Stream streamD = client.local().createStream(7).open(false);
+        Http2Stream streamE = client.local().createStream(9).open(false);
+        Http2Stream streamF = client.local().createStream(11).open(false);
+
+        streamB.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        streamC.setPriority(streamB.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        streamD.setPriority(streamB.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        streamE.setPriority(streamC.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        streamF.setPriority(streamD.id(), DEFAULT_PRIORITY_WEIGHT, false);
+
+        // Close internal nodes, leave 1 leaf node open, and ensure part of the tree (D & F) is cleaned up
+        streamA.close();
+        streamB.close();
+        streamC.close();
+        streamD.close();
+        streamF.close();
+
+        // Level 0
+        Http2Stream p = client.connectionStream();
+        assertEquals(1, p.numChildren());
+        assertEquals(2, p.prioritizableForTree());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+
+        // Level 1
+        p = p.child(streamA.id());
+        assertNotNull(p);
+        assertEquals(0, p.parent().id());
+        assertEquals(1, p.numChildren());
+        assertEquals(1, p.prioritizableForTree());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+
+        // Level 2
+        p = p.child(streamB.id());
+        assertNotNull(p);
+        assertEquals(streamA.id(), p.parent().id());
+        assertEquals(1, p.numChildren());
+        assertEquals(1, p.prioritizableForTree());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+
+        // Level 3
+        p = p.child(streamC.id());
+        assertNotNull(p);
+        assertEquals(streamB.id(), p.parent().id());
+        assertEquals(1, p.numChildren());
+        assertEquals(1, p.prioritizableForTree());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+
+        // Level 4
+        p = p.child(streamE.id());
+        assertNotNull(p);
+        assertEquals(streamC.id(), p.parent().id());
+        assertEquals(0, p.numChildren());
+        assertEquals(1, p.prioritizableForTree());
+    }
+
+    @Test
+    public void priorityChangeWithNoPrioritizableDependentsShouldRestructureTree() throws Exception {
+        Http2Stream streamA = client.local().createStream(1).open(false);
+        Http2Stream streamB = client.local().createStream(3).open(false);
+        Http2Stream streamC = client.local().createStream(5).open(false);
+        Http2Stream streamD = client.local().createStream(7).open(false);
+        Http2Stream streamE = client.local().createStream(9).open(false);
+        Http2Stream streamF = client.local().createStream(11).open(false);
+
+        streamB.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        streamC.setPriority(streamB.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        streamD.setPriority(streamB.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        streamE.setPriority(streamC.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        streamF.setPriority(streamD.id(), DEFAULT_PRIORITY_WEIGHT, false);
+
+        // Leave leaf nodes open (E & F)
+        streamA.close();
+        streamB.close();
+        streamC.close();
+        streamD.close();
+
+        // Move F to depend on C, this should close D
+        streamF.setPriority(streamC.id(), DEFAULT_PRIORITY_WEIGHT, false);
+
+        // Level 0
+        Http2Stream p = client.connectionStream();
+        assertEquals(1, p.numChildren());
+        assertEquals(3, p.prioritizableForTree());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+
+        // Level 1
+        p = p.child(streamA.id());
+        assertNotNull(p);
+        assertEquals(0, p.parent().id());
+        assertEquals(1, p.numChildren());
+        assertEquals(2, p.prioritizableForTree());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+
+        // Level 2
+        p = p.child(streamB.id());
+        assertNotNull(p);
+        assertEquals(streamA.id(), p.parent().id());
+        assertEquals(1, p.numChildren());
+        assertEquals(2, p.prioritizableForTree());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+
+        // Level 3
+        p = p.child(streamC.id());
+        assertNotNull(p);
+        assertEquals(streamB.id(), p.parent().id());
+        assertEquals(2, p.numChildren());
+        assertEquals(2, p.prioritizableForTree());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+
+        // Level 4
+        p = p.child(streamE.id());
+        assertNotNull(p);
+        assertEquals(streamC.id(), p.parent().id());
+        assertEquals(0, p.numChildren());
+        assertEquals(1, p.prioritizableForTree());
+        p = p.parent().child(streamF.id());
+        assertNotNull(p);
+        assertEquals(streamC.id(), p.parent().id());
+        assertEquals(0, p.numChildren());
+        assertEquals(1, p.prioritizableForTree());
     }
 
     @Test
@@ -423,18 +667,21 @@ public class DefaultHttp2ConnectionTest {
         // Level 0
         Http2Stream p = client.connectionStream();
         assertEquals(1, p.numChildren());
+        assertEquals(7, p.prioritizableForTree());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
 
         // Level 1
         p = p.child(streamD.id());
         assertNotNull(p);
         assertEquals(2, p.numChildren());
+        assertEquals(6, p.prioritizableForTree());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
 
         // Level 2
         p = p.child(streamF.id());
         assertNotNull(p);
         assertEquals(0, p.numChildren());
+        assertEquals(1, p.prioritizableForTree());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
         p = p.parent().child(streamA.id());
         assertNotNull(p);
@@ -445,16 +692,19 @@ public class DefaultHttp2ConnectionTest {
         p = p.child(streamB.id());
         assertNotNull(p);
         assertEquals(0, p.numChildren());
+        assertEquals(1, p.prioritizableForTree());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
         p = p.parent().child(streamC.id());
         assertNotNull(p);
         assertEquals(1, p.numChildren());
+        assertEquals(2, p.prioritizableForTree());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
 
         // Level 4;
         p = p.child(streamE.id());
         assertNotNull(p);
         assertEquals(0, p.numChildren());
+        assertEquals(1, p.prioritizableForTree());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
     }
 
@@ -515,38 +765,45 @@ public class DefaultHttp2ConnectionTest {
         // Level 0
         Http2Stream p = client.connectionStream();
         assertEquals(1, p.numChildren());
+        assertEquals(7, p.prioritizableForTree());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
 
         // Level 1
         p = p.child(streamD.id());
         assertNotNull(p);
         assertEquals(1, p.numChildren());
+        assertEquals(6, p.prioritizableForTree());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
 
         // Level 2
         p = p.child(streamA.id());
         assertNotNull(p);
         assertEquals(3, p.numChildren());
+        assertEquals(5, p.prioritizableForTree());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
 
         // Level 3
         p = p.child(streamB.id());
         assertNotNull(p);
         assertEquals(0, p.numChildren());
+        assertEquals(1, p.prioritizableForTree());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
         p = p.parent().child(streamF.id());
         assertNotNull(p);
         assertEquals(0, p.numChildren());
+        assertEquals(1, p.prioritizableForTree());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
         p = p.parent().child(streamC.id());
         assertNotNull(p);
         assertEquals(1, p.numChildren());
+        assertEquals(2, p.prioritizableForTree());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
 
         // Level 4;
         p = p.child(streamE.id());
         assertNotNull(p);
         assertEquals(0, p.numChildren());
+        assertEquals(1, p.prioritizableForTree());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
     }
 
