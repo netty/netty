@@ -158,6 +158,13 @@ public interface Http2Stream {
     Http2Stream parent();
 
     /**
+     * Get the number of streams in the priority tree rooted at this node that are OK to exist in the priority
+     * tree on their own right. Some streams may be in the priority tree because their dependents require them to
+     * remain.
+     */
+    int prioritizableForTree();
+
+    /**
      * Indicates whether or not this stream is a descendant in the priority tree from the given stream.
      */
     boolean isDescendantOf(Http2Stream stream);
