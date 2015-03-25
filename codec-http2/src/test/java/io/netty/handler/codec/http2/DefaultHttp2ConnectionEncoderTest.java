@@ -38,7 +38,6 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
@@ -48,8 +47,14 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
+import io.netty.handler.codec.http2.Http2Exception.ClosedStreamCreationException;
 import io.netty.handler.codec.http2.Http2RemoteFlowController.FlowControlled;
 import io.netty.util.concurrent.ImmediateEventExecutor;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -57,10 +62,6 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * Tests for {@link DefaultHttp2ConnectionEncoder}
@@ -375,6 +376,40 @@ public class DefaultHttp2ConnectionEncoderTest {
         verify(writer).writePriority(eq(ctx), eq(STREAM_ID), eq(0), eq((short) 255), eq(true), eq(promise));
         verify(local).createStream(STREAM_ID);
         verify(stream, never()).open(anyBoolean());
+    }
+
+    @Test
+    public void priorityWriteOnPreviouslyExistingStreamShouldSucceed() throws Exception {
+        doAnswer(new Answer<Http2Stream>() {
+            @Override
+            public Http2Stream answer(InvocationOnMock in) throws Throwable {
+                throw new ClosedStreamCreationException(Http2Error.INTERNAL_ERROR);
+            }
+        }).when(local).createStream(eq(STREAM_ID));
+        when(connection.stream(STREAM_ID)).thenReturn(null);
+        when(connection.requireStream(STREAM_ID)).thenReturn(null);
+        // Just return the stream object as the connection stream to ensure the dependent stream "exists"
+        when(connection.stream(0)).thenReturn(stream);
+        when(connection.requireStream(0)).thenReturn(stream);
+        encoder.writePriority(ctx, STREAM_ID, 0, (short) 255, true, promise);
+        verify(stream, never()).setPriority(anyInt(), anyShort(), anyBoolean());
+        verify(writer).writePriority(eq(ctx), eq(STREAM_ID), eq(0), eq((short) 255), eq(true), eq(promise));
+        verify(local).createStream(STREAM_ID);
+    }
+
+    @Test
+    public void priorityWriteOnPreviouslyExistingParentStreamShouldSucceed() throws Exception {
+        doAnswer(new Answer<Http2Stream>() {
+            @Override
+            public Http2Stream answer(InvocationOnMock in) throws Throwable {
+                throw new ClosedStreamCreationException(Http2Error.INTERNAL_ERROR);
+            }
+        }).when(stream).setPriority(eq(0), eq((short) 255), eq(true));
+        when(connection.stream(STREAM_ID)).thenReturn(stream);
+        when(connection.requireStream(STREAM_ID)).thenReturn(stream);
+        encoder.writePriority(ctx, STREAM_ID, 0, (short) 255, true, promise);
+        verify(stream).setPriority(eq(0), eq((short) 255), eq(true));
+        verify(writer).writePriority(eq(ctx), eq(STREAM_ID), eq(0), eq((short) 255), eq(true), eq(promise));
     }
 
     @Test

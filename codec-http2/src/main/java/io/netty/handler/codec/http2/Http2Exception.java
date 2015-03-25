@@ -73,6 +73,18 @@ public class Http2Exception extends Exception {
     }
 
     /**
+     * Use if an error has occurred which can not be isolated to a single stream, but instead applies
+     * to the entire connection.
+     * @param error The type of error as defined by the HTTP/2 specification.
+     * @param fmt String with the content and format for the additional debug data.
+     * @param args Objects which fit into the format defined by {@code fmt}.
+     * @return An exception which can be translated into a HTTP/2 error.
+     */
+    public static Http2Exception closedStreamError(Http2Error error, String fmt, Object... args) {
+        return new ClosedStreamCreationException(error, String.format(fmt, args));
+    }
+
+    /**
      * Use if an error which can be isolated to a single stream has occurred.  If the {@code id} is not
      * {@link Http2CodecUtil#CONNECTION_STREAM_ID} then a {@link Http2Exception.StreamException} will be returned.
      * Otherwise the error is considered a connection error and a {@link Http2Exception} is returned.
@@ -128,6 +140,25 @@ public class Http2Exception extends Exception {
      */
     public static int streamId(Http2Exception e) {
         return isStreamError(e) ? ((StreamException) e).streamId() : CONNECTION_STREAM_ID;
+    }
+
+    /**
+     * Used when a stream creation attempt fails but may be because the stream was previously closed.
+     */
+    public static final class ClosedStreamCreationException extends Http2Exception {
+        private static final long serialVersionUID = -1911637707391622439L;
+
+        public ClosedStreamCreationException(Http2Error error) {
+            super(error);
+        }
+
+        public ClosedStreamCreationException(Http2Error error, String message) {
+            super(error, message);
+        }
+
+        public ClosedStreamCreationException(Http2Error error, String message, Throwable cause) {
+            super(error, message, cause);
+        }
     }
 
     /**
