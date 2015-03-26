@@ -56,7 +56,7 @@ import java.util.List;
  * <pre>
  * // In your {@link ChannelInitializer}:
  * {@link ChannelPipeline} p = channel.pipeline();
- * {@link SslContext} sslCtx = {@link #newServerContext(File, File) SslContext.newServerContext(...)};
+ * {@link SslContext} sslCtx = {@link SslContextBuilder#forServer(File, File) SslContextBuilder.forServer(...)}.build();
  * p.addLast("ssl", {@link #newEngine(ByteBufAllocator) sslCtx.newEngine(channel.alloc())});
  * ...
  * </pre>
@@ -65,7 +65,7 @@ import java.util.List;
  * <pre>
  * // In your {@link ChannelInitializer}:
  * {@link ChannelPipeline} p = channel.pipeline();
- * {@link SslContext} sslCtx = {@link #newClientContext(File) SslContext.newClientContext(...)};
+ * {@link SslContext} sslCtx = {@link #newBuilderForClient() SslContext.newBuilderForClient()}.build();
  * p.addLast("ssl", {@link #newEngine(ByteBufAllocator, String, int) sslCtx.newEngine(channel.alloc(), host, port)});
  * ...
  * </pre>
@@ -112,7 +112,9 @@ public abstract class SslContext {
      * @param certChainFile an X.509 certificate chain file in PEM format
      * @param keyFile a PKCS#8 private key file in PEM format
      * @return a new server-side {@link SslContext}
+     * @deprecated Replaced by {@link SslContextBuilder}
      */
+    @Deprecated
     public static SslContext newServerContext(File certChainFile, File keyFile) throws SSLException {
         return newServerContext(certChainFile, keyFile, null);
     }
@@ -125,7 +127,9 @@ public abstract class SslContext {
      * @param keyPassword the password of the {@code keyFile}.
      *                    {@code null} if it's not password-protected.
      * @return a new server-side {@link SslContext}
+     * @deprecated Replaced by {@link SslContextBuilder}
      */
+    @Deprecated
     public static SslContext newServerContext(
             File certChainFile, File keyFile, String keyPassword) throws SSLException {
         return newServerContext(null, certChainFile, keyFile, keyPassword);
@@ -149,6 +153,7 @@ public abstract class SslContext {
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                       {@code 0} to use the default value.
      * @return a new server-side {@link SslContext}
+     * @deprecated Replaced by {@link SslContextBuilder}
      */
     @Deprecated
     public static SslContext newServerContext(
@@ -177,7 +182,9 @@ public abstract class SslContext {
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                       {@code 0} to use the default value.
      * @return a new server-side {@link SslContext}
+     * @deprecated Replaced by {@link SslContextBuilder}
      */
+    @Deprecated
     public static SslContext newServerContext(
             File certChainFile, File keyFile, String keyPassword,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
@@ -195,7 +202,9 @@ public abstract class SslContext {
      * @param certChainFile an X.509 certificate chain file in PEM format
      * @param keyFile a PKCS#8 private key file in PEM format
      * @return a new server-side {@link SslContext}
+     * @deprecated Replaced by {@link SslContextBuilder}
      */
+    @Deprecated
     public static SslContext newServerContext(
             SslProvider provider, File certChainFile, File keyFile) throws SSLException {
         return newServerContext(provider, certChainFile, keyFile, null);
@@ -211,7 +220,9 @@ public abstract class SslContext {
      * @param keyPassword the password of the {@code keyFile}.
      *                    {@code null} if it's not password-protected.
      * @return a new server-side {@link SslContext}
+     * @deprecated Replaced by {@link SslContextBuilder}
      */
+    @Deprecated
     public static SslContext newServerContext(
             SslProvider provider, File certChainFile, File keyFile, String keyPassword) throws SSLException {
         return newServerContext(provider, certChainFile, keyFile, keyPassword, null, IdentityCipherSuiteFilter.INSTANCE,
@@ -238,6 +249,7 @@ public abstract class SslContext {
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                       {@code 0} to use the default value.
      * @return a new server-side {@link SslContext}
+     * @deprecated Replaced by {@link SslContextBuilder}
      */
     @Deprecated
     public static SslContext newServerContext(
@@ -271,7 +283,9 @@ public abstract class SslContext {
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                       {@code 0} to use the default value.
      * @return a new server-side {@link SslContext}
+     * @deprecated Replaced by {@link SslContextBuilder}
      */
+    @Deprecated
     public static SslContext newServerContext(
             SslProvider provider,
             File certChainFile, File keyFile, String keyPassword, TrustManagerFactory trustManagerFactory,
@@ -303,7 +317,9 @@ public abstract class SslContext {
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                       {@code 0} to use the default value.
      * @return a new server-side {@link SslContext}
+     * @deprecated Replaced by {@link SslContextBuilder}
      */
+    @Deprecated
     public static SslContext newServerContext(SslProvider provider,
             File certChainFile, File keyFile, String keyPassword,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
@@ -342,8 +358,21 @@ public abstract class SslContext {
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                       {@code 0} to use the default value.
      * @return a new server-side {@link SslContext}
+     * @deprecated Replaced by {@link SslContextBuilder}
      */
+    @Deprecated
     public static SslContext newServerContext(
+            SslProvider provider,
+            File trustCertChainFile, TrustManagerFactory trustManagerFactory,
+            File keyCertChainFile, File keyFile, String keyPassword, KeyManagerFactory keyManagerFactory,
+            Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
+            long sessionCacheSize, long sessionTimeout) throws SSLException {
+        return newServerContext(provider, trustCertChainFile, trustManagerFactory, keyCertChainFile,
+                keyFile, keyPassword, keyManagerFactory, ciphers, cipherFilter, apn,
+                sessionCacheSize, sessionTimeout);
+    }
+
+    static SslContext newServerContextInternal(
             SslProvider provider,
             File trustCertChainFile, TrustManagerFactory trustManagerFactory,
             File keyCertChainFile, File keyFile, String keyPassword, KeyManagerFactory keyManagerFactory,
@@ -372,7 +401,9 @@ public abstract class SslContext {
      * Creates a new client-side {@link SslContext}.
      *
      * @return a new client-side {@link SslContext}
+     * @deprecated Replaced by {@link SslContextBuilder}
      */
+    @Deprecated
     public static SslContext newClientContext() throws SSLException {
         return newClientContext(null, null, null);
     }
@@ -383,7 +414,9 @@ public abstract class SslContext {
      * @param certChainFile an X.509 certificate chain file in PEM format
      *
      * @return a new client-side {@link SslContext}
+     * @deprecated Replaced by {@link SslContextBuilder}
      */
+    @Deprecated
     public static SslContext newClientContext(File certChainFile) throws SSLException {
         return newClientContext(null, certChainFile);
     }
@@ -396,7 +429,9 @@ public abstract class SslContext {
      *                            {@code null} to use the default.
      *
      * @return a new client-side {@link SslContext}
+     * @deprecated Replaced by {@link SslContextBuilder}
      */
+    @Deprecated
     public static SslContext newClientContext(TrustManagerFactory trustManagerFactory) throws SSLException {
         return newClientContext(null, null, trustManagerFactory);
     }
@@ -411,7 +446,9 @@ public abstract class SslContext {
      *                            {@code null} to use the default.
      *
      * @return a new client-side {@link SslContext}
+     * @deprecated Replaced by {@link SslContextBuilder}
      */
+    @Deprecated
     public static SslContext newClientContext(
             File certChainFile, TrustManagerFactory trustManagerFactory) throws SSLException {
         return newClientContext(null, certChainFile, trustManagerFactory);
@@ -437,6 +474,7 @@ public abstract class SslContext {
      *                       {@code 0} to use the default value.
      *
      * @return a new client-side {@link SslContext}
+     * @deprecated Replaced by {@link SslContextBuilder}
      */
     @Deprecated
     public static SslContext newClientContext(
@@ -466,7 +504,9 @@ public abstract class SslContext {
      *                       {@code 0} to use the default value.
      *
      * @return a new client-side {@link SslContext}
+     * @deprecated Replaced by {@link SslContextBuilder}
      */
+    @Deprecated
     public static SslContext newClientContext(
             File certChainFile, TrustManagerFactory trustManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
@@ -483,7 +523,9 @@ public abstract class SslContext {
      *                 {@code null} to use the current default one.
      *
      * @return a new client-side {@link SslContext}
+     * @deprecated Replaced by {@link SslContextBuilder}
      */
+    @Deprecated
     public static SslContext newClientContext(SslProvider provider) throws SSLException {
         return newClientContext(provider, null, null);
     }
@@ -497,7 +539,9 @@ public abstract class SslContext {
      *                      {@code null} to use the system default
      *
      * @return a new client-side {@link SslContext}
+     * @deprecated Replaced by {@link SslContextBuilder}
      */
+    @Deprecated
     public static SslContext newClientContext(SslProvider provider, File certChainFile) throws SSLException {
         return newClientContext(provider, certChainFile, null);
     }
@@ -512,7 +556,9 @@ public abstract class SslContext {
      *                            {@code null} to use the default.
      *
      * @return a new client-side {@link SslContext}
+     * @deprecated Replaced by {@link SslContextBuilder}
      */
+    @Deprecated
     public static SslContext newClientContext(
             SslProvider provider, TrustManagerFactory trustManagerFactory) throws SSLException {
         return newClientContext(provider, null, trustManagerFactory);
@@ -530,7 +576,9 @@ public abstract class SslContext {
      *                            {@code null} to use the default.
      *
      * @return a new client-side {@link SslContext}
+     * @deprecated Replaced by {@link SslContextBuilder}
      */
+    @Deprecated
     public static SslContext newClientContext(
             SslProvider provider, File certChainFile, TrustManagerFactory trustManagerFactory) throws SSLException {
         return newClientContext(provider, certChainFile, trustManagerFactory, null, IdentityCipherSuiteFilter.INSTANCE,
@@ -559,6 +607,7 @@ public abstract class SslContext {
      *                       {@code 0} to use the default value.
      *
      * @return a new client-side {@link SslContext}
+     * @deprecated Replaced by {@link SslContextBuilder}
      */
     @Deprecated
     public static SslContext newClientContext(
@@ -592,7 +641,9 @@ public abstract class SslContext {
      *                       {@code 0} to use the default value.
      *
      * @return a new client-side {@link SslContext}
+     * @deprecated Replaced by {@link SslContextBuilder}
      */
+    @Deprecated
     public static SslContext newClientContext(
             SslProvider provider,
             File certChainFile, TrustManagerFactory trustManagerFactory,
@@ -638,8 +689,21 @@ public abstract class SslContext {
      *                       {@code 0} to use the default value.
      *
      * @return a new client-side {@link SslContext}
+     * @deprecated Replaced by {@link SslContextBuilder}
      */
+    @Deprecated
     public static SslContext newClientContext(
+            SslProvider provider,
+            File trustCertChainFile, TrustManagerFactory trustManagerFactory,
+            File keyCertChainFile, File keyFile, String keyPassword, KeyManagerFactory keyManagerFactory,
+            Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
+            long sessionCacheSize, long sessionTimeout) throws SSLException {
+      return newClientContextInternal(provider, trustCertChainFile, trustManagerFactory,
+          keyCertChainFile, keyFile, keyPassword, keyManagerFactory, ciphers, cipherFilter, apn,
+          sessionCacheSize, sessionTimeout);
+    }
+
+    static SslContext newClientContextInternal(
             SslProvider provider,
             File trustCertChainFile, TrustManagerFactory trustManagerFactory,
             File keyCertChainFile, File keyFile, String keyPassword, KeyManagerFactory keyManagerFactory,
