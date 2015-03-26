@@ -27,6 +27,7 @@ import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 /**
@@ -43,7 +44,8 @@ public final class ObjectEchoClient {
         // Configure SSL.
         final SslContext sslCtx;
         if (SSL) {
-            sslCtx = SslContext.newClientContext(InsecureTrustManagerFactory.INSTANCE);
+            sslCtx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
         } else {
             sslCtx = null;
         }
