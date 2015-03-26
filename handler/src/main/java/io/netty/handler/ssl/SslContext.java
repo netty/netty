@@ -16,6 +16,8 @@
 
 package io.netty.handler.ssl;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -719,7 +721,7 @@ public abstract class SslContext {
         private long sessionCacheSize;
         private long sessionTimeout;
 
-        private Builder(boolean forClient) {
+        Builder(boolean forClient) {
             this.forClient = forClient;
         }
 
@@ -774,12 +776,8 @@ public abstract class SslContext {
          */
         public Builder keyManager(File keyCertChainFile, File keyFile, String keyPassword) {
             if (!forClient) {
-                if (keyCertChainFile == null) {
-                    throw new NullPointerException("keyCertChainFile required for servers");
-                }
-                if (keyFile == null) {
-                    throw new NullPointerException("keyFile required for servers");
-                }
+                checkNotNull(keyCertChainFile, "keyCertChainFile required for servers");
+                checkNotNull(keyFile, "keyFile required for servers");
             }
             this.keyCertChainFile = keyCertChainFile;
             this.keyFile = keyFile;
@@ -796,11 +794,7 @@ public abstract class SslContext {
          */
         public Builder keyManager(KeyManagerFactory keyManagerFactory) {
             if (!forClient) {
-                if (keyManagerFactory == null) {
-                    throw new NullPointerException("keyManagerFactory required for servers");
-                }
-                // If SslProvider != JDK, we could throw an IllegalStateException, but we don't
-                // because builders are commonly allowed to be in an illegal state temporarily.
+                checkNotNull(keyManagerFactory, "keyManagerFactory required for servers");
             }
             this.keyCertChainFile = null;
             this.keyFile = null;
@@ -823,9 +817,7 @@ public abstract class SslContext {
          * ciphers} is {@code null}, then the default cipher suites will be used.
          */
         public Builder ciphers(Iterable<String> ciphers, CipherSuiteFilter cipherFilter) {
-            if (cipherFilter == null) {
-                throw new NullPointerException("cipherFilter");
-            }
+            checkNotNull(cipherFilter, "cipherFilter");
             this.ciphers = ciphers;
             this.cipherFilter = cipherFilter;
             return this;
