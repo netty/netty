@@ -24,6 +24,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 /**
@@ -40,7 +41,8 @@ public final class PortUnificationServer {
     public static void main(String[] args) throws Exception {
         // Configure SSL context
         SelfSignedCertificate ssc = new SelfSignedCertificate();
-        final SslContext sslCtx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
+        final SslContext sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+            .build();
 
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
         EventLoopGroup workerGroup = new NioEventLoopGroup();
