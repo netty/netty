@@ -673,6 +673,204 @@ public abstract class SslContext {
         return apn;
     }
 
+    /**
+     * Creates a builder for new client-side {@link SslContext}.
+     */
+    public static Builder newBuilderForClient() {
+        return new Builder(true);
+    }
+
+    /**
+     * Creates a builder for new server-side {@link SslContext}.
+     *
+     * @param keyCertChainFile an X.509 certificate chain file in PEM format
+     * @param keyFile a PKCS#8 private key file in PEM format
+     */
+    public static Builder newBuilderForServer(File keyCertChainFile, File keyFile) {
+        return new Builder(false).keyManager(keyCertChainFile, keyFile);
+    }
+
+    /**
+     * Creates a builder for new server-side {@link SslContext}.
+     *
+     * @param keyCertChainFile an X.509 certificate chain file in PEM format
+     * @param keyFile a PKCS#8 private key file in PEM format
+     * @param keyPassword the password of the {@code keyFile}, or {@code null} if it's not
+     *     password-protected
+     */
+    public static Builder newBuilderForServer(File keyCertChainFile, File keyFile,
+            String keyPassword) {
+        return new Builder(false).keyManager(keyCertChainFile, keyFile, keyPassword);
+    }
+
+    /** Builder for configuring a new SslContext for creation. */
+    public static final class Builder {
+        private final boolean forClient;
+        private SslProvider provider;
+        private File trustCertChainFile;
+        private TrustManagerFactory trustManagerFactory;
+        private File keyCertChainFile;
+        private File keyFile;
+        private String keyPassword;
+        private KeyManagerFactory keyManagerFactory;
+        private Iterable<String> ciphers;
+        private CipherSuiteFilter cipherFilter = IdentityCipherSuiteFilter.INSTANCE;
+        private ApplicationProtocolConfig apn;
+        private long sessionCacheSize;
+        private long sessionTimeout;
+
+        private Builder(boolean forClient) {
+            this.forClient = forClient;
+        }
+
+        /**
+         * The {@link SslContext} implementation to use. {@code null} uses the default one.
+         */
+        public Builder sslProvider(SslProvider provider) {
+            this.provider = provider;
+            return this;
+        }
+
+        /**
+         * Trusted certificates for verifying the remote endpoint's certificate. The file should
+         * contain an X.509 certificate chain in PEM format. {@code null} uses the system default.
+         */
+        public Builder trustManager(File trustCertChainFile) {
+            this.trustCertChainFile = trustCertChainFile;
+            this.trustManagerFactory = null;
+            return this;
+        }
+
+        /**
+         * Trusted manager for verifying the remote endpoint's certificate. Using a {@code
+         * TrustManagerFactory} is only supported for {@link SslProvider#JDK}; for other providers,
+         * you must use {@link #trustManager(File)}. {@code null} uses the system default.
+         */
+        public Builder trustManager(TrustManagerFactory trustManagerFactory) {
+            this.trustCertChainFile = null;
+            this.trustManagerFactory = trustManagerFactory;
+            return this;
+        }
+
+        /**
+         * Identifying certificate for this host. {@code keyCertChainFile} and {@code keyFile} may
+         * be {@code null} for client contexts, which disables mutual authentication.
+         *
+         * @param keyCertChainFile an X.509 certificate chain file in PEM format
+         * @param keyFile a PKCS#8 private key file in PEM format
+         */
+        public Builder keyManager(File keyCertChainFile, File keyFile) {
+            return keyManager(keyCertChainFile, keyFile, null);
+        }
+
+        /**
+         * Identifying certificate for this host. {@code keyCertChainFile} and {@code keyFile} may
+         * be {@code null} for client contexts, which disables mutual authentication.
+         *
+         * @param keyCertChainFile an X.509 certificate chain file in PEM format
+         * @param keyFile a PKCS#8 private key file in PEM format
+         * @param keyPassword the password of the {@code keyFile}, or {@code null} if it's not
+         *     password-protected
+         */
+        public Builder keyManager(File keyCertChainFile, File keyFile, String keyPassword) {
+            if (!forClient) {
+                if (keyCertChainFile == null) {
+                    throw new NullPointerException("keyCertChainFile required for servers");
+                }
+                if (keyFile == null) {
+                    throw new NullPointerException("keyFile required for servers");
+                }
+            }
+            this.keyCertChainFile = keyCertChainFile;
+            this.keyFile = keyFile;
+            this.keyPassword = keyPassword;
+            this.keyManagerFactory = null;
+            return this;
+        }
+
+        /**
+         * Identifying manager for this host. {@code keyManagerFactory} may be {@code null} for
+         * client contexts, which disables mutual authentication. Using a {@code KeyManagerFactory}
+         * is only supported for {@link SslProvider#JDK}; for other providers, you must use {@link
+         * #keyManager(File, File)} or {@link #keyManager(File, File, String)}.
+         */
+        public Builder keyManager(KeyManagerFactory keyManagerFactory) {
+            if (!forClient) {
+                if (keyManagerFactory == null) {
+                    throw new NullPointerException("keyManagerFactory required for servers");
+                }
+                // If SslProvider != JDK, we could throw an IllegalStateException, but we don't
+                // because builders are commonly allowed to be in an illegal state temporarily.
+            }
+            this.keyCertChainFile = null;
+            this.keyFile = null;
+            this.keyPassword = null;
+            this.keyManagerFactory = keyManagerFactory;
+            return this;
+        }
+
+        /**
+         * The cipher suites to enable, in the order of preference. {@code null} to use default
+         * cipher suites.
+         */
+        public Builder ciphers(Iterable<String> ciphers) {
+            return ciphers(ciphers, IdentityCipherSuiteFilter.INSTANCE);
+        }
+
+        /**
+         * The cipher suites to enable, in the order of preference. {@code cipherFilter} will be
+         * applied to the ciphers before use if provider is {@link SslProvider#JDK}. If {@code
+         * ciphers} is {@code null}, then the default cipher suites will be used.
+         */
+        public Builder ciphers(Iterable<String> ciphers, CipherSuiteFilter cipherFilter) {
+            if (cipherFilter == null) {
+                throw new NullPointerException("cipherFilter");
+            }
+            this.ciphers = ciphers;
+            this.cipherFilter = cipherFilter;
+            return this;
+        }
+
+        /**
+         * Application protocol negotiation configuration. {@code null} disables support.
+         */
+        public Builder applicationProtocolConfig(ApplicationProtocolConfig apn) {
+            this.apn = apn;
+            return this;
+        }
+
+        /**
+         * Set the size of the cache used for storing SSL session objects. {@code 0} to use the
+         * default value.
+         */
+        public Builder sessionCacheSize(long sessionCacheSize) {
+            this.sessionCacheSize = sessionCacheSize;
+            return this;
+        }
+
+        /**
+         * Set the timeout for the cached SSL session objects, in seconds. {@code 0} to use the
+         * default value.
+         */
+        public Builder sessionTimeout(long sessionTimeout) {
+            this.sessionTimeout = sessionTimeout;
+            return this;
+        }
+
+        /** Create new {@code SslContext} instance. */
+        public SslContext build() throws SSLException {
+            if (forClient) {
+                return SslContext.newClientContext(provider, trustCertChainFile,
+                    trustManagerFactory, keyCertChainFile, keyFile, keyPassword, keyManagerFactory,
+                    ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
+            } else {
+                return SslContext.newServerContext(provider, trustCertChainFile,
+                    trustManagerFactory, keyCertChainFile, keyFile, keyPassword, keyManagerFactory,
+                    ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
+            }
+        }
+    }
+
     SslContext() { }
 
     /**
