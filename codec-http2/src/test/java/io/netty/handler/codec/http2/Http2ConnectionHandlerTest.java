@@ -247,17 +247,17 @@ public class Http2ConnectionHandlerTest {
             public ChannelFuture answer(InvocationOnMock invocation) throws Throwable {
                 Object[] args = invocation.getArguments();
                 ChannelFutureListener listener = (ChannelFutureListener) args[0];
-                // Simulate that all streams have become inactive by the time the future completes
+                // Simulate that all streams have become inactive by the time the future completes.
                 when(connection.activeStreams()).thenReturn(Collections.<Http2Stream>emptyList());
                 when(connection.numActiveStreams()).thenReturn(0);
-                // Simulate the future being completed
+                // Simulate the future being completed.
                 listener.operationComplete(future);
                 return future;
             }
         }).when(future).addListener(any(GenericFutureListener.class));
         handler.close(ctx, promise);
         handler.closeStream(stream, future);
-        // Simulate another stream close call being made after the context should already be closed
+        // Simulate another stream close call being made after the context should already be closed.
         handler.closeStream(stream, future);
         verify(ctx, times(1)).close(any(ChannelPromise.class));
     }
