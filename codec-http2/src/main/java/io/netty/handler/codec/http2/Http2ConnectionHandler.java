@@ -195,8 +195,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         try {
             ChannelFuture future = ctx.newSucceededFuture();
-            final Collection<Http2Stream> streams = connection().activeStreams();
-            for (Http2Stream s : streams.toArray(new Http2Stream[streams.size()])) {
+            for (Http2Stream s : connection().activeStreams()) {
                 closeStream(s, future);
             }
         } finally {

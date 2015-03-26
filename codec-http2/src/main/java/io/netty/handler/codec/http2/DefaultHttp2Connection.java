@@ -39,22 +39,30 @@ import io.netty.util.collection.IntObjectMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 /**
  * Simple implementation of {@link Http2Connection}.
  */
 public class DefaultHttp2Connection implements Http2Connection {
 
+    private static final Comparator<Http2Stream> STREAMID_COMPARATOR = new Comparator<Http2Stream>() {
+        @Override
+        public int compare(Http2Stream o1, Http2Stream o2) {
+            return o1.id() - o2.id();
+        }
+    };
+
     private final Set<Listener> listeners = new HashSet<Listener>(4);
     private final IntObjectMap<Http2Stream> streamMap = new IntObjectHashMap<Http2Stream>();
     private final ConnectionStream connectionStream = new ConnectionStream();
-    private final Set<Http2Stream> activeStreams = new LinkedHashSet<Http2Stream>();
+    private final Set<Http2Stream> activeStreams = new ConcurrentSkipListSet<Http2Stream>(STREAMID_COMPARATOR);
     private final DefaultEndpoint<Http2LocalFlowController> localEndpoint;
     private final DefaultEndpoint<Http2RemoteFlowController> remoteEndpoint;
     private final Http2StreamRemovalPolicy removalPolicy;
@@ -131,7 +139,9 @@ public class DefaultHttp2Connection implements Http2Connection {
 
     @Override
     public int numActiveStreams() {
-        return activeStreams.size();
+        // We avoid using activeStreams().size() as it is not a constant time operation,
+        // but has to count every element in the set instead.
+        return localEndpoint.numActiveStreams() + remoteEndpoint.numActiveStreams();
     }
 
     @Override
