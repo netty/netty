@@ -34,6 +34,7 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBeh
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.handler.ssl.IdentityCipherSuiteFilter;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 /**
@@ -57,15 +58,15 @@ public final class SpdyClient {
 
     public static void main(String[] args) throws Exception {
         // Configure SSL.
-        final SslContext sslCtx = SslContext.newClientContext(
-                null, InsecureTrustManagerFactory.INSTANCE, null, IdentityCipherSuiteFilter.INSTANCE,
-                new ApplicationProtocolConfig(
+        final SslContext sslCtx = SslContextBuilder.forClient()
+            .trustManager(InsecureTrustManagerFactory.INSTANCE)
+            .applicationProtocolConfig(new ApplicationProtocolConfig(
                         Protocol.NPN,
                         SelectorFailureBehavior.CHOOSE_MY_LAST_PROTOCOL,
                         SelectedListenerFailureBehavior.CHOOSE_MY_LAST_PROTOCOL,
                         SelectedProtocol.SPDY_3_1.protocolName(),
-                        SelectedProtocol.HTTP_1_1.protocolName()),
-                0, 0);
+                        SelectedProtocol.HTTP_1_1.protocolName()))
+            .build();
 
         HttpResponseClientHandler httpResponseHandler = new HttpResponseClientHandler();
         EventLoopGroup workerGroup = new NioEventLoopGroup();
