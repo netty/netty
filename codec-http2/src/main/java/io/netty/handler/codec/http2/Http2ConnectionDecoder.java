@@ -29,49 +29,9 @@ import java.util.List;
 public interface Http2ConnectionDecoder extends Closeable {
 
     /**
-     * Builder for new instances of {@link Http2ConnectionDecoder}.
+     * Sets the lifecycle manager. Must be called as part of initialization before the decoder is used.
      */
-    interface Builder {
-        /**
-         * Sets the {@link Http2Connection} to be used when building the decoder.
-         */
-        Builder connection(Http2Connection connection);
-
-        /**
-         * Sets the {@link Http2LifecycleManager} to be used when building the decoder.
-         */
-        Builder lifecycleManager(Http2LifecycleManager lifecycleManager);
-
-        /**
-         * Gets the {@link Http2LifecycleManager} to be used when building the decoder.
-         */
-        Http2LifecycleManager lifecycleManager();
-
-        /**
-         * Sets the {@link Http2FrameReader} to be used when building the decoder.
-         */
-        Builder frameReader(Http2FrameReader frameReader);
-
-        /**
-         * Sets the {@link Http2FrameListener} to be used when building the decoder.
-         */
-        Builder listener(Http2FrameListener listener);
-
-        /**
-         * Sets the {@link Http2ConnectionEncoder} used when building the decoder.
-         */
-        Builder encoder(Http2ConnectionEncoder encoder);
-
-        /**
-         * Sets the {@link Http2PromisedRequestVerifier} used when building the decoder.
-         */
-        Builder requestVerifier(Http2PromisedRequestVerifier requestVerifier);
-
-        /**
-         * Creates a new decoder instance.
-         */
-        Http2ConnectionDecoder build();
-    }
+    void lifecycleManager(Http2LifecycleManager lifecycleManager);
 
     /**
      * Provides direct access to the underlying connection.

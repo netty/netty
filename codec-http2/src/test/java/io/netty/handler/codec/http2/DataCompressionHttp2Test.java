@@ -216,7 +216,7 @@ public class DataCompressionHttp2Test {
             });
             awaitServer();
             assertEquals(0, serverConnection.local().flowController().unconsumedBytes(stream));
-            assertEquals(new StringBuilder(text1).append(text2).toString(),
+            assertEquals(text1 + text2,
                     serverOut.toString(CharsetUtil.UTF_8.name()));
         } finally {
             data1.release();
@@ -296,16 +296,13 @@ public class DataCompressionHttp2Test {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                Http2FrameWriter writer = new DefaultHttp2FrameWriter();
-                Http2ConnectionHandler connectionHandler =
-                        new Http2ConnectionHandler(new DefaultHttp2ConnectionDecoder.Builder()
-                                .connection(serverConnection)
-                                .frameReader(new DefaultHttp2FrameReader())
-                                .listener(
-                                        new DelegatingDecompressorFrameListener(serverConnection,
-                                                serverListener)),
-                                new CompressorHttp2ConnectionEncoder.Builder().connection(
-                                        serverConnection).frameWriter(writer));
+                Http2ConnectionEncoder encoder = new CompressorHttp2ConnectionEncoder(
+                        new DefaultHttp2ConnectionEncoder(serverConnection, new DefaultHttp2FrameWriter()));
+                Http2ConnectionDecoder decoder =
+                        new DefaultHttp2ConnectionDecoder(serverConnection, encoder, new DefaultHttp2FrameReader(),
+                                new DelegatingDecompressorFrameListener(serverConnection,
+                                        serverListener));
+                Http2ConnectionHandler connectionHandler = new Http2ConnectionHandler(decoder, encoder);
                 p.addLast(connectionHandler);
                 serverChannelLatch.countDown();
             }
@@ -319,17 +316,14 @@ public class DataCompressionHttp2Test {
                 ChannelPipeline p = ch.pipeline();
                 FrameCountDown clientFrameCountDown = new FrameCountDown(clientListener,
                         clientSettingsAckLatch, clientLatch);
-                Http2FrameWriter writer = new DefaultHttp2FrameWriter();
-                Http2ConnectionHandler connectionHandler =
-                        new Http2ConnectionHandler(new DefaultHttp2ConnectionDecoder.Builder()
-                                .connection(clientConnection)
-                                .frameReader(new DefaultHttp2FrameReader())
-                                .listener(
-                                        new DelegatingDecompressorFrameListener(clientConnection,
-                                                clientFrameCountDown)),
-                                new CompressorHttp2ConnectionEncoder.Builder().connection(
-                                        clientConnection).frameWriter(writer));
-                clientEncoder = connectionHandler.encoder();
+                clientEncoder = new CompressorHttp2ConnectionEncoder(
+                        new DefaultHttp2ConnectionEncoder(clientConnection, new DefaultHttp2FrameWriter()));
+                Http2ConnectionDecoder decoder =
+                        new DefaultHttp2ConnectionDecoder(clientConnection, clientEncoder,
+                                new DefaultHttp2FrameReader(),
+                                new DelegatingDecompressorFrameListener(clientConnection,
+                                        clientFrameCountDown));
+                Http2ConnectionHandler connectionHandler = new Http2ConnectionHandler(decoder, clientEncoder);
                 p.addLast(connectionHandler);
             }
         });

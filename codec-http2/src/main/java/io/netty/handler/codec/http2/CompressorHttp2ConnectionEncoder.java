@@ -34,10 +34,10 @@ import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 
 /**
- * A HTTP2 encoder that will compress data frames according to the {@code content-encoding} header for each stream.
- * The compression provided by this class will be applied to the data for the entire stream.
+ * A decorating HTTP2 encoder that will compress data frames according to the {@code content-encoding} header for each
+ * stream. The compression provided by this class will be applied to the data for the entire stream.
  */
-public class CompressorHttp2ConnectionEncoder extends DefaultHttp2ConnectionEncoder {
+public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionEncoder {
     private static final Http2ConnectionAdapter CLEAN_UP_LISTENER = new Http2ConnectionAdapter() {
         @Override
         public void streamRemoved(Http2Stream stream) {
@@ -48,53 +48,33 @@ public class CompressorHttp2ConnectionEncoder extends DefaultHttp2ConnectionEnco
         }
     };
 
+    public static final int DEFAULT_COMPRESSION_LEVEL = 6;
+    public static final int DEFAULT_WINDOW_BITS = 15;
+    public static final int DEFAULT_MEM_LEVEL = 8;
+
     private final int compressionLevel;
     private final int windowBits;
     private final int memLevel;
 
-    /**
-     * Builder for new instances of {@link CompressorHttp2ConnectionEncoder}
-     */
-    public static class Builder extends DefaultHttp2ConnectionEncoder.Builder {
-        protected int compressionLevel = 6;
-        protected int windowBits = 15;
-        protected int memLevel = 8;
-
-        public Builder compressionLevel(int compressionLevel) {
-            this.compressionLevel = compressionLevel;
-            return this;
-        }
-
-        public Builder windowBits(int windowBits) {
-            this.windowBits = windowBits;
-            return this;
-        }
-
-        public Builder memLevel(int memLevel) {
-            this.memLevel = memLevel;
-            return this;
-        }
-
-        @Override
-        public CompressorHttp2ConnectionEncoder build() {
-            return new CompressorHttp2ConnectionEncoder(this);
-        }
+    public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate) {
+        this(delegate, DEFAULT_COMPRESSION_LEVEL, DEFAULT_WINDOW_BITS, DEFAULT_MEM_LEVEL);
     }
 
-    protected CompressorHttp2ConnectionEncoder(Builder builder) {
-        super(builder);
-        if (builder.compressionLevel < 0 || builder.compressionLevel > 9) {
-            throw new IllegalArgumentException("compressionLevel: " + builder.compressionLevel + " (expected: 0-9)");
+    public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate, int compressionLevel, int windowBits,
+                                            int memLevel) {
+        super(delegate);
+        if (compressionLevel < 0 || compressionLevel > 9) {
+            throw new IllegalArgumentException("compressionLevel: " + compressionLevel + " (expected: 0-9)");
         }
-        if (builder.windowBits < 9 || builder.windowBits > 15) {
-            throw new IllegalArgumentException("windowBits: " + builder.windowBits + " (expected: 9-15)");
+        if (windowBits < 9 || windowBits > 15) {
+            throw new IllegalArgumentException("windowBits: " + windowBits + " (expected: 9-15)");
         }
-        if (builder.memLevel < 1 || builder.memLevel > 9) {
-            throw new IllegalArgumentException("memLevel: " + builder.memLevel + " (expected: 1-9)");
+        if (memLevel < 1 || memLevel > 9) {
+            throw new IllegalArgumentException("memLevel: " + memLevel + " (expected: 1-9)");
         }
-        compressionLevel = builder.compressionLevel;
-        windowBits = builder.windowBits;
-        memLevel = builder.memLevel;
+        this.compressionLevel = compressionLevel;
+        this.windowBits = windowBits;
+        this.memLevel = memLevel;
 
         connection().addListener(CLEAN_UP_LISTENER);
     }

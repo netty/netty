@@ -52,6 +52,8 @@ import io.netty.handler.codec.http2.DefaultHttp2FrameReader;
 import io.netty.handler.codec.http2.DefaultHttp2FrameWriter;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.Http2Connection;
+import io.netty.handler.codec.http2.Http2ConnectionDecoder;
+import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2FrameAdapter;
 import io.netty.handler.codec.http2.Http2FrameWriter;
@@ -264,11 +266,11 @@ public class Http2FrameWriterBenchmark extends AbstractSharedExecutorMicrobenchm
                     connection.local().flowController(localFlowController);
                 }
                 environment.writer(new DefaultHttp2FrameWriter());
-                Http2ConnectionHandler connectionHandler = new Http2ConnectionHandler(
-                        new DefaultHttp2ConnectionDecoder.Builder().connection(connection)
-                                .frameReader(new DefaultHttp2FrameReader()).listener(new Http2FrameAdapter()),
-                        new DefaultHttp2ConnectionEncoder.Builder().connection(connection).frameWriter(
-                                environment.writer()));
+                Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, environment.writer());
+                Http2ConnectionDecoder decoder =
+                        new DefaultHttp2ConnectionDecoder(connection, encoder, new DefaultHttp2FrameReader(),
+                                new Http2FrameAdapter());
+                Http2ConnectionHandler connectionHandler = new Http2ConnectionHandler(decoder, encoder);
                 p.addLast(connectionHandler);
                 environment.context(p.lastContext());
             }
@@ -283,10 +285,11 @@ public class Http2FrameWriterBenchmark extends AbstractSharedExecutorMicrobenchm
     private static Environment boostrapEmbeddedEnv(final ByteBufAllocator alloc) {
         final EmbeddedEnvironment env = new EmbeddedEnvironment(new DefaultHttp2FrameWriter());
         final Http2Connection connection = new DefaultHttp2Connection(false);
-        final Http2ConnectionHandler connectionHandler = new Http2ConnectionHandler(
-                new DefaultHttp2ConnectionDecoder.Builder().connection(connection)
-                        .frameReader(new DefaultHttp2FrameReader()).listener(new Http2FrameAdapter()),
-                new DefaultHttp2ConnectionEncoder.Builder().connection(connection).frameWriter(env.writer()));
+        Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, env.writer());
+        Http2ConnectionDecoder decoder =
+                new DefaultHttp2ConnectionDecoder(connection, encoder, new DefaultHttp2FrameReader(),
+                        new Http2FrameAdapter());
+        Http2ConnectionHandler connectionHandler = new Http2ConnectionHandler(decoder, encoder);
         env.context(new EmbeddedChannelWriteReleaseHandlerContext(alloc, connectionHandler) {
             @Override
             protected void handleException(Throwable t) {
