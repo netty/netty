@@ -40,9 +40,9 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
         super(connection, frameReader, frameWriter, listener);
     }
 
-    public HttpToHttp2ConnectionHandler(Http2ConnectionDecoder.Builder decoderBuilder,
-            Http2ConnectionEncoder.Builder encoderBuilder) {
-        super(decoderBuilder, encoderBuilder);
+    public HttpToHttp2ConnectionHandler(Http2ConnectionDecoder decoder,
+                                        Http2ConnectionEncoder encoder) {
+        super(decoder, encoder);
     }
 
     /**

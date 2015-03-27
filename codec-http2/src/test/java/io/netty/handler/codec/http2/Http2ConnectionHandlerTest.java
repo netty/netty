@@ -90,12 +90,6 @@ public class Http2ConnectionHandlerTest {
     private Http2Stream stream;
 
     @Mock
-    private Http2ConnectionDecoder.Builder decoderBuilder;
-
-    @Mock
-    private Http2ConnectionEncoder.Builder encoderBuilder;
-
-    @Mock
     private Http2ConnectionDecoder decoder;
 
     @Mock
@@ -110,8 +104,6 @@ public class Http2ConnectionHandlerTest {
 
         promise = new DefaultChannelPromise(channel);
 
-        when(encoderBuilder.build()).thenReturn(encoder);
-        when(decoderBuilder.build()).thenReturn(decoder);
         when(encoder.connection()).thenReturn(connection);
         when(decoder.connection()).thenReturn(connection);
         when(encoder.frameWriter()).thenReturn(frameWriter);
@@ -132,7 +124,7 @@ public class Http2ConnectionHandlerTest {
     }
 
     private Http2ConnectionHandler newHandler() throws Exception {
-        Http2ConnectionHandler handler = new Http2ConnectionHandler(decoderBuilder, encoderBuilder);
+        Http2ConnectionHandler handler = new Http2ConnectionHandler(decoder, encoder);
         handler.handlerAdded(ctx);
         return handler;
     }

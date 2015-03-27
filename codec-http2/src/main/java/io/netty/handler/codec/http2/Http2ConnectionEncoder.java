@@ -26,35 +26,9 @@ import io.netty.channel.ChannelPromise;
 public interface Http2ConnectionEncoder extends Http2FrameWriter {
 
     /**
-     * Builder for new instances of {@link Http2ConnectionEncoder}.
+     * Sets the lifecycle manager. Must be called as part of initialization before the encoder is used.
      */
-    interface Builder {
-
-        /**
-         * Sets the {@link Http2Connection} to be used when building the encoder.
-         */
-        Builder connection(Http2Connection connection);
-
-        /**
-         * Sets the {@link Http2LifecycleManager} to be used when building the encoder.
-         */
-        Builder lifecycleManager(Http2LifecycleManager lifecycleManager);
-
-        /**
-         * Gets the {@link Http2LifecycleManager} to be used when building the encoder.
-         */
-        Http2LifecycleManager lifecycleManager();
-
-        /**
-         * Sets the {@link Http2FrameWriter} to be used when building the encoder.
-         */
-        Builder frameWriter(Http2FrameWriter frameWriter);
-
-        /**
-         * Creates a new encoder instance.
-         */
-        Http2ConnectionEncoder build();
-    }
+    void lifecycleManager(Http2LifecycleManager lifecycleManager);
 
     /**
      * Provides direct access to the underlying connection.

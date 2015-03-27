@@ -35,61 +35,22 @@ import java.util.ArrayDeque;
 public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     private final Http2FrameWriter frameWriter;
     private final Http2Connection connection;
-    private final Http2LifecycleManager lifecycleManager;
+    private Http2LifecycleManager lifecycleManager;
     // We prefer ArrayDeque to LinkedList because later will produce more GC.
     // This initial capacity is plenty for SETTINGS traffic.
     private final ArrayDeque<Http2Settings> outstandingLocalSettingsQueue = new ArrayDeque<Http2Settings>(4);
 
-    /**
-     * Builder for new instances of {@link DefaultHttp2ConnectionEncoder}.
-     */
-    public static class Builder implements Http2ConnectionEncoder.Builder {
-        protected Http2FrameWriter frameWriter;
-        protected Http2Connection connection;
-        protected Http2LifecycleManager lifecycleManager;
-
-        @Override
-        public Builder connection(
-                Http2Connection connection) {
-            this.connection = connection;
-            return this;
-        }
-
-        @Override
-        public Builder lifecycleManager(
-                Http2LifecycleManager lifecycleManager) {
-            this.lifecycleManager = lifecycleManager;
-            return this;
-        }
-
-        @Override
-        public Http2LifecycleManager lifecycleManager() {
-            return lifecycleManager;
-        }
-
-        @Override
-        public Builder frameWriter(Http2FrameWriter frameWriter) {
-            this.frameWriter = frameWriter;
-            return this;
-        }
-
-        @Override
-        public Http2ConnectionEncoder build() {
-            return new DefaultHttp2ConnectionEncoder(this);
-        }
-    }
-
-    public static Builder newBuilder() {
-        return new Builder();
-    }
-
-    protected DefaultHttp2ConnectionEncoder(Builder builder) {
-        connection = checkNotNull(builder.connection, "connection");
-        frameWriter = checkNotNull(builder.frameWriter, "frameWriter");
-        lifecycleManager = checkNotNull(builder.lifecycleManager, "lifecycleManager");
+    public DefaultHttp2ConnectionEncoder(Http2Connection connection, Http2FrameWriter frameWriter) {
+        this.connection = checkNotNull(connection, "connection");
+        this.frameWriter = checkNotNull(frameWriter, "frameWriter");
         if (connection.remote().flowController() == null) {
             connection.remote().flowController(new DefaultHttp2RemoteFlowController(connection));
         }
+    }
+
+    @Override
+    public void lifecycleManager(Http2LifecycleManager lifecycleManager) {
+        this.lifecycleManager = checkNotNull(lifecycleManager, "lifecycleManager");
     }
 
     @Override
