@@ -241,8 +241,8 @@ public interface Http2Connection {
     int numActiveStreams();
 
     /**
-     * Gets all streams that are actively in use (i.e. {@code OPEN} or {@code HALF CLOSED}). The returned collection is
-     * sorted by priority.
+     * Gets all streams that are actively in use (i.e. {@code OPEN} or {@code HALF CLOSED}).
+     * The returned collection must be safe to be modified while iterating.
      */
     Collection<Http2Stream> activeStreams();
 

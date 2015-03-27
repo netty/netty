@@ -548,6 +548,20 @@ public class DefaultHttp2ConnectionTest {
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
     }
 
+    /**
+     * Ensure that the collection used for {@link DefaultHttp2Connection#activeStreams()} can be
+     * modified while being iterated over.
+     */
+    @Test
+    public void activeStreamsMayBeClosedWhileIterating() throws Http2Exception {
+        server.local().createStream(2).open(false);
+        server.local().createStream(4).open(false);
+
+        for (Http2Stream stream : server.activeStreams()) {
+            stream.close();
+        }
+    }
+
     private void verifyParentChanging(List<Http2Stream> expectedArg1, List<Http2Stream> expectedArg2) {
         assertSame(expectedArg1.size(), expectedArg2.size());
         ArgumentCaptor<Http2Stream> arg1Captor = ArgumentCaptor.forClass(Http2Stream.class);
