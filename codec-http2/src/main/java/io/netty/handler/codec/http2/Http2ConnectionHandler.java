@@ -63,38 +63,19 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     public Http2ConnectionHandler(Http2Connection connection, Http2FrameReader frameReader,
-            Http2FrameWriter frameWriter, Http2FrameListener listener) {
-        this(DefaultHttp2ConnectionDecoder.newBuilder().connection(connection)
-                .frameReader(frameReader).listener(listener),
-             DefaultHttp2ConnectionEncoder.newBuilder().connection(connection)
-                .frameWriter(frameWriter));
+                                  Http2FrameWriter frameWriter, Http2FrameListener listener) {
+        encoder = new DefaultHttp2ConnectionEncoder(connection, frameWriter);
+        decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader, listener);
     }
 
     /**
-     * Constructor for pre-configured encoder and decoder builders. Just sets the {@code this} as the
+     * Constructor for pre-configured encoder and decoder. Just sets the {@code this} as the
      * {@link Http2LifecycleManager} and builds them.
      */
-    public Http2ConnectionHandler(Http2ConnectionDecoder.Builder decoderBuilder,
-            Http2ConnectionEncoder.Builder encoderBuilder) {
-        checkNotNull(decoderBuilder, "decoderBuilder");
-        checkNotNull(encoderBuilder, "encoderBuilder");
-
-        if (encoderBuilder.lifecycleManager() != decoderBuilder.lifecycleManager()) {
-            throw new IllegalArgumentException("Encoder and Decoder must share a lifecycle manager");
-        } else if (encoderBuilder.lifecycleManager() == null) {
-            encoderBuilder.lifecycleManager(this);
-            decoderBuilder.lifecycleManager(this);
-        }
-
-        // Build the encoder.
-        encoder = checkNotNull(encoderBuilder.build(), "encoder");
-
-        // Build the decoder.
-        decoderBuilder.encoder(encoder);
-        decoder = checkNotNull(decoderBuilder.build(), "decoder");
-
-        // Verify that the encoder and decoder use the same connection.
-        checkNotNull(encoder.connection(), "encoder.connection");
+    public Http2ConnectionHandler(Http2ConnectionDecoder decoder,
+                                  Http2ConnectionEncoder encoder) {
+        this.decoder = checkNotNull(decoder, "decoder");
+        this.encoder = checkNotNull(encoder, "encoder");
         if (encoder.connection() != decoder.connection()) {
             throw new IllegalArgumentException("Encoder and Decoder do not share the same connection object");
         }
@@ -304,6 +285,9 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        // Initialize the encoder and decoder.
+        encoder.lifecycleManager(this);
+        decoder.lifecycleManager(this);
         byteDecoder = new PrefaceDecoder(ctx);
     }
 

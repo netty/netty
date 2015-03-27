@@ -40,85 +40,38 @@ import java.util.List;
 public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     private Http2FrameListener internalFrameListener = new PrefaceFrameListener();
     private final Http2Connection connection;
-    private final Http2LifecycleManager lifecycleManager;
+    private Http2LifecycleManager lifecycleManager;
     private final Http2ConnectionEncoder encoder;
     private final Http2FrameReader frameReader;
     private final Http2FrameListener listener;
     private final Http2PromisedRequestVerifier requestVerifier;
 
-    /**
-     * Builder for instances of {@link DefaultHttp2ConnectionDecoder}.
-     */
-    public static class Builder implements Http2ConnectionDecoder.Builder {
-        private Http2Connection connection;
-        private Http2LifecycleManager lifecycleManager;
-        private Http2ConnectionEncoder encoder;
-        private Http2FrameReader frameReader;
-        private Http2FrameListener listener;
-        private Http2PromisedRequestVerifier requestVerifier = ALWAYS_VERIFY;
-
-        @Override
-        public Builder connection(Http2Connection connection) {
-            this.connection = connection;
-            return this;
-        }
-
-        @Override
-        public Builder lifecycleManager(Http2LifecycleManager lifecycleManager) {
-            this.lifecycleManager = lifecycleManager;
-            return this;
-        }
-
-        @Override
-        public Http2LifecycleManager lifecycleManager() {
-            return lifecycleManager;
-        }
-
-        @Override
-        public Builder frameReader(Http2FrameReader frameReader) {
-            this.frameReader = frameReader;
-            return this;
-        }
-
-        @Override
-        public Builder listener(Http2FrameListener listener) {
-            this.listener = listener;
-            return this;
-        }
-
-        @Override
-        public Builder encoder(Http2ConnectionEncoder encoder) {
-            this.encoder = encoder;
-            return this;
-        }
-
-        @Override
-        public Http2ConnectionDecoder.Builder requestVerifier(Http2PromisedRequestVerifier requestVerifier) {
-            this.requestVerifier = requestVerifier;
-            return this;
-        }
-
-        @Override
-        public Http2ConnectionDecoder build() {
-            return new DefaultHttp2ConnectionDecoder(this);
-        }
+    public DefaultHttp2ConnectionDecoder(Http2Connection connection,
+                                         Http2ConnectionEncoder encoder,
+                                         Http2FrameReader frameReader,
+                                         Http2FrameListener listener) {
+        this(connection, encoder, frameReader, listener, ALWAYS_VERIFY);
     }
 
-    public static Builder newBuilder() {
-        return new Builder();
-    }
-
-    protected DefaultHttp2ConnectionDecoder(Builder builder) {
-        connection = checkNotNull(builder.connection, "connection");
-        frameReader = checkNotNull(builder.frameReader, "frameReader");
-        lifecycleManager = checkNotNull(builder.lifecycleManager, "lifecycleManager");
-        encoder = checkNotNull(builder.encoder, "encoder");
-        listener = checkNotNull(builder.listener, "listener");
-        requestVerifier = checkNotNull(builder.requestVerifier, "requestVerifier");
+    public DefaultHttp2ConnectionDecoder(Http2Connection connection,
+                                         Http2ConnectionEncoder encoder,
+                                         Http2FrameReader frameReader,
+                                         Http2FrameListener listener,
+                                         Http2PromisedRequestVerifier requestVerifier) {
+        this.connection = checkNotNull(connection, "connection");
+        this.frameReader = checkNotNull(frameReader, "frameReader");
+        this.encoder = checkNotNull(encoder, "encoder");
+        this.listener = checkNotNull(listener, "listener");
+        this.requestVerifier = checkNotNull(requestVerifier, "requestVerifier");
         if (connection.local().flowController() == null) {
             connection.local().flowController(
                     new DefaultHttp2LocalFlowController(connection, encoder.frameWriter()));
         }
+    }
+
+    @Override
+    public void lifecycleManager(Http2LifecycleManager lifecycleManager) {
+        this.lifecycleManager = checkNotNull(lifecycleManager, "lifecycleManager");
     }
 
     @Override
