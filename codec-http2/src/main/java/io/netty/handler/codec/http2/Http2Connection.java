@@ -17,8 +17,6 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 
-import java.util.Collection;
-
 /**
  * Manager for the state of an HTTP/2 connection with the remote end-point.
  */
@@ -260,10 +258,25 @@ public interface Http2Connection {
     int numActiveStreams();
 
     /**
-     * Gets all streams that are actively in use (i.e. {@code OPEN} or {@code HALF CLOSED}). The returned collection is
-     * sorted by priority.
+     * Provide a means of iterating over the collection of active streams.
+     *
+     * @param visitor The visitor which will visit each active stream.
+     * @return The stream before iteration stopped or {@code null} if iteration went past the end.
      */
-    Collection<Http2Stream> activeStreams();
+    Http2Stream forEachActiveStream(StreamVisitor visitor) throws Http2Exception;
+
+    /**
+     * A visitor that allows iteration over a collection of streams.
+     */
+    interface StreamVisitor {
+        /**
+         * @return <ul>
+         *         <li>{@code true} if the processor wants to continue the loop and handle the entry.</li>
+         *         <li>{@code false} if the processor wants to stop handling headers and abort the loop.</li>
+         *         </ul>
+         */
+        boolean visit(Http2Stream stream) throws Http2Exception;
+    }
 
     /**
      * Indicates whether or not the local endpoint for this connection is the server.

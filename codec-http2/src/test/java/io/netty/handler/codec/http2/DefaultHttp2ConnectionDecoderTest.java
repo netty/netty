@@ -46,6 +46,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
+import io.netty.handler.codec.http2.Http2Connection.StreamVisitor;
 import io.netty.handler.codec.http2.Http2Exception.ClosedStreamCreationException;
 
 import java.util.Collections;
@@ -124,7 +125,16 @@ public class DefaultHttp2ConnectionDecoderTest {
         when(stream.state()).thenReturn(OPEN);
         when(stream.open(anyBoolean())).thenReturn(stream);
         when(pushStream.id()).thenReturn(PUSH_STREAM_ID);
-        when(connection.activeStreams()).thenReturn(Collections.singletonList(stream));
+        doAnswer(new Answer<Http2Stream>() {
+            @Override
+            public Http2Stream answer(InvocationOnMock in) throws Throwable {
+                StreamVisitor visitor = in.getArgumentAt(0, StreamVisitor.class);
+                if (!visitor.visit(stream)) {
+                    return stream;
+                }
+                return null;
+            }
+        }).when(connection).forEachActiveStream(any(StreamVisitor.class));
         when(connection.stream(STREAM_ID)).thenReturn(stream);
         when(connection.requireStream(STREAM_ID)).thenReturn(stream);
         when(connection.local()).thenReturn(local);
