@@ -27,6 +27,7 @@ import io.netty.handler.codec.http2.Http2Stream.State;
 
 import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Deque;
 
@@ -238,7 +239,8 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             // Now write all of the allocated bytes. Copying the activeStreams array to avoid
             // side effects due to stream removal/addition which might occur as a result
             // of end-of-stream or errors.
-            for (Http2Stream stream : connection.activeStreams().toArray(new Http2Stream[0])) {
+            Collection<Http2Stream> streams = connection.activeStreams();
+            for (Http2Stream stream : streams.toArray(new Http2Stream[streams.size()])) {
                 state(stream).writeAllocatedBytes();
             }
             flush();
@@ -325,7 +327,6 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         return bytesAllocated;
     }
 
-
     /**
      * The outbound flow control state for a single stream.
      */
@@ -377,13 +378,6 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
             // Perform the write.
             writeBytes(numBytes);
-        }
-
-        /**
-         * Gets the number of bytes that have been allocated to this stream by the priority algorithm.
-         */
-        int allocated() {
-            return allocated;
         }
 
         /**
