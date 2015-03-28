@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.jboss.netty.channel.Channels.*;
+import static org.jboss.netty.channel.socket.nio.AbstractNioWorker.isIoThread;
 
 abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChannel> extends AbstractChannel {
 
@@ -256,10 +257,14 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
             if (newWriteBufferSize >= highWaterMark) {
                 if (newWriteBufferSize - messageSize < highWaterMark) {
                     highWaterMarkCounter.incrementAndGet();
-                    if (!notifying.get() && setUnwritable()) {
-                        notifying.set(Boolean.TRUE);
-                        fireChannelInterestChanged(AbstractNioChannel.this);
-                        notifying.set(Boolean.FALSE);
+                    if (setUnwritable()) {
+                        if (!isIoThread(AbstractNioChannel.this)) {
+                            fireChannelInterestChangedLater(AbstractNioChannel.this);
+                        } else if (!notifying.get()) {
+                            notifying.set(Boolean.TRUE);
+                            fireChannelInterestChanged(AbstractNioChannel.this);
+                            notifying.set(Boolean.FALSE);
+                        }
                     }
                 }
             }
@@ -276,10 +281,14 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
                 if (newWriteBufferSize == 0 || newWriteBufferSize < lowWaterMark) {
                     if (newWriteBufferSize + messageSize >= lowWaterMark) {
                         highWaterMarkCounter.decrementAndGet();
-                        if (isConnected() && !notifying.get() && setWritable()) {
-                            notifying.set(Boolean.TRUE);
-                            fireChannelInterestChanged(AbstractNioChannel.this);
-                            notifying.set(Boolean.FALSE);
+                        if (isConnected() && setWritable()) {
+                            if (!isIoThread(AbstractNioChannel.this)) {
+                               fireChannelInterestChangedLater(AbstractNioChannel.this);
+                            } else if (!notifying.get()) {
+                                notifying.set(Boolean.TRUE);
+                                fireChannelInterestChanged(AbstractNioChannel.this);
+                                notifying.set(Boolean.FALSE);
+                            }
                         }
                     }
                 }
