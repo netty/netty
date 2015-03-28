@@ -44,10 +44,9 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
+import io.netty.handler.codec.http2.Http2Connection.StreamVisitor;
 import io.netty.util.concurrent.GenericFutureListener;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import org.junit.After;
@@ -113,8 +112,18 @@ public class Http2ConnectionHandlerTest {
         when(channel.isActive()).thenReturn(true);
         when(connection.remote()).thenReturn(remote);
         when(connection.local()).thenReturn(local);
-        when(connection.activeStreams()).thenReturn(Collections.singletonList(stream));
+        doAnswer(new Answer<Http2Stream>() {
+            @Override
+            public Http2Stream answer(InvocationOnMock in) throws Throwable {
+                StreamVisitor visitor = in.getArgumentAt(0, StreamVisitor.class);
+                if (!visitor.visit(stream)) {
+                    return stream;
+                }
+                return null;
+            }
+        }).when(connection).forEachActiveStream(any(StreamVisitor.class));
         when(connection.stream(NON_EXISTANT_STREAM_ID)).thenReturn(null);
+        when(connection.numActiveStreams()).thenReturn(1);
         when(connection.stream(STREAM_ID)).thenReturn(stream);
         when(stream.open(anyBoolean())).thenReturn(stream);
         when(encoder.writeSettings(eq(ctx), any(Http2Settings.class), eq(promise))).thenReturn(future);
@@ -266,8 +275,6 @@ public class Http2ConnectionHandlerTest {
     @Test
     public void closeListenerShouldBeNotifiedOnlyOneTime() throws Exception {
         handler = newHandler();
-        when(connection.activeStreams()).thenReturn(Arrays.asList(stream));
-        when(connection.numActiveStreams()).thenReturn(1);
         when(future.isDone()).thenReturn(true);
         when(future.isSuccess()).thenReturn(true);
         doAnswer(new Answer<ChannelFuture>() {
@@ -276,7 +283,12 @@ public class Http2ConnectionHandlerTest {
                 Object[] args = invocation.getArguments();
                 GenericFutureListener<ChannelFuture> listener = (GenericFutureListener<ChannelFuture>) args[0];
                 // Simulate that all streams have become inactive by the time the future completes.
-                when(connection.activeStreams()).thenReturn(Collections.<Http2Stream>emptyList());
+                doAnswer(new Answer<Http2Stream>() {
+                    @Override
+                    public Http2Stream answer(InvocationOnMock in) throws Throwable {
+                        return null;
+                    }
+                }).when(connection).forEachActiveStream(any(StreamVisitor.class));
                 when(connection.numActiveStreams()).thenReturn(0);
                 // Simulate the future being completed.
                 listener.operationComplete(future);

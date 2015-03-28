@@ -28,6 +28,7 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http2.Http2Connection.StreamVisitor;
 import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
 
@@ -35,7 +36,6 @@ import io.netty.handler.codec.http2.Http2Exception.StreamException;
  * Basic implementation of {@link Http2LocalFlowController}.
  */
 public class DefaultHttp2LocalFlowController implements Http2LocalFlowController {
-    private static final int DEFAULT_COMPOSITE_EXCEPTION_SIZE = 4;
     /**
      * The default ratio of window size to initial window size below which a {@code WINDOW_UPDATE}
      * is sent to expand the window.
@@ -82,23 +82,9 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         int delta = newWindowSize - initialWindowSize;
         initialWindowSize = newWindowSize;
 
-        CompositeStreamException compositeException = null;
-        for (Http2Stream stream : connection.activeStreams()) {
-            try {
-                // Increment flow control window first so state will be consistent if overflow is detected
-                FlowState state = state(stream);
-                state.incrementFlowControlWindows(delta);
-                state.incrementInitialStreamWindow(delta);
-            } catch (StreamException e) {
-                if (compositeException == null) {
-                    compositeException = new CompositeStreamException(e.error(), DEFAULT_COMPOSITE_EXCEPTION_SIZE);
-                }
-                compositeException.add(e);
-            }
-        }
-        if (compositeException != null) {
-            throw compositeException;
-        }
+        WindowUpdateVisitor visitor = new WindowUpdateVisitor(delta);
+        connection.forEachActiveStream(visitor);
+        visitor.throwIfError();
     }
 
     @Override
@@ -208,7 +194,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         return state(connection.connectionStream());
     }
 
-    private FlowState state(Http2Stream stream) {
+    private static FlowState state(Http2Stream stream) {
         checkNotNull(stream, "stream");
         return stream.getProperty(FlowState.class);
     }
@@ -389,6 +375,40 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
             // Send a window update for the stream/connection.
             frameWriter.writeWindowUpdate(ctx, stream.id(), deltaWindowSize, ctx.newPromise());
             ctx.flush();
+        }
+    }
+
+    /**
+     * Provides a means to iterate over all active streams and increment the flow control windows.
+     */
+    private static final class WindowUpdateVisitor implements StreamVisitor {
+        private CompositeStreamException compositeException;
+        private final int delta;
+
+        public WindowUpdateVisitor(int delta) {
+            this.delta = delta;
+        }
+
+        @Override
+        public boolean visit(Http2Stream stream) throws Http2Exception {
+            try {
+                // Increment flow control window first so state will be consistent if overflow is detected.
+                FlowState state = state(stream);
+                state.incrementFlowControlWindows(delta);
+                state.incrementInitialStreamWindow(delta);
+            } catch (StreamException e) {
+                if (compositeException == null) {
+                    compositeException = new CompositeStreamException(e.error(), 4);
+                }
+                compositeException.add(e);
+            }
+            return true;
+        }
+
+        public void throwIfError() throws CompositeStreamException {
+            if (compositeException != null) {
+                throw compositeException;
+            }
         }
     }
 }

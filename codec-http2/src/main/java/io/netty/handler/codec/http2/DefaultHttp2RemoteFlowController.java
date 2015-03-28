@@ -23,16 +23,23 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http2.Http2Connection.StreamVisitor;
 import io.netty.handler.codec.http2.Http2Stream.State;
 
 import java.util.ArrayDeque;
-import java.util.Collection;
 import java.util.Deque;
 
 /**
  * Basic implementation of {@link Http2RemoteFlowController}.
  */
 public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowController {
+    private static final StreamVisitor WRITE_ALLOCATED_BYTES = new StreamVisitor() {
+        @Override
+        public boolean visit(Http2Stream stream) {
+            state(stream).writeAllocatedBytes();
+            return true;
+        }
+    };
     private final Http2Connection connection;
     private int initialWindowSize = DEFAULT_WINDOW_SIZE;
     private ChannelHandlerContext ctx;
@@ -115,12 +122,16 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             throw new IllegalArgumentException("Invalid initial window size: " + newWindowSize);
         }
 
-        int delta = newWindowSize - initialWindowSize;
+        final int delta = newWindowSize - initialWindowSize;
         initialWindowSize = newWindowSize;
-        for (Http2Stream stream : connection.activeStreams()) {
-            // Verify that the maximum value is not exceeded by this change.
-            state(stream).incrementStreamWindow(delta);
-        }
+        connection.forEachActiveStream(new StreamVisitor() {
+            @Override
+            public boolean visit(Http2Stream stream) throws Http2Exception {
+                // Verify that the maximum value is not exceeded by this change.
+                state(stream).incrementStreamWindow(delta);
+                return true;
+            }
+        });
 
         if (delta > 0) {
             // The window size increased, send any pending frames for all streams.
@@ -215,7 +226,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     /**
      * Writes as many pending bytes as possible, according to stream priority.
      */
-    private void writePendingBytes() {
+    private void writePendingBytes() throws Http2Exception {
         Http2Stream connectionStream = connection.connectionStream();
         int connectionWindow = state(connectionStream).window();
 
@@ -223,13 +234,8 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             // Allocate the bytes for the connection window to the streams, but do not write.
             allocateBytesForTree(connectionStream, connectionWindow);
 
-            // Now write all of the allocated bytes. Copying the activeStreams array to avoid
-            // side effects due to stream removal/addition which might occur as a result
-            // of end-of-stream or errors.
-            Collection<Http2Stream> streams = connection.activeStreams();
-            for (Http2Stream stream : streams.toArray(new Http2Stream[streams.size()])) {
-                state(stream).writeAllocatedBytes();
-            }
+            // Now write all of the allocated bytes.
+            connection.forEachActiveStream(WRITE_ALLOCATED_BYTES);
             flush();
         }
     }
