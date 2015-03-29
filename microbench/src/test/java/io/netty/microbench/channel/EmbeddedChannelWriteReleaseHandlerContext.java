@@ -20,7 +20,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelHandlerInvoker;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
@@ -75,11 +74,6 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext implements Chann
     }
 
     @Override
-    public ChannelHandlerInvoker invoker() {
-        return null;
-    }
-
-    @Override
     public String name() {
         return HANDLER_NAME;
     }
@@ -96,41 +90,21 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext implements Chann
 
     @Override
     public ChannelHandlerContext fireChannelRegistered() {
-        try {
-            handler().channelRegistered(this);
-        } catch (Exception e) {
-            handleException(e);
-        }
         return this;
     }
 
     @Override
     public ChannelHandlerContext fireChannelUnregistered() {
-        try {
-            handler().channelUnregistered(this);
-        } catch (Exception e) {
-            handleException(e);
-        }
         return this;
     }
 
     @Override
     public ChannelHandlerContext fireChannelActive() {
-        try {
-            handler().channelActive(this);
-        } catch (Exception e) {
-            handleException(e);
-        }
         return this;
     }
 
     @Override
     public ChannelHandlerContext fireChannelInactive() {
-        try {
-            handler().channelInactive(this);
-        } catch (Exception e) {
-            handleException(e);
-        }
         return this;
     }
 
@@ -146,41 +120,21 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext implements Chann
 
     @Override
     public ChannelHandlerContext fireUserEventTriggered(Object event) {
-        try {
-            handler().userEventTriggered(this, event);
-        } catch (Exception e) {
-            handleException(e);
-        }
         return this;
     }
 
     @Override
     public ChannelHandlerContext fireChannelRead(Object msg) {
-        try {
-            handler().channelRead(this, msg);
-        } catch (Exception e) {
-            handleException(e);
-        }
         return this;
     }
 
     @Override
     public ChannelHandlerContext fireChannelReadComplete() {
-        try {
-            handler().channelReadComplete(this);
-        } catch (Exception e) {
-            handleException(e);
-        }
         return this;
     }
 
     @Override
     public ChannelHandlerContext fireChannelWritabilityChanged() {
-        try {
-            handler().channelWritabilityChanged(this);
-        } catch (Exception e) {
-            handleException(e);
-        }
         return this;
     }
 
