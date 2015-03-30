@@ -240,7 +240,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         try {
             decode().onDataRead(ctx, STREAM_ID, data, 10, true);
             verify(localFlow).receiveFlowControlledFrame(eq(ctx), eq(stream), eq(data), eq(10), eq(true));
-            verify(lifecycleManager).closeRemoteSide(eq(stream), eq(future));
+            verify(lifecycleManager).closeForReading(eq(stream), eq(future));
             verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(10), eq(true));
         } finally {
             data.release();
@@ -283,7 +283,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         } catch (RuntimeException cause) {
             verify(localFlow)
                     .receiveFlowControlledFrame(eq(ctx), eq(stream), eq(data), eq(padding), eq(true));
-            verify(lifecycleManager).closeRemoteSide(eq(stream), eq(future));
+            verify(lifecycleManager).closeForReading(eq(stream), eq(future));
             verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(padding), eq(true));
             assertEquals(0, localFlow.unconsumedBytes(stream));
         } finally {
@@ -340,7 +340,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         when(stream.state()).thenReturn(RESERVED_REMOTE);
         decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true);
         verify(stream).open(true);
-        verify(lifecycleManager).closeRemoteSide(eq(stream), eq(future));
+        verify(lifecycleManager).closeForReading(eq(stream), eq(future));
         verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true));
     }

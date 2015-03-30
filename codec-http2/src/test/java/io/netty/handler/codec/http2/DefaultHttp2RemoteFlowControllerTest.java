@@ -1000,7 +1000,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         final Http2Stream stream = stream(STREAM_A);
         doAnswer(new Answer<Void>() {
             public Void answer(InvocationOnMock invocationOnMock) {
-                stream.closeLocalSide();
+                stream.closeForWriting();
                 return null;
             }
         }).when(flowControlled).error(any(Throwable.class));

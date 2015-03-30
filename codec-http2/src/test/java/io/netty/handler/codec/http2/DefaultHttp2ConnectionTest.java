@@ -191,7 +191,7 @@ public class DefaultHttp2ConnectionTest {
     @Test
     public void closeLocalWhenOpenShouldSucceed() throws Http2Exception {
         Http2Stream stream = server.remote().createStream(3).open(false);
-        stream.closeLocalSide();
+        stream.closeForWriting();
         assertEquals(State.HALF_CLOSED_LOCAL, stream.state());
         assertEquals(1, server.activeStreams().size());
     }
@@ -199,7 +199,7 @@ public class DefaultHttp2ConnectionTest {
     @Test
     public void closeRemoteWhenOpenShouldSucceed() throws Http2Exception {
         Http2Stream stream = server.remote().createStream(3).open(false);
-        stream.closeRemoteSide();
+        stream.closeForReading();
         assertEquals(State.HALF_CLOSED_REMOTE, stream.state());
         assertEquals(1, server.activeStreams().size());
     }
@@ -207,7 +207,7 @@ public class DefaultHttp2ConnectionTest {
     @Test
     public void closeOnlyOpenSideShouldClose() throws Http2Exception {
         Http2Stream stream = server.remote().createStream(3).open(true);
-        stream.closeLocalSide();
+        stream.closeForWriting();
         assertEquals(State.CLOSED, stream.state());
         assertTrue(server.activeStreams().isEmpty());
     }

@@ -336,7 +336,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         when(stream.state()).thenReturn(RESERVED_LOCAL);
         encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false, promise);
         verify(stream).open(false);
-        verify(stream, never()).closeLocalSide();
+        verify(stream, never()).closeForWriting();
         assertNotNull(payloadCaptor.getValue());
         payloadCaptor.getValue().write(0);
         verify(writer).writeHeaders(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(0),
@@ -461,7 +461,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         ByteBuf data = dummyData();
         encoder.writeData(ctx, STREAM_ID, data.retain(), 0, true, promise);
         verify(remoteFlow).sendFlowControlled(eq(ctx), eq(stream), any(FlowControlled.class));
-        verify(lifecycleManager).closeLocalSide(stream, promise);
+        verify(lifecycleManager).closeForWriting(stream, promise);
         assertEquals(data.toString(UTF_8), writtenData.get(0));
         data.release();
     }
@@ -483,7 +483,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         // Trigger the write and mark the promise successful to trigger listeners
         payloadCaptor.getValue().write(0);
         promise.trySuccess();
-        verify(lifecycleManager).closeLocalSide(eq(stream), eq(promise));
+        verify(lifecycleManager).closeForWriting(eq(stream), eq(promise));
     }
 
     @Test
@@ -498,7 +498,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         verify(stream).open(true);
 
         promise.trySuccess();
-        verify(lifecycleManager).closeLocalSide(eq(stream), eq(promise));
+        verify(lifecycleManager).closeForWriting(eq(stream), eq(promise));
     }
 
     private void mockSendFlowControlledWriteEverything() {

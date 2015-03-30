@@ -509,7 +509,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         @Override
         public void writeComplete() {
             if (endOfStream) {
-                lifecycleManager.closeLocalSide(stream, promise);
+                lifecycleManager.closeForWriting(stream, promise);
             }
         }
 

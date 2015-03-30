@@ -65,16 +65,14 @@ public interface Http2Stream {
     Http2Stream close();
 
     /**
-     * Closes the local side of this stream. If this makes the stream closed, the child is closed as
-     * well.
+     * Closes the this stream for writing (i.e. closes the local side).
      */
-    Http2Stream closeLocalSide();
+    Http2Stream closeForWriting();
 
     /**
-     * Closes the remote side of this stream. If this makes the stream closed, the child is closed
-     * as well.
+     * Closes this stream for reading (i.e. closes the remote side).
      */
-    Http2Stream closeRemoteSide();
+    Http2Stream closeForReading();
 
     /**
      * Indicates whether a {@code RST_STREAM} frame has been sent from the local endpoint for this stream.
@@ -88,16 +86,16 @@ public interface Http2Stream {
     Http2Stream resetSent();
 
     /**
-     * Indicates whether the remote side of this stream is open (i.e. the state is either
-     * {@link State#OPEN} or {@link State#HALF_CLOSED_LOCAL}).
+     * Indicates whether the remote side of this stream is open, allowing the stream to be readable (i.e.
+     * the state is either {@link State#OPEN} or {@link State#HALF_CLOSED_LOCAL}).
      */
-    boolean remoteSideOpen();
+    boolean isReadable();
 
     /**
-     * Indicates whether the local side of this stream is open (i.e. the state is either
-     * {@link State#OPEN} or {@link State#HALF_CLOSED_REMOTE}).
+     * Indicates whether the local side of this stream is open, allowing the stream to be written (i.e.
+     * the state is either {@link State#OPEN} or {@link State#HALF_CLOSED_REMOTE}).
      */
-    boolean localSideOpen();
+    boolean isWritable();
 
     /**
      * Associates the application-defined data with this stream.

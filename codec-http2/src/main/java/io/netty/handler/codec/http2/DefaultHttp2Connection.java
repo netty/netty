@@ -384,7 +384,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public Http2Stream closeLocalSide() {
+        public Http2Stream closeForWriting() {
             switch (state) {
             case OPEN:
                 state = HALF_CLOSED_LOCAL;
@@ -400,7 +400,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public Http2Stream closeRemoteSide() {
+        public Http2Stream closeForReading() {
             switch (state) {
             case OPEN:
                 state = HALF_CLOSED_REMOTE;
@@ -422,12 +422,12 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public final boolean remoteSideOpen() {
+        public final boolean isReadable() {
             return state == HALF_CLOSED_LOCAL || state == OPEN || state == RESERVED_REMOTE;
         }
 
         @Override
-        public final boolean localSideOpen() {
+        public final boolean isWritable() {
             return state == HALF_CLOSED_REMOTE || state == OPEN || state == RESERVED_LOCAL;
         }
 
@@ -651,12 +651,12 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public Http2Stream closeLocalSide() {
+        public Http2Stream closeForWriting() {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public Http2Stream closeRemoteSide() {
+        public Http2Stream closeForReading() {
             throw new UnsupportedOperationException();
         }
     }
@@ -730,7 +730,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             if (parent == null) {
                 throw connectionError(PROTOCOL_ERROR, "Parent stream missing");
             }
-            if (isLocal() ? !parent.localSideOpen() : !parent.remoteSideOpen()) {
+            if (isLocal() ? !parent.isWritable() : !parent.isReadable()) {
                 throw connectionError(PROTOCOL_ERROR, "Stream %d is not open for sending push promise", parent.id());
             }
             if (!opposite().allowPushTo()) {
