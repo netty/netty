@@ -659,16 +659,18 @@ public class DefaultHttp2RemoteFlowControllerTest {
         incrementWindowSize(CONNECTION_STREAM_ID, 1000);
 
         // All writes sum == 1000
-        dataA.assertPartiallyWritten(109);
-        dataB.assertPartiallyWritten(445);
-        dataC.assertPartiallyWritten(223);
-        dataD.assertPartiallyWritten(223);
+        assertEquals(1000, dataA.written() + dataB.written() + dataC.written() + dataD.written());
+        int allowedError = 10;
+        dataA.assertPartiallyWritten(109, allowedError);
+        dataB.assertPartiallyWritten(445, allowedError);
+        dataC.assertPartiallyWritten(223, allowedError);
+        dataD.assertPartiallyWritten(223, allowedError);
 
         assertEquals(0, window(CONNECTION_STREAM_ID));
-        assertEquals(DEFAULT_WINDOW_SIZE - 109, window(STREAM_A));
-        assertEquals(DEFAULT_WINDOW_SIZE - 445, window(STREAM_B));
-        assertEquals(DEFAULT_WINDOW_SIZE - 223, window(STREAM_C));
-        assertEquals(DEFAULT_WINDOW_SIZE - 223, window(STREAM_D));
+        assertEquals(DEFAULT_WINDOW_SIZE - dataA.written(), window(STREAM_A));
+        assertEquals(DEFAULT_WINDOW_SIZE - dataB.written(), window(STREAM_B));
+        assertEquals(DEFAULT_WINDOW_SIZE - dataC.written(), window(STREAM_C));
+        assertEquals(DEFAULT_WINDOW_SIZE - dataD.written(), window(STREAM_D));
     }
 
     /**
@@ -1215,13 +1217,21 @@ public class DefaultHttp2RemoteFlowControllerTest {
             return true;
         }
 
+        public int written() {
+            return originalSize - currentSize;
+        }
+
         public void assertNotWritten() {
             assertFalse(writeCalled);
         }
 
         public void assertPartiallyWritten(int expectedWritten) {
+            assertPartiallyWritten(expectedWritten, 0);
+        }
+
+        public void assertPartiallyWritten(int expectedWritten, int delta) {
             assertTrue(writeCalled);
-            assertEquals(expectedWritten, originalSize - currentSize);
+            assertEquals(expectedWritten, written(), delta);
         }
 
         public void assertFullyWritten() {
