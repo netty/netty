@@ -29,19 +29,6 @@ import org.jboss.netty.util.CharsetUtil;
 final class WebSocketUtil {
 
     /**
-     * @deprecated use {@link #md5(ChannelBuffer)}
-     */
-    @Deprecated
-    static byte[] md5(byte[] bytes) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            return md.digest(bytes);
-        } catch (NoSuchAlgorithmException e) {
-            throw new InternalError("MD5 not supported on this platform");
-        }
-    }
-
-    /**
      * Performs an MD5 hash
      *
      * @param buffer
@@ -61,19 +48,6 @@ final class WebSocketUtil {
             return ChannelBuffers.wrappedBuffer(md.digest());
         } catch (NoSuchAlgorithmException e) {
             throw new InternalError("MD5 not supported on this platform");
-        }
-    }
-
-    /**
-     * @deprecated use {@link #sha1(ChannelBuffer)}
-     */
-    @Deprecated
-    static byte[] sha1(byte[] bytes) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA1");
-            return md.digest(bytes);
-        } catch (NoSuchAlgorithmException e) {
-            throw new InternalError("SHA-1 not supported on this platform");
         }
     }
 
@@ -98,15 +72,6 @@ final class WebSocketUtil {
         } catch (NoSuchAlgorithmException e) {
             throw new InternalError("SHA-1 not supported on this platform");
         }
-    }
-
-    /**
-     * @deprecated use {@link #base64(ChannelBuffer)}
-     */
-    @Deprecated
-    static String base64(byte[] bytes) {
-        ChannelBuffer hashed = ChannelBuffers.wrappedBuffer(bytes);
-        return Base64.encode(hashed).toString(CharsetUtil.UTF_8);
     }
 
     /**

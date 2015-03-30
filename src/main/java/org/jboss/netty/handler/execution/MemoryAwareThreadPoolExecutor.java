@@ -386,22 +386,6 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
     }
 
     /**
-     * @deprecated <tt>maxTotalMemorySize</tt> is not modifiable anymore.
-     */
-    @Deprecated
-    public void setMaxTotalMemorySize(long maxTotalMemorySize) {
-        if (maxTotalMemorySize < 0) {
-            throw new IllegalArgumentException(
-                    "maxTotalMemorySize: " + maxTotalMemorySize);
-        }
-
-        if (getTaskCount() > 0) {
-            throw new IllegalStateException(
-                    "can't be changed after a task is executed");
-        }
-    }
-
-    /**
      * If set to {@code false} no queued {@link ChannelEventRunnable}'s {@link ChannelFuture}
      * will get notified once {@link #shutdownNow()} is called.  If set to {@code true} every
      * queued {@link ChannelEventRunnable} will get marked as failed via {@link ChannelFuture#setFailure(Throwable)}.

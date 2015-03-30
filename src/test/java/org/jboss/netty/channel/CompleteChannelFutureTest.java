@@ -97,11 +97,6 @@ public class CompleteChannelFutureTest {
             throw new Error();
         }
 
-        @Deprecated
-        public ChannelFuture rethrowIfFailed() throws Exception {
-            throw new Error();
-        }
-
         public ChannelFuture sync() throws InterruptedException {
             throw new Error();
         }

@@ -46,7 +46,6 @@ import org.jboss.netty.handler.codec.http.multipart.HttpDataFactory;
 import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
 import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder.EndOfDataDecoderException;
 import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder.ErrorDataDecoderException;
-import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder.IncompatibleDataDecoderException;
 import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder.NotEnoughDataDecoderException;
 import org.jboss.netty.handler.codec.http.multipart.InterfaceHttpData;
 import org.jboss.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataType;
@@ -149,13 +148,6 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
                 responseContent.append(e1.getMessage());
                 writeResponse(e.getChannel());
                 Channels.close(e.getChannel());
-                return;
-            } catch (IncompatibleDataDecoderException e1) {
-                // GET Method: should not try to create a HttpPostRequestDecoder
-                // So OK but stop here
-                responseContent.append(e1.getMessage());
-                responseContent.append("\r\n\r\nEND OF GET CONTENT\r\n");
-                writeResponse(e.getChannel());
                 return;
             }
 

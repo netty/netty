@@ -361,6 +361,17 @@ public interface Channel extends Comparable<Channel> {
     ChannelFuture setReadable(boolean readable);
 
     /**
+     * Returns {@code true} if and only if the user-defined writability flag at the specified index is set to
+     * {@code true}.
+     */
+    boolean getUserDefinedWritability(int index);
+
+    /**
+     * Sets a user-defined writability flag at the specified index.
+     */
+    void setUserDefinedWritability(int index, boolean isWritable);
+
+    /**
      * Retrieves an object which is {@link #setAttachment(Object) attached} to
      * this {@link Channel}.
      *

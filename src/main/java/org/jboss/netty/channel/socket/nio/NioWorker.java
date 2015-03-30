@@ -149,7 +149,7 @@ public class NioWorker extends AbstractNioWorker {
                 }
 
                 channel.channel.register(
-                        selector, channel.getRawInterestOps(), channel);
+                        selector, channel.getInternalInterestOps(), channel);
 
                 if (future != null) {
                     channel.setConnected();

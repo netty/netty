@@ -30,8 +30,7 @@ public class NioDatagramWorkerPool extends AbstractNioWorkerPool<NioDatagramWork
     }
 
     @Override
-    @Deprecated
-    protected NioDatagramWorker createWorker(Executor executor) {
+    protected NioDatagramWorker newWorker(Executor executor) {
         return new NioDatagramWorker(executor);
     }
 }

@@ -26,7 +26,6 @@ import org.jboss.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadOp
 import org.jboss.netty.handler.codec.http.multipart.HttpPostBodyUtil.TransferEncodingMechanism;
 import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder.EndOfDataDecoderException;
 import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder.ErrorDataDecoderException;
-import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder.IncompatibleDataDecoderException;
 import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder.MultiPartStatus;
 import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder.NotEnoughDataDecoderException;
 import org.jboss.netty.util.internal.CaseIgnoringComparator;
@@ -42,7 +41,6 @@ import java.util.TreeMap;
 /**
  * This decoder will decode Body and can handle POST BODY in multipart form.
  */
-@SuppressWarnings({ "deprecation", "RedundantThrowsDeclaration" })
 public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequestDecoder {
     /**
      * Factory used to create InterfaceHttpData
@@ -120,11 +118,9 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
     *
     * @param request the request to decode
     * @throws NullPointerException for request
-    * @throws IncompatibleDataDecoderException if the request has no body to decode
     * @throws ErrorDataDecoderException if the default charset was wrong when decoding or other errors
     */
-    public HttpPostMultipartRequestDecoder(HttpRequest request)
-            throws ErrorDataDecoderException, IncompatibleDataDecoderException {
+    public HttpPostMultipartRequestDecoder(HttpRequest request) throws ErrorDataDecoderException {
         this(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE),
                 request, HttpConstants.DEFAULT_CHARSET);
     }
@@ -134,11 +130,10 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      * @param factory the factory used to create InterfaceHttpData
      * @param request the request to decode
      * @throws NullPointerException for request or factory
-     * @throws IncompatibleDataDecoderException if the request has no body to decode
      * @throws ErrorDataDecoderException if the default charset was wrong when decoding or other errors
      */
     public HttpPostMultipartRequestDecoder(HttpDataFactory factory, HttpRequest request)
-            throws ErrorDataDecoderException, IncompatibleDataDecoderException {
+            throws ErrorDataDecoderException {
         this(factory, request, HttpConstants.DEFAULT_CHARSET);
     }
 
@@ -148,12 +143,10 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      * @param request the request to decode
      * @param charset the charset to use as default
      * @throws NullPointerException for request or charset or factory
-     * @throws IncompatibleDataDecoderException if the request has no body to decode
      * @throws ErrorDataDecoderException if the default charset was wrong when decoding or other errors
      */
     public HttpPostMultipartRequestDecoder(HttpDataFactory factory, HttpRequest request,
-            Charset charset) throws ErrorDataDecoderException,
-            IncompatibleDataDecoderException {
+            Charset charset) throws ErrorDataDecoderException {
         if (factory == null) {
             throw new NullPointerException("factory");
         }
@@ -1616,7 +1609,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         String svalue = sb.substring(valueStart, valueEnd);
         String[] values;
         if (svalue.indexOf(';') >= 0) {
-            values = StringUtil.split(svalue, ';');
+            values = splitMultipartHeaderValues(svalue);
         } else {
             values = StringUtil.split(svalue, ',');
         }
@@ -1628,5 +1621,40 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             array[i] = headers.get(i);
         }
         return array;
+    }
+
+    /**
+     * Split one header value in Multipart.
+     *
+     * @return an array of {@link String} where values that were separated by ';' or ','
+     */
+    private static String[] splitMultipartHeaderValues(String svalue) {
+        List<String> values = new ArrayList<String>(1);
+        boolean inQuote = false;
+        boolean escapeNext = false;
+        int start = 0;
+        for (int i = 0; i < svalue.length(); i++) {
+            char c = svalue.charAt(i);
+            if (inQuote) {
+                if (escapeNext) {
+                    escapeNext = false;
+                } else {
+                    if (c == '\\') {
+                        escapeNext = true;
+                    } else if (c == '"') {
+                        inQuote = false;
+                    }
+                }
+            } else {
+                if (c == '"') {
+                    inQuote = true;
+                } else if (c == ';') {
+                    values.add(svalue.substring(start, i));
+                    start = i + 1;
+                }
+            }
+        }
+        values.add(svalue.substring(start));
+        return values.toArray(new String[values.size()]);
     }
 }

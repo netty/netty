@@ -158,15 +158,15 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
 
         // Override OP_WRITE flag - a user cannot change this flag.
         interestOps &= ~Channel.OP_WRITE;
-        interestOps |= channel.getInterestOps() & Channel.OP_WRITE;
+        interestOps |= channel.getInternalInterestOps() & Channel.OP_WRITE;
 
         boolean changed = false;
         try {
-            if (channel.getInterestOps() != interestOps) {
+            if (channel.getInternalInterestOps() != interestOps) {
                 if ((interestOps & Channel.OP_READ) != 0) {
-                    channel.setInterestOpsNow(Channel.OP_READ);
+                    channel.setInternalInterestOps(Channel.OP_READ);
                 } else {
-                    channel.setInterestOpsNow(Channel.OP_NONE);
+                    channel.setInternalInterestOps(Channel.OP_NONE);
                 }
                 changed = true;
             }
@@ -174,7 +174,7 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
             future.setSuccess();
             if (changed) {
                 synchronized (channel.interestOpsLock) {
-                    channel.setInterestOpsNow(interestOps);
+                    channel.setInternalInterestOps(interestOps);
 
                     // Notify the worker so it stops or continues reading.
                     Thread currentThread = Thread.currentThread();

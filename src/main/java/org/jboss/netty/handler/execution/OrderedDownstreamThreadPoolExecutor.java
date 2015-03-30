@@ -116,16 +116,6 @@ public final class OrderedDownstreamThreadPoolExecutor extends OrderedMemoryAwar
     }
 
     /**
-     * Throws {@link UnsupportedOperationException} as there is not support for limit the memory
-     * size in this implementation
-     */
-    @Override
-    @Deprecated
-    public void setMaxTotalMemorySize(long maxTotalMemorySize) {
-        throw new UnsupportedOperationException("Not supported by this implementation");
-    }
-
-    /**
      * Return {@code false} as we not need to cound the memory in this implementation
      */
     @Override

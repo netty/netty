@@ -32,22 +32,12 @@ public class InternalAttribute implements InterfaceHttpData {
     protected final List<String> value = new ArrayList<String>();
     private final Charset charset;
 
-    @Deprecated
-    public InternalAttribute() {
-       this(CharsetUtil.UTF_8);
-    }
-
     public InternalAttribute(Charset charset) {
         this.charset = charset;
     }
 
     public HttpDataType getHttpDataType() {
         return HttpDataType.InternalAttribute;
-    }
-
-    @Deprecated
-    public List<String> getValue() {
-        return value;
     }
 
     public void addValue(String value) {
