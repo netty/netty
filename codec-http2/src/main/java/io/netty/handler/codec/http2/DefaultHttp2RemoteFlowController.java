@@ -282,7 +282,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                 int weight = child.weight();
                 double weightRatio = weight / (double) totalWeight;
 
-                int bytesForTree = Math.min(nextConnectionWindow, (int) Math.ceil(connectionWindow * weightRatio));
+                int bytesForTree = Math.min(nextConnectionWindow, Math.max(1, (int) (connectionWindow * weightRatio)));
                 int bytesForChild = Math.min(state.streamableBytes(), bytesForTree);
 
                 if (bytesForChild > 0) {
