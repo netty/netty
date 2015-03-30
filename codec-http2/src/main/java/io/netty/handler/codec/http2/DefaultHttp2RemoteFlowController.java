@@ -26,26 +26,13 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Stream.State;
 
 import java.util.ArrayDeque;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.Deque;
 
 /**
  * Basic implementation of {@link Http2RemoteFlowController}.
  */
 public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowController {
-
-    /**
-     * A {@link Comparator} that sorts streams in ascending order the amount of streamable data.
-     */
-    private static final Comparator<Http2Stream> WEIGHT_ORDER = new Comparator<Http2Stream>() {
-        @Override
-        public int compare(Http2Stream o1, Http2Stream o2) {
-            return o2.weight() - o1.weight();
-        }
-    };
-
     private final Http2Connection connection;
     private int initialWindowSize = DEFAULT_WINDOW_SIZE;
     private ChannelHandlerContext ctx;
@@ -283,7 +270,6 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         // This is the priority algorithm which will divide the available bytes based
         // upon stream weight relative to its peers
         Http2Stream[] children = parent.children().toArray(new Http2Stream[parent.numChildren()]);
-        Arrays.sort(children, WEIGHT_ORDER);
         int totalWeight = parent.totalChildWeights();
         for (int tail = children.length; tail > 0;) {
             int head = 0;
