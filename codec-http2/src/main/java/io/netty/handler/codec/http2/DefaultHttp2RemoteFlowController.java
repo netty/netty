@@ -236,7 +236,8 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
     /**
      * This will allocate bytes by stream weight and priority for the entire tree rooted at {@code parent}, but does
-     * not write any bytes.
+     * not write any bytes. Priority is generally distributed proportionally to siblings in the priority tree, however
+     * we ensure that at least 1 byte is assigned to each stream in order to make progress.
      *
      * @param parent The parent of the tree.
      * @param connectionWindow The connection window this is available for use at this point in the tree.
@@ -282,6 +283,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                 int weight = child.weight();
                 double weightRatio = weight / (double) totalWeight;
 
+                // Ensure that at least one byte is allocated to this stream (if it has streamableBytes).
                 int bytesForTree = Math.min(nextConnectionWindow, Math.max(1, (int) (connectionWindow * weightRatio)));
                 int bytesForChild = Math.min(state.streamableBytes(), bytesForTree);
 
