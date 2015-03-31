@@ -15,6 +15,8 @@
  */
 package io.netty.util.concurrent;
 
+import io.netty.util.internal.ObjectUtil;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -30,6 +32,9 @@ import static io.netty.util.concurrent.AbstractEventExecutor.*;
  * Abstract base class for {@link EventExecutorGroup} implementations.
  */
 public abstract class AbstractEventExecutorGroup implements EventExecutorGroup {
+
+    private volatile RejectedTaskHandler rejectedTaskHandler = DefaultRejectedTaskHandler.INSTANCE;
+
     @Override
     public Future<?> submit(Runnable task) {
         return next().submit(task);
@@ -113,5 +118,16 @@ public abstract class AbstractEventExecutorGroup implements EventExecutorGroup {
     @Override
     public void execute(Runnable command) {
         next().execute(command);
+    }
+    
+    @Override
+    public void setRejectedTaskHandler(RejectedTaskHandler rejectedTaskHandler) {
+        ObjectUtil.checkNotNull(rejectedTaskHandler, "rejectedTaskHandler");
+        this.rejectedTaskHandler = rejectedTaskHandler;
+    }
+    
+    @Override
+    public RejectedTaskHandler rejectedTaskHandler() {
+        return rejectedTaskHandler;
     }
 }
