@@ -86,17 +86,25 @@ public interface Http2Connection {
 
         /**
          * Called when a {@code GOAWAY} frame was sent for the connection.
+         *
+         * @param lastStreamId the last known stream of the remote endpoint.
+         * @param errorCode    the error code, if abnormal closure.
+         * @param debugData    application-defined debug data.
          */
-        void onGoAwaySent(long errorCode, ByteBuf debugData);
+        void onGoAwaySent(int lastStreamId, long errorCode, ByteBuf debugData);
 
         /**
-         * Called when a {@code GOAWAY} was received from the remote endpoint. This
-         * event handler duplicates {@link Http2FrameListener#onGoAwayRead(io.netty.channel.ChannelHandlerContext,
-         * int, long, io.netty.buffer.ByteBuf)} but is added here in order to simplify application logic
-         * for handling {@code GOAWAY} in a uniform way. An application should generally not handle both events, but if
-         * it does this method is called first, before notifying the {@link Http2FrameListener}.
+         * Called when a {@code GOAWAY} was received from the remote endpoint. This event handler duplicates {@link
+         * Http2FrameListener#onGoAwayRead(io.netty.channel.ChannelHandlerContext, int, long, io.netty.buffer.ByteBuf)}
+         * but is added here in order to simplify application logic for handling {@code GOAWAY} in a uniform way. An
+         * application should generally not handle both events, but if it does this method is called first, before
+         * notifying the {@link Http2FrameListener}.
+         *
+         * @param lastStreamId the last known stream of the remote endpoint.
+         * @param errorCode    the error code, if abnormal closure.
+         * @param debugData    application-defined debug data.
          */
-        void onGoAwayReceived(long errorCode, ByteBuf debugData);
+        void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData);
     }
 
     /**

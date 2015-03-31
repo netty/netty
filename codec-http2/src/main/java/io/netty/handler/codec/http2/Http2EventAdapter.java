@@ -116,10 +116,10 @@ public class Http2EventAdapter implements Http2Connection.Listener, Http2FrameLi
     }
 
     @Override
-    public void onGoAwaySent(long errorCode, ByteBuf debugData) {
+    public void onGoAwaySent(int lastStreamId, long errorCode, ByteBuf debugData) {
     }
 
     @Override
-    public void onGoAwayReceived(long errorCode, ByteBuf debugData) {
+    public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
     }
 }

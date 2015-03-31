@@ -163,7 +163,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         localEndpoint.lastKnownStream(lastKnownStream);
         if (!alreadyNotified) {
             for (Listener listener : listeners) {
-                listener.onGoAwayReceived(errorCode, debugData);
+                listener.onGoAwayReceived(lastKnownStream, errorCode, debugData);
             }
         }
     }
@@ -179,7 +179,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         remoteEndpoint.lastKnownStream(lastKnownStream);
         if (!alreadyNotified) {
             for (Listener listener : listeners) {
-                listener.onGoAwaySent(errorCode, debugData);
+                listener.onGoAwaySent(lastKnownStream, errorCode, debugData);
             }
         }
     }

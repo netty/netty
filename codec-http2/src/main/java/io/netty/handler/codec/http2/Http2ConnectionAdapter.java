@@ -42,11 +42,11 @@ public class Http2ConnectionAdapter implements Http2Connection.Listener {
     }
 
     @Override
-    public void onGoAwaySent(long errorCode, ByteBuf debugData) {
+    public void onGoAwaySent(int lastStreamId, long errorCode, ByteBuf debugData) {
     }
 
     @Override
-    public void onGoAwayReceived(long errorCode, ByteBuf debugData) {
+    public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
     }
 
     @Override
