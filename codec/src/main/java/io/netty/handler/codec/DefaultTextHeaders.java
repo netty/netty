@@ -16,15 +16,16 @@
 
 package io.netty.handler.codec;
 
+import static io.netty.util.AsciiString.CHARSEQUENCE_CASE_INSENSITIVE_ORDER;
+import static io.netty.util.AsciiString.CHARSEQUENCE_CASE_SENSITIVE_ORDER;
+import static io.netty.util.internal.StringUtil.COMMA;
+import io.netty.util.AsciiString;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.text.ParseException;
 import java.util.Comparator;
 import java.util.Iterator;
-
-import static io.netty.handler.codec.AsciiString.*;
-import static io.netty.util.internal.StringUtil.COMMA;
 
 public class DefaultTextHeaders extends DefaultConvertibleHeaders<CharSequence, String> implements TextHeaders {
     private static final HashCodeGenerator<CharSequence> CHARSEQUECE_CASE_INSENSITIVE_HASH_CODE_GENERATOR =
@@ -36,12 +37,7 @@ public class DefaultTextHeaders extends DefaultConvertibleHeaders<CharSequence, 
     };
 
     private static final HashCodeGenerator<CharSequence> CHARSEQUECE_CASE_SENSITIVE_HASH_CODE_GENERATOR =
-            new HashCodeGenerator<CharSequence>() {
-        @Override
-        public int generateHashCode(CharSequence name) {
-            return name.hashCode();
-        }
-    };
+            new JavaHashCodeGenerator<CharSequence>();
 
     public static class DefaultTextValueTypeConverter implements ValueConverter<CharSequence> {
         @Override

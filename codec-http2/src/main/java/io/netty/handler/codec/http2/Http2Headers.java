@@ -15,8 +15,9 @@
 
 package io.netty.handler.codec.http2;
 
-import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.BinaryHeaders;
+import io.netty.util.ByteString;
+import io.netty.util.CharsetUtil;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -55,8 +56,8 @@ public interface Http2Headers extends BinaryHeaders {
          */
         STATUS(":status");
 
-        private final AsciiString value;
-        private static final Set<AsciiString> PSEUDO_HEADERS = new HashSet<AsciiString>();
+        private final ByteString value;
+        private static final Set<ByteString> PSEUDO_HEADERS = new HashSet<ByteString>();
         static {
             for (PseudoHeaderName pseudoHeader : PseudoHeaderName.values()) {
                 PSEUDO_HEADERS.add(pseudoHeader.value());
@@ -64,10 +65,10 @@ public interface Http2Headers extends BinaryHeaders {
         }
 
         PseudoHeaderName(String value) {
-            this.value = new AsciiString(value);
+            this.value = new ByteString(value, CharsetUtil.UTF_8);
         }
 
-        public AsciiString value() {
+        public ByteString value() {
             // Return a slice so that the buffer gets its own reader index.
             return value;
         }
@@ -75,103 +76,103 @@ public interface Http2Headers extends BinaryHeaders {
         /**
          * Indicates whether the given header name is a valid HTTP/2 pseudo header.
          */
-        public static boolean isPseudoHeader(AsciiString header) {
+        public static boolean isPseudoHeader(ByteString header) {
             return PSEUDO_HEADERS.contains(header);
         }
     }
 
     @Override
-    Http2Headers add(AsciiString name, AsciiString value);
+    Http2Headers add(ByteString name, ByteString value);
 
     @Override
-    Http2Headers add(AsciiString name, Iterable<? extends AsciiString> values);
+    Http2Headers add(ByteString name, Iterable<? extends ByteString> values);
 
     @Override
-    Http2Headers add(AsciiString name, AsciiString... values);
+    Http2Headers add(ByteString name, ByteString... values);
 
     @Override
-    Http2Headers addObject(AsciiString name, Object value);
+    Http2Headers addObject(ByteString name, Object value);
 
     @Override
-    Http2Headers addObject(AsciiString name, Iterable<?> values);
+    Http2Headers addObject(ByteString name, Iterable<?> values);
 
     @Override
-    Http2Headers addObject(AsciiString name, Object... values);
+    Http2Headers addObject(ByteString name, Object... values);
 
     @Override
-    Http2Headers addBoolean(AsciiString name, boolean value);
+    Http2Headers addBoolean(ByteString name, boolean value);
 
     @Override
-    Http2Headers addByte(AsciiString name, byte value);
+    Http2Headers addByte(ByteString name, byte value);
 
     @Override
-    Http2Headers addChar(AsciiString name, char value);
+    Http2Headers addChar(ByteString name, char value);
 
     @Override
-    Http2Headers addShort(AsciiString name, short value);
+    Http2Headers addShort(ByteString name, short value);
 
     @Override
-    Http2Headers addInt(AsciiString name, int value);
+    Http2Headers addInt(ByteString name, int value);
 
     @Override
-    Http2Headers addLong(AsciiString name, long value);
+    Http2Headers addLong(ByteString name, long value);
 
     @Override
-    Http2Headers addFloat(AsciiString name, float value);
+    Http2Headers addFloat(ByteString name, float value);
 
     @Override
-    Http2Headers addDouble(AsciiString name, double value);
+    Http2Headers addDouble(ByteString name, double value);
 
     @Override
-    Http2Headers addTimeMillis(AsciiString name, long value);
+    Http2Headers addTimeMillis(ByteString name, long value);
 
     @Override
     Http2Headers add(BinaryHeaders headers);
 
     @Override
-    Http2Headers set(AsciiString name, AsciiString value);
+    Http2Headers set(ByteString name, ByteString value);
 
     @Override
-    Http2Headers set(AsciiString name, Iterable<? extends AsciiString> values);
+    Http2Headers set(ByteString name, Iterable<? extends ByteString> values);
 
     @Override
-    Http2Headers set(AsciiString name, AsciiString... values);
+    Http2Headers set(ByteString name, ByteString... values);
 
     @Override
-    Http2Headers setObject(AsciiString name, Object value);
+    Http2Headers setObject(ByteString name, Object value);
 
     @Override
-    Http2Headers setObject(AsciiString name, Iterable<?> values);
+    Http2Headers setObject(ByteString name, Iterable<?> values);
 
     @Override
-    Http2Headers setObject(AsciiString name, Object... values);
+    Http2Headers setObject(ByteString name, Object... values);
 
     @Override
-    Http2Headers setBoolean(AsciiString name, boolean value);
+    Http2Headers setBoolean(ByteString name, boolean value);
 
     @Override
-    Http2Headers setByte(AsciiString name, byte value);
+    Http2Headers setByte(ByteString name, byte value);
 
     @Override
-    Http2Headers setChar(AsciiString name, char value);
+    Http2Headers setChar(ByteString name, char value);
 
     @Override
-    Http2Headers setShort(AsciiString name, short value);
+    Http2Headers setShort(ByteString name, short value);
 
     @Override
-    Http2Headers setInt(AsciiString name, int value);
+    Http2Headers setInt(ByteString name, int value);
 
     @Override
-    Http2Headers setLong(AsciiString name, long value);
+    Http2Headers setLong(ByteString name, long value);
 
     @Override
-    Http2Headers setFloat(AsciiString name, float value);
+    Http2Headers setFloat(ByteString name, float value);
 
     @Override
-    Http2Headers setDouble(AsciiString name, double value);
+    Http2Headers setDouble(ByteString name, double value);
 
     @Override
-    Http2Headers setTimeMillis(AsciiString name, long value);
+    Http2Headers setTimeMillis(ByteString name, long value);
 
     @Override
     Http2Headers set(BinaryHeaders headers);
@@ -185,50 +186,50 @@ public interface Http2Headers extends BinaryHeaders {
     /**
      * Sets the {@link PseudoHeaderName#METHOD} header or {@code null} if there is no such header
      */
-    Http2Headers method(AsciiString value);
+    Http2Headers method(ByteString value);
 
     /**
      * Sets the {@link PseudoHeaderName#SCHEME} header if there is no such header
      */
-    Http2Headers scheme(AsciiString value);
+    Http2Headers scheme(ByteString value);
 
     /**
      * Sets the {@link PseudoHeaderName#AUTHORITY} header or {@code null} if there is no such header
      */
-    Http2Headers authority(AsciiString value);
+    Http2Headers authority(ByteString value);
 
     /**
      * Sets the {@link PseudoHeaderName#PATH} header or {@code null} if there is no such header
      */
-    Http2Headers path(AsciiString value);
+    Http2Headers path(ByteString value);
 
     /**
      * Sets the {@link PseudoHeaderName#STATUS} header or {@code null} if there is no such header
      */
-    Http2Headers status(AsciiString value);
+    Http2Headers status(ByteString value);
 
     /**
      * Gets the {@link PseudoHeaderName#METHOD} header or {@code null} if there is no such header
      */
-    AsciiString method();
+    ByteString method();
 
     /**
      * Gets the {@link PseudoHeaderName#SCHEME} header or {@code null} if there is no such header
      */
-    AsciiString scheme();
+    ByteString scheme();
 
     /**
      * Gets the {@link PseudoHeaderName#AUTHORITY} header or {@code null} if there is no such header
      */
-    AsciiString authority();
+    ByteString authority();
 
     /**
      * Gets the {@link PseudoHeaderName#PATH} header or {@code null} if there is no such header
      */
-    AsciiString path();
+    ByteString path();
 
     /**
      * Gets the {@link PseudoHeaderName#STATUS} header or {@code null} if there is no such header
      */
-    AsciiString status();
+    ByteString status();
 }

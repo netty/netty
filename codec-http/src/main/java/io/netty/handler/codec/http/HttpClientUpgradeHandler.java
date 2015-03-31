@@ -16,7 +16,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.AsciiString;
+import io.netty.util.AsciiString;
 
 import java.util.Collection;
 import java.util.LinkedHashSet;

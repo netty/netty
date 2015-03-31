@@ -16,8 +16,8 @@
 
 package io.netty.handler.codec.rtsp;
 
-import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.util.AsciiString;
 
 /**
  * Standard RTSP header names.

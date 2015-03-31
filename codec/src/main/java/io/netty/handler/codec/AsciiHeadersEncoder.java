@@ -20,7 +20,9 @@ package io.netty.handler.codec;
 import java.util.Map.Entry;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.handler.codec.TextHeaders.EntryVisitor;
+import io.netty.util.AsciiString;
 
 public final class AsciiHeadersEncoder implements EntryVisitor {
 
@@ -129,7 +131,7 @@ public final class AsciiHeadersEncoder implements EntryVisitor {
     }
 
     private static void writeAsciiString(ByteBuf buf, int offset, AsciiString value, int valueLen) {
-        value.copy(0, buf, offset, valueLen);
+        ByteBufUtil.copy(value, 0, buf, offset, valueLen);
     }
 
     private static void writeCharSequence(ByteBuf buf, int offset, CharSequence value, int valueLen) {

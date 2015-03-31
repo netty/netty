@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.spdy;
 
-import io.netty.handler.codec.AsciiString;
+import io.netty.util.AsciiString;
 
 /**
  * Provides the constants for the header names used by the {@link SpdyHttpDecoder} and {@link SpdyHttpEncoder}.

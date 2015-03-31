@@ -16,13 +16,13 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufProcessor;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.TooLongFrameException;
+import io.netty.util.ByteProcessor;
 import io.netty.util.internal.AppendableCharSequence;
 
 import java.util.List;
@@ -734,7 +734,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         return result;
     }
 
-    private static class HeaderParser implements ByteBufProcessor {
+    private static class HeaderParser implements ByteProcessor {
         private final AppendableCharSequence seq;
         private final int maxLength;
         private int size;

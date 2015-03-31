@@ -67,6 +67,16 @@ public class DefaultHeaders<T> implements Headers<T> {
     }
 
     /**
+     * Uses the {@link #hashCode()} method to generate the hash code.
+     */
+    public static final class JavaHashCodeGenerator<T> implements HashCodeGenerator<T> {
+        @Override
+        public int generateHashCode(T name) {
+            return name.hashCode();
+        }
+    }
+
+    /**
      * A name converted which does not covert but instead just returns this {@code name} unchanged
      */
     public static final class IdentityNameConverter<T> implements NameConverter<T> {

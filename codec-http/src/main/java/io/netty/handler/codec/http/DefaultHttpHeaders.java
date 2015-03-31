@@ -15,9 +15,11 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.DefaultTextHeaders;
 import io.netty.handler.codec.TextHeaders;
+import io.netty.util.AsciiString;
+import io.netty.util.ByteProcessor;
+import io.netty.util.internal.PlatformDependent;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -81,17 +83,34 @@ public class DefaultHttpHeaders extends DefaultTextHeaders implements HttpHeader
             return seq;
         }
 
-        private static void validateValue(AsciiString seq) {
-            int state = 0;
-            // Start looping through each of the character
-            final int start = seq.arrayOffset();
-            final int end = start + seq.length();
-            final byte[] array = seq.array();
-            for (int index = start; index < end; index++) {
-                state = validateValueChar(seq, state, (char) (array[index] & 0xFF));
+        private static final class ValidateValueProcessor implements ByteProcessor {
+            private final CharSequence seq;
+            private int state;
+
+            public ValidateValueProcessor(CharSequence seq) {
+                this.seq = seq;
             }
 
-            if (state != 0) {
+            @Override
+            public boolean process(byte value) throws Exception {
+                state = validateValueChar(state, (char) value, seq);
+                return true;
+            }
+
+            public int state() {
+                return state;
+            }
+        }
+
+        private static void validateValue(AsciiString seq) {
+            ValidateValueProcessor processor = new ValidateValueProcessor(seq);
+            try {
+                seq.forEachByte(processor);
+            } catch (Throwable t) {
+                PlatformDependent.throwException(t);
+            }
+
+            if (processor.state() != 0) {
                 throw new IllegalArgumentException("a header value must not end with '\\r' or '\\n':" + seq);
             }
         }
@@ -100,7 +119,7 @@ public class DefaultHttpHeaders extends DefaultTextHeaders implements HttpHeader
             int state = 0;
             // Start looping through each of the character
             for (int index = 0; index < seq.length(); index++) {
-                state = validateValueChar(seq, state, seq.charAt(index));
+                state = validateValueChar(state, seq.charAt(index), seq);
             }
 
             if (state != 0) {
@@ -108,16 +127,16 @@ public class DefaultHttpHeaders extends DefaultTextHeaders implements HttpHeader
             }
         }
 
-        private static int validateValueChar(CharSequence seq, int state, char character) {
+        private static int validateValueChar(int state, char c, CharSequence seq) {
             /*
              * State:
              * 0: Previous character was neither CR nor LF
              * 1: The previous character was CR
              * 2: The previous character was LF
              */
-            if ((character & HIGHEST_INVALID_VALUE_CHAR_MASK) == 0) {
+            if ((c & HIGHEST_INVALID_VALUE_CHAR_MASK) == 0) {
                 // Check the absolutely prohibited characters.
-                switch (character) {
+                switch (c) {
                 case 0x0: // NULL
                     throw new IllegalArgumentException("a header value contains a prohibited character '\0': " + seq);
                 case 0x0b: // Vertical tab
@@ -130,7 +149,7 @@ public class DefaultHttpHeaders extends DefaultTextHeaders implements HttpHeader
             // Check the CRLF (HT | SP) pattern
             switch (state) {
             case 0:
-                switch (character) {
+                switch (c) {
                 case '\r':
                     state = 1;
                     break;
@@ -140,7 +159,7 @@ public class DefaultHttpHeaders extends DefaultTextHeaders implements HttpHeader
                 }
                 break;
             case 1:
-                switch (character) {
+                switch (c) {
                 case '\n':
                     state = 2;
                     break;
@@ -149,7 +168,7 @@ public class DefaultHttpHeaders extends DefaultTextHeaders implements HttpHeader
                 }
                 break;
             case 2:
-                switch (character) {
+                switch (c) {
                 case '\t':
                 case ' ':
                     state = 0;
@@ -164,6 +183,24 @@ public class DefaultHttpHeaders extends DefaultTextHeaders implements HttpHeader
 
     static class HttpHeadersNameConverter implements NameConverter<CharSequence> {
         protected final boolean validate;
+
+        private static final class ValidateNameProcessor implements ByteProcessor {
+            private final CharSequence seq;
+
+            public ValidateNameProcessor(CharSequence seq) {
+                this.seq = seq;
+            }
+
+            @Override
+            public boolean process(byte value) throws Exception {
+                // Check to see if the character is not an ASCII character.
+                if (value < 0) {
+                    throw new IllegalArgumentException("a header name cannot contain non-ASCII character: " + seq);
+                }
+                validateNameChar(value, seq);
+                return true;
+            }
+        }
 
         HttpHeadersNameConverter(boolean validate) {
             this.validate = validate;
@@ -183,43 +220,33 @@ public class DefaultHttpHeaders extends DefaultTextHeaders implements HttpHeader
         }
 
         private static void validateName(AsciiString name) {
-            // Go through each characters in the name
-            final int start = name.arrayOffset();
-            final int end = start + name.length();
-            final byte[] array = name.array();
-            for (int index = start; index < end; index ++) {
-                byte b = array[index];
-
-                // Check to see if the character is not an ASCII character
-                if (b < 0) {
-                    throw new IllegalArgumentException("a header name cannot contain non-ASCII characters: " + name);
-                }
-
-                // Check for prohibited characters.
-                validateNameChar(name, b);
+            try {
+                name.forEachByte(new ValidateNameProcessor(name));
+            } catch (Throwable t) {
+                PlatformDependent.throwException(t);
             }
         }
 
         private static void validateName(CharSequence name) {
-            // Go through each characters in the name
+            // Go through each characters in the name.
             for (int index = 0; index < name.length(); index++) {
-                char character = name.charAt(index);
+                char c = name.charAt(index);
 
-                // Check to see if the character is not an ASCII character
-                if (character > 127) {
+                // Check to see if the character is not an ASCII character.
+                if (c > 127) {
                     throw new IllegalArgumentException("a header name cannot contain non-ASCII characters: " + name);
                 }
 
                 // Check for prohibited characters.
-                validateNameChar(name, character);
+                validateNameChar(c, name);
             }
         }
 
-        private static void validateNameChar(CharSequence name, int character) {
+        private static void validateNameChar(int character, CharSequence seq) {
             if ((character & HIGHEST_INVALID_NAME_CHAR_MASK) == 0 && LOOKUP_TABLE[character] != 0) {
                 throw new IllegalArgumentException(
                         "a header name cannot contain the following prohibited characters: =,;: \\t\\r\\n\\v\\f: " +
-                        name);
+                                seq);
             }
         }
     }

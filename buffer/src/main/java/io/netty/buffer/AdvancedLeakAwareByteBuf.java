@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import io.netty.util.ByteProcessor;
 import io.netty.util.ResourceLeak;
 
 import java.io.IOException;
@@ -599,25 +600,25 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
-    public int forEachByte(ByteBufProcessor processor) {
+    public int forEachByte(ByteProcessor processor) {
         leak.record();
         return super.forEachByte(processor);
     }
 
     @Override
-    public int forEachByte(int index, int length, ByteBufProcessor processor) {
+    public int forEachByte(int index, int length, ByteProcessor processor) {
         leak.record();
         return super.forEachByte(index, length, processor);
     }
 
     @Override
-    public int forEachByteDesc(ByteBufProcessor processor) {
+    public int forEachByteDesc(ByteProcessor processor) {
         leak.record();
         return super.forEachByteDesc(processor);
     }
 
     @Override
-    public int forEachByteDesc(int index, int length, ByteBufProcessor processor) {
+    public int forEachByteDesc(int index, int length, ByteProcessor processor) {
         leak.record();
         return super.forEachByteDesc(index, length, processor);
     }

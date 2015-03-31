@@ -16,7 +16,7 @@
 
 package io.netty.handler.codec.http;
 
-import io.netty.handler.codec.AsciiString;
+import io.netty.util.AsciiString;
 
 /**
  * Standard HTTP header values.

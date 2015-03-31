@@ -15,11 +15,12 @@
  */
 package io.netty.handler.codec.http;
 
+import static io.netty.handler.codec.http.HttpConstants.CR;
+import static io.netty.handler.codec.http.HttpConstants.LF;
+import static io.netty.handler.codec.http.HttpConstants.SP;
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.AsciiString;
+import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
-
-import static io.netty.handler.codec.http.HttpConstants.*;
 
 /**
  * Encodes an {@link HttpRequest} or an {@link HttpContent} into
@@ -38,7 +39,7 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
     @Override
     protected void encodeInitialLine(ByteBuf buf, HttpRequest request) throws Exception {
         AsciiString method = request.method().name();
-        buf.writeBytes(method.array(), method.arrayOffset(), method.length());
+        buf.writeBytes(method.array());
         buf.writeByte(SP);
 
         // Add / as absolute path if no is present.
@@ -75,7 +76,7 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
         buf.writeByte(SP);
 
         AsciiString version = request.protocolVersion().text();
-        buf.writeBytes(version.array(), version.arrayOffset(), version.length());
+        buf.writeBytes(version.array());
         buf.writeBytes(CRLF);
     }
 }

@@ -15,13 +15,14 @@
  */
 package io.netty.handler.codec.rtsp;
 
+import static io.netty.handler.codec.http.HttpConstants.CR;
+import static io.netty.handler.codec.http.HttpConstants.LF;
+import static io.netty.handler.codec.http.HttpConstants.SP;
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
-
-import static io.netty.handler.codec.http.HttpConstants.*;
 
 /**
  * Encodes an RTSP request represented in {@link FullHttpRequest} into
@@ -39,14 +40,14 @@ public class RtspRequestEncoder extends RtspObjectEncoder<HttpRequest> {
     @Override
     protected void encodeInitialLine(ByteBuf buf, HttpRequest request) throws Exception {
         AsciiString method = request.method().name();
-        buf.writeBytes(method.array(), method.arrayOffset(), method.length());
+        buf.writeBytes(method.array());
         buf.writeByte(SP);
 
         buf.writeBytes(request.uri().getBytes(CharsetUtil.UTF_8));
         buf.writeByte(SP);
 
         AsciiString version = request.protocolVersion().text();
-        buf.writeBytes(version.array(), version.arrayOffset(), version.length());
+        buf.writeBytes(version.array());
         buf.writeBytes(CRLF);
     }
 }

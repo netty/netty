@@ -15,10 +15,10 @@
  */
 package io.netty.handler.codec.spdy;
 
-import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.DefaultTextHeaders;
 import io.netty.handler.codec.Headers;
 import io.netty.handler.codec.TextHeaders;
+import io.netty.util.AsciiString;
 
 import java.util.Locale;
 
