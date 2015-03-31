@@ -16,10 +16,11 @@
 package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_TABLE_SIZE;
-import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.handler.codec.AsciiString;
@@ -28,26 +29,23 @@ import io.netty.handler.codec.BinaryHeaders.EntryVisitor;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Collections;
 import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeSet;
 
 import com.twitter.hpack.Encoder;
 
 public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2HeadersEncoder.Configuration {
     private final Encoder encoder;
     private final ByteArrayOutputStream tableSizeChangeOutput = new ByteArrayOutputStream();
-    private final Set<String> sensitiveHeaders = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+    private final SensitivityDetector sensitivityDetector;
     private final Http2HeaderTable headerTable;
 
     public DefaultHttp2HeadersEncoder() {
-        this(DEFAULT_HEADER_TABLE_SIZE, Collections.<String>emptySet());
+        this(DEFAULT_HEADER_TABLE_SIZE, NEVER_SENSITIVE);
     }
 
-    public DefaultHttp2HeadersEncoder(int maxHeaderTableSize, Set<String> sensitiveHeaders) {
+    public DefaultHttp2HeadersEncoder(int maxHeaderTableSize, SensitivityDetector sensitivityDetector) {
+        this.sensitivityDetector = checkNotNull(sensitivityDetector, "sensitiveDetector");
         encoder = new Encoder(maxHeaderTableSize);
-        this.sensitiveHeaders.addAll(sensitiveHeaders);
         headerTable = new Http2HeaderTableEncoder();
     }
 
@@ -111,8 +109,7 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
     }
 
     private void encodeHeader(AsciiString key, AsciiString value, OutputStream stream) throws IOException {
-        boolean sensitive = sensitiveHeaders.contains(key.toString());
-        encoder.encodeHeader(stream, key.array(), value.array(), sensitive);
+        encoder.encodeHeader(stream, key.array(), value.array(), sensitivityDetector.isSensitive(key, value));
     }
 
     /**
