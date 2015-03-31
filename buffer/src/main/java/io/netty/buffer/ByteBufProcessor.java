@@ -16,10 +16,15 @@
 
 package io.netty.buffer;
 
-public interface ByteBufProcessor {
+import io.netty.util.ByteProcessor;
+
+/**
+ * @deprecated Use {@link ByteProcessor}.
+ */
+public interface ByteBufProcessor extends ByteProcessor {
 
     /**
-     * Aborts on a {@code NUL (0x00)}.
+     * @deprecated Use {@link ByteProcessor#FIND_NULL}.
      */
     ByteBufProcessor FIND_NUL = new ByteBufProcessor() {
         @Override
@@ -29,7 +34,7 @@ public interface ByteBufProcessor {
     };
 
     /**
-     * Aborts on a non-{@code NUL (0x00)}.
+     * @deprecated Use {@link ByteProcessor#FIND_NON_NUL}.
      */
     ByteBufProcessor FIND_NON_NUL = new ByteBufProcessor() {
         @Override
@@ -39,7 +44,7 @@ public interface ByteBufProcessor {
     };
 
     /**
-     * Aborts on a {@code CR ('\r')}.
+     * @deprecated Use {@link ByteProcessor#FIND_CR}.
      */
     ByteBufProcessor FIND_CR = new ByteBufProcessor() {
         @Override
@@ -49,7 +54,7 @@ public interface ByteBufProcessor {
     };
 
     /**
-     * Aborts on a non-{@code CR ('\r')}.
+     * @deprecated Use {@link ByteProcessor#FIND_NON_CR}.
      */
     ByteBufProcessor FIND_NON_CR = new ByteBufProcessor() {
         @Override
@@ -59,7 +64,7 @@ public interface ByteBufProcessor {
     };
 
     /**
-     * Aborts on a {@code LF ('\n')}.
+     * @deprecated Use {@link ByteProcessor#FIND_LF}.
      */
     ByteBufProcessor FIND_LF = new ByteBufProcessor() {
         @Override
@@ -69,7 +74,7 @@ public interface ByteBufProcessor {
     };
 
     /**
-     * Aborts on a non-{@code LF ('\n')}.
+     * @deprecated Use {@link ByteProcessor#FIND_NON_LF}.
      */
     ByteBufProcessor FIND_NON_LF = new ByteBufProcessor() {
         @Override
@@ -79,7 +84,7 @@ public interface ByteBufProcessor {
     };
 
     /**
-     * Aborts on a {@code CR ('\r')} or a {@code LF ('\n')}.
+     * @deprecated Use {@link ByteProcessor#FIND_CRLF}.
      */
     ByteBufProcessor FIND_CRLF = new ByteBufProcessor() {
         @Override
@@ -89,7 +94,7 @@ public interface ByteBufProcessor {
     };
 
     /**
-     * Aborts on a byte which is neither a {@code CR ('\r')} nor a {@code LF ('\n')}.
+     * @deprecated Use {@link ByteProcessor#FIND_NON_CRLF}.
      */
     ByteBufProcessor FIND_NON_CRLF = new ByteBufProcessor() {
         @Override
@@ -99,7 +104,7 @@ public interface ByteBufProcessor {
     };
 
     /**
-     * Aborts on a linear whitespace (a ({@code ' '} or a {@code '\t'}).
+     * @deprecated Use {@link ByteProcessor#FIND_LINEAR_WHITESPACE}.
      */
     ByteBufProcessor FIND_LINEAR_WHITESPACE = new ByteBufProcessor() {
         @Override
@@ -109,7 +114,7 @@ public interface ByteBufProcessor {
     };
 
     /**
-     * Aborts on a byte which is not a linear whitespace (neither {@code ' '} nor {@code '\t'}).
+     * @deprecated Use {@link ByteProcessor#FIND_NON_LINEAR_WHITESPACE}.
      */
     ByteBufProcessor FIND_NON_LINEAR_WHITESPACE = new ByteBufProcessor() {
         @Override
@@ -117,10 +122,4 @@ public interface ByteBufProcessor {
             return value == ' ' || value == '\t';
         }
     };
-
-    /**
-     * @return {@code true} if the processor wants to continue the loop and handle the next byte in the buffer.
-     *         {@code false} if the processor wants to stop handling bytes and abort the loop.
-     */
-    boolean process(byte value) throws Exception;
 }

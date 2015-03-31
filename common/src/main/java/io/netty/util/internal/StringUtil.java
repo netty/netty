@@ -34,6 +34,7 @@ public final class StringUtil {
     public static final char LINE_FEED = '\n';
     public static final char CARRIAGE_RETURN = '\r';
     public static final String EMPTY_STRING = "";
+    public static final byte UPPER_CASE_TO_LOWER_CASE_ASCII_OFFSET = (int) 'a' - (int) 'A';
     private static final String[] BYTE2HEX_PAD = new String[256];
     private static final String[] BYTE2HEX_NOPAD = new String[256];
     /**

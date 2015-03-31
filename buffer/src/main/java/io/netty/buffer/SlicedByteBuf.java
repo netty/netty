@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.ByteProcessor;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -275,7 +277,7 @@ public class SlicedByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
-    public int forEachByte(int index, int length, ByteBufProcessor processor) {
+    public int forEachByte(int index, int length, ByteProcessor processor) {
         int ret = buffer.forEachByte(index + adjustment, length, processor);
         if (ret >= adjustment) {
             return ret - adjustment;
@@ -285,7 +287,7 @@ public class SlicedByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
-    public int forEachByteDesc(int index, int length, ByteBufProcessor processor) {
+    public int forEachByteDesc(int index, int length, ByteProcessor processor) {
         int ret = buffer.forEachByteDesc(index + adjustment, length, processor);
         if (ret >= adjustment) {
             return ret - adjustment;

@@ -17,9 +17,9 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufProcessor;
 import io.netty.buffer.SwappedByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.ByteProcessor;
 import io.netty.util.Signal;
 import io.netty.util.internal.StringUtil;
 
@@ -352,7 +352,7 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     }
 
     @Override
-    public int forEachByte(ByteBufProcessor processor) {
+    public int forEachByte(ByteProcessor processor) {
         int ret = buffer.forEachByte(processor);
         if (ret < 0) {
             throw REPLAY;
@@ -362,7 +362,7 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     }
 
     @Override
-    public int forEachByte(int index, int length, ByteBufProcessor processor) {
+    public int forEachByte(int index, int length, ByteProcessor processor) {
         final int writerIndex = buffer.writerIndex();
         if (index >= writerIndex) {
             throw REPLAY;
@@ -381,7 +381,7 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     }
 
     @Override
-    public int forEachByteDesc(ByteBufProcessor processor) {
+    public int forEachByteDesc(ByteProcessor processor) {
         if (terminated) {
             return buffer.forEachByteDesc(processor);
         } else {
@@ -391,7 +391,7 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     }
 
     @Override
-    public int forEachByteDesc(int index, int length, ByteBufProcessor processor) {
+    public int forEachByteDesc(int index, int length, ByteProcessor processor) {
         if (index + length > buffer.writerIndex()) {
             throw REPLAY;
         }

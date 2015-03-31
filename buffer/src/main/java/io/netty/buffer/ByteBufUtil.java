@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import io.netty.util.ByteString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
@@ -31,6 +33,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
+import java.util.Arrays;
 import java.util.Locale;
 
 /**
@@ -547,6 +550,85 @@ public final class ByteBufUtil {
         } else {
             return ThreadLocalDirectByteBuf.newInstance();
         }
+    }
+
+    /**
+     * Create a copy of the underlying storage from {@link value} into a byte array.
+     * The copy will start at {@link ByteBuf#readerIndex()} and copy {@link ByteBuf#readableBytes()} bytes.
+     */
+    public static byte[] getBytes(ByteBuf buf) {
+        return getBytes(buf, checkNotNull(buf, "buf").readerIndex(), buf.readableBytes());
+    }
+
+    /**
+     * Create a copy of the underlying storage from {@link buf} into a byte array.
+     * The copy will start at {@code start} and copy {@code length} bytes.
+     */
+    public static byte[] getBytes(ByteBuf buf, int start, int length) {
+        return getBytes(buf, start, length, true);
+    }
+
+    /**
+     * Return an array of the underlying storage from {@link buf} into a byte array.
+     * The copy will start at {@code start} and copy {@code length} bytes.
+     * If {@code copy} is true a copy will be made of the memory.
+     * If {@code copy} is false the underlying storage will be shared, if possible.
+     */
+    public static byte[] getBytes(ByteBuf buf, int start, int length, boolean copy) {
+        if (start < 0 || length > checkNotNull(buf, "buf").capacity() - start) {
+            throw new IndexOutOfBoundsException("expected: " + "0 <= start(" + start + ") <= start + length(" + length
+                    + ") <= " + "buf.capacity(" + buf.capacity() + ')');
+        }
+
+        if (buf.hasArray()) {
+            if (copy || start != 0 || length != buf.capacity()) {
+                int baseOffset = buf.arrayOffset() + start;
+                return Arrays.copyOfRange(buf.array(), baseOffset, baseOffset + length);
+            } else {
+                return buf.array();
+            }
+        }
+
+        byte[] v = new byte[length];
+        buf.getBytes(start, v);
+        return v;
+    }
+
+    /**
+     * Copies the content of {@code src} to a {@link ByteBuf} using {@link ByteBuf#writeBytes(byte[], int, int)}.
+     * @param src The source of the data to copy.
+     * @param srcIdx the starting offset of characters to copy.
+     * @param dst the destination byte array.
+     * @param dstIdx the starting offset in the destination byte array.
+     * @param length the number of characters to copy.
+     */
+    public static void copy(ByteString src, int srcIdx, ByteBuf dst, int dstIdx, int length) {
+        final int thisLen = src.length();
+
+        if (srcIdx < 0 || length > thisLen - srcIdx) {
+            throw new IndexOutOfBoundsException("expected: " + "0 <= srcIdx(" + srcIdx + ") <= srcIdx + length("
+                            + length + ") <= srcLen(" + thisLen + ')');
+        }
+
+        checkNotNull(dst, "dst").setBytes(dstIdx, src.array(), srcIdx, length);
+    }
+
+    /**
+     * Copies the content of {@code src} to a {@link ByteBuf} using {@link ByteBuf#writeBytes(byte[], int, int)}.
+     * @param src The source of the data to copy.
+     * @param srcIdx the starting offset of characters to copy.
+     * @param dst the destination byte array.
+     * @param length the number of characters to copy.
+     */
+    public static void copy(ByteString src, int srcIdx, ByteBuf dst, int length) {
+        final int thisLen = src.length();
+
+        if (srcIdx < 0 || length > thisLen - srcIdx) {
+            throw new IndexOutOfBoundsException("expected: " + "0 <= srcIdx(" + srcIdx + ") <= srcIdx + length("
+                            + length + ") <= srcLen(" + thisLen + ')');
+        }
+
+        checkNotNull(dst, "dst").writeBytes(src.array(), srcIdx, length);
     }
 
     static final class ThreadLocalUnsafeDirectByteBuf extends UnpooledUnsafeDirectByteBuf {

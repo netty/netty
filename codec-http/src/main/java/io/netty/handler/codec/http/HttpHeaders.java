@@ -17,7 +17,6 @@ package io.netty.handler.codec.http;
 
 import io.netty.handler.codec.TextHeaders;
 
-
 /**
  * Provides the constants for the standard HTTP header names and values and
  * commonly used utility methods that accesses an {@link HttpMessage}.

@@ -23,8 +23,8 @@ import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
-import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.BinaryHeaders.EntryVisitor;
+import io.netty.util.ByteString;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -67,8 +67,8 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
 
             // Write pseudo headers first as required by the HTTP/2 spec.
             for (Http2Headers.PseudoHeaderName pseudoHeader : Http2Headers.PseudoHeaderName.values()) {
-                AsciiString name = pseudoHeader.value();
-                AsciiString value = headers.get(name);
+                ByteString name = pseudoHeader.value();
+                ByteString value = headers.get(name);
                 if (value != null) {
                     encodeHeader(name, value, stream);
                 }
@@ -76,9 +76,9 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
 
             headers.forEachEntry(new EntryVisitor() {
                 @Override
-                public boolean visit(Entry<AsciiString, AsciiString> entry) throws Exception {
-                    final AsciiString name = entry.getKey();
-                    final AsciiString value = entry.getValue();
+                public boolean visit(Entry<ByteString, ByteString> entry) throws Exception {
+                    final ByteString name = entry.getKey();
+                    final ByteString value = entry.getValue();
                     if (!Http2Headers.PseudoHeaderName.isPseudoHeader(name)) {
                         encodeHeader(name, value, stream);
                     }
@@ -108,7 +108,7 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
         return this;
     }
 
-    private void encodeHeader(AsciiString key, AsciiString value, OutputStream stream) throws IOException {
+    private void encodeHeader(ByteString key, ByteString value, OutputStream stream) throws IOException {
         encoder.encodeHeader(stream, key.array(), value.array(), sensitivityDetector.isSensitive(key, value));
     }
 

@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import io.netty.util.ByteProcessor;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -668,22 +669,22 @@ public class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
-    public int forEachByte(ByteBufProcessor processor) {
+    public int forEachByte(ByteProcessor processor) {
         return buf.forEachByte(processor);
     }
 
     @Override
-    public int forEachByte(int index, int length, ByteBufProcessor processor) {
+    public int forEachByte(int index, int length, ByteProcessor processor) {
         return buf.forEachByte(index, length, processor);
     }
 
     @Override
-    public int forEachByteDesc(ByteBufProcessor processor) {
+    public int forEachByteDesc(ByteProcessor processor) {
         return buf.forEachByteDesc(processor);
     }
 
     @Override
-    public int forEachByteDesc(int index, int length, ByteBufProcessor processor) {
+    public int forEachByteDesc(int index, int length, ByteProcessor processor) {
         return buf.forEachByteDesc(index, length, processor);
     }
 

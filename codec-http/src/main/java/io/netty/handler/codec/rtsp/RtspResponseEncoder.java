@@ -15,12 +15,13 @@
  */
 package io.netty.handler.codec.rtsp;
 
+import static io.netty.handler.codec.http.HttpConstants.CR;
+import static io.netty.handler.codec.http.HttpConstants.LF;
+import static io.netty.handler.codec.http.HttpConstants.SP;
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponse;
-
-import static io.netty.handler.codec.http.HttpConstants.*;
+import io.netty.util.AsciiString;
 
 /**
  * Encodes an RTSP response represented in {@link FullHttpResponse} into
@@ -37,15 +38,15 @@ public class RtspResponseEncoder extends RtspObjectEncoder<HttpResponse> {
     @Override
     protected void encodeInitialLine(ByteBuf buf, HttpResponse response) throws Exception {
         AsciiString version = response.protocolVersion().text();
-        buf.writeBytes(version.array(), version.arrayOffset(), version.length());
+        buf.writeBytes(version.array());
         buf.writeByte(SP);
 
         AsciiString code = response.status().codeAsText();
-        buf.writeBytes(code.array(), code.arrayOffset(), code.length());
+        buf.writeBytes(code.array());
         buf.writeByte(SP);
 
         AsciiString reasonPhrase = response.status().reasonPhrase();
-        buf.writeBytes(reasonPhrase.array(), reasonPhrase.arrayOffset(), reasonPhrase.length());
+        buf.writeBytes(reasonPhrase.array());
         buf.writeBytes(CRLF);
     }
 }

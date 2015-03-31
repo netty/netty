@@ -14,80 +14,74 @@
  */
 package io.netty.handler.codec;
 
+import io.netty.util.ByteString;
+import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
 
+import java.nio.charset.Charset;
 import java.text.ParseException;
 
-import static io.netty.handler.codec.AsciiString.*;
-
-public class DefaultBinaryHeaders extends DefaultHeaders<AsciiString> implements BinaryHeaders {
-    private static final HashCodeGenerator<AsciiString> ASCII_HASH_CODE_GENERATOR =
-            new HashCodeGenerator<AsciiString>() {
+public class DefaultBinaryHeaders extends DefaultHeaders<ByteString> implements BinaryHeaders {
+    private static final ValueConverter<ByteString> OBJECT_TO_BYTE = new ValueConverter<ByteString>() {
+        private final Charset DEFAULT_CHARSET = CharsetUtil.UTF_8;
         @Override
-        public int generateHashCode(AsciiString name) {
-            return AsciiString.caseInsensitiveHashCode(name);
-        }
-    };
-
-    private static final ValueConverter<AsciiString> OBJECT_TO_ASCII = new ValueConverter<AsciiString>() {
-        @Override
-        public AsciiString convertObject(Object value) {
-            if (value instanceof AsciiString) {
-                return (AsciiString) value;
+        public ByteString convertObject(Object value) {
+            if (value instanceof ByteString) {
+                return (ByteString) value;
             }
             if (value instanceof CharSequence) {
-                return new AsciiString((CharSequence) value);
+                return new ByteString((CharSequence) value, DEFAULT_CHARSET);
             }
-            return new AsciiString(value.toString());
+            return new ByteString(value.toString(), DEFAULT_CHARSET);
         }
 
         @Override
-        public AsciiString convertInt(int value) {
-            return new AsciiString(String.valueOf(value));
+        public ByteString convertInt(int value) {
+            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
         }
 
         @Override
-        public AsciiString convertLong(long value) {
-            return new AsciiString(String.valueOf(value));
+        public ByteString convertLong(long value) {
+            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
         }
 
         @Override
-        public AsciiString convertDouble(double value) {
-            return new AsciiString(String.valueOf(value));
+        public ByteString convertDouble(double value) {
+            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
         }
 
         @Override
-        public AsciiString convertChar(char value) {
-            return new AsciiString(String.valueOf(value));
+        public ByteString convertChar(char value) {
+            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
         }
 
         @Override
-        public AsciiString convertBoolean(boolean value) {
-            return new AsciiString(String.valueOf(value));
+        public ByteString convertBoolean(boolean value) {
+            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
         }
 
         @Override
-        public AsciiString convertFloat(float value) {
-            return new AsciiString(String.valueOf(value));
+        public ByteString convertFloat(float value) {
+            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
         }
 
         @Override
-        public int convertToInt(AsciiString value) {
-            return value.parseInt();
+        public int convertToInt(ByteString value) {
+            return value.parseAsciiInt();
         }
 
         @Override
-        public long convertToLong(AsciiString value) {
-            return value.parseLong();
+        public long convertToLong(ByteString value) {
+            return value.parseAsciiLong();
         }
 
         @Override
-        public AsciiString convertTimeMillis(long value) {
-            return new AsciiString(String.valueOf(value));
+        public ByteString convertTimeMillis(long value) {
+            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
         }
 
         @Override
-        public long convertToTimeMillis(AsciiString value) {
+        public long convertToTimeMillis(ByteString value) {
             try {
                 return HeaderDateFormat.get().parse(value.toString());
             } catch (ParseException e) {
@@ -97,155 +91,145 @@ public class DefaultBinaryHeaders extends DefaultHeaders<AsciiString> implements
         }
 
         @Override
-        public double convertToDouble(AsciiString value) {
-            return value.parseDouble();
+        public double convertToDouble(ByteString value) {
+            return value.parseAsciiDouble();
         }
 
         @Override
-        public char convertToChar(AsciiString value) {
-            return value.charAt(0);
+        public char convertToChar(ByteString value) {
+            return value.parseChar();
         }
 
         @Override
-        public boolean convertToBoolean(AsciiString value) {
+        public boolean convertToBoolean(ByteString value) {
             return value.byteAt(0) != 0;
         }
 
         @Override
-        public float convertToFloat(AsciiString value) {
-            return value.parseFloat();
+        public float convertToFloat(ByteString value) {
+            return value.parseAsciiFloat();
         }
 
         @Override
-        public AsciiString convertShort(short value) {
-            return new AsciiString(String.valueOf(value));
+        public ByteString convertShort(short value) {
+            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
         }
 
         @Override
-        public short convertToShort(AsciiString value) {
-            return value.parseShort();
+        public short convertToShort(ByteString value) {
+            return value.parseAsciiShort();
         }
 
         @Override
-        public AsciiString convertByte(byte value) {
-            return new AsciiString(String.valueOf(value));
+        public ByteString convertByte(byte value) {
+            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
         }
 
         @Override
-        public byte convertToByte(AsciiString value) {
+        public byte convertToByte(ByteString value) {
             return value.byteAt(0);
         }
     };
 
-    private static final NameConverter<AsciiString> ASCII_TO_LOWER_CONVERTER = new NameConverter<AsciiString>() {
-        @Override
-        public AsciiString convertName(AsciiString name) {
-            return name.toLowerCase();
-        }
-    };
-
-    private static final NameConverter<AsciiString> ASCII_IDENTITY_CONVERTER = new NameConverter<AsciiString>() {
-        @Override
-        public AsciiString convertName(AsciiString name) {
-            return name;
-        }
-    };
+    private static final HashCodeGenerator<ByteString> JAVA_HASH_CODE_GENERATOR =
+            new JavaHashCodeGenerator<ByteString>();
+    protected static final NameConverter<ByteString> IDENTITY_NAME_CONVERTER = new IdentityNameConverter<ByteString>();
 
     public DefaultBinaryHeaders() {
-        this(false);
+        this(IDENTITY_NAME_CONVERTER);
     }
 
-    public DefaultBinaryHeaders(boolean forceKeyToLower) {
-        super(CASE_INSENSITIVE_ORDER, CASE_INSENSITIVE_ORDER, ASCII_HASH_CODE_GENERATOR, OBJECT_TO_ASCII,
-                forceKeyToLower ? ASCII_TO_LOWER_CONVERTER : ASCII_IDENTITY_CONVERTER);
+    public DefaultBinaryHeaders(NameConverter<ByteString> nameConverter) {
+        super(ByteString.DEFAULT_COMPARATOR, ByteString.DEFAULT_COMPARATOR,
+                JAVA_HASH_CODE_GENERATOR, OBJECT_TO_BYTE, nameConverter);
     }
 
     @Override
-    public BinaryHeaders add(AsciiString name, AsciiString value) {
+    public BinaryHeaders add(ByteString name, ByteString value) {
         super.add(name, value);
         return this;
     }
 
     @Override
-    public BinaryHeaders add(AsciiString name, Iterable<? extends AsciiString> values) {
+    public BinaryHeaders add(ByteString name, Iterable<? extends ByteString> values) {
         super.add(name, values);
         return this;
     }
 
     @Override
-    public BinaryHeaders add(AsciiString name, AsciiString... values) {
+    public BinaryHeaders add(ByteString name, ByteString... values) {
         super.add(name, values);
         return this;
     }
 
     @Override
-    public BinaryHeaders addObject(AsciiString name, Object value) {
+    public BinaryHeaders addObject(ByteString name, Object value) {
         super.addObject(name, value);
         return this;
     }
 
     @Override
-    public BinaryHeaders addObject(AsciiString name, Iterable<?> values) {
+    public BinaryHeaders addObject(ByteString name, Iterable<?> values) {
         super.addObject(name, values);
         return this;
     }
 
     @Override
-    public BinaryHeaders addObject(AsciiString name, Object... values) {
+    public BinaryHeaders addObject(ByteString name, Object... values) {
         super.addObject(name, values);
         return this;
     }
 
     @Override
-    public BinaryHeaders addBoolean(AsciiString name, boolean value) {
+    public BinaryHeaders addBoolean(ByteString name, boolean value) {
         super.addBoolean(name, value);
         return this;
     }
 
     @Override
-    public BinaryHeaders addChar(AsciiString name, char value) {
+    public BinaryHeaders addChar(ByteString name, char value) {
         super.addChar(name, value);
         return this;
     }
 
     @Override
-    public BinaryHeaders addByte(AsciiString name, byte value) {
+    public BinaryHeaders addByte(ByteString name, byte value) {
         super.addByte(name, value);
         return this;
     }
 
     @Override
-    public BinaryHeaders addShort(AsciiString name, short value) {
+    public BinaryHeaders addShort(ByteString name, short value) {
         super.addShort(name, value);
         return this;
     }
 
     @Override
-    public BinaryHeaders addInt(AsciiString name, int value) {
+    public BinaryHeaders addInt(ByteString name, int value) {
         super.addInt(name, value);
         return this;
     }
 
     @Override
-    public BinaryHeaders addLong(AsciiString name, long value) {
+    public BinaryHeaders addLong(ByteString name, long value) {
         super.addLong(name, value);
         return this;
     }
 
     @Override
-    public BinaryHeaders addFloat(AsciiString name, float value) {
+    public BinaryHeaders addFloat(ByteString name, float value) {
         super.addFloat(name, value);
         return this;
     }
 
     @Override
-    public BinaryHeaders addDouble(AsciiString name, double value) {
+    public BinaryHeaders addDouble(ByteString name, double value) {
         super.addDouble(name, value);
         return this;
     }
 
     @Override
-    public BinaryHeaders addTimeMillis(AsciiString name, long value) {
+    public BinaryHeaders addTimeMillis(ByteString name, long value) {
         super.addTimeMillis(name, value);
         return this;
     }
@@ -257,91 +241,91 @@ public class DefaultBinaryHeaders extends DefaultHeaders<AsciiString> implements
     }
 
     @Override
-    public BinaryHeaders set(AsciiString name, AsciiString value) {
+    public BinaryHeaders set(ByteString name, ByteString value) {
         super.set(name, value);
         return this;
     }
 
     @Override
-    public BinaryHeaders set(AsciiString name, Iterable<? extends AsciiString> values) {
+    public BinaryHeaders set(ByteString name, Iterable<? extends ByteString> values) {
         super.set(name, values);
         return this;
     }
 
     @Override
-    public BinaryHeaders set(AsciiString name, AsciiString... values) {
+    public BinaryHeaders set(ByteString name, ByteString... values) {
         super.set(name, values);
         return this;
     }
 
     @Override
-    public BinaryHeaders setObject(AsciiString name, Object value) {
+    public BinaryHeaders setObject(ByteString name, Object value) {
         super.setObject(name, value);
         return this;
     }
 
     @Override
-    public BinaryHeaders setObject(AsciiString name, Iterable<?> values) {
+    public BinaryHeaders setObject(ByteString name, Iterable<?> values) {
         super.setObject(name, values);
         return this;
     }
 
     @Override
-    public BinaryHeaders setObject(AsciiString name, Object... values) {
+    public BinaryHeaders setObject(ByteString name, Object... values) {
         super.setObject(name, values);
         return this;
     }
 
     @Override
-    public BinaryHeaders setBoolean(AsciiString name, boolean value) {
+    public BinaryHeaders setBoolean(ByteString name, boolean value) {
         super.setBoolean(name, value);
         return this;
     }
 
     @Override
-    public BinaryHeaders setChar(AsciiString name, char value) {
+    public BinaryHeaders setChar(ByteString name, char value) {
         super.setChar(name, value);
         return this;
     }
 
     @Override
-    public BinaryHeaders setByte(AsciiString name, byte value) {
+    public BinaryHeaders setByte(ByteString name, byte value) {
         super.setByte(name, value);
         return this;
     }
 
     @Override
-    public BinaryHeaders setShort(AsciiString name, short value) {
+    public BinaryHeaders setShort(ByteString name, short value) {
         super.setShort(name, value);
         return this;
     }
 
     @Override
-    public BinaryHeaders setInt(AsciiString name, int value) {
+    public BinaryHeaders setInt(ByteString name, int value) {
         super.setInt(name, value);
         return this;
     }
 
     @Override
-    public BinaryHeaders setLong(AsciiString name, long value) {
+    public BinaryHeaders setLong(ByteString name, long value) {
         super.setLong(name, value);
         return this;
     }
 
     @Override
-    public BinaryHeaders setFloat(AsciiString name, float value) {
+    public BinaryHeaders setFloat(ByteString name, float value) {
         super.setFloat(name, value);
         return this;
     }
 
     @Override
-    public BinaryHeaders setDouble(AsciiString name, double value) {
+    public BinaryHeaders setDouble(ByteString name, double value) {
         super.setDouble(name, value);
         return this;
     }
 
     @Override
-    public BinaryHeaders setTimeMillis(AsciiString name, long value) {
+    public BinaryHeaders setTimeMillis(ByteString name, long value) {
         super.setTimeMillis(name, value);
         return this;
     }

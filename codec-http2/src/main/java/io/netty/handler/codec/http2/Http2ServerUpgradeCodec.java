@@ -23,15 +23,17 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.writeFrameHeader;
 import static io.netty.handler.codec.http2.Http2FrameTypes.SETTINGS;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
+import io.netty.util.ByteString;
 import io.netty.util.CharsetUtil;
 
+import java.nio.CharBuffer;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -104,8 +106,7 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
     @Override
     public void upgradeTo(final ChannelHandlerContext ctx, FullHttpRequest upgradeRequest,
             FullHttpResponse upgradeResponse) {
-        // Add the HTTP/2 connection handler to the pipeline immediately following the current
-        // handler.
+        // Add the HTTP/2 connection handler to the pipeline immediately following the current handler.
         ctx.pipeline().addAfter(ctx.name(), handlerName, connectionHandler);
     }
 
@@ -114,7 +115,7 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
      */
     private Http2Settings decodeSettingsHeader(ChannelHandlerContext ctx, CharSequence settingsHeader)
             throws Http2Exception {
-        ByteBuf header = Unpooled.wrappedBuffer(AsciiString.getBytes(settingsHeader, CharsetUtil.UTF_8));
+        ByteBuf header = ByteBufUtil.encodeString(ctx.alloc(), CharBuffer.wrap(settingsHeader), CharsetUtil.UTF_8);
         try {
             // Decode the SETTINGS payload.
             ByteBuf payload = Base64.decode(header, URL_SAFE);

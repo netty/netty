@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.spdy;
 
-import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.TextHeaders;
+import io.netty.util.AsciiString;
 
 /**
  * Provides the constants for the standard SPDY HTTP header names and commonly
