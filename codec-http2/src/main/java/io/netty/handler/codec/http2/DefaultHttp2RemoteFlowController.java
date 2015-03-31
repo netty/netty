@@ -283,7 +283,9 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                 int weight = child.weight();
                 double weightRatio = weight / (double) totalWeight;
 
-                // To make progress toward the connection window due to possible rounding errors, we make sure that each
+                // We need to ensure that the entire connection window is used (assuming streams have >= connection
+                // window bytes to send) and we may need some sort of rounding to accomplish this. In order to make
+                // progress toward the connection window due to possible rounding errors, we make sure that each
                 // stream (with data to send) is given at least 1 byte toward the connection window.
                 int connectionWindowChunk = Math.max(1, (int) (connectionWindow * weightRatio));
                 int bytesForTree = Math.min(nextConnectionWindow, connectionWindowChunk);
