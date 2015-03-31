@@ -15,7 +15,8 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.handler.codec.AsciiString;
+import io.netty.util.AsciiString;
+
 import org.junit.Test;
 
 import java.util.List;

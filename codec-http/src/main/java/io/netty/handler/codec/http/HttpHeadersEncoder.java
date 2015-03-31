@@ -17,8 +17,9 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.AsciiString;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.handler.codec.TextHeaders.EntryVisitor;
+import io.netty.util.AsciiString;
 
 import java.util.Map.Entry;
 
@@ -61,7 +62,7 @@ final class HttpHeadersEncoder implements EntryVisitor {
     }
 
     private static void writeAsciiString(ByteBuf buf, int offset, AsciiString value, int valueLen) {
-        value.copy(0, buf, offset, valueLen);
+        ByteBufUtil.copy(value, 0, buf, offset, valueLen);
     }
 
     private static void writeCharSequence(ByteBuf buf, int offset, CharSequence value, int valueLen) {

@@ -15,11 +15,12 @@
  */
 package io.netty.handler.codec.http;
 
+import static io.netty.handler.codec.http.HttpConstants.SP;
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.AsciiString;
+import io.netty.util.AsciiString;
+import io.netty.util.ByteProcessor;
+import io.netty.util.ByteString;
 import io.netty.util.CharsetUtil;
-
-import static io.netty.handler.codec.http.HttpConstants.*;
 
 /**
  * The response code and its description of HTTP or its derived protocols, such as
@@ -465,6 +466,85 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
             }
         } catch (Exception e) {
             throw new IllegalArgumentException("malformed status line: " + status, e);
+        }
+    }
+
+    private static final class HttpStatusLineProcessor implements ByteProcessor {
+        private static final byte ASCII_SPACE = (byte) ' ';
+        private final ByteString string;
+        private int i;
+        /**
+         * 0 = New or havn't seen {@link ASCII_SPACE}.
+         * 1 = Last byte was {@link ASCII_SPACE}.
+         * 2 = Terminal State. Processed the byte after {@link ASCII_SPACE}, and parsed the status line.
+         * 3 = Terminal State. There was no byte after {@link ASCII_SPACE} but status has been parsed with what we saw.
+         */
+        private int state;
+        private HttpResponseStatus status;
+
+        public HttpStatusLineProcessor(ByteString string) {
+            this.string = string;
+        }
+
+        @Override
+        public boolean process(byte value) {
+            switch (state) {
+            case 0:
+                if (value == ASCII_SPACE) {
+                    state = 1;
+                }
+                break;
+            case 1:
+                parseStatus(i);
+                state = 2;
+                return false;
+            default:
+                break;
+            }
+            ++i;
+            return true;
+        }
+
+        private void parseStatus(int codeEnd) {
+            int code = string.parseAsciiInt(0, codeEnd);
+            status = valueOf(code);
+            if (codeEnd < string.length()) {
+                String actualReason = string.toString(codeEnd + 1, string.length());
+                if (!status.reasonPhrase().equals(actualReason)) {
+                    status = new HttpResponseStatus(code, actualReason);
+                }
+            }
+        }
+
+        public HttpResponseStatus status() {
+            if (state <= 1) {
+                parseStatus(string.length());
+                state = 3;
+            }
+            return status;
+        }
+    }
+
+    /**
+     * Parses the specified HTTP status line into a {@link HttpResponseStatus}. The expected formats of the line are:
+     * <ul>
+     * <li>{@code statusCode} (e.g. 200)</li>
+     * <li>{@code statusCode} {@code reasonPhrase} (e.g. 404 Not Found)</li>
+     * </ul>
+     *
+     * @throws IllegalArgumentException if the specified status line is malformed
+     */
+    public static HttpResponseStatus parseLine(ByteString line) {
+        try {
+            HttpStatusLineProcessor processor = new HttpStatusLineProcessor(line);
+            line.forEachByte(processor);
+            HttpResponseStatus status = processor.status();
+            if (status == null) {
+                throw new IllegalArgumentException("unable to get status after parsing input");
+            }
+            return status;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("malformed status line: " + line, e);
         }
     }
 

@@ -13,15 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec;
+package io.netty.util;
 
 import static org.junit.Assert.assertArrayEquals;
-import io.netty.util.CharsetUtil;
 
-import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
 import java.nio.charset.Charset;
-import java.nio.charset.CharsetEncoder;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -41,8 +37,8 @@ public class AsciiStringTest {
         final Charset[] charsets = CharsetUtil.values();
         for (int i = 0; i < charsets.length; ++i) {
             final Charset charset = charsets[i];
-            byte[] expected = getBytesWithEncoder(bString, charset);
-            byte[] actual = AsciiString.getBytes(b, charset);
+            byte[] expected = bString.getBytes(charset);
+            byte[] actual = new ByteString(b, charset).toByteArray();
             assertArrayEquals("failure for " + charset, expected, actual);
         }
     }
@@ -58,7 +54,7 @@ public class AsciiStringTest {
         for (int i = 0; i < charsets.length; ++i) {
             final Charset charset = charsets[i];
             byte[] expected = bString.getBytes(charset);
-            byte[] actual = AsciiString.getBytes(bString, charset);
+            byte[] actual = new ByteString(bString, charset).toByteArray();
             assertArrayEquals("failure for " + charset, expected, actual);
         }
     }
@@ -72,12 +68,8 @@ public class AsciiStringTest {
         final String bString = b.toString();
         // The AsciiString class actually limits the Charset to ISO_8859_1
         byte[] expected = bString.getBytes(CharsetUtil.ISO_8859_1);
-        final Charset[] charsets = CharsetUtil.values();
-        for (int i = 0; i < charsets.length; ++i) {
-            final Charset charset = charsets[i];
-            byte[] actual = AsciiString.getBytes(new AsciiString(bString), charset);
-            assertArrayEquals("failure for " + charset, expected, actual);
-        }
+        byte[] actual = new AsciiString(bString).toByteArray();
+        assertArrayEquals(expected, actual);
     }
 
     @Test
@@ -85,12 +77,5 @@ public class AsciiStringTest {
         String string = "shouldn't fail";
         AsciiString ascii = new AsciiString(string.toCharArray());
         Assert.assertEquals(string, ascii.toString());
-    }
-
-    private static byte[] getBytesWithEncoder(CharSequence value, Charset charset) {
-        final CharsetEncoder encoder = CharsetUtil.getEncoder(charset);
-        final ByteBuffer nativeBuffer = ByteBuffer.allocate((int) (encoder.maxBytesPerChar() * value.length()));
-        encoder.encode(CharBuffer.wrap(value), nativeBuffer, true);
-        return nativeBuffer.array();
     }
 }

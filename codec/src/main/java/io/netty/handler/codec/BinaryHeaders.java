@@ -16,68 +16,70 @@
 
 package io.netty.handler.codec;
 
+import io.netty.util.ByteString;
+
 /**
- * A typical {@code AsciiString} multimap used by protocols that use binary headers (such as HTTP/2) for the
- * representation of arbitrary key-value data. {@link AsciiString} is just a wrapper around a byte array but provides
+ * A typical {@code ByteString} multimap used by protocols that use binary headers (such as HTTP/2) for the
+ * representation of arbitrary key-value data. {@link ByteString} is just a wrapper around a byte array but provides
  * some additional utility when handling text data.
  */
-public interface BinaryHeaders extends Headers<AsciiString> {
+public interface BinaryHeaders extends Headers<ByteString> {
     /**
-     * A visitor that helps reduce GC pressure while iterating over a collection of {@link Headers}.
+     * Provides an abstraction to iterate over elements maintained in the {@link Headers} collection.
      */
-    interface EntryVisitor extends Headers.EntryVisitor<AsciiString> {
+    interface EntryVisitor extends Headers.EntryVisitor<ByteString> {
     }
 
     /**
-     * A visitor that helps reduce GC pressure while iterating over a collection of {@link Headers}.
+     * Provides an abstraction to iterate over elements maintained in the {@link Headers} collection.
      */
-    interface NameVisitor extends Headers.NameVisitor<AsciiString> {
+    interface NameVisitor extends Headers.NameVisitor<ByteString> {
     }
 
     @Override
-    BinaryHeaders add(AsciiString name, AsciiString value);
+    BinaryHeaders add(ByteString name, ByteString value);
 
     @Override
-    BinaryHeaders add(AsciiString name, Iterable<? extends AsciiString> values);
+    BinaryHeaders add(ByteString name, Iterable<? extends ByteString> values);
 
     @Override
-    BinaryHeaders add(AsciiString name, AsciiString... values);
+    BinaryHeaders add(ByteString name, ByteString... values);
 
     @Override
-    BinaryHeaders addObject(AsciiString name, Object value);
+    BinaryHeaders addObject(ByteString name, Object value);
 
     @Override
-    BinaryHeaders addObject(AsciiString name, Iterable<?> values);
+    BinaryHeaders addObject(ByteString name, Iterable<?> values);
 
     @Override
-    BinaryHeaders addObject(AsciiString name, Object... values);
+    BinaryHeaders addObject(ByteString name, Object... values);
 
     @Override
-    BinaryHeaders addBoolean(AsciiString name, boolean value);
+    BinaryHeaders addBoolean(ByteString name, boolean value);
 
     @Override
-    BinaryHeaders addByte(AsciiString name, byte value);
+    BinaryHeaders addByte(ByteString name, byte value);
 
     @Override
-    BinaryHeaders addChar(AsciiString name, char value);
+    BinaryHeaders addChar(ByteString name, char value);
 
     @Override
-    BinaryHeaders addShort(AsciiString name, short value);
+    BinaryHeaders addShort(ByteString name, short value);
 
     @Override
-    BinaryHeaders addInt(AsciiString name, int value);
+    BinaryHeaders addInt(ByteString name, int value);
 
     @Override
-    BinaryHeaders addLong(AsciiString name, long value);
+    BinaryHeaders addLong(ByteString name, long value);
 
     @Override
-    BinaryHeaders addFloat(AsciiString name, float value);
+    BinaryHeaders addFloat(ByteString name, float value);
 
     @Override
-    BinaryHeaders addDouble(AsciiString name, double value);
+    BinaryHeaders addDouble(ByteString name, double value);
 
     @Override
-    BinaryHeaders addTimeMillis(AsciiString name, long value);
+    BinaryHeaders addTimeMillis(ByteString name, long value);
 
     /**
      * See {@link Headers#add(Headers)}
@@ -85,49 +87,49 @@ public interface BinaryHeaders extends Headers<AsciiString> {
     BinaryHeaders add(BinaryHeaders headers);
 
     @Override
-    BinaryHeaders set(AsciiString name, AsciiString value);
+    BinaryHeaders set(ByteString name, ByteString value);
 
     @Override
-    BinaryHeaders set(AsciiString name, Iterable<? extends AsciiString> values);
+    BinaryHeaders set(ByteString name, Iterable<? extends ByteString> values);
 
     @Override
-    BinaryHeaders set(AsciiString name, AsciiString... values);
+    BinaryHeaders set(ByteString name, ByteString... values);
 
     @Override
-    BinaryHeaders setObject(AsciiString name, Object value);
+    BinaryHeaders setObject(ByteString name, Object value);
 
     @Override
-    BinaryHeaders setObject(AsciiString name, Iterable<?> values);
+    BinaryHeaders setObject(ByteString name, Iterable<?> values);
 
     @Override
-    BinaryHeaders setObject(AsciiString name, Object... values);
+    BinaryHeaders setObject(ByteString name, Object... values);
 
     @Override
-    BinaryHeaders setBoolean(AsciiString name, boolean value);
+    BinaryHeaders setBoolean(ByteString name, boolean value);
 
     @Override
-    BinaryHeaders setByte(AsciiString name, byte value);
+    BinaryHeaders setByte(ByteString name, byte value);
 
     @Override
-    BinaryHeaders setChar(AsciiString name, char value);
+    BinaryHeaders setChar(ByteString name, char value);
 
     @Override
-    BinaryHeaders setShort(AsciiString name, short value);
+    BinaryHeaders setShort(ByteString name, short value);
 
     @Override
-    BinaryHeaders setInt(AsciiString name, int value);
+    BinaryHeaders setInt(ByteString name, int value);
 
     @Override
-    BinaryHeaders setLong(AsciiString name, long value);
+    BinaryHeaders setLong(ByteString name, long value);
 
     @Override
-    BinaryHeaders setFloat(AsciiString name, float value);
+    BinaryHeaders setFloat(ByteString name, float value);
 
     @Override
-    BinaryHeaders setDouble(AsciiString name, double value);
+    BinaryHeaders setDouble(ByteString name, double value);
 
     @Override
-    BinaryHeaders setTimeMillis(AsciiString name, long value);
+    BinaryHeaders setTimeMillis(ByteString name, long value);
 
     /**
      * See {@link Headers#set(Headers)}

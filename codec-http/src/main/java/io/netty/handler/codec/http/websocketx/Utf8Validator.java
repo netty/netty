@@ -36,13 +36,13 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufProcessor;
 import io.netty.handler.codec.CorruptedFrameException;
+import io.netty.util.ByteProcessor;
 
 /**
  * Checks UTF8 bytes for validity
  */
-final class Utf8Validator implements ByteBufProcessor {
+final class Utf8Validator implements ByteProcessor {
     private static final int UTF8_ACCEPT = 0;
     private static final int UTF8_REJECT = 12;
 

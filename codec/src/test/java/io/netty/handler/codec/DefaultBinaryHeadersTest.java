@@ -17,6 +17,8 @@ package io.netty.handler.codec;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import io.netty.util.AsciiString;
+import io.netty.util.ByteString;
 
 import java.util.HashSet;
 import java.util.Iterator;
@@ -40,11 +42,11 @@ public class DefaultBinaryHeadersTest {
         byte[] key2 = randomBytes();
         byte[] value2 = randomBytes();
 
-        DefaultBinaryHeaders h1 = new DefaultBinaryHeaders(false);
+        DefaultBinaryHeaders h1 = new DefaultBinaryHeaders();
         h1.set(as(key1), as(value1));
         h1.set(as(key2), as(value2));
 
-        DefaultBinaryHeaders h2 = new DefaultBinaryHeaders(false);
+        DefaultBinaryHeaders h2 = new DefaultBinaryHeaders();
         h2.set(as(key1), as(value1));
         h2.set(as(key2), as(value2));
 
@@ -63,13 +65,13 @@ public class DefaultBinaryHeadersTest {
         byte[] v3 = randomBytes();
         byte[] v4 = randomBytes();
 
-        DefaultBinaryHeaders h1 = new DefaultBinaryHeaders(false);
+        DefaultBinaryHeaders h1 = new DefaultBinaryHeaders();
         h1.set(as(k1), as(v1));
         h1.set(as(k2), as(v2));
         h1.add(as(k2), as(v3));
         h1.add(as(k1), as(v4));
 
-        DefaultBinaryHeaders h2 = new DefaultBinaryHeaders(false);
+        DefaultBinaryHeaders h2 = new DefaultBinaryHeaders();
         h2.set(as(k1), as(v1));
         h2.set(as(k2), as(v2));
         h2.add(as(k1), as(v4));
@@ -90,13 +92,13 @@ public class DefaultBinaryHeadersTest {
         byte[] v3 = randomBytes();
         byte[] v4 = randomBytes();
 
-        DefaultBinaryHeaders h1 = new DefaultBinaryHeaders(false);
+        DefaultBinaryHeaders h1 = new DefaultBinaryHeaders();
         h1.set(as(k1), as(v1));
         h1.set(as(k2), as(v2));
         h1.add(as(k2), as(v3));
         h1.add(as(k1), as(v4));
 
-        DefaultBinaryHeaders h2 = new DefaultBinaryHeaders(false);
+        DefaultBinaryHeaders h2 = new DefaultBinaryHeaders();
         h2.set(as(k1), as(v1));
         h2.set(as(k2), as(v2));
         h2.add(as(k1), as(v4));
@@ -116,18 +118,18 @@ public class DefaultBinaryHeadersTest {
         byte[] v3 = randomBytes();
         byte[] v4 = randomBytes();
 
-        DefaultBinaryHeaders h1 = new DefaultBinaryHeaders(false);
+        DefaultBinaryHeaders h1 = new DefaultBinaryHeaders();
         h1.set(as(k1), as(v1));
         h1.set(as(k2), as(v2));
         h1.add(as(k2), as(v3));
         h1.add(as(k1), as(v4));
 
-        DefaultBinaryHeaders h2 = new DefaultBinaryHeaders(false);
+        DefaultBinaryHeaders h2 = new DefaultBinaryHeaders();
         h2.set(as(k1), as(v1));
         h2.set(as(k2), as(v2));
         h2.add(as(k1), as(v4));
 
-        DefaultBinaryHeaders expected = new DefaultBinaryHeaders(false);
+        DefaultBinaryHeaders expected = new DefaultBinaryHeaders();
         expected.set(as(k1), as(v1));
         expected.set(as(k2), as(v2));
         expected.add(as(k2), as(v3));
@@ -148,14 +150,14 @@ public class DefaultBinaryHeadersTest {
         byte[] v2 = randomBytes();
         byte[] v3 = randomBytes();
 
-        DefaultBinaryHeaders h1 = new DefaultBinaryHeaders(false);
+        DefaultBinaryHeaders h1 = new DefaultBinaryHeaders();
         h1.add(as(k1), as(v1));
         h1.add(as(k1), as(v2));
         assertEquals(2, h1.size());
 
         h1.set(as(k1), as(v3));
         assertEquals(1, h1.size());
-        List<AsciiString> list = h1.getAll(as(k1));
+        List<ByteString> list = h1.getAll(as(k1));
         assertEquals(1, list.size());
         assertEquals(as(v3), list.get(0));
     }
@@ -251,14 +253,14 @@ public class DefaultBinaryHeadersTest {
 
         h1.set(as("foo"), as("goo3"));
         assertEquals(1, h1.size());
-        List<AsciiString> list = h1.getAll(as("foo"));
+        List<ByteString> list = h1.getAll(as("foo"));
         assertEquals(1, list.size());
         assertEquals(as("goo3"), list.get(0));
     }
 
     @Test(expected = NoSuchElementException.class)
     public void iterateEmptyHeadersShouldThrow() {
-        Iterator<Map.Entry<AsciiString, AsciiString>> iterator = new DefaultBinaryHeaders().iterator();
+        Iterator<Map.Entry<ByteString, ByteString>> iterator = new DefaultBinaryHeaders().iterator();
         assertFalse(iterator.hasNext());
         iterator.next();
     }
@@ -281,7 +283,7 @@ public class DefaultBinaryHeadersTest {
         }
 
         // Now iterate through the headers, removing them from the original set.
-        for (Map.Entry<AsciiString, AsciiString> entry : h1) {
+        for (Map.Entry<ByteString, ByteString> entry : h1) {
             assertTrue(headers.remove(entry.getKey().toString() + ':' + entry.getValue().toString()));
         }
 
@@ -296,7 +298,7 @@ public class DefaultBinaryHeadersTest {
         h1.add(as("foo"), as("goo2"));
         assertEquals(as("goo"), h1.getAndRemove(as("foo")));
         assertEquals(0, h1.size());
-        List<AsciiString> values = h1.getAll(as("foo"));
+        List<ByteString> values = h1.getAll(as("foo"));
         assertEquals(0, values.size());
     }
 

@@ -28,10 +28,10 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelPromiseAggregator;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
+import io.netty.util.ByteString;
 
 /**
  * A decorating HTTP2 encoder that will compress data frames according to the {@code content-encoding} header for each
@@ -170,11 +170,11 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
      * (alternatively, you can throw a {@link Http2Exception} to block unknown encoding).
      * @throws Http2Exception If the specified encoding is not not supported and warrants an exception
      */
-    protected EmbeddedChannel newContentCompressor(AsciiString contentEncoding) throws Http2Exception {
-        if (GZIP.equalsIgnoreCase(contentEncoding) || X_GZIP.equalsIgnoreCase(contentEncoding)) {
+    protected EmbeddedChannel newContentCompressor(ByteString contentEncoding) throws Http2Exception {
+        if (GZIP.equals(contentEncoding) || X_GZIP.equals(contentEncoding)) {
             return newCompressionChannel(ZlibWrapper.GZIP);
         }
-        if (DEFLATE.equalsIgnoreCase(contentEncoding) || X_DEFLATE.equalsIgnoreCase(contentEncoding)) {
+        if (DEFLATE.equals(contentEncoding) || X_DEFLATE.equals(contentEncoding)) {
             return newCompressionChannel(ZlibWrapper.ZLIB);
         }
         // 'identity' or unsupported
@@ -189,7 +189,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
      * @return the expected content encoding of the new content.
      * @throws Http2Exception if the {@code contentEncoding} is not supported and warrants an exception
      */
-    protected AsciiString getTargetContentEncoding(AsciiString contentEncoding) throws Http2Exception {
+    protected ByteString getTargetContentEncoding(ByteString contentEncoding) throws Http2Exception {
         return contentEncoding;
     }
 
@@ -219,7 +219,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         EmbeddedChannel compressor = stream.getProperty(CompressorHttp2ConnectionEncoder.class);
         if (compressor == null) {
             if (!endOfStream) {
-                AsciiString encoding = headers.get(CONTENT_ENCODING);
+                ByteString encoding = headers.get(CONTENT_ENCODING);
                 if (encoding == null) {
                     encoding = IDENTITY;
                 }
@@ -227,8 +227,8 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                     compressor = newContentCompressor(encoding);
                     if (compressor != null) {
                         stream.setProperty(CompressorHttp2ConnectionEncoder.class, compressor);
-                        AsciiString targetContentEncoding = getTargetContentEncoding(encoding);
-                        if (IDENTITY.equalsIgnoreCase(targetContentEncoding)) {
+                        ByteString targetContentEncoding = getTargetContentEncoding(encoding);
+                        if (IDENTITY.equals(targetContentEncoding)) {
                             headers.remove(CONTENT_ENCODING);
                         } else {
                             headers.set(CONTENT_ENCODING, targetContentEncoding);
