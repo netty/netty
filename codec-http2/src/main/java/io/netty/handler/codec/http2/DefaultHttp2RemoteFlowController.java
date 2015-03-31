@@ -235,11 +235,12 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     }
 
     /**
-     * This will allocate bytes by stream weight and priority for the entire tree rooted at {@code parent}, but does
-     * not write any bytes. Priority is generally distributed proportionally to siblings in the priority tree, however
-     * we ensure that at least 1 byte is assigned to each stream in order to make progress.
+     * This will allocate bytes by stream weight and priority for the entire tree rooted at {@code parent}, but does not
+     * write any bytes. Priority is generally distributed proportionally to siblings in the priority tree, however we
+     * need to ensure that the entire connection window is used (assuming streams have >= connection window bytes to
+     * send) and we may need some sort of rounding to accomplish this..
      *
-     * @param parent The parent of the tree.
+     * @param parent           The parent of the tree.
      * @param connectionWindow The connection window this is available for use at this point in the tree.
      * @return An object summarizing the write and allocation results.
      */
@@ -283,10 +284,8 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                 int weight = child.weight();
                 double weightRatio = weight / (double) totalWeight;
 
-                // We need to ensure that the entire connection window is used (assuming streams have >= connection
-                // window bytes to send) and we may need some sort of rounding to accomplish this. In order to make
-                // progress toward the connection window due to possible rounding errors, we make sure that each
-                // stream (with data to send) is given at least 1 byte toward the connection window.
+                // In order to make progress toward the connection window due to possible rounding errors, we make sure
+                // that each stream (with data to send) is given at least 1 byte toward the connection window.
                 int connectionWindowChunk = Math.max(1, (int) (connectionWindow * weightRatio));
                 int bytesForTree = Math.min(nextConnectionWindow, connectionWindowChunk);
                 int bytesForChild = Math.min(state.streamableBytes(), bytesForTree);
