@@ -38,6 +38,7 @@ public class ChunkedStream implements ChunkedInput<ByteBuf> {
     private final PushbackInputStream in;
     private final int chunkSize;
     private long offset;
+    private boolean closed;
 
     /**
      * Creates a new instance that fetches data from the specified stream.
@@ -79,6 +80,10 @@ public class ChunkedStream implements ChunkedInput<ByteBuf> {
 
     @Override
     public boolean isEndOfInput() throws Exception {
+        if (closed) {
+            return true;
+        }
+
         int b = in.read();
         if (b < 0) {
             return true;
@@ -90,6 +95,7 @@ public class ChunkedStream implements ChunkedInput<ByteBuf> {
 
     @Override
     public void close() throws Exception {
+        closed = true;
         in.close();
     }
 
