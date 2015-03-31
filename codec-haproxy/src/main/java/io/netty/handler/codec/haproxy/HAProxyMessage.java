@@ -16,8 +16,8 @@
 package io.netty.handler.codec.haproxy;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufProcessor;
 import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.AddressFamily;
+import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.StringUtil;
@@ -166,7 +166,7 @@ public final class HAProxyMessage {
                             Math.min(addressInfoLen, header.readableBytes()) + " bytes (expected: 216+ bytes)");
             }
             int startIdx = header.readerIndex();
-            int addressEnd = header.forEachByte(startIdx, 108, ByteBufProcessor.FIND_NUL);
+            int addressEnd = header.forEachByte(startIdx, 108, ByteProcessor.FIND_NUL);
             if (addressEnd == -1) {
                 addressLen = 108;
             } else {
@@ -176,7 +176,7 @@ public final class HAProxyMessage {
 
             startIdx += 108;
 
-            addressEnd = header.forEachByte(startIdx, 108, ByteBufProcessor.FIND_NUL);
+            addressEnd = header.forEachByte(startIdx, 108, ByteProcessor.FIND_NUL);
             if (addressEnd == -1) {
                 addressLen = 108;
             } else {

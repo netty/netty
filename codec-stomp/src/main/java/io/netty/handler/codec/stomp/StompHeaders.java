@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.stomp;
 
-import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.TextHeaders;
+import io.netty.util.AsciiString;
 
 /**
  * The multimap data structure for the STOMP header names and values. It also provides the constants for the standard

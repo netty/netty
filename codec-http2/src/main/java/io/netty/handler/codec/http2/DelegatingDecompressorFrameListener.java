@@ -28,10 +28,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
+import io.netty.util.ByteString;
 
 /**
  * A HTTP2 frame listener that will decompress data frames according to the {@code content-encoding} header for each
@@ -159,13 +159,11 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
      *         (alternatively, you can throw a {@link Http2Exception} to block unknown encoding).
      * @throws Http2Exception If the specified encoding is not not supported and warrants an exception
      */
-    protected EmbeddedChannel newContentDecompressor(AsciiString contentEncoding) throws Http2Exception {
-        if (GZIP.equalsIgnoreCase(contentEncoding) ||
-            X_GZIP.equalsIgnoreCase(contentEncoding)) {
+    protected EmbeddedChannel newContentDecompressor(ByteString contentEncoding) throws Http2Exception {
+        if (GZIP.equals(contentEncoding) || X_GZIP.equals(contentEncoding)) {
             return new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP));
         }
-        if (DEFLATE.equalsIgnoreCase(contentEncoding) ||
-            X_DEFLATE.equalsIgnoreCase(contentEncoding)) {
+        if (DEFLATE.equals(contentEncoding) || X_DEFLATE.equals(contentEncoding)) {
             final ZlibWrapper wrapper = strict ? ZlibWrapper.ZLIB : ZlibWrapper.ZLIB_OR_NONE;
             // To be strict, 'deflate' means ZLIB, but some servers were not implemented correctly.
             return new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(wrapper));
@@ -182,7 +180,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
      * @return the expected content encoding of the new content.
      * @throws Http2Exception if the {@code contentEncoding} is not supported and warrants an exception
      */
-    protected AsciiString getTargetContentEncoding(@SuppressWarnings("UnusedParameters") AsciiString contentEncoding)
+    protected ByteString getTargetContentEncoding(@SuppressWarnings("UnusedParameters") ByteString contentEncoding)
                     throws Http2Exception {
         return IDENTITY;
     }
@@ -205,7 +203,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         Http2Decompressor decompressor = decompressor(stream);
         if (decompressor == null && !endOfStream) {
             // Determine the content encoding.
-            AsciiString contentEncoding = headers.get(CONTENT_ENCODING);
+            ByteString contentEncoding = headers.get(CONTENT_ENCODING);
             if (contentEncoding == null) {
                 contentEncoding = IDENTITY;
             }
@@ -215,8 +213,8 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
                 stream.setProperty(Http2Decompressor.class, decompressor);
                 // Decode the content and remove or replace the existing headers
                 // so that the message looks like a decoded message.
-                AsciiString targetContentEncoding = getTargetContentEncoding(contentEncoding);
-                if (IDENTITY.equalsIgnoreCase(targetContentEncoding)) {
+                ByteString targetContentEncoding = getTargetContentEncoding(contentEncoding);
+                if (IDENTITY.equals(targetContentEncoding)) {
                     headers.remove(CONTENT_ENCODING);
                 } else {
                     headers.set(CONTENT_ENCODING, targetContentEncoding);

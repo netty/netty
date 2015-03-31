@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.util.internal.StringUtil;
 
 /**
  * The default {@link HttpResponse} implementation.

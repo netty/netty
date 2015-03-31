@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.ByteProcessor;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.internal.PlatformDependent;
@@ -965,7 +966,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     @Override
-    public int forEachByte(ByteBufProcessor processor) {
+    public int forEachByte(ByteProcessor processor) {
         int index = readerIndex;
         int length = writerIndex - index;
         ensureAccessible();
@@ -973,12 +974,12 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     @Override
-    public int forEachByte(int index, int length, ByteBufProcessor processor) {
+    public int forEachByte(int index, int length, ByteProcessor processor) {
         checkIndex(index, length);
         return forEachByteAsc0(index, length, processor);
     }
 
-    private int forEachByteAsc0(int index, int length, ByteBufProcessor processor) {
+    private int forEachByteAsc0(int index, int length, ByteProcessor processor) {
         if (processor == null) {
             throw new NullPointerException("processor");
         }
@@ -1005,7 +1006,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     @Override
-    public int forEachByteDesc(ByteBufProcessor processor) {
+    public int forEachByteDesc(ByteProcessor processor) {
         int index = readerIndex;
         int length = writerIndex - index;
         ensureAccessible();
@@ -1013,13 +1014,13 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     @Override
-    public int forEachByteDesc(int index, int length, ByteBufProcessor processor) {
+    public int forEachByteDesc(int index, int length, ByteProcessor processor) {
         checkIndex(index, length);
 
         return forEachByteDesc0(index, length, processor);
     }
 
-    private int forEachByteDesc0(int index, int length, ByteBufProcessor processor) {
+    private int forEachByteDesc0(int index, int length, ByteProcessor processor) {
 
         if (processor == null) {
             throw new NullPointerException("processor");

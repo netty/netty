@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.ByteProcessor;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -296,12 +298,12 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
-    public int forEachByte(int index, int length, ByteBufProcessor processor) {
+    public int forEachByte(int index, int length, ByteProcessor processor) {
         return buffer.forEachByte(index, length, processor);
     }
 
     @Override
-    public int forEachByteDesc(int index, int length, ByteBufProcessor processor) {
+    public int forEachByteDesc(int index, int length, ByteProcessor processor) {
         return buffer.forEachByteDesc(index, length, processor);
     }
 

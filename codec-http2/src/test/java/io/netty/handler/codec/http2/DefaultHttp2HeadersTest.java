@@ -15,30 +15,41 @@
  */
 package io.netty.handler.codec.http2;
 
-import io.netty.handler.codec.AsciiString;
-import org.junit.Test;
-
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import io.netty.util.AsciiString;
+import io.netty.util.ByteString;
+import io.netty.util.CharsetUtil;
+
+import org.junit.Test;
 
 public class DefaultHttp2HeadersTest {
 
-    private static final AsciiString NAME = new AsciiString("Test");
-    private static final AsciiString VALUE = new AsciiString("some value");
+    private static final byte[] NAME_BYTES = { 'T', 'E', 's', 'T' };
+    private static final byte[] NAME_BYTES_LOWERCASE = { 't', 'e', 's', 't' };
+    private static final ByteString NAME_BYTESTRING = new ByteString(NAME_BYTES);
+    private static final AsciiString NAME_ASCIISTRING = new AsciiString("Test");
+    private static final ByteString VALUE = new ByteString("some value", CharsetUtil.UTF_8);
 
     @Test
     public void defaultLowercase() {
-        Http2Headers headers = new DefaultHttp2Headers().set(NAME, VALUE);
-        assertEquals(first(headers), NAME.toLowerCase());
+        Http2Headers headers = new DefaultHttp2Headers().set(NAME_BYTESTRING, VALUE);
+        assertArrayEquals(NAME_BYTES_LOWERCASE, first(headers).toByteArray());
+    }
+
+    @Test
+    public void defaultLowercaseAsciiString() {
+        Http2Headers headers = new DefaultHttp2Headers().set(NAME_ASCIISTRING, VALUE);
+        assertEquals(NAME_ASCIISTRING.toLowerCase(), first(headers));
     }
 
     @Test
     public void caseInsensitive() {
-        Http2Headers headers = new DefaultHttp2Headers(false).set(NAME, VALUE);
-        assertEquals(first(headers), NAME);
+        Http2Headers headers = new DefaultHttp2Headers(false).set(NAME_BYTESTRING, VALUE);
+        assertArrayEquals(NAME_BYTES, first(headers).toByteArray());
     }
 
-    private static AsciiString first(Http2Headers headers) {
+    private static ByteString first(Http2Headers headers) {
         return headers.names().iterator().next();
     }
-
 }

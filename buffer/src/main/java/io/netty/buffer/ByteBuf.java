@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.ByteProcessor;
 import io.netty.util.ReferenceCounted;
 
 import java.io.IOException;
@@ -178,7 +179,7 @@ import java.nio.charset.UnsupportedCharsetException;
  *
  * For simple single-byte searches, use {@link #indexOf(int, int, byte)} and {@link #bytesBefore(int, int, byte)}.
  * {@link #bytesBefore(byte)} is especially useful when you deal with a {@code NUL}-terminated string.
- * For complicated searches, use {@link #forEachByte(int, int, ByteBufProcessor)} with a {@link ByteBufProcessor}
+ * For complicated searches, use {@link #forEachByte(int, int, ByteProcessor)} with a {@link ByteProcessor}
  * implementation.
  *
  * <h3>Mark and reset</h3>
@@ -1605,26 +1606,26 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * Iterates over the readable bytes of this buffer with the specified {@code processor} in ascending order.
      *
      * @return {@code -1} if the processor iterated to or beyond the end of the readable bytes.
-     *         The last-visited index If the {@link ByteBufProcessor#process(byte)} returned {@code false}.
+     *         The last-visited index If the {@link ByteProcessor#process(byte)} returned {@code false}.
      */
-    public abstract int forEachByte(ByteBufProcessor processor);
+    public abstract int forEachByte(ByteProcessor processor);
 
     /**
      * Iterates over the specified area of this buffer with the specified {@code processor} in ascending order.
      * (i.e. {@code index}, {@code (index + 1)},  .. {@code (index + length - 1)})
      *
      * @return {@code -1} if the processor iterated to or beyond the end of the specified area.
-     *         The last-visited index If the {@link ByteBufProcessor#process(byte)} returned {@code false}.
+     *         The last-visited index If the {@link ByteProcessor#process(byte)} returned {@code false}.
      */
-    public abstract int forEachByte(int index, int length, ByteBufProcessor processor);
+    public abstract int forEachByte(int index, int length, ByteProcessor processor);
 
     /**
      * Iterates over the readable bytes of this buffer with the specified {@code processor} in descending order.
      *
      * @return {@code -1} if the processor iterated to or beyond the beginning of the readable bytes.
-     *         The last-visited index If the {@link ByteBufProcessor#process(byte)} returned {@code false}.
+     *         The last-visited index If the {@link ByteProcessor#process(byte)} returned {@code false}.
      */
-    public abstract int forEachByteDesc(ByteBufProcessor processor);
+    public abstract int forEachByteDesc(ByteProcessor processor);
 
     /**
      * Iterates over the specified area of this buffer with the specified {@code processor} in descending order.
@@ -1632,9 +1633,9 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      *
      *
      * @return {@code -1} if the processor iterated to or beyond the beginning of the specified area.
-     *         The last-visited index If the {@link ByteBufProcessor#process(byte)} returned {@code false}.
+     *         The last-visited index If the {@link ByteProcessor#process(byte)} returned {@code false}.
      */
-    public abstract int forEachByteDesc(int index, int length, ByteBufProcessor processor);
+    public abstract int forEachByteDesc(int index, int length, ByteProcessor processor);
 
     /**
      * Returns a copy of this buffer's readable bytes.  Modifying the content
