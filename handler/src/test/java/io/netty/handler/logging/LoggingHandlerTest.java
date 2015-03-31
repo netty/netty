@@ -39,16 +39,27 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import static org.easymock.EasyMock.*;
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static org.easymock.EasyMock.createNiceMock;
+import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.reportMatcher;
+import static org.easymock.EasyMock.verify;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.CoreMatchers.sameInstance;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
+import static org.slf4j.Logger.ROOT_LOGGER_NAME;
 
 /**
  * Verifies the correct functionality of the {@link LoggingHandler}.
  */
 public class LoggingHandlerTest {
 
-    private static final Logger root = (Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
+    private static final String LOGGER_NAME = LoggingHandler.class.getName();
+
+    private static final Logger rootLogger = (Logger) LoggerFactory.getLogger(ROOT_LOGGER_NAME);
+    private static final Logger logger = (Logger) LoggerFactory.getLogger(LOGGER_NAME);
+
     private static final List<Appender<ILoggingEvent>> oldAppenders = new ArrayList<Appender<ILoggingEvent>>();
     /**
      * Custom logback appender which gets used to match on log messages.
@@ -57,10 +68,10 @@ public class LoggingHandlerTest {
 
     @BeforeClass
     public static void beforeClass() {
-        for (Iterator<Appender<ILoggingEvent>> i = root.iteratorForAppenders(); i.hasNext();) {
+        for (Iterator<Appender<ILoggingEvent>> i = rootLogger.iteratorForAppenders(); i.hasNext();) {
             Appender<ILoggingEvent> a = i.next();
             oldAppenders.add(a);
-            root.detachAppender(a);
+            rootLogger.detachAppender(a);
         }
 
         Unpooled.buffer();
@@ -69,7 +80,7 @@ public class LoggingHandlerTest {
     @AfterClass
     public static void afterClass() {
         for (Appender<ILoggingEvent> a: oldAppenders) {
-            root.addAppender(a);
+            rootLogger.addAppender(a);
         }
     }
 
@@ -77,12 +88,12 @@ public class LoggingHandlerTest {
     @SuppressWarnings("unchecked")
     public void setup() {
         appender = createNiceMock(Appender.class);
-        root.addAppender(appender);
+        logger.addAppender(appender);
     }
 
     @After
     public void teardown() {
-        root.detachAppender(appender);
+        logger.detachAppender(appender);
     }
 
     @Test(expected = NullPointerException.class)
@@ -93,7 +104,7 @@ public class LoggingHandlerTest {
 
     @Test
     public void shouldApplyCustomLogLevel() {
-        LoggingHandler handler = new LoggingHandler("LoggingHandlerTest", LogLevel.INFO);
+        LoggingHandler handler = new LoggingHandler(LogLevel.INFO);
         assertEquals(LogLevel.INFO, handler.level());
     }
 
