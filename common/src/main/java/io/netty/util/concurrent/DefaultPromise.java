@@ -32,8 +32,6 @@ import static java.util.concurrent.TimeUnit.*;
 public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultPromise.class);
-    private static final InternalLogger rejectedExecutionLogger =
-            InternalLoggerFactory.getInstance(DefaultPromise.class.getName() + ".rejectedExecution");
 
     private static final int MAX_LISTENER_STACK_DEPTH = 8;
     private static final Signal SUCCESS = Signal.valueOf(DefaultPromise.class, "SUCCESS");
@@ -670,7 +668,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         try {
             executor.execute(task);
         } catch (Throwable t) {
-            rejectedExecutionLogger.error("Failed to submit a listener notification task. Event loop shut down?", t);
+            executor.rejectedTaskHandler().taskRejected(task, t);
         }
     }
 
