@@ -23,7 +23,7 @@ import java.util.Set;
 
 public interface Headers<T> extends Iterable<Map.Entry<T, T>> {
     /**
-     * A visitor that helps reduce GC pressure while iterating over a collection of {@link Headers}.
+     * Provides an abstraction to iterate over elements maintained in the {@link Headers} collection.
      */
     interface EntryVisitor<T> {
         /**
@@ -36,7 +36,7 @@ public interface Headers<T> extends Iterable<Map.Entry<T, T>> {
     }
 
     /**
-     * A visitor that helps reduce GC pressure while iterating over a collection of {@link Headers}.
+     * Provides an abstraction to iterate over elements maintained in the {@link Headers} collection.
      */
     interface NameVisitor<T> {
         /**
@@ -1095,16 +1095,14 @@ public interface Headers<T> extends Iterable<Map.Entry<T, T>> {
     Iterator<Entry<T, T>> iterator();
 
     /**
-     * Provide a means of iterating over elements in this map with low GC
-     *
+     * Provides an abstraction to iterate over elements maintained in the {@link Headers} collection.
      * @param visitor The visitor which will visit each element in this map
      * @return The last entry before iteration stopped or {@code null} if iteration went past the end
      */
     Map.Entry<T, T> forEachEntry(EntryVisitor<T> visitor) throws Exception;
 
     /**
-     * Provide a means of iterating over elements in this map with low GC
-     *
+     * Provides an abstraction to iterate over elements maintained in the {@link Headers} collection.
      * @param visitor The visitor which will visit each element in this map
      * @return The last key before iteration stopped or {@code null} if iteration went past the end
      */

@@ -15,9 +15,11 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.internal.ThreadLocalRandom;
+
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
@@ -1666,7 +1668,7 @@ public abstract class AbstractByteBufTest {
 
         final AtomicInteger lastIndex = new AtomicInteger();
         buffer.setIndex(CAPACITY / 4, CAPACITY * 3 / 4);
-        assertThat(buffer.forEachByte(new ByteBufProcessor() {
+        assertThat(buffer.forEachByte(new ByteProcessor() {
             int i = CAPACITY / 4;
 
             @Override
@@ -1689,7 +1691,7 @@ public abstract class AbstractByteBufTest {
         }
 
         final int stop = CAPACITY / 2;
-        assertThat(buffer.forEachByte(CAPACITY / 3, CAPACITY / 3, new ByteBufProcessor() {
+        assertThat(buffer.forEachByte(CAPACITY / 3, CAPACITY / 3, new ByteProcessor() {
             int i = CAPACITY / 3;
 
             @Override
@@ -1713,7 +1715,7 @@ public abstract class AbstractByteBufTest {
         }
 
         final AtomicInteger lastIndex = new AtomicInteger();
-        assertThat(buffer.forEachByteDesc(CAPACITY / 4, CAPACITY * 2 / 4, new ByteBufProcessor() {
+        assertThat(buffer.forEachByteDesc(CAPACITY / 4, CAPACITY * 2 / 4, new ByteProcessor() {
             int i = CAPACITY * 3 / 4 - 1;
 
             @Override
@@ -2377,22 +2379,22 @@ public abstract class AbstractByteBufTest {
 
     @Test(expected = IllegalReferenceCountException.class)
     public void testForEachByteAfterRelease() {
-        releasedBuffer().forEachByte(new TestByteBufProcessor());
+        releasedBuffer().forEachByte(new TestByteProcessor());
     }
 
     @Test(expected = IllegalReferenceCountException.class)
     public void testForEachByteAfterRelease1() {
-        releasedBuffer().forEachByte(0, 1, new TestByteBufProcessor());
+        releasedBuffer().forEachByte(0, 1, new TestByteProcessor());
     }
 
     @Test(expected = IllegalReferenceCountException.class)
     public void testForEachByteDescAfterRelease() {
-        releasedBuffer().forEachByteDesc(new TestByteBufProcessor());
+        releasedBuffer().forEachByteDesc(new TestByteProcessor());
     }
 
     @Test(expected = IllegalReferenceCountException.class)
     public void testForEachByteDescAfterRelease1() {
-        releasedBuffer().forEachByteDesc(0, 1, new TestByteBufProcessor());
+        releasedBuffer().forEachByteDesc(0, 1, new TestByteProcessor());
     }
 
     @Test(expected = IllegalReferenceCountException.class)
@@ -2647,7 +2649,7 @@ public abstract class AbstractByteBufTest {
         }
     }
 
-    private static final class TestByteBufProcessor implements ByteBufProcessor {
+    private static final class TestByteProcessor implements ByteProcessor {
         @Override
         public boolean process(byte value) throws Exception {
             return true;

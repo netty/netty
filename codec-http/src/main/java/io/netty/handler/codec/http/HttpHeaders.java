@@ -16,8 +16,9 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.AsciiString;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.handler.codec.Headers.EntryVisitor;
+import io.netty.util.AsciiString;
 import io.netty.util.internal.PlatformDependent;
 
 import java.text.ParseException;
@@ -1283,7 +1284,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     @Deprecated
     public static void encodeAscii(CharSequence seq, ByteBuf buf) {
         if (seq instanceof AsciiString) {
-            ((AsciiString) seq).copy(0, buf, seq.length());
+            ByteBufUtil.copy((AsciiString) seq, 0, buf, seq.length());
         } else {
             encodeAscii0(seq, buf);
         }

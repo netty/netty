@@ -18,7 +18,6 @@ import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.BinaryHeaders;
 import io.netty.handler.codec.TextHeaders.EntryVisitor;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -35,6 +34,8 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.util.AsciiString;
+import io.netty.util.ByteString;
 
 import java.net.URI;
 import java.util.HashMap;
@@ -168,7 +169,7 @@ public final class HttpUtil {
      * @return The HTTP/1.x status
      * @throws Http2Exception If there is a problem translating from HTTP/2 to HTTP/1.x
      */
-    public static HttpResponseStatus parseStatus(AsciiString status) throws Http2Exception {
+    public static HttpResponseStatus parseStatus(ByteString status) throws Http2Exception {
         HttpResponseStatus result;
         try {
             result = HttpResponseStatus.parseLine(status);
@@ -220,11 +221,10 @@ public final class HttpUtil {
      */
     public static FullHttpRequest toHttpRequest(int streamId, Http2Headers http2Headers, boolean validateHttpHeaders)
                     throws Http2Exception {
-        // HTTP/2 does not define a way to carry the version identifier that is
-        // included in the HTTP/1.1 request line.
-        final AsciiString method = checkNotNull(http2Headers.method(),
+        // HTTP/2 does not define a way to carry the version identifier that is included in the HTTP/1.1 request line.
+        final ByteString method = checkNotNull(http2Headers.method(),
                 "method header cannot be null in conversion to HTTP/1.x");
-        final AsciiString path = checkNotNull(http2Headers.path(),
+        final ByteString path = checkNotNull(http2Headers.path(),
                 "path header cannot be null in conversion to HTTP/1.x");
         FullHttpRequest msg = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.valueOf(method
                         .toString()), path.toString(), validateHttpHeaders);
@@ -330,10 +330,10 @@ public final class HttpUtil {
         /**
          * Translations from HTTP/2 header name to the HTTP/1.x equivalent.
          */
-        private static final Map<AsciiString, AsciiString>
-            REQUEST_HEADER_TRANSLATIONS = new HashMap<AsciiString, AsciiString>();
-        private static final Map<AsciiString, AsciiString>
-            RESPONSE_HEADER_TRANSLATIONS = new HashMap<AsciiString, AsciiString>();
+        private static final Map<ByteString, ByteString>
+            REQUEST_HEADER_TRANSLATIONS = new HashMap<ByteString, ByteString>();
+        private static final Map<ByteString, ByteString>
+            RESPONSE_HEADER_TRANSLATIONS = new HashMap<ByteString, ByteString>();
         static {
             RESPONSE_HEADER_TRANSLATIONS.put(Http2Headers.PseudoHeaderName.AUTHORITY.value(),
                             ExtensionHeaderNames.AUTHORITY.text());
@@ -346,7 +346,7 @@ public final class HttpUtil {
 
         private final int streamId;
         private final HttpHeaders output;
-        private final Map<AsciiString, AsciiString> translations;
+        private final Map<ByteString, ByteString> translations;
 
         /**
          * Create a new instance
@@ -362,10 +362,10 @@ public final class HttpUtil {
         }
 
         @Override
-        public boolean visit(Entry<AsciiString, AsciiString> entry) throws Http2Exception {
-            final AsciiString name = entry.getKey();
-            final AsciiString value = entry.getValue();
-            AsciiString translatedName = translations.get(name);
+        public boolean visit(Entry<ByteString, ByteString> entry) throws Http2Exception {
+            final ByteString name = entry.getKey();
+            final ByteString value = entry.getValue();
+            ByteString translatedName = translations.get(name);
             if (translatedName != null || !Http2Headers.PseudoHeaderName.isPseudoHeader(name)) {
                 if (translatedName == null) {
                     translatedName = name;
@@ -373,11 +373,11 @@ public final class HttpUtil {
 
                 // http://tools.ietf.org/html/draft-ietf-httpbis-http2-16#section-8.1.2.3
                 // All headers that start with ':' are only valid in HTTP/2 context
-                if (translatedName.isEmpty() || translatedName.charAt(0) == ':') {
+                if (translatedName.isEmpty() || translatedName.byteAt(0) == ':') {
                     throw streamError(streamId, PROTOCOL_ERROR,
                             "Invalid HTTP/2 header '%s' encountered in translation to HTTP/1.x", translatedName);
                 } else {
-                    output.add(translatedName, value);
+                    output.add(translatedName.toString(), value);
                 }
             }
             return true;
