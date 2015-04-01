@@ -23,6 +23,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_CONCURRENT_STREAMS;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_INITIAL_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_HEADER_LIST_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.NUM_STANDARD_SETTINGS;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_ENABLE_PUSH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_INITIAL_WINDOW_SIZE;
@@ -39,9 +40,14 @@ import io.netty.util.collection.IntObjectHashMap;
  * methods for standard settings.
  */
 public final class Http2Settings extends IntObjectHashMap<Long> {
+    /**
+     * Default capacity based on the number of standard settings from the HTTP/2 spec, adjusted so that adding all of
+     * the standard settings will not cause the map capacity to change.
+     */
+    private static final int DEFAULT_CAPACITY = (int) (NUM_STANDARD_SETTINGS / DEFAULT_LOAD_FACTOR) + 1;
 
     public Http2Settings() {
-        this(6 /* number of standard settings */);
+        this(DEFAULT_CAPACITY);
     }
 
     public Http2Settings(int initialCapacity, float loadFactor) {
@@ -53,9 +59,10 @@ public final class Http2Settings extends IntObjectHashMap<Long> {
     }
 
     /**
-     * Overrides the superclass method to perform verification of standard HTTP/2 settings.
+     * Adds the given setting key/value pair. For standard settings defined by the HTTP/2 spec, performs
+     * validation on the values.
      *
-     * @throws IllegalArgumentException if verification of the setting fails.
+     * @throws IllegalArgumentException if verification for a standard HTTP/2 setting fails.
      */
     @Override
     public Long put(int key, Long value) {
@@ -176,7 +183,7 @@ public final class Http2Settings extends IntObjectHashMap<Long> {
         return this;
     }
 
-    Integer getIntValue(int key) {
+    public Integer getIntValue(int key) {
         Long value = get(key);
         if (value == null) {
             return null;
@@ -220,7 +227,8 @@ public final class Http2Settings extends IntObjectHashMap<Long> {
                 }
                 break;
             default:
-                throw new IllegalArgumentException("key");
+                // Non-standard HTTP/2 setting - don't do validation.
+                break;
         }
     }
 

@@ -61,4 +61,10 @@ public class Http2SettingsTest {
         assertEquals(MAX_FRAME_SIZE_UPPER_BOUND, (int) settings.maxFrameSize());
         assertEquals(4L, (long) settings.maxHeaderListSize());
     }
+
+    @Test
+    public void nonStandardSettingsShouldBeSet() {
+        settings.put(0, 123L);
+        assertEquals(123L, (long) settings.get(0));
+    }
 }
