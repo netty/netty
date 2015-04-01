@@ -33,10 +33,10 @@ import java.util.NoSuchElementException;
 public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectMap.Entry<V>> {
 
     /** Default initial capacity. Used if not specified in the constructor */
-    private static final int DEFAULT_CAPACITY = 11;
+    public static final int DEFAULT_CAPACITY = 11;
 
     /** Default load factor. Used if not specified in the constructor */
-    private static final float DEFAULT_LOAD_FACTOR = 0.5f;
+    public static final float DEFAULT_LOAD_FACTOR = 0.5f;
 
     /**
      * Placeholder for null values, so we can use the actual null to mean available.
