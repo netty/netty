@@ -22,14 +22,14 @@ import io.netty.util.concurrent.EventExecutor;
  * recommended to use {@link Channel#newSucceededFuture()} instead of
  * calling the constructor of this future.
  */
-final class SucceededChannelFuture extends CompleteChannelFuture {
+public final class SucceededChannelFuture extends CompleteChannelFuture {
 
     /**
      * Creates a new instance.
      *
      * @param channel the {@link Channel} associated with this future
      */
-    SucceededChannelFuture(Channel channel, EventExecutor executor) {
+    public SucceededChannelFuture(Channel channel, EventExecutor executor) {
         super(channel, executor);
     }
 

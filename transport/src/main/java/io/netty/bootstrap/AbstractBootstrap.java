@@ -46,8 +46,8 @@ import java.util.Map;
  */
 public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C extends Channel> implements Cloneable {
 
-    private volatile EventLoopGroup group;
-    private volatile ChannelFactory<? extends C> channelFactory;
+    volatile EventLoopGroup group;
+    volatile ChannelFactory<? extends C> channelFactory;
     private volatile SocketAddress localAddress;
     private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
     private final Map<AttributeKey<?>, Object> attrs = new LinkedHashMap<AttributeKey<?>, Object>();
@@ -369,7 +369,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         return localAddress;
     }
 
-    final ChannelFactory<? extends C> channelFactory() {
+    public final ChannelFactory<? extends C> channelFactory() {
         return channelFactory;
     }
 
