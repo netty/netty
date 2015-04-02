@@ -957,7 +957,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             ctx.read();
         }
 
-        ctx.fireChannelReadComplete();
+        super.channelReadComplete(ctx);
     }
 
     /**
