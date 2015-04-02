@@ -116,16 +116,16 @@ public interface EventExecutorGroup extends ScheduledExecutorService, Iterable<E
 
     @Override
     ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit);
-    
+
     /**
-     * Set the {@link RejectTaskHandler} that will be called if the execution of a task is rejected. 
-     * 
-     * @param rejectTaskHandler the handler that handles rejected tasks
+     * Sets the {@link RejectedTaskHandler} that will be called if the execution of a task is rejected.
+     *
+     * @param rejectedTaskHandler the handler that handles rejected tasks
      */
     void setRejectedTaskHandler(RejectedTaskHandler rejectedTaskHandler);
-    
+
     /**
-     * Returns the {@link RejectTaskHandler} that will be used for rejected tasks.
+     * Returns the {@link RejectedTaskHandler} that will be used for rejected tasks.
      */
     RejectedTaskHandler rejectedTaskHandler();
 }

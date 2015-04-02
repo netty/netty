@@ -16,19 +16,15 @@
 package io.netty.util.concurrent;
 
 /**
- * The default implementation for rejected tasks is
- * {@link DefaultRejectedTaskHandler}, which logs the failure of executing a task. To change
- * this default behavior, a custom
- * {@link RejectedTaskHandler} can be set in
- * {@link AbstractEventExecutor#setRejectedTaskHandler(RejectedTaskHandler)} or
- * {@link AbstractEventExecutorGroup#setRejectedTaskHandler(RejectedTaskHandler)}.
+ * A handler that is notified when a task is rejected by an {@link EventExecutor}.
  */
 public interface RejectedTaskHandler {
     /**
-     * This method is called if the task was rejected for execution.
-     * 
+     * Invoked when a task has been rejected for execution.
+     *
+     * @param executor the {@link EventExecutor} which was asked for execution
      * @param task the rejected task
      * @param cause the cause of rejection
      */
-    void taskRejected(Runnable task, Throwable cause);
+    void taskRejected(EventExecutor executor, Runnable task, Throwable cause);
 }

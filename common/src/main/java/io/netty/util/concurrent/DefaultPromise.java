@@ -668,7 +668,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         try {
             executor.execute(task);
         } catch (Throwable t) {
-            executor.rejectedTaskHandler().taskRejected(task, t);
+            executor.rejectedTaskHandler().taskRejected(executor, task, t);
         }
     }
 

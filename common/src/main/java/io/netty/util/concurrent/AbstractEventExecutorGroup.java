@@ -119,13 +119,13 @@ public abstract class AbstractEventExecutorGroup implements EventExecutorGroup {
     public void execute(Runnable command) {
         next().execute(command);
     }
-    
+
     @Override
     public void setRejectedTaskHandler(RejectedTaskHandler rejectedTaskHandler) {
         ObjectUtil.checkNotNull(rejectedTaskHandler, "rejectedTaskHandler");
         this.rejectedTaskHandler = rejectedTaskHandler;
     }
-    
+
     @Override
     public RejectedTaskHandler rejectedTaskHandler() {
         return rejectedTaskHandler;

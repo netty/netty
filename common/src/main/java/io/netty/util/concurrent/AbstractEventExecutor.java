@@ -184,7 +184,7 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
             throw new UnsupportedOperationException("read-only");
         }
     }
-    
+
     @Override
     public void setRejectedTaskHandler(RejectedTaskHandler rejectedTaskHandler) {
         ObjectUtil.checkNotNull(rejectedTaskHandler, "rejectedTaskHandler");

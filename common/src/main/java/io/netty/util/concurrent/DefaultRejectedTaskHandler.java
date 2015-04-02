@@ -19,19 +19,23 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 /**
- * The default implementation that just logs the rejection of a rejected task.
+ * The default {@link RejectedTaskHandler} that just logs the rejection of a rejected task.
  */
 public final class DefaultRejectedTaskHandler implements RejectedTaskHandler {
-    
-    public static final RejectedTaskHandler INSTANCE = new DefaultRejectedTaskHandler();
-    
-    private static final InternalLogger rejectedExecutionLogger = 
-            InternalLoggerFactory.getInstance(DefaultRejectedTaskHandler.class.getName() + ".rejectedExecution");
 
-    private DefaultRejectedTaskHandler() {}
+    /**
+     * The singleton.
+     */
+    public static final RejectedTaskHandler INSTANCE = new DefaultRejectedTaskHandler();
+
+    private static final InternalLogger rejectedExecutionLogger =
+            InternalLoggerFactory.getInstance(DefaultRejectedTaskHandler.class);
+
+    private DefaultRejectedTaskHandler() { }
 
     @Override
-    public void taskRejected(Runnable task, Throwable cause) {
-        rejectedExecutionLogger.error("Failed to submit a listener notification task. Event loop shut down?", cause);
+    public void taskRejected(EventExecutor executor, Runnable task, Throwable cause) {
+        rejectedExecutionLogger.error(
+                "Failed to submit a task ({}) to an executor ({}). Event loop shut down?", task, executor, cause);
     }
 }
