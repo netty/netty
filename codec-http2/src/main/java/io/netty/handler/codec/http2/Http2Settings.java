@@ -183,6 +183,11 @@ public final class Http2Settings extends IntObjectHashMap<Long> {
         return this;
     }
 
+    /**
+     * A helper method that returns {@link Long#intValue()} on the value, if present. Note that
+     * if the range of the value exceeds {@link Integer#MAX_VALUE}, the {@link #get(int)} method should
+     * be used instead to avoid truncation of the value.
+     */
     public Integer getIntValue(int key) {
         Long value = get(key);
         if (value == null) {
