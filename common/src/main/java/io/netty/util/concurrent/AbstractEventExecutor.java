@@ -15,6 +15,8 @@
  */
 package io.netty.util.concurrent;
 
+import io.netty.util.internal.ObjectUtil;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -36,6 +38,8 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
 
     private final EventExecutorGroup parent;
     private final Collection<AbstractEventExecutor> selfCollection = Collections.singleton(this);
+
+    private volatile RejectedTaskHandler rejectedTaskHandler = DefaultRejectedTaskHandler.INSTANCE;
 
     protected AbstractEventExecutor() {
         this(null);
@@ -179,5 +183,16 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
         public void remove() {
             throw new UnsupportedOperationException("read-only");
         }
+    }
+    
+    @Override
+    public void setRejectedTaskHandler(RejectedTaskHandler rejectedTaskHandler) {
+        ObjectUtil.checkNotNull(rejectedTaskHandler, "rejectedTaskHandler");
+        this.rejectedTaskHandler = rejectedTaskHandler;
+    }
+
+    @Override
+    public RejectedTaskHandler rejectedTaskHandler() {
+        return rejectedTaskHandler;
     }
 }
