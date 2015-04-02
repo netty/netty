@@ -219,7 +219,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     public ChannelFuture writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
             ChannelPromise promise) {
         // Delegate to the lifecycle manager for proper updating of connection state.
-        return lifecycleManager.writeRstStream(ctx, streamId, errorCode, promise);
+        return lifecycleManager.resetStream(ctx, streamId, errorCode, promise);
     }
 
     @Override
@@ -287,7 +287,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     @Override
     public ChannelFuture writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData,
             ChannelPromise promise) {
-        return lifecycleManager.writeGoAway(ctx, lastStreamId, errorCode, debugData, promise);
+        return lifecycleManager.goAway(ctx, lastStreamId, errorCode, debugData, promise);
     }
 
     @Override
@@ -470,7 +470,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         @Override
         public void writeComplete() {
             if (endOfStream) {
-                lifecycleManager.closeLocalSide(stream, promise);
+                lifecycleManager.closeStreamLocal(stream, promise);
             }
         }
 

@@ -344,7 +344,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             return;
         }
 
-        ChannelFuture future = writeGoAway(ctx, null);
+        ChannelFuture future = goAway(ctx, null);
 
         // If there are no active streams, close immediately after the send is complete.
         // Otherwise wait until all streams are inactive.
@@ -396,7 +396,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      * @param future If closing, the future after which to close the channel.
      */
     @Override
-    public void closeLocalSide(Http2Stream stream, ChannelFuture future) {
+    public void closeStreamLocal(Http2Stream stream, ChannelFuture future) {
         switch (stream.state()) {
             case HALF_CLOSED_LOCAL:
             case OPEN:
@@ -416,7 +416,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      * @param future If closing, the future after which to close the channel.
      */
     @Override
-    public void closeRemoteSide(Http2Stream stream, ChannelFuture future) {
+    public void closeStreamRemote(Http2Stream stream, ChannelFuture future) {
         switch (stream.state()) {
             case HALF_CLOSED_REMOTE:
             case OPEN:
@@ -428,13 +428,6 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
     }
 
-    /**
-     * Closes the given stream and adds a hook to close the channel after the given future
-     * completes.
-     *
-     * @param stream the stream to be closed.
-     * @param future the future after which to close the channel.
-     */
     @Override
     public void closeStream(final Http2Stream stream, ChannelFuture future) {
         stream.close();
@@ -486,7 +479,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         if (http2Ex == null) {
             http2Ex = new Http2Exception(INTERNAL_ERROR, cause.getMessage(), cause);
         }
-        writeGoAway(ctx, http2Ex).addListener(new ClosingChannelFutureListener(ctx, ctx.newPromise()));
+        goAway(ctx, http2Ex).addListener(new ClosingChannelFutureListener(ctx, ctx.newPromise()));
     }
 
     /**
@@ -498,18 +491,15 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      * @param http2Ex the {@link StreamException} that is embedded in the causality chain.
      */
     protected void onStreamError(ChannelHandlerContext ctx, Throwable cause, StreamException http2Ex) {
-        writeRstStream(ctx, http2Ex.streamId(), http2Ex.error().code(), ctx.newPromise());
+        resetStream(ctx, http2Ex.streamId(), http2Ex.error().code(), ctx.newPromise());
     }
 
     protected Http2FrameWriter frameWriter() {
         return encoder().frameWriter();
     }
 
-    /**
-     * Writes a {@code RST_STREAM} frame to the remote endpoint and updates the connection state appropriately.
-     */
     @Override
-    public ChannelFuture writeRstStream(final ChannelHandlerContext ctx, int streamId, long errorCode,
+    public ChannelFuture resetStream(final ChannelHandlerContext ctx, int streamId, long errorCode,
             final ChannelPromise promise) {
         final Http2Stream stream = connection().stream(streamId);
         if (stream == null || stream.isResetSent()) {
@@ -539,12 +529,9 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         return future;
     }
 
-    /**
-     * Sends a {@code GO_AWAY} frame to the remote endpoint and updates the connection state appropriately.
-     */
     @Override
-    public ChannelFuture writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData,
-            ChannelPromise promise) {
+    public ChannelFuture goAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode,
+            ByteBuf debugData, ChannelPromise promise) {
         Http2Connection connection = connection();
         if (connection.goAwayReceived() || connection.goAwaySent()) {
             debugData.release();
@@ -560,9 +547,9 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     /**
-     * Sends a {@code GO_AWAY} frame appropriate for the given exception.
+     * Close the remote endpoint with with a {@code GO_AWAY} frame.
      */
-    private ChannelFuture writeGoAway(ChannelHandlerContext ctx, Http2Exception cause) {
+    private ChannelFuture goAway(ChannelHandlerContext ctx, Http2Exception cause) {
         Http2Connection connection = connection();
         if (connection.goAwayReceived() || connection.goAwaySent()) {
             return ctx.newSucceededFuture();
@@ -573,7 +560,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         long errorCode = cause != null ? cause.error().code() : NO_ERROR.code();
         ByteBuf debugData = Http2CodecUtil.toByteBuf(ctx, cause);
         int lastKnownStream = connection.remote().lastStreamCreated();
-        return writeGoAway(ctx, lastKnownStream, errorCode, debugData, ctx.newPromise());
+        return goAway(ctx, lastKnownStream, errorCode, debugData, ctx.newPromise());
     }
 
     /**
