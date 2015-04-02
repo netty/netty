@@ -240,7 +240,7 @@ public class Http2ConnectionHandlerTest {
     @Test
     public void writeRstOnNonExistantStreamShouldSucceed() throws Exception {
         handler = newHandler();
-        handler.writeRstStream(ctx, NON_EXISTANT_STREAM_ID, STREAM_CLOSED.code(), promise);
+        handler.resetStream(ctx, NON_EXISTANT_STREAM_ID, STREAM_CLOSED.code(), promise);
         verify(frameWriter, never())
             .writeRstStream(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ChannelPromise.class));
         assertTrue(promise.isDone());
@@ -256,7 +256,7 @@ public class Http2ConnectionHandlerTest {
         when(stream.state()).thenReturn(CLOSED);
         // The stream is "closed" but is still known about by the connection (connection().stream(..)
         // will return the stream). We should still write a RST_STREAM frame in this scenario.
-        handler.writeRstStream(ctx, STREAM_ID, STREAM_CLOSED.code(), promise);
+        handler.resetStream(ctx, STREAM_ID, STREAM_CLOSED.code(), promise);
         verify(frameWriter).writeRstStream(eq(ctx), eq(STREAM_ID), anyLong(), any(ChannelPromise.class));
     }
 

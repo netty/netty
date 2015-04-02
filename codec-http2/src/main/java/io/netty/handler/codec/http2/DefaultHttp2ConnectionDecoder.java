@@ -262,7 +262,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 }
 
                 if (endOfStream) {
-                    lifecycleManager.closeRemoteSide(stream, ctx.newSucceededFuture());
+                    lifecycleManager.closeStreamRemote(stream, ctx.newSucceededFuture());
                 }
             }
         }
@@ -321,7 +321,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
             // If the headers completes this stream, close it.
             if (endOfStream) {
-                lifecycleManager.closeRemoteSide(stream, ctx.newSucceededFuture());
+                lifecycleManager.closeStreamRemote(stream, ctx.newSucceededFuture());
             }
         }
 
