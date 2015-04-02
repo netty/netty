@@ -914,7 +914,7 @@ public class SslHandler extends ByteToMessageDecoder {
             ctx.read();
         }
 
-        ctx.fireChannelReadComplete();
+        super.channelReadComplete(ctx);
     }
 
     /**
