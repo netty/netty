@@ -20,6 +20,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGH
 import static io.netty.handler.codec.http2.Http2CodecUtil.emptyPingBuf;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.CharsetUtil.UTF_8;
@@ -453,6 +454,14 @@ public class DefaultHttp2ConnectionDecoderTest {
         decode().onRstStreamRead(ctx, STREAM_ID, PROTOCOL_ERROR.code());
         verify(lifecycleManager).closeStream(eq(stream), eq(future));
         verify(listener).onRstStreamRead(eq(ctx), eq(STREAM_ID), eq(PROTOCOL_ERROR.code()));
+    }
+
+    @Test(expected = Http2Exception.class)
+    public void rstStreamOnIdleStreamShouldThrow() throws Exception {
+        when(stream.state()).thenReturn(IDLE);
+        decode().onRstStreamRead(ctx, STREAM_ID, PROTOCOL_ERROR.code());
+        verify(lifecycleManager).closeStream(eq(stream), eq(future));
+        verify(listener, never()).onRstStreamRead(any(ChannelHandlerContext.class), anyInt(), anyLong());
     }
 
     @Test
