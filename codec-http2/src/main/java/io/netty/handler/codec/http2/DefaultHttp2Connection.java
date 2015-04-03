@@ -43,7 +43,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -54,7 +54,11 @@ import java.util.Set;
  */
 public class DefaultHttp2Connection implements Http2Connection {
 
-    private final Set<Listener> listeners = new HashSet<Listener>(4);
+    /**
+     * We chose a {@link List} over a {@link Set} to avoid allocating an {@link Iterator} objects when iterating over
+     * the listeners.
+     */
+    private final List<Listener> listeners = new ArrayList<Listener>(4);
     private final IntObjectMap<Http2Stream> streamMap = new IntObjectHashMap<Http2Stream>();
     private final ConnectionStream connectionStream = new ConnectionStream();
     private final Set<Http2Stream> activeStreams = new LinkedHashSet<Http2Stream>();
@@ -161,8 +165,8 @@ public class DefaultHttp2Connection implements Http2Connection {
         boolean alreadyNotified = goAwayReceived();
         localEndpoint.lastKnownStream(lastKnownStream);
         if (!alreadyNotified) {
-            for (Listener listener : listeners) {
-                listener.onGoAwayReceived(lastKnownStream, errorCode, debugData);
+            for (int i = 0; i < listeners.size(); i++) {
+                listeners.get(i).onGoAwayReceived(lastKnownStream, errorCode, debugData);
             }
         }
     }
@@ -177,8 +181,8 @@ public class DefaultHttp2Connection implements Http2Connection {
         boolean alreadyNotified = goAwaySent();
         remoteEndpoint.lastKnownStream(lastKnownStream);
         if (!alreadyNotified) {
-            for (Listener listener : listeners) {
-                listener.onGoAwaySent(lastKnownStream, errorCode, debugData);
+            for (int i = 0; i < listeners.size(); i++) {
+                listeners.get(i).onGoAwaySent(lastKnownStream, errorCode, debugData);
             }
         }
     }
@@ -198,8 +202,8 @@ public class DefaultHttp2Connection implements Http2Connection {
             // Remove it from the map and priority tree.
             streamMap.remove(stream.id());
 
-            for (Listener listener : listeners) {
-                listener.onStreamRemoved(stream);
+            for (int i = 0; i < listeners.size(); i++) {
+                listeners.get(i).onStreamRemoved(stream);
             }
         }
     }
@@ -376,8 +380,8 @@ public class DefaultHttp2Connection implements Http2Connection {
                 createdBy().numActiveStreams++;
 
                 // Notify the listeners.
-                for (Listener listener : listeners) {
-                    listener.onStreamActive(this);
+                for (int i = 0; i < listeners.size(); i++) {
+                    listeners.get(i).onStreamActive(this);
                 }
             }
             return this;
@@ -397,8 +401,8 @@ public class DefaultHttp2Connection implements Http2Connection {
                     createdBy().numActiveStreams--;
 
                     // Notify the listeners.
-                    for (Listener listener : listeners) {
-                        listener.onStreamClosed(this);
+                    for (int i = 0; i < listeners.size(); i++) {
+                        listeners.get(i).onStreamClosed(this);
                     }
                 } finally {
                     // Mark this stream for removal.
@@ -494,8 +498,8 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         private void notifyHalfClosed(Http2Stream stream) {
-            for (Listener listener : listeners) {
-                listener.onStreamHalfClosed(stream);
+            for (int i = 0; i < listeners.size(); i++) {
+                listeners.get(i).onStreamHalfClosed(stream);
             }
         }
 
@@ -525,8 +529,8 @@ public class DefaultHttp2Connection implements Http2Connection {
                 }
                 final short oldWeight = this.weight;
                 this.weight = weight;
-                for (Listener l : listeners) {
-                    l.onWeightChanged(this, oldWeight);
+                for (int i = 0; i < listeners.size(); i++) {
+                    listeners.get(i).onWeightChanged(this, oldWeight);
                 }
             }
         }
@@ -706,15 +710,15 @@ public class DefaultHttp2Connection implements Http2Connection {
     private void notifyParentChanged(List<ParentChangedEvent> events) {
         for (int i = 0; i < events.size(); ++i) {
             ParentChangedEvent event = events.get(i);
-            for (Listener l : listeners) {
-                event.notifyListener(l);
+            for (int j = 0; j < listeners.size(); j++) {
+                event.notifyListener(listeners.get(j));
             }
         }
     }
 
     private void notifyParentChanging(Http2Stream stream, Http2Stream newParent) {
-        for (Listener l : listeners) {
-            l.onPriorityTreeParentChanging(stream, newParent);
+        for (int i = 0; i < listeners.size(); i++) {
+            listeners.get(i).onPriorityTreeParentChanging(stream, newParent);
         }
     }
 
@@ -859,8 +863,8 @@ public class DefaultHttp2Connection implements Http2Connection {
             connectionStream.takeChild(stream, false, events);
 
             // Notify the listeners of the event.
-            for (Listener listener : listeners) {
-                listener.onStreamAdded(stream);
+            for (int i = 0; i < listeners.size(); i++) {
+                listeners.get(i).onStreamAdded(stream);
             }
 
             notifyParentChanged(events);
