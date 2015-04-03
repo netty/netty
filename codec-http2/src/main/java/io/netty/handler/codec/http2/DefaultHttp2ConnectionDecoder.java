@@ -356,9 +356,13 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         @Override
         public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
             Http2Stream stream = connection.requireStream(streamId);
-            if (stream.state() == CLOSED) {
-                // RstStream frames must be ignored for closed streams.
-                return;
+            switch(stream.state()) {
+            case IDLE:
+                throw connectionError(PROTOCOL_ERROR, "RST_STREAM received for IDLE stream %d", streamId);
+            case CLOSED:
+                return; // RST_STREAM frames must be ignored for closed streams.
+            default:
+                break;
             }
 
             listener.onRstStreamRead(ctx, streamId, errorCode);
