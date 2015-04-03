@@ -229,12 +229,13 @@ public interface Http2Connection {
     }
 
     /**
-     * Adds a listener of stream life-cycle events. Adding the same listener multiple times has no effect.
+     * Adds a listener of stream life-cycle events.
      */
     void addListener(Listener listener);
 
     /**
-     * Removes a listener of stream life-cycle events.
+     * Removes a listener of stream life-cycle events. If the same listener was added multiple times
+     * then only the first occurence gets removed.
      */
     void removeListener(Listener listener);
 
