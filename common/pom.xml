@@ -147,7 +147,7 @@
                                       String keyPrimitive,
                                       String keyObject) {
                   def keyName = keyPrimitive.capitalize()
-                  def replaceFrom = "^(.*)K([a-zA-Z]+).template\$\$"
+                  def replaceFrom = "^(.*)[[a-z]+\\.]*K([A-Za-z]+).template"
                   def replaceTo = "\\1" + keyName + "\\2.java"
                   ant.copy(todir: outputDir) {
                     fileset(dir: templateDir) {

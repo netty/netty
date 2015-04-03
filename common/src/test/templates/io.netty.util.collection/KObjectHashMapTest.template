@@ -105,7 +105,7 @@ public class @K@ObjectHashMapTest {
 
     @Test
     public void putShouldGrowMap() {
-        for (@k@ key = 0; key < 255; ++key) {
+        for (@k@ key = 0; key < (@k@) 255; ++key) {
             Value v = new Value(Integer.toString(key));
             assertNull(map.put(key, v));
             assertEquals(key + 1, map.size());
