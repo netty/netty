@@ -68,7 +68,7 @@ public final class PrimitiveCollections {
 
         @Override
         public Object remove(int key) {
-            throw new UnsupportedOperationException("remove");
+            return null;
         }
 
         @Override
