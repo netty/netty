@@ -30,6 +30,7 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBeh
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.handler.ssl.IdentityCipherSuiteFilter;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 /**
@@ -57,15 +58,14 @@ public final class SpdyServer {
     public static void main(String[] args) throws Exception {
         // Configure SSL.
         SelfSignedCertificate ssc = new SelfSignedCertificate();
-        SslContext sslCtx = SslContext.newServerContext(
-                ssc.certificate(), ssc.privateKey(), null, null, IdentityCipherSuiteFilter.INSTANCE,
-                new ApplicationProtocolConfig(
+        SslContext sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+            .applicationProtocolConfig(new ApplicationProtocolConfig(
                         Protocol.NPN,
                         SelectorFailureBehavior.FATAL_ALERT,
                         SelectedListenerFailureBehavior.FATAL_ALERT,
                         SelectedProtocol.SPDY_3_1.protocolName(),
-                        SelectedProtocol.HTTP_1_1.protocolName()),
-                0, 0);
+                        SelectedProtocol.HTTP_1_1.protocolName()))
+            .build();
 
         // Configure the server.
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
