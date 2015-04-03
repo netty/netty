@@ -38,6 +38,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http2.Http2StreamRemovalPolicy.Action;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+import io.netty.util.collection.PrimitiveCollections;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -216,7 +217,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         private State state = IDLE;
         private short weight = DEFAULT_PRIORITY_WEIGHT;
         private DefaultStream parent;
-        private IntObjectMap<DefaultStream> children = newChildMap();
+        private IntObjectMap<DefaultStream> children = PrimitiveCollections.emptyIntObjectMap();
         private int totalChildWeights;
         private int prioritizableForTree = 1;
         private boolean resetSent;
@@ -503,6 +504,12 @@ public class DefaultHttp2Connection implements Http2Connection {
             }
         }
 
+        private void initChildrenIfEmpty() {
+            if (children == PrimitiveCollections.<DefaultStream>emptyIntObjectMap()) {
+                children = new IntObjectHashMap<DefaultStream>(4);
+            }
+        }
+
         @Override
         public final boolean remoteSideOpen() {
             return state == HALF_CLOSED_LOCAL || state == OPEN || state == RESERVED_REMOTE;
@@ -539,7 +546,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             totalChildWeights = 0;
             prioritizableForTree = isPrioritizable() ? 1 : 0;
             IntObjectMap<DefaultStream> prevChildren = children;
-            children = newChildMap();
+            children = PrimitiveCollections.emptyIntObjectMap();
             return prevChildren;
         }
 
@@ -560,6 +567,9 @@ public class DefaultHttp2Connection implements Http2Connection {
                     child.takeChild(grandchild, false, events);
                 }
             }
+
+            // Lazily initialize the children to save object allocations.
+            initChildrenIfEmpty();
 
             if (children.put(child.id(), child) == null) {
                 totalChildWeights += child.weight();
@@ -671,10 +681,6 @@ public class DefaultHttp2Connection implements Http2Connection {
             stream.data = new DefaultProperyMap(DEFAULT_INITIAL_SIZE);
             return stream.data.remove(key);
         }
-    }
-
-    private static IntObjectMap<DefaultStream> newChildMap() {
-        return new IntObjectHashMap<DefaultStream>(4);
     }
 
     /**
