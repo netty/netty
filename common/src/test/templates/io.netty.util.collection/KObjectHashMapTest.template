@@ -27,9 +27,9 @@ import java.util.Set;
 import static org.junit.Assert.*;
 
 /**
- * Tests for {@link IntObjectHashMap}.
+ * Tests for {@link @K@ObjectHashMap}.
  */
-public class IntObjectHashMapTest {
+public class @K@ObjectHashMapTest {
 
     private static class Value {
         private final String name;
@@ -69,69 +69,72 @@ public class IntObjectHashMapTest {
         }
     }
 
-    private IntObjectHashMap<Value> map;
+    private @K@ObjectHashMap<Value> map;
 
     @Before
     public void setup() {
-        map = new IntObjectHashMap<Value>();
+        map = new @K@ObjectHashMap<Value>();
     }
 
     @Test
     public void putNewMappingShouldSucceed() {
         Value v = new Value("v");
-        assertNull(map.put(1, v));
+        @k@ key = 1;
+        assertNull(map.put(key, v));
         assertEquals(1, map.size());
-        assertTrue(map.containsKey(1));
+        assertTrue(map.containsKey(key));
         assertTrue(map.containsValue(v));
-        assertEquals(v, map.get(1));
+        assertEquals(v, map.get(key));
     }
 
     @Test
     public void putShouldReplaceValue() {
         Value v1 = new Value("v1");
-        assertNull(map.put(1, v1));
+        @k@ key = 1;
+        assertNull(map.put(key, v1));
 
         // Replace the value.
         Value v2 = new Value("v2");
-        assertSame(v1, map.put(1, v2));
+        assertSame(v1, map.put(key, v2));
 
         assertEquals(1, map.size());
-        assertTrue(map.containsKey(1));
+        assertTrue(map.containsKey(key));
         assertTrue(map.containsValue(v2));
-        assertEquals(v2, map.get(1));
+        assertEquals(v2, map.get(key));
     }
 
     @Test
     public void putShouldGrowMap() {
-        for (int i = 0; i < 10000; ++i) {
-            Value v = new Value(Integer.toString(i));
-            assertNull(map.put(i, v));
-            assertEquals(i + 1, map.size());
-            assertTrue(map.containsKey(i));
+        for (@k@ key = 0; key < 255; ++key) {
+            Value v = new Value(Integer.toString(key));
+            assertNull(map.put(key, v));
+            assertEquals(key + 1, map.size());
+            assertTrue(map.containsKey(key));
             assertTrue(map.containsValue(v));
-            assertEquals(v, map.get(i));
+            assertEquals(v, map.get(key));
         }
     }
 
     @Test
     public void negativeKeyShouldSucceed() {
         Value v = new Value("v");
-        map.put(-3, v);
+        map.put((@k@) -3, v);
         assertEquals(1, map.size());
-        assertEquals(v, map.get(-3));
+        assertEquals(v, map.get((@k@) -3));
     }
 
     @Test
     public void removeMissingValueShouldReturnNull() {
-        assertNull(map.remove(1));
+        assertNull(map.remove((@k@) 1));
         assertEquals(0, map.size());
     }
 
     @Test
     public void removeShouldReturnPreviousValue() {
         Value v = new Value("v");
-        map.put(1, v);
-        assertSame(v, map.remove(1));
+        @k@ key = 1;
+        map.put(key, v);
+        assertSame(v, map.remove(key));
     }
 
     /**
@@ -142,7 +145,7 @@ public class IntObjectHashMapTest {
      */
     @Test
     public void noFreeSlotsShouldRehash() {
-        for (int i = 0; i < 10; ++i) {
+        for (@k@ i = 0; i < 10; ++i) {
             map.put(i, new Value(Integer.toString(i)));
             // Now mark it as REMOVED so that size won't cause the rehash.
             map.remove(i);
@@ -151,26 +154,30 @@ public class IntObjectHashMapTest {
 
         // Now add an entry to force the rehash since no FREE slots are available in the map.
         Value v = new Value("v");
-        map.put(1, v);
+        @k@ key = 1;
+        map.put(key, v);
         assertEquals(1, map.size());
-        assertSame(v, map.get(1));
+        assertSame(v, map.get(key));
     }
 
     @Test
     public void putAllShouldSucceed() {
+        @k@ k1 = 1;
+        @k@ k2 = 2;
+        @k@ k3 = 3;
         Value v1 = new Value("v1");
         Value v2 = new Value("v2");
         Value v3 = new Value("v3");
-        map.put(1, v1);
-        map.put(2, v2);
-        map.put(3, v3);
+        map.put(k1, v1);
+        map.put(k2, v2);
+        map.put(k3, v3);
 
-        IntObjectHashMap<Value> map2 = new IntObjectHashMap<Value>();
+        @K@ObjectHashMap<Value> map2 = new @K@ObjectHashMap<Value>();
         map2.putAll(map);
         assertEquals(3, map2.size());
-        assertSame(v1, map2.get(1));
-        assertSame(v2, map2.get(2));
-        assertSame(v3, map2.get(3));
+        assertSame(v1, map2.get(k1));
+        assertSame(v2, map2.get(k2));
+        assertSame(v3, map2.get(k3));
     }
 
     @Test
@@ -178,9 +185,9 @@ public class IntObjectHashMapTest {
         Value v1 = new Value("v1");
         Value v2 = new Value("v2");
         Value v3 = new Value("v3");
-        map.put(1, v1);
-        map.put(2, v2);
-        map.put(3, v3);
+        map.put((@k@) 1, v1);
+        map.put((@k@) 2, v2);
+        map.put((@k@) 3, v3);
         map.clear();
         assertEquals(0, map.size());
         assertTrue(map.isEmpty());
@@ -188,77 +195,85 @@ public class IntObjectHashMapTest {
 
     @Test
     public void containsValueShouldFindNull() {
-        map.put(1, new Value("v1"));
-        map.put(2, null);
-        map.put(3, new Value("v2"));
+        map.put((@k@) 1, new Value("v1"));
+        map.put((@k@) 2, null);
+        map.put((@k@) 3, new Value("v2"));
         assertTrue(map.containsValue(null));
     }
 
     @Test
     public void containsValueShouldFindInstance() {
         Value v = new Value("v1");
-        map.put(1, new Value("v2"));
-        map.put(2, new Value("v3"));
-        map.put(3, v);
+        map.put((@k@) 1, new Value("v2"));
+        map.put((@k@) 2, new Value("v3"));
+        map.put((@k@) 3, v);
         assertTrue(map.containsValue(v));
     }
 
     @Test
     public void containsValueShouldFindEquivalentValue() {
-        map.put(1, new Value("v1"));
-        map.put(2, new Value("v2"));
-        map.put(3, new Value("v3"));
+        map.put((@k@) 1, new Value("v1"));
+        map.put((@k@) 2, new Value("v2"));
+        map.put((@k@) 3, new Value("v3"));
         assertTrue(map.containsValue(new Value("v2")));
     }
 
     @Test
     public void containsValueNotFindMissingValue() {
-        map.put(1, new Value("v1"));
-        map.put(2, new Value("v2"));
-        map.put(3, new Value("v3"));
+        map.put((@k@) 1, new Value("v1"));
+        map.put((@k@) 2, new Value("v2"));
+        map.put((@k@) 3, new Value("v3"));
         assertFalse(map.containsValue(new Value("v4")));
     }
 
     @Test
     public void iteratorShouldTraverseEntries() {
-        map.put(1, new Value("v1"));
-        map.put(2, new Value("v2"));
-        map.put(3, new Value("v3"));
+        @k@ k1 = 1;
+        @k@ k2 = 2;
+        @k@ k3 = 3;
+        @k@ k4 = 4;
+        map.put(k1, new Value("v1"));
+        map.put(k2, new Value("v2"));
+        map.put(k3, new Value("v3"));
 
         // Add and then immediately remove another entry.
-        map.put(4, new Value("v4"));
-        map.remove(4);
+        map.put(k4, new Value("v4"));
+        map.remove(k4);
 
-        Set<Integer> found = new HashSet<Integer>();
-        for (IntObjectMap.Entry<Value> entry : map.entries()) {
+        Set<@O@> found = new HashSet<@O@>();
+        for (@K@ObjectMap.Entry<Value> entry : map.entries()) {
             assertTrue(found.add(entry.key()));
         }
         assertEquals(3, found.size());
-        assertTrue(found.contains(1));
-        assertTrue(found.contains(2));
-        assertTrue(found.contains(3));
+        assertTrue(found.contains(k1));
+        assertTrue(found.contains(k2));
+        assertTrue(found.contains(k3));
     }
 
     @Test
     public void keysShouldBeReturned() {
-        map.put(1, new Value("v1"));
-        map.put(2, new Value("v2"));
-        map.put(3, new Value("v3"));
+        @k@ k1 = 1;
+        @k@ k2 = 2;
+        @k@ k3 = 3;
+        @k@ k4 = 4;
+        map.put(k1, new Value("v1"));
+        map.put(k2, new Value("v2"));
+        map.put(k3, new Value("v3"));
 
         // Add and then immediately remove another entry.
-        map.put(4, new Value("v4"));
-        map.remove(4);
+        map.put(k4, new Value("v4"));
+        map.remove(k4);
 
-        int[] keys = map.keys();
+        @k@[] keys = map.keys();
         assertEquals(3, keys.length);
 
-        Set<Integer> expected = new HashSet<Integer>();
-        expected.add(1);
-        expected.add(2);
-        expected.add(3);
+        Set<@O@> expected = new HashSet<@O@>();
+        expected.add(k1);
+        expected.add(k2);
+        expected.add(k3);
 
-        Set<Integer> found = new HashSet<Integer>();
-        for (int key : keys) {
+        Set<@O@> found = new HashSet<@O@>();
+        for (@k@ key : keys) {
             assertTrue(found.add(key));
         }
         assertEquals(expected, found);
@@ -266,16 +281,20 @@ public class IntObjectHashMapTest {
 
     @Test
     public void valuesShouldBeReturned() {
+        @k@ k1 = 1;
+        @k@ k2 = 2;
+        @k@ k3 = 3;
+        @k@ k4 = 4;
         Value v1 = new Value("v1");
         Value v2 = new Value("v2");
         Value v3 = new Value("v3");
-        map.put(1, v1);
-        map.put(2, v2);
-        map.put(3, v3);
+        map.put(k1, v1);
+        map.put(k2, v2);
+        map.put(k3, v3);
 
         // Add and then immediately remove another entry.
-        map.put(4, new Value("v4"));
-        map.remove(4);
+        map.put(k4, new Value("v4"));
+        map.remove(k4);
 
         // Ensure values() return all values.
         Set<Value> expected = new HashSet<Value>();
@@ -305,9 +324,9 @@ public class IntObjectHashMapTest {
     public void mapShouldSupportHashingConflicts() {
         for (int mod = 0; mod < 10; ++mod) {
             for (int sz = 1; sz <= 101; sz += 2) {
-                IntObjectHashMap<String> map = new IntObjectHashMap<String>(sz);
+                @K@ObjectHashMap<String> map = new @K@ObjectHashMap<String>(sz);
                 for (int i = 0; i < 100; ++i) {
-                    map.put(i * mod, "");
+                    map.put((@k@)(i * mod), "");
                 }
             }
         }
@@ -315,34 +334,34 @@ public class IntObjectHashMapTest {
 
     @Test
     public void hashcodeEqualsTest() {
-        IntObjectHashMap<Integer> map1 = new IntObjectHashMap<Integer>();
-        IntObjectHashMap<Integer> map2 = new IntObjectHashMap<Integer>();
+        @K@ObjectHashMap<Integer> map1 = new @K@ObjectHashMap<Integer>();
+        @K@ObjectHashMap<Integer> map2 = new @K@ObjectHashMap<Integer>();
         Random rnd = new Random(0);
         while (map1.size() < 100) {
-            int key = rnd.nextInt(100);
-            map1.put(key, key);
-            map2.put(key, key);
+            @k@ key = (@k@) rnd.nextInt(100);
+            map1.put(key, Integer.valueOf(key));
+            map2.put(key, Integer.valueOf(key));
         }
         assertEquals(map1.hashCode(), map2.hashCode());
         assertEquals(map1, map2);
         // Remove one "middle" element, maps should now be non-equals.
-        int[] keys = map1.keys();
+        @k@[] keys = map1.keys();
         map2.remove(keys[50]);
         assertFalse(map1.equals(map2));
         // Put it back; will likely be in a different position, but maps will be equal again.
-        map2.put(keys[50], map1.keys()[50]);
+        map2.put(keys[50], Integer.valueOf(map1.keys()[50]));
         assertEquals(map1, map2);
         assertEquals(map1.hashCode(), map2.hashCode());
         // Make map2 have one extra element, will be non-equal.
-        map2.put(1000, 1000);
+        map2.put((@k@) 100, 100);
         assertFalse(map1.equals(map2));
         // Rebuild map2 with elements in a different order, again the maps should be equal.
         // (These tests with same elements in different order also show that the hashCode
         // function does not depend on the internal ordering of entries.)
         map2.clear();
         Arrays.sort(keys);
-        for (int key : keys) {
-            map2.put(key, key);
+        for (@k@ key : keys) {
+            map2.put(key, Integer.valueOf(key));
         }
         assertEquals(map1.hashCode(), map2.hashCode());
         assertEquals(map1, map2);
@@ -365,25 +384,25 @@ public class IntObjectHashMapTest {
         // This size is also chosen so after the single rehash, the map will be densely
         // populated, getting close to a second rehash but not triggering it.
         int startTableSize = 1105;
-        IntObjectHashMap<Integer> map = new IntObjectHashMap<Integer>(startTableSize);
+        @K@ObjectHashMap<Integer> map = new @K@ObjectHashMap<Integer>(startTableSize);
         // Reference map which implementation we trust to be correct, will mirror all operations.
-        HashMap<Integer, Integer> goodMap = new HashMap<Integer, Integer>();
+        HashMap<@O@, Integer> goodMap = new HashMap<@O@, Integer>();
 
         // Add initial population.
         for (int i = 0; i < baseSize / 4; ++i) {
-            int key = rnd.nextInt(baseSize);
-            assertEquals(goodMap.put(key, key), map.put(key, key));
+            @k@ key = (@k@) rnd.nextInt(baseSize);
+            assertEquals(goodMap.put(key, Integer.valueOf(key)), map.put(key, Integer.valueOf(key)));
             // 50% elements are multiple of a divisor of startTableSize => more conflicts.
-            key = rnd.nextInt(baseSize) * 17;
-            assertEquals(goodMap.put(key, key), map.put(key, key));
+            key = (@k@) (rnd.nextInt(baseSize) * 17);
+            assertEquals(goodMap.put(key, Integer.valueOf(key)), map.put(key, Integer.valueOf(key)));
         }
 
         // Now do some mixed adds and removes for further fuzzing
         // Rehash will happen here, but only once, and the final size will be closer to max.
         for (int i = 0; i < baseSize * 1000; ++i) {
-            int key = rnd.nextInt(baseSize);
+            @k@ key = (@k@) rnd.nextInt(baseSize);
             if (rnd.nextDouble() >= 0.2) {
-                assertEquals(goodMap.put(key, key), map.put(key, key));
+                assertEquals(goodMap.put(key, Integer.valueOf(key)), map.put(key, Integer.valueOf(key)));
             } else {
                 assertEquals(goodMap.remove(key), map.remove(key));
             }
@@ -392,7 +411,7 @@ public class IntObjectHashMapTest {
         // Final batch of fuzzing, only searches and removes.
         int removeSize = map.size() / 2;
         while (removeSize > 0) {
-            int key = rnd.nextInt(baseSize);
+            @k@ key = (@k@) rnd.nextInt(baseSize);
             boolean found = goodMap.containsKey(key);
             assertEquals(found, map.containsKey(key));
             assertEquals(goodMap.remove(key), map.remove(key));
@@ -403,16 +422,16 @@ public class IntObjectHashMapTest {
 
         // Now gotta write some code to compare the final maps, as equals() won't work.
         assertEquals(goodMap.size(), map.size());
-        Integer[] goodKeys = goodMap.keySet().toArray(new Integer[goodMap.size()]);
+        @O@[] goodKeys = goodMap.keySet().toArray(new @O@[goodMap.size()]);
         Arrays.sort(goodKeys);
-        int [] keys = map.keys();
+        @k@ [] keys = map.keys();
         Arrays.sort(keys);
         for (int i = 0; i < goodKeys.length; ++i) {
-            assertEquals((int) goodKeys[i], keys[i]);
+            assertEquals((@k@) goodKeys[i], keys[i]);
         }
 
         // Finally drain the map.
-        for (int key : map.keys()) {
+        for (@k@ key : map.keys()) {
             assertEquals(goodMap.remove(key), map.remove(key));
         }
         assertTrue(map.isEmpty());
