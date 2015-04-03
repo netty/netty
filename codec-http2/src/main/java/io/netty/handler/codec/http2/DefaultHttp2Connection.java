@@ -510,6 +510,12 @@ public class DefaultHttp2Connection implements Http2Connection {
             }
         }
 
+        private void initChildrenIfEmpty() {
+            if (children == PrimitiveCollections.<DefaultStream>emptyIntObjectMap()) {
+                children = new IntObjectHashMap<DefaultStream>(4);
+            }
+        }
+
         @Override
         public final boolean remoteSideOpen() {
             return state == HALF_CLOSED_LOCAL || state == OPEN || state == RESERVED_REMOTE;
