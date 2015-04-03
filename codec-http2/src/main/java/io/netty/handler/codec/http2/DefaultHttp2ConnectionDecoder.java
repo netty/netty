@@ -307,10 +307,17 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 }
             }
 
+            try {
+                // This call will create a stream for streamDependency if necessary.
+                // For this reason it must be done before notifying the listener.
+                stream.setPriority(streamDependency, weight, exclusive);
+            } catch (ClosedStreamCreationException ignored) {
+                // It is possible that either the stream for this frame or the parent stream is closed.
+                // In this case we should ignore the exception and allow the frame to be sent.
+            }
+
             listener.onHeadersRead(ctx, streamId, headers,
                     streamDependency, weight, exclusive, padding, endOfStream);
-
-            stream.setPriority(streamDependency, weight, exclusive);
 
             // If the headers completes this stream, close it.
             if (endOfStream) {
