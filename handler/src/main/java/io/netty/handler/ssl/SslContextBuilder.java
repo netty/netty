@@ -23,7 +23,9 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.File;
 
-/** Builder for configuring a new SslContext for creation. */
+/**
+ * Builder for configuring a new SslContext for creation.
+ */
 public final class SslContextBuilder {
     /**
      * Creates a builder for new client-side {@link SslContext}.
