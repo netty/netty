@@ -913,9 +913,9 @@ public class SslHandler extends FrameDecoder
             //
             // See https://github.com/netty/netty/issues/1534
 
-            final ByteBuffer inNetBuf = in.toByteBuffer(in.readerIndex(), totalLength);
-            unwrapped = unwrap(ctx, channel, in, inNetBuf, totalLength, true);
-            assert !inNetBuf.hasRemaining() || engine.isInboundDone();
+            in.skipBytes(totalLength);
+            final ByteBuffer inNetBuf = in.toByteBuffer(startOffset, totalLength);
+            unwrapped = unwrap(ctx, channel, inNetBuf, totalLength, true);
         }
 
         if (nonSslRecord) {
@@ -1229,7 +1229,7 @@ public class SslHandler extends FrameDecoder
      */
     private void unwrapNonAppData(
             ChannelHandlerContext ctx, Channel channel, boolean mightNeedHandshake) throws SSLException {
-        unwrap(ctx, channel, ChannelBuffers.EMPTY_BUFFER, EMPTY_BUFFER, -1, mightNeedHandshake);
+        unwrap(ctx, channel, EMPTY_BUFFER, -1, mightNeedHandshake);
     }
 
     /**
@@ -1237,10 +1237,9 @@ public class SslHandler extends FrameDecoder
      */
     private ChannelBuffer unwrap(
             ChannelHandlerContext ctx, Channel channel,
-            ChannelBuffer nettyInNetBuf, ByteBuffer nioInNetBuf,
+            ByteBuffer nioInNetBuf,
             int initialNettyOutAppBufCapacity, boolean mightNeedHandshake) throws SSLException {
 
-        final int nettyInNetBufStartOffset = nettyInNetBuf.readerIndex();
         final int nioInNetBufStartOffset = nioInNetBuf.position();
         final ByteBuffer nioOutAppBuf = bufferPool.acquireBuffer();
 
@@ -1298,10 +1297,6 @@ public class SslHandler extends FrameDecoder
                         } finally {
                             outAppBuf.flip();
 
-                            // Sync the offset of the inbound buffer.
-                            nettyInNetBuf.readerIndex(
-                                    nettyInNetBufStartOffset + nioInNetBuf.position() - nioInNetBufStartOffset);
-
                             // Copy the unwrapped data into a smaller buffer.
                             if (outAppBuf.hasRemaining()) {
                                 if (nettyOutAppBuf == null) {
@@ -1349,6 +1344,20 @@ public class SslHandler extends FrameDecoder
 
                     if (result.getStatus() == Status.BUFFER_UNDERFLOW ||
                         result.bytesConsumed() == 0 && result.bytesProduced() == 0) {
+                        if (nioInNetBuf.hasRemaining() && !engine.isInboundDone()) {
+                            // We expect SSLEngine to consume all the bytes we feed it, but
+                            // empirical evidence indicates that we sometimes end up with leftovers
+                            // Log when this happens to get a better understanding of this corner
+                            // case.
+                            // See https://github.com/netty/netty/pull/3584
+                            logger.warn("Unexpected leftover data after SSLEngine.unwrap():"
+                                    + " status=" + result.getStatus()
+                                    + " handshakeStatus=" + result.getHandshakeStatus()
+                                    + " consumed=" + result.bytesConsumed()
+                                    + " produced=" + result.bytesProduced()
+                                    + " remaining=" + nioInNetBuf.remaining()
+                                    + " data=" + ChannelBuffers.hexDump(ChannelBuffers.wrappedBuffer(nioInNetBuf)));
+                        }
                         break;
                     }
                 }
