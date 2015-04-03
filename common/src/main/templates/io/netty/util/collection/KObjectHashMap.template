@@ -23,14 +23,14 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- * A hash map implementation of {@link IntObjectMap} that uses open addressing for keys.
+ * A hash map implementation of {@link @K@ObjectMap} that uses open addressing for keys.
  * To minimize the memory footprint, this class uses open addressing rather than chaining.
  * Collisions are resolved using linear probing. Deletions implement compaction, so cost of
  * remove can approach O(N) for full maps, which makes a small loadFactor recommended.
  *
  * @param <V> The value type stored in the map.
  */
-public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectMap.Entry<V>> {
+public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectMap.Entry<V>> {
 
     /** Default initial capacity. Used if not specified in the constructor */
     public static final int DEFAULT_CAPACITY = 11;
@@ -50,20 +50,20 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
     /** The load factor for the map. Used to calculate {@link #maxSize}. */
     private final float loadFactor;
 
-    private int[] keys;
+    private @k@[] keys;
     private V[] values;
     private Collection<V> valueCollection;
     private int size;
 
-    public IntObjectHashMap() {
+    public @K@ObjectHashMap() {
         this(DEFAULT_CAPACITY, DEFAULT_LOAD_FACTOR);
     }
 
-    public IntObjectHashMap(int initialCapacity) {
+    public @K@ObjectHashMap(int initialCapacity) {
         this(initialCapacity, DEFAULT_LOAD_FACTOR);
     }
 
-    public IntObjectHashMap(int initialCapacity, float loadFactor) {
+    public @K@ObjectHashMap(int initialCapacity, float loadFactor) {
         if (initialCapacity < 1) {
             throw new IllegalArgumentException("initialCapacity must be >= 1");
         }
@@ -79,7 +79,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
         int capacity = adjustCapacity(initialCapacity);
 
         // Allocate the arrays.
-        keys = new int[capacity];
+        keys = new @k@[capacity];
         @SuppressWarnings({ "unchecked", "SuspiciousArrayCast" })
         V[] temp = (V[]) new Object[capacity];
         values = temp;
@@ -98,13 +98,13 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
     }
 
     @Override
-    public V get(int key) {
+    public V get(@k@ key) {
         int index = indexOf(key);
         return index == -1 ? null : toExternal(values[index]);
     }
 
     @Override
-    public V put(int key, V value) {
+    public V put(@k@ key, V value) {
         int startIndex = hashIndex(key);
         int index = startIndex;
 
@@ -136,10 +136,10 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
     }
 
     @Override
-    public void putAll(IntObjectMap<V> sourceMap) {
+    public void putAll(@K@ObjectMap<V> sourceMap) {
         if (sourceMap instanceof IntObjectHashMap) {
             // Optimization - iterate through the arrays.
-            IntObjectHashMap<V> source = (IntObjectHashMap<V>) sourceMap;
+            @K@ObjectHashMap<V> source = (@K@ObjectHashMap<V>) sourceMap;
             for (int i = 0; i < source.values.length; ++i) {
                 V sourceValue = source.values[i];
                 if (sourceValue != null) {
@@ -156,7 +156,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
     }
 
     @Override
-    public V remove(int key) {
+    public V remove(@k@ key) {
         int index = indexOf(key);
         if (index == -1) {
             return null;
@@ -179,13 +179,13 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
 
     @Override
     public void clear() {
-        Arrays.fill(keys, 0);
+        Arrays.fill(keys, (@k@) 0);
         Arrays.fill(values, null);
         size = 0;
     }
 
     @Override
-    public boolean containsKey(int key) {
+    public boolean containsKey(@k@ key) {
         return indexOf(key) >= 0;
     }
 
@@ -212,8 +212,8 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
     }
 
     @Override
-    public int[] keys() {
-        int[] outKeys = new int[size()];
+    public @k@[] keys() {
+        @k@[] outKeys = new @k@[size()];
         int targetIx = 0;
         for (int i = 0; i < values.length; ++i) {
             if (values[i] != null) {
@@ -244,7 +244,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
                 @Override
                 public Iterator<V> iterator() {
                     return new Iterator<V>() {
-                        final Iterator<Entry<V>> iter = IntObjectHashMap.this.iterator();
+                        final Iterator<Entry<V>> iter = @K@ObjectHashMap.this.iterator();
                         @Override
                         public boolean hasNext() {
                             return iter.hasNext();
@@ -278,7 +278,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
         // array, which may have different lengths for two maps of same size(), so the
         // capacity cannot be used as input for hashing but the size can.
         int hash = size;
-        for (int key : keys) {
+        for (@k@ key : keys) {
             // 0 can be a valid key or unused slot, but won't impact the hashcode in either case.
             // This way we can use a cheap loop without conditionals, or hard-to-unroll operations,
             // or the devastatingly bad memory locality of visiting value objects.
@@ -286,7 +286,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
             // of terms, only their values; since the map is an unordered collection and
             // entries can end up in different positions in different maps that have the same
             // elements, but with different history of puts/removes, due to conflicts.
-            hash ^= key;
+            hash ^= hashCode(key);
         }
         return hash;
     }
@@ -296,18 +296,18 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof IntObjectMap)) {
+        if (!(obj instanceof @K@ObjectMap)) {
             return false;
         }
         @SuppressWarnings("rawtypes")
-        IntObjectMap other = (IntObjectMap) obj;
+        @K@ObjectMap other = (@K@ObjectMap) obj;
         if (size != other.size()) {
             return false;
         }
         for (int i = 0; i < values.length; ++i) {
             V value = values[i];
             if (value != null) {
-                int key = keys[i];
+                @k@ key = keys[i];
                 Object otherValue = other.get(key);
                 if (value == NULL_VALUE) {
                     if (otherValue != null) {
@@ -327,7 +327,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
      * @param key the key for an entry in the map.
      * @return the index where the key was found, or {@code -1} if no entry is found for that key.
      */
-    private int indexOf(int key) {
+    private int indexOf(@k@ key) {
         int startIndex = hashIndex(key);
         int index = startIndex;
 
@@ -350,9 +350,16 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
     /**
      * Returns the hashed index for the given key.
      */
-    private int hashIndex(int key) {
+    private int hashIndex(@k@ key) {
         // Allowing for negative keys by adding the length after the first mod operation.
-        return (key % keys.length + keys.length) % keys.length;
+        return (hashCode(key) % keys.length + keys.length) % keys.length;
+    }
+
+    /**
+     * Returns the hash code for the key.
+     */
+    private static int hashCode(@k@ key) {
+       return @HASH_CODE@;
     }
 
     /**
@@ -428,10 +435,10 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
      * @param newCapacity the new capacity for the map.
      */
     private void rehash(int newCapacity) {
-        int[] oldKeys = keys;
+        @k@[] oldKeys = keys;
         V[] oldVals = values;
 
-        keys = new int[newCapacity];
+        keys = new @k@[newCapacity];
         @SuppressWarnings({ "unchecked", "SuspiciousArrayCast" })
         V[] temp = (V[]) new Object[newCapacity];
         values = temp;
@@ -444,7 +451,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
             if (oldVal != null) {
                 // Inlined put(), but much simpler: we don't need to worry about
                 // duplicated keys, growing/rehashing, or failing to insert.
-                int oldKey = oldKeys[i];
+                @k@ oldKey = oldKeys[i];
                 int index = hashIndex(oldKey);
 
                 for (;;) {
@@ -512,7 +519,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
         // into the Iterator object (potentially making loop optimization much easier).
 
         @Override
-        public int key() {
+        public @k@ key() {
             return keys[entryIndex];
         }
 
@@ -546,7 +553,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
     /**
      * Helper method called by {@link #toString()} in order to convert a single map key into a string.
      */
-    protected String keyToString(int key) {
-        return Integer.toString(key);
+    protected String keyToString(@k@ key) {
+        return @O@.toString(key);
     }
 }

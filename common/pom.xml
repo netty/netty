@@ -28,6 +28,13 @@
 
   <name>Netty/Common</name>
 
+  <properties>
+    <collection.template.dir>${project.basedir}/src/main/templates</collection.template.dir>
+    <collection.template.test.dir>${project.basedir}/src/test/templates</collection.template.test.dir>
+    <collection.src.dir>${project.build.directory}/generated-sources/collections/java</collection.src.dir>
+    <collection.testsrc.dir>${project.build.directory}/generated-test-sources/collections/java</collection.testsrc.dir>
+  </properties>
+
   <dependencies>
     <!-- Byte code generator - completely optional -->
     <dependency>
@@ -54,5 +61,73 @@
       <optional>true</optional>
     </dependency>
   </dependencies>
+
+  <build>
+    <plugins>
+      <!-- Add generated collection sources. -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>1.9.1</version>
+        <executions>
+          <execution>
+            <id>add-source</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${collection.src.dir}</source>
+              </sources>
+            </configuration>
+          </execution>
+          <execution>
+            <id>add-test-source</id>
+            <phase>generate-test-sources</phase>
+            <goals>
+              <goal>add-test-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${collection.testsrc.dir}</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Generate the primitive collections from the template files. -->
+      <plugin>
+        <groupId>org.codehaus.gmaven</groupId>
+        <artifactId>groovy-maven-plugin</artifactId>
+        <version>2.0</version>
+        <dependencies>
+          <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-all</artifactId>
+            <version>2.4.3</version>
+          </dependency>
+          <dependency>
+            <groupId>ant</groupId>
+            <artifactId>ant-optional</artifactId>
+            <version>1.5.3-1</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>generate-collections</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>execute</goal>
+            </goals>
+            <configuration>
+              <source>${project.basedir}/src/main/script/codegen.groovy</source>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 </project>
 
