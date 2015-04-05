@@ -251,9 +251,6 @@ public class TrafficCounter {
      *            the checkInterval in millisecond between two computations.
      */
     public TrafficCounter(ScheduledExecutorService executor, String name, long checkInterval) {
-        if (executor == null) {
-            throw new NullPointerException("executor");
-        }
         if (name == null) {
             throw new NullPointerException("name");
         }
@@ -285,9 +282,6 @@ public class TrafficCounter {
 
         if (trafficShapingHandler == null) {
             throw new IllegalArgumentException("trafficShapingHandler");
-        }
-        if (executor == null) {
-            throw new NullPointerException("executor");
         }
         if (name == null) {
             throw new NullPointerException("name");
