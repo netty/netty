@@ -106,7 +106,7 @@ public class @K@ObjectHashMapTest {
     @Test
     public void putShouldGrowMap() {
         for (@k@ key = 0; key < (@k@) 255; ++key) {
-            Value v = new Value(Integer.toString(key));
+            Value v = new Value(Long.toString(key));
             assertNull(map.put(key, v));
             assertEquals(key + 1, map.size());
             assertTrue(map.containsKey(key));
@@ -146,7 +146,7 @@ public class @K@ObjectHashMapTest {
     @Test
     public void noFreeSlotsShouldRehash() {
         for (@k@ i = 0; i < 10; ++i) {
-            map.put(i, new Value(Integer.toString(i)));
+            map.put(i, new Value(Long.toString(i)));
             // Now mark it as REMOVED so that size won't cause the rehash.
             map.remove(i);
             assertEquals(0, map.size());
@@ -334,13 +334,13 @@ public class @K@ObjectHashMapTest {
 
     @Test
     public void hashcodeEqualsTest() {
-        @K@ObjectHashMap<Integer> map1 = new @K@ObjectHashMap<Integer>();
-        @K@ObjectHashMap<Integer> map2 = new @K@ObjectHashMap<Integer>();
+        @K@ObjectHashMap<Long> map1 = new @K@ObjectHashMap<Long>();
+        @K@ObjectHashMap<Long> map2 = new @K@ObjectHashMap<Long>();
         Random rnd = new Random(0);
         while (map1.size() < 100) {
             @k@ key = (@k@) rnd.nextInt(100);
-            map1.put(key, Integer.valueOf(key));
-            map2.put(key, Integer.valueOf(key));
+            map1.put(key, Long.valueOf(key));
+            map2.put(key, Long.valueOf(key));
         }
         assertEquals(map1.hashCode(), map2.hashCode());
         assertEquals(map1, map2);
@@ -349,11 +349,11 @@ public class @K@ObjectHashMapTest {
         map2.remove(keys[50]);
         assertFalse(map1.equals(map2));
         // Put it back; will likely be in a different position, but maps will be equal again.
-        map2.put(keys[50], Integer.valueOf(map1.keys()[50]));
+        map2.put(keys[50], Long.valueOf(map1.keys()[50]));
         assertEquals(map1, map2);
         assertEquals(map1.hashCode(), map2.hashCode());
         // Make map2 have one extra element, will be non-equal.
-        map2.put((@k@) 100, 100);
+        map2.put((@k@) 100, 100L);
         assertFalse(map1.equals(map2));
         // Rebuild map2 with elements in a different order, again the maps should be equal.
         // (These tests with same elements in different order also show that the hashCode
@@ -361,7 +361,7 @@ public class @K@ObjectHashMapTest {
         map2.clear();
         Arrays.sort(keys);
         for (@k@ key : keys) {
-            map2.put(key, Integer.valueOf(key));
+            map2.put(key, Long.valueOf(key));
         }
         assertEquals(map1.hashCode(), map2.hashCode());
         assertEquals(map1, map2);
@@ -384,17 +384,17 @@ public class @K@ObjectHashMapTest {
         // This size is also chosen so after the single rehash, the map will be densely
         // populated, getting close to a second rehash but not triggering it.
         int startTableSize = 1105;
-        @K@ObjectHashMap<Integer> map = new @K@ObjectHashMap<Integer>(startTableSize);
+        @K@ObjectHashMap<Long> map = new @K@ObjectHashMap<Long>(startTableSize);
         // Reference map which implementation we trust to be correct, will mirror all operations.
-        HashMap<@O@, Integer> goodMap = new HashMap<@O@, Integer>();
+        HashMap<@O@, Long> goodMap = new HashMap<@O@, Long>();
 
         // Add initial population.
         for (int i = 0; i < baseSize / 4; ++i) {
             @k@ key = (@k@) rnd.nextInt(baseSize);
-            assertEquals(goodMap.put(key, Integer.valueOf(key)), map.put(key, Integer.valueOf(key)));
+            assertEquals(goodMap.put(key, Long.valueOf(key)), map.put(key, Long.valueOf(key)));
             // 50% elements are multiple of a divisor of startTableSize => more conflicts.
             key = (@k@) (rnd.nextInt(baseSize) * 17);
-            assertEquals(goodMap.put(key, Integer.valueOf(key)), map.put(key, Integer.valueOf(key)));
+            assertEquals(goodMap.put(key, Long.valueOf(key)), map.put(key, Long.valueOf(key)));
         }
 
         // Now do some mixed adds and removes for further fuzzing
@@ -402,7 +402,7 @@ public class @K@ObjectHashMapTest {
         for (int i = 0; i < baseSize * 1000; ++i) {
             @k@ key = (@k@) rnd.nextInt(baseSize);
             if (rnd.nextDouble() >= 0.2) {
-                assertEquals(goodMap.put(key, Integer.valueOf(key)), map.put(key, Integer.valueOf(key)));
+                assertEquals(goodMap.put(key, Long.valueOf(key)), map.put(key, Long.valueOf(key)));
             } else {
                 assertEquals(goodMap.remove(key), map.remove(key));
             }

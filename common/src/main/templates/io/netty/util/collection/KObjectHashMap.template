@@ -360,7 +360,7 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
      * Returns the hash code for the key.
      */
     private int hashCode(@k@ key) {
-       return @O@.valueOf(key).hashCode();
+       return @HASH_CODE@;
     }
 
     /**
