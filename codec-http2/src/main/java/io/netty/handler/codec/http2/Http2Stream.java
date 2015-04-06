@@ -34,24 +34,6 @@ public interface Http2Stream {
     }
 
     /**
-     * Represents the state which flow controller implementations are expected to track.
-     */
-    interface FlowControlState {
-        /**
-         * Get the portion of the flow control window that is available for sending/receiving frames which are subject
-         * to flow control. This quantity is measured in number of bytes.
-         */
-        int windowSize();
-
-        /**
-         * Get the initial flow control window size. This quantity is measured in number of bytes.
-         * Note the unavailable window portion can be calculated by
-         * {@link #initialWindowSize()} - {@link #windowSize()}.
-         */
-        int initialWindowSize();
-    }
-
-    /**
      * Gets the unique identifier for this stream within the connection.
      */
     int id();
@@ -60,26 +42,6 @@ public interface Http2Stream {
      * Gets the state of this stream.
      */
     State state();
-
-    /**
-     * Get the state as related to the {@link Http2LocalFlowController}.
-     */
-    FlowControlState localFlowState();
-
-    /**
-     * Set the state as related to the {@link Http2LocalFlowController}.
-     */
-    void localFlowState(FlowControlState state);
-
-    /**
-     * Get the state as related to {@link Http2RemoteFlowController}.
-     */
-    FlowControlState remoteFlowState();
-
-    /**
-     * Set the state as related to {@link Http2RemoteFlowController}.
-     */
-    void remoteFlowState(FlowControlState state);
 
     /**
      * Opens this stream, making it available via {@link Http2Connection#forEachActiveStream(Http2StreamVisitor)} and
@@ -140,17 +102,17 @@ public interface Http2Stream {
      * Associates the application-defined data with this stream.
      * @return The value that was previously associated with {@code key}, or {@code null} if there was none.
      */
-    Object setProperty(Object key, Object value);
+    <V> V setProperty(Http2Connection.PropertyKey key, V value);
 
     /**
      * Returns application-defined data if any was associated with this stream.
      */
-    <V> V getProperty(Object key);
+    <V> V getProperty(Http2Connection.PropertyKey key);
 
     /**
      * Returns and removes application-defined data if any was associated with this stream.
      */
-    <V> V removeProperty(Object key);
+    <V> V removeProperty(Http2Connection.PropertyKey key);
 
     /**
      * Updates an priority for this stream. Calling this method may affect the straucture of the

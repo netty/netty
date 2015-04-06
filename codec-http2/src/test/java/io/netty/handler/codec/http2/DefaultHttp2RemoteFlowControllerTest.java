@@ -86,6 +86,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         connection = new DefaultHttp2Connection(false);
         controller = new DefaultHttp2RemoteFlowController(connection);
+        connection.remote().flowController(controller);
 
         connection.local().createStream(STREAM_A, false);
         connection.local().createStream(STREAM_B, false);
@@ -1222,7 +1223,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
     }
 
     private int window(int streamId) throws Http2Exception {
-        return stream(streamId).remoteFlowState().windowSize();
+        return controller.windowSize(stream(streamId));
     }
 
     private void incrementWindowSize(int streamId, int delta) throws Http2Exception {
