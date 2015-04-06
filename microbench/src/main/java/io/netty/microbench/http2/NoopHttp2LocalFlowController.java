@@ -15,6 +15,7 @@
 package io.netty.microbench.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_INITIAL_WINDOW_SIZE;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Exception;
@@ -32,6 +33,16 @@ public final class NoopHttp2LocalFlowController implements Http2LocalFlowControl
 
     @Override
     public int initialWindowSize() {
+        return MAX_INITIAL_WINDOW_SIZE;
+    }
+
+    @Override
+    public int windowSize(Http2Stream stream) {
+        return MAX_INITIAL_WINDOW_SIZE;
+    }
+
+    @Override
+    public int initialWindowSize(Http2Stream stream) {
         return MAX_INITIAL_WINDOW_SIZE;
     }
 

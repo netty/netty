@@ -37,6 +37,7 @@ import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.collection.PrimitiveCollections;
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -44,11 +45,10 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 
@@ -59,9 +59,11 @@ public class DefaultHttp2Connection implements Http2Connection {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultHttp2Connection.class);
     // Fields accessed by inner classes
     final IntObjectMap<Http2Stream> streamMap = new IntObjectHashMap<Http2Stream>();
+    final PropertyKeyRegistry propertyKeyRegistry = new PropertyKeyRegistry();
     final ConnectionStream connectionStream = new ConnectionStream();
     final DefaultEndpoint<Http2LocalFlowController> localEndpoint;
     final DefaultEndpoint<Http2RemoteFlowController> remoteEndpoint;
+
     /**
      * The initial size of the children map is chosen to be conservative on initial memory allocations under
      * the assumption that most streams will have a small number of children. This choice may be
@@ -265,11 +267,28 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
     }
 
+    @Override
+    public PropertyKey newKey() {
+        return propertyKeyRegistry.newKey();
+    }
+
+    /**
+     * Verifies that the key is valid and returns it as the internal {@link DefaultPropertyKey} type.
+     *
+     * @throws NullPointerException if the key is {@code null}.
+     * @throws ClassCastException if the key is not of type {@link DefaultPropertyKey}.
+     * @throws IllegalArgumentException if the key was not created by this connection.
+     */
+    final DefaultPropertyKey verifyKey(PropertyKey key) {
+        return checkNotNull((DefaultPropertyKey) key, "key").verifyConnection(this);
+    }
+
     /**
      * Simple stream implementation. Streams can be compared to each other by priority.
      */
     private class DefaultStream implements Http2Stream {
         private final int id;
+        private final PropertyMap properties = new PropertyMap();
         private State state;
         private short weight = DEFAULT_PRIORITY_WEIGHT;
         private DefaultStream parent;
@@ -277,14 +296,10 @@ public class DefaultHttp2Connection implements Http2Connection {
         private int totalChildWeights;
         private int prioritizableForTree = 1;
         private boolean resetSent;
-        private PropertyMap data;
-        private FlowControlState localFlowState;
-        private FlowControlState remoteFlowState;
 
         DefaultStream(int id, State state) {
             this.id = id;
             this.state = state;
-            data = new LazyPropertyMap(this);
         }
 
         @Override
@@ -295,26 +310,6 @@ public class DefaultHttp2Connection implements Http2Connection {
         @Override
         public final State state() {
             return state;
-        }
-
-        @Override
-        public FlowControlState localFlowState() {
-            return localFlowState;
-        }
-
-        @Override
-        public void localFlowState(FlowControlState state) {
-            localFlowState = state;
-        }
-
-        @Override
-        public FlowControlState remoteFlowState() {
-            return remoteFlowState;
-        }
-
-        @Override
-        public void remoteFlowState(FlowControlState state) {
-            remoteFlowState = state;
         }
 
         @Override
@@ -329,18 +324,18 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public final Object setProperty(Object key, Object value) {
-            return data.put(key, value);
+        public final <V> V setProperty(PropertyKey key, V value) {
+            return properties.add(verifyKey(key), value);
         }
 
         @Override
-        public final <V> V getProperty(Object key) {
-            return data.get(key);
+        public final <V> V getProperty(PropertyKey key) {
+            return properties.get(verifyKey(key));
         }
 
         @Override
-        public final <V> V removeProperty(Object key) {
-            return data.remove(key);
+        public final <V> V removeProperty(PropertyKey key) {
+            return properties.remove(verifyKey(key));
         }
 
         @Override
@@ -694,74 +689,44 @@ public class DefaultHttp2Connection implements Http2Connection {
             }
             return false;
         }
-    }
 
-    /**
-     * Allows the data map to be lazily initialized for {@link DefaultStream}.
-     */
-    private interface PropertyMap {
-        Object put(Object key, Object value);
+        /**
+         * Provides the lazy initialization for the {@link DefaultStream} data map.
+         */
+        private class PropertyMap {
+            Object[] values = EmptyArrays.EMPTY_OBJECTS;
 
-        <V> V get(Object key);
+            <V> V add(DefaultPropertyKey key, V value) {
+                resizeIfNecessary(key.index);
+                @SuppressWarnings("unchecked")
+                V prevValue = (V) values[key.index];
+                values[key.index] = value;
+                return prevValue;
+            }
 
-        <V> V remove(Object key);
-    }
+            @SuppressWarnings("unchecked")
+            <V> V get(DefaultPropertyKey key) {
+                if (key.index >= values.length) {
+                    return null;
+                }
+                return (V) values[key.index];
+            }
 
-    /**
-     * Provides actual {@link HashMap} functionality for {@link DefaultStream}'s application data.
-     */
-    private static final class DefaultProperyMap implements PropertyMap {
-        private final Map<Object, Object> data;
+            @SuppressWarnings("unchecked")
+            <V> V remove(DefaultPropertyKey key) {
+                V prevValue = null;
+                if (key.index < values.length) {
+                    prevValue = (V) values[key.index];
+                    values[key.index] = null;
+                }
+                return prevValue;
+            }
 
-        DefaultProperyMap(int initialSize) {
-            data = new HashMap<Object, Object>(initialSize);
-        }
-
-        @Override
-        public Object put(Object key, Object value) {
-            return data.put(key, value);
-        }
-
-        @SuppressWarnings("unchecked")
-        @Override
-        public <V> V get(Object key) {
-            return (V) data.get(key);
-        }
-
-        @SuppressWarnings("unchecked")
-        @Override
-        public <V> V remove(Object key) {
-            return (V) data.remove(key);
-        }
-    }
-
-    /**
-     * Provides the lazy initialization for the {@link DefaultStream} data map.
-     */
-    private static final class LazyPropertyMap implements PropertyMap {
-        private static final int DEFAULT_INITIAL_SIZE = 4;
-        private final DefaultStream stream;
-
-        LazyPropertyMap(DefaultStream stream) {
-            this.stream = stream;
-        }
-
-        @Override
-        public Object put(Object key, Object value) {
-            stream.data = new DefaultProperyMap(DEFAULT_INITIAL_SIZE);
-            return stream.data.put(key, value);
-        }
-
-        @Override
-        public <V> V get(Object key) {
-            stream.data = new DefaultProperyMap(DEFAULT_INITIAL_SIZE);
-            return stream.data.get(key);
-        }
-
-        @Override
-        public <V> V remove(Object key) {
-            stream.data = new DefaultProperyMap(DEFAULT_INITIAL_SIZE);
-            return stream.data.remove(key);
+            void resizeIfNecessary(int index) {
+                if (index >= values.length) {
+                    values = Arrays.copyOf(values, propertyKeyRegistry.size());
+                }
+            }
         }
     }
 
@@ -1188,6 +1153,45 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         private boolean allowModifications() {
             return pendingIterations == 0;
+        }
+    }
+
+    /**
+     * Implementation of {@link PropertyKey} that specifies the index position of the property.
+     */
+    final class DefaultPropertyKey implements PropertyKey {
+        private final int index;
+
+        DefaultPropertyKey(int index) {
+            this.index = index;
+        }
+
+        DefaultPropertyKey verifyConnection(Http2Connection connection) {
+            if (connection != DefaultHttp2Connection.this) {
+                throw new IllegalArgumentException("Using a key that was not created by this connection");
+            }
+            return this;
+        }
+    }
+
+    /**
+     * A registry of all stream property keys known by this connection.
+     */
+    private class PropertyKeyRegistry {
+        final List<DefaultPropertyKey> keys = new ArrayList<DefaultPropertyKey>(4);
+
+        /**
+         * Registers a new property key.
+         */
+        @SuppressWarnings("unchecked")
+        DefaultPropertyKey newKey() {
+            DefaultPropertyKey key = new DefaultPropertyKey(keys.size());
+            keys.add(key);
+            return key;
+        }
+
+        int size() {
+            return keys.size();
         }
     }
 }

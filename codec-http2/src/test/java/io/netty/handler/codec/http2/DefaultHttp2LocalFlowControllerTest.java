@@ -67,6 +67,7 @@ public class DefaultHttp2LocalFlowControllerTest {
 
         connection = new DefaultHttp2Connection(false);
         controller = new DefaultHttp2LocalFlowController(connection, frameWriter, updateRatio);
+        connection.local().flowController(controller);
 
         connection.local().createStream(STREAM_ID, false);
     }
@@ -320,7 +321,7 @@ public class DefaultHttp2LocalFlowControllerTest {
     }
 
     private int window(int streamId) throws Http2Exception {
-        return stream(streamId).localFlowState().windowSize();
+        return controller.windowSize(stream(streamId));
     }
 
     private Http2Stream stream(int streamId) {

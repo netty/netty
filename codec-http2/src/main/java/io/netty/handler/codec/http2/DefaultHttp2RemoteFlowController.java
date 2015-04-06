@@ -18,13 +18,13 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
-import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
+import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http2.Http2Stream.FlowControlState;
 import io.netty.handler.codec.http2.Http2Stream.State;
 
 import java.util.ArrayDeque;
@@ -35,7 +35,7 @@ import java.util.Deque;
  * Basic implementation of {@link Http2RemoteFlowController}.
  */
 public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowController {
-    private static final Http2StreamVisitor WRITE_ALLOCATED_BYTES = new Http2StreamVisitor() {
+    private final Http2StreamVisitor WRITE_ALLOCATED_BYTES = new Http2StreamVisitor() {
         @Override
         public boolean visit(Http2Stream stream) {
             state(stream).writeAllocatedBytes();
@@ -43,6 +43,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
     };
     private final Http2Connection connection;
+    private final Http2Connection.PropertyKey stateKey;
     private int initialWindowSize = DEFAULT_WINDOW_SIZE;
     private ChannelHandlerContext ctx;
     private boolean needFlush;
@@ -51,7 +52,8 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         this.connection = checkNotNull(connection, "connection");
 
         // Add a flow state for the connection.
-        connection.connectionStream().remoteFlowState(
+        stateKey = connection.newKey();
+        connection.connectionStream().setProperty(stateKey,
                 new DefaultState(connection.connectionStream(), initialWindowSize));
 
         // Register for notification of new streams.
@@ -60,7 +62,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             public void onStreamAdded(Http2Stream stream) {
                 // If the stream state is not open then the stream is not yet eligible for flow controlled frames and
                 // only requires the ReducedFlowState. Otherwise the full amount of memory is required.
-                stream.remoteFlowState(stream.state() == IDLE ?
+                stream.setProperty(stateKey, stream.state() == IDLE ?
                         new ReducedState(stream) :
                         new DefaultState(stream, 0));
             }
@@ -69,10 +71,11 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             public void onStreamActive(Http2Stream stream) {
                 // If the object was previously created, but later activated then we have to ensure
                 // the full state is allocated and the proper initialWindowSize is used.
-                if (stream.remoteFlowState().getClass() == DefaultState.class) {
-                    state(stream).window(initialWindowSize);
+                AbstractState state = state(stream);
+                if (state.getClass() == DefaultState.class) {
+                    state.window(initialWindowSize);
                 } else {
-                    stream.remoteFlowState(new DefaultState(state(stream), initialWindowSize));
+                    stream.setProperty(stateKey, new DefaultState(state, initialWindowSize));
                 }
             }
 
@@ -87,7 +90,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                 // decrease the amount of memory required for this stream because no flow controlled frames can
                 // be exchanged on this stream
                 if (stream.prioritizableForTree() != 0) {
-                    stream.remoteFlowState(new ReducedState(state));
+                    stream.setProperty(stateKey, new ReducedState(state));
                 }
             }
 
@@ -162,6 +165,16 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     }
 
     @Override
+    public int windowSize(Http2Stream stream) {
+        return state(stream).windowSize();
+    }
+
+    @Override
+    public int initialWindowSize(Http2Stream stream) {
+        return state(stream).initialWindowSize();
+    }
+
+    @Override
     public void incrementWindowSize(ChannelHandlerContext ctx, Http2Stream stream, int delta) throws Http2Exception {
         if (stream.id() == CONNECTION_STREAM_ID) {
             // Update the connection window and write any pending frames for all streams.
@@ -209,12 +222,12 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         return state(stream).streamableBytesForTree();
     }
 
-    private static AbstractState state(Http2Stream stream) {
-        return (AbstractState) checkNotNull(stream, "stream").remoteFlowState();
+    private AbstractState state(Http2Stream stream) {
+        return (AbstractState) checkNotNull(stream, "stream").getProperty(stateKey);
     }
 
     private AbstractState connectionState() {
-        return (AbstractState) connection.connectionStream().remoteFlowState();
+        return (AbstractState) connection.connectionStream().getProperty(stateKey);
     }
 
     /**
@@ -261,7 +274,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
      * @param connectionWindowSize The connection window this is available for use at this point in the tree.
      * @return An object summarizing the write and allocation results.
      */
-    static int allocateBytesForTree(Http2Stream parent, int connectionWindowSize) throws Http2Exception {
+    int allocateBytesForTree(Http2Stream parent, int connectionWindowSize) throws Http2Exception {
         AbstractState state = state(parent);
         if (state.streamableBytesForTree() <= 0) {
             return 0;
@@ -289,7 +302,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
      * A {@link Http2StreamVisitor} that performs the HTTP/2 priority algorithm to distribute the available connection
      * window appropriately to the children of a given stream.
      */
-    private static final class ChildFeeder implements Http2StreamVisitor {
+    private final class ChildFeeder implements Http2StreamVisitor {
         final int maxSize;
         int totalWeight;
         int connectionWindow;
@@ -399,7 +412,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
      * A simplified version of {@link ChildFeeder} that is only used when all streamable bytes fit within the
      * available connection window.
      */
-    private static final class SimpleChildFeeder implements Http2StreamVisitor {
+    private final class SimpleChildFeeder implements Http2StreamVisitor {
         int bytesAllocated;
         int connectionWindow;
 
@@ -437,35 +450,35 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         // Set to true if cancel() was called.
         private boolean cancelled;
 
-        public DefaultState(Http2Stream stream, int initialWindowSize) {
+        DefaultState(Http2Stream stream, int initialWindowSize) {
             super(stream);
             window(initialWindowSize);
             pendingWriteQueue = new ArrayDeque<FlowControlled>(2);
         }
 
-        public DefaultState(AbstractState existingState, int initialWindowSize) {
+        DefaultState(AbstractState existingState, int initialWindowSize) {
             super(existingState);
             window(initialWindowSize);
             pendingWriteQueue = new ArrayDeque<FlowControlled>(2);
         }
 
         @Override
-        public int windowSize() {
+        int windowSize() {
             return window;
         }
 
         @Override
-        public int initialWindowSize() {
+        int initialWindowSize() {
             return initialWindowSize;
         }
 
         @Override
-        public void window(int initialWindowSize) {
+        void window(int initialWindowSize) {
             window = initialWindowSize;
         }
 
         @Override
-        public void allocate(int bytes) {
+        void allocate(int bytes) {
             allocated += bytes;
             // Also artificially reduce the streamable bytes for this tree to give the appearance
             // that the data has been written. This will be restored before the allocated bytes are
@@ -474,7 +487,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
 
         @Override
-        public void writeAllocatedBytes() {
+        void writeAllocatedBytes() {
             int numBytes = allocated;
 
             // Restore the number of streamable bytes to this branch.
@@ -493,7 +506,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
 
         @Override
-        public int incrementStreamWindow(int delta) throws Http2Exception {
+        int incrementStreamWindow(int delta) throws Http2Exception {
             if (delta > 0 && Integer.MAX_VALUE - delta < window) {
                 throw streamError(stream.id(), FLOW_CONTROL_ERROR,
                         "Window size overflow for stream: %d", stream.id());
@@ -510,28 +523,28 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
 
         @Override
-        public int writableWindow() {
+        int writableWindow() {
             return min(window, connectionWindowSize());
         }
 
         @Override
-        public int streamableBytes() {
+        int streamableBytes() {
             return max(0, min(pendingBytes - allocated, window));
         }
 
         @Override
-        public int streamableBytesForTree() {
+        int streamableBytesForTree() {
             return streamableBytesForTree;
         }
 
         @Override
-        public void enqueueFrame(FlowControlled frame) {
+        void enqueueFrame(FlowControlled frame) {
             incrementPendingBytes(frame.size());
             pendingWriteQueue.offer(frame);
         }
 
         @Override
-        public boolean hasFrame() {
+        boolean hasFrame() {
             return !pendingWriteQueue.isEmpty();
         }
 
@@ -543,7 +556,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
 
         @Override
-        public void cancel() {
+        void cancel() {
             cancel(null);
         }
 
@@ -568,7 +581,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
 
         @Override
-        public int writeBytes(int bytes) {
+        int writeBytes(int bytes) {
             int bytesAttempted = 0;
             while (hasFrame()) {
                 int maxBytes = min(bytes - bytesAttempted, writableWindow());
@@ -683,94 +696,94 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
      * The remote flow control state for a single stream that is not in a state where flow controlled frames cannot
      * be exchanged.
      */
-    private static final class ReducedState extends AbstractState {
-        public ReducedState(Http2Stream stream) {
+    private final class ReducedState extends AbstractState {
+        ReducedState(Http2Stream stream) {
             super(stream);
         }
 
-        public ReducedState(AbstractState existingState) {
+        ReducedState(AbstractState existingState) {
             super(existingState);
         }
 
         @Override
-        public int windowSize() {
+        int windowSize() {
             return 0;
         }
 
         @Override
-        public int initialWindowSize() {
+        int initialWindowSize() {
             return 0;
         }
 
         @Override
-        public int writableWindow() {
+        int writableWindow() {
             return 0;
         }
 
         @Override
-        public int streamableBytes() {
+        int streamableBytes() {
             return 0;
         }
 
         @Override
-        public int streamableBytesForTree() {
+        int streamableBytesForTree() {
             return streamableBytesForTree;
         }
 
         @Override
-        public void writeAllocatedBytes() {
+        void writeAllocatedBytes() {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void cancel() {
+        void cancel() {
         }
 
         @Override
-        public void window(int initialWindowSize) {
+        void window(int initialWindowSize) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public int incrementStreamWindow(int delta) throws Http2Exception {
+        int incrementStreamWindow(int delta) throws Http2Exception {
             // This operation needs to be supported during the initial settings exchange when
             // the peer has not yet acknowledged this peer being activated.
             return 0;
         }
 
         @Override
-        public int writeBytes(int bytes) {
+        int writeBytes(int bytes) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void enqueueFrame(FlowControlled frame) {
+        void enqueueFrame(FlowControlled frame) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void allocate(int bytes) {
+        void allocate(int bytes) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public boolean hasFrame() {
+        boolean hasFrame() {
             return false;
         }
     }
 
     /**
-     * An abstraction around {@link FlowControlState} which provides specific extensions used by remote flow control.
+     * An abstraction which provides specific extensions used by remote flow control.
      */
-    private abstract static class AbstractState implements FlowControlState {
+    private abstract class AbstractState {
         protected final Http2Stream stream;
         protected int streamableBytesForTree;
 
-        public AbstractState(Http2Stream stream) {
+        AbstractState(Http2Stream stream) {
             this.stream = stream;
         }
 
-        public AbstractState(AbstractState existingState) {
+        AbstractState(AbstractState existingState) {
             this.stream = existingState.stream();
             this.streamableBytesForTree = existingState.streamableBytesForTree();
         }
@@ -778,7 +791,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         /**
          * The stream this state is associated with.
          */
-        public final Http2Stream stream() {
+        final Http2Stream stream() {
             return stream;
         }
 
@@ -786,72 +799,76 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          * Recursively increments the {@link #streamableBytesForTree()} for this branch in the priority tree starting
          * at the current node.
          */
-        public final void incrementStreamableBytesForTree(int numBytes) {
+        final void incrementStreamableBytesForTree(int numBytes) {
             streamableBytesForTree += numBytes;
             if (!stream.isRoot()) {
                 state(stream.parent()).incrementStreamableBytesForTree(numBytes);
             }
         }
 
+        abstract int windowSize();
+
+        abstract int initialWindowSize();
+
         /**
          * Write bytes allocated bytes for this stream.
          */
-        public abstract void writeAllocatedBytes();
+        abstract void writeAllocatedBytes();
 
         /**
          * Returns the number of pending bytes for this node that will fit within the
-         * {@link #availableWindow()}. This is used for the priority algorithm to determine the aggregate
+         * {@link #writableWindow()}. This is used for the priority algorithm to determine the aggregate
          * number of bytes that can be written at each node. Each node only takes into account its
          * stream window so that when a change occurs to the connection window, these values need
          * not change (i.e. no tree traversal is required).
          */
-        public abstract int streamableBytes();
+        abstract int streamableBytes();
 
         /**
          * Get the {@link #streamableBytes()} for the entire tree rooted at this node.
          */
-        public abstract int streamableBytesForTree();
+        abstract int streamableBytesForTree();
 
         /**
          * Any operations that may be pending are cleared and the status of these operations is failed.
          */
-        public abstract void cancel();
+        abstract void cancel();
 
         /**
-         * Reset the {@link #availableWindow()} size.
+         * Reset the window size for this stream.
          */
-        public abstract void window(int initialWindowSize);
+        abstract void window(int initialWindowSize);
 
         /**
          * Increments the flow control window for this stream by the given delta and returns the new value.
          */
-        public abstract int incrementStreamWindow(int delta) throws Http2Exception;
+        abstract int incrementStreamWindow(int delta) throws Http2Exception;
 
         /**
          * Returns the maximum writable window (minimum of the stream and connection windows).
          */
-        public abstract int writableWindow();
+        abstract int writableWindow();
 
         /**
          * Writes up to the number of bytes from the pending queue. May write less if limited by the writable window, by
          * the number of pending writes available, or because a frame does not support splitting on arbitrary
          * boundaries.
          */
-        public abstract int writeBytes(int bytes);
+        abstract int writeBytes(int bytes);
 
         /**
          * Adds the {@code frame} to the pending queue and increments the pending byte count.
          */
-        public abstract void enqueueFrame(FlowControlled frame);
+        abstract void enqueueFrame(FlowControlled frame);
 
         /**
          * Increment the number of bytes allocated to this stream by the priority algorithm
          */
-        public abstract void allocate(int bytes);
+        abstract void allocate(int bytes);
 
         /**
          * Indicates whether or not there are frames in the pending queue.
          */
-        public abstract boolean hasFrame();
+        abstract boolean hasFrame();
     }
 }
