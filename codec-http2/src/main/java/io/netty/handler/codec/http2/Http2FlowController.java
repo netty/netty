@@ -22,8 +22,8 @@ import io.netty.channel.ChannelHandlerContext;
 public interface Http2FlowController {
 
     /**
-     * Sets the initial flow control window and updates all stream windows (but not the connection
-     * window) by the delta.
+     * Sets the connection-wide initial flow control window and updates all stream windows (but not the connection
+     * stream window) by the delta.
      * <p>
      * This method is used to apply the {@code SETTINGS_INITIAL_WINDOW_SIZE} value for an
      * {@code SETTINGS} frame.
@@ -34,10 +34,23 @@ public interface Http2FlowController {
     void initialWindowSize(int newWindowSize) throws Http2Exception;
 
     /**
-     * Gets the initial flow control window size that is used as the basis for new stream flow
+     * Gets the connection-wide initial flow control window size that is used as the basis for new stream flow
      * control windows.
      */
     int initialWindowSize();
+
+    /**
+     * Get the portion of the flow control window for the given stream that is currently available for sending/receiving
+     * frames which are subject to flow control. This quantity is measured in number of bytes.
+     */
+    int windowSize(Http2Stream stream);
+
+    /**
+     * Get the initial flow control window size for the given stream. This quantity is measured in number of bytes. Note
+     * the unavailable window portion can be calculated by {@link #initialWindowSize()} - {@link
+     * #windowSize(Http2Stream)}.
+     */
+    int initialWindowSize(Http2Stream stream);
 
     /**
      * Increments the size of the stream's flow control window by the given delta.
