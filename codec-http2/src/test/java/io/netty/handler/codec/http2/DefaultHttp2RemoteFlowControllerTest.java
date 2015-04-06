@@ -86,6 +86,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         connection = new DefaultHttp2Connection(false);
         controller = new DefaultHttp2RemoteFlowController(connection);
+        connection.remote().flowController(controller);
 
         connection.local().createStream(STREAM_A).open(false);
         connection.local().createStream(STREAM_B).open(false);

@@ -22,6 +22,12 @@ import io.netty.channel.ChannelHandlerContext;
 public interface Http2FlowController {
 
     /**
+     * Gets the {@link Http2Connection.PropertyKey} used for accessing the {@link Http2Stream.FlowControlState} property
+     * that this controller associates with each {@link Http2Stream}.
+     */
+    Http2Connection.PropertyKey stateKey();
+
+    /**
      * Sets the initial flow control window and updates all stream windows (but not the connection
      * window) by the delta.
      * <p>

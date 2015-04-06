@@ -34,7 +34,7 @@ import java.util.Deque;
  * Basic implementation of {@link Http2RemoteFlowController}.
  */
 public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowController {
-    private static final Http2StreamVisitor WRITE_ALLOCATED_BYTES = new Http2StreamVisitor() {
+    private final Http2StreamVisitor WRITE_ALLOCATED_BYTES = new Http2StreamVisitor() {
         @Override
         public boolean visit(Http2Stream stream) {
             state(stream).writeAllocatedBytes();
@@ -42,6 +42,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
     };
     private final Http2Connection connection;
+    private final Http2Connection.PropertyKey stateKey;
     private int initialWindowSize = DEFAULT_WINDOW_SIZE;
     private ChannelHandlerContext ctx;
     private boolean needFlush;
@@ -50,7 +51,8 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         this.connection = checkNotNull(connection, "connection");
 
         // Add a flow state for the connection.
-        connection.connectionStream().remoteFlowState(
+        stateKey = connection.newKey();
+        connection.connectionStream().setProperty(stateKey,
                 new DefaultFlowState(connection.connectionStream(), initialWindowSize));
 
         // Register for notification of new streams.
@@ -58,7 +60,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             @Override
             public void onStreamAdded(Http2Stream stream) {
                 // Just add a new flow state to the stream.
-                stream.remoteFlowState(new DefaultFlowState(stream, 0));
+                stream.setProperty(stateKey, new DefaultFlowState(stream, 0));
             }
 
             @Override
@@ -115,6 +117,11 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                 }
             }
         });
+    }
+
+    @Override
+    public Http2Connection.PropertyKey stateKey() {
+        return stateKey;
     }
 
     @Override
@@ -193,12 +200,12 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         return state(stream).streamableBytesForTree();
     }
 
-    private static DefaultFlowState state(Http2Stream stream) {
-        return (DefaultFlowState) checkNotNull(stream, "stream").remoteFlowState();
+    private DefaultFlowState state(Http2Stream stream) {
+        return (DefaultFlowState) checkNotNull(stream, "stream").getProperty(stateKey);
     }
 
     private DefaultFlowState connectionState() {
-        return (DefaultFlowState) connection.connectionStream().remoteFlowState();
+        return (DefaultFlowState) connection.connectionStream().getProperty(stateKey);
     }
 
     /**
@@ -245,7 +252,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
      * @param connectionWindowSize The connection window this is available for use at this point in the tree.
      * @return An object summarizing the write and allocation results.
      */
-    static int allocateBytesForTree(Http2Stream parent, int connectionWindowSize) throws Http2Exception {
+    int allocateBytesForTree(Http2Stream parent, int connectionWindowSize) throws Http2Exception {
         DefaultFlowState state = state(parent);
         if (state.streamableBytesForTree() <= 0) {
             return 0;
@@ -273,7 +280,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
      * A {@link Http2StreamVisitor} that performs the HTTP/2 priority algorithm to distribute the available connection
      * window appropriately to the children of a given stream.
      */
-    private static final class ChildFeeder implements Http2StreamVisitor {
+    private final class ChildFeeder implements Http2StreamVisitor {
         final int maxSize;
         int totalWeight;
         int connectionWindow;
@@ -383,7 +390,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
      * A simplified version of {@link ChildFeeder} that is only used when all streamable bytes fit within the
      * available connection window.
      */
-    private static final class SimpleChildFeeder implements Http2StreamVisitor {
+    private final class SimpleChildFeeder implements Http2StreamVisitor {
         int bytesAllocated;
         int connectionWindow;
 

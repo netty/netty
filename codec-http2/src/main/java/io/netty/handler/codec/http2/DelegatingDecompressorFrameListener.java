@@ -24,6 +24,7 @@ import static io.netty.handler.codec.http.HttpHeaderValues.X_GZIP;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -38,19 +39,11 @@ import io.netty.util.ByteString;
  * stream. The decompression provided by this class will be applied to the data for the entire stream.
  */
 public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecorator {
-    private static final Http2ConnectionAdapter CLEAN_UP_LISTENER = new Http2ConnectionAdapter() {
-        @Override
-        public void onStreamRemoved(Http2Stream stream) {
-            final Http2Decompressor decompressor = decompressor(stream);
-            if (decompressor != null) {
-                cleanup(stream, decompressor);
-            }
-        }
-    };
 
     private final Http2Connection connection;
     private final boolean strict;
     private boolean flowControllerInitialized;
+    final Http2Connection.PropertyKey propertyKey;
 
     public DelegatingDecompressorFrameListener(Http2Connection connection, Http2FrameListener listener) {
         this(connection, listener, true);
@@ -62,7 +55,16 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         this.connection = connection;
         this.strict = strict;
 
-        connection.addListener(CLEAN_UP_LISTENER);
+        propertyKey = connection.newKey();
+        connection.addListener(new Http2ConnectionAdapter() {
+            @Override
+            public void onStreamRemoved(Http2Stream stream) {
+                final Http2Decompressor decompressor = decompressor(stream);
+                if (decompressor != null) {
+                    cleanup(stream, decompressor);
+                }
+            }
+        });
     }
 
     @Override
@@ -210,7 +212,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
             final EmbeddedChannel channel = newContentDecompressor(contentEncoding);
             if (channel != null) {
                 decompressor = new Http2Decompressor(channel);
-                stream.setProperty(Http2Decompressor.class, decompressor);
+                stream.setProperty(propertyKey, decompressor);
                 // Decode the content and remove or replace the existing headers
                 // so that the message looks like a decoded message.
                 ByteString targetContentEncoding = getTargetContentEncoding(contentEncoding);
@@ -237,8 +239,8 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         }
     }
 
-    private static Http2Decompressor decompressor(Http2Stream stream) {
-        return (Http2Decompressor) (stream == null? null : stream.getProperty(Http2Decompressor.class));
+    Http2Decompressor decompressor(Http2Stream stream) {
+        return stream == null ? null : (Http2Decompressor) stream.getProperty(propertyKey);
     }
 
     /**
@@ -248,7 +250,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
      * @param stream The stream for which {@code decompressor} is the decompressor for
      * @param decompressor The decompressor for {@code stream}
      */
-    private static void cleanup(Http2Stream stream, Http2Decompressor decompressor) {
+    private void cleanup(Http2Stream stream, Http2Decompressor decompressor) {
         final EmbeddedChannel channel = decompressor.decompressor();
         if (channel.finish()) {
             for (;;) {
@@ -259,7 +261,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
                 buf.release();
             }
         }
-        decompressor = stream.removeProperty(Http2Decompressor.class);
+        decompressor = stream.removeProperty(propertyKey);
     }
 
     /**
@@ -286,11 +288,16 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
     /**
      * A decorator around the local flow controller that converts consumed bytes from uncompressed to compressed.
      */
-    private static final class ConsumedBytesConverter implements Http2LocalFlowController {
+    private final class ConsumedBytesConverter implements Http2LocalFlowController {
         private final Http2LocalFlowController flowController;
 
         ConsumedBytesConverter(Http2LocalFlowController flowController) {
             this.flowController = checkNotNull(flowController, "flowController");
+        }
+
+        @Override
+        public Http2Connection.PropertyKey stateKey() {
+            return flowController.stateKey();
         }
 
         @Override
@@ -330,12 +337,12 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
                 flowController.consumeBytes(ctx, stream, numBytes);
             } catch (Http2Exception e) {
                 if (copy != null) {
-                    stream.setProperty(Http2Decompressor.class, copy);
+                    stream.setProperty(propertyKey, copy);
                 }
                 throw e;
             } catch (Throwable t) {
                 if (copy != null) {
-                    stream.setProperty(Http2Decompressor.class, copy);
+                    stream.setProperty(propertyKey, copy);
                 }
                 throw new Http2Exception(INTERNAL_ERROR,
                         "Error while returning bytes to flow control window", t);
