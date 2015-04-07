@@ -32,12 +32,12 @@ import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.collection.PrimitiveCollections;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -61,6 +61,15 @@ public class DefaultHttp2Connection implements Http2Connection {
     final ConnectionStream connectionStream = new ConnectionStream();
     final DefaultEndpoint<Http2LocalFlowController> localEndpoint;
     final DefaultEndpoint<Http2RemoteFlowController> remoteEndpoint;
+    /**
+     * The initial size of the children map is chosen to be conservative on initial memory allocations under
+     * the assumption that most streams will have a small number of children. This choice may be
+     * sub-optimal if when children are present there are many children (i.e. a web page which has many
+     * dependencies to load).
+     */
+    private static final int INITIAL_CHILDREN_MAP_SIZE =
+            Math.max(1, SystemPropertyUtil.getInt("io.netty.http2.childrenMapSize", 4));
+
     /**
      * We chose a {@link List} over a {@link Set} to avoid allocating an {@link Iterator} objects when iterating over
      * the listeners.
@@ -453,7 +462,7 @@ public class DefaultHttp2Connection implements Http2Connection {
          * Instead use {@link #incrementPrioritizableForTree(int, Http2Stream)}.
          */
         private void incrementPrioritizableForTree0(int amt, Http2Stream oldParent) {
-            assert amt > 0;
+            assert amt > 0 && Integer.MAX_VALUE - amt >= prioritizableForTree;
             prioritizableForTree += amt;
             if (parent != null && parent != oldParent) {
                 parent.incrementPrioritizableForTree0(amt, oldParent);
@@ -475,7 +484,7 @@ public class DefaultHttp2Connection implements Http2Connection {
          * Direct calls to this method are discouraged. Instead use {@link #decrementPrioritizableForTree(int)}.
          */
         private void decrementPrioritizableForTree0(int amt) {
-            assert amt > 0;
+            assert amt > 0 && prioritizableForTree >= amt;
             prioritizableForTree -= amt;
             if (parent != null) {
                 parent.decrementPrioritizableForTree0(amt);
@@ -501,8 +510,12 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         private void initChildrenIfEmpty() {
             if (children == PrimitiveCollections.<DefaultStream>emptyIntObjectMap()) {
-                children = new IntObjectHashMap<DefaultStream>(4);
+                initChildren();
             }
+        }
+
+        private void initChildren() {
+            children = new IntObjectHashMap<DefaultStream>(INITIAL_CHILDREN_MAP_SIZE);
         }
 
         @Override
@@ -541,11 +554,26 @@ public class DefaultHttp2Connection implements Http2Connection {
             }
         }
 
-        final IntObjectMap<DefaultStream> removeAllChildren() {
-            totalChildWeights = 0;
-            prioritizableForTree = isPrioritizable() ? 1 : 0;
+        /**
+         * Remove all children with the exception of {@code streamToRetain}.
+         * This method is intended to be used to support an exclusive priority dependency operation.
+         * @return The map of children prior to this operation, excluding {@code streamToRetain} if present.
+         */
+        private IntObjectMap<DefaultStream> retain(DefaultStream streamToRetain) {
+            streamToRetain = children.remove(streamToRetain.id());
             IntObjectMap<DefaultStream> prevChildren = children;
-            children = PrimitiveCollections.emptyIntObjectMap();
+            // This map should be re-initialized in anticipation for the 1 exclusive child which will be added.
+            // It will either be added directly in this method, or after this method is called...but it will be added.
+            initChildren();
+            if (streamToRetain == null) {
+                totalChildWeights = 0;
+                prioritizableForTree = isPrioritizable() ? 1 : 0;
+            } else {
+                totalChildWeights = streamToRetain.weight();
+                // prioritizableForTree does not change because it is assumed all children node will still be
+                // descendants through an exclusive priority tree operation.
+                children.put(streamToRetain.id(), streamToRetain);
+            }
             return prevChildren;
         }
 
@@ -555,33 +583,44 @@ public class DefaultHttp2Connection implements Http2Connection {
          */
         final void takeChild(DefaultStream child, boolean exclusive, List<ParentChangedEvent> events) {
             DefaultStream oldParent = child.parent();
-            events.add(new ParentChangedEvent(child, oldParent));
-            notifyParentChanging(child, this);
-            child.parent = this;
 
-            if (exclusive && !children.isEmpty()) {
-                // If it was requested that this child be the exclusive dependency of this node,
-                // move any previous children to the child node, becoming grand children of this node.
-                for (DefaultStream grandchild : removeAllChildren().values()) {
-                    child.takeChild(grandchild, false, events);
+            if (oldParent != this) {
+                events.add(new ParentChangedEvent(child, oldParent));
+                notifyParentChanging(child, this);
+                child.parent = this;
+                // We need the removal operation to happen first so the prioritizableForTree for the old parent to root
+                // path is updated with the correct child.prioritizableForTree() value. Note that the removal operation
+                // may not be successful and may return null. This is because when an exclusive dependency is processed
+                // the children are removed in a previous recursive call but the child's parent link is updated here.
+                if (oldParent != null && oldParent.children.remove(child.id()) != null) {
+                    oldParent.totalChildWeights -= child.weight();
+                    if (!child.isDescendantOf(oldParent)) {
+                        oldParent.decrementPrioritizableForTree(child.prioritizableForTree());
+                        if (oldParent.prioritizableForTree() == 0) {
+                            // There are a few risks with immediately removing nodes from the priority tree:
+                            // 1. We are removing nodes while we are potentially shifting the tree. There are no
+                            // concrete cases known but is risky because it could invalidate the data structure.
+                            // 2. We are notifying listeners of the removal while the tree is in flux. Currently the
+                            // codec listeners make no assumptions about priority tree structure when being notified.
+                            removeStream(oldParent);
+                        }
+                    }
                 }
-            }
 
-            // Lazily initialize the children to save object allocations.
-            initChildrenIfEmpty();
+                // Lazily initialize the children to save object allocations.
+                initChildrenIfEmpty();
 
-            if (children.put(child.id(), child) == null) {
+                final Http2Stream oldChild = children.put(child.id(), child);
+                assert oldChild == null : "A stream with the same stream ID was already in the child map.";
                 totalChildWeights += child.weight();
                 incrementPrioritizableForTree(child.prioritizableForTree(), oldParent);
             }
 
-            if (oldParent != null && oldParent.children.remove(child.id()) != null) {
-                oldParent.totalChildWeights -= child.weight();
-                if (!child.isDescendantOf(oldParent)) {
-                    oldParent.decrementPrioritizableForTree(child.prioritizableForTree());
-                    if (oldParent.prioritizableForTree() == 0) {
-                        removeStream(oldParent);
-                    }
+            if (exclusive && !children.isEmpty()) {
+                // If it was requested that this child be the exclusive dependency of this node,
+                // move any previous children to the child node, becoming grand children of this node.
+                for (DefaultStream grandchild : retain(child).values()) {
+                    child.takeChild(grandchild, false, events);
                 }
             }
         }
@@ -604,6 +643,11 @@ public class DefaultHttp2Connection implements Http2Connection {
                 }
 
                 if (prioritizableForTree() == 0) {
+                    // There are a few risks with immediately removing nodes from the priority tree:
+                    // 1. We are removing nodes while we are potentially shifting the tree. There are no
+                    // concrete cases known but is risky because it could invalidate the data structure.
+                    // 2. We are notifying listeners of the removal while the tree is in flux. Currently the
+                    // codec listeners make no assumptions about priority tree structure when being notified.
                     removeStream(this);
                 }
                 notifyParentChanged(events);
