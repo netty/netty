@@ -465,7 +465,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             assert amt > 0;
             prioritizableForTree += amt;
             if (parent != null && parent != oldParent) {
-                parent.incrementPrioritizableForTree(amt, oldParent);
+                parent.incrementPrioritizableForTree0(amt, oldParent);
             }
         }
 
@@ -487,7 +487,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             assert amt > 0;
             prioritizableForTree -= amt;
             if (parent != null) {
-                parent.decrementPrioritizableForTree(amt);
+                parent.decrementPrioritizableForTree0(amt);
             }
         }
 
