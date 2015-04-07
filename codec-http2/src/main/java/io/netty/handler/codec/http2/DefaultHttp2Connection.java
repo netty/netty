@@ -33,12 +33,10 @@ import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http2.Http2StreamRemovalPolicy.Action;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
-import io.netty.util.collection.PrimitiveCollections;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -217,15 +215,20 @@ public class DefaultHttp2Connection implements Http2Connection {
         private State state = IDLE;
         private short weight = DEFAULT_PRIORITY_WEIGHT;
         private DefaultStream parent;
-        private IntObjectMap<DefaultStream> children = PrimitiveCollections.emptyIntObjectMap();
         private int totalChildWeights;
         private int prioritizableForTree = 1;
         private boolean resetSent;
-        private PropertyMap data;
+        // Non private members are to avoid synthetic method generation for private helper classes
+        // which access these methods.
+        PropertyMap data;
+        ChildrenMap children;
 
         DefaultStream(int id) {
             this.id = id;
+            // this is used in the constructor in a controlled manner.
+            // The objects which use this are very controlled and internal to this class only, and are just helpers.
             data = new LazyPropertyMap(this);
+            children = new LazyChildrenMap(this);
         }
 
         @Override
@@ -504,12 +507,6 @@ public class DefaultHttp2Connection implements Http2Connection {
             }
         }
 
-        private void initChildrenIfEmpty() {
-            if (children == PrimitiveCollections.<DefaultStream>emptyIntObjectMap()) {
-                children = new IntObjectHashMap<DefaultStream>(4);
-            }
-        }
-
         @Override
         public final boolean remoteSideOpen() {
             return state == HALF_CLOSED_LOCAL || state == OPEN || state == RESERVED_REMOTE;
@@ -542,11 +539,11 @@ public class DefaultHttp2Connection implements Http2Connection {
             }
         }
 
-        final IntObjectMap<DefaultStream> removeAllChildren() {
+        final ChildrenMap removeAllChildren() {
             totalChildWeights = 0;
             prioritizableForTree = isPrioritizable() ? 1 : 0;
-            IntObjectMap<DefaultStream> prevChildren = children;
-            children = PrimitiveCollections.emptyIntObjectMap();
+            ChildrenMap prevChildren = children;
+            children = new LazyChildrenMap(this);
             return prevChildren;
         }
 
@@ -567,9 +564,6 @@ public class DefaultHttp2Connection implements Http2Connection {
                     child.takeChild(grandchild, false, events);
                 }
             }
-
-            // Lazily initialize the children to save object allocations.
-            initChildrenIfEmpty();
 
             if (children.put(child.id(), child) == null) {
                 totalChildWeights += child.weight();
@@ -615,6 +609,111 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     /**
+     * Extracts the map interface used by {@link DefaultStream} to track children.
+     */
+    private interface ChildrenMap {
+        int size();
+        boolean isEmpty();
+        void clear();
+        Collection<? extends DefaultStream> values();
+        Http2Stream get(int streamId);
+        Http2Stream remove(int streamId);
+        Http2Stream put(int id, DefaultStream stream);
+    }
+
+    /**
+     * A means to lazily instantiate a real map upon the first usage which writes to the map. This allows the user
+     * of the {@link ChildrenMap} to not have to do any if checks or worry about {@code null} maps.
+     */
+    private static final class LazyChildrenMap implements ChildrenMap {
+        private final DefaultStream lazyStream;
+        public LazyChildrenMap(DefaultStream lazyStream) {
+            this.lazyStream = lazyStream;
+        }
+
+        @Override
+        public int size() {
+            return 0;
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return true;
+        }
+
+        @Override
+        public void clear() {
+        }
+
+        @Override
+        public Collection<? extends DefaultStream> values() {
+            return Collections.emptyList();
+        }
+
+        @Override
+        public Http2Stream get(int streamId) {
+            return null;
+        }
+
+        @Override
+        public Http2Stream remove(int streamId) {
+            return null;
+        }
+
+        @Override
+        public Http2Stream put(int id, DefaultStream stream) {
+            // Now that we are writing to the map we actually have to create it.
+            lazyStream.children = new DefaultChildMap();
+            return lazyStream.children.put(id, stream);
+        }
+    }
+
+    /**
+     * Default implementation of the {@link ChildrenMap} backed by a {@link IntObjectHashMap}.
+     */
+    private static final class DefaultChildMap implements ChildrenMap {
+        private final IntObjectHashMap<DefaultStream> children;
+        public DefaultChildMap() {
+            children = new IntObjectHashMap<DefaultStream>(4);
+        }
+
+        @Override
+        public int size() {
+            return children.size();
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return children.isEmpty();
+        }
+
+        @Override
+        public void clear() {
+            children.clear();
+        }
+
+        @Override
+        public Collection<? extends DefaultStream> values() {
+            return children.values();
+        }
+
+        @Override
+        public Http2Stream get(int streamId) {
+            return children.get(streamId);
+        }
+
+        @Override
+        public Http2Stream remove(int streamId) {
+            return children.remove(streamId);
+        }
+
+        @Override
+        public Http2Stream put(int id, DefaultStream stream) {
+            return children.put(id, stream);
+        }
+    }
+
+    /**
      * Allows the data map to be lazily initialized for {@link DefaultStream}.
      */
     private interface PropertyMap {
@@ -631,7 +730,7 @@ public class DefaultHttp2Connection implements Http2Connection {
     private static final class DefaultProperyMap implements PropertyMap {
         private final Map<Object, Object> data;
 
-        DefaultProperyMap(int initialSize) {
+        public DefaultProperyMap(int initialSize) {
             data = new HashMap<Object, Object>(initialSize);
         }
 
@@ -657,29 +756,27 @@ public class DefaultHttp2Connection implements Http2Connection {
      * Provides the lazy initialization for the {@link DefaultStream} data map.
      */
     private static final class LazyPropertyMap implements PropertyMap {
-        private static final int DEFAULT_INITIAL_SIZE = 4;
         private final DefaultStream stream;
 
-        LazyPropertyMap(DefaultStream stream) {
+        public LazyPropertyMap(DefaultStream stream) {
             this.stream = stream;
         }
 
         @Override
         public Object put(Object key, Object value) {
-            stream.data = new DefaultProperyMap(DEFAULT_INITIAL_SIZE);
+            // Write access requires that we create a real implementation and delgate.
+            stream.data = new DefaultProperyMap(4);
             return stream.data.put(key, value);
         }
 
         @Override
         public <V> V get(Object key) {
-            stream.data = new DefaultProperyMap(DEFAULT_INITIAL_SIZE);
-            return stream.data.get(key);
+            return null;
         }
 
         @Override
         public <V> V remove(Object key) {
-            stream.data = new DefaultProperyMap(DEFAULT_INITIAL_SIZE);
-            return stream.data.remove(key);
+            return null;
         }
     }
 
