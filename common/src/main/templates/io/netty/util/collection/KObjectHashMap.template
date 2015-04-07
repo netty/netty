@@ -286,7 +286,7 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
             // of terms, only their values; since the map is an unordered collection and
             // entries can end up in different positions in different maps that have the same
             // elements, but with different history of puts/removes, due to conflicts.
-            hash ^= @HASH_CODE@;
+            hash ^= hashCode(key);
         }
         return hash;
     }
@@ -352,8 +352,14 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
      */
     private int hashIndex(@k@ key) {
         // Allowing for negative keys by adding the length after the first mod operation.
-        int hashCode = @HASH_CODE@;
-        return (hashCode % keys.length + keys.length) % keys.length;
+        return (hashCode(key) % keys.length + keys.length) % keys.length;
+    }
+
+    /**
+     * Returns the hash code for the key.
+     */
+    private static int hashCode(@k@ key) {
+       return @HASH_CODE@;
     }
 
     /**
