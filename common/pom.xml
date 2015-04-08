@@ -31,8 +31,8 @@
   <properties>
     <collection.template.dir>${project.basedir}/src/main/templates</collection.template.dir>
     <collection.template.test.dir>${project.basedir}/src/test/templates</collection.template.test.dir>
-    <collection.src.dir>${project.build.directory}/generated-sources/collections/main/java</collection.src.dir>
-    <collection.testsrc.dir>${project.build.directory}/generated-sources/collections/test/java</collection.testsrc.dir>
+    <collection.src.dir>${project.build.directory}/generated-sources/collections/java</collection.src.dir>
+    <collection.testsrc.dir>${project.build.directory}/generated-test-sources/collections/java</collection.testsrc.dir>
   </properties>
 
   <dependencies>
@@ -122,47 +122,7 @@
               <goal>execute</goal>
             </goals>
             <configuration>
-              <source>
-                String[] templateDirs = ["${collection.template.dir}",
-                                         "${collection.template.test.dir}"]
-                String[] outputDirs = ["${collection.src.dir}",
-                                       "${collection.testsrc.dir}"]
-
-                templateDirs.eachWithIndex { templateDir, i ->
-                  convertSources templateDir, outputDirs[i]
-                }
-
-                void convertSources(String templateDir, String outputDir) {
-                  String[] keyPrimitives = ["byte", "char", "short", "int", "long"]
-                  String[] keyObjects = ["Byte", "Character", "Short", "Integer", "Long"];
-
-                  keyPrimitives.eachWithIndex { keyPrimitive, i ->
-                    convertTemplates templateDir, outputDir, keyPrimitive, keyObjects[i]
-                  }
-                }
-
-                void convertTemplates(String templateDir,
-                                      String outputDir,
-                                      String keyPrimitive,
-                                      String keyObject) {
-                  def keyName = keyPrimitive.capitalize()
-                  def replaceFrom = "(^.*)K([^.]+)\\.template\$"
-                  def replaceTo = "\\1" + keyName + "\\2.java"
-                  def hashCodeFn = keyPrimitive.equals("long") ? "(int)(key ^ (key >>> 32))" : "(int) key"
-                  ant.copy(todir: outputDir) {
-                    fileset(dir: templateDir) {
-                      include(name: "**/*.template")
-                    }
-                    filterset() {
-                      filter(token: "K", value: keyName)
-                      filter(token: "k", value: keyPrimitive)
-                      filter(token: "O", value: keyObject)
-                      filter(token: "HASH_CODE", value: hashCodeFn)
-                    }
-                    regexpmapper(from: replaceFrom, to: replaceTo)
-                  }
-                }
-              </source>
+              <source>${project.basedir}/src/main/script/codegen.groovy</source>
             </configuration>
           </execution>
         </executions>
