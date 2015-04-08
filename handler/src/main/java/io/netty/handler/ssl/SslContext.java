@@ -16,7 +16,9 @@
 
 package io.netty.handler.ssl;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 
@@ -38,11 +40,18 @@ import java.io.File;
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
+import java.security.KeyException;
+import java.security.KeyFactory;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -667,5 +676,59 @@ public abstract class SslContext {
         cipher.init(Cipher.DECRYPT_MODE, pbeKey, encryptedPrivateKeyInfo.getAlgParameters());
 
         return encryptedPrivateKeyInfo.getKeySpec(cipher);
+    }
+
+    /**
+     * Generates a new {@link KeyStore}.
+     *
+     * @param certChainFile a X.509 certificate chain file in PEM format,
+     * @param keyFile a PKCS#8 private key file in PEM format,
+     * @param keyPasswordChars the password of the {@code keyFile}.
+     *                    {@code null} if it's not password-protected.
+     * @return generated {@link KeyStore}.
+     */
+    static KeyStore buildKeyStore(File certChainFile, File keyFile, char[] keyPasswordChars)
+            throws KeyStoreException, NoSuchAlgorithmException,
+                   NoSuchPaddingException, InvalidKeySpecException, InvalidAlgorithmParameterException,
+                   CertificateException, KeyException, IOException {
+        ByteBuf encodedKeyBuf = PemReader.readPrivateKey(keyFile);
+        byte[] encodedKey = new byte[encodedKeyBuf.readableBytes()];
+        encodedKeyBuf.readBytes(encodedKey).release();
+
+        PKCS8EncodedKeySpec encodedKeySpec = generateKeySpec(keyPasswordChars, encodedKey);
+
+        PrivateKey key;
+        try {
+            key = KeyFactory.getInstance("RSA").generatePrivate(encodedKeySpec);
+        } catch (InvalidKeySpecException ignore) {
+            try {
+                key = KeyFactory.getInstance("DSA").generatePrivate(encodedKeySpec);
+            } catch (InvalidKeySpecException ignore2) {
+                try {
+                    key = KeyFactory.getInstance("EC").generatePrivate(encodedKeySpec);
+                } catch (InvalidKeySpecException e) {
+                    throw new InvalidKeySpecException("Neither RSA, DSA nor EC worked", e);
+                }
+            }
+        }
+
+        CertificateFactory cf = CertificateFactory.getInstance("X.509");
+        ByteBuf[] certs = PemReader.readCertificates(certChainFile);
+        List<Certificate> certChain = new ArrayList<Certificate>(certs.length);
+
+        try {
+            for (ByteBuf buf: certs) {
+                certChain.add(cf.generateCertificate(new ByteBufInputStream(buf)));
+            }
+        } finally {
+            for (ByteBuf buf: certs) {
+                buf.release();
+            }
+        }
+
+        KeyStore ks = KeyStore.getInstance("JKS");
+        ks.load(null, null);
+        ks.setKeyEntry("key", key, keyPasswordChars, certChain.toArray(new Certificate[certChain.size()]));
+        return ks;
     }
 }
