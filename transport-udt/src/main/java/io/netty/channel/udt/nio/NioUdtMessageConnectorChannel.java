@@ -174,6 +174,9 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel imp
         final ByteBuf byteBuf = message.content();
 
         final int messageSize = byteBuf.readableBytes();
+        if (messageSize == 0) {
+            return true;
+        }
 
         final long writtenBytes;
         if (byteBuf.nioBufferCount() == 1) {
@@ -182,18 +185,13 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel imp
             writtenBytes = javaChannel().write(byteBuf.nioBuffers());
         }
 
-        // did not write the message
-        if (writtenBytes <= 0 && messageSize > 0) {
-            return false;
-        }
-
         // wrote message completely
-        if (writtenBytes != messageSize) {
+        if (writtenBytes > 0 && writtenBytes != messageSize) {
             throw new Error(
                     "Provider error: failed to write message. Provider library should be upgraded.");
         }
 
-        return true;
+        return writtenBytes > 0;
     }
 
     @Override
