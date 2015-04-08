@@ -15,8 +15,7 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufInputStream;
+import io.netty.util.internal.EmptyArrays;
 import org.apache.tomcat.jni.SSL;
 import org.apache.tomcat.jni.SSLContext;
 
@@ -25,16 +24,8 @@ import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.io.File;
-import java.security.KeyFactory;
 import java.security.KeyStore;
-import java.security.PrivateKey;
-import java.security.cert.Certificate;
-import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.util.ArrayList;
-import java.util.List;
 
 import static io.netty.util.internal.ObjectUtil.*;
 
@@ -294,48 +285,15 @@ public final class OpenSslServerContext extends OpenSslContext {
                     throw new SSLException("failed to set certificate: " + certChainFile + " and " + keyFile, e);
                 }
                 try {
-                    KeyStore ks = KeyStore.getInstance("JKS");
-                    ks.load(null, null);
-                    CertificateFactory cf = CertificateFactory.getInstance("X.509");
-                    KeyFactory rsaKF = KeyFactory.getInstance("RSA");
-                    KeyFactory dsaKF = KeyFactory.getInstance("DSA");
+                    char[] keyPasswordChars = keyPassword == null ? EmptyArrays.EMPTY_CHARS : keyPassword.toCharArray();
 
-                    ByteBuf encodedKeyBuf = PemReader.readPrivateKey(keyFile);
-                    byte[] encodedKey = new byte[encodedKeyBuf.readableBytes()];
-                    encodedKeyBuf.readBytes(encodedKey).release();
-
-                    char[] keyPasswordChars = keyPassword.toCharArray();
-                    PKCS8EncodedKeySpec encodedKeySpec = generateKeySpec(keyPasswordChars, encodedKey);
-
-                    PrivateKey key;
-                    try {
-                        key = rsaKF.generatePrivate(encodedKeySpec);
-                    } catch (InvalidKeySpecException ignore) {
-                        key = dsaKF.generatePrivate(encodedKeySpec);
-                    }
-
-                    List<Certificate> certChain = new ArrayList<Certificate>();
-                    ByteBuf[] certs = PemReader.readCertificates(certChainFile);
-                    try {
-                        for (ByteBuf buf: certs) {
-                            certChain.add(cf.generateCertificate(new ByteBufInputStream(buf)));
-                        }
-                    } finally {
-                        for (ByteBuf buf: certs) {
-                            buf.release();
-                        }
-                    }
-
-                    ks.setKeyEntry("key", key, keyPasswordChars, certChain.toArray(new Certificate[certChain.size()]));
-
+                    KeyStore ks = buildKeyStore(certChainFile, keyFile, keyPasswordChars);
                     if (trustManagerFactory == null) {
                         // Mimic the way SSLContext.getInstance(KeyManager[], null, null) works
                         trustManagerFactory = TrustManagerFactory.getInstance(
                                 TrustManagerFactory.getDefaultAlgorithm());
-                        trustManagerFactory.init((KeyStore) null);
-                    } else {
-                        trustManagerFactory.init(ks);
                     }
+                    trustManagerFactory.init(ks);
 
                     final X509TrustManager manager = chooseTrustManager(trustManagerFactory.getTrustManagers());
 
