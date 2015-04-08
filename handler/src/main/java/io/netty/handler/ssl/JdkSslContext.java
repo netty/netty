@@ -34,19 +34,15 @@ import java.io.File;
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyException;
-import java.security.KeyFactory;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
 import java.security.Security;
 import java.security.UnrecoverableKeyException;
-import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
-import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -165,6 +161,7 @@ public abstract class JdkSslContext extends SslContext {
     /**
      * Returns the JDK {@link SSLSessionContext} object held by this context.
      */
+    @Override
     public final SSLSessionContext sessionContext() {
         if (isServer()) {
             return context().getServerSessionContext();
@@ -318,40 +315,8 @@ public abstract class JdkSslContext extends SslContext {
                     throws KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException,
                     InvalidKeySpecException, InvalidAlgorithmParameterException, IOException,
                     CertificateException, KeyException, UnrecoverableKeyException {
-        KeyStore ks = KeyStore.getInstance("JKS");
-        ks.load(null, null);
-        CertificateFactory cf = CertificateFactory.getInstance("X.509");
-        KeyFactory rsaKF = KeyFactory.getInstance("RSA");
-        KeyFactory dsaKF = KeyFactory.getInstance("DSA");
-
-        ByteBuf encodedKeyBuf = PemReader.readPrivateKey(keyFile);
-        byte[] encodedKey = new byte[encodedKeyBuf.readableBytes()];
-        encodedKeyBuf.readBytes(encodedKey).release();
-
         char[] keyPasswordChars = keyPassword == null ? EmptyArrays.EMPTY_CHARS : keyPassword.toCharArray();
-        PKCS8EncodedKeySpec encodedKeySpec = generateKeySpec(keyPasswordChars, encodedKey);
-
-        PrivateKey key;
-        try {
-            key = rsaKF.generatePrivate(encodedKeySpec);
-        } catch (InvalidKeySpecException ignore) {
-            key = dsaKF.generatePrivate(encodedKeySpec);
-        }
-
-        List<Certificate> certChain = new ArrayList<Certificate>();
-        ByteBuf[] certs = PemReader.readCertificates(certChainFile);
-        try {
-            for (ByteBuf buf: certs) {
-                certChain.add(cf.generateCertificate(new ByteBufInputStream(buf)));
-            }
-        } finally {
-            for (ByteBuf buf: certs) {
-                buf.release();
-            }
-        }
-
-        ks.setKeyEntry("key", key, keyPasswordChars, certChain.toArray(new Certificate[certChain.size()]));
-
+        KeyStore ks = buildKeyStore(certChainFile, keyFile, keyPasswordChars);
         // Set up key manager factory to use our key store
         if (kmf == null) {
             kmf = KeyManagerFactory.getInstance(keyAlgorithm);
