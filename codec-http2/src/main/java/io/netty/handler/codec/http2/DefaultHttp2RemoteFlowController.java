@@ -25,9 +25,14 @@ import static java.lang.Math.min;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Connection.StreamVisitor;
 import io.netty.handler.codec.http2.Http2Stream.State;
+import io.netty.util.internal.Iterators;
 
 import java.util.ArrayDeque;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Deque;
+import java.util.Iterator;
 
 /**
  * Basic implementation of {@link Http2RemoteFlowController}.
@@ -277,24 +282,27 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
         // This is the priority algorithm which will divide the available bytes based
         // upon stream weight relative to its peers
-        Http2Stream[] children = parent.children().toArray(new Http2Stream[parent.numChildren()]);
+        ChildCache childCache = new ChildCache(parent);
         int totalWeight = parent.totalChildWeights();
-        for (int tail = children.length; tail > 0;) {
-            int head = 0;
-            int nextTail = 0;
+        while (childCache.nextIterationSize() > 0) {
             int nextTotalWeight = 0;
             int nextConnectionWindow = connectionWindow;
-            for (; head < tail && nextConnectionWindow > 0; ++head) {
-                Http2Stream child = children[head];
+
+            for (Http2Stream child : childCache) {
+                if (nextConnectionWindow <= 0) {
+                    // The connection window has collapsed for this iteration, nothing to do.
+                    break;
+                }
+
                 state = state(child);
                 int weight = child.weight();
                 double weightRatio = weight / (double) totalWeight;
 
                 // In order to make progress toward the connection window due to possible rounding errors, we make sure
                 // that each stream (with data to send) is given at least 1 byte toward the connection window.
-                int connectionWindowChunk = Math.max(1, (int) (connectionWindow * weightRatio));
-                int bytesForTree = Math.min(nextConnectionWindow, connectionWindowChunk);
-                int bytesForChild = Math.min(state.streamableBytes(), bytesForTree);
+                int connectionWindowChunk = max(1, (int) (connectionWindow * weightRatio));
+                int bytesForTree = min(nextConnectionWindow, connectionWindowChunk);
+                int bytesForChild = min(state.streamableBytes(), bytesForTree);
 
                 if (bytesForChild > 0) {
                     state.allocate(bytesForChild);
@@ -305,8 +313,8 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                     // iteration. This is needed because we don't yet know if all the peers will be able to use
                     // all of their "fair share" of the connection window, and if they don't use it then we should
                     // divide their unused shared up for the peers who still want to send.
-                    if (state.streamableBytesForTree() > 0) {
-                        children[nextTail++] = child;
+                    if (nextConnectionWindow > 0 && state.streamableBytesForTree() > 0) {
+                        childCache.addToNextIteration(child);
                         nextTotalWeight += weight;
                     }
                 }
@@ -319,10 +327,83 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             }
             connectionWindow = nextConnectionWindow;
             totalWeight = nextTotalWeight;
-            tail = nextTail;
         }
 
         return bytesAllocated;
+    }
+
+    /**
+     * Utility class used by the priority algorithm to manage multiple iterations over the children of a given stream.
+     * This class will try to avoid copying the {@link Collection} returned by the parent {@link
+     * Http2Stream#children()}} by first iterating over the collection directly. As streams are found that require
+     * additional processing, they will be added to the next iteration buffer via {@link
+     * #addToNextIteration(Http2Stream)}. The next call to {@link #iterator()} will return an {@link Iterator} that will
+     * iterate only over those streams which were added back to the cache.
+     */
+    private final class ChildCache implements Iterable<Http2Stream> {
+        final Collection<? extends Http2Stream> children;
+        int nextTail;
+        Http2Stream[] childArray = null;
+
+        /**
+         * Creates the cache and initializes it to iterate over all children of the given parent in the next
+         * iteration.
+         */
+        ChildCache(Http2Stream parent) {
+            this.children = parent.children();
+            nextTail = children.size();
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public Iterator<Http2Stream> iterator() {
+            try {
+                if (nextTail == 0) {
+                    // Nothing to iterate over.
+                    return Collections.emptyIterator();
+                }
+
+                if (childArray != null) {
+                    // We've allocated the child array, iterate over it up to the specified tail position.
+                    return Iterators.newIterator(childArray, 0, nextTail);
+                }
+
+                if (nextTail != children.size()) {
+                    // We should never get here.
+                    throw new IllegalStateException(
+                            String.format("nextTail (%d) does not match num children (%d)", nextTail, children.size()));
+                }
+
+                // On the first iteration we use the children collection directly. Future iterations
+                // will use the childArray.
+                return (Iterator<Http2Stream>) children.iterator();
+            } finally {
+                // Re-initialize the next tail.
+                nextTail = 0;
+            }
+        }
+
+        /**
+         * Adds the given child to the collection iterated over by the next call to {@link #iterator()}.
+         */
+        void addToNextIteration(Http2Stream child) {
+            if (childArray == null) {
+                // Initial size is 1/4 the number of children.
+                int initialSize = min(max(4, children.size() / 4), children.size());
+                childArray = new Http2Stream[initialSize];
+            } else if (nextTail >= childArray.length) {
+                // Grow the array by a factor of 2.
+                childArray = Arrays.copyOf(childArray, min(children.size(), childArray.length * 2));
+            }
+            childArray[nextTail++] = child;
+        }
+
+        /**
+         * Returns the size of the collection to be iterated over by the next call to {@link #iterator()}.
+         */
+        int nextIterationSize() {
+            return nextTail;
+        }
     }
 
     /**
@@ -522,7 +603,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
                 // Write the portion of the frame.
                 writing = true;
-                needFlush |= frame.write(Math.max(0, allowedBytes));
+                needFlush |= frame.write(max(0, allowedBytes));
                 if (!cancelled && frame.size() == 0) {
                     // This frame has been fully written, remove this frame
                     // and notify it. Since we remove this frame
