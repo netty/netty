@@ -59,13 +59,13 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
 
         // Add a flow state for the connection.
         final Http2Stream connectionStream = connection.connectionStream();
-        connectionStream.setProperty(FlowState.class, new FlowState(connectionStream, initialWindowSize));
+        setState(connectionStream, new FlowState(connectionStream, initialWindowSize));
 
         // Register for notification of new streams.
         connection.addListener(new Http2ConnectionAdapter() {
             @Override
             public void onStreamAdded(Http2Stream stream) {
-                stream.setProperty(FlowState.class, new FlowState(stream, 0));
+                setState(stream, new FlowState(stream, 0));
             }
 
             @Override
@@ -195,14 +195,26 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     }
 
     private static FlowState state(Http2Stream stream) {
-        checkNotNull(stream, "stream");
-        return stream.getProperty(FlowState.class);
+        if (stream instanceof FastPropertyAccess) {
+            return ((FastPropertyAccess) stream).localFlow();
+        } else {
+            checkNotNull(stream, "stream");
+            return stream.getProperty(FlowState.class);
+        }
+    }
+
+    private static void setState(Http2Stream stream, FlowState flowState) {
+        if (stream instanceof FastPropertyAccess) {
+            ((FastPropertyAccess) stream).localFlow(flowState);
+        } else {
+            stream.setProperty(FlowState.class, flowState);
+        }
     }
 
     /**
      * Flow control window state for an individual stream.
      */
-    private final class FlowState {
+    final class FlowState {
         private final Http2Stream stream;
 
         /**
@@ -234,29 +246,29 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         private int lowerBound;
         private boolean endOfStream;
 
-        FlowState(Http2Stream stream, int initialWindowSize) {
+        private FlowState(Http2Stream stream, int initialWindowSize) {
             this.stream = stream;
             window(initialWindowSize);
             streamWindowUpdateRatio = windowUpdateRatio;
         }
 
-        int window() {
+        private int window() {
             return window;
         }
 
-        void window(int initialWindowSize) {
+        private void window(int initialWindowSize) {
             window = processedWindow = initialStreamWindowSize = initialWindowSize;
         }
 
-        void endOfStream(boolean endOfStream) {
+        private void endOfStream(boolean endOfStream) {
             this.endOfStream = endOfStream;
         }
 
-        float windowUpdateRatio() {
+        private float windowUpdateRatio() {
             return streamWindowUpdateRatio;
         }
 
-        void windowUpdateRatio(float ratio) {
+        private void windowUpdateRatio(float ratio) {
             streamWindowUpdateRatio = ratio;
         }
 
@@ -264,7 +276,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
          * Increment the initial window size for this stream.
          * @param delta The amount to increase the initial window size by.
          */
-        void incrementInitialStreamWindow(int delta) {
+        private void incrementInitialStreamWindow(int delta) {
             // Clip the delta so that the resulting initialStreamWindowSize falls within the allowed range.
             int newValue = (int) min(MAX_INITIAL_WINDOW_SIZE,
                     max(MIN_INITIAL_WINDOW_SIZE, initialStreamWindowSize + (long) delta));
@@ -278,7 +290,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
          * @param delta The amount to increment the window by.
          * @throws Http2Exception if integer overflow occurs on the window.
          */
-        void incrementFlowControlWindows(int delta) throws Http2Exception {
+        private void incrementFlowControlWindows(int delta) throws Http2Exception {
             if (delta > 0 && window > MAX_INITIAL_WINDOW_SIZE - delta) {
                 throw streamError(stream.id(), FLOW_CONTROL_ERROR,
                         "Flow control window overflowed for stream: %d", stream.id());
@@ -294,7 +306,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
          * @param dataLength The amount of data to for which this stream is no longer eligible to use for flow control.
          * @throws Http2Exception If too much data is used relative to how much is available.
          */
-        void receiveFlowControlledFrame(int dataLength) throws Http2Exception {
+        private void receiveFlowControlledFrame(int dataLength) throws Http2Exception {
             assert dataLength >= 0;
 
             // Apply the delta. Even if we throw an exception we want to have taken this delta into account.
@@ -314,7 +326,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         /**
          * Returns the processed bytes for this stream.
          */
-        void returnProcessedBytes(int delta) throws Http2Exception {
+        private void returnProcessedBytes(int delta) throws Http2Exception {
             if (processedWindow - delta < window) {
                 throw streamError(stream.id(), INTERNAL_ERROR,
                         "Attempting to return too many bytes for stream %d", stream.id());
@@ -322,7 +334,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
             processedWindow -= delta;
         }
 
-        void consumeBytes(ChannelHandlerContext ctx, int numBytes) throws Http2Exception {
+        private void consumeBytes(ChannelHandlerContext ctx, int numBytes) throws Http2Exception {
             if (stream.id() == CONNECTION_STREAM_ID) {
                 throw new UnsupportedOperationException("Returning bytes for the connection window is not supported");
             }
@@ -340,14 +352,14 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
             writeWindowUpdateIfNeeded(ctx);
         }
 
-        int unconsumedBytes() {
+        private int unconsumedBytes() {
             return processedWindow - window;
         }
 
         /**
          * Updates the flow control window for this stream if it is appropriate.
          */
-        void writeWindowUpdateIfNeeded(ChannelHandlerContext ctx) throws Http2Exception {
+        private void writeWindowUpdateIfNeeded(ChannelHandlerContext ctx) throws Http2Exception {
             if (endOfStream || initialStreamWindowSize <= 0) {
                 return;
             }
@@ -362,7 +374,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
          * Called to perform a window update for this stream (or connection). Updates the window size back
          * to the size of the initial window and sends a window update frame to the remote endpoint.
          */
-        void writeWindowUpdate(ChannelHandlerContext ctx) throws Http2Exception {
+        private void writeWindowUpdate(ChannelHandlerContext ctx) throws Http2Exception {
             // Expand the window for this stream back to the size of the initial window.
             int deltaWindowSize = initialStreamWindowSize - processedWindow;
             try {
@@ -410,5 +422,21 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
                 throw compositeException;
             }
         }
+    }
+
+    /**
+     * A {@link Http2Stream} implementation can extend from this interface to provide the
+     * {@link DefaultHttp2LocalFlowController} with fast access to the stream's {@link FlowState}.
+     */
+    interface FastPropertyAccess {
+        /**
+         * Set the {@link FlowState}.
+         */
+        void localFlow(FlowState flowState);
+
+        /**
+         * Get the {@link FlowState}.
+         */
+        FlowState localFlow();
     }
 }

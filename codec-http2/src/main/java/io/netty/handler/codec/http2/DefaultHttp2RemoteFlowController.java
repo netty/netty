@@ -49,15 +49,14 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         this.connection = checkNotNull(connection, "connection");
 
         // Add a flow state for the connection.
-        connection.connectionStream().setProperty(FlowState.class,
-                new FlowState(connection.connectionStream(), initialWindowSize));
+        setState(connection.connectionStream(), new FlowState(connection.connectionStream(), initialWindowSize));
 
         // Register for notification of new streams.
         connection.addListener(new Http2ConnectionAdapter() {
             @Override
             public void onStreamAdded(Http2Stream stream) {
                 // Just add a new flow state to the stream.
-                stream.setProperty(FlowState.class, new FlowState(stream, 0));
+                setState(stream, new FlowState(stream, 0));
             }
 
             @Override
@@ -198,8 +197,20 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     }
 
     private static FlowState state(Http2Stream stream) {
-        checkNotNull(stream, "stream");
-        return stream.getProperty(FlowState.class);
+        if (stream instanceof FastPropertyAccess) {
+            return ((FastPropertyAccess) stream).remoteFlow();
+        } else {
+            checkNotNull(stream, "stream");
+            return stream.getProperty(FlowState.class);
+        }
+    }
+
+    private static void setState(Http2Stream stream, FlowState state) {
+        if (stream instanceof FastPropertyAccess) {
+            ((FastPropertyAccess) stream).remoteFlow(state);
+        } else {
+            stream.setProperty(FlowState.class, state);
+        }
     }
 
     private FlowState connectionState() {
@@ -328,7 +339,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     /**
      * The outbound flow control state for a single stream.
      */
-    private final class FlowState {
+    final class FlowState {
         private final Deque<FlowControlled> pendingWriteQueue;
         private final Http2Stream stream;
         private int window;
@@ -340,24 +351,24 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         // Set to true if cancel() was called.
         private boolean cancelled;
 
-        FlowState(Http2Stream stream, int initialWindowSize) {
+        private FlowState(Http2Stream stream, int initialWindowSize) {
             this.stream = stream;
             window(initialWindowSize);
             pendingWriteQueue = new ArrayDeque<FlowControlled>(2);
         }
 
-        int window() {
+        private int window() {
             return window;
         }
 
-        void window(int initialWindowSize) {
+        private void window(int initialWindowSize) {
             window = initialWindowSize;
         }
 
         /**
          * Increment the number of bytes allocated to this stream by the priority algorithm
          */
-        void allocate(int bytes) {
+        private void allocate(int bytes) {
             allocated += bytes;
             // Also artificially reduce the streamable bytes for this tree to give the appearance
             // that the data has been written. This will be restored before the allocated bytes are
@@ -368,7 +379,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         /**
          * Write bytes allocated bytes for this stream.
          */
-        void writeAllocatedBytes() {
+        private void writeAllocatedBytes() {
             int numBytes = allocated;
 
             // Restore the number of streamable bytes to this branch.
@@ -382,14 +393,14 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         /**
          * Reset the number of bytes that have been allocated to this stream by the priority algorithm.
          */
-        void resetAllocated() {
+        private void resetAllocated() {
             allocated = 0;
         }
 
         /**
          * Increments the flow control window for this stream by the given delta and returns the new value.
          */
-        int incrementStreamWindow(int delta) throws Http2Exception {
+        private int incrementStreamWindow(int delta) throws Http2Exception {
             if (delta > 0 && Integer.MAX_VALUE - delta < window) {
                 throw streamError(stream.id(), FLOW_CONTROL_ERROR,
                         "Window size overflow for stream: %d", stream.id());
@@ -408,7 +419,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         /**
          * Returns the maximum writable window (minimum of the stream and connection windows).
          */
-        int writableWindow() {
+        private int writableWindow() {
             return min(window, connectionWindow());
         }
 
@@ -419,11 +430,11 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          * stream window so that when a change occurs to the connection window, these values need
          * not change (i.e. no tree traversal is required).
          */
-        int streamableBytes() {
+        private int streamableBytes() {
             return max(0, min(pendingBytes - allocated, window));
         }
 
-        int streamableBytesForTree() {
+        private int streamableBytesForTree() {
             return streamableBytesForTree;
         }
 
@@ -431,7 +442,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          * Adds the {@code frame} to the pending queue and increments the pending
          * byte count.
          */
-        void enqueueFrame(FlowControlled frame) {
+        private void enqueueFrame(FlowControlled frame) {
             incrementPendingBytes(frame.size());
             pendingWriteQueue.offer(frame);
         }
@@ -439,21 +450,21 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         /**
          * Indicates whether or not there are frames in the pending queue.
          */
-        boolean hasFrame() {
+        private boolean hasFrame() {
             return !pendingWriteQueue.isEmpty();
         }
 
         /**
          * Returns the the head of the pending queue, or {@code null} if empty.
          */
-        FlowControlled peek() {
+        private FlowControlled peek() {
             return pendingWriteQueue.peek();
         }
 
         /**
          * Clears the pending queue and writes errors for each remaining frame.
          */
-        void cancel() {
+        private void cancel() {
             cancel(null);
         }
 
@@ -462,7 +473,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          *
          * @param cause the {@link Throwable} that caused this method to be invoked.
          */
-        void cancel(Throwable cause) {
+        private void cancel(Throwable cause) {
             cancelled = true;
             // Ensure that the queue can't be modified while
             // we are writing.
@@ -484,7 +495,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          * the number of pending writes available, or because a frame does not support splitting on arbitrary
          * boundaries.
          */
-        int writeBytes(int bytes) {
+        private int writeBytes(int bytes) {
             int bytesAttempted = 0;
             while (hasFrame()) {
                 int maxBytes = min(bytes - bytesAttempted, writableWindow());
@@ -511,7 +522,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          * Note: this does not flush the {@link ChannelHandlerContext}.
          * </p>
          */
-        int write(FlowControlled frame, int allowedBytes) {
+        private int write(FlowControlled frame, int allowedBytes) {
             int before = frame.size();
             int writtenBytes = 0;
             // In case an exception is thrown we want to
@@ -556,7 +567,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          * Recursively increments the streamable bytes for this branch in the priority tree starting at the current
          * node.
          */
-        void incrementStreamableBytesForTree(int numBytes) {
+        private void incrementStreamableBytesForTree(int numBytes) {
             streamableBytesForTree += numBytes;
             if (!stream.isRoot()) {
                 state(stream.parent()).incrementStreamableBytesForTree(numBytes);
@@ -568,7 +579,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          * fit into the stream window, then {@link #incrementStreamableBytesForTree} is called to recursively update
          * this branch of the priority tree.
          */
-        void incrementPendingBytes(int numBytes) {
+        private void incrementPendingBytes(int numBytes) {
             int previouslyStreamable = streamableBytes();
             pendingBytes += numBytes;
 
@@ -581,14 +592,14 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         /**
          * If this frame is in the pending queue, decrements the number of pending bytes for the stream.
          */
-        void decrementPendingBytes(int bytes) {
+        private void decrementPendingBytes(int bytes) {
             incrementPendingBytes(-bytes);
         }
 
         /**
          * Decrement the per stream and connection flow control window by {@code bytes}.
          */
-        void decrementFlowControlWindow(int bytes) {
+        private void decrementFlowControlWindow(int bytes) {
             try {
                 int negativeBytes = -bytes;
                 connectionState().incrementStreamWindow(negativeBytes);
@@ -603,9 +614,26 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          * Discards this {@link FlowControlled}, writing an error. If this frame is in the pending queue,
          * the unwritten bytes are removed from this branch of the priority tree.
          */
-        void writeError(FlowControlled frame, Http2Exception cause) {
+        private void writeError(FlowControlled frame, Http2Exception cause) {
             decrementPendingBytes(frame.size());
             frame.error(cause);
         }
+    }
+
+    /**
+     * A {@link Http2Stream} implementation can extend from this interface to provide the
+     * {@link DefaultHttp2RemoteFlowController} with fast access to the stream's {@link FlowState}.
+     */
+    interface FastPropertyAccess {
+
+        /**
+         * Set the {@link FlowState}.
+         */
+        void remoteFlow(FlowState flowState);
+
+        /**
+         * Get the {@link FlowState}.
+         */
+        FlowState remoteFlow();
     }
 }
