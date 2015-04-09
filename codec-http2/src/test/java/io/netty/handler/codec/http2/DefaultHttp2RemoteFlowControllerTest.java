@@ -256,7 +256,6 @@ public class DefaultHttp2RemoteFlowControllerTest {
         final int initWindow = 20;
         final int secondWindowSize = 10;
         controller.initialWindowSize(initWindow);
-        Http2Stream streamA = connection.stream(STREAM_A);
 
         FakeFlowControlled data1 = new FakeFlowControlled(initWindow);
         FakeFlowControlled data2 = new FakeFlowControlled(5);
@@ -267,7 +266,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         // Make the window size for stream A negative
         controller.initialWindowSize(initWindow - secondWindowSize);
-        assertEquals(-secondWindowSize, controller.windowSize(streamA));
+        assertEquals(-secondWindowSize, window(STREAM_A));
 
         // Queue up a write. It should not be written now because the window is negative
         sendData(STREAM_A, data2);
@@ -275,12 +274,12 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         // Open the window size back up a bit (no send should happen)
         incrementWindowSize(STREAM_A, 5);
-        assertEquals(-5, controller.windowSize(streamA));
+        assertEquals(-5, window(STREAM_A));
         data2.assertNotWritten();
 
         // Open the window size back up a bit (no send should happen)
         incrementWindowSize(STREAM_A, 5);
-        assertEquals(0, controller.windowSize(streamA));
+        assertEquals(0, window(STREAM_A));
         data2.assertNotWritten();
 
         // Open the window size back up and allow the write to happen
@@ -1223,7 +1222,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
     }
 
     private int window(int streamId) throws Http2Exception {
-        return controller.windowSize(stream(streamId));
+        return stream(streamId).remoteFlowState().windowSize();
     }
 
     private void incrementWindowSize(int streamId, int delta) throws Http2Exception {

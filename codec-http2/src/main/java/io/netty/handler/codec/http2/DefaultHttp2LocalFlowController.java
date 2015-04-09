@@ -30,6 +30,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
+import io.netty.handler.codec.http2.Http2Stream.FlowControlState;
 
 /**
  * Basic implementation of {@link Http2LocalFlowController}.
@@ -57,14 +58,14 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         windowUpdateRatio(windowUpdateRatio);
 
         // Add a flow state for the connection.
-        final Http2Stream connectionStream = connection.connectionStream();
-        connectionStream.setProperty(FlowState.class, new FlowState(connectionStream, initialWindowSize));
+        connection.connectionStream().localFlowState(
+                new DefaultFlowState(connection.connectionStream(), initialWindowSize));
 
         // Register for notification of new streams.
         connection.addListener(new Http2ConnectionAdapter() {
             @Override
             public void onStreamAdded(Http2Stream stream) {
-                stream.setProperty(FlowState.class, new FlowState(stream, 0));
+                stream.localFlowState(new DefaultFlowState(stream, 0));
             }
 
             @Override
@@ -92,14 +93,9 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     }
 
     @Override
-    public int windowSize(Http2Stream stream) {
-        return state(stream).window();
-    }
-
-    @Override
     public void incrementWindowSize(ChannelHandlerContext ctx, Http2Stream stream, int delta) throws Http2Exception {
         checkNotNull(ctx, "ctx");
-        FlowState state = state(stream);
+        DefaultFlowState state = state(stream);
         // Just add the delta to the stream-specific initial window size so that the next time the window
         // expands it will grow to the new initial size.
         state.incrementInitialStreamWindow(delta);
@@ -160,7 +156,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
      */
     public void windowUpdateRatio(ChannelHandlerContext ctx, Http2Stream stream, float ratio) throws Http2Exception {
         checkValidRatio(ratio);
-        FlowState state = state(stream);
+        DefaultFlowState state = state(stream);
         state.windowUpdateRatio(ratio);
         state.writeWindowUpdateIfNeeded(ctx);
     }
@@ -184,24 +180,23 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         connectionState().receiveFlowControlledFrame(dataLength);
 
         // Apply the stream-level flow control
-        FlowState state = state(stream);
+        DefaultFlowState state = state(stream);
         state.endOfStream(endOfStream);
         state.receiveFlowControlledFrame(dataLength);
     }
 
-    private FlowState connectionState() {
-        return state(connection.connectionStream());
+    private DefaultFlowState connectionState() {
+        return (DefaultFlowState) connection.connectionStream().localFlowState();
     }
 
-    private static FlowState state(Http2Stream stream) {
-        checkNotNull(stream, "stream");
-        return stream.getProperty(FlowState.class);
+    private static DefaultFlowState state(Http2Stream stream) {
+        return (DefaultFlowState) checkNotNull(stream, "stream").localFlowState();
     }
 
     /**
      * Flow control window state for an individual stream.
      */
-    private final class FlowState {
+    private final class DefaultFlowState implements FlowControlState {
         private final Http2Stream stream;
 
         /**
@@ -233,14 +228,20 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         private int lowerBound;
         private boolean endOfStream;
 
-        FlowState(Http2Stream stream, int initialWindowSize) {
+        DefaultFlowState(Http2Stream stream, int initialWindowSize) {
             this.stream = stream;
             window(initialWindowSize);
             streamWindowUpdateRatio = windowUpdateRatio;
         }
 
-        int window() {
+        @Override
+        public int windowSize() {
             return window;
+        }
+
+        @Override
+        public int initialWindowSize() {
+            return initialStreamWindowSize;
         }
 
         void window(int initialWindowSize) {
@@ -330,7 +331,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
             }
 
             // Return bytes to the connection window
-            FlowState connectionState = connectionState();
+            DefaultFlowState connectionState = connectionState();
             connectionState.returnProcessedBytes(numBytes);
             connectionState.writeWindowUpdateIfNeeded(ctx);
 
@@ -392,7 +393,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         public boolean visit(Http2Stream stream) throws Http2Exception {
             try {
                 // Increment flow control window first so state will be consistent if overflow is detected.
-                FlowState state = state(stream);
+                DefaultFlowState state = state(stream);
                 state.incrementFlowControlWindows(delta);
                 state.incrementInitialStreamWindow(delta);
             } catch (StreamException e) {
