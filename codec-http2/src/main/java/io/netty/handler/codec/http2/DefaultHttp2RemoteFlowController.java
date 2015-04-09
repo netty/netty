@@ -348,8 +348,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
                 // Iterate over the children that are currently still hungry.
                 for (int head = 0; head < tail && nextConnectionWindow > 0; ++head) {
-                    Http2Stream child = stillHungry[head];
-                    if (!visit(child)) {
+                    if (!visit(stillHungry[head])) {
                         // The connection window has collapsed, break out of the loop.
                         break;
                     }
@@ -375,11 +374,8 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         void allocateSpace(int index) {
             if (stillHungry == null) {
                 // Initial size is 1/4 the number of children.
-                int minSize = max(index + 1, 4);
-                int desiredSize = maxSize / 4;
-                int initialSize = min(max(minSize, desiredSize), maxSize);
-                stillHungry = new Http2Stream[initialSize];
-            } else if (index >= stillHungry.length) {
+                stillHungry = new Http2Stream[max(2, maxSize / 4)];
+            } else if (index == stillHungry.length) {
                 // Grow the array by a factor of 2.
                 stillHungry = Arrays.copyOf(stillHungry, min(maxSize, stillHungry.length * 2));
             }
