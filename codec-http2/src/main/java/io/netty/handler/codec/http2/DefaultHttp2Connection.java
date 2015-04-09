@@ -239,7 +239,6 @@ public class DefaultHttp2Connection implements Http2Connection {
         private State state = IDLE;
         private short weight = DEFAULT_PRIORITY_WEIGHT;
         private DefaultStream parent;
-        // TODO(nathanmittler): We no longer need a map. LinkedList?
         private IntObjectMap<DefaultStream> children = PrimitiveCollections.emptyIntObjectMap();
         private int totalChildWeights;
         private int prioritizableForTree = 1;
