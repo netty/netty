@@ -251,7 +251,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
      * @param connectionWindow The connection window this is available for use at this point in the tree.
      * @return An object summarizing the write and allocation results.
      */
-    private static int allocateBytesForTree(Http2Stream parent, int connectionWindow) throws Http2Exception {
+    static int allocateBytesForTree(Http2Stream parent, int connectionWindow) throws Http2Exception {
         FlowState state = state(parent);
         if (state.streamableBytesForTree() <= 0) {
             return 0;
