@@ -36,11 +36,6 @@ public final class NoopHttp2LocalFlowController implements Http2LocalFlowControl
     }
 
     @Override
-    public int windowSize(Http2Stream stream) {
-        return MAX_INITIAL_WINDOW_SIZE;
-    }
-
-    @Override
     public void incrementWindowSize(ChannelHandlerContext ctx, Http2Stream stream, int delta)
             throws Http2Exception {
     }
