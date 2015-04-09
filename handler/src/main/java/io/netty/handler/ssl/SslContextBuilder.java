@@ -94,7 +94,7 @@ public final class SslContextBuilder {
     }
 
     /**
-     * Trusted manager for verifying the remote endpoint's certificate. Using a {@code
+     * Trusted manager for verifying the remote endpoint's certificate. Using a {@link
      * TrustManagerFactory} is only supported for {@link SslProvider#JDK}; for other providers,
      * you must use {@link #trustManager(File)}. {@code null} uses the system default.
      */
