@@ -246,6 +246,8 @@ public class DefaultHttp2Connection implements Http2Connection {
         private int prioritizableForTree = 1;
         private boolean resetSent;
         private PropertyMap data;
+        private FlowControlState localFlowState;
+        private FlowControlState remoteFlowState;
 
         DefaultStream(int id) {
             this.id = id;
@@ -260,6 +262,26 @@ public class DefaultHttp2Connection implements Http2Connection {
         @Override
         public final State state() {
             return state;
+        }
+
+        @Override
+        public FlowControlState localFlowState() {
+            return localFlowState;
+        }
+
+        @Override
+        public void localFlowState(FlowControlState state) {
+            localFlowState = state;
+        }
+
+        @Override
+        public FlowControlState remoteFlowState() {
+            return remoteFlowState;
+        }
+
+        @Override
+        public void remoteFlowState(FlowControlState state) {
+            remoteFlowState = state;
         }
 
         @Override
@@ -917,6 +939,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         private void addStream(DefaultStream stream) {
             // Add the stream to the map and priority tree.
             streamMap.put(stream.id(), stream);
+
             List<ParentChangedEvent> events = new ArrayList<ParentChangedEvent>(1);
             connectionStream.takeChild(stream, false, events);
 
