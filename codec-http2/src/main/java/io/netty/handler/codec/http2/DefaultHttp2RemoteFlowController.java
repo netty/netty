@@ -364,14 +364,14 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          * fit within the current connection window).
          */
         void stillHungry(Http2Stream child) {
-            allocateSpace(nextTail);
+            ensureSpaceIsAllocated(nextTail);
             stillHungry[nextTail++] = child;
         }
 
         /**
          * Ensures that the {@link #stillHungry} array is properly sized to hold the given index.
          */
-        void allocateSpace(int index) {
+        void ensureSpaceIsAllocated(int index) {
             if (stillHungry == null) {
                 // Initial size is 1/4 the number of children.
                 stillHungry = new Http2Stream[max(2, maxSize / 4)];
