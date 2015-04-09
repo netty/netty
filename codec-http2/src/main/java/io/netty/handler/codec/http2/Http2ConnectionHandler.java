@@ -33,7 +33,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.handler.codec.http2.Http2Connection.StreamVisitor;
 import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -149,7 +148,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                 // Check if there are streams to avoid the overhead of creating the ChannelFuture.
                 if (connection.numActiveStreams() > 0) {
                     final ChannelFuture future = ctx.newSucceededFuture();
-                    connection.forEachActiveStream(new StreamVisitor() {
+                    connection.forEachActiveStream(new Http2StreamVisitor() {
                         @Override
                         public boolean visit(Http2Stream stream) throws Http2Exception {
                             closeStream(stream, future);
