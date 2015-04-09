@@ -50,11 +50,11 @@ import java.util.List;
  * {@link Http2LocalFlowController}
  */
 public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http2LifecycleManager {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Http2ConnectionHandler.class);
     private final Http2ConnectionDecoder decoder;
     private final Http2ConnectionEncoder encoder;
     private ChannelFutureListener closeListener;
     private BaseDecoder byteDecoder;
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Http2ConnectionHandler.class);
 
     public Http2ConnectionHandler(boolean server, Http2FrameListener listener) {
         this(new DefaultHttp2Connection(server), listener);
