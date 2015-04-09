@@ -24,14 +24,14 @@ import org.junit.Test;
 import static io.netty.util.ReferenceCountUtil.releaseLater;
 import static org.junit.Assert.*;
 
-public class ReplayingDecoderBufferTest {
+public class ReplayingDecoderByteBufTest {
 
     /**
      * See https://github.com/netty/netty/issues/445
      */
     @Test
     public void testGetUnsignedByte() {
-        ReplayingDecoderBuffer buffer = new ReplayingDecoderBuffer(releaseLater(Unpooled.copiedBuffer("TestBuffer",
+        ReplayingDecoderByteBuf buffer = new ReplayingDecoderByteBuf(releaseLater(Unpooled.copiedBuffer("TestBuffer",
                 CharsetUtil.ISO_8859_1)));
 
         boolean error;
@@ -54,7 +54,7 @@ public class ReplayingDecoderBufferTest {
      */
     @Test
     public void testGetByte() {
-        ReplayingDecoderBuffer buffer = new ReplayingDecoderBuffer(releaseLater(Unpooled.copiedBuffer("TestBuffer",
+        ReplayingDecoderByteBuf buffer = new ReplayingDecoderByteBuf(releaseLater(Unpooled.copiedBuffer("TestBuffer",
                 CharsetUtil.ISO_8859_1)));
 
         boolean error;
@@ -81,7 +81,7 @@ public class ReplayingDecoderBufferTest {
         while (buf.isWritable()) {
             buf.writeBoolean(true);
         }
-        ReplayingDecoderBuffer buffer = new ReplayingDecoderBuffer(buf);
+        ReplayingDecoderByteBuf buffer = new ReplayingDecoderByteBuf(buf);
 
         boolean error;
         int i = 0;
