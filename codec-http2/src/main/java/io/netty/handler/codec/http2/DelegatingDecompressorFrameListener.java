@@ -304,11 +304,6 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         }
 
         @Override
-        public int windowSize(Http2Stream stream) {
-            return flowController.windowSize(stream);
-        }
-
-        @Override
         public void incrementWindowSize(ChannelHandlerContext ctx, Http2Stream stream, int delta)
                 throws Http2Exception {
             flowController.incrementWindowSize(ctx, stream, delta);

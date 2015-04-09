@@ -40,16 +40,6 @@ public interface Http2FlowController {
     int initialWindowSize();
 
     /**
-     * Gets the number of bytes remaining in the flow control window size for the given stream.
-     *
-     * @param stream The subject stream. Use {@link Http2Connection#connectionStream()} for
-     *            requesting the size of the connection window.
-     * @return the current size of the flow control window.
-     * @throws IllegalArgumentException if the given stream does not exist.
-     */
-    int windowSize(Http2Stream stream);
-
-    /**
      * Increments the size of the stream's flow control window by the given delta.
      * <p>
      * In the case of a {@link Http2RemoteFlowController} this is called upon receipt of a
