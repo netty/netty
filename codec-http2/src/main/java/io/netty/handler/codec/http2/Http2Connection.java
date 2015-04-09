@@ -45,7 +45,7 @@ public interface Http2Connection {
 
         /**
          * Notifies the listener that the given stream is now {@code CLOSED} in both directions and will no longer
-         * be returned by {@link #activeStreams()}.
+         * be accessible via {@link #forEachActiveStream(Http2StreamVisitor)}.
          */
         void onStreamClosed(Http2Stream stream);
 
@@ -263,20 +263,7 @@ public interface Http2Connection {
      * @param visitor The visitor which will visit each active stream.
      * @return The stream before iteration stopped or {@code null} if iteration went past the end.
      */
-    Http2Stream forEachActiveStream(StreamVisitor visitor) throws Http2Exception;
-
-    /**
-     * A visitor that allows iteration over a collection of streams.
-     */
-    interface StreamVisitor {
-        /**
-         * @return <ul>
-         *         <li>{@code true} if the processor wants to continue the loop and handle the entry.</li>
-         *         <li>{@code false} if the processor wants to stop handling headers and abort the loop.</li>
-         *         </ul>
-         */
-        boolean visit(Http2Stream stream) throws Http2Exception;
-    }
+    Http2Stream forEachActiveStream(Http2StreamVisitor visitor) throws Http2Exception;
 
     /**
      * Indicates whether or not the local endpoint for this connection is the server.
