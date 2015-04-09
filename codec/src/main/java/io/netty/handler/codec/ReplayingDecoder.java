@@ -269,7 +269,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
 
     static final Signal REPLAY = Signal.valueOf(ReplayingDecoder.class.getName() + ".REPLAY");
 
-    private final ReplayingDecoderBuffer replayable = new ReplayingDecoderBuffer();
+    private final ReplayingDecoderByteBuf replayable = new ReplayingDecoderByteBuf();
     private S state;
     private int checkpoint = -1;
 
