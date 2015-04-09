@@ -34,7 +34,7 @@ import java.nio.charset.Charset;
 /**
  * Special {@link ByteBuf} implementation which is used by the {@link ReplayingDecoder}
  */
-final class ReplayingDecoderBuffer extends ByteBuf {
+final class ReplayingDecoderByteBuf extends ByteBuf {
 
     private static final Signal REPLAY = ReplayingDecoder.REPLAY;
 
@@ -42,15 +42,15 @@ final class ReplayingDecoderBuffer extends ByteBuf {
     private boolean terminated;
     private SwappedByteBuf swapped;
 
-    static final ReplayingDecoderBuffer EMPTY_BUFFER = new ReplayingDecoderBuffer(Unpooled.EMPTY_BUFFER);
+    static final ReplayingDecoderByteBuf EMPTY_BUFFER = new ReplayingDecoderByteBuf(Unpooled.EMPTY_BUFFER);
 
     static {
         EMPTY_BUFFER.terminate();
     }
 
-    ReplayingDecoderBuffer() { }
+    ReplayingDecoderByteBuf() { }
 
-    ReplayingDecoderBuffer(ByteBuf buffer) {
+    ReplayingDecoderByteBuf(ByteBuf buffer) {
         setCumulation(buffer);
     }
 
