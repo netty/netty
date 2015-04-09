@@ -28,7 +28,6 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http2.Http2Connection.StreamVisitor;
 import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
 
@@ -381,7 +380,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     /**
      * Provides a means to iterate over all active streams and increment the flow control windows.
      */
-    private static final class WindowUpdateVisitor implements StreamVisitor {
+    private static final class WindowUpdateVisitor implements Http2StreamVisitor {
         private CompositeStreamException compositeException;
         private final int delta;
 

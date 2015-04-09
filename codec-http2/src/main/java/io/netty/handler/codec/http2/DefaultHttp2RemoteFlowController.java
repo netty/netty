@@ -22,8 +22,8 @@ import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http2.Http2Connection.StreamVisitor;
 import io.netty.handler.codec.http2.Http2Stream.State;
 
 import java.util.ArrayDeque;
@@ -33,7 +33,7 @@ import java.util.Deque;
  * Basic implementation of {@link Http2RemoteFlowController}.
  */
 public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowController {
-    private static final StreamVisitor WRITE_ALLOCATED_BYTES = new StreamVisitor() {
+    private static final Http2StreamVisitor WRITE_ALLOCATED_BYTES = new Http2StreamVisitor() {
         @Override
         public boolean visit(Http2Stream stream) {
             state(stream).writeAllocatedBytes();
@@ -124,7 +124,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
         final int delta = newWindowSize - initialWindowSize;
         initialWindowSize = newWindowSize;
-        connection.forEachActiveStream(new StreamVisitor() {
+        connection.forEachActiveStream(new Http2StreamVisitor() {
             @Override
             public boolean visit(Http2Stream stream) throws Http2Exception {
                 // Verify that the maximum value is not exceeded by this change.
@@ -259,25 +259,19 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         // If the number of streamable bytes for this tree will fit in the connection window
         // then there is no need to prioritize the bytes...everyone sends what they have
         if (state.streamableBytesForTree() <= connectionWindow) {
-            for (Http2Stream child : parent.children()) {
-                state = state(child);
-                int bytesForChild = state.streamableBytes();
-
-                if (bytesForChild > 0 || state.hasFrame()) {
-                    state.allocate(bytesForChild);
-                    bytesAllocated += bytesForChild;
-                    connectionWindow -= bytesForChild;
-                }
-                int childBytesAllocated = allocateBytesForTree(child, connectionWindow);
-                bytesAllocated += childBytesAllocated;
-                connectionWindow -= childBytesAllocated;
+            try {
+                AllocationVisitor visitor = new AllocationVisitor(connectionWindow);
+                parent.forEachChild(visitor);
+                return visitor.bytesAllocated;
+            } catch (Http2Exception e) {
+                // Should never happen.
+                throw new RuntimeException(e);
             }
-            return bytesAllocated;
         }
 
         // This is the priority algorithm which will divide the available bytes based
         // upon stream weight relative to its peers
-        Http2Stream[] children = parent.children().toArray(new Http2Stream[parent.numChildren()]);
+        Http2Stream[] children = getChildrenAsArray(parent);
         int totalWeight = parent.totalChildWeights();
         for (int tail = children.length; tail > 0;) {
             int head = 0;
@@ -323,6 +317,56 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
 
         return bytesAllocated;
+    }
+
+    /**
+     * Converts the children to an array.
+     */
+    private static Http2Stream[] getChildrenAsArray(Http2Stream parent) {
+        try {
+            final Http2Stream[] children = new Http2Stream[parent.numChildren()];
+            parent.forEachChild(new Http2StreamVisitor() {
+                int ix = 0;
+                @Override
+                public boolean visit(Http2Stream stream) throws Http2Exception {
+                    children[ix++] = stream;
+                    return true;
+                }
+            });
+
+            return children;
+        } catch (Http2Exception e) {
+            // This will never happen.
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * A {@link Http2StreamVisitor} that allocates all of the bytes for each child stream.
+     */
+    private final class AllocationVisitor implements Http2StreamVisitor {
+        int bytesAllocated;
+        int connectionWindow;
+
+        AllocationVisitor(int connectionWindow) {
+            this.connectionWindow = connectionWindow;
+        }
+
+        @Override
+        public boolean visit(Http2Stream child) {
+            FlowState childState = state(child);
+            int bytesForChild = childState.streamableBytes();
+
+            if (bytesForChild > 0 || childState.hasFrame()) {
+                childState.allocate(bytesForChild);
+                bytesAllocated += bytesForChild;
+                connectionWindow -= bytesForChild;
+            }
+            int childBytesAllocated = allocateBytesForTree(child, connectionWindow);
+            bytesAllocated += childBytesAllocated;
+            connectionWindow -= childBytesAllocated;
+            return true;
+        }
     }
 
     /**

@@ -33,6 +33,7 @@ import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http2.Http2StreamRemovalPolicy.Action;
 import io.netty.util.collection.IntObjectHashMap;
@@ -42,7 +43,6 @@ import io.netty.util.internal.PlatformDependent;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -142,7 +142,7 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     @Override
-    public Http2Stream forEachActiveStream(StreamVisitor visitor) throws Http2Exception {
+    public Http2Stream forEachActiveStream(Http2StreamVisitor visitor) throws Http2Exception {
         return activeStreams.forEachActiveStream(visitor);
     }
 
@@ -169,7 +169,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         try {
-            forEachActiveStream(new StreamVisitor() {
+            forEachActiveStream(new Http2StreamVisitor() {
                 @Override
                 public boolean visit(Http2Stream stream) {
                     if (stream.id() > lastKnownStream && localEndpoint.createdStreamId(stream.id())) {
@@ -196,7 +196,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         try {
-            forEachActiveStream(new StreamVisitor() {
+            forEachActiveStream(new Http2StreamVisitor() {
                 @Override
                 public boolean visit(Http2Stream stream) {
                     if (stream.id() > lastKnownStream && remoteEndpoint.createdStreamId(stream.id())) {
@@ -239,6 +239,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         private State state = IDLE;
         private short weight = DEFAULT_PRIORITY_WEIGHT;
         private DefaultStream parent;
+        // TODO(nathanmittler): We no longer need a map. LinkedList?
         private IntObjectMap<DefaultStream> children = PrimitiveCollections.emptyIntObjectMap();
         private int totalChildWeights;
         private int prioritizableForTree = 1;
@@ -334,18 +335,16 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public final Collection<? extends Http2Stream> children() {
-            return children.values();
-        }
-
-        @Override
-        public final boolean hasChild(int streamId) {
-            return child(streamId) != null;
-        }
-
-        @Override
-        public final Http2Stream child(int streamId) {
-            return children.get(streamId);
+        public Http2Stream forEachChild(Http2StreamVisitor visitor) throws Http2Exception {
+            Http2Stream resultStream = null;
+            for (IntObjectHashMap.Entry<DefaultStream> entry : children.entries()) {
+                Http2Stream stream = entry.value();
+                if (!visitor.visit(stream)) {
+                    resultStream = stream;
+                    break;
+                }
+            }
+            return resultStream;
         }
 
         @Override
@@ -1020,7 +1019,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             }
         }
 
-        public Http2Stream forEachActiveStream(StreamVisitor visitor) throws Http2Exception {
+        public Http2Stream forEachActiveStream(Http2StreamVisitor visitor) throws Http2Exception {
             ++pendingIterations;
             Http2Stream resultStream = null;
             try {
