@@ -33,6 +33,7 @@ import static org.mockito.Mockito.verify;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http2.Http2Connection.Endpoint;
 import io.netty.handler.codec.http2.Http2Stream.State;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -924,7 +925,8 @@ public class DefaultHttp2ConnectionTest {
             });
             return streamHolder.value;
         } catch (Http2Exception e) {
-            throw new RuntimeException(e);
+            PlatformDependent.throwException(e);
+            return null;
         }
     }
 }

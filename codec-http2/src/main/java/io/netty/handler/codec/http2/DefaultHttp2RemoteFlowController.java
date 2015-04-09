@@ -27,6 +27,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Stream.State;
 
 import java.util.ArrayDeque;
+import java.util.Arrays;
 import java.util.Deque;
 
 /**
@@ -250,110 +251,155 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
      * @param connectionWindow The connection window this is available for use at this point in the tree.
      * @return An object summarizing the write and allocation results.
      */
-    private int allocateBytesForTree(Http2Stream parent, int connectionWindow) {
+    private static int allocateBytesForTree(Http2Stream parent, int connectionWindow) throws Http2Exception {
         FlowState state = state(parent);
         if (state.streamableBytesForTree() <= 0) {
             return 0;
         }
-        int bytesAllocated = 0;
         // If the number of streamable bytes for this tree will fit in the connection window
         // then there is no need to prioritize the bytes...everyone sends what they have
         if (state.streamableBytesForTree() <= connectionWindow) {
-            try {
-                AllocationVisitor visitor = new AllocationVisitor(connectionWindow);
-                parent.forEachChild(visitor);
-                return visitor.bytesAllocated;
-            } catch (Http2Exception e) {
-                // Should never happen.
-                throw new RuntimeException(e);
-            }
+            SimpleChildFeeder childFeeder = new SimpleChildFeeder(connectionWindow);
+            parent.forEachChild(childFeeder);
+            return childFeeder.bytesAllocated;
         }
 
-        // This is the priority algorithm which will divide the available bytes based
-        // upon stream weight relative to its peers
-        Http2Stream[] children = getChildrenAsArray(parent);
-        int totalWeight = parent.totalChildWeights();
-        for (int tail = children.length; tail > 0;) {
-            int head = 0;
-            int nextTail = 0;
-            int nextTotalWeight = 0;
-            int nextConnectionWindow = connectionWindow;
-            for (; head < tail && nextConnectionWindow > 0; ++head) {
-                Http2Stream child = children[head];
-                state = state(child);
-                int weight = child.weight();
-                double weightRatio = weight / (double) totalWeight;
+        ChildFeeder childFeeder = new ChildFeeder(parent, connectionWindow);
+        // Iterate once over all children of this parent and try to feed all the children.
+        parent.forEachChild(childFeeder);
 
-                // In order to make progress toward the connection window due to possible rounding errors, we make sure
-                // that each stream (with data to send) is given at least 1 byte toward the connection window.
-                int connectionWindowChunk = Math.max(1, (int) (connectionWindow * weightRatio));
-                int bytesForTree = Math.min(nextConnectionWindow, connectionWindowChunk);
-                int bytesForChild = Math.min(state.streamableBytes(), bytesForTree);
+        // Now feed any remaining children that are still hungry until the connection
+        // window collapses.
+        childFeeder.feedHungryChildren();
 
-                if (bytesForChild > 0) {
-                    state.allocate(bytesForChild);
-                    bytesAllocated += bytesForChild;
-                    nextConnectionWindow -= bytesForChild;
-                    bytesForTree -= bytesForChild;
-                    // If this subtree still wants to send then re-insert into children list and re-consider for next
-                    // iteration. This is needed because we don't yet know if all the peers will be able to use
-                    // all of their "fair share" of the connection window, and if they don't use it then we should
-                    // divide their unused shared up for the peers who still want to send.
-                    if (state.streamableBytesForTree() > 0) {
-                        children[nextTail++] = child;
-                        nextTotalWeight += weight;
+        return childFeeder.bytesAllocated;
+    }
+
+    /**
+     * A {@link Http2StreamVisitor} that performs the HTTP/2 priority algorithm to distribute the available connection
+     * window appropriately to the children of a given stream.
+     */
+    private static final class ChildFeeder implements Http2StreamVisitor {
+        final int maxSize;
+        int totalWeight;
+        int connectionWindow;
+        int nextTotalWeight;
+        int nextConnectionWindow;
+        int bytesAllocated;
+        Http2Stream[] stillHungry;
+        int nextTail;
+
+        ChildFeeder(Http2Stream parent, int connectionWindow) {
+            maxSize = parent.numChildren();
+            totalWeight = parent.totalChildWeights();
+            this.connectionWindow = connectionWindow;
+            this.nextConnectionWindow = connectionWindow;
+        }
+
+        @Override
+        public boolean visit(Http2Stream child) throws Http2Exception {
+            FlowState state = state(child);
+            int weight = child.weight();
+            double weightRatio = weight / (double) totalWeight;
+
+            // In order to make progress toward the connection window due to possible rounding errors, we make sure
+            // that each stream (with data to send) is given at least 1 byte toward the connection window.
+            int connectionWindowChunk = Math.max(1, (int) (connectionWindow * weightRatio));
+            int bytesForTree = Math.min(nextConnectionWindow, connectionWindowChunk);
+            int bytesForChild = Math.min(state.streamableBytes(), bytesForTree);
+
+            if (bytesForChild > 0) {
+                state.allocate(bytesForChild);
+                bytesAllocated += bytesForChild;
+                nextConnectionWindow -= bytesForChild;
+                bytesForTree -= bytesForChild;
+                // If this subtree still wants to send then re-insert into children list and re-consider for next
+                // iteration. This is needed because we don't yet know if all the peers will be able to use
+                // all of their "fair share" of the connection window, and if they don't use it then we should
+                // divide their unused shared up for the peers who still want to send.
+                if (nextConnectionWindow > 0 && state.streamableBytesForTree() > 0) {
+                    stillHungry(child);
+                    nextTotalWeight += weight;
+                }
+            }
+
+            if (bytesForTree > 0) {
+                int childBytesAllocated = allocateBytesForTree(child, bytesForTree);
+                bytesAllocated += childBytesAllocated;
+                nextConnectionWindow -= childBytesAllocated;
+            }
+
+            return nextConnectionWindow > 0;
+        }
+
+        void feedHungryChildren() throws Http2Exception {
+            if (stillHungry == null) {
+                // There are no hungry children to feed.
+                return;
+            }
+
+            totalWeight = nextTotalWeight;
+            connectionWindow = nextConnectionWindow;
+
+            // Loop until there are not bytes left to stream or the connection window has collapsed.
+            for (int tail = nextTail; tail > 0 && connectionWindow > 0;) {
+                nextTotalWeight = 0;
+                nextTail = 0;
+
+                // Iterate over the children that are currently still hungry.
+                for (int head = 0; head < tail && nextConnectionWindow > 0; ++head) {
+                    Http2Stream child = stillHungry[head];
+                    if (!visit(child)) {
+                        // The connection window has collapsed, break out of the loop.
+                        break;
                     }
                 }
-
-                if (bytesForTree > 0) {
-                    int childBytesAllocated = allocateBytesForTree(child, bytesForTree);
-                    bytesAllocated += childBytesAllocated;
-                    nextConnectionWindow -= childBytesAllocated;
-                }
+                connectionWindow = nextConnectionWindow;
+                totalWeight = nextTotalWeight;
+                tail = nextTail;
             }
-            connectionWindow = nextConnectionWindow;
-            totalWeight = nextTotalWeight;
-            tail = nextTail;
         }
 
-        return bytesAllocated;
-    }
+        /**
+         * Indicates that the given child is still hungry (i.e. still has streamable bytes that can
+         * fit within the current connection window).
+         */
+        void stillHungry(Http2Stream child) {
+            allocateSpace(nextTail);
+            stillHungry[nextTail++] = child;
+        }
 
-    /**
-     * Converts the children to an array.
-     */
-    private static Http2Stream[] getChildrenAsArray(Http2Stream parent) {
-        try {
-            final Http2Stream[] children = new Http2Stream[parent.numChildren()];
-            parent.forEachChild(new Http2StreamVisitor() {
-                int ix = 0;
-                @Override
-                public boolean visit(Http2Stream stream) throws Http2Exception {
-                    children[ix++] = stream;
-                    return true;
-                }
-            });
-
-            return children;
-        } catch (Http2Exception e) {
-            // This will never happen.
-            throw new RuntimeException(e);
+        /**
+         * Ensures that the {@link #stillHungry} array is properly sized to hold the given index.
+         */
+        void allocateSpace(int index) {
+            if (stillHungry == null) {
+                // Initial size is 1/4 the number of children.
+                int minSize = max(index + 1, 4);
+                int desiredSize = maxSize / 4;
+                int initialSize = min(max(minSize, desiredSize), maxSize);
+                stillHungry = new Http2Stream[initialSize];
+            } else if (index >= stillHungry.length) {
+                // Grow the array by a factor of 2.
+                stillHungry = Arrays.copyOf(stillHungry, min(maxSize, stillHungry.length * 2));
+            }
         }
     }
 
     /**
-     * A {@link Http2StreamVisitor} that allocates all of the bytes for each child stream.
+     * A simplified version of {@link ChildFeeder} that is only used when all streamable bytes fit within the
+     * available connection window.
      */
-    private final class AllocationVisitor implements Http2StreamVisitor {
+    private static final class SimpleChildFeeder implements Http2StreamVisitor {
         int bytesAllocated;
         int connectionWindow;
 
-        AllocationVisitor(int connectionWindow) {
+        SimpleChildFeeder(int connectionWindow) {
             this.connectionWindow = connectionWindow;
         }
 
         @Override
-        public boolean visit(Http2Stream child) {
+        public boolean visit(Http2Stream child) throws Http2Exception {
             FlowState childState = state(child);
             int bytesForChild = childState.streamableBytes();
 

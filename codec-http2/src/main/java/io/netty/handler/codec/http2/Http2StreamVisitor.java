@@ -20,8 +20,8 @@ package io.netty.handler.codec.http2;
 public interface Http2StreamVisitor {
     /**
      * @return <ul>
-     *         <li>{@code true} if the processor wants to continue the loop and handle the entry.</li>
-     *         <li>{@code false} if the processor wants to stop handling headers and abort the loop.</li>
+     *         <li>{@code true} if the visitor wants to continue the loop and handle the entry.</li>
+     *         <li>{@code false} if the visitor wants to stop handling headers and abort the loop.</li>
      *         </ul>
      */
     boolean visit(Http2Stream stream) throws Http2Exception;
