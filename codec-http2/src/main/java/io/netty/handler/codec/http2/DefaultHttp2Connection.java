@@ -335,15 +335,13 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public Http2Stream forEachChild(Http2StreamVisitor visitor) throws Http2Exception {
-            Http2Stream resultStream = null;
             for (IntObjectHashMap.Entry<DefaultStream> entry : children.entries()) {
                 Http2Stream stream = entry.value();
                 if (!visitor.visit(stream)) {
-                    resultStream = stream;
-                    break;
+                    return stream;
                 }
             }
-            return resultStream;
+            return null;
         }
 
         @Override
@@ -1020,15 +1018,13 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         public Http2Stream forEachActiveStream(Http2StreamVisitor visitor) throws Http2Exception {
             ++pendingIterations;
-            Http2Stream resultStream = null;
             try {
                 for (Http2Stream stream : streams) {
                     if (!visitor.visit(stream)) {
-                        resultStream = stream;
-                        break;
+                        return stream;
                     }
                 }
-                return resultStream;
+                return null;
             } finally {
                 --pendingIterations;
                 if (allowModifications()) {
