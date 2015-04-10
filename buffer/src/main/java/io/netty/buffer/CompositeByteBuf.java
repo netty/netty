@@ -37,7 +37,7 @@ import java.util.ListIterator;
  * {@link ByteBufAllocator#compositeBuffer()} or {@link Unpooled#wrappedBuffer(ByteBuf...)} instead of calling the
  * constructor explicitly.
  */
-public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
+public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements Iterable<ByteBuf> {
 
     private static final ByteBuffer EMPTY_NIO_BUFFER = Unpooled.EMPTY_BUFFER.nioBuffer();
 
@@ -371,6 +371,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
         return this;
     }
 
+    @Override
     public Iterator<ByteBuf> iterator() {
         ensureAccessible();
         List<ByteBuf> list = new ArrayList<ByteBuf>(components.size());
