@@ -28,9 +28,11 @@ import java.nio.channels.ScatteringByteChannel;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.NoSuchElementException;
 
 /**
  * A virtual buffer which shows multiple buffers as a single merged buffer.  It is recommended to use
@@ -40,6 +42,7 @@ import java.util.ListIterator;
 public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements Iterable<ByteBuf> {
 
     private static final ByteBuffer EMPTY_NIO_BUFFER = Unpooled.EMPTY_BUFFER.nioBuffer();
+    private static final Iterator<ByteBuf> EMPTY_ITERATOR = Collections.<ByteBuf>emptyList().iterator();
 
     private final ResourceLeak leak;
     private final ByteBufAllocator alloc;
@@ -374,11 +377,10 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     @Override
     public Iterator<ByteBuf> iterator() {
         ensureAccessible();
-        List<ByteBuf> list = new ArrayList<ByteBuf>(components.size());
-        for (Component c: components) {
-            list.add(c.buf);
+        if (components.isEmpty()) {
+            return EMPTY_ITERATOR;
         }
-        return list.iterator();
+        return new CompositeByteBufIterator();
     }
 
     /**
@@ -1647,5 +1649,35 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     @Override
     public ByteBuf unwrap() {
         return null;
+    }
+
+    private final class CompositeByteBufIterator implements Iterator<ByteBuf> {
+        private final int size = components.size();
+        private int index;
+
+        @Override
+        public boolean hasNext() {
+            return size > index;
+        }
+
+        @Override
+        public ByteBuf next() {
+            if (size != components.size()) {
+                throw new ConcurrentModificationException();
+            }
+            if (!hasNext()) {
+                throw new NoSuchElementException();
+            }
+            try {
+                return components.get(index++).buf;
+            } catch (IndexOutOfBoundsException e) {
+                throw new ConcurrentModificationException();
+            }
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException("Read-Only");
+        }
     }
 }
