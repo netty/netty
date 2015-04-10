@@ -44,7 +44,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
-import io.netty.handler.codec.http2.Http2Connection.StreamVisitor;
 import io.netty.util.concurrent.GenericFutureListener;
 
 import java.util.List;
@@ -115,13 +114,13 @@ public class Http2ConnectionHandlerTest {
         doAnswer(new Answer<Http2Stream>() {
             @Override
             public Http2Stream answer(InvocationOnMock in) throws Throwable {
-                StreamVisitor visitor = in.getArgumentAt(0, StreamVisitor.class);
+                Http2StreamVisitor visitor = in.getArgumentAt(0, Http2StreamVisitor.class);
                 if (!visitor.visit(stream)) {
                     return stream;
                 }
                 return null;
             }
-        }).when(connection).forEachActiveStream(any(StreamVisitor.class));
+        }).when(connection).forEachActiveStream(any(Http2StreamVisitor.class));
         when(connection.stream(NON_EXISTANT_STREAM_ID)).thenReturn(null);
         when(connection.numActiveStreams()).thenReturn(1);
         when(connection.stream(STREAM_ID)).thenReturn(stream);
@@ -288,7 +287,7 @@ public class Http2ConnectionHandlerTest {
                     public Http2Stream answer(InvocationOnMock in) throws Throwable {
                         return null;
                     }
-                }).when(connection).forEachActiveStream(any(StreamVisitor.class));
+                }).when(connection).forEachActiveStream(any(Http2StreamVisitor.class));
                 when(connection.numActiveStreams()).thenReturn(0);
                 // Simulate the future being completed.
                 listener.operationComplete(future);

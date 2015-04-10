@@ -15,8 +15,6 @@
 
 package io.netty.handler.codec.http2;
 
-import java.util.Collection;
-
 /**
  * A single stream within an HTTP2 connection. Streams are compared to each other by priority.
  */
@@ -46,7 +44,8 @@ public interface Http2Stream {
     State state();
 
     /**
-     * Add this stream to {@link Http2Connection#activeStreams()} and transition state to:
+     * Opens this stream, making it available via {@link Http2Connection#forEachActiveStream(Http2StreamVisitor)} and
+     * transition state to:
      * <ul>
      * <li>{@link State#OPEN} if {@link #state()} is {@link State#IDLE} and {@code halfClosed} is {@code false}.</li>
      * <li>{@link State#HALF_CLOSED_LOCAL} if {@link #state()} is {@link State#IDLE} and {@code halfClosed}
@@ -175,18 +174,10 @@ public interface Http2Stream {
     int numChildren();
 
     /**
-     * Indicates whether the given stream is a direct child of this stream.
+     * Provide a means of iterating over the children of this stream.
+     *
+     * @param visitor The visitor which will visit each child stream.
+     * @return The stream before iteration stopped or {@code null} if iteration went past the end.
      */
-    boolean hasChild(int streamId);
-
-    /**
-     * Attempts to find a child of this stream with the given ID. If not found, returns
-     * {@code null}.
-     */
-    Http2Stream child(int streamId);
-
-    /**
-     * Gets all streams that are direct dependents on this stream.
-     */
-    Collection<? extends Http2Stream> children();
+    Http2Stream forEachChild(Http2StreamVisitor visitor) throws Http2Exception;
 }
