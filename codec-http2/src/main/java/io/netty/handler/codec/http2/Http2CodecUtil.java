@@ -16,14 +16,13 @@
 package io.netty.handler.codec.http2;
 
 import static io.netty.util.CharsetUtil.UTF_8;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
-import io.netty.handler.codec.http2.Http2StreamRemovalPolicy.Action;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
@@ -111,30 +110,6 @@ public final class Http2CodecUtil {
     public static ByteBuf emptyPingBuf() {
         // Return a duplicate so that modifications to the reader index will not affect the original buffer.
         return Unpooled.wrappedBuffer(EMPTY_PING);
-    }
-
-    /**
-     * Returns a simple {@link Http2StreamRemovalPolicy} that immediately calls back the
-     * {@link Action} when a stream is marked for removal.
-     */
-    public static Http2StreamRemovalPolicy immediateRemovalPolicy() {
-        return new Http2StreamRemovalPolicy() {
-            private Action action;
-
-            @Override
-            public void setAction(Action action) {
-                this.action = checkNotNull(action, "action");
-            }
-
-            @Override
-            public void markForRemoval(Http2Stream stream) {
-                if (action == null) {
-                    throw new IllegalStateException(
-                            "Action must be called before removing streams.");
-                }
-                action.removeStream(stream);
-            }
-        };
     }
 
     /**
@@ -319,16 +294,6 @@ public final class Http2CodecUtil {
             }
             return false;
         }
-    }
-
-    /**
-     * Fails the given promise with the cause and then re-throws the cause.
-     */
-    public static <T extends Throwable> T failAndThrow(ChannelPromise promise, T cause) throws T {
-        if (!promise.isDone()) {
-            promise.setFailure(cause);
-        }
-        throw cause;
     }
 
     private Http2CodecUtil() { }
