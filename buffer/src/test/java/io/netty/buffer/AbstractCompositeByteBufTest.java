@@ -21,7 +21,10 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.ConcurrentModificationException;
+import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import static io.netty.buffer.Unpooled.*;
 import static io.netty.util.ReferenceCountUtil.*;
@@ -864,5 +867,75 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         assertSame(EMPTY_BUFFER, cbuf.internalComponent(1));
         assertNotSame(EMPTY_BUFFER, cbuf.internalComponentAtOffset(1));
         cbuf.release();
+    }
+
+    @Test
+    public void testIterator() {
+        CompositeByteBuf cbuf = compositeBuffer();
+        cbuf.addComponent(EMPTY_BUFFER);
+        cbuf.addComponent(EMPTY_BUFFER);
+
+        Iterator<ByteBuf> it = cbuf.iterator();
+        assertTrue(it.hasNext());
+        assertSame(EMPTY_BUFFER, it.next());
+        assertTrue(it.hasNext());
+        assertSame(EMPTY_BUFFER, it.next());
+        assertFalse(it.hasNext());
+
+        try {
+            it.next();
+            fail();
+        } catch (NoSuchElementException e) {
+            //Expected
+        }
+        cbuf.release();
+    }
+
+    @Test
+    public void testEmptyIterator() {
+        CompositeByteBuf cbuf = compositeBuffer();
+
+        Iterator<ByteBuf> it = cbuf.iterator();
+        assertFalse(it.hasNext());
+
+        try {
+            it.next();
+            fail();
+        } catch (NoSuchElementException e) {
+            //Expected
+        }
+        cbuf.release();
+    }
+
+    @Test(expected = ConcurrentModificationException.class)
+    public void testIteratorConcurrentModificationAdd() {
+        CompositeByteBuf cbuf = compositeBuffer();
+        cbuf.addComponent(EMPTY_BUFFER);
+
+        Iterator<ByteBuf> it = cbuf.iterator();
+        cbuf.addComponent(EMPTY_BUFFER);
+
+        assertTrue(it.hasNext());
+        try {
+            it.next();
+        } finally {
+            cbuf.release();
+        }
+    }
+
+    @Test(expected = ConcurrentModificationException.class)
+    public void testIteratorConcurrentModificationRemove() {
+        CompositeByteBuf cbuf = compositeBuffer();
+        cbuf.addComponent(EMPTY_BUFFER);
+
+        Iterator<ByteBuf> it = cbuf.iterator();
+        cbuf.removeComponent(0);
+
+        assertTrue(it.hasNext());
+        try {
+            it.next();
+        } finally {
+            cbuf.release();
+        }
     }
 }
