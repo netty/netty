@@ -569,11 +569,11 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
 
         @Override
         void epollRdHupReady() {
-            if (isActive()) {
-                epollInReady();
-            } else {
-                closeOnRead(pipeline());
-            }
+            // Just call closeOnRead(). There is no need to trigger a read as this
+            // will result in a IOException anyway.
+            //
+            // See https://github.com/netty/netty/issues/3539
+            closeOnRead(pipeline());
         }
 
         @Override
