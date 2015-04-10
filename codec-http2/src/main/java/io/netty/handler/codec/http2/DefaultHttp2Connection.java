@@ -19,7 +19,6 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.immediateRemovalPolicy;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.REFUSED_STREAM;
 import static io.netty.handler.codec.http2.Http2Exception.closedStreamError;
@@ -35,7 +34,6 @@ import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.http2.Http2StreamRemovalPolicy.Action;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.collection.PrimitiveCollections;
@@ -71,35 +69,15 @@ public class DefaultHttp2Connection implements Http2Connection {
     final ActiveStreams activeStreams;
 
     /**
-     * Creates a connection with an immediate stream removal policy.
+     * Creates a new connection with the given settings.
      *
      * @param server
      *            whether or not this end-point is the server-side of the HTTP/2 connection.
      */
     public DefaultHttp2Connection(boolean server) {
-        this(server, immediateRemovalPolicy());
-    }
-
-    /**
-     * Creates a new connection with the given settings.
-     *
-     * @param server
-     *            whether or not this end-point is the server-side of the HTTP/2 connection.
-     * @param removalPolicy
-     *            the policy to be used for removal of closed stream.
-     */
-    public DefaultHttp2Connection(boolean server, Http2StreamRemovalPolicy removalPolicy) {
-        activeStreams = new ActiveStreams(listeners, checkNotNull(removalPolicy, "removalPolicy"));
+        activeStreams = new ActiveStreams(listeners);
         localEndpoint = new DefaultEndpoint<Http2LocalFlowController>(server);
         remoteEndpoint = new DefaultEndpoint<Http2RemoteFlowController>(!server);
-
-        // Tell the removal policy how to remove a stream from this connection.
-        removalPolicy.setAction(new Action() {
-            @Override
-            public void removeStream(Http2Stream stream) {
-                DefaultHttp2Connection.this.removeStream((DefaultStream) stream);
-            }
-        });
 
         // Add the connection stream to the map.
         streamMap.put(connectionStream.id(), connectionStream);
@@ -997,31 +975,32 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     /**
-     * Default implementation of the {@link ActiveStreams} class.
+     * Allows events which would modify the collection of active streams to be queued while iterating via {@link
+     * #forEachActiveStream(Http2StreamVisitor)}.
      */
-    private static final class ActiveStreams {
+    interface Event {
         /**
-         * Allows events which would modify {@link #streams} to be queued while iterating over {@link #streams}.
+         * Trigger the original intention of this event. Expect to modify the active streams list.
+         * <p/>
+         * If a {@link RuntimeException} object is thrown it will be logged and <strong>not propagated</strong>.
+         * Throwing from this method is not supported and is considered a programming error.
          */
-        interface Event {
-            /**
-             * Trigger the original intention of this event. Expect to modify {@link #streams}.
-             * <p>
-             * If a {@link RuntimeException} object is thrown it will be logged and <strong>not propagated</strong>.
-             * Throwing from this method is not supported and is considered a programming error.
-             */
-            void process();
-        }
+        void process();
+    }
+
+    /**
+     * Manages the list of currently active streams.  Queues any {@link Event}s that would modify the list of
+     * active streams in order to prevent modification while iterating.
+     */
+    private final class ActiveStreams {
 
         private final List<Listener> listeners;
-        private final Http2StreamRemovalPolicy removalPolicy;
         private final Queue<Event> pendingEvents = new ArrayDeque<Event>(4);
         private final Set<Http2Stream> streams = new LinkedHashSet<Http2Stream>();
         private int pendingIterations;
 
-        public ActiveStreams(List<Listener> listeners, Http2StreamRemovalPolicy removalPolicy) {
+        public ActiveStreams(List<Listener> listeners) {
             this.listeners = listeners;
-            this.removalPolicy = removalPolicy;
         }
 
         public int size() {
@@ -1110,8 +1089,7 @@ public class DefaultHttp2Connection implements Http2Connection {
                         }
                     }
                 } finally {
-                    // Mark this stream for removal.
-                    removalPolicy.markForRemoval(stream);
+                    removeStream(stream);
                 }
             }
         }
