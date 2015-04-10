@@ -482,7 +482,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
             int numSettings = payloadLength / SETTING_ENTRY_LENGTH;
             Http2Settings settings = new Http2Settings();
             for (int index = 0; index < numSettings; ++index) {
-                int id = payload.readUnsignedShort();
+                char id = (char) payload.readUnsignedShort();
                 long value = payload.readUnsignedInt();
                 try {
                     settings.put(id, value);

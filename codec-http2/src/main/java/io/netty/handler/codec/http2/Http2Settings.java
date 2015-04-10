@@ -16,13 +16,13 @@
 package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_CONCURRENT_STREAMS;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_INITIAL_WINDOW_SIZE;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_CONCURRENT_STREAMS;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_INITIAL_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_HEADER_LIST_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_HEADER_TABLE_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_INITIAL_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.NUM_STANDARD_SETTINGS;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_ENABLE_PUSH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_HEADER_TABLE_SIZE;
@@ -32,14 +32,15 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_FRAME_SIZ
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isMaxFrameSizeValid;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import io.netty.util.collection.IntObjectHashMap;
+
+import io.netty.util.collection.CharObjectHashMap;
 
 /**
  * Settings for one endpoint in an HTTP/2 connection. Each of the values are optional as defined in
  * the spec for the SETTINGS frame. Permits storage of arbitrary key/value pairs but provides helper
  * methods for standard settings.
  */
-public final class Http2Settings extends IntObjectHashMap<Long> {
+public final class Http2Settings extends CharObjectHashMap<Long> {
     /**
      * Default capacity based on the number of standard settings from the HTTP/2 spec, adjusted so that adding all of
      * the standard settings will not cause the map capacity to change.
@@ -65,7 +66,7 @@ public final class Http2Settings extends IntObjectHashMap<Long> {
      * @throws IllegalArgumentException if verification for a standard HTTP/2 setting fails.
      */
     @Override
-    public Long put(int key, Long value) {
+    public Long put(char key, Long value) {
         verifyStandardSetting(key, value);
         return super.put(key, value);
     }
@@ -184,11 +185,11 @@ public final class Http2Settings extends IntObjectHashMap<Long> {
     }
 
     /**
-     * A helper method that returns {@link Long#intValue()} on the return of {@link #get(int)}, if present. Note that
-     * if the range of the value exceeds {@link Integer#MAX_VALUE}, the {@link #get(int)} method should
+     * A helper method that returns {@link Long#intValue()} on the return of {@link #get(char)}, if present. Note that
+     * if the range of the value exceeds {@link Integer#MAX_VALUE}, the {@link #get(char)} method should
      * be used instead to avoid truncation of the value.
      */
-    public Integer getIntValue(int key) {
+    public Integer getIntValue(char key) {
         Long value = get(key);
         if (value == null) {
             return null;
@@ -238,7 +239,7 @@ public final class Http2Settings extends IntObjectHashMap<Long> {
     }
 
     @Override
-    protected String keyToString(int key) {
+    protected String keyToString(char key) {
         switch (key) {
             case SETTINGS_HEADER_TABLE_SIZE:
                 return "HEADER_TABLE_SIZE";

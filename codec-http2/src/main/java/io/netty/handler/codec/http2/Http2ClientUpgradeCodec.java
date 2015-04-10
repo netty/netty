@@ -23,13 +23,14 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.writeUnsignedShort;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static io.netty.util.ReferenceCountUtil.release;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.util.collection.IntObjectMap;
+import io.netty.util.collection.CharObjectHashMap;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -104,7 +105,7 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
             // Serialize the payload of the SETTINGS frame.
             int payloadLength = SETTING_ENTRY_LENGTH * settings.size();
             buf = ctx.alloc().buffer(payloadLength);
-            for (IntObjectMap.Entry<Long> entry : settings.entries()) {
+            for (CharObjectHashMap.Entry<Long> entry : settings.entries()) {
                 writeUnsignedShort(entry.key(), buf);
                 writeUnsignedInt(entry.value(), buf);
             }
