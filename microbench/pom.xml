@@ -81,6 +81,11 @@
       <version>1.7.1</version>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>uk.co.real-logic</groupId>
+      <artifactId>Agrona</artifactId>
+      <version>0.1</version>
+    </dependency>
   </dependencies>
 
   <build>
