@@ -63,12 +63,12 @@ public final class Http2CodecUtil {
     public static final int WINDOW_UPDATE_FRAME_LENGTH = FRAME_HEADER_LENGTH + INT_FIELD_LENGTH;
     public static final int CONTINUATION_FRAME_HEADER_LENGTH = FRAME_HEADER_LENGTH + MAX_PADDING_LENGTH_LENGTH;
 
-    public static final int SETTINGS_HEADER_TABLE_SIZE = 1;
-    public static final int SETTINGS_ENABLE_PUSH = 2;
-    public static final int SETTINGS_MAX_CONCURRENT_STREAMS = 3;
-    public static final int SETTINGS_INITIAL_WINDOW_SIZE = 4;
-    public static final int SETTINGS_MAX_FRAME_SIZE = 5;
-    public static final int SETTINGS_MAX_HEADER_LIST_SIZE = 6;
+    public static final char SETTINGS_HEADER_TABLE_SIZE = 1;
+    public static final char SETTINGS_ENABLE_PUSH = 2;
+    public static final char SETTINGS_MAX_CONCURRENT_STREAMS = 3;
+    public static final char SETTINGS_INITIAL_WINDOW_SIZE = 4;
+    public static final char SETTINGS_MAX_FRAME_SIZE = 5;
+    public static final char SETTINGS_MAX_HEADER_LIST_SIZE = 6;
     public static final int NUM_STANDARD_SETTINGS = 6;
 
     public static final int MAX_HEADER_TABLE_SIZE = Integer.MAX_VALUE; // Size limited by HPACK library

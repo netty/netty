@@ -52,13 +52,14 @@ import static io.netty.handler.codec.http2.Http2FrameTypes.RST_STREAM;
 import static io.netty.handler.codec.http2.Http2FrameTypes.SETTINGS;
 import static io.netty.handler.codec.http2.Http2FrameTypes.WINDOW_UPDATE;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
 import io.netty.handler.codec.http2.Http2FrameWriter.Configuration;
-import io.netty.util.collection.IntObjectMap;
+import io.netty.util.collection.CharObjectMap;
 
 /**
  * A {@link Http2FrameWriter} that supports all frame types defined by the HTTP/2 specification.
@@ -121,7 +122,6 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
             int padding, boolean endStream, ChannelPromise promise) {
         boolean releaseData = true;
-        ByteBuf buf = null;
         SimpleChannelPromiseAggregator promiseAggregator =
                 new SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());
         try {
@@ -133,7 +133,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             int payloadLength = data.readableBytes() + padding + flags.getPaddingPresenceFieldLength();
             verifyPayloadLength(payloadLength);
 
-            buf = ctx.alloc().buffer(DATA_FRAME_HEADER_LENGTH);
+            ByteBuf buf = ctx.alloc().buffer(DATA_FRAME_HEADER_LENGTH);
             writeFrameHeaderInternal(buf, payloadLength, DATA, flags, streamId);
             writePaddingLength(buf, padding);
             ctx.write(buf, promiseAggregator.newPromise());
@@ -213,7 +213,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             int payloadLength = SETTING_ENTRY_LENGTH * settings.size();
             ByteBuf buf = ctx.alloc().buffer(FRAME_HEADER_LENGTH + settings.size() * SETTING_ENTRY_LENGTH);
             writeFrameHeaderInternal(buf, payloadLength, SETTINGS, new Http2Flags(), 0);
-            for (IntObjectMap.Entry<Long> entry : settings.entries()) {
+            for (CharObjectMap.Entry<Long> entry : settings.entries()) {
                 writeUnsignedShort(entry.key(), buf);
                 writeUnsignedInt(entry.value(), buf);
             }
