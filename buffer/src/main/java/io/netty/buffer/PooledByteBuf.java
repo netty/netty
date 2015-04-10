@@ -143,10 +143,14 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
         if (handle >= 0) {
             final long handle = this.handle;
             this.handle = -1;
-            memory = null;
             boolean sameThread = initThread == Thread.currentThread();
-            initThread = null;
             chunk.arena.free(chunk, handle, maxLength, sameThread);
+            // Dereference everything so GC can do it's work.
+            chunk = null;
+            tmpNioBuf = null;
+            initThread = null;
+            memory = null;
+
             recycle();
         }
     }
