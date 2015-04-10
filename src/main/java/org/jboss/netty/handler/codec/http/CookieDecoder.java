@@ -41,13 +41,8 @@ import java.util.TreeSet;
  */
 public class CookieDecoder {
 
+    private static final String INVALID_VALUE = "<invalid value>";
     private static final char COMMA = ',';
-
-    /**
-     * Creates a new decoder.
-     */
-    public CookieDecoder() {
-    }
 
     /**
      * Decodes the specified HTTP header value into {@link Cookie}s.
@@ -240,7 +235,8 @@ public class CookieDecoder {
                             i ++;
                             for (;;) {
                                 if (i == headerLen) {
-                                    value = newValueBuf.toString();
+                                    // Missing closing quote.
+                                    value = INVALID_VALUE;
                                     break keyValLoop;
                                 }
                                 if (hadBackslash) {
@@ -292,8 +288,10 @@ public class CookieDecoder {
                 }
             }
 
-            names.add(name);
-            values.add(value);
+            if (value != INVALID_VALUE) {
+                names.add(name);
+                values.add(value);
+            }
         }
     }
 }

@@ -15,13 +15,18 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import static org.junit.Assert.*;
+import org.junit.Test;
 
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Set;
 
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class CookieDecoderTest {
     @Test
@@ -376,6 +381,14 @@ public class CookieDecoderTest {
         assertEquals("T", c.getName());
         assertEquals("z=E", c.getValue());
     }
+
+    @Test
+    public void testMismatchingQuotes() {
+        String src = "aaa='bbb;ccc=ddd";
+        Set<Cookie> cookies = new CookieDecoder().decode(src);
+        assertTrue(cookies.isEmpty());
+    }
+
 
     @Test
     public void testDecodingLongValue() {
