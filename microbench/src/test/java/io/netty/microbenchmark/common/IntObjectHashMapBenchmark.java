@@ -17,7 +17,9 @@ package io.netty.microbenchmark.common;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.collection.IntObjectHashMap;
 import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Level;
+import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.infra.Blackhole;
@@ -38,14 +40,11 @@ public class IntObjectHashMapBenchmark extends AbstractMicrobenchmark {
     int size;
 
     int[] keys;
-    IntObjectHashMap<Long> map;
-    Int2ObjectHashMap<Long> agronaMap;
+    IntObjectHashMap<Long> nettyMap = new IntObjectHashMap<Long>();
+    Int2ObjectHashMap<Long> agronaMap = new Int2ObjectHashMap<Long>();
 
     @Setup(Level.Iteration)
     public void setup() {
-        map = new IntObjectHashMap<Long>();
-        agronaMap = new Int2ObjectHashMap<Long>();
-
         // Create a 'size' # of random integers.
         Random r = new Random();
         Set<Integer> keySet = new HashSet<Integer>();
@@ -59,31 +58,49 @@ public class IntObjectHashMapBenchmark extends AbstractMicrobenchmark {
         for (Integer key : keySet) {
             keys[index++] = key;
         }
+
+        for (int key : keys) {
+            nettyMap.put(key, VALUE);
+            agronaMap.put(key, VALUE);
+        }
     }
 
     @Benchmark
-    public void put(Blackhole bh) {
+    @BenchmarkMode(Mode.Throughput)
+    public void nettyPut(Blackhole bh) {
+        IntObjectHashMap<Long> map = new IntObjectHashMap<Long>();
         for (int key : keys) {
             bh.consume(map.put(key, VALUE));
         }
     }
 
     @Benchmark
+    @BenchmarkMode(Mode.Throughput)
     public void agronaPut(Blackhole bh) {
+        Int2ObjectHashMap<Long> map = new Int2ObjectHashMap<Long>();
         for (int key : keys) {
-            bh.consume(agronaMap.put(key, VALUE));
+            bh.consume(map.put(key, VALUE));
         }
     }
 
-    public static void main(String[] args) throws RunnerException {
-        Options opt = new OptionsBuilder()
-                .include(IntObjectHashMapBenchmark.class.getSimpleName())
-                .warmupIterations(5)
-                .measurementIterations(5)
-                .forks(1)
-                .jvmArgs("-ea")
-                .build();
+    @Benchmark
+    @BenchmarkMode(Mode.Throughput)
+    public void nettyLookup(Blackhole bh) {
+        for (int key : keys) {
+            bh.consume(nettyMap.get(key));
+        }
+    }
 
+    @Benchmark
+    @BenchmarkMode(Mode.Throughput)
+    public void agronaLookup(Blackhole bh) {
+        for (int key : keys) {
+            bh.consume(agronaMap.get(key));
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        Options opt = new IntObjectHashMapBenchmark().newOptionsBuilder().build();
         new Runner(opt).run();
     }
 }
