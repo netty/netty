@@ -34,7 +34,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
-import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.epoll.EpollSocketChannel;
@@ -66,17 +65,15 @@ import io.netty.util.concurrent.Future;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Random;
 
-import org.junit.AfterClass;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
 
 @State(Scope.Benchmark)
 public class Http2FrameWriterBenchmark extends AbstractSharedExecutorMicrobenchmark {
@@ -94,35 +91,24 @@ public class Http2FrameWriterBenchmark extends AbstractSharedExecutorMicrobenchm
             new OioEnvironmentParametersBase(PooledByteBufAllocator.DEFAULT);
 
     public static enum EnvironmentType {
-        EMBEDDED_POOLED, EMBEDDED_UNPOOLED,
-        NIO_POOLED, NIO_UNPOOLED,
-        EPOLL_POOLED, EPOLL_UNPOOLED,
-        OIO_POOLED, OIO_UNPOOLED;
+        EMBEDDED_POOLED(NIO_POOLED_PARAMS), EMBEDDED_UNPOOLED(NIO_UNPOOLED_PARAMS),
+        NIO_POOLED(NIO_POOLED_PARAMS), NIO_UNPOOLED(NIO_UNPOOLED_PARAMS),
+        EPOLL_POOLED(EPOLL_POOLED_PARAMS), EPOLL_UNPOOLED(EPOLL_UNPOOLED_PARAMS),
+        OIO_POOLED(OIO_POOLED_PARAMS), OIO_UNPOOLED(OIO_UNPOOLED_PARAMS);
+
+        private final EnvironmentParameters params;
+
+        private EnvironmentType(EnvironmentParameters params) {
+            this.params = params;
+        }
+
+        public EnvironmentParameters params() {
+            return params;
+        }
     }
 
     public static enum DataPayloadType {
         SMALL, MEDIUM, LARGE, JUMBO;
-    }
-
-    private static final Map<EnvironmentType, Environment> ENVIRONMENTS = new HashMap<EnvironmentType, Environment>();
-    private static final Map<DataPayloadType, BenchmarkTestPayload> PAYLOADS =
-            new HashMap<DataPayloadType, BenchmarkTestPayload>();
-
-    static {
-        ENVIRONMENTS.put(EnvironmentType.OIO_POOLED, boostrapEnvWithTransport(OIO_POOLED_PARAMS));
-        ENVIRONMENTS.put(EnvironmentType.OIO_UNPOOLED, boostrapEnvWithTransport(OIO_UNPOOLED_PARAMS));
-        ENVIRONMENTS.put(EnvironmentType.NIO_POOLED, boostrapEnvWithTransport(NIO_POOLED_PARAMS));
-        ENVIRONMENTS.put(EnvironmentType.NIO_UNPOOLED, boostrapEnvWithTransport(NIO_UNPOOLED_PARAMS));
-        if (Epoll.isAvailable()) {
-            ENVIRONMENTS.put(EnvironmentType.EPOLL_POOLED, boostrapEnvWithTransport(EPOLL_POOLED_PARAMS));
-            ENVIRONMENTS.put(EnvironmentType.EPOLL_UNPOOLED, boostrapEnvWithTransport(EPOLL_UNPOOLED_PARAMS));
-        }
-        ENVIRONMENTS.put(EnvironmentType.EMBEDDED_POOLED, boostrapEmbeddedEnv(PooledByteBufAllocator.DEFAULT));
-        ENVIRONMENTS.put(EnvironmentType.EMBEDDED_UNPOOLED, boostrapEmbeddedEnv(UnpooledByteBufAllocator.DEFAULT));
-        PAYLOADS.put(DataPayloadType.SMALL, createPayload(DataPayloadType.SMALL));
-        PAYLOADS.put(DataPayloadType.MEDIUM, createPayload(DataPayloadType.MEDIUM));
-        PAYLOADS.put(DataPayloadType.LARGE, createPayload(DataPayloadType.LARGE));
-        PAYLOADS.put(DataPayloadType.JUMBO, createPayload(DataPayloadType.JUMBO));
     }
 
     @Param
@@ -138,28 +124,31 @@ public class Http2FrameWriterBenchmark extends AbstractSharedExecutorMicrobenchm
 
     private BenchmarkTestPayload payload;
 
-    @AfterClass
-    public static void teardown() {
-        for (Environment env : ENVIRONMENTS.values()) {
-            try {
-                env.teardown();
-            } catch (Exception e) {
-                handleUnexpectedException(e);
-            }
-        }
-        for (BenchmarkTestPayload payload : PAYLOADS.values()) {
-            payload.release();
-        }
-    }
-
     @Setup(Level.Trial)
     public void setup() {
-        environment = ENVIRONMENTS.get(environmentType);
+        switch (environmentType) {
+        case EMBEDDED_POOLED:
+        case EMBEDDED_UNPOOLED:
+            environment = boostrapEmbeddedEnv(environmentType);
+            break;
+        default:
+            environment = boostrapEnvWithTransport(environmentType);
+            break;
+        }
         if (environment == null) {
             throw new IllegalStateException("Environment type [" + environmentType + "] is not supported.");
         }
         AbstractSharedExecutorMicrobenchmark.executor(environment.eventLoop());
-        payload = PAYLOADS.get(dataType);
+        payload = createPayload(dataType);
+    }
+
+    @TearDown(Level.Trial)
+    public void teardown() throws Exception {
+        try {
+            environment.teardown();
+        } finally {
+            payload.release();
+        }
     }
 
     @Benchmark
@@ -233,7 +222,8 @@ public class Http2FrameWriterBenchmark extends AbstractSharedExecutorMicrobenchm
         }
     }
 
-    private static Environment boostrapEnvWithTransport(final EnvironmentParameters params) {
+    private static Environment boostrapEnvWithTransport(final EnvironmentType environmentType) {
+        final EnvironmentParameters params = environmentType.params();
         ServerBootstrap sb = new ServerBootstrap();
         Bootstrap cb = new Bootstrap();
         final TrasportEnvironment environment = new TrasportEnvironment(cb, sb);
@@ -282,7 +272,8 @@ public class Http2FrameWriterBenchmark extends AbstractSharedExecutorMicrobenchm
         return environment;
     }
 
-    private static Environment boostrapEmbeddedEnv(final ByteBufAllocator alloc) {
+    private static Environment boostrapEmbeddedEnv(final EnvironmentType environmentType) {
+        final ByteBufAllocator alloc = environmentType.params().clientAllocator();
         final EmbeddedEnvironment env = new EmbeddedEnvironment(new DefaultHttp2FrameWriter());
         final Http2Connection connection = new DefaultHttp2Connection(false);
         Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, env.writer());
