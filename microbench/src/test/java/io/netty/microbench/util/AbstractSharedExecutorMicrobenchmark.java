@@ -33,13 +33,13 @@ import org.openjdk.jmh.annotations.Fork;
 @Fork(AbstractSharedExecutorMicrobenchmark.DEFAULT_FORKS)
 public class AbstractSharedExecutorMicrobenchmark extends AbstractMicrobenchmarkBase {
 
-    protected static final int DEFAULT_FORKS = 0; // Forks has to be 0 so tasks are run immediately by JMH
+    protected static final int DEFAULT_FORKS = 1;
     protected static final String[] JVM_ARGS;
 
     static {
         final String[] customArgs = {
         "-Xms2g", "-Xmx2g", "-XX:MaxDirectMemorySize=2g", "-Dharness.executor=CUSTOM",
-        "-Dharness.executor.class=io.netty.microbench.util.AbstractExecutorMicrobenchmark$DelegateHarnessExecutor" };
+    "-Dharness.executor.class=io.netty.microbench.util.AbstractSharedExecutorMicrobenchmark$DelegateHarnessExecutor" };
 
         JVM_ARGS = new String[BASE_JVM_ARGS.length + customArgs.length];
         System.arraycopy(BASE_JVM_ARGS, 0, JVM_ARGS, 0, BASE_JVM_ARGS.length);
