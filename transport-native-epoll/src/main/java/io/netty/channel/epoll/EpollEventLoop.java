@@ -305,26 +305,22 @@ final class EpollEventLoop extends SingleThreadEventLoop {
 
                 AbstractEpollChannel ch = channels.get(fd);
                 if (ch != null && ch.isOpen()) {
-                    boolean close = (ev & Native.EPOLLRDHUP) != 0;
-                    boolean read = (ev & Native.EPOLLIN) != 0;
-                    boolean write = (ev & Native.EPOLLOUT) != 0;
 
                     AbstractEpollUnsafe unsafe = (AbstractEpollUnsafe) ch.unsafe();
 
                     // We need to check if the channel is still open before try to trigger the
                     // callbacks.
-                    //
                     // See https://github.com/netty/netty/issues/3443
-                    if (close && ch.isOpen()) {
+                    if ((ev & Native.EPOLLRDHUP) != 0 && ch.isOpen()) {
                         unsafe.epollRdHupReady();
                     }
 
-                    if (write && ch.isOpen()) {
+                    if ((ev & Native.EPOLLOUT) != 0 && ch.isOpen()) {
                         // force flush of data as the epoll is writable again
                         unsafe.epollOutReady();
                     }
 
-                    if (read && ch.isOpen()) {
+                    if ((ev & Native.EPOLLIN) != 0 && ch.isOpen()) {
                         // Something is ready to read, so consume it now
                         unsafe.epollInReady();
                     }
