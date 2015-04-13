@@ -64,12 +64,17 @@
       <artifactId>netty-codec-http2</artifactId>
       <version>${project.version}</version>
     </dependency>
-     <dependency>
-       <groupId>${project.groupId}</groupId>
-       <artifactId>netty-transport-native-epoll</artifactId>
-       <version>${project.version}</version>
-       <classifier>linux-${epoll.arch}</classifier>
-     </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-transport-native-epoll</artifactId>
+      <version>${project.version}</version>
+      <classifier>linux-${epoll.arch}</classifier>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>compile</scope>
+    </dependency>
     <dependency>
       <groupId>org.openjdk.jmh</groupId>
       <artifactId>jmh-core</artifactId>
@@ -91,23 +96,47 @@
   <build>
     <plugins>
       <plugin>
-        <artifactId>maven-deploy-plugin</artifactId>
-        <configuration>
-          <skip>true</skip>
-        </configuration>
-      </plugin>
-      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
+          <testSourceDirectory>${project.build.sourceDirectory}</testSourceDirectory>
+          <testClassesDirectory>${project.build.outputDirectory}</testClassesDirectory>
           <excludes>
             <exclude>**/AbstractMicrobenchmark.java</exclude>
             <exclude>**/*$*.class</exclude>
+            <exclude>**/generated/*.class</exclude>
           </excludes>
-            <systemPropertyVariables>
-                <perfReportDir>${project.build.directory}/reports/performance/</perfReportDir>
-            </systemPropertyVariables>
+          <systemPropertyVariables>
+            <perfReportDir>${project.build.directory}/reports/performance/</perfReportDir>
+          </systemPropertyVariables>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>generate-manifest</id>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>manifest</goal>
+            </goals>
+            <configuration>
+              <supportedProjectTypes>
+                <supportedProjectType>jar</supportedProjectType>
+                <supportedProjectType>bundle</supportedProjectType>
+              </supportedProjectTypes>
+              <instructions>
+                <Export-Package>${project.groupId}.*</Export-Package>
+                <Export-Package>!*.generated.*</Export-Package>
+                <!-- enforce JVM vendor package as optional -->
+                <Import-Package>sun.nio.ch;resolution:=optional,org.eclipse.jetty.npn;version="[1,2)";resolution:=optional,org.eclipse.jetty.alpn;version="[1,2)";resolution:=optional,*</Import-Package>
+                <!-- override "internal" private package convention -->
+                <Private-Package>!*</Private-Package>
+              </instructions>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
     <extensions>
