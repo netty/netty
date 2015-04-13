@@ -32,155 +32,161 @@ import java.util.Set;
 public class IntObjectHashMapBenchmark extends AbstractMicrobenchmark {
     private static final Long VALUE = Long.MAX_VALUE;
 
+    public enum MapType {
+        AGRONA,
+        NETTY
+    }
+
+    public enum KeyDistribution {
+        HTTP2,
+        RANDOM
+    }
+
     @Param({ "10", "100", "1000", "10000", "100000" })
-    private int size;
+    public int size;
 
-    private int[] randomKeys;
-    private int[] http2Keys;
-    private IntObjectHashMap<Long> randomNettyMap = new IntObjectHashMap<Long>();
-    private Int2ObjectHashMap<Long> randomAgronaMap = new Int2ObjectHashMap<Long>();
-    private IntObjectHashMap<Long> http2NettyMap = new IntObjectHashMap<Long>();
-    private Int2ObjectHashMap<Long> http2AgronaMap = new Int2ObjectHashMap<Long>();
+    @Param
+    public MapType mapType;
 
-    @Setup(Level.Iteration)
+    @Param
+    public KeyDistribution keyDistribution;
+
+    private Environment environment;
+
+    @Setup(Level.Trial)
     public void setup() {
-        // Create a 'size' # of random integers.
-        Random r = new Random();
-        Set<Integer> keySet = new HashSet<Integer>();
-        while (keySet.size() < size) {
-            keySet.add(r.nextInt());
-        }
-
-        // Create the random keys and pre-populate the random maps.
-        randomKeys = new int[size];
-        int index = 0;
-        for (Integer key : keySet) {
-            randomKeys[index++] = key;
-            randomNettyMap.put(key, VALUE);
-            randomAgronaMap.put(key, VALUE);
-        }
-
-        // Create the HTTP/2 keys and pre-populate the HTTP/2 maps.
-        http2Keys = new int[size];
-        index = 0;
-        for (int key = 3; index < size; ++index, key += 2) {
-            http2Keys[index] = key;
-            http2NettyMap.put(key, VALUE);
-            http2AgronaMap.put(key, VALUE);
+        switch(mapType) {
+            case AGRONA: {
+                environment = new AgronaEnvironment();
+                break;
+            }
+            case NETTY: {
+                environment = new NettyEnvironment();
+                break;
+            }
+            default: {
+                throw new IllegalStateException("Invalid mapType: " + mapType);
+            }
         }
     }
 
     @Benchmark
     @BenchmarkMode(Mode.Throughput)
-    public void randomNettyPut(Blackhole bh) {
-        nettyPut(bh, randomKeys);
+    public void put(Blackhole bh) {
+        environment.put(bh);
     }
 
     @Benchmark
     @BenchmarkMode(Mode.Throughput)
-    public void randomAgronaPut(Blackhole bh) {
-        agronaPut(bh, randomKeys);
+    public void lookup(Blackhole bh) {
+        environment.lookup(bh);
     }
 
     @Benchmark
     @BenchmarkMode(Mode.Throughput)
-    public void randomNettyLookup(Blackhole bh) {
-        nettyLookup(bh, randomKeys);
+    public void remove(Blackhole bh) {
+        environment.remove(bh);
     }
 
-    @Benchmark
-    @BenchmarkMode(Mode.Throughput)
-    public void randomAgronaLookup(Blackhole bh) {
-        agronaLookup(bh, randomKeys);
+    private abstract class Environment {
+        final int[] keys;
+        Environment() {
+            keys = new int[size];
+            switch(keyDistribution) {
+                case HTTP2:
+                    for (int index = 0, key = 3; index < size; ++index, key += 2) {
+                        keys[index] = key;
+                    }
+                    break;
+                case RANDOM: {
+                    // Create a 'size' # of random integers.
+                    Random r = new Random();
+                    Set<Integer> keySet = new HashSet<Integer>();
+                    while (keySet.size() < size) {
+                        keySet.add(r.nextInt());
+                    }
+
+                    int index = 0;
+                    for (Integer key : keySet) {
+                        keys[index++] = key;
+                    }
+                    break;
+                }
+                default: {
+                    throw new IllegalStateException("Unknown keyDistribution: " + keyDistribution);
+                }
+            }
+        }
+        abstract void put(Blackhole bh);
+        abstract void lookup(Blackhole bh);
+        abstract void remove(Blackhole bh);
     }
 
-    @Benchmark
-    @BenchmarkMode(Mode.Throughput)
-    public void randomNettyRemove(Blackhole bh) {
-        nettyRemove(bh, randomKeys, randomNettyMap);
-    }
+    private class AgronaEnvironment extends Environment {
+        private final Int2ObjectHashMap<Long> map = new Int2ObjectHashMap<Long>();
 
-    @Benchmark
-    @BenchmarkMode(Mode.Throughput)
-    public void randomAgronaRemove(Blackhole bh) {
-        agronaRemove(bh, randomKeys, randomAgronaMap);
-    }
+        AgronaEnvironment() {
+            for (int key : keys) {
+                map.put(key, VALUE);
+            }
+        }
 
-    @Benchmark
-    @BenchmarkMode(Mode.Throughput)
-    public void http2NettyPut(Blackhole bh) {
-        nettyPut(bh, http2Keys);
-    }
+        @Override
+        void put(Blackhole bh) {
+            Int2ObjectHashMap<Long> map = new Int2ObjectHashMap<Long>();
+            for (int key : keys) {
+                bh.consume(map.put(key, VALUE));
+            }
+        }
 
-    @Benchmark
-    @BenchmarkMode(Mode.Throughput)
-    public void http2AgronaPut(Blackhole bh) {
-        agronaPut(bh, http2Keys);
-    }
+        @Override
+        void lookup(Blackhole bh) {
+            for (int key : keys) {
+                bh.consume(map.get(key));
+            }
+        }
 
-    @Benchmark
-    @BenchmarkMode(Mode.Throughput)
-    public void http2NettyLookup(Blackhole bh) {
-        nettyLookup(bh, http2Keys);
-    }
-
-    @Benchmark
-    @BenchmarkMode(Mode.Throughput)
-    public void http2AgronaLookup(Blackhole bh) {
-        agronaLookup(bh, http2Keys);
-    }
-
-    @Benchmark
-    @BenchmarkMode(Mode.Throughput)
-    public void http2NettyRemove(Blackhole bh) {
-        nettyRemove(bh, http2Keys, http2NettyMap);
-    }
-
-    @Benchmark
-    @BenchmarkMode(Mode.Throughput)
-    public void http2AgronaRemove(Blackhole bh) {
-        agronaRemove(bh, http2Keys, http2AgronaMap);
-    }
-
-    private void nettyPut(Blackhole bh, int[] keys) {
-        IntObjectHashMap<Long> map = new IntObjectHashMap<Long>();
-        for (int key : keys) {
-            bh.consume(map.put(key, VALUE));
+        @Override
+        void remove(Blackhole bh) {
+            Int2ObjectHashMap<Long> copy = new Int2ObjectHashMap<Long>();
+            copy.putAll(map);
+            for (int key : keys) {
+                bh.consume(copy.remove(key));
+            }
         }
     }
 
-    private void agronaPut(Blackhole bh, int[] keys) {
-        Int2ObjectHashMap<Long> map = new Int2ObjectHashMap<Long>();
-        for (int key : keys) {
-            bh.consume(map.put(key, VALUE));
-        }
-    }
+    private class NettyEnvironment extends Environment {
+        private final IntObjectHashMap<Long> map = new IntObjectHashMap<Long>();
 
-    private void nettyLookup(Blackhole bh, int[] keys) {
-        for (int key : keys) {
-            bh.consume(randomNettyMap.get(key));
+        NettyEnvironment() {
+            for (int key : keys) {
+                map.put(key, VALUE);
+            }
         }
-    }
 
-    private void agronaLookup(Blackhole bh, int[] keys) {
-        for (int key : keys) {
-            bh.consume(randomAgronaMap.get(key));
+        @Override
+        void put(Blackhole bh) {
+            IntObjectHashMap<Long> map = new IntObjectHashMap<Long>();
+            for (int key : keys) {
+                bh.consume(map.put(key, VALUE));
+            }
         }
-    }
 
-    private void nettyRemove(Blackhole bh, int[] keys, IntObjectHashMap<Long> populatedMap) {
-        IntObjectHashMap<Long> map = new IntObjectHashMap<Long>();
-        map.putAll(populatedMap);
-        for (int key : keys) {
-            bh.consume(map.remove(key));
+        @Override
+        void lookup(Blackhole bh) {
+            for (int key : keys) {
+                bh.consume(map.get(key));
+            }
         }
-    }
 
-    private void agronaRemove(Blackhole bh, int[] keys, Int2ObjectHashMap<Long> populatedMap) {
-        Int2ObjectHashMap<Long> map = new Int2ObjectHashMap<Long>();
-        map.putAll(populatedMap);
-        for (int key : keys) {
-            bh.consume(map.remove(key));
+        @Override
+        void remove(Blackhole bh) {
+            IntObjectHashMap<Long> copy = new IntObjectHashMap<Long>();
+            copy.putAll(map);
+            for (int key : keys) {
+                bh.consume(copy.remove(key));
+            }
         }
     }
 }
