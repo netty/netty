@@ -23,10 +23,6 @@ import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.infra.Blackhole;
-import org.openjdk.jmh.runner.Runner;
-import org.openjdk.jmh.runner.RunnerException;
-import org.openjdk.jmh.runner.options.Options;
-import org.openjdk.jmh.runner.options.OptionsBuilder;
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
 
 import java.util.HashSet;
@@ -37,11 +33,11 @@ public class IntObjectHashMapBenchmark extends AbstractMicrobenchmark {
     private static final Long VALUE = Long.MAX_VALUE;
 
     @Param({ "10", "100", "1000", "10000", "100000" })
-    int size;
+    private int size;
 
-    int[] keys;
-    IntObjectHashMap<Long> nettyMap = new IntObjectHashMap<Long>();
-    Int2ObjectHashMap<Long> agronaMap = new Int2ObjectHashMap<Long>();
+    private int[] keys;
+    private IntObjectHashMap<Long> nettyMap = new IntObjectHashMap<Long>();
+    private Int2ObjectHashMap<Long> agronaMap = new Int2ObjectHashMap<Long>();
 
     @Setup(Level.Iteration)
     public void setup() {
@@ -99,8 +95,23 @@ public class IntObjectHashMapBenchmark extends AbstractMicrobenchmark {
         }
     }
 
-    public static void main(String[] args) throws Exception {
-        Options opt = new IntObjectHashMapBenchmark().newOptionsBuilder().build();
-        new Runner(opt).run();
+    @Benchmark
+    @BenchmarkMode(Mode.Throughput)
+    public void nettyRemove(Blackhole bh) {
+        IntObjectHashMap<Long> map = new IntObjectHashMap<Long>();
+        map.putAll(nettyMap);
+        for (int key : keys) {
+            bh.consume(map.remove(key));
+        }
+    }
+
+    @Benchmark
+    @BenchmarkMode(Mode.Throughput)
+    public void agronaRemove(Blackhole bh) {
+        Int2ObjectHashMap<Long> map = new Int2ObjectHashMap<Long>();
+        map.putAll(agronaMap);
+        for (int key : keys) {
+            bh.consume(map.remove(key));
+        }
     }
 }
