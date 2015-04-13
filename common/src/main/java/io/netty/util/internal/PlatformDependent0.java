@@ -39,6 +39,7 @@ final class PlatformDependent0 {
     private static final Unsafe UNSAFE;
     private static final boolean BIG_ENDIAN = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
     private static final long ADDRESS_FIELD_OFFSET;
+    private static final long ARRAY_BASE_OFFSET;
 
     /**
      * Limits the number of bytes to copy per {@link Unsafe#copyMemory(long, long, long)} to allow safepoint polling
@@ -112,9 +113,11 @@ final class PlatformDependent0 {
 
         if (unsafe == null) {
             ADDRESS_FIELD_OFFSET = -1;
+            ARRAY_BASE_OFFSET = -1;
             UNALIGNED = false;
         } else {
             ADDRESS_FIELD_OFFSET = objectFieldOffset(addressField);
+            ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(byte[].class);
             boolean unaligned;
             try {
                 Class<?> bitsClass = Class.forName("java.nio.Bits", false, ClassLoader.getSystemClassLoader());
@@ -137,6 +140,10 @@ final class PlatformDependent0 {
         return UNSAFE != null;
     }
 
+    static boolean unalignedAccess() {
+        return UNALIGNED;
+    }
+
     static void throwException(Throwable t) {
         UNSAFE.throwException(t);
     }
@@ -152,7 +159,7 @@ final class PlatformDependent0 {
     }
 
     static long arrayBaseOffset() {
-        return UNSAFE.arrayBaseOffset(byte[].class);
+        return ARRAY_BASE_OFFSET;
     }
 
     static Object getObject(Object object, long fieldOffset) {
@@ -309,6 +316,37 @@ final class PlatformDependent0 {
             srcOffset += size;
             dstOffset += size;
         }
+    }
+
+    static boolean equals(byte[] bytes1, int startPos1, int endPos1, byte[] bytes2, int startPos2, int endPos2) {
+        final int len1 = endPos1 - startPos1;
+        final int len2 = endPos2 - startPos2;
+        if (len1 != len2) {
+            return false;
+        }
+        if (len1 == 0) {
+            return true;
+        }
+        final long baseOffset1 = ARRAY_BASE_OFFSET + startPos1;
+        final long baseOffset2 = ARRAY_BASE_OFFSET + startPos2;
+        int remainingBytes = len1 & 7;
+        for (int i = len1 - 8; i >= remainingBytes; i -= 8) {
+            if (UNSAFE.getLong(bytes1, baseOffset1 + i) != UNSAFE.getLong(bytes2, baseOffset2 + i)) {
+                return false;
+            }
+        }
+        if (remainingBytes >= 4) {
+            remainingBytes -= 4;
+            if (UNSAFE.getInt(bytes1, baseOffset1 + remainingBytes) !=
+                UNSAFE.getInt(bytes2, baseOffset2 + remainingBytes)) {
+                return false;
+            }
+        }
+        if (remainingBytes >= 2) {
+            return UNSAFE.getChar(bytes1, baseOffset1) == UNSAFE.getChar(bytes2, baseOffset2) &&
+                   (remainingBytes == 2 || bytes1[startPos1 + 2] == bytes2[startPos2 + 2]);
+        }
+        return bytes1[startPos1] == bytes2[startPos2];
     }
 
     static <U, W> AtomicReferenceFieldUpdater<U, W> newAtomicReferenceFieldUpdater(
