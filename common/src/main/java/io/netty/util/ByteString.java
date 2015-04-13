@@ -15,6 +15,8 @@
 package io.netty.util;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.nio.ByteBuffer;
@@ -600,24 +602,12 @@ public class ByteString {
         if (!(obj instanceof ByteString)) {
             return false;
         }
-
         if (this == obj) {
             return true;
         }
-
-        ByteString that = (ByteString) obj;
-        if (length() != that.length() || hashCode() != that.hashCode()) {
-            return false;
-        }
-
-        final int end = value.length;
-        for (int i = 0, j = 0; i < end; i++, j++) {
-            if (value[i] != that.value[j]) {
-                return false;
-            }
-        }
-
-        return true;
+        ByteString other = (ByteString) obj;
+        return hashCode() == other.hashCode() &&
+               PlatformDependent.equals(array(), 0, array().length, other.array(), 0, other.array().length);
     }
 
     /**
