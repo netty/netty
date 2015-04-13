@@ -37,7 +37,7 @@ public class AbstractMicrobenchmark extends AbstractMicrobenchmarkBase {
     static {
         final String[] customArgs = {
         "-Xms768m", "-Xmx768m", "-XX:MaxDirectMemorySize=768m", "-Dharness.executor=CUSTOM",
-        "-Dharness.executor.class=io.netty.microbench.util.AbstractMicrobenchmark$HarnessExecutor" };
+        "-Dharness.executor.class=AbstractMicrobenchmark$HarnessExecutor" };
 
         JVM_ARGS = new String[BASE_JVM_ARGS.length + customArgs.length];
         System.arraycopy(BASE_JVM_ARGS, 0, JVM_ARGS, 0, BASE_JVM_ARGS.length);
