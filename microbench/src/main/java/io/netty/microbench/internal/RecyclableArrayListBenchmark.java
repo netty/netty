@@ -20,11 +20,14 @@ import io.netty.util.internal.RecyclableArrayList;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Param;
+import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Threads;
 
 /**
  * This class benchmarks different allocators with different allocation sizes.
  */
+@State(Scope.Benchmark)
 @Threads(4)
 @Measurement(iterations = 10, batchSize = 100)
 public class RecyclableArrayListBenchmark extends AbstractMicrobenchmark {

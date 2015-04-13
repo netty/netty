@@ -18,6 +18,8 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_UPPER_BOUND;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
+
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -66,6 +68,7 @@ import io.netty.util.concurrent.Future;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Level;
@@ -127,13 +130,13 @@ public class Http2FrameWriterBenchmark extends AbstractSharedExecutorMicrobenchm
     @Setup(Level.Trial)
     public void setup() {
         switch (environmentType) {
-        case EMBEDDED_POOLED:
-        case EMBEDDED_UNPOOLED:
-            environment = boostrapEmbeddedEnv(environmentType);
-            break;
-        default:
-            environment = boostrapEnvWithTransport(environmentType);
-            break;
+            case EMBEDDED_POOLED:
+            case EMBEDDED_UNPOOLED:
+                environment = boostrapEmbeddedEnv(environmentType);
+                break;
+            default:
+                environment = boostrapEnvWithTransport(environmentType);
+                break;
         }
         if (environment == null) {
             throw new IllegalStateException("Environment type [" + environmentType + "] is not supported.");
@@ -226,7 +229,7 @@ public class Http2FrameWriterBenchmark extends AbstractSharedExecutorMicrobenchm
         final EnvironmentParameters params = environmentType.params();
         ServerBootstrap sb = new ServerBootstrap();
         Bootstrap cb = new Bootstrap();
-        final TrasportEnvironment environment = new TrasportEnvironment(cb, sb);
+        final TransportEnvironment environment = new TransportEnvironment(cb, sb);
 
         EventLoopGroup serverEventLoopGroup = params.newEventLoopGroup();
         sb.group(serverEventLoopGroup, serverEventLoopGroup);
@@ -242,6 +245,7 @@ public class Http2FrameWriterBenchmark extends AbstractSharedExecutorMicrobenchm
         cb.group(params.newEventLoopGroup());
         cb.channel(params.clientChannelClass());
         cb.option(ChannelOption.ALLOCATOR, params.clientAllocator());
+        final CountDownLatch latch = new CountDownLatch(1);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
@@ -263,12 +267,21 @@ public class Http2FrameWriterBenchmark extends AbstractSharedExecutorMicrobenchm
                 Http2ConnectionHandler connectionHandler = new Http2ConnectionHandler(decoder, encoder);
                 p.addLast(connectionHandler);
                 environment.context(p.lastContext());
+                // Must wait for context to be set.
+                latch.countDown();
             }
         });
 
         environment.serverChannel(sb.bind(params.address()));
         params.address(environment.serverChannel().localAddress());
         environment.clientChannel(cb.connect(params.address()));
+        try {
+            if (!latch.await(5, SECONDS)) {
+                throw new RuntimeException("Channel did not initialize in time");
+            }
+        } catch (InterruptedException ie) {
+            throw new RuntimeException(ie);
+        }
         return environment;
     }
 
@@ -437,7 +450,7 @@ public class Http2FrameWriterBenchmark extends AbstractSharedExecutorMicrobenchm
         }
     }
 
-    private static final class TrasportEnvironment implements Environment {
+    private static final class TransportEnvironment implements Environment {
         private final ServerBootstrap sb;
         private final Bootstrap cb;
         private Channel serverChannel;
@@ -445,7 +458,7 @@ public class Http2FrameWriterBenchmark extends AbstractSharedExecutorMicrobenchm
         private ChannelHandlerContext clientContext;
         private Http2FrameWriter clientWriter;
 
-        public TrasportEnvironment(Bootstrap cb, ServerBootstrap sb) {
+        public TransportEnvironment(Bootstrap cb, ServerBootstrap sb) {
             this.sb = checkNotNull(sb, "sb");
             this.cb = checkNotNull(cb, "cb");
         }
