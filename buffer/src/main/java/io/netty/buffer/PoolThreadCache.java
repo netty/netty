@@ -129,7 +129,7 @@ final class PoolThreadCache {
             int cacheSize, int maxCachedBufferCapacity, PoolArena<T> area) {
         if (cacheSize > 0) {
             int max = Math.min(area.chunkSize, maxCachedBufferCapacity);
-            int arraySize = Math.max(1, max / area.pageSize);
+            int arraySize = Math.max(1, log2(max / area.pageSize) + 1);
 
             @SuppressWarnings("unchecked")
             NormalMemoryRegionCache<T>[] cache = new NormalMemoryRegionCache[arraySize];
