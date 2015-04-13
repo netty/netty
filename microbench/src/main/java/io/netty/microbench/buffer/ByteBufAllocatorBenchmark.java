@@ -22,12 +22,15 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Param;
+import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.State;
 
 import java.util.Random;
 
 /**
  * This class benchmarks different allocators with different allocation sizes.
  */
+@State(Scope.Benchmark)
 public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
 
     private static final ByteBufAllocator unpooledAllocator = new UnpooledByteBufAllocator(true);
