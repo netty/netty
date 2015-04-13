@@ -96,6 +96,11 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         return listener;
     }
 
+    // Visible for testing
+    Http2FrameListener internalFrameListener() {
+        return internalFrameListener;
+    }
+
     @Override
     public boolean prefaceReceived() {
         return FrameReadListener.class == internalFrameListener.getClass();
