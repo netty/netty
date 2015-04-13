@@ -54,6 +54,7 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
     private V[] values;
     private Collection<V> valueCollection;
     private int size;
+    private int mask;
 
     public @K@ObjectHashMap() {
         this(DEFAULT_CAPACITY, DEFAULT_LOAD_FACTOR);
@@ -76,7 +77,8 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
         this.loadFactor = loadFactor;
 
         // Adjust the initial capacity if necessary.
-        int capacity = adjustCapacity(initialCapacity);
+        int capacity = findNextPositivePowerOfTwo(initialCapacity);
+        mask = capacity - 1;
 
         // Allocate the arrays.
         keys = new @k@[capacity];
@@ -351,8 +353,7 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
      * Returns the hashed index for the given key.
      */
     private int hashIndex(@k@ key) {
-        // Allowing for negative keys by adding the length after the first mod operation.
-        return (hashCode(key) % keys.length + keys.length) % keys.length;
+        return hashCode(key) & mask;
     }
 
     /**
@@ -371,19 +372,17 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
         if (size > maxSize) {
             // Need to grow the arrays. We take care to detect integer overflow,
             // also limit array size to ArrayList.MAX_ARRAY_SIZE.
-            rehash(adjustCapacity((int) Math.min(keys.length * 2.0, Integer.MAX_VALUE - 8)));
+            int newCapacity = keys.length << 1;
+            if(newCapacity < 0) {
+                throw new IllegalStateException("Max capacity reached at size=" + size);
+            } else {
+                rehash(newCapacity);
+            }
         } else if (size == keys.length) {
             // Open addressing requires that we have at least 1 slot available. Need to refresh
             // the arrays to clear any removed elements.
             rehash(keys.length);
         }
-    }
-
-    /**
-     * Adjusts the given capacity value to ensure that it's odd. Even capacities can break probing.
-     */
-    private static int adjustCapacity(int capacity) {
-        return capacity | 1;
     }
 
     /**
@@ -444,6 +443,7 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
         values = temp;
 
         maxSize = calcMaxSize(newCapacity);
+        mask = newCapacity - 1;
 
         // Insert to the new arrays.
         for (int i = 0; i < oldVals.length; ++i) {
@@ -555,5 +555,19 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
      */
     protected String keyToString(@k@ key) {
         return @O@.toString(key);
+    }
+
+    /**
+     * Fast method of finding the next power of 2 greater than or equal to the supplied value.
+     *
+     * If the value is &lt;= 0 then 1 will be returned.
+     *
+     * This method is not suitable for {@link Integer#MIN_VALUE} or numbers greater than 2^30.*
+     * @param value from which to search for next power of 2
+     * @return The next power of 2 or the value itself if it is a power of 2
+     */
+    private static int findNextPositivePowerOfTwo(final int value)
+    {
+        return 1 << (32 - Integer.numberOfLeadingZeros(value - 1));
     }
 }
