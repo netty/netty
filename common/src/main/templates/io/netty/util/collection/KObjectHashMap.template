@@ -15,6 +15,8 @@
 
 package io.netty.util.collection;
 
+import static io.netty.util.internal.MathUtil.findNextPositivePowerOfTwo;
+
 import java.lang.reflect.Array;
 import java.util.AbstractCollection;
 import java.util.Arrays;
@@ -33,7 +35,7 @@ import java.util.NoSuchElementException;
 public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectMap.Entry<V>> {
 
     /** Default initial capacity. Used if not specified in the constructor */
-    public static final int DEFAULT_CAPACITY = 11;
+    public static final int DEFAULT_CAPACITY = 8;
 
     /** Default load factor. Used if not specified in the constructor */
     public static final float DEFAULT_LOAD_FACTOR = 0.5f;
@@ -52,8 +54,8 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
 
     private @k@[] keys;
     private V[] values;
-    private Collection<V> valueCollection;
     private int size;
+    private int mask;
 
     public @K@ObjectHashMap() {
         this(DEFAULT_CAPACITY, DEFAULT_LOAD_FACTOR);
@@ -76,7 +78,8 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
         this.loadFactor = loadFactor;
 
         // Adjust the initial capacity if necessary.
-        int capacity = adjustCapacity(initialCapacity);
+        int capacity = findNextPositivePowerOfTwo(initialCapacity);
+        mask = capacity - 1;
 
         // Allocate the arrays.
         keys = new @k@[capacity];
@@ -238,38 +241,33 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
 
     @Override
     public Collection<V> values() {
-        Collection<V> valueCollection = this.valueCollection;
-        if (valueCollection == null) {
-            this.valueCollection = valueCollection = new AbstractCollection<V>() {
-                @Override
-                public Iterator<V> iterator() {
-                    return new Iterator<V>() {
-                        final Iterator<Entry<V>> iter = @K@ObjectHashMap.this.iterator();
-                        @Override
-                        public boolean hasNext() {
-                            return iter.hasNext();
-                        }
+        return new AbstractCollection<V>() {
+            @Override
+            public Iterator<V> iterator() {
+                return new Iterator<V>() {
+                    final Iterator<Entry<V>> iter = @K@ObjectHashMap.this.iterator();
+                    @Override
+                    public boolean hasNext() {
+                        return iter.hasNext();
+                    }
 
-                        @Override
-                        public V next() {
-                            return iter.next().value();
-                        }
+                    @Override
+                    public V next() {
+                        return iter.next().value();
+                    }
 
-                        @Override
-                        public void remove() {
-                            throw new UnsupportedOperationException();
-                        }
-                    };
-                }
+                    @Override
+                    public void remove() {
+                        throw new UnsupportedOperationException();
+                    }
+                };
+            }
 
-                @Override
-                public int size() {
-                    return size;
-                }
-            };
-        }
-
-        return valueCollection;
+            @Override
+            public int size() {
+                return size;
+            }
+        };
     }
 
     @Override
@@ -351,8 +349,7 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
      * Returns the hashed index for the given key.
      */
     private int hashIndex(@k@ key) {
-        // Allowing for negative keys by adding the length after the first mod operation.
-        return (hashCode(key) % keys.length + keys.length) % keys.length;
+        return hashCode(key) & mask;
     }
 
     /**
@@ -369,21 +366,13 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
         size++;
 
         if (size > maxSize) {
-            // Need to grow the arrays. We take care to detect integer overflow,
-            // also limit array size to ArrayList.MAX_ARRAY_SIZE.
-            rehash(adjustCapacity((int) Math.min(keys.length * 2.0, Integer.MAX_VALUE - 8)));
-        } else if (size == keys.length) {
-            // Open addressing requires that we have at least 1 slot available. Need to refresh
-            // the arrays to clear any removed elements.
-            rehash(keys.length);
-        }
-    }
+            if(keys.length == Integer.MAX_VALUE) {
+                throw new IllegalStateException("Max capacity reached at size=" + size);
+            }
 
-    /**
-     * Adjusts the given capacity value to ensure that it's odd. Even capacities can break probing.
-     */
-    private static int adjustCapacity(int capacity) {
-        return capacity | 1;
+            // Double the capacity.
+            rehash(keys.length << 1);
+        }
     }
 
     /**
@@ -444,6 +433,7 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
         values = temp;
 
         maxSize = calcMaxSize(newCapacity);
+        mask = newCapacity - 1;
 
         // Insert to the new arrays.
         for (int i = 0; i < oldVals.length; ++i) {
