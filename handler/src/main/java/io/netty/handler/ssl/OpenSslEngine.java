@@ -120,6 +120,12 @@ public final class OpenSslEngine extends SSLEngine {
 
     private static final long EMPTY_ADDR = Buffer.address(Unpooled.EMPTY_BUFFER.nioBuffer());
 
+    private static final SSLEngineResult NEED_UNWRAP_OK = new SSLEngineResult(OK, NEED_UNWRAP, 0, 0);
+    private static final SSLEngineResult NEED_UNWRAP_CLOSED = new SSLEngineResult(CLOSED, NEED_UNWRAP, 0, 0);
+    private static final SSLEngineResult NEED_WRAP_OK = new SSLEngineResult(OK, NEED_WRAP, 0, 0);
+    private static final SSLEngineResult NEED_WRAP_CLOSED = new SSLEngineResult(CLOSED, NEED_WRAP, 0, 0);
+    private static final SSLEngineResult CLOSED_NOT_HANDSHAKING = new SSLEngineResult(CLOSED, NOT_HANDSHAKING, 0, 0);
+
     // OpenSSL state
     private long ssl;
     private long networkBIO;
@@ -373,7 +379,7 @@ public final class OpenSslEngine extends SSLEngine {
 
         // Check to make sure the engine has not been closed
         if (destroyed != 0) {
-            return new SSLEngineResult(CLOSED, NOT_HANDSHAKING, 0, 0);
+            return CLOSED_NOT_HANDSHAKING;
         }
 
         // Throw required runtime exceptions
@@ -403,8 +409,13 @@ public final class OpenSslEngine extends SSLEngine {
         // without regard to the handshake status.
         SSLEngineResult.HandshakeStatus handshakeStatus = handshakeStatus0();
 
-        if ((!handshakeFinished || engineClosed) && handshakeStatus == NEED_UNWRAP) {
-            return new SSLEngineResult(getEngineStatus(), NEED_UNWRAP, 0, 0);
+        if (handshakeStatus == NEED_UNWRAP) {
+            if (!handshakeFinished) {
+                return NEED_UNWRAP_OK;
+            }
+            if (engineClosed) {
+                return NEED_UNWRAP_CLOSED;
+            }
         }
 
         int bytesProduced = 0;
@@ -484,7 +495,7 @@ public final class OpenSslEngine extends SSLEngine {
 
         // Check to make sure the engine has not been closed
         if (destroyed != 0) {
-            return new SSLEngineResult(CLOSED, NOT_HANDSHAKING, 0, 0);
+            return CLOSED_NOT_HANDSHAKING;
         }
 
         // Throw requried runtime exceptions
@@ -526,8 +537,13 @@ public final class OpenSslEngine extends SSLEngine {
         // In handshake or close_notify stages, check if call to unwrap was made
         // without regard to the handshake status.
         SSLEngineResult.HandshakeStatus handshakeStatus = handshakeStatus0();
-        if ((!handshakeFinished || engineClosed) && handshakeStatus == NEED_WRAP) {
-            return new SSLEngineResult(getEngineStatus(), NEED_WRAP, 0, 0);
+        if (handshakeStatus == NEED_WRAP) {
+            if (!handshakeFinished) {
+                return NEED_WRAP_OK;
+            }
+            if (engineClosed) {
+                return NEED_WRAP_CLOSED;
+            }
         }
 
         final int srcsEndOffset = srcsOffset + srcsLength;
