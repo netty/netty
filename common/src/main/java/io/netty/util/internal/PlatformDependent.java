@@ -42,7 +42,6 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-
 /**
  * Utility that detects various properties specific to the current runtime
  * environment, such as Java version and the availability of the
@@ -72,7 +71,7 @@ public final class PlatformDependent {
             HAS_UNSAFE && !SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
     private static final long MAX_DIRECT_MEMORY = maxDirectMemory0();
 
-    private static final long ARRAY_BASE_OFFSET = arrayBaseOffset0();
+    private static final long ARRAY_BASE_OFFSET = PlatformDependent0.arrayBaseOffset();
 
     private static final boolean HAS_JAVASSIST = hasJavassist0();
 
@@ -351,6 +350,24 @@ public final class PlatformDependent {
     }
 
     /**
+     * Compare two {@code byte} arrays for equality. For performance reasons no bounds checking on the
+     * parameters is performed.
+     *
+     * @param bytes1 the first byte array.
+     * @param startPos1 the position (inclusive) to start comparing in {@code bytes1}.
+     * @param endPos1 the position (exclusive) to stop comparing in {@code bytes1}.
+     * @param bytes2 the second byte array.
+     * @param startPos2 the position (inclusive) to start comparing in {@code bytes2}.
+     * @param endPos2 the position (exclusive) to stop comparing in {@code bytes2}.
+     */
+    public static boolean equals(byte[] bytes1, int startPos1, int endPos1, byte[] bytes2, int startPos2, int endPos2) {
+        if (!hasUnsafe() || !PlatformDependent0.unalignedAccess()) {
+            return safeEquals(bytes1, startPos1, endPos1, bytes2, startPos2, endPos2);
+        }
+        return PlatformDependent0.equals(bytes1, startPos1, endPos1, bytes2, startPos2, endPos2);
+    }
+
+    /**
      * Create a new optimized {@link AtomicReferenceFieldUpdater} or {@code null} if it
      * could not be created. Because of this the caller need to check for {@code null} and if {@code null} is returned
      * use {@link AtomicReferenceFieldUpdater#newUpdater(Class, Class, String)} as fallback.
@@ -622,14 +639,6 @@ public final class PlatformDependent {
         }
     }
 
-    private static long arrayBaseOffset0() {
-        if (!hasUnsafe()) {
-            return -1;
-        }
-
-        return PlatformDependent0.arrayBaseOffset();
-    }
-
     private static long maxDirectMemory0() {
         long maxDirectMemory = 0;
         try {
@@ -845,6 +854,21 @@ public final class PlatformDependent {
             return -1;
         }
         return PlatformDependent0.addressSize();
+    }
+
+    private static boolean safeEquals(byte[] bytes1, int startPos1, int endPos1,
+                                      byte[] bytes2, int startPos2, int endPos2) {
+        final int len1 = endPos1 - startPos1;
+        final int len2 = endPos2 - startPos2;
+        if (len1 != len2) {
+            return false;
+        }
+        for (int i = 0; i < len1; i++) {
+            if (bytes1[startPos1 + i] != bytes2[startPos2 + i]) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private PlatformDependent() {
