@@ -15,8 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.handler.codec.http.CookieEncoderUtil.*;
-
 /**
  * A <a href="http://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie encoder to be used client side,
  * so only name=value pairs are sent.
@@ -34,6 +32,7 @@ import static io.netty.handler.codec.http.CookieEncoderUtil.*;
  *
  * @see ClientCookieDecoder
  */
+@Deprecated
 public final class ClientCookieEncoder {
 
     /**
@@ -43,8 +42,9 @@ public final class ClientCookieEncoder {
      * @param value the cookie value
      * @return a Rfc6265 style Cookie header value
      */
+    @Deprecated
     public static String encode(String name, String value) {
-        return encode(new DefaultCookie(name, value));
+        return io.netty.handler.codec.http.cookie.ClientCookieEncoder.LAX.encode(name, value);
     }
 
     /**
@@ -53,14 +53,9 @@ public final class ClientCookieEncoder {
      * @param specified the cookie
      * @return a Rfc6265 style Cookie header value
      */
+    @Deprecated
     public static String encode(Cookie cookie) {
-        if (cookie == null) {
-            throw new NullPointerException("cookie");
-        }
-
-        StringBuilder buf = stringBuilder();
-        encode(buf, cookie);
-        return stripTrailingSeparator(buf);
+        return io.netty.handler.codec.http.cookie.ClientCookieEncoder.LAX.encode(cookie);
     }
 
     /**
@@ -69,24 +64,9 @@ public final class ClientCookieEncoder {
      * @param cookies some cookies
      * @return a Rfc6265 style Cookie header value, null if no cookies are passed.
      */
+    @Deprecated
     public static String encode(Cookie... cookies) {
-        if (cookies == null) {
-            throw new NullPointerException("cookies");
-        }
-
-        if (cookies.length == 0) {
-            return null;
-        }
-
-        StringBuilder buf = stringBuilder();
-        for (Cookie c : cookies) {
-            if (c == null) {
-                break;
-            }
-
-            encode(buf, c);
-        }
-        return stripTrailingSeparatorOrNull(buf);
+        return io.netty.handler.codec.http.cookie.ClientCookieEncoder.LAX.encode(cookies);
     }
 
     /**
@@ -95,31 +75,9 @@ public final class ClientCookieEncoder {
      * @param cookies some cookies
      * @return a Rfc6265 style Cookie header value, null if no cookies are passed.
      */
+    @Deprecated
     public static String encode(Iterable<Cookie> cookies) {
-        if (cookies == null) {
-            throw new NullPointerException("cookies");
-        }
-
-        if (!cookies.iterator().hasNext()) {
-            return null;
-        }
-
-        StringBuilder buf = stringBuilder();
-        for (Cookie c : cookies) {
-            if (c == null) {
-                break;
-            }
-
-            encode(buf, c);
-        }
-        return stripTrailingSeparatorOrNull(buf);
-    }
-
-    private static void encode(StringBuilder buf, Cookie c) {
-        // rawValue > value > ""
-        String value = c.rawValue() != null ? c.rawValue()
-                : c.value() != null ? c.value() : "";
-        addUnquoted(buf, c.name(), value);
+        return io.netty.handler.codec.http.cookie.ClientCookieEncoder.LAX.encode(cookies);
     }
 
     private ClientCookieEncoder() {

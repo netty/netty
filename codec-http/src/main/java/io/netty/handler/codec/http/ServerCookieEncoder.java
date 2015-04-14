@@ -15,12 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.handler.codec.http.CookieEncoderUtil.*;
-
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 
 /**
@@ -38,7 +33,10 @@ import java.util.List;
  * </pre>
  *
  * @see ServerCookieDecoder
+ *
+ * @deprecated Use {@link io.netty.handler.codec.http.cookie.ServerCookieEncoder} instead
  */
+@Deprecated
 public final class ServerCookieEncoder {
 
     /**
@@ -48,8 +46,9 @@ public final class ServerCookieEncoder {
      * @param value the cookie value
      * @return a single Set-Cookie header value
      */
+    @Deprecated
     public static String encode(String name, String value) {
-        return encode(new DefaultCookie(name, value));
+        return io.netty.handler.codec.http.cookie.ServerCookieEncoder.LAX.encode(name, value);
     }
 
     /**
@@ -58,40 +57,9 @@ public final class ServerCookieEncoder {
      * @param cookie the cookie
      * @return a single Set-Cookie header value
      */
+    @Deprecated
     public static String encode(Cookie cookie) {
-        if (cookie == null) {
-            throw new NullPointerException("cookie");
-        }
-
-        StringBuilder buf = stringBuilder();
-
-        addUnquoted(buf, cookie.name(), cookie.value());
-
-        if (cookie.maxAge() != Long.MIN_VALUE) {
-            add(buf, CookieHeaderNames.MAX_AGE, cookie.maxAge());
-            Date expires = new Date(cookie.maxAge() * 1000 + System.currentTimeMillis());
-            addUnquoted(buf, CookieHeaderNames.EXPIRES, HttpHeaderDateFormat.get().format(expires));
-        }
-
-        if (cookie.path() != null) {
-            addUnquoted(buf, CookieHeaderNames.PATH, cookie.path());
-        }
-
-        if (cookie.domain() != null) {
-            addUnquoted(buf, CookieHeaderNames.DOMAIN, cookie.domain());
-        }
-        if (cookie.isSecure()) {
-            buf.append(CookieHeaderNames.SECURE);
-            buf.append((char) HttpConstants.SEMICOLON);
-            buf.append((char) HttpConstants.SP);
-        }
-        if (cookie.isHttpOnly()) {
-            buf.append(CookieHeaderNames.HTTPONLY);
-            buf.append((char) HttpConstants.SEMICOLON);
-            buf.append((char) HttpConstants.SP);
-        }
-
-        return stripTrailingSeparator(buf);
+        return io.netty.handler.codec.http.cookie.ServerCookieEncoder.LAX.encode(cookie);
     }
 
     /**
@@ -100,23 +68,9 @@ public final class ServerCookieEncoder {
      * @param cookies a bunch of cookies
      * @return the corresponding bunch of Set-Cookie headers
      */
+    @Deprecated
     public static List<String> encode(Cookie... cookies) {
-        if (cookies == null) {
-            throw new NullPointerException("cookies");
-        }
-
-        if (cookies.length == 0) {
-            return Collections.emptyList();
-        }
-
-        List<String> encoded = new ArrayList<String>(cookies.length);
-        for (Cookie c : cookies) {
-            if (c == null) {
-                break;
-            }
-            encoded.add(encode(c));
-        }
-        return encoded;
+        return io.netty.handler.codec.http.cookie.ServerCookieEncoder.LAX.encode(cookies);
     }
 
     /**
@@ -125,23 +79,9 @@ public final class ServerCookieEncoder {
      * @param cookies a bunch of cookies
      * @return the corresponding bunch of Set-Cookie headers
      */
+    @Deprecated
     public static List<String> encode(Collection<Cookie> cookies) {
-        if (cookies == null) {
-            throw new NullPointerException("cookies");
-        }
-
-        if (cookies.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        List<String> encoded = new ArrayList<String>(cookies.size());
-        for (Cookie c : cookies) {
-            if (c == null) {
-                break;
-            }
-            encoded.add(encode(c));
-        }
-        return encoded;
+        return io.netty.handler.codec.http.cookie.ServerCookieEncoder.LAX.encode(cookies);
     }
 
     /**
@@ -150,23 +90,9 @@ public final class ServerCookieEncoder {
      * @param cookies a bunch of cookies
      * @return the corresponding bunch of Set-Cookie headers
      */
+    @Deprecated
     public static List<String> encode(Iterable<Cookie> cookies) {
-        if (cookies == null) {
-            throw new NullPointerException("cookies");
-        }
-
-        if (!cookies.iterator().hasNext()) {
-            return Collections.emptyList();
-        }
-
-        List<String> encoded = new ArrayList<String>();
-        for (Cookie c : cookies) {
-            if (c == null) {
-                break;
-            }
-            encoded.add(encode(c));
-        }
-        return encoded;
+        return io.netty.handler.codec.http.cookie.ServerCookieEncoder.LAX.encode(cookies);
     }
 
     private ServerCookieEncoder() {

@@ -19,63 +19,26 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.TreeSet;
 
-
-
 /**
  * The default {@link Cookie} implementation.
+ *
+ * @deprecated Use {@link io.netty.handler.codec.http.cookie.DefaultCookie} instead.
  */
-public class DefaultCookie implements Cookie {
+@Deprecated
+public class DefaultCookie extends io.netty.handler.codec.http.cookie.DefaultCookie implements Cookie {
 
-    private final String name;
-    private String value;
-    private String rawValue;
-    private String domain;
-    private String path;
     private String comment;
     private String commentUrl;
     private boolean discard;
     private Set<Integer> ports = Collections.emptySet();
     private Set<Integer> unmodifiablePorts = ports;
-    private long maxAge = Long.MIN_VALUE;
     private int version;
-    private boolean secure;
-    private boolean httpOnly;
 
     /**
      * Creates a new cookie with the specified name and value.
      */
     public DefaultCookie(String name, String value) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
-        name = name.trim();
-        if (name.isEmpty()) {
-            throw new IllegalArgumentException("empty name");
-        }
-
-        for (int i = 0; i < name.length(); i ++) {
-            char c = name.charAt(i);
-            if (c > 127) {
-                throw new IllegalArgumentException(
-                        "name contains non-ascii character: " + name);
-            }
-
-            // Check prohibited characters.
-            switch (c) {
-            case '\t': case '\n': case 0x0b: case '\f': case '\r':
-            case ' ':  case ',':  case ';':  case '=':
-                throw new IllegalArgumentException(
-                        "name contains one of the following prohibited characters: " +
-                        "=,; \\t\\r\\n\\v\\f: " + name);
-            }
-        }
-
-        if (name.charAt(0) == '$') {
-            throw new IllegalArgumentException("name starting with '$' not allowed: " + name);
-        }
-
-        this.name = name;
-        setValue(value);
+        super(name, value);
     }
 
     @Override
@@ -85,40 +48,9 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
-    public String name() {
-        return name;
-    }
-
-    @Override
     @Deprecated
     public String getValue() {
         return value();
-    }
-
-    @Override
-    public String value() {
-        return value;
-    }
-
-    @Override
-    public void setValue(String value) {
-        if (value == null) {
-            throw new NullPointerException("value");
-        }
-        this.value = value;
-    }
-
-    @Override
-    public String rawValue() {
-        return rawValue;
-    }
-
-    @Override
-    public void setRawValue(String rawValue) {
-        if (value == null) {
-            throw new NullPointerException("rawValue");
-        }
-        this.rawValue = rawValue;
     }
 
     @Override
@@ -128,29 +60,9 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
-    public String domain() {
-        return domain;
-    }
-
-    @Override
-    public void setDomain(String domain) {
-        this.domain = validateValue("domain", domain);
-    }
-
-    @Override
     @Deprecated
     public String getPath() {
         return path();
-    }
-
-    @Override
-    public String path() {
-        return path;
-    }
-
-    @Override
-    public void setPath(String path) {
-        this.path = validateValue("path", path);
     }
 
     @Override
@@ -160,11 +72,13 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
+    @Deprecated
     public String comment() {
         return comment;
     }
 
     @Override
+    @Deprecated
     public void setComment(String comment) {
         this.comment = validateValue("comment", comment);
     }
@@ -176,21 +90,25 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
+    @Deprecated
     public String commentUrl() {
         return commentUrl;
     }
 
     @Override
+    @Deprecated
     public void setCommentUrl(String commentUrl) {
         this.commentUrl = validateValue("commentUrl", commentUrl);
     }
 
     @Override
+    @Deprecated
     public boolean isDiscard() {
         return discard;
     }
 
     @Override
+    @Deprecated
     public void setDiscard(boolean discard) {
         this.discard = discard;
     }
@@ -202,6 +120,7 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
+    @Deprecated
     public Set<Integer> ports() {
         if (unmodifiablePorts == null) {
             unmodifiablePorts = Collections.unmodifiableSet(ports);
@@ -210,6 +129,7 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
+    @Deprecated
     public void setPorts(int... ports) {
         if (ports == null) {
             throw new NullPointerException("ports");
@@ -232,6 +152,7 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
+    @Deprecated
     public void setPorts(Iterable<Integer> ports) {
         Set<Integer> newPorts = new TreeSet<Integer>();
         for (int p: ports) {
@@ -255,174 +176,20 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
-    public long maxAge() {
-        return maxAge;
-    }
-
-    @Override
-    public void setMaxAge(long maxAge) {
-        this.maxAge = maxAge;
-    }
-
-    @Override
     @Deprecated
     public int getVersion() {
         return version();
     }
 
     @Override
+    @Deprecated
     public int version() {
         return version;
     }
 
     @Override
+    @Deprecated
     public void setVersion(int version) {
         this.version = version;
-    }
-
-    @Override
-    public boolean isSecure() {
-        return secure;
-    }
-
-    @Override
-    public void setSecure(boolean secure) {
-        this.secure = secure;
-    }
-
-    @Override
-    public boolean isHttpOnly() {
-        return httpOnly;
-    }
-
-    @Override
-    public void setHttpOnly(boolean httpOnly) {
-        this.httpOnly = httpOnly;
-    }
-
-    @Override
-    public int hashCode() {
-        return name().hashCode();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (!(o instanceof Cookie)) {
-            return false;
-        }
-
-        Cookie that = (Cookie) o;
-        if (!name().equalsIgnoreCase(that.name())) {
-            return false;
-        }
-
-        if (path() == null) {
-            if (that.path() != null) {
-                return false;
-            }
-        } else if (that.path() == null) {
-            return false;
-        } else if (!path().equals(that.path())) {
-            return false;
-        }
-
-        if (domain() == null) {
-            if (that.domain() != null) {
-                return false;
-            }
-        } else if (that.domain() == null) {
-            return false;
-        } else {
-            return domain().equalsIgnoreCase(that.domain());
-        }
-
-        return true;
-    }
-
-    @Override
-    public int compareTo(Cookie c) {
-        int v;
-        v = name().compareToIgnoreCase(c.name());
-        if (v != 0) {
-            return v;
-        }
-
-        if (path() == null) {
-            if (c.path() != null) {
-                return -1;
-            }
-        } else if (c.path() == null) {
-            return 1;
-        } else {
-            v = path().compareTo(c.path());
-            if (v != 0) {
-                return v;
-            }
-        }
-
-        if (domain() == null) {
-            if (c.domain() != null) {
-                return -1;
-            }
-        } else if (c.domain() == null) {
-            return 1;
-        } else {
-            v = domain().compareToIgnoreCase(c.domain());
-            return v;
-        }
-
-        return 0;
-    }
-
-    @Override
-    public String toString() {
-        StringBuilder buf = new StringBuilder()
-            .append(name())
-            .append('=')
-            .append(value());
-        if (domain() != null) {
-            buf.append(", domain=")
-               .append(domain());
-        }
-        if (path() != null) {
-            buf.append(", path=")
-               .append(path());
-        }
-        if (comment() != null) {
-            buf.append(", comment=")
-               .append(comment());
-        }
-        if (maxAge() >= 0) {
-            buf.append(", maxAge=")
-               .append(maxAge())
-               .append('s');
-        }
-        if (isSecure()) {
-            buf.append(", secure");
-        }
-        if (isHttpOnly()) {
-            buf.append(", HTTPOnly");
-        }
-        return buf.toString();
-    }
-
-    private static String validateValue(String name, String value) {
-        if (value == null) {
-            return null;
-        }
-        value = value.trim();
-        if (value.isEmpty()) {
-            return null;
-        }
-        for (int i = 0; i < value.length(); i ++) {
-            char c = value.charAt(i);
-            switch (c) {
-            case '\r': case '\n': case '\f': case 0x0b: case ';':
-                throw new IllegalArgumentException(
-                        name + " contains one of the following prohibited characters: " +
-                        ";\\r\\n\\f\\v (" + value + ')');
-            }
-        }
-        return value;
     }
 }
