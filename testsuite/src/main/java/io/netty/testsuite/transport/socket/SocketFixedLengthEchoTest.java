@@ -22,6 +22,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.FixedLengthFrameDecoder;
 import org.junit.Test;
@@ -63,6 +64,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         final EchoHandler sh = new EchoHandler(autoRead);
         final EchoHandler ch = new EchoHandler(autoRead);
 
+        sb.childOption(ChannelOption.AUTO_READ, autoRead);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             public void initChannel(Channel sch) throws Exception {
@@ -71,6 +73,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
             }
         });
 
+        cb.option(ChannelOption.AUTO_READ, autoRead);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
             public void initChannel(Channel sch) throws Exception {
@@ -148,6 +151,9 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             channel = ctx.channel();
+            if (!autoRead) {
+                ctx.read();
+            }
         }
 
         @Override
