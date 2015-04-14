@@ -235,7 +235,7 @@ public abstract class SslContext {
     public static SslContext newServerContext(
             SslProvider provider, File certChainFile, File keyFile, String keyPassword) throws SSLException {
         return newServerContext(provider, certChainFile, keyFile, keyPassword, null, IdentityCipherSuiteFilter.INSTANCE,
-                null, 0, 0);
+                                null, 0, 0);
     }
 
     /**
@@ -376,9 +376,9 @@ public abstract class SslContext {
             File keyCertChainFile, File keyFile, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
-        return newServerContext(provider, trustCertChainFile, trustManagerFactory, keyCertChainFile,
-                keyFile, keyPassword, keyManagerFactory, ciphers, cipherFilter, apn,
-                sessionCacheSize, sessionTimeout);
+        return newServerContextInternal(provider, trustCertChainFile, trustManagerFactory, keyCertChainFile,
+                                        keyFile, keyPassword, keyManagerFactory, ciphers, cipherFilter, apn,
+                                        sessionCacheSize, sessionTimeout);
     }
 
     static SslContext newServerContextInternal(
@@ -708,8 +708,9 @@ public abstract class SslContext {
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
       return newClientContextInternal(provider, trustCertChainFile, trustManagerFactory,
-          keyCertChainFile, keyFile, keyPassword, keyManagerFactory, ciphers, cipherFilter, apn,
-          sessionCacheSize, sessionTimeout);
+                                      keyCertChainFile, keyFile, keyPassword, keyManagerFactory, ciphers, cipherFilter,
+                                      apn,
+                                      sessionCacheSize, sessionTimeout);
     }
 
     static SslContext newClientContextInternal(
