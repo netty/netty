@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,35 +13,47 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http;
+package io.netty.handler.codec.http.cookie;
+
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
+import io.netty.handler.codec.http.HttpHeaderDateFormat;
 
 import java.text.ParsePosition;
 import java.util.Date;
 
-import static io.netty.handler.codec.http.CookieEncoderUtil.*;
-
 /**
  * A <a href="http://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie decoder to be used client side.
  *
- * It will store the raw value in {@link Cookie#setRawValue(String)} so it can be
+ * It will store the way the raw value was wrapped in {@link Cookie#setWrap(boolean)} so it can be
  * eventually sent back to the Origin server as is.
  *
  * @see ClientCookieEncoder
  */
-public final class ClientCookieDecoder {
+public final class ClientCookieDecoder extends CookieDecoder {
+
+    /**
+     * Strict encoder that validates that name and value chars are in the valid scope
+     * defined in RFC6265
+     */
+    public static final ClientCookieDecoder STRICT = new ClientCookieDecoder(true);
+
+    /**
+     * Lax instance that doesn't validate name and value
+     */
+    public static final ClientCookieDecoder LAX = new ClientCookieDecoder(false);
+
+    private ClientCookieDecoder(boolean strict) {
+        super(strict);
+    }
 
     /**
      * Decodes the specified Set-Cookie HTTP header value into a {@link Cookie}.
      *
      * @return the decoded {@link Cookie}
      */
-    public static Cookie decode(String header) {
-
-        if (header == null) {
-            throw new NullPointerException("header");
-        }
-
-        final int headerLen = header.length();
+    public Cookie decode(String header) {
+        final int headerLen = checkNotNull(header, "header").length();
 
         if (headerLen == 0) {
             return null;
@@ -70,89 +82,35 @@ public final class ClientCookieDecoder {
                 break;
             }
 
-            int newNameStart = i;
-            int newNameEnd = i;
-            String value, rawValue;
+            int nameBegin = i;
+            int nameEnd = i;
+            int valueBegin = -1;
+            int valueEnd = -1;
 
-            if (i == headerLen) {
-                value = rawValue = null;
-            } else {
+            if (i != headerLen) {
                 keyValLoop: for (;;) {
 
                     char curChar = header.charAt(i);
                     if (curChar == ';') {
                         // NAME; (no value till ';')
-                        newNameEnd = i;
-                        value = rawValue = null;
+                        nameEnd = i;
+                        valueBegin = valueEnd = -1;
                         break keyValLoop;
+
                     } else if (curChar == '=') {
                         // NAME=VALUE
-                        newNameEnd = i;
+                        nameEnd = i;
                         i++;
                         if (i == headerLen) {
                             // NAME= (empty value, i.e. nothing after '=')
-                            value = rawValue = "";
+                            valueBegin = valueEnd = 0;
                             break keyValLoop;
                         }
 
-                        int newValueStart = i;
-                        char c = header.charAt(i);
-                        if (c == '"') {
-                            // NAME="VALUE"
-                            StringBuilder newValueBuf = stringBuilder();
-
-                            int rawValueStart = i;
-                            int rawValueEnd = i;
-
-                            final char q = c;
-                            boolean hadBackslash = false;
-                            i++;
-                            for (;;) {
-                                if (i == headerLen) {
-                                    value = newValueBuf.toString();
-                                    // only need to compute raw value for cookie
-                                    // value which is in first position
-                                    rawValue = header.substring(rawValueStart, rawValueEnd);
-                                    break keyValLoop;
-                                }
-                                if (hadBackslash) {
-                                    hadBackslash = false;
-                                    c = header.charAt(i++);
-                                    rawValueEnd = i;
-                                    if (c == '\\' || c == '"') {
-                                        newValueBuf.setCharAt(newValueBuf.length() - 1, c);
-                                    } else {
-                                        // Do not escape last backslash.
-                                        newValueBuf.append(c);
-                                    }
-                                } else {
-                                    c = header.charAt(i++);
-                                    rawValueEnd = i;
-                                    if (c == q) {
-                                        value = newValueBuf.toString();
-                                        // only need to compute raw value for
-                                        // cookie value which is in first
-                                        // position
-                                        rawValue = header.substring(rawValueStart, rawValueEnd);
-                                        break keyValLoop;
-                                    }
-                                    newValueBuf.append(c);
-                                    if (c == '\\') {
-                                        hadBackslash = true;
-                                    }
-                                }
-                            }
-                        } else {
-                            // NAME=VALUE;
-                            int semiPos = header.indexOf(';', i);
-                            if (semiPos > 0) {
-                                value = rawValue = header.substring(newValueStart, semiPos);
-                                i = semiPos;
-                            } else {
-                                value = rawValue = header.substring(newValueStart);
-                                i = headerLen;
-                            }
-                        }
+                        valueBegin = i;
+                        // NAME=VALUE;
+                        int semiPos = header.indexOf(';', i);
+                        valueEnd = i = semiPos > 0 ? semiPos : headerLen;
                         break keyValLoop;
                     } else {
                         i++;
@@ -160,17 +118,31 @@ public final class ClientCookieDecoder {
 
                     if (i == headerLen) {
                         // NAME (no value till the end of string)
-                        newNameEnd = i;
-                        value = rawValue = null;
+                        nameEnd = headerLen;
+                        valueBegin = valueEnd = -1;
                         break;
                     }
                 }
             }
 
+            if (valueEnd > 0 && header.charAt(valueEnd - 1) == ',') {
+                // old multiple cookies separator, skipping it
+                valueEnd--;
+            }
+
             if (cookieBuilder == null) {
-                cookieBuilder = new CookieBuilder(header, newNameStart, newNameEnd, value, rawValue);
+                // cookie name-value pair
+                DefaultCookie cookie = initCookie(header, nameBegin, nameEnd, valueBegin, valueEnd);
+
+                if (cookie == null) {
+                    return null;
+                }
+
+                cookieBuilder = new CookieBuilder(cookie);
             } else {
-                cookieBuilder.appendAttribute(header, newNameStart, newNameEnd, value);
+                // cookie attribute
+                String attrValue = valueBegin == -1 ? null : header.substring(valueBegin, valueEnd);
+                cookieBuilder.appendAttribute(header, nameBegin, nameEnd, attrValue);
             }
         }
         return cookieBuilder.cookie();
@@ -178,9 +150,7 @@ public final class ClientCookieDecoder {
 
     private static class CookieBuilder {
 
-        private final String name;
-        private final String value;
-        private final String rawValue;
+        private final DefaultCookie cookie;
         private String domain;
         private String path;
         private long maxAge = Long.MIN_VALUE;
@@ -188,11 +158,8 @@ public final class ClientCookieDecoder {
         private boolean secure;
         private boolean httpOnly;
 
-        public CookieBuilder(String header, int keyStart, int keyEnd,
-                String value, String rawValue) {
-            name = header.substring(keyStart, keyEnd);
-            this.value = value;
-            this.rawValue = rawValue;
+        public CookieBuilder(DefaultCookie cookie) {
+            this.cookie = cookie;
         }
 
         private long mergeMaxAgeAndExpire(long maxAge, String expires) {
@@ -210,13 +177,6 @@ public final class ClientCookieDecoder {
         }
 
         public Cookie cookie() {
-            if (name == null) {
-                return null;
-            }
-
-            DefaultCookie cookie = new DefaultCookie(name, value);
-            cookie.setValue(value);
-            cookie.setRawValue(rawValue);
             cookie.setDomain(domain);
             cookie.setPath(path);
             cookie.setMaxAge(mergeMaxAgeAndExpire(maxAge, expires));
@@ -245,7 +205,6 @@ public final class ClientCookieDecoder {
 
         private void setCookieAttribute(String header, int keyStart,
                 int keyEnd, String value) {
-
             int length = keyEnd - keyStart;
 
             if (length == 4) {
@@ -260,15 +219,15 @@ public final class ClientCookieDecoder {
         }
 
         private void parse4(String header, int nameStart, String value) {
-            if (header.regionMatches(true, nameStart, "Path", 0, 4)) {
+            if (header.regionMatches(true, nameStart, CookieHeaderNames.PATH, 0, 4)) {
                 path = value;
             }
         }
 
         private void parse6(String header, int nameStart, String value) {
-            if (header.regionMatches(true, nameStart, "Domain", 0, 5)) {
-                domain = value.isEmpty() ? null : value;
-            } else if (header.regionMatches(true, nameStart, "Secure", 0, 5)) {
+            if (header.regionMatches(true, nameStart, CookieHeaderNames.DOMAIN, 0, 5)) {
+                domain = value.length() > 0 ? value.toString() : null;
+            } else if (header.regionMatches(true, nameStart, CookieHeaderNames.SECURE, 0, 5)) {
                 secure = true;
             }
         }
@@ -286,22 +245,17 @@ public final class ClientCookieDecoder {
         }
 
         private void parse7(String header, int nameStart, String value) {
-            if (header.regionMatches(true, nameStart, "Expires", 0, 7)) {
+            if (header.regionMatches(true, nameStart, CookieHeaderNames.EXPIRES, 0, 7)) {
                 setExpire(value);
-            } else if (header.regionMatches(true, nameStart, "Max-Age", 0, 7)) {
+            } else if (header.regionMatches(true, nameStart, CookieHeaderNames.MAX_AGE, 0, 7)) {
                 setMaxAge(value);
             }
         }
 
         private void parse8(String header, int nameStart, String value) {
-
-            if (header.regionMatches(true, nameStart, "HttpOnly", 0, 8)) {
+            if (header.regionMatches(true, nameStart, CookieHeaderNames.HTTPONLY, 0, 8)) {
                 httpOnly = true;
             }
         }
-    }
-
-    private ClientCookieDecoder() {
-        // unused
     }
 }
