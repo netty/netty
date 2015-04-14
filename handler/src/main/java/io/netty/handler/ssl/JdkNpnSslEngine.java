@@ -44,14 +44,8 @@ final class JdkNpnSslEngine extends JdkSslEngine {
             return;
         }
         try {
-            // Try to get the bootstrap class loader.
-            ClassLoader bootloader = ClassLoader.getSystemClassLoader().getParent();
-            if (bootloader == null) {
-                // If failed, use the system class loader,
-                // although it's not perfect to tell if NPN extension has been loaded.
-                bootloader = ClassLoader.getSystemClassLoader();
-            }
-            Class.forName("sun.security.ssl.NextProtoNegoExtension", true, bootloader);
+            // Always use bootstrap class loader.
+            Class.forName("sun.security.ssl.NextProtoNegoExtension", true, null);
             available = true;
         } catch (Exception ignore) {
             // npn-boot was not loaded.
