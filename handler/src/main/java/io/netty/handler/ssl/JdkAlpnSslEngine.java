@@ -44,14 +44,8 @@ final class JdkAlpnSslEngine extends JdkSslEngine {
         }
 
         try {
-            // Try to get the bootstrap class loader.
-            ClassLoader bootloader = ClassLoader.getSystemClassLoader().getParent();
-            if (bootloader == null) {
-                // If failed, use the system class loader,
-                // although it's not perfect to tell if APLN extension has been loaded.
-                bootloader = ClassLoader.getSystemClassLoader();
-            }
-            Class.forName("sun.security.ssl.ALPNExtension", true, bootloader);
+            // Always use bootstrap class loader.
+            Class.forName("sun.security.ssl.ALPNExtension", true, null);
             available = true;
         } catch (Exception ignore) {
             // alpn-boot was not loaded.
