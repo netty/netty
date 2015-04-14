@@ -16,3 +16,4 @@
 #include <jni.h>
 
 int Java_io_netty_channel_unix_FileDescriptor_close(JNIEnv* env, jclass clazz, jint fd);
+int Java_io_netty_channel_unix_FileDescriptor_open(JNIEnv* env, jclass clazz, jstring path);

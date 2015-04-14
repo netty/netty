@@ -46,6 +46,7 @@
 // optional
 extern int accept4(int sockFd, struct sockaddr* addr, socklen_t* addrlen, int flags) __attribute__((weak));
 extern int epoll_create1(int flags) __attribute__((weak));
+extern int pipe2(int pipefd[2], int flags) __attribute__((weak));
 
 #ifdef IO_NETTY_SENDMMSG_NOT_FOUND
 extern int sendmmsg(int sockfd, struct mmsghdr* msgvec, unsigned int vlen, unsigned int flags) __attribute__((weak));
@@ -1577,4 +1578,51 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_sizeofEpollEvent(JNIEn
 
 JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_offsetofEpollData(JNIEnv* env, jclass clazz) {
     return offsetof(struct epoll_event, data);
+}
+
+JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_pipe0(JNIEnv* env, jclass clazz) {
+    int fd[2];
+    if (pipe2) {
+        // we can just use pipe2 and so save extra syscalls;
+        if (pipe2(fd, O_NONBLOCK) != 0) {
+            return -errno;
+        }
+    } else {
+         if (pipe(fd) == 0) {
+            if (fcntl(fd[0], F_SETFD, O_NONBLOCK) < 0) {
+                int err = errno;
+                close(fd[0]);
+                close(fd[1]);
+                return -err;
+            }
+            if (fcntl(fd[1], F_SETFD, O_NONBLOCK) < 0) {
+                int err = errno;
+                close(fd[0]);
+                close(fd[1]);
+                return -err;
+            }
+         } else {
+            return -errno;
+         }
+    }
+
+    // encode the fds into a long
+    return (((long)fd[0]) << 32) | (fd[1] & 0xffffffffL);
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_splice0(JNIEnv* env, jclass clazz, jint fd, jint offIn, jint fdOut, jint offOut, jint len) {
+    ssize_t res;
+    int err;
+    loff_t off_in = offIn > -1 ? (loff_t) offIn : NULL;
+    loff_t off_out = offOut > -1 ? (loff_t) offOut : NULL;
+
+    do {
+       res = splice(fd, off_in, fdOut, off_out, (size_t) len, SPLICE_F_NONBLOCK | SPLICE_F_MOVE);
+       // keep on splicing if it was interrupted
+    } while (res == -1 && ((err = errno) == EINTR));
+
+    if (res < 0) {
+        return -err;
+    }
+    return (jint) res;
 }

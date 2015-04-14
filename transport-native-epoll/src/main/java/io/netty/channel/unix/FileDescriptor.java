@@ -15,6 +15,9 @@
  */
 package io.netty.channel.unix;
 
+import io.netty.channel.epoll.Native;
+
+import java.io.File;
 import java.io.IOException;
 
 /**
@@ -80,4 +83,14 @@ public class FileDescriptor {
     }
 
     private static native int close(int fd);
+
+    public static FileDescriptor from(File file) throws IOException {
+        int res = open(file.getPath());
+        if (res < 0) {
+            throw Native.newIOException("open", res);
+        }
+        return new FileDescriptor(res);
+    }
+
+    private static native int open(String path);
 }

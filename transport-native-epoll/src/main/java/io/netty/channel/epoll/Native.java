@@ -39,7 +39,7 @@ import java.util.Locale;
  *
  * <strong>Internal usage only!</strong>
  */
-final class Native {
+public final class Native {
 
     static {
         String name = SystemPropertyUtil.get("os.name").toLowerCase(Locale.UK).trim();
@@ -89,6 +89,7 @@ final class Native {
     private static final IOException CONNECTION_RESET_EXCEPTION_SENDTO;
     private static final IOException CONNECTION_RESET_EXCEPTION_SENDMSG;
     private static final IOException CONNECTION_RESET_EXCEPTION_SENDMMSG;
+    private static final IOException CONNECTION_RESET_EXCEPTION_SPLICE;
 
     static {
         for (int i = 0; i < ERRORS.length; i++) {
@@ -110,6 +111,8 @@ final class Native {
                 ERRNO_EPIPE_NEGATIVE);
         CONNECTION_RESET_EXCEPTION_SENDMMSG = newConnectionResetException("syscall:sendmmsg(...)",
                 ERRNO_EPIPE_NEGATIVE);
+        CONNECTION_RESET_EXCEPTION_SPLICE = newConnectionResetException("syscall:splice(...)",
+                ERRNO_EPIPE_NEGATIVE);
         CLOSED_CHANNEL_EXCEPTION = new ClosedChannelException();
         CLOSED_CHANNEL_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
     }
@@ -120,7 +123,7 @@ final class Native {
         return exception;
     }
 
-    private static IOException newIOException(String method, int err) {
+    public static IOException newIOException(String method, int err) {
         return new IOException(method + "() failed: " + ERRORS[-err]);
     }
 
@@ -176,6 +179,26 @@ final class Native {
     }
 
     private static native int close0(int fd);
+
+    public static int splice(int fd, int offIn, int fdOut, int offOut, int len) throws IOException {
+        int res =  splice0(fd, offIn, fdOut, offOut, len);
+        if (res >= 0) {
+            return res;
+        }
+        return ioResult("splice", res, CONNECTION_RESET_EXCEPTION_SPLICE);
+    }
+
+    private static native int splice0(int fd, int offIn, int fdOut, int offOut, int len);
+
+    public static long pipe() throws IOException {
+        long res = pipe0();
+        if (res >= 0) {
+            return res;
+        }
+        throw newIOException("pipe", (int) res);
+    }
+
+    private static native long pipe0();
 
     public static int write(int fd, ByteBuffer buf, int pos, int limit) throws IOException {
         int res = write0(fd, buf, pos, limit);

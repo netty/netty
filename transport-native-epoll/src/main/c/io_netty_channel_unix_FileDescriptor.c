@@ -16,6 +16,7 @@
 #include <jni.h>
 #include <unistd.h>
 #include <errno.h>
+#include <fcntl.h>
 #include "io_netty_channel_unix_FileDescriptor.h"
 
 JNIEXPORT int JNICALL Java_io_netty_channel_unix_FileDescriptor_close(JNIEnv* env, jclass clazz, jint fd) {
@@ -23,4 +24,17 @@ JNIEXPORT int JNICALL Java_io_netty_channel_unix_FileDescriptor_close(JNIEnv* en
        return -errno;
    }
    return 0;
+}
+
+JNIEXPORT int JNICALL Java_io_netty_channel_unix_FileDescriptor_open(JNIEnv* env, jclass clazz, jstring path) {
+
+    const char* f_path = (*env)->GetStringUTFChars(env, path, 0);
+
+    int res = open(f_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    (*env)->ReleaseStringUTFChars(env, path, f_path);
+
+    if (res < 0) {
+        return -errno;
+    }
+    return res;
 }
