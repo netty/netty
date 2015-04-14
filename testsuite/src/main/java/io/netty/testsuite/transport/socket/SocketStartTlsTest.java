@@ -21,6 +21,7 @@ import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.LineBasedFrameDecoder;
@@ -142,6 +143,9 @@ public class SocketStartTlsTest extends AbstractSocketTest {
     }
 
     private void testStartTls(ServerBootstrap sb, Bootstrap cb, boolean autoRead) throws Throwable {
+        sb.childOption(ChannelOption.AUTO_READ, autoRead);
+        cb.option(ChannelOption.AUTO_READ, autoRead);
+
         final EventExecutorGroup executor = SocketStartTlsTest.executor;
         SSLEngine sse = serverCtx.newEngine(PooledByteBufAllocator.DEFAULT);
         SSLEngine cse = clientCtx.newEngine(PooledByteBufAllocator.DEFAULT);
@@ -235,6 +239,9 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         @Override
         public void channelActive(ChannelHandlerContext ctx)
                 throws Exception {
+            if (!autoRead) {
+                ctx.read();
+            }
             ctx.writeAndFlush("StartTlsRequest\n");
         }
 
@@ -287,6 +294,9 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             channel = ctx.channel();
+            if (!autoRead) {
+                ctx.read();
+            }
         }
 
         @Override
