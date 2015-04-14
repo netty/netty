@@ -15,7 +15,12 @@
  */
 package io.netty.channel.unix;
 
+import io.netty.channel.epoll.Native;
+
+import java.io.File;
 import java.io.IOException;
+
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Native {@link FileDescriptor} implementation which allows to wrap an {@code int} and provide a
@@ -80,4 +85,25 @@ public class FileDescriptor {
     }
 
     private static native int close(int fd);
+
+    /**
+     * Open a new {@link FileDescriptor} for the given path.
+     */
+    public static FileDescriptor from(String path) throws IOException {
+        checkNotNull(path, "path");
+        int res = open(path);
+        if (res < 0) {
+            throw Native.newIOException("open", res);
+        }
+        return new FileDescriptor(res);
+    }
+
+    /**
+     * Open a new {@link FileDescriptor} for the given {@link File}.
+     */
+    public static FileDescriptor from(File file) throws IOException {
+        return from(checkNotNull(file, "file").getPath());
+    }
+
+    private static native int open(String path);
 }
