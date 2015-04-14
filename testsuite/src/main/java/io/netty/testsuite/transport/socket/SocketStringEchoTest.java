@@ -20,6 +20,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
@@ -70,6 +71,9 @@ public class SocketStringEchoTest extends AbstractSocketTest {
     }
 
     private static void testStringEcho(ServerBootstrap sb, Bootstrap cb, boolean autoRead) throws Throwable {
+        sb.childOption(ChannelOption.AUTO_READ, autoRead);
+        cb.option(ChannelOption.AUTO_READ, autoRead);
+
         final StringEchoHandler sh = new StringEchoHandler(autoRead);
         final StringEchoHandler ch = new StringEchoHandler(autoRead);
 
@@ -160,6 +164,9 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             channel = ctx.channel();
+            if (!autoRead) {
+                ctx.read();
+            }
         }
 
         @Override

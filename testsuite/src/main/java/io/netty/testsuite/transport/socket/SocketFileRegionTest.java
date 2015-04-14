@@ -22,6 +22,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.FileRegion;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -84,6 +85,9 @@ public class SocketFileRegionTest extends AbstractSocketTest {
 
     private static void testFileRegion0(
             ServerBootstrap sb, Bootstrap cb, boolean voidPromise, final boolean autoRead) throws Throwable {
+        sb.childOption(ChannelOption.AUTO_READ, autoRead);
+        cb.option(ChannelOption.AUTO_READ, autoRead);
+
         final int bufferSize = 1024;
         final File file = File.createTempFile("netty-", ".tmp");
         file.deleteOnExit();
@@ -108,6 +112,15 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         out.close();
 
         ChannelHandler ch = new SimpleChannelInboundHandler<Object>() {
+
+            @Override
+            public void channelActive(ChannelHandlerContext ctx)
+                    throws Exception {
+                if (!autoRead) {
+                    ctx.read();
+                }
+            }
+
             @Override
             public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
             }
@@ -193,6 +206,9 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         public void channelActive(ChannelHandlerContext ctx)
                 throws Exception {
             channel = ctx.channel();
+            if (!autoRead) {
+                ctx.read();
+            }
         }
 
         @Override

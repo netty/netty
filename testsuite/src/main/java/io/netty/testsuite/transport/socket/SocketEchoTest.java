@@ -23,6 +23,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
@@ -150,6 +151,8 @@ public class SocketEchoTest extends AbstractSocketTest {
             });
             cb.handler(ch);
         }
+        sb.childOption(ChannelOption.AUTO_READ, autoRead);
+        cb.option(ChannelOption.AUTO_READ, autoRead);
 
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.connect().sync().channel();
@@ -227,6 +230,9 @@ public class SocketEchoTest extends AbstractSocketTest {
         public void channelActive(ChannelHandlerContext ctx)
                 throws Exception {
             channel = ctx.channel();
+            if (!autoRead) {
+                ctx.read();
+            }
         }
 
         @Override
