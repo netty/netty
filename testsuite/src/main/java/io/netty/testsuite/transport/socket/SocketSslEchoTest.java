@@ -24,6 +24,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.ssl.JdkSslClientContext;
 import io.netty.handler.ssl.JdkSslServerContext;
@@ -221,6 +222,9 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         final ExecutorService delegatedTaskExecutor = Executors.newCachedThreadPool();
         reset();
 
+        sb.childOption(ChannelOption.AUTO_READ, autoRead);
+        cb.option(ChannelOption.AUTO_READ, autoRead);
+
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             @SuppressWarnings("deprecation")
@@ -417,6 +421,13 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             this.recvCounter = recvCounter;
             this.negoCounter = negoCounter;
             this.exception = exception;
+        }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            if (!autoRead) {
+                ctx.read();
+            }
         }
 
         @Override
