@@ -23,6 +23,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.spdy.SpdyFrameCodec;
@@ -176,6 +177,9 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
             throw new IllegalArgumentException("unknown version");
         }
 
+        sb.childOption(ChannelOption.AUTO_READ, autoRead);
+        cb.option(ChannelOption.AUTO_READ, autoRead);
+
         final SpdyEchoTestServerHandler sh = new SpdyEchoTestServerHandler(autoRead);
         final SpdyEchoTestClientHandler ch = new SpdyEchoTestClientHandler(frames.copy(), autoRead);
 
@@ -234,6 +238,13 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         }
 
         @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            if (!autoRead) {
+                ctx.read();
+            }
+        }
+
+        @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             ctx.write(msg);
         }
@@ -266,6 +277,12 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         SpdyEchoTestClientHandler(ByteBuf frames, boolean autoRead) {
             this.frames = frames;
             this.autoRead = autoRead;
+        }
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            if (!autoRead) {
+                ctx.read();
+            }
         }
 
         @Override
