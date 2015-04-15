@@ -187,13 +187,13 @@ public final class HttpUploadClient {
         );
 
         // send request
-        List<Entry<String, String>> entries = headers.entries();
         channel.writeAndFlush(request);
 
         // Wait for the server to close the connection.
         channel.closeFuture().sync();
 
-        return entries;
+        // convert headers to list
+        return headers.entries();
     }
 
     /**

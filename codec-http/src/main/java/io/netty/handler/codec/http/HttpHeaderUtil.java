@@ -18,6 +18,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
@@ -230,11 +231,13 @@ public final class HttpHeaderUtil {
             m.headers().add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
             m.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
         } else {
-            List<String> values = m.headers().getAll(HttpHeaderNames.TRANSFER_ENCODING);
-            if (values.isEmpty()) {
+            // Make a copy to be able to modify values while iterating
+            List<String> encodings = m.headers().getAll(HttpHeaderNames.TRANSFER_ENCODING);
+            if (encodings.isEmpty()) {
                 return;
             }
-            Iterator<String> valuesIt = values.iterator();
+            List<CharSequence> values = new ArrayList<CharSequence>(encodings);
+            Iterator<CharSequence> valuesIt = values.iterator();
             while (valuesIt.hasNext()) {
                 CharSequence value = valuesIt.next();
                 if (HttpHeaderValues.CHUNKED.equalsIgnoreCase(value)) {

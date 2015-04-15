@@ -26,11 +26,6 @@ public class EmptyTextHeaders extends EmptyConvertibleHeaders<CharSequence, Stri
     }
 
     @Override
-    public boolean containsObject(CharSequence name, Object value, boolean ignoreCase) {
-        return false;
-    }
-
-    @Override
     public TextHeaders add(CharSequence name, CharSequence value) {
         super.add(name, value);
         return this;
