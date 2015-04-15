@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -234,6 +235,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     private int packetLength;
 
+    /**
+     * This flag is used to determine if we need to call {@link ChannelHandlerContext#read()} to consume more data
+     * when {@link ChannelConfig#isAutoRead()} is {@code false}.
+     */
+    private boolean firedChannelRead;
+
     private volatile long handshakeTimeoutMillis = 10000;
     private volatile long closeNotifyTimeoutMillis = 3000;
 
@@ -294,7 +301,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
          * {@link OpenSslEngine#unwrap(ByteBuffer[], ByteBuffer[])} which works with multiple {@link ByteBuffer}s
          * and which does not need to do extra memory copies.
          */
-        setCumulator(opensslEngine ? COMPOSITE_CUMULATOR : MERGE_CUMULATOR);
+        setCumulator(opensslEngine? COMPOSITE_CUMULATOR : MERGE_CUMULATOR);
     }
 
     public long getHandshakeTimeoutMillis() {
@@ -908,6 +915,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         }
 
         if (totalLength > 0) {
+            boolean decoded = false;
+
             // The buffer contains one or more full SSL records.
             // Slice out the whole packet so unwrap will only be called with complete packets.
             // Also directly reset the packetLength. This is needed as unwrap(..) may trigger
@@ -926,12 +935,18 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 ByteBuf copy = ctx.alloc().heapBuffer(totalLength);
                 try {
                     copy.writeBytes(in, startOffset, totalLength);
-                    unwrap(ctx, copy, 0, totalLength);
+                    decoded = unwrap(ctx, copy, 0, totalLength);
                 } finally {
                     copy.release();
                 }
             } else {
-                unwrap(ctx, in, startOffset, totalLength);
+                decoded = unwrap(ctx, in, startOffset, totalLength);
+            }
+
+            if (!firedChannelRead) {
+                // Check first if firedChannelRead is not set yet as it may have been set in a
+                // previous decode(...) call.
+                firedChannelRead = decoded;
             }
         }
 
@@ -947,17 +962,23 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        // Discard bytes of the cumulation buffer if needed.
+        discardSomeReadBytes();
+
         if (needsFlush) {
             needsFlush = false;
             ctx.flush();
         }
 
         // If handshake is not finished yet, we need more data.
-        if (!handshakePromise.isDone() && !ctx.channel().config().isAutoRead()) {
+        if (!ctx.channel().config().isAutoRead() && (!firedChannelRead || !handshakePromise.isDone())) {
+            // No auto-read used and no message passed through the ChannelPipeline or the handhshake was not complete
+            // yet, which means we need to trigger the read to ensure we not encounter any stalls.
             ctx.read();
         }
 
-        super.channelReadComplete(ctx);
+        firedChannelRead = false;
+        ctx.fireChannelReadComplete();
     }
 
     /**
@@ -970,9 +991,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     /**
      * Unwraps inbound SSL records.
      */
-    private void unwrap(
+    private boolean unwrap(
             ChannelHandlerContext ctx, ByteBuf packet, int offset, int length) throws SSLException {
 
+        boolean decoded = false;
         boolean wrapLater = false;
         boolean notifyClosure = false;
         ByteBuf decodeOut = allocate(ctx, length);
@@ -1041,11 +1063,14 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             throw e;
         } finally {
             if (decodeOut.isReadable()) {
+                decoded = true;
+
                 ctx.fireChannelRead(decodeOut);
             } else {
                 decodeOut.release();
             }
         }
+        return decoded;
     }
 
     private SSLEngineResult unwrap(

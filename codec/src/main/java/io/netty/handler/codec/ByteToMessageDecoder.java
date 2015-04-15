@@ -252,6 +252,17 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        discardSomeReadBytes();
+        if (decodeWasNull) {
+            decodeWasNull = false;
+            if (!ctx.channel().config().isAutoRead()) {
+                ctx.read();
+            }
+        }
+        ctx.fireChannelReadComplete();
+    }
+
+    protected final void discardSomeReadBytes() {
         if (cumulation != null && !first && cumulation.refCnt() == 1) {
             // discard some bytes if possible to make more room in the
             // buffer but only if the refCnt == 1  as otherwise the user may have
@@ -262,13 +273,6 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             // - https://github.com/netty/netty/issues/1764
             cumulation.discardSomeReadBytes();
         }
-        if (decodeWasNull) {
-            decodeWasNull = false;
-            if (!ctx.channel().config().isAutoRead()) {
-                ctx.read();
-            }
-        }
-        ctx.fireChannelReadComplete();
     }
 
     @Override
