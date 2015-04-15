@@ -17,6 +17,8 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.DefaultHeaders;
+import io.netty.handler.codec.DefaultTextHeaders;
 import io.netty.util.internal.StringUtil;
 
 import java.util.Map.Entry;
@@ -107,32 +109,26 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
     }
 
     private static final class TrailingHttpHeaders extends DefaultHttpHeaders {
-        private static final class TrailingHttpHeadersNameConverter extends HttpHeadersNameConverter {
-            TrailingHttpHeadersNameConverter(boolean validate) {
-                super(validate);
-            }
+        private static final class TrailingHttpHeadersNameValidator implements
+                                                                    DefaultHeaders.NameValidator<CharSequence> {
+
+            private static final TrailingHttpHeadersNameValidator INSTANCE = new TrailingHttpHeadersNameValidator();
 
             @Override
-            public CharSequence convertName(CharSequence name) {
-                name = super.convertName(name);
-                if (validate) {
-                    if (HttpHeaderNames.CONTENT_LENGTH.equalsIgnoreCase(name)
-                                    || HttpHeaderNames.TRANSFER_ENCODING.equalsIgnoreCase(name)
-                                    || HttpHeaderNames.TRAILER.equalsIgnoreCase(name)) {
-                        throw new IllegalArgumentException("prohibited trailing header: " + name);
-                    }
+            public void validate(CharSequence name) {
+                HeaderNameValidator.INSTANCE.validate(name);
+                if (HttpHeaderNames.CONTENT_LENGTH.equalsIgnoreCase(name)
+                    || HttpHeaderNames.TRANSFER_ENCODING.equalsIgnoreCase(name)
+                    || HttpHeaderNames.TRAILER.equalsIgnoreCase(name)) {
+                    throw new IllegalArgumentException("prohibited trailing header: " + name);
                 }
-                return name;
             }
         }
 
-        private static final TrailingHttpHeadersNameConverter
-            VALIDATE_NAME_CONVERTER = new TrailingHttpHeadersNameConverter(true);
-        private static final TrailingHttpHeadersNameConverter
-            NO_VALIDATE_NAME_CONVERTER = new TrailingHttpHeadersNameConverter(false);
-
         TrailingHttpHeaders(boolean validate) {
-            super(validate, validate ? VALIDATE_NAME_CONVERTER : NO_VALIDATE_NAME_CONVERTER, false);
+            super(validate,
+                  validate ? TrailingHttpHeadersNameValidator.INSTANCE : DefaultTextHeaders.NO_NAME_VALIDATOR,
+                  false);
         }
     }
 }

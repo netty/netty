@@ -17,9 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.handler.codec.Headers.EntryVisitor;
 import io.netty.util.AsciiString;
-import io.netty.util.internal.PlatformDependent;
 
 import java.text.ParseException;
 import java.util.Calendar;
@@ -31,7 +29,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import static io.netty.handler.codec.http.HttpConstants.*;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
@@ -39,9 +36,8 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * commonly used utility methods that accesses an {@link HttpMessage}.
  */
 public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>> {
-
-    private static final byte[] HEADER_SEPERATOR = { COLON, SP };
-    private static final byte[] CRLF = { CR, LF };
+    static final Iterator<Entry<CharSequence, CharSequence>> EMPTY_CHARS_ITERATOR =
+            Collections.<Entry<CharSequence, CharSequence>>emptyList().iterator();
 
     public static final HttpHeaders EMPTY_HEADERS = new HttpHeaders() {
         @Override
@@ -100,6 +96,11 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         }
 
         @Override
+        public int size() {
+            return 0;
+        }
+
+        @Override
         public Set<String> names() {
             return Collections.emptySet();
         }
@@ -155,13 +156,13 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         }
 
         @Override
-        public Entry<CharSequence, CharSequence> forEachEntry(EntryVisitor<CharSequence> visitor) throws Exception {
-            return null; // Since this is an empty header collection
+        public Iterator<Entry<String, String>> iterator() {
+            return entries().iterator();
         }
 
         @Override
-        public Iterator<Entry<String, String>> iterator() {
-            return entries().iterator();
+        public Iterator<Entry<CharSequence, CharSequence>> iteratorCharSequence() {
+            return EMPTY_CHARS_ITERATOR;
         }
     };
 
@@ -1264,21 +1265,11 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     static void encode(HttpHeaders headers, ByteBuf buf) throws Exception {
-        if (headers instanceof DefaultHttpHeaders) {
-            ((DefaultHttpHeaders) headers).encode(buf);
-        } else {
-            for (Entry<String, String> header: headers) {
-                encode(header.getKey(), header.getValue(), buf);
-            }
+        Iterator<Entry<CharSequence, CharSequence>> iter = headers.iteratorCharSequence();
+        while (iter.hasNext()) {
+            Entry<CharSequence, CharSequence> header = iter.next();
+            HttpHeadersEncoder.encoderHeader(header.getKey(), header.getValue(), buf);
         }
-    }
-
-    @SuppressWarnings("deprecation")
-    private static void encode(CharSequence key, CharSequence value, ByteBuf buf) {
-        encodeAscii(key, buf);
-        buf.writeBytes(HEADER_SEPERATOR);
-        encodeAscii(value, buf);
-        buf.writeBytes(CRLF);
     }
 
     @Deprecated
@@ -1436,6 +1427,17 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     public abstract boolean contains(String name);
 
     /**
+     * @deprecated Use {@link #iteratorCharSequence()}.
+     * {@inheritDoc}
+     */
+    @Override
+    @Deprecated
+    public abstract Iterator<Entry<String, String>> iterator();
+
+    @Deprecated
+    public abstract Iterator<Entry<CharSequence, CharSequence>> iteratorCharSequence();
+
+    /**
      * Checks to see if there is a header with the specified name
      *
      * @param name The name of the header to search for
@@ -1449,6 +1451,11 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * Checks if no header exists.
      */
     public abstract boolean isEmpty();
+
+    /**
+     * Returns the number of headers in this object.
+     */
+    public abstract int size();
 
     /**
      * Returns a new {@link Set} that contains the names of all headers in this object.  Note that modifying the
@@ -1600,10 +1607,8 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
             return this;
         }
 
-        try {
-            headers.forEachEntry(addAllVisitor());
-        } catch (Exception e) {
-            PlatformDependent.throwException(e);
+        for (Entry<String, String> entry : headers) {
+            add(entry.getKey(), entry.getValue());
         }
         return this;
     }
@@ -1621,10 +1626,8 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
             return this;
         }
 
-        try {
-            headers.forEachEntry(setAllVisitor());
-        } catch (Exception e) {
-            PlatformDependent.throwException(e);
+        for (Entry<String, String> entry : headers) {
+            set(entry.getKey(), entry.getValue());
         }
         return this;
     }
@@ -1701,34 +1704,4 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     public boolean contains(CharSequence name, CharSequence value, boolean ignoreCase) {
         return contains(name.toString(), value.toString(), ignoreCase);
     }
-
-    /**
-     * Provide a means of iterating over elements in this map with low GC
-     *
-     * @param visitor The visitor which will visit each element in this map
-     * @return The last entry before iteration stopped or {@code null} if iteration went past the end
-     */
-    public abstract Map.Entry<CharSequence, CharSequence> forEachEntry(EntryVisitor<CharSequence> visitor)
-            throws Exception;
-
-    private EntryVisitor<CharSequence> setAllVisitor() {
-        return new EntryVisitor<CharSequence>() {
-            @Override
-            public boolean visit(Entry<CharSequence, CharSequence> entry) {
-                set(entry.getKey(), entry.getValue());
-                return true;
-            }
-        };
-    }
-
-    private EntryVisitor<CharSequence> addAllVisitor() {
-        return new EntryVisitor<CharSequence>() {
-            @Override
-            public boolean visit(Entry<CharSequence, CharSequence> entry) {
-                add(entry.getKey(), entry.getValue());
-                return true;
-            }
-        };
-    }
-
 }

@@ -23,10 +23,15 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map.Entry;
 
-import static io.netty.buffer.Unpooled.*;
-import static io.netty.handler.codec.http.HttpConstants.*;
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.buffer.Unpooled.directBuffer;
+import static io.netty.buffer.Unpooled.unreleasableBuffer;
+import static io.netty.handler.codec.http.HttpConstants.CR;
+import static io.netty.handler.codec.http.HttpConstants.LF;
 
 /**
  * Encodes an {@link HttpMessage} or an {@link HttpContent} into
@@ -137,7 +142,11 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
      * Encode the {@link HttpHeaders} into a {@link ByteBuf}.
      */
     protected void encodeHeaders(HttpHeaders headers, ByteBuf buf) throws Exception {
-        HttpHeaders.encode(headers, buf);
+        Iterator<Entry<CharSequence, CharSequence>> iter = headers.iteratorCharSequence();
+        while (iter.hasNext()) {
+            Entry<CharSequence, CharSequence> header = iter.next();
+            HttpHeadersEncoder.encoderHeader(header.getKey(), header.getValue(), buf);
+        }
     }
 
     private void encodeChunkedContent(ChannelHandlerContext ctx, Object msg, long contentLength, List<Object> out) {

@@ -243,11 +243,11 @@ public class DefaultTextHeadersTest {
     }
 
     private static TextHeaders newDefaultTextHeaders() {
-        return new DefaultTextHeaders();
+        return new DefaultTextHeaders(false);
     }
 
     private static TextHeaders newCsvTextHeaders() {
-        return new DefaultTextHeaders(true, true);
+        return new DefaultTextHeaders(true);
     }
 
     private static void addValues(final TextHeaders headers, HeaderValue... headerValues) {

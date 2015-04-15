@@ -25,6 +25,7 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
 
 import java.util.List;
+import java.util.Map.Entry;
 
 /**
  * Encodes a {@link StompFrame} or a {@link StompSubframe} into a {@link ByteBuf}.
@@ -66,11 +67,9 @@ public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe>
 
         buf.writeBytes(frame.command().toString().getBytes(CharsetUtil.US_ASCII));
         buf.writeByte(StompConstants.LF);
-        try {
-            frame.headers().forEachEntry(new AsciiHeadersEncoder(buf, SeparatorType.COLON, NewlineType.LF));
-        } catch (Exception ex) {
-            buf.release();
-            PlatformDependent.throwException(ex);
+        AsciiHeadersEncoder headersEncoder = new AsciiHeadersEncoder(buf, SeparatorType.COLON, NewlineType.LF);
+        for (Entry<CharSequence, CharSequence> entry : frame.headers()) {
+            headersEncoder.encode(entry);
         }
         buf.writeByte(StompConstants.LF);
         return buf;
