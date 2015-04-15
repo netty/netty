@@ -36,7 +36,7 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     }
 
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, boolean validateHeaders) {
-        this(httpVersion, method, uri, Unpooled.buffer(0), true);
+        this(httpVersion, method, uri, Unpooled.buffer(0), validateHeaders);
     }
 
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,

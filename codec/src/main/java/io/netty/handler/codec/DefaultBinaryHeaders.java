@@ -20,128 +20,24 @@ import io.netty.util.internal.PlatformDependent;
 
 import java.nio.charset.Charset;
 import java.text.ParseException;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.TreeMap;
 
 public class DefaultBinaryHeaders extends DefaultHeaders<ByteString> implements BinaryHeaders {
-    private static final ValueConverter<ByteString> OBJECT_TO_BYTE = new ValueConverter<ByteString>() {
-        private final Charset DEFAULT_CHARSET = CharsetUtil.UTF_8;
-        @Override
-        public ByteString convertObject(Object value) {
-            if (value instanceof ByteString) {
-                return (ByteString) value;
-            }
-            if (value instanceof CharSequence) {
-                return new ByteString((CharSequence) value, DEFAULT_CHARSET);
-            }
-            return new ByteString(value.toString(), DEFAULT_CHARSET);
-        }
 
-        @Override
-        public ByteString convertInt(int value) {
-            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
-        }
-
-        @Override
-        public ByteString convertLong(long value) {
-            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
-        }
-
-        @Override
-        public ByteString convertDouble(double value) {
-            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
-        }
-
-        @Override
-        public ByteString convertChar(char value) {
-            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
-        }
-
-        @Override
-        public ByteString convertBoolean(boolean value) {
-            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
-        }
-
-        @Override
-        public ByteString convertFloat(float value) {
-            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
-        }
-
-        @Override
-        public int convertToInt(ByteString value) {
-            return value.parseAsciiInt();
-        }
-
-        @Override
-        public long convertToLong(ByteString value) {
-            return value.parseAsciiLong();
-        }
-
-        @Override
-        public ByteString convertTimeMillis(long value) {
-            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
-        }
-
-        @Override
-        public long convertToTimeMillis(ByteString value) {
-            try {
-                return HeaderDateFormat.get().parse(value.toString());
-            } catch (ParseException e) {
-                PlatformDependent.throwException(e);
-            }
-            return 0;
-        }
-
-        @Override
-        public double convertToDouble(ByteString value) {
-            return value.parseAsciiDouble();
-        }
-
-        @Override
-        public char convertToChar(ByteString value) {
-            return value.parseChar();
-        }
-
-        @Override
-        public boolean convertToBoolean(ByteString value) {
-            return value.byteAt(0) != 0;
-        }
-
-        @Override
-        public float convertToFloat(ByteString value) {
-            return value.parseAsciiFloat();
-        }
-
-        @Override
-        public ByteString convertShort(short value) {
-            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
-        }
-
-        @Override
-        public short convertToShort(ByteString value) {
-            return value.parseAsciiShort();
-        }
-
-        @Override
-        public ByteString convertByte(byte value) {
-            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
-        }
-
-        @Override
-        public byte convertToByte(ByteString value) {
-            return value.byteAt(0);
-        }
-    };
-
-    private static final HashCodeGenerator<ByteString> JAVA_HASH_CODE_GENERATOR =
-            new JavaHashCodeGenerator<ByteString>();
-    protected static final NameConverter<ByteString> IDENTITY_NAME_CONVERTER = new IdentityNameConverter<ByteString>();
+    private static final NameValidator<ByteString> NO_NAME_VALIDATOR = DefaultHeaders.NoNameValidator.instance();
 
     public DefaultBinaryHeaders() {
-        this(IDENTITY_NAME_CONVERTER);
+        this(new TreeMap<ByteString, Object>(ByteString.DEFAULT_COMPARATOR));
     }
 
-    public DefaultBinaryHeaders(NameConverter<ByteString> nameConverter) {
-        super(ByteString.DEFAULT_COMPARATOR, ByteString.DEFAULT_COMPARATOR,
-                JAVA_HASH_CODE_GENERATOR, OBJECT_TO_BYTE, nameConverter);
+    public DefaultBinaryHeaders(Map<ByteString, Object> map) {
+        this(map, NO_NAME_VALIDATOR);
+    }
+
+    public DefaultBinaryHeaders(Map<ByteString, Object> map, NameValidator<ByteString> nameValidator) {
+        super(map, nameValidator, ByteStringConverter.INSTANCE);
     }
 
     @Override
@@ -346,5 +242,120 @@ public class DefaultBinaryHeaders extends DefaultHeaders<ByteString> implements 
     public BinaryHeaders clear() {
         super.clear();
         return this;
+    }
+
+    public static final class ByteStringConverter implements ValueConverter<ByteString> {
+
+        public static final ByteStringConverter INSTANCE = new ByteStringConverter();
+        private static final Charset DEFAULT_CHARSET = CharsetUtil.UTF_8;
+
+        private ByteStringConverter() {
+        }
+
+        @Override
+        public ByteString convertObject(Object value) {
+            if (value instanceof ByteString) {
+                return (ByteString) value;
+            }
+            if (value instanceof CharSequence) {
+                return new ByteString((CharSequence) value, DEFAULT_CHARSET);
+            }
+            return new ByteString(value.toString(), DEFAULT_CHARSET);
+        }
+
+        @Override
+        public ByteString convertInt(int value) {
+            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
+        }
+
+        @Override
+        public ByteString convertLong(long value) {
+            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
+        }
+
+        @Override
+        public ByteString convertDouble(double value) {
+            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
+        }
+
+        @Override
+        public ByteString convertChar(char value) {
+            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
+        }
+
+        @Override
+        public ByteString convertBoolean(boolean value) {
+            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
+        }
+
+        @Override
+        public ByteString convertFloat(float value) {
+            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
+        }
+
+        @Override
+        public int convertToInt(ByteString value) {
+            return value.parseAsciiInt();
+        }
+
+        @Override
+        public long convertToLong(ByteString value) {
+            return value.parseAsciiLong();
+        }
+
+        @Override
+        public ByteString convertTimeMillis(long value) {
+            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
+        }
+
+        @Override
+        public long convertToTimeMillis(ByteString value) {
+            try {
+                return HeaderDateFormat.get().parse(value.toString());
+            } catch (ParseException e) {
+                PlatformDependent.throwException(e);
+            }
+            return 0;
+        }
+
+        @Override
+        public double convertToDouble(ByteString value) {
+            return value.parseAsciiDouble();
+        }
+
+        @Override
+        public char convertToChar(ByteString value) {
+            return value.parseChar();
+        }
+
+        @Override
+        public boolean convertToBoolean(ByteString value) {
+            return value.byteAt(0) != 0;
+        }
+
+        @Override
+        public float convertToFloat(ByteString value) {
+            return value.parseAsciiFloat();
+        }
+
+        @Override
+        public ByteString convertShort(short value) {
+            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
+        }
+
+        @Override
+        public short convertToShort(ByteString value) {
+            return value.parseAsciiShort();
+        }
+
+        @Override
+        public ByteString convertByte(byte value) {
+            return new ByteString(String.valueOf(value), DEFAULT_CHARSET);
+        }
+
+        @Override
+        public byte convertToByte(ByteString value) {
+            return value.byteAt(0);
+        }
     }
 }

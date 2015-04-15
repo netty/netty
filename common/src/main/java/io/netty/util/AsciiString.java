@@ -54,64 +54,53 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
     };
 
     public static final Comparator<CharSequence> CHARSEQUENCE_CASE_INSENSITIVE_ORDER = new Comparator<CharSequence>() {
+
         @Override
         public int compare(CharSequence o1, CharSequence o2) {
-            if (o1 == o2) {
-                return 0;
+            int len1 = o1.length();
+            int delta = len1 - o2.length();
+            if (delta != 0) {
+                return delta;
             }
-
-            AsciiString a1 = o1 instanceof AsciiString ? (AsciiString) o1 : null;
-            AsciiString a2 = o2 instanceof AsciiString ? (AsciiString) o2 : null;
-
-            int result;
-            int length1 = o1.length();
-            int length2 = o2.length();
-            int minLength = Math.min(length1, length2);
-            if (a1 != null && a2 != null) {
-                final int a1Len = minLength + a1.arrayOffset();
+            if (o1.getClass().equals(AsciiString.class) && o2.getClass().equals(AsciiString.class)) {
+                AsciiString a1 = (AsciiString) o1;
+                AsciiString a2 = (AsciiString) o2;
+                final int a1Len = a1.length() + a1.arrayOffset();
                 for (int i = a1.arrayOffset(), j = a2.arrayOffset(); i < a1Len; i++, j++) {
-                    byte v1 = a1.value[i];
-                    byte v2 = a2.value[j];
-                    if (v1 == v2) {
-                        continue;
-                    }
-                    int c1 = toLowerCase(v1);
-                    int c2 = toLowerCase(v2);
-                    result = c1 - c2;
-                    if (result != 0) {
-                        return result;
-                    }
-                }
-            } else if (a1 != null) {
-                for (int i = a1.arrayOffset(), j = 0; j < minLength; i++, j++) {
-                    int c1 = toLowerCase(a1.value[i]);
-                    int c2 = toLowerCase(o2.charAt(j));
-                    result = c1 - c2;
-                    if (result != 0) {
-                        return result;
-                    }
-                }
-            } else if (a2 != null) {
-                for (int i = 0, j = a2.arrayOffset(); i < minLength; i++, j++) {
-                    int c1 = toLowerCase(o1.charAt(i));
-                    int c2 = toLowerCase(a2.value[j]);
-                    result = c1 - c2;
-                    if (result != 0) {
-                        return result;
+                    byte c1 = a1.value[i];
+                    byte c2 = a2.value[j];
+                    if (c1 != c2) {
+                        if (c1 >= 'A' && c1 <= 'Z') {
+                            c1 += 32;
+                        }
+                        if (c2 >= 'A' && c2 <= 'Z') {
+                            c2 += 32;
+                        }
+                        delta = c1 - c2;
+                        if (delta != 0) {
+                            return delta;
+                        }
                     }
                 }
             } else {
-                for (int i = 0; i < minLength; i++) {
-                    int c1 = toLowerCase(o1.charAt(i));
-                    int c2 = toLowerCase(o2.charAt(i));
-                    result = c1 - c2;
-                    if (result != 0) {
-                        return result;
+                for (int i = len1 - 1; i >= 0; i --) {
+                    char c1 = o1.charAt(i);
+                    char c2 = o2.charAt(i);
+                    if (c1 != c2) {
+                        if (c1 >= 'A' && c1 <= 'Z') {
+                            c1 += 32;
+                        }
+                        if (c2 >= 'A' && c2 <= 'Z') {
+                            c2 += 32;
+                        }
+                        delta = c1 - c2;
+                        if (delta != 0) {
+                            return delta;
+                        }
                     }
                 }
             }
-
-            return length1 - length2;
+            return 0;
         }
     };
 

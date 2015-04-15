@@ -305,6 +305,9 @@ final class SpdyCodecUtil {
                 throw new IllegalArgumentException(
                         "name contains null character: " + name);
             }
+            if (c >= 'A' && c <= 'Z') {
+                throw new IllegalArgumentException("name must be all lower case.");
+            }
             if (c > 127) {
                 throw new IllegalArgumentException(
                         "name contains non-ascii character: " + name);

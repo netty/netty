@@ -19,7 +19,13 @@ package io.netty.handler.codec.stomp;
 import io.netty.handler.codec.DefaultTextHeaders;
 import io.netty.handler.codec.TextHeaders;
 
+import java.util.TreeMap;
+
 public class DefaultStompHeaders extends DefaultTextHeaders implements StompHeaders {
+
+    public DefaultStompHeaders() {
+        super(new TreeMap<CharSequence, Object>(), NO_NAME_VALIDATOR, CharSequenceConverter.INSTANCE, false);
+    }
 
     @Override
     public StompHeaders add(CharSequence name, CharSequence value) {

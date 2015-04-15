@@ -45,6 +45,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 
@@ -186,12 +188,17 @@ public final class HttpUploadClient {
         );
 
         // send request
-        List<Entry<String, String>> entries = headers.entriesConverted();
         channel.writeAndFlush(request);
 
         // Wait for the server to close the connection.
         channel.closeFuture().sync();
 
+        // convert headers to list
+        List<Entry<String, String>> entries = new ArrayList<Entry<String, String>>(headers.size());
+        Iterator<Entry<String, String>> iterConverted = headers.iteratorConverted();
+        while (iterConverted.hasNext()) {
+            entries.add(iterConverted.next());
+        }
         return entries;
     }
 

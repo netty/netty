@@ -20,6 +20,8 @@ import io.netty.util.ByteString;
 import io.netty.util.CharsetUtil;
 
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map.Entry;
 import java.util.Set;
 
 /**
@@ -182,6 +184,14 @@ public interface Http2Headers extends BinaryHeaders {
 
     @Override
     Http2Headers clear();
+
+    /**
+     * Returns an iterator over all HTTP/2 headers from this instance. The iteration order is as follows:
+     *   1. All non-pseudo headers (in no particular order).
+     *   2. Headers with multiple values will have their values appear in insertion order.
+     */
+    @Override
+    Iterator<Entry<ByteString, ByteString>> iterator();
 
     /**
      * Sets the {@link PseudoHeaderName#METHOD} header or {@code null} if there is no such header
