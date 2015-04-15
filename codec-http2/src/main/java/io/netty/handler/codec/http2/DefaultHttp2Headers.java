@@ -14,86 +14,18 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.util.internal.StringUtil.UPPER_CASE_TO_LOWER_CASE_ASCII_OFFSET;
 import io.netty.handler.codec.BinaryHeaders;
 import io.netty.handler.codec.DefaultBinaryHeaders;
-import io.netty.util.AsciiString;
-import io.netty.util.ByteProcessor;
 import io.netty.util.ByteString;
-import io.netty.util.internal.PlatformDependent;
+import java.io.Serializable;
+import java.util.Comparator;
+import java.util.List;
+import java.util.TreeMap;
 
 public class DefaultHttp2Headers extends DefaultBinaryHeaders implements Http2Headers {
-    private static final ByteProcessor HTTP2_ASCII_UPPERCASE_PROCESSOR = new ByteProcessor() {
-        @Override
-        public boolean process(byte value) throws Exception {
-            return value < 'A' || value > 'Z';
-        }
-    };
 
-    private static final class Http2AsciiToLowerCaseConverter implements ByteProcessor {
-        private final byte[] result;
-        private int i;
-
-        public Http2AsciiToLowerCaseConverter(int length) {
-            result = new byte[length];
-        }
-
-        @Override
-        public boolean process(byte value) throws Exception {
-            result[i++] = (value >= 'A' && value <= 'Z')
-                    ? (byte) (value + UPPER_CASE_TO_LOWER_CASE_ASCII_OFFSET) : value;
-            return true;
-        }
-
-        public byte[] result() {
-            return result;
-        }
-    };
-
-    private static final NameConverter<ByteString> HTTP2_ASCII_TO_LOWER_CONVERTER = new NameConverter<ByteString>() {
-        @Override
-        public ByteString convertName(ByteString name) {
-            if (name instanceof AsciiString) {
-                return ((AsciiString) name).toLowerCase();
-            }
-
-            try {
-                if (name.forEachByte(HTTP2_ASCII_UPPERCASE_PROCESSOR) == -1) {
-                    return name;
-                }
-
-                Http2AsciiToLowerCaseConverter converter = new Http2AsciiToLowerCaseConverter(name.length());
-                name.forEachByte(converter);
-                return new ByteString(converter.result(), false);
-            } catch (Exception e) {
-                PlatformDependent.throwException(e);
-                return null;
-            }
-        }
-    };
-
-    /**
-     * Creates an instance that will convert all header names to lowercase.
-     */
     public DefaultHttp2Headers() {
-        this(true);
-    }
-
-    /**
-     * Creates an instance that can be configured to either do header field name conversion to
-     * lowercase, or not do any conversion at all.
-     * <p>
-     *
-     * <strong>Note</strong> that setting {@code forceKeyToLower} to {@code false} can violate the
-     * <a href="https://tools.ietf.org/html/draft-ietf-httpbis-http2-16#section-8.1.2">HTTP/2 specification</a>
-     * which specifies that a request or response containing an uppercase header field MUST be treated
-     * as malformed. Only set {@code forceKeyToLower} to {@code false} if you are explicitly using lowercase
-     * header field names and want to avoid the conversion to lowercase.
-     *
-     * @param forceKeyToLower if @{code false} no header name conversion will be performed
-     */
-    public DefaultHttp2Headers(boolean forceKeyToLower) {
-        super(forceKeyToLower ? HTTP2_ASCII_TO_LOWER_CONVERTER : IDENTITY_NAME_CONVERTER);
+        super(new TreeMap<ByteString, Object>(Http2HeaderNameComparator.INSTANCE));
     }
 
     @Override
@@ -353,5 +285,62 @@ public class DefaultHttp2Headers extends DefaultBinaryHeaders implements Http2He
     @Override
     public ByteString status() {
         return get(PseudoHeaderName.STATUS.value());
+    }
+
+    @Override
+    public int hashCode() {
+        return size();
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        if (!(other instanceof DefaultHttp2Headers)) {
+            return false;
+        }
+        DefaultHttp2Headers headers = (DefaultHttp2Headers) other;
+        if (size() != headers.size()) {
+            return false;
+        }
+        Comparator<ByteString> valueComparator = ByteString.DEFAULT_COMPARATOR;
+        for (ByteString  name : names()) {
+            List<ByteString> otherValues = headers.getAll(name);
+            List<ByteString> values = getAll(name);
+            if (otherValues.size() != values.size()) {
+                return false;
+            }
+            for (int i = 0; i < otherValues.size(); i++) {
+                if (valueComparator.compare(otherValues.get(i), values.get(i)) != 0) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private static class Http2HeaderNameComparator implements Comparator<ByteString>, Serializable {
+
+        private static final Http2HeaderNameComparator INSTANCE = new Http2HeaderNameComparator();
+        private static final long serialVersionUID = 1109871697664666478L;
+
+        @Override
+        public int compare(ByteString one, ByteString two) {
+            // Reserved header names come first.
+            final boolean isPseudoHeader1 = !one.isEmpty() && one.byteAt(0) == ':';
+            final boolean isPseudoHeader2 = !two.isEmpty() && two.byteAt(0) == ':';
+            if (isPseudoHeader1 != isPseudoHeader2) {
+                return isPseudoHeader1 ? -1 : 1;
+            }
+            final int delta = one.hashCode() - two.hashCode();
+            if (delta == 0) {
+                // If the hash code matches it's very likely for the two strings to be equal
+                // and thus we optimistically compare them with the much faster equals method.
+                if (one.equals(two)) {
+                    return 0;
+                } else {
+                    return ByteString.DEFAULT_COMPARATOR.compare(one, two);
+                }
+            }
+            return delta;
+        }
     }
 }

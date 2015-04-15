@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
@@ -27,22 +28,11 @@ public class DefaultConvertibleHeaders<UnconvertedType, ConvertedType> extends D
 
     private final TypeConverter<UnconvertedType, ConvertedType> typeConverter;
 
-    public DefaultConvertibleHeaders(Comparator<? super UnconvertedType> keyComparator,
-            Comparator<? super UnconvertedType> valueComparator,
-            HashCodeGenerator<UnconvertedType> hashCodeGenerator,
-            ValueConverter<UnconvertedType> valueConverter,
-            TypeConverter<UnconvertedType, ConvertedType> typeConverter) {
-        super(keyComparator, valueComparator, hashCodeGenerator, valueConverter);
-        this.typeConverter = typeConverter;
-    }
-
-    public DefaultConvertibleHeaders(Comparator<? super UnconvertedType> keyComparator,
-            Comparator<? super UnconvertedType> valueComparator,
-            HashCodeGenerator<UnconvertedType> hashCodeGenerator,
-            ValueConverter<UnconvertedType> valueConverter,
-            TypeConverter<UnconvertedType, ConvertedType> typeConverter,
-            NameConverter<UnconvertedType> nameConverter) {
-        super(keyComparator, valueComparator, hashCodeGenerator, valueConverter, nameConverter);
+    public DefaultConvertibleHeaders(Map<UnconvertedType, Object> map,
+                                     NameValidator<UnconvertedType> nameValidator,
+                                     ValueConverter<UnconvertedType> valueConverter,
+                                     TypeConverter<UnconvertedType, ConvertedType> typeConverter) {
+        super(map, nameValidator, valueConverter);
         this.typeConverter = typeConverter;
     }
 
@@ -92,17 +82,6 @@ public class DefaultConvertibleHeaders<UnconvertedType, ConvertedType> extends D
             allConverted.add(typeConverter.toConvertedType(all.get(i)));
         }
         return allConverted;
-    }
-
-    @Override
-    public List<Entry<ConvertedType, ConvertedType>> entriesConverted() {
-        List<Entry<UnconvertedType, UnconvertedType>> entries = entries();
-        List<Entry<ConvertedType, ConvertedType>> entriesConverted = new ArrayList<Entry<ConvertedType, ConvertedType>>(
-                entries.size());
-        for (int i = 0; i < entries.size(); ++i) {
-            entriesConverted.add(new ConvertedEntry(entries.get(i)));
-        }
-        return entriesConverted;
     }
 
     @Override
