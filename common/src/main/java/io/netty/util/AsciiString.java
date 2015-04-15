@@ -24,7 +24,6 @@ import io.netty.util.internal.PlatformDependent;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -69,11 +68,10 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
             int length2 = o2.length();
             int minLength = Math.min(length1, length2);
             if (a1 != null && a2 != null) {
-                byte[] thisValue = a1.value;
-                byte[] thatValue = a2.value;
-                for (int i = 0; i < minLength; i++) {
-                    byte v1 = thisValue[i];
-                    byte v2 = thatValue[i];
+                final int a1Len = minLength + a1.arrayOffset();
+                for (int i = a1.arrayOffset(), j = a2.arrayOffset(); i < a1Len; i++, j++) {
+                    byte v1 = a1.value[i];
+                    byte v2 = a2.value[j];
                     if (v1 == v2) {
                         continue;
                     }
@@ -85,20 +83,18 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
                     }
                 }
             } else if (a1 != null) {
-                byte[] thisValue = a1.value;
-                for (int i = 0; i < minLength; i++) {
-                    int c1 = toLowerCase(thisValue[i]);
-                    int c2 = toLowerCase(o2.charAt(i));
+                for (int i = a1.arrayOffset(), j = 0; j < minLength; i++, j++) {
+                    int c1 = toLowerCase(a1.value[i]);
+                    int c2 = toLowerCase(o2.charAt(j));
                     result = c1 - c2;
                     if (result != 0) {
                         return result;
                     }
                 }
             } else if (a2 != null) {
-                byte[] thatValue = a2.value;
-                for (int i = 0; i < minLength; i++) {
+                for (int i = 0, j = a2.arrayOffset(); i < minLength; i++, j++) {
                     int c1 = toLowerCase(o1.charAt(i));
-                    int c2 = toLowerCase(thatValue[i]);
+                    int c2 = toLowerCase(a2.value[j]);
                     result = c1 - c2;
                     if (result != 0) {
                         return result;
@@ -134,31 +130,28 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
             int length2 = o2.length();
             int minLength = Math.min(length1, length2);
             if (a1 != null && a2 != null) {
-                byte[] thisValue = a1.value;
-                byte[] thatValue = a2.value;
-                for (int i = 0; i < minLength; i++) {
-                    byte v1 = thisValue[i];
-                    byte v2 = thatValue[i];
+                final int a1Len = minLength + a1.arrayOffset();
+                for (int i = a1.arrayOffset(), j = a2.arrayOffset(); i < a1Len; i++, j++) {
+                    byte v1 = a1.value[i];
+                    byte v2 = a2.value[j];
                     result = v1 - v2;
                     if (result != 0) {
                         return result;
                     }
                 }
             } else if (a1 != null) {
-                byte[] thisValue = a1.value;
-                for (int i = 0; i < minLength; i++) {
-                    int c1 = thisValue[i];
-                    int c2 = o2.charAt(i);
+                for (int i = a1.arrayOffset(), j = 0; j < minLength; i++, j++) {
+                    int c1 = a1.value[i];
+                    int c2 = o2.charAt(j);
                     result = c1 - c2;
                     if (result != 0) {
                         return result;
                     }
                 }
             } else if (a2 != null) {
-                byte[] thatValue = a2.value;
-                for (int i = 0; i < minLength; i++) {
+                for (int i = 0, j = a2.arrayOffset(); i < minLength; i++, j++) {
                     int c1 = o1.charAt(i);
-                    int c2 = thatValue[i];
+                    int c2 = a2.value[j];
                     result = c1 - c2;
                     if (result != 0) {
                         return result;
@@ -180,21 +173,48 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
     };
 
     /**
+     * Factory which uses the {@link #AsciiString(byte[], int, int, boolean)} constructor.
+     */
+    private static final ByteStringFactory DEFAULT_FACTORY = new ByteStringFactory() {
+        @Override
+        public ByteString newInstance(byte[] value, int start, int length, boolean copy) {
+            return new AsciiString(value, start, length, copy);
+        }
+    };
+
+    /**
      * Returns the case-insensitive hash code of the specified string. Note that this method uses the same hashing
      * algorithm with {@link #hashCode()} so that you can put both {@link AsciiString}s and arbitrary
      * {@link CharSequence}s into the same {@link TextHeaders}.
      */
     public static int caseInsensitiveHashCode(CharSequence value) {
         if (value instanceof AsciiString) {
-            return value.hashCode();
+            try {
+                ByteProcessor processor = new ByteProcessor() {
+                    private int hash;
+                    @Override
+                    public boolean process(byte value) throws Exception {
+                        hash = hash * HASH_CODE_PRIME ^ toLowerCase(value) & HASH_CODE_PRIME;
+                        return true;
+                    }
+
+                    @Override
+                    public int hashCode() {
+                        return hash;
+                    }
+                };
+                ((AsciiString) value).forEachByte(processor);
+                return processor.hashCode();
+            } catch (Exception e) {
+                PlatformDependent.throwException(e);
+            }
         }
 
         int hash = 0;
         final int end = value.length();
         for (int i = 0; i < end; i++) {
-            hash = hash * HASH_CODE_PRIME ^ value.charAt(i) & HASH_CODE_PRIME;
+            hash = hash * HASH_CODE_PRIME ^ toLowerCase(value.charAt(i)) & HASH_CODE_PRIME;
         }
-
         return hash;
     }
 
@@ -267,20 +287,16 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
         super(value, copy);
     }
 
-    public AsciiString(byte[] value, int start, int length) {
-        super(value, start, length);
-    }
-
     public AsciiString(byte[] value, int start, int length, boolean copy) {
         super(value, start, length, copy);
     }
 
-    public AsciiString(ByteBuffer value) {
-        super(value);
+    public AsciiString(ByteString value, boolean copy) {
+        super(value, copy);
     }
 
-    public AsciiString(ByteBuffer value, int start, int length) {
-        super(value, start, length);
+    public AsciiString(ByteBuffer value) {
+        super(value);
     }
 
     public AsciiString(ByteBuffer value, int start, int length, boolean copy) {
@@ -314,14 +330,20 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
                             + ") <= " + "value.length(" + value.length() + ')');
         }
 
-        for (int i = 0; i < length; i++) {
-            this.value[i] = c2b(value.charAt(start + i));
+        for (int i = 0, j = start; i < length; i++, j++) {
+            this.value[i] = c2b(value.charAt(j));
         }
     }
 
     @Override
     public char charAt(int index) {
         return b2c(byteAt(index));
+    }
+
+    @Override
+    public void arrayChanged() {
+        string = null;
+        super.arrayChanged();
     }
 
     private static byte c2b(char c) {
@@ -381,6 +403,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
      *         positive integer if this string is after the specified string.
      * @throws NullPointerException if {@code string} is {@code null}.
      */
+    @Override
     public int compareTo(CharSequence string) {
         if (this == string) {
             return 0;
@@ -390,9 +413,8 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
         int length1 = length();
         int length2 = string.length();
         int minLength = Math.min(length1, length2);
-        byte[] value = this.value;
-        for (int i = 0, j = 0; j < minLength; i++, j++) {
-            result = b2c(value[i]) - string.charAt(j);
+        for (int i = 0, j = arrayOffset(); i < minLength; i++, j++) {
+            result = b2c(value[j]) - string.charAt(i);
             if (result != 0) {
                 return result;
             }
@@ -438,9 +460,9 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
                 return that;
             }
 
-            byte[] newValue = Arrays.copyOf(value, thisLen + thatLen);
-            System.arraycopy(that.value, 0, newValue, thisLen, thatLen);
-
+            byte[] newValue = new byte[thisLen + thatLen];
+            System.arraycopy(value, arrayOffset(), newValue, 0, thisLen);
+            System.arraycopy(that.value, that.arrayOffset(), newValue, thisLen, thatLen);
             return new AsciiString(newValue, false);
         }
 
@@ -448,9 +470,9 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
             return new AsciiString(string);
         }
 
-        int newLen = thisLen + thatLen;
-        byte[] newValue = Arrays.copyOf(value, newLen);
-        for (int i = thisLen, j = 0; i < newLen; i++, j++) {
+        byte[] newValue = new byte[thisLen + thatLen];
+        System.arraycopy(value, arrayOffset(), newValue, 0, thisLen);
+        for (int i = thisLen, j = 0; i < newValue.length; i++, j++) {
             newValue[i] = c2b(string.charAt(j));
         }
 
@@ -491,8 +513,8 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
             return false;
         }
 
-        for (int i = 0; i < thisLen; i++) {
-            char c1 = b2c(value[i]);
+        for (int i = 0, j = arrayOffset(); i < thisLen; i++, j++) {
+            char c1 = b2c(value[j]);
             char c2 = string.charAt(i);
             if (c1 != c2 && toLowerCase(c1) != toLowerCase(c2)) {
                 return false;
@@ -521,8 +543,13 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
             return EmptyArrays.EMPTY_CHARS;
         }
 
+        if (start < 0 || length > length() - start) {
+            throw new IndexOutOfBoundsException("expected: " + "0 <= start(" + start + ") <= srcIdx + length("
+                            + length + ") <= srcLen(" + length() + ')');
+        }
+
         final char[] buffer = new char[length];
-        for (int i = 0, j = start; i < length; i++, j++) {
+        for (int i = 0, j = start + arrayOffset(); i < length; i++, j++) {
             buffer[i] = b2c(value[j]);
         }
         return buffer;
@@ -541,22 +568,30 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
             throw new NullPointerException("dst");
         }
 
-        final int thisLen = value.length;
-
-        if (srcIdx < 0 || length > thisLen - srcIdx) {
+        if (srcIdx < 0 || length > length() - srcIdx) {
             throw new IndexOutOfBoundsException("expected: " + "0 <= srcIdx(" + srcIdx + ") <= srcIdx + length("
-                            + length + ") <= srcLen(" + thisLen + ')');
+                            + length + ") <= srcLen(" + length() + ')');
         }
 
         final int dstEnd = dstIdx + length;
-        for (int i = srcIdx, j = dstIdx; j < dstEnd; i++, j++) {
-            dst[j] = b2c(value[i]);
+        for (int i = dstIdx, j = srcIdx + arrayOffset(); i < dstEnd; i++, j++) {
+            dst[i] = b2c(value[j]);
         }
     }
 
     @Override
+    public AsciiString subSequence(int start) {
+        return subSequence(start, length());
+    }
+
+    @Override
     public AsciiString subSequence(int start, int end) {
-       return (AsciiString) super.subSequence(start, end);
+       return subSequence(start, end, true);
+    }
+
+    @Override
+    public AsciiString subSequence(int start, int end, boolean copy) {
+        return (AsciiString) super.subSequence(start, end, copy, DEFAULT_FACTORY);
     }
 
     /**
@@ -587,7 +622,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
             start = 0;
         }
 
-        final int thisLen = value.length;
+        final int thisLen = length();
 
         int subCount = subString.length();
         if (subCount <= 0) {
@@ -598,6 +633,9 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
         }
 
         final char firstChar = subString.charAt(0);
+        if (firstChar > MAX_CHAR_VALUE) {
+            return -1;
+        }
         ByteProcessor IndexOfVisitor = new IndexOfProcessor((byte) firstChar);
         try {
             for (;;) {
@@ -606,7 +644,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
                     return -1; // handles subCount > count || start >= count
                 }
                 int o1 = i, o2 = 0;
-                while (++o2 < subCount && b2c(value[++o1]) == subString.charAt(o2)) {
+                while (++o2 < subCount && b2c(value[++o1 + arrayOffset()]) == subString.charAt(o2)) {
                     // Intentionally empty
                 }
                 if (o2 == subCount) {
@@ -645,7 +683,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
      * @throws NullPointerException if {@code subString} is {@code null}.
      */
     public int lastIndexOf(CharSequence subString, int start) {
-        final int thisLen = value.length;
+        final int thisLen = length();
         final int subCount = subString.length();
 
         if (subCount > thisLen || start < 0) {
@@ -660,6 +698,9 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
 
         // count and subCount are both >= 1
         final char firstChar = subString.charAt(0);
+        if (firstChar > MAX_CHAR_VALUE) {
+            return -1;
+        }
         ByteProcessor IndexOfVisitor = new IndexOfProcessor((byte) firstChar);
         try {
             for (;;) {
@@ -668,7 +709,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
                     return -1;
                 }
                 int o1 = i, o2 = 0;
-                while (++o2 < subCount && b2c(value[++o1]) == subString.charAt(o2)) {
+                while (++o2 < subCount && b2c(value[++o1 + arrayOffset()]) == subString.charAt(o2)) {
                     // Intentionally empty
                 }
                 if (o2 == subCount) {
@@ -702,7 +743,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
             return false;
         }
 
-        final int thisLen = value.length;
+        final int thisLen = length();
         if (thisStart < 0 || thisLen - thisStart < length) {
             return false;
         }
@@ -711,9 +752,9 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
             return true;
         }
 
-        final int thisEnd = thisStart + length;
-        for (int i = thisStart, j = start; i < thisEnd; i++, j++) {
-            if (b2c(value[i]) != string.charAt(j)) {
+        final int thatEnd = start + length;
+        for (int i = start, j = thisStart + arrayOffset(); i < thatEnd; i++, j++) {
+            if (b2c(value[j]) != string.charAt(i)) {
                 return false;
             }
         }
@@ -741,7 +782,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
             throw new NullPointerException("string");
         }
 
-        final int thisLen = value.length;
+        final int thisLen = length();
         if (thisStart < 0 || length > thisLen - thisStart) {
             return false;
         }
@@ -749,7 +790,8 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
             return false;
         }
 
-        int thisEnd = thisStart + length;
+        thisStart += arrayOffset();
+        final int thisEnd = thisStart + length;
         while (thisStart < thisEnd) {
             char c1 = b2c(value[thisStart++]);
             char c2 = string.charAt(start++);
@@ -784,15 +826,14 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
             return this;
         }
 
-        final int count = value.length;
         final byte newCharByte = c2b(newChar);
-        byte[] buffer = new byte[count];
-        for (int i = 0, j = 0; i < count; i++, j++) {
-            byte b = value[i];
+        byte[] buffer = new byte[length()];
+        for (int i = 0, j = arrayOffset(); i < buffer.length; i++, j++) {
+            byte b = value[j];
             if (b == oldCharByte) {
                 b = newCharByte;
             }
-            buffer[j] = b;
+            buffer[i] = b;
         }
 
         return new AsciiString(buffer, false);
@@ -831,7 +872,8 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
     public AsciiString toLowerCase() {
         boolean lowercased = true;
         int i, j;
-        for (i = 0; i < value.length; ++i) {
+        final int len = length() + arrayOffset();
+        for (i = arrayOffset(); i < len; ++i) {
             byte b = value[i];
             if (b >= 'A' && b <= 'Z') {
                 lowercased = false;
@@ -844,9 +886,8 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
             return this;
         }
 
-        final int length = value.length;
-        final byte[] newValue = new byte[length];
-        for (i = 0, j = 0; i < length; ++i, ++j) {
+        final byte[] newValue = new byte[length()];
+        for (i = 0, j = arrayOffset(); i < newValue.length; ++i, ++j) {
             newValue[i] = toLowerCase(value[j]);
         }
 
@@ -861,7 +902,8 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
     public AsciiString toUpperCase() {
         boolean uppercased = true;
         int i, j;
-        for (i = 0; i < value.length; ++i) {
+        final int len = length() + arrayOffset();
+        for (i = arrayOffset(); i < len; ++i) {
             byte b = value[i];
             if (b >= 'a' && b <= 'z') {
                 uppercased = false;
@@ -874,9 +916,8 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
             return this;
         }
 
-        final int length = value.length;
-        final byte[] newValue = new byte[length];
-        for (i = 0, j = 0; i < length; ++i, ++j) {
+        final byte[] newValue = new byte[length()];
+        for (i = 0, j = arrayOffset(); i < newValue.length; ++i, ++j) {
             newValue[i] = toUpperCase(value[j]);
         }
 
@@ -889,7 +930,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
      * @return a new string with characters {@code <= \\u0020} removed from the beginning and the end.
      */
     public AsciiString trim() {
-        int start = 0, last = value.length;
+        int start = arrayOffset(), last = arrayOffset() + length();
         int end = last;
         while (start <= end && value[start] <= ' ') {
             start++;
@@ -969,13 +1010,13 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
         final List<AsciiString> res = new ArrayList<AsciiString>();
 
         int start = 0;
-        final int length = value.length;
+        final int length = length();
         for (int i = start; i < length; i++) {
             if (charAt(i) == delim) {
                 if (start == i) {
                     res.add(EMPTY_STRING);
                 } else {
-                    res.add(new AsciiString(value, start, i - start, false));
+                    res.add(new AsciiString(value, start + arrayOffset(), i - start, false));
                 }
                 start = i + 1;
             }
@@ -986,7 +1027,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
         } else {
             if (start != length) {
                 // Add the last element if it's not empty.
-                res.add(new AsciiString(value, start, length - start, false));
+                res.add(new AsciiString(value, start + arrayOffset(), length - start, false));
             } else {
                 // Truncate trailing empty elements.
                 for (int i = res.size() - 1; i >= 0; i--) {
@@ -1013,73 +1054,5 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
             throw new NullPointerException();
         }
         return indexOf(cs) >= 0;
-    }
-
-    public int parseInt() {
-        return parseAsciiInt();
-    }
-
-    public int parseInt(int radix) {
-        return parseAsciiInt(radix);
-    }
-
-    public int parseInt(int start, int end) {
-        return parseAsciiInt(start, end);
-    }
-
-    public int parseInt(int start, int end, int radix) {
-        return parseAsciiInt(start, end, radix);
-    }
-
-    public long parseLong() {
-        return parseAsciiLong();
-    }
-
-    public long parseLong(int radix) {
-        return parseAsciiLong(radix);
-    }
-
-    public long parseLong(int start, int end) {
-        return parseAsciiLong(start, end);
-    }
-
-    public long parseLong(int start, int end, int radix) {
-        return parseAsciiLong(start, end, radix);
-    }
-
-    public char parseChar(int start) {
-        return charAt(start);
-    }
-
-    public short parseShort() {
-        return parseAsciiShort();
-    }
-
-    public short parseShort(int radix) {
-        return parseAsciiShort(radix);
-    }
-
-    public short parseShort(int start, int end) {
-        return parseAsciiShort(start, end);
-    }
-
-    public short parseShort(int start, int end, int radix) {
-        return parseAsciiShort(start, end, radix);
-    }
-
-    public float parseFloat() {
-        return parseAsciiFloat();
-    }
-
-    public float parseFloat(int start, int end) {
-        return parseAsciiFloat(start, end);
-    }
-
-    public double parseDouble() {
-        return parseAsciiDouble();
-    }
-
-    public double parseDouble(int start, int end) {
-        return parseAsciiDouble(start, end);
     }
 }

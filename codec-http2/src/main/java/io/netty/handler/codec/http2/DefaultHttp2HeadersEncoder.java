@@ -109,7 +109,10 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
     }
 
     private void encodeHeader(ByteString key, ByteString value, OutputStream stream) throws IOException {
-        encoder.encodeHeader(stream, key.array(), value.array(), sensitivityDetector.isSensitive(key, value));
+        encoder.encodeHeader(stream,
+                key.isEntireArrayUsed() ? key.array() : new ByteString(key, true).array(),
+                value.isEntireArrayUsed() ? value.array() : new ByteString(value, true).array(),
+                sensitivityDetector.isSensitive(key, value));
     }
 
     /**

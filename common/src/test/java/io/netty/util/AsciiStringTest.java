@@ -15,6 +15,7 @@
  */
 package io.netty.util;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertArrayEquals;
 
 import java.nio.charset.Charset;
@@ -26,7 +27,6 @@ import org.junit.Test;
  * Test for the {@link AsciiString} class
  */
 public class AsciiStringTest {
-
     @Test
     public void testGetBytesStringBuilder() {
         final StringBuilder b = new StringBuilder();
@@ -77,5 +77,26 @@ public class AsciiStringTest {
         String string = "shouldn't fail";
         AsciiString ascii = new AsciiString(string.toCharArray());
         Assert.assertEquals(string, ascii.toString());
+    }
+
+    @Test
+    public void subSequenceTest() {
+        byte[] init = {'t', 'h', 'i', 's', ' ', 'i', 's', ' ', 'a', ' ', 't', 'e', 's', 't' };
+        AsciiString ascii = new AsciiString(init);
+        final int start = 2;
+        final int end = init.length;
+        AsciiString sub1 = ascii.subSequence(start, end, false);
+        AsciiString sub2 = ascii.subSequence(start, end, true);
+        assertEquals(sub1, sub2);
+        for (int i = start; i < end; ++i) {
+            assertEquals(init[i], sub1.byteAt(i - start));
+        }
+    }
+
+    @Test
+    public void caseInsensativeHasher() {
+        String s1 = new String("TransfeR-EncodinG");
+        AsciiString s2 = new AsciiString("transfer-encoding");
+        assertEquals(AsciiString.caseInsensitiveHashCode(s1), AsciiString.caseInsensitiveHashCode(s2));
     }
 }
