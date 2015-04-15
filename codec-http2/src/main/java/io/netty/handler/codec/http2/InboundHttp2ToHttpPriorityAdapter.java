@@ -17,10 +17,10 @@ package io.netty.handler.codec.http2;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 
+import java.util.Iterator;
 import java.util.Map.Entry;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.TextHeaders.EntryVisitor;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -137,13 +137,11 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
      */
     private static void addHttpHeadersToHttp2Headers(HttpHeaders httpHeaders, final Http2Headers http2Headers) {
         try {
-            httpHeaders.forEachEntry(new EntryVisitor() {
-                @Override
-                public boolean visit(Entry<CharSequence, CharSequence> entry) throws Exception {
-                    http2Headers.add(AsciiString.of(entry.getKey()), AsciiString.of(entry.getValue()));
-                    return true;
-                }
-            });
+            Iterator<Entry<CharSequence, CharSequence>> iter = httpHeaders.iteratorCharSequence();
+            while (iter.hasNext()) {
+                Entry<CharSequence, CharSequence> entry = iter.next();
+                http2Headers.add(AsciiString.of(entry.getKey()), AsciiString.of(entry.getValue()));
+            }
         } catch (Exception ex) {
             PlatformDependent.throwException(ex);
         }

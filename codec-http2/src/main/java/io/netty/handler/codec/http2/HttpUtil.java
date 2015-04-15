@@ -18,8 +18,6 @@ import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import io.netty.handler.codec.BinaryHeaders;
-import io.netty.handler.codec.TextHeaders.EntryVisitor;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpMessage;
@@ -41,6 +39,7 @@ import io.netty.util.ByteString;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -246,9 +245,11 @@ public final class HttpUtil {
                     FullHttpMessage destinationMessage, boolean addToTrailer) throws Http2Exception {
         HttpHeaders headers = addToTrailer ? destinationMessage.trailingHeaders() : destinationMessage.headers();
         boolean request = destinationMessage instanceof HttpRequest;
-        Http2ToHttpHeaderTranslator visitor = new Http2ToHttpHeaderTranslator(streamId, headers, request);
+        Http2ToHttpHeaderTranslator translator = new Http2ToHttpHeaderTranslator(streamId, headers, request);
         try {
-            sourceHeaders.forEachEntry(visitor);
+            for (Entry<ByteString, ByteString> entry : sourceHeaders) {
+                translator.translate(entry);
+            }
         } catch (Http2Exception ex) {
             throw ex;
         } catch (Throwable t) {
@@ -315,29 +316,27 @@ public final class HttpUtil {
 
         final Http2Headers out = new DefaultHttp2Headers();
 
-        inHeaders.forEachEntry(new EntryVisitor() {
-            @Override
-            public boolean visit(Entry<CharSequence, CharSequence> entry) throws Exception {
-                final AsciiString aName = AsciiString.of(entry.getKey()).toLowerCase();
-                if (!HTTP_TO_HTTP2_HEADER_BLACKLIST.contains(aName)) {
-                    AsciiString aValue = AsciiString.of(entry.getValue());
-                    // https://tools.ietf.org/html/draft-ietf-httpbis-http2-16#section-8.1.2.2
-                    // makes a special exception for TE
-                    if (!aName.equalsIgnoreCase(HttpHeaderNames.TE) ||
-                        aValue.equalsIgnoreCase(HttpHeaderValues.TRAILERS)) {
-                        out.add(aName, aValue);
-                    }
+        Iterator<Entry<CharSequence, CharSequence>> iter = inHeaders.iteratorCharSequence();
+        while (iter.hasNext()) {
+            Entry<CharSequence, CharSequence> entry = iter.next();
+            final AsciiString aName = AsciiString.of(entry.getKey()).toLowerCase();
+            if (!HTTP_TO_HTTP2_HEADER_BLACKLIST.contains(aName)) {
+                AsciiString aValue = AsciiString.of(entry.getValue());
+                // https://tools.ietf.org/html/draft-ietf-httpbis-http2-16#section-8.1.2.2
+                // makes a special exception for TE
+                if (!aName.equalsIgnoreCase(HttpHeaderNames.TE) ||
+                    aValue.equalsIgnoreCase(HttpHeaderValues.TRAILERS)) {
+                    out.add(aName, aValue);
                 }
-                return true;
             }
-        });
+        }
         return out;
     }
 
     /**
      * A visitor which translates HTTP/2 headers to HTTP/1 headers
      */
-    private static final class Http2ToHttpHeaderTranslator implements BinaryHeaders.EntryVisitor {
+    private static final class Http2ToHttpHeaderTranslator {
         /**
          * Translations from HTTP/2 header name to the HTTP/1.x equivalent.
          */
@@ -372,8 +371,7 @@ public final class HttpUtil {
             translations = request ? REQUEST_HEADER_TRANSLATIONS : RESPONSE_HEADER_TRANSLATIONS;
         }
 
-        @Override
-        public boolean visit(Entry<ByteString, ByteString> entry) throws Http2Exception {
+        public void translate(Entry<ByteString, ByteString> entry) throws Http2Exception {
             final ByteString name = entry.getKey();
             final ByteString value = entry.getValue();
             ByteString translatedName = translations.get(name);
@@ -391,7 +389,6 @@ public final class HttpUtil {
                     output.add(new AsciiString(translatedName, false), new AsciiString(value, false));
                 }
             }
-            return true;
         }
     }
 }

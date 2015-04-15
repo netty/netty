@@ -21,10 +21,9 @@ import java.util.Map.Entry;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.handler.codec.TextHeaders.EntryVisitor;
 import io.netty.util.AsciiString;
 
-public final class AsciiHeadersEncoder implements EntryVisitor {
+public final class AsciiHeadersEncoder {
 
     /**
      * The separator characters to insert between a header name and a header value.
@@ -78,8 +77,7 @@ public final class AsciiHeadersEncoder implements EntryVisitor {
         this.newlineType = newlineType;
     }
 
-    @Override
-    public boolean visit(Entry<CharSequence, CharSequence> entry) throws Exception {
+    public void encode(Entry<CharSequence, CharSequence> entry) {
         final CharSequence name = entry.getKey();
         final CharSequence value = entry.getValue();
         final ByteBuf buf = this.buf;
@@ -119,7 +117,6 @@ public final class AsciiHeadersEncoder implements EntryVisitor {
         }
 
         buf.writerIndex(offset);
-        return true;
     }
 
     private static void writeAscii(ByteBuf buf, int offset, CharSequence value, int valueLen) {

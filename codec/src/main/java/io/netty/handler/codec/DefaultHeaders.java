@@ -14,154 +14,59 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.util.collection.IntObjectHashMap;
-import io.netty.util.collection.IntObjectMap;
 import io.netty.util.concurrent.FastThreadLocal;
-import io.netty.util.internal.PlatformDependent;
 
 import java.text.DateFormat;
 import java.text.ParseException;
-import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
+import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TimeZone;
-import java.util.TreeSet;
+import java.util.Date;
+import java.util.TreeMap;
 
-import static io.netty.util.internal.ObjectUtil.*;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
+import static java.util.Collections.unmodifiableList;
+import static java.util.Collections.unmodifiableSet;
 
+
+/**
+ * Default implementation of {@link Headers};
+ *
+ * @param <T> the type of the header name and value.
+ */
 public class DefaultHeaders<T> implements Headers<T> {
-    /**
-     * Allows users of this interface to specify a hash code other than the default {@link Object#hashCode()}
-     */
-    public interface HashCodeGenerator<T> {
-        /**
-         * Obtain the hash code for the given {@code name}
-         *
-         * @param name The name to generate the hash code for
-         * @return The hash code for {@code name}
-         */
-        int generateHashCode(T name);
-    }
 
-    /**
-     * Allows users to convert the {@code name} elements before being processed by this map
-     */
-    public interface NameConverter<T> {
-        /**
-         * Convert the {@code name} to some other form of the same object type
-         *
-         * @param name The object to convert
-         * @return The results of the conversion
-         */
-        T convertName(T name);
-    }
-
-    /**
-     * Uses the {@link #hashCode()} method to generate the hash code.
-     */
-    public static final class JavaHashCodeGenerator<T> implements HashCodeGenerator<T> {
-        @Override
-        public int generateHashCode(T name) {
-            return name.hashCode();
-        }
-    }
-
-    /**
-     * A name converted which does not covert but instead just returns this {@code name} unchanged
-     */
-    public static final class IdentityNameConverter<T> implements NameConverter<T> {
-        @Override
-        public T convertName(T name) {
-            return name;
-        }
-    }
-
-    private static final int HASH_CODE_PRIME = 31;
-    private static final int DEFAULT_BUCKET_SIZE = 17;
-    private static final int DEFAULT_MAP_SIZE = 4;
-    private static final NameConverter<Object> DEFAULT_NAME_CONVERTER = new IdentityNameConverter<Object>();
-
-    private final IntObjectMap<HeaderEntry> entries;
-    private final IntObjectMap<HeaderEntry> tailEntries;
-    private final HeaderEntry head;
-    private final Comparator<? super T> keyComparator;
-    private final Comparator<? super T> valueComparator;
-    private final HashCodeGenerator<T> hashCodeGenerator;
+    private final Map<T, Object> map;
+    private final NameValidator<T> nameValidator;
     private final ValueConverter<T> valueConverter;
-    private final NameConverter<T> nameConverter;
-    private final int bucketSize;
     int size;
 
-    @SuppressWarnings("unchecked")
-    public DefaultHeaders(Comparator<? super T> keyComparator, Comparator<? super T> valueComparator,
-            HashCodeGenerator<T> hashCodeGenerator, ValueConverter<T> typeConverter) {
-        this(keyComparator, valueComparator, hashCodeGenerator, typeConverter,
-                (NameConverter<T>) DEFAULT_NAME_CONVERTER);
-    }
+    boolean hasMultipleValues;
 
-    public DefaultHeaders(Comparator<? super T> keyComparator, Comparator<? super T> valueComparator,
-            HashCodeGenerator<T> hashCodeGenerator, ValueConverter<T> typeConverter, NameConverter<T> nameConverter) {
-        this(keyComparator, valueComparator, hashCodeGenerator, typeConverter, nameConverter, DEFAULT_BUCKET_SIZE,
-                DEFAULT_MAP_SIZE);
-    }
-
-    public DefaultHeaders(Comparator<? super T> keyComparator, Comparator<? super T> valueComparator,
-            HashCodeGenerator<T> hashCodeGenerator, ValueConverter<T> valueConverter, NameConverter<T> nameConverter,
-            int bucketSize, int initialMapSize) {
-        if (keyComparator == null) {
-            throw new NullPointerException("keyComparator");
-        }
-        if (valueComparator == null) {
-            throw new NullPointerException("valueComparator");
-        }
-        if (hashCodeGenerator == null) {
-            throw new NullPointerException("hashCodeGenerator");
-        }
-        if (valueConverter == null) {
-            throw new NullPointerException("valueConverter");
-        }
-        if (nameConverter == null) {
-            throw new NullPointerException("nameConverter");
-        }
-        if (bucketSize < 1) {
-            throw new IllegalArgumentException("bucketSize must be a positive integer");
-        }
-        head = new HeaderEntry();
-        head.before = head.after = head;
-        this.keyComparator = keyComparator;
-        this.valueComparator = valueComparator;
-        this.hashCodeGenerator = hashCodeGenerator;
-        this.valueConverter = valueConverter;
-        this.nameConverter = nameConverter;
-        this.bucketSize = bucketSize;
-        entries = new IntObjectHashMap<HeaderEntry>(initialMapSize);
-        tailEntries = new IntObjectHashMap<HeaderEntry>(initialMapSize);
+    public DefaultHeaders(Map<T, Object> map, NameValidator<T> nameValidator, ValueConverter<T> valueConverter) {
+        this.map = checkNotNull(map, "map");
+        this.nameValidator = checkNotNull(nameValidator, "nameValidator");
+        this.valueConverter = checkNotNull(valueConverter, "valueConverter");
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public T get(T name) {
-        checkNotNull(name, "name");
-
-        int h = hashCodeGenerator.generateHashCode(name);
-        int i = index(h);
-        HeaderEntry e = entries.get(i);
-        while (e != null) {
-            if (e.hash == h && keyComparator.compare(e.name, name) == 0) {
-                return e.value;
-            }
-            e = e.next;
+        Object value = map.get(name);
+        if (isList(value)) {
+            return ((List<T>) value).get(0);
         }
-        return null;
+        return (T) value;
     }
 
     @Override
@@ -174,56 +79,19 @@ public class DefaultHeaders<T> implements Headers<T> {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public T getAndRemove(T name) {
-        checkNotNull(name, "name");
-        int h = hashCodeGenerator.generateHashCode(name);
-        int i = index(h);
-        HeaderEntry e = entries.get(i);
-        if (e == null) {
+        Object value = map.remove(name);
+        if (value == null) {
             return null;
         }
-
-        T value = null;
-        for (;;) {
-            if (e.hash == h && keyComparator.compare(e.name, name) == 0) {
-                if (value == null) {
-                    value = e.value;
-                }
-                e.remove();
-                HeaderEntry next = e.next;
-                if (next != null) {
-                    entries.put(i, next);
-                    e = next;
-                } else {
-                    entries.remove(i);
-                    tailEntries.remove(i);
-                    return value;
-                }
-            } else {
-                break;
-            }
+        if (isList(value)) {
+            List<T> value0 = (List<T>) value;
+            size -= value0.size();
+            return value0.get(0);
         }
-
-        for (;;) {
-            HeaderEntry next = e.next;
-            if (next == null) {
-                break;
-            }
-            if (next.hash == h && keyComparator.compare(e.name, name) == 0) {
-                if (value == null) {
-                    value = next.value;
-                }
-                e.next = next.next;
-                if (e.next == null) {
-                    tailEntries.put(i, e);
-                }
-                next.remove();
-            } else {
-                e = next;
-            }
-        }
-
-        return value;
+        size--;
+        return (T) value;
     }
 
     @Override
@@ -236,84 +104,23 @@ public class DefaultHeaders<T> implements Headers<T> {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public List<T> getAll(T name) {
-        checkNotNull(name, "name");
-        List<T> values = new ArrayList<T>(4);
-        int h = hashCodeGenerator.generateHashCode(name);
-        int i = index(h);
-        HeaderEntry e = entries.get(i);
-        while (e != null) {
-            if (e.hash == h && keyComparator.compare(e.name, name) == 0) {
-                values.add(e.value);
-            }
-            e = e.next;
+        Object value = map.get(name);
+        if (isList(value)) {
+            return unmodifiableList((List<T>) value);
         }
-
-        return values;
+        if (value == null) {
+            return emptyList();
+        }
+        return singletonList((T) value);
     }
 
     @Override
     public List<T> getAllAndRemove(T name) {
-        checkNotNull(name, "name");
-        int h = hashCodeGenerator.generateHashCode(name);
-        int i = index(h);
-        HeaderEntry e = entries.get(i);
-        if (e == null) {
-            return null;
-        }
-
-        List<T> values = new ArrayList<T>(4);
-        for (;;) {
-            if (e.hash == h && keyComparator.compare(e.name, name) == 0) {
-                values.add(e.value);
-                e.remove();
-                HeaderEntry next = e.next;
-                if (next != null) {
-                    entries.put(i, next);
-                    e = next;
-                } else {
-                    entries.remove(i);
-                    tailEntries.remove(i);
-                    return values;
-                }
-            } else {
-                break;
-            }
-        }
-
-        for (;;) {
-            HeaderEntry next = e.next;
-            if (next == null) {
-                break;
-            }
-            if (next.hash == h && keyComparator.compare(next.name, name) == 0) {
-                values.add(next.value);
-                e.next = next.next;
-                if (e.next == null) {
-                    tailEntries.put(i, e);
-                }
-                next.remove();
-            } else {
-                e = next;
-            }
-        }
-
-        return values;
-    }
-
-    @Override
-    public List<Entry<T, T>> entries() {
-        final int size = size();
-        List<Map.Entry<T, T>> localEntries = new ArrayList<Map.Entry<T, T>>(size);
-
-        HeaderEntry e = head.after;
-        while (e != head) {
-            localEntries.add(e);
-            e = e.after;
-        }
-
-        assert size == localEntries.size();
-        return localEntries;
+        List<T> all = getAll(name);
+        remove(name);
+        return all;
     }
 
     @Override
@@ -322,8 +129,13 @@ public class DefaultHeaders<T> implements Headers<T> {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public boolean contains(T name, T value) {
-        return contains(name, value, keyComparator, valueComparator);
+        Object values = map.get(name);
+        if (isList(values)) {
+            return ((List<T>) values).contains(value);
+        }
+        return values != null && values.equals(value);
     }
 
     @Override
@@ -377,41 +189,19 @@ public class DefaultHeaders<T> implements Headers<T> {
     }
 
     @Override
-    public boolean contains(T name, T value, Comparator<? super T> comparator) {
-        return contains(name, value, comparator, comparator);
-    }
-
-    @Override
-    public boolean contains(T name, T value,
-            Comparator<? super T> keyComparator, Comparator<? super T> valueComparator) {
-        checkNotNull(name, "name");
-        checkNotNull(value, "value");
-        checkNotNull(keyComparator, "keyComparator");
-        checkNotNull(valueComparator, "valueComparator");
-        int h = hashCodeGenerator.generateHashCode(name);
-        int i = index(h);
-        HeaderEntry e = entries.get(i);
-        while (e != null) {
-            if (e.hash == h &&
-                    keyComparator.compare(e.name, name) == 0 &&
-                    valueComparator.compare(e.value, value) == 0) {
-                return true;
+    @SuppressWarnings("unchecked")
+    public boolean contains(T name, T value, Comparator<? super T> valueComparator) {
+        Object values = map.get(name);
+        if (isList(values)) {
+            List<T> values0 = (List<T>) values;
+            for (int i = 0; i < values0.size(); i++) {
+                if (valueComparator.compare(value, values0.get(i)) == 0) {
+                    return true;
+                }
             }
-            e = e.next;
+            return false;
         }
-        return false;
-    }
-
-    @Override
-    public boolean containsObject(T name, Object value, Comparator<? super T> comparator) {
-        return containsObject(name, value, comparator, comparator);
-    }
-
-    @Override
-    public boolean containsObject(T name, Object value, Comparator<? super T> keyComparator,
-            Comparator<? super T> valueComparator) {
-        return contains(
-                name, valueConverter.convertObject(checkNotNull(value, "value")), keyComparator, valueComparator);
+        return values != null && valueComparator.compare((T) values, value) == 0;
     }
 
     @Override
@@ -421,73 +211,54 @@ public class DefaultHeaders<T> implements Headers<T> {
 
     @Override
     public boolean isEmpty() {
-        return head == head.after;
+        return map.isEmpty();
     }
 
     @Override
     public Set<T> names() {
-        final Set<T> names = new TreeSet<T>(keyComparator);
-
-        HeaderEntry e = head.after;
-        while (e != head) {
-            names.add(e.name);
-            e = e.after;
-        }
-
-        return names;
-    }
-
-    @Override
-    public List<T> namesList() {
-        final List<T> names = new ArrayList<T>(size());
-
-        HeaderEntry e = head.after;
-        while (e != head) {
-            names.add(e.name);
-            e = e.after;
-        }
-
-        return names;
+        return unmodifiableSet(map.keySet());
     }
 
     @Override
     public Headers<T> add(T name, T value) {
-        name = convertName(name);
+        validateName(name);
         checkNotNull(value, "value");
-        int h = hashCodeGenerator.generateHashCode(name);
-        int i = index(h);
-        add0(h, i, name, value);
+        Object prevValue = map.put(name, value);
+        size++;
+        if (prevValue != null) {
+            appendValue(name, value, prevValue);
+        }
         return this;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void appendValue(T name, T value, Object prevValue) {
+        hasMultipleValues = true;
+        if (isList(prevValue)) {
+            ((List<T>) prevValue).add(value);
+            map.put(name, prevValue);
+        } else {
+            List<T> values = newList();
+            values.add((T) prevValue);
+            values.add(value);
+            map.put(name, values);
+        }
     }
 
     @Override
     public Headers<T> add(T name, Iterable<? extends T> values) {
-        name = convertName(name);
         checkNotNull(values, "values");
-
-        int h = hashCodeGenerator.generateHashCode(name);
-        int i = index(h);
-        for (T v : values) {
-            if (v == null) {
-                break;
-            }
-            add0(h, i, name, v);
+        for (T value : values) {
+            add(name, value);
         }
         return this;
     }
 
     @Override
     public Headers<T> add(T name, T... values) {
-        name = convertName(name);
         checkNotNull(values, "values");
-
-        int h = hashCodeGenerator.generateHashCode(name);
-        int i = index(h);
-        for (T v : values) {
-            if (v == null) {
-                break;
-            }
-            add0(h, i, name, v);
+        for (int i = 0; i < values.length; i++) {
+            add(name, values[i]);
         }
         return this;
     }
@@ -499,36 +270,18 @@ public class DefaultHeaders<T> implements Headers<T> {
 
     @Override
     public Headers<T> addObject(T name, Iterable<?> values) {
-        name = convertName(name);
         checkNotNull(values, "values");
-
-        int h = hashCodeGenerator.generateHashCode(name);
-        int i = index(h);
-        for (Object o : values) {
-            if (o == null) {
-                break;
-            }
-            T converted = valueConverter.convertObject(o);
-            checkNotNull(converted, "converted");
-            add0(h, i, name, converted);
+        for (Object value : values) {
+            addObject(name, value);
         }
         return this;
     }
 
     @Override
     public Headers<T> addObject(T name, Object... values) {
-        name = convertName(name);
         checkNotNull(values, "values");
-
-        int h = hashCodeGenerator.generateHashCode(name);
-        int i = index(h);
-        for (Object o : values) {
-            if (o == null) {
-                break;
-            }
-            T converted = valueConverter.convertObject(o);
-            checkNotNull(converted, "converted");
-            add0(h, i, name, converted);
+        for (int i = 0; i < values.length; i++) {
+            addObject(name, values[i]);
         }
         return this;
     }
@@ -579,102 +332,90 @@ public class DefaultHeaders<T> implements Headers<T> {
     }
 
     @Override
-    public Headers<T> add(Headers<T> headers) {
+    public Headers<T> add(Headers<? extends T> headers) {
         checkNotNull(headers, "headers");
-
-        add0(headers);
+        if (headers == this) {
+            throw new IllegalArgumentException("can't add to itself.");
+        }
+        for (Entry<? extends T, ? extends T> header : headers) {
+            add(header.getKey(), header.getValue());
+        }
         return this;
     }
 
     @Override
     public Headers<T> set(T name, T value) {
-        name = convertName(name);
+        validateName(name);
         checkNotNull(value, "value");
-        int h = hashCodeGenerator.generateHashCode(name);
-        int i = index(h);
-        remove0(h, i, name);
-        add0(h, i, name, value);
+        Object oldValue = map.put(name, value);
+        updateSizeAfterSet(oldValue, 1);
         return this;
     }
 
     @Override
     public Headers<T> set(T name, Iterable<? extends T> values) {
-        name = convertName(name);
+        validateName(name);
         checkNotNull(values, "values");
-
-        int h = hashCodeGenerator.generateHashCode(name);
-        int i = index(h);
-        remove0(h, i, name);
-        for (T v : values) {
-            if (v == null) {
-                break;
-            }
-            add0(h, i, name, v);
+        List<T> list = newList();
+        for (T value : values) {
+            list.add(checkNotNull(value, "value"));
         }
-
+        Object oldValue = map.put(name, list);
+        updateSizeAfterSet(oldValue, list.size());
+        hasMultipleValues = true;
         return this;
     }
 
     @Override
     public Headers<T> set(T name, T... values) {
-        name = convertName(name);
+        validateName(name);
         checkNotNull(values, "values");
-
-        int h = hashCodeGenerator.generateHashCode(name);
-        int i = index(h);
-        remove0(h, i, name);
-        for (T v : values) {
-            if (v == null) {
-                break;
-            }
-            add0(h, i, name, v);
+        List<T> list = newList(values.length);
+        for (int i = 0; i < values.length; i++) {
+            list.add(checkNotNull(values[i], "value"));
         }
-
+        Object oldValue = map.put(name, list);
+        updateSizeAfterSet(oldValue, values.length);
+        hasMultipleValues = true;
         return this;
     }
 
     @Override
     public Headers<T> setObject(T name, Object value) {
-        return set(name, valueConverter.convertObject(checkNotNull(value, "value")));
+        checkNotNull(value, "value");
+        T convertedValue = checkNotNull(valueConverter.convertObject(value), "convertedValue");
+        return set(name, convertedValue);
     }
 
     @Override
     public Headers<T> setObject(T name, Iterable<?> values) {
-        name = convertName(name);
+        validateName(name);
         checkNotNull(values, "values");
-
-        int h = hashCodeGenerator.generateHashCode(name);
-        int i = index(h);
-        remove0(h, i, name);
-        for (Object o : values) {
-            if (o == null) {
-                break;
-            }
-            T converted = valueConverter.convertObject(o);
-            checkNotNull(converted, "converted");
-            add0(h, i, name, converted);
+        List<T> list = newList();
+        for (Object value : values) {
+            value = checkNotNull(value, "value");
+            T convertedValue = checkNotNull(valueConverter.convertObject(value), "convertedValue");
+            list.add(convertedValue);
         }
-
+        Object oldValue = map.put(name, list);
+        updateSizeAfterSet(oldValue, list.size());
+        hasMultipleValues = true;
         return this;
     }
 
     @Override
     public Headers<T> setObject(T name, Object... values) {
-        name = convertName(name);
+        validateName(name);
         checkNotNull(values, "values");
-
-        int h = hashCodeGenerator.generateHashCode(name);
-        int i = index(h);
-        remove0(h, i, name);
-        for (Object o : values) {
-            if (o == null) {
-                break;
-            }
-            T converted = valueConverter.convertObject(o);
-            checkNotNull(converted, "converted");
-            add0(h, i, name, converted);
+        List<T> list = newList(values.length);
+        for (int i = 0; i < values.length; i++) {
+            Object value = checkNotNull(values[i], "value");
+            T convertedValue = checkNotNull(valueConverter.convertObject(value), "convertedValue");
+            list.add(convertedValue);
         }
-
+        Object oldValue = map.put(name, list);
+        updateSizeAfterSet(oldValue, list.size());
+        hasMultipleValues = true;
         return this;
     }
 
@@ -724,80 +465,50 @@ public class DefaultHeaders<T> implements Headers<T> {
     }
 
     @Override
-    public Headers<T> set(Headers<T> headers) {
+    public Headers<T> set(Headers<? extends T> headers) {
         checkNotNull(headers, "headers");
-
+        if (headers == this) {
+            return this;
+        }
         clear();
-        add0(headers);
+        add(headers);
         return this;
     }
 
     @Override
-    public Headers<T> setAll(Headers<T> headers) {
+    public Headers<T> setAll(Headers<? extends T> headers) {
         checkNotNull(headers, "headers");
-
-        if (headers instanceof DefaultHeaders) {
-            DefaultHeaders<T> m = (DefaultHeaders<T>) headers;
-            HeaderEntry e = m.head.after;
-            while (e != m.head) {
-                set(e.name, e.value);
-                e = e.after;
-            }
-        } else {
-            try {
-                headers.forEachEntry(setAllVisitor());
-            } catch (Exception ex) {
-                PlatformDependent.throwException(ex);
-            }
+        if (headers == this) {
+            return this;
         }
-
+        for (T key : headers.names()) {
+            remove(key);
+        }
+        for (Entry<? extends T, ? extends T> entry : headers) {
+            add(entry.getKey(), entry.getValue());
+        }
         return this;
     }
 
     @Override
     public boolean remove(T name) {
-        checkNotNull(name, "name");
-        int h = hashCodeGenerator.generateHashCode(name);
-        int i = index(h);
-        return remove0(h, i, name);
+        return getAndRemove(name) != null;
     }
 
     @Override
     public Headers<T> clear() {
-        entries.clear();
-        tailEntries.clear();
-        head.before = head.after = head;
+        map.clear();
+        hasMultipleValues = false;
         size = 0;
         return this;
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public Iterator<Entry<T, T>> iterator() {
-        return new KeyValueHeaderIterator();
-    }
-
-    @Override
-    public Map.Entry<T, T> forEachEntry(EntryVisitor<T> visitor) throws Exception {
-        HeaderEntry e = head.after;
-        while (e != head) {
-            if (!visitor.visit(e)) {
-                return e;
-            }
-            e = e.after;
-        }
-        return null;
-    }
-
-    @Override
-    public T forEachName(NameVisitor<T> visitor) throws Exception {
-        HeaderEntry e = head.after;
-        while (e != head) {
-            if (!visitor.visit(e.name)) {
-                return e.name;
-            }
-            e = e.after;
-        }
-        return null;
+        Object iter = map.entrySet().iterator();
+        return !hasMultipleValues ? (Iterator<Entry<T, T>>) iter
+                                  : new NameValueIterator((Iterator<Entry<T, Object>>) iter);
     }
 
     @Override
@@ -871,7 +582,7 @@ public class DefaultHeaders<T> implements Headers<T> {
     }
 
     @Override
-    public short getInt(T name, short defaultValue) {
+    public short getShort(T name, short defaultValue) {
         Short v = getShort(name);
         return v == null ? defaultValue : v;
     }
@@ -1147,81 +858,39 @@ public class DefaultHeaders<T> implements Headers<T> {
         if (!(o instanceof DefaultHeaders)) {
             return false;
         }
-
         @SuppressWarnings("unchecked")
-        DefaultHeaders<T> h2 = (DefaultHeaders<T>) o;
-        // First, check that the set of names match. Don't use a TreeSet for comparison
-        // because we want to force the keyComparator to be used for all comparisons
-        List<T> namesList = namesList();
-        List<T> otherNamesList = h2.namesList();
-        if (!equals(namesList, otherNamesList, keyComparator)) {
-            return false;
-        }
-
-        // Compare the values for each name. Don't use a TreeSet for comparison
-        // because we want to force the valueComparator to be used for all comparisons
-        Set<T> names = new TreeSet<T>(keyComparator);
-        names.addAll(namesList);
-        for (T name : names) {
-            if (!equals(getAll(name), h2.getAll(name), valueComparator)) {
-                return false;
-            }
-        }
-
-        return true;
+        DefaultHeaders<T> other = (DefaultHeaders<T>) o;
+        return size() == other.size() && map.equals(other.map);
     }
 
     /**
-     * Compare two lists using the {@code comparator} for all comparisons (not using the equals() operator)
-     * @param lhs Left hand side
-     * @param rhs Right hand side
-     * @param comparator Comparator which will be used for all comparisons (equals() on objects will not be used)
-     * @return True if {@code lhs} == {@code rhs} according to {@code comparator}. False otherwise.
+     * This method is purposefully kept simple and returns {@link #size()} as the hash code.
+     * There are two compelling reasons for keeping {@link #hashCode()} simple:
+     *   1) It's difficult to get it right as the hash code mostly depends on the {@link Map}
+     *      implementation. Simply using {@link Map#hashCode()} doesn't work as for
+     *      example {@link TreeMap#hashCode()} does not fulfill the contract between {@link Object#hashCode()} and
+     *      {@link Object#equals(Object)} when it's used with a {@link Comparator} that is not consistent with
+     *      {@link Object#equals(Object)}.
+     *   2) The {@link #hashCode()} function doesn't appear to be important for {@link Headers} implementations. It's
+     *      solely there because we override {@link Object#equals(Object)}, which makes it easier to use {@link Headers}
+     *      in tests, but also has little practical use outside of tests.
      */
-    private static <T> boolean equals(List<T> lhs, List<T> rhs, Comparator<? super T> comparator) {
-        final int lhsSize = lhs.size();
-        if (lhsSize != rhs.size()) {
-            return false;
-        }
-
-        // Don't use a TreeSet to do the comparison.  We want to force the comparator
-        // to be used instead of the object's equals()
-        Collections.sort(lhs, comparator);
-        Collections.sort(rhs, comparator);
-        for (int i = 0; i < lhsSize; ++i) {
-            if (comparator.compare(lhs.get(i), rhs.get(i)) != 0) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     @Override
     public int hashCode() {
-        int result = 1;
-        for (T name : names()) {
-            result = HASH_CODE_PRIME * result + name.hashCode();
-            List<T> values = getAll(name);
-            Collections.sort(values, valueComparator);
-            for (int i = 0; i < values.size(); ++i) {
-                result = HASH_CODE_PRIME * result + hashCodeGenerator.generateHashCode(values.get(i));
-            }
-        }
-        return result;
+        return size();
     }
 
     @Override
     public String toString() {
         StringBuilder builder = new StringBuilder(getClass().getSimpleName()).append('[');
+        String separator = "";
         for (T name : names()) {
             List<T> values = getAll(name);
-            Collections.sort(values, valueComparator);
             for (int i = 0; i < values.size(); ++i) {
-                builder.append(name).append(": ").append(values.get(i)).append(", ");
+                builder.append(separator);
+                builder.append(name).append(": ").append(values.get(i));
             }
-        }
-        if (builder.length() > 2) { // remove the trailing ", "
-            builder.setLength(builder.length() - 2);
+            separator = ", ";
         }
         return builder.append(']').toString();
     }
@@ -1230,200 +899,75 @@ public class DefaultHeaders<T> implements Headers<T> {
         return valueConverter;
     }
 
-    private T convertName(T name) {
-        return nameConverter.convertName(checkNotNull(name, "name"));
+    @SuppressWarnings("unchecked")
+    private void updateSizeAfterSet(Object oldValue, int newSize) {
+        if (isList(oldValue)) {
+            size -= ((List<T>) oldValue).size();
+        } else if (oldValue != null) {
+            size--;
+        }
+        size += newSize;
     }
 
-    private int index(int hash) {
-        return Math.abs(hash % bucketSize);
+    private void validateName(T name) {
+        checkNotNull(name, "name");
+        nameValidator.validate(name);
     }
 
-    private void add0(Headers<T> headers) {
-        if (headers.isEmpty()) {
-            return;
-        }
-
-        if (headers instanceof DefaultHeaders) {
-            DefaultHeaders<T> m = (DefaultHeaders<T>) headers;
-            HeaderEntry e = m.head.after;
-            while (e != m.head) {
-                add(e.name, e.value);
-                e = e.after;
-            }
-        } else {
-            try {
-                headers.forEachEntry(addAllVisitor());
-            } catch (Exception ex) {
-                PlatformDependent.throwException(ex);
-            }
-        }
+    private static boolean isList(Object value) {
+        return value != null && value.getClass() == ValuesList.class;
     }
 
-    private void add0(int h, int i, T name, T value) {
-        // Update the per-bucket hash table linked list
-        HeaderEntry newEntry = new HeaderEntry(h, name, value);
-        HeaderEntry oldTail = tailEntries.get(i);
-        if (oldTail == null) {
-            entries.put(i, newEntry);
-        } else {
-            oldTail.next = newEntry;
-        }
-        tailEntries.put(i, newEntry);
-
-        // Update the overall insertion order linked list
-        newEntry.addBefore(head);
+    private List<T> newList() {
+        return newList(4);
     }
 
-    private boolean remove0(int h, int i, T name) {
-        HeaderEntry e = entries.get(i);
-        if (e == null) {
-            return false;
-        }
-
-        boolean removed = false;
-        for (;;) {
-            if (e.hash == h && keyComparator.compare(e.name, name) == 0) {
-                e.remove();
-                HeaderEntry next = e.next;
-                if (next != null) {
-                    entries.put(i, next);
-                    e = next;
-                } else {
-                    entries.remove(i);
-                    tailEntries.remove(i);
-                    return true;
-                }
-                removed = true;
-            } else {
-                break;
-            }
-        }
-
-        for (;;) {
-            HeaderEntry next = e.next;
-            if (next == null) {
-                break;
-            }
-            if (next.hash == h && keyComparator.compare(next.name, name) == 0) {
-                e.next = next.next;
-                if (e.next == null) {
-                    tailEntries.put(i, e);
-                }
-                next.remove();
-                removed = true;
-            } else {
-                e = next;
-            }
-        }
-
-        return removed;
+    private List<T> newList(int initialSize) {
+        return new ValuesList<T>(initialSize);
     }
 
-    private EntryVisitor<T> setAllVisitor() {
-        return new EntryVisitor<T>() {
-            @Override
-            public boolean visit(Entry<T, T> entry) {
-                set(entry.getKey(), entry.getValue());
-                return true;
-            }
-        };
-    }
+    private final class NameValueIterator implements Iterator<Entry<T, T>> {
+        private final Iterator<Entry<T, Object>> iter;
+        private T name;
+        private List<T> values;
+        private int valuesIdx;
 
-    private EntryVisitor<T> addAllVisitor() {
-        return new EntryVisitor<T>() {
-            @Override
-            public boolean visit(Entry<T, T> entry) {
-                add(entry.getKey(), entry.getValue());
-                return true;
-            }
-        };
-    }
-
-    private final class HeaderEntry implements Map.Entry<T, T> {
-        final int hash;
-        final T name;
-        T value;
-        /**
-         * In bucket linked list
-         */
-        HeaderEntry next;
-        /**
-         * Overall insertion order linked list
-         */
-        HeaderEntry before, after;
-
-        HeaderEntry(int hash, T name, T value) {
-            this.hash = hash;
-            this.name = name;
-            this.value = value;
+        NameValueIterator(Iterator<Entry<T, Object>> iter) {
+            this.iter = iter;
         }
-
-        HeaderEntry() {
-            hash = -1;
-            name = null;
-            value = null;
-        }
-
-        void remove() {
-            before.after = after;
-            after.before = before;
-            --size;
-        }
-
-        void addBefore(HeaderEntry e) {
-            after = e;
-            before = e.before;
-            before.after = this;
-            after.before = this;
-            ++size;
-        }
-
-        @Override
-        public T getKey() {
-            return name;
-        }
-
-        @Override
-        public T getValue() {
-            return value;
-        }
-
-        @Override
-        public T setValue(T value) {
-            checkNotNull(value, "value");
-            T oldValue = this.value;
-            this.value = value;
-            return oldValue;
-        }
-
-        @Override
-        public String toString() {
-            return new StringBuilder()
-                .append(name)
-                .append('=')
-                .append(value)
-                .toString();
-        }
-    }
-
-    protected final class KeyValueHeaderIterator implements Iterator<Entry<T, T>> {
-
-        private HeaderEntry current = head;
 
         @Override
         public boolean hasNext() {
-            return current.after != head;
+            return iter.hasNext() || values != null;
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public Entry<T, T> next() {
-            current = current.after;
-
-            if (current == head) {
-                throw new NoSuchElementException();
+            if (name == null) {
+                Entry<T, Object> entry = iter.next();
+                if (!isList(entry.getValue())) {
+                    return (Entry<T, T>) entry;
+                }
+                initListIterator(entry);
             }
+            return fetchNextEntryFromList();
+        }
 
-            return current;
+        @SuppressWarnings("unchecked")
+        private void initListIterator(Entry<T, Object> entry) {
+            name = entry.getKey();
+            values = (List<T>) entry.getValue();
+            valuesIdx = 0;
+        }
+
+        private Entry<T, T> fetchNextEntryFromList() {
+            Entry<T, T> next = new SimpleListEntry<T>(name, values, valuesIdx++);
+            if (values.size() == valuesIdx) {
+                name = null;
+                values = null;
+            }
+            return next;
         }
 
         @Override
@@ -1432,8 +976,36 @@ public class DefaultHeaders<T> implements Headers<T> {
         }
     }
 
+    private static class SimpleListEntry<T> extends SimpleEntry<T, T> {
+        private static final long serialVersionUID = 542062057061955051L;
+        private final List<T> values;
+        private final int idx;
+
+        SimpleListEntry(T name, List<T> values, int idx) {
+            super(name, values.get(idx));
+            this.values = values;
+            this.idx = idx;
+        }
+
+        @Override
+        public T setValue(T value) {
+            T oldValue = super.setValue(value);
+            values.set(idx, value);
+            return oldValue;
+        }
+    }
+
+    private static final class ValuesList<T> extends ArrayList<T> {
+        private static final long serialVersionUID = -2434101246756843900L;
+
+        ValuesList(int initialSize) {
+            super(initialSize);
+        }
+    }
+
     /**
-     * This DateFormat decodes 3 formats of {@link java.util.Date}, but only encodes the one, the first:
+     * This {@link DateFormat} decodes 3 formats of {@link Date}.
+     *
      * <ul>
      * <li>Sun, 06 Nov 1994 08:49:37 GMT: standard specification, the only one with valid generation</li>
      * <li>Sun, 06 Nov 1994 08:49:37 GMT: obsolete specification</li>
@@ -1441,14 +1013,13 @@ public class DefaultHeaders<T> implements Headers<T> {
      * </ul>
      */
     static final class HeaderDateFormat {
-        private static final ParsePosition parsePos = new ParsePosition(0);
         private static final FastThreadLocal<HeaderDateFormat> dateFormatThreadLocal =
                 new FastThreadLocal<HeaderDateFormat>() {
-            @Override
-            protected HeaderDateFormat initialValue() {
-                return new HeaderDateFormat();
-            }
-        };
+                    @Override
+                    protected HeaderDateFormat initialValue() {
+                        return new HeaderDateFormat();
+                    }
+                };
 
         static HeaderDateFormat get() {
             return dateFormatThreadLocal.get();
@@ -1462,6 +1033,7 @@ public class DefaultHeaders<T> implements Headers<T> {
          * </pre>
          */
         private final DateFormat dateFormat1 = new SimpleDateFormat("E, dd MMM yyyy HH:mm:ss z", Locale.ENGLISH);
+
         /**
          * First obsolete format:
          *
@@ -1470,6 +1042,7 @@ public class DefaultHeaders<T> implements Headers<T> {
          * </pre>
          */
         private final DateFormat dateFormat2 = new SimpleDateFormat("E, dd-MMM-yy HH:mm:ss z", Locale.ENGLISH);
+
         /**
          * Second obsolete format
          *
@@ -1487,31 +1060,58 @@ public class DefaultHeaders<T> implements Headers<T> {
         }
 
         long parse(String text) throws ParseException {
-            Date date = dateFormat1.parse(text, parsePos);
+            Date date = dateFormat1.parse(text);
             if (date == null) {
-                date = dateFormat2.parse(text, parsePos);
+                date = dateFormat2.parse(text);
             }
             if (date == null) {
-                date = dateFormat3.parse(text, parsePos);
+                date = dateFormat3.parse(text);
             }
             if (date == null) {
                 throw new ParseException(text, 0);
             }
             return date.getTime();
         }
+    }
 
-        long parse(String text, long defaultValue) {
-            Date date = dateFormat1.parse(text, parsePos);
-            if (date == null) {
-                date = dateFormat2.parse(text, parsePos);
-            }
-            if (date == null) {
-                date = dateFormat3.parse(text, parsePos);
-            }
-            if (date == null) {
-                return defaultValue;
-            }
-            return date.getTime();
+    public interface NameValidator<T> {
+        void validate(T name);
+    }
+
+    public static final class NoNameValidator<T> implements NameValidator<T> {
+
+        @SuppressWarnings("rawtypes")
+        private static final NameValidator INSTANCE = new NoNameValidator();
+
+        private NoNameValidator() {
         }
+
+        @SuppressWarnings("unchecked")
+        public static <T> NameValidator<T> instance() {
+            return (NameValidator<T>) INSTANCE;
+        }
+
+        @Override
+        public void validate(T name) {
+        }
+    }
+
+    public static <V> boolean comparatorEquals(Headers<V> a, Headers<V> b, Comparator<V> valueComparator) {
+        if (a.size() != b.size()) {
+            return false;
+        }
+        for (V name : a.names()) {
+            List<V> otherValues = b.getAll(name);
+            List<V> values = a.getAll(name);
+            if (otherValues.size() != values.size()) {
+                return false;
+            }
+            for (int i = 0; i < otherValues.size(); i++) {
+                if (valueComparator.compare(otherValues.get(i), values.get(i)) != 0) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 }
