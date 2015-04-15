@@ -25,8 +25,9 @@ import static io.netty.channel.ChannelOption.*;
 /**
  * Option for configuring the SCTP transport
  */
-public final class SctpChannelOption {
+public final class SctpChannelOption<T> extends ChannelOption<T> {
 
+    @SuppressWarnings("rawtypes")
     private static final Class<SctpChannelOption> T = SctpChannelOption.class;
 
     public static final ChannelOption<Boolean> SCTP_DISABLE_FRAGMENTS = valueOf(T, "SCTP_DISABLE_FRAGMENTS");
@@ -39,5 +40,8 @@ public final class SctpChannelOption {
     public static final ChannelOption<SocketAddress> SCTP_SET_PEER_PRIMARY_ADDR =
             valueOf(T, "SCTP_SET_PEER_PRIMARY_ADDR");
 
-    private SctpChannelOption() { }
+    @SuppressWarnings({ "unused", "deprecation" })
+    private SctpChannelOption() {
+        super(null);
+    }
 }
