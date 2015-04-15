@@ -18,24 +18,14 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.handler.codec.TextHeaders.EntryVisitor;
 import io.netty.util.AsciiString;
 
-import java.util.Map.Entry;
+final class HttpHeadersEncoder {
 
-final class HttpHeadersEncoder implements EntryVisitor {
-
-    private final ByteBuf buf;
-
-    HttpHeadersEncoder(ByteBuf buf) {
-        this.buf = buf;
+    private HttpHeadersEncoder() {
     }
 
-    @Override
-    public boolean visit(Entry<CharSequence, CharSequence> entry) throws Exception {
-        final CharSequence name = entry.getKey();
-        final CharSequence value = entry.getValue();
-        final ByteBuf buf = this.buf;
+    public static void encoderHeader(CharSequence name, CharSequence value, ByteBuf buf) throws Exception {
         final int nameLen = name.length();
         final int valueLen = value.length();
         final int entryLen = nameLen + valueLen + 4;
@@ -50,7 +40,6 @@ final class HttpHeadersEncoder implements EntryVisitor {
         buf.setByte(offset ++, '\r');
         buf.setByte(offset ++, '\n');
         buf.writerIndex(offset);
-        return true;
     }
 
     private static void writeAscii(ByteBuf buf, int offset, CharSequence value, int valueLen) {

@@ -24,17 +24,6 @@ import io.netty.util.ByteString;
  * some additional utility when handling text data.
  */
 public interface BinaryHeaders extends Headers<ByteString> {
-    /**
-     * Provides an abstraction to iterate over elements maintained in the {@link Headers} collection.
-     */
-    interface EntryVisitor extends Headers.EntryVisitor<ByteString> {
-    }
-
-    /**
-     * Provides an abstraction to iterate over elements maintained in the {@link Headers} collection.
-     */
-    interface NameVisitor extends Headers.NameVisitor<ByteString> {
-    }
 
     @Override
     BinaryHeaders add(ByteString name, ByteString value);

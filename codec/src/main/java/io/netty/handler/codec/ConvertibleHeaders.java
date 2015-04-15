@@ -90,13 +90,6 @@ public interface ConvertibleHeaders<UnconvertedType, ConvertedType> extends Head
     List<ConvertedType> getAllAndRemoveAndConvert(UnconvertedType name);
 
     /**
-     * Invokes {@link Headers#entries()} and lazily does a conversion on the results as they are accessed
-     *
-     * @return The values corresponding to {@code name} and then lazily converted
-     */
-    List<Map.Entry<ConvertedType, ConvertedType>> entriesConverted();
-
-    /**
      * Invokes {@link Headers#iterator()} and lazily does a conversion on the results as they are accessed
      *
      * @return Iterator which will provide converted values corresponding to {@code name}

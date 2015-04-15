@@ -55,13 +55,9 @@ public class EmptyConvertibleHeaders<UnconvertedType, ConvertedType> extends
     }
 
     @Override
-    public List<Entry<ConvertedType, ConvertedType>> entriesConverted() {
-        return Collections.emptyList();
-    }
-
-    @Override
     public Iterator<Entry<ConvertedType, ConvertedType>> iteratorConverted() {
-        return entriesConverted().iterator();
+        List<Entry<ConvertedType, ConvertedType>> empty = Collections.emptyList();
+        return empty.iterator();
     }
 
     @Override

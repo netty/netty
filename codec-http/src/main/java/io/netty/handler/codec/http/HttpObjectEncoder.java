@@ -24,6 +24,7 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.util.List;
+import java.util.Map.Entry;
 
 import static io.netty.buffer.Unpooled.*;
 import static io.netty.handler.codec.http.HttpConstants.*;
@@ -137,7 +138,9 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
      * Encode the {@link HttpHeaders} into a {@link ByteBuf}.
      */
     protected void encodeHeaders(HttpHeaders headers, ByteBuf buf) throws Exception {
-        headers.forEachEntry(new HttpHeadersEncoder(buf));
+        for (Entry<CharSequence, CharSequence> header : headers) {
+            HttpHeadersEncoder.encoderHeader(header.getKey(), header.getValue(), buf);
+        }
     }
 
     private void encodeChunkedContent(ChannelHandlerContext ctx, Object msg, long contentLength, List<Object> out) {
