@@ -610,7 +610,7 @@ public final class ByteBufUtil {
                             + length + ") <= srcLen(" + thisLen + ')');
         }
 
-        checkNotNull(dst, "dst").setBytes(dstIdx, src.array(), srcIdx, length);
+        checkNotNull(dst, "dst").setBytes(dstIdx, src.array(), srcIdx + src.arrayOffset(), length);
     }
 
     /**
@@ -628,7 +628,7 @@ public final class ByteBufUtil {
                             + length + ") <= srcLen(" + thisLen + ')');
         }
 
-        checkNotNull(dst, "dst").writeBytes(src.array(), srcIdx, length);
+        checkNotNull(dst, "dst").writeBytes(src.array(), srcIdx + src.arrayOffset(), length);
     }
 
     static final class ThreadLocalUnsafeDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
