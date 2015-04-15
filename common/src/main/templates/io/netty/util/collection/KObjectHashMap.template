@@ -364,13 +364,12 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
         size++;
 
         if (size > maxSize) {
-            // Double the capacity.
-            int newCapacity = keys.length << 1;
-            if(newCapacity < 0) {
+            if(keys.length == Integer.MAX_VALUE) {
                 throw new IllegalStateException("Max capacity reached at size=" + size);
-            } else {
-                rehash(newCapacity);
             }
+
+            // Double the capacity.
+            rehash(keys.length << 1);
         }
     }
 
