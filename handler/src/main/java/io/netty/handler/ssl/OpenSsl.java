@@ -118,7 +118,29 @@ public final class OpenSsl {
      * <a href="https://tools.ietf.org/html/rfc7301">ALPN</a>.
      */
     public static boolean isAlpnSupported() {
-        return isAvailable() && SSL.version() >= 0x10002000L;
+        return version() >= 0x10002000L;
+    }
+
+    /**
+     * Returns the version of the used available OpenSSL library or {@code -1} if {@link #isAvailable()}
+     * returns {@code false}.
+     */
+    public static int version() {
+        if (isAvailable()) {
+            return SSL.version();
+        }
+        return -1;
+    }
+
+    /**
+     * Returns the version string of the used available OpenSSL library or {@code null} if {@link #isAvailable()}
+     * returns {@code false}.
+     */
+    public static String versionString() {
+        if (isAvailable()) {
+            return SSL.versionString();
+        }
+        return null;
     }
 
     /**
