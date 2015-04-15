@@ -47,7 +47,7 @@ public class ByteString {
             int length1 = o1.length();
             int length2 = o2.length();
             int minLength = Math.min(length1, length2);
-            for (int i = 0, j = 0; j < minLength; i++, j++) {
+            for (int i = o1.offset, j = o2.offset; i < minLength; i++, j++) {
                 result = o1.value[i] - o2.value[j];
                 if (result != 0) {
                     return result;
@@ -57,13 +57,41 @@ public class ByteString {
             return length1 - length2;
         }
     };
+
+    /**
+     * Allows sub classes to take advantage of {@link ByteString} operations which need to generate new
+     * ByteString objects.
+     */
+    protected interface ByteStringFactory {
+        ByteString newInstance(byte[] value, int start, int length, boolean copy);
+    }
+
+    /**
+     * Factory which uses the {@link #ByteString(byte[], int, int, boolean)} constructor.
+     */
+    private static final ByteStringFactory DEFAULT_FACTORY = new ByteStringFactory() {
+        @Override
+        public ByteString newInstance(byte[] value, int start, int length, boolean copy) {
+            return new ByteString(value, start, length, copy);
+        }
+    };
+
     public static final ByteString EMPTY_STRING = new ByteString(0);
-    protected static final int HASH_CODE_PRIME = 31;
+    protected static final int HASH_CODE_PRIME = 31;;
 
     /**
      * If this value is modified outside the constructor then call {@link #arrayChanged()}.
      */
     protected final byte[] value;
+    /**
+     * Offset into {@link #value} that all operations should use when acting upon {@link #value}.
+     */
+    private final int offset;
+    /**
+     * Length in bytes for {@link #value} that we care about. This is independent from {@code value.length}
+     * because we may be looking at a subsection of the array.
+     */
+    private final int length;
     /**
      * The hash code is cached after it is first computed. It can be reset with {@link #arrayChanged()}.
      */
@@ -72,7 +100,11 @@ public class ByteString {
     /**
      * Used for classes which extend this class and want to initialize the {@link #value} array by them selves.
      */
-    ByteString(int length) { value = new byte[length]; }
+    ByteString(int length) {
+        value = new byte[length];
+        offset = 0;
+        this.length = length;
+    }
 
     /**
      * Initialize this byte string based upon a byte array. A copy will be made.
@@ -86,24 +118,13 @@ public class ByteString {
      * {@code copy} determines if a copy is made or the array is shared.
      */
     public ByteString(byte[] value, boolean copy) {
-        if (copy) {
-            this.value = checkNotNull(value, "value").clone();
-        } else {
-            this.value = checkNotNull(value, "value");
-        }
-    }
-
-    /**
-     * Initialize this byte string based upon a range of a byte array. A copy will be made.
-     */
-    public ByteString(byte[] value, int start, int length) {
-        this(value, start, length, true);
+        this(value, 0, checkNotNull(value, "value").length, copy);
     }
 
     /**
      * Construct a new {@link BinaryString} object from a {@code byte[]} array.
      * @param copy {@code true} then a copy of the memory will be made. {@code false} the underlying memory
-     * will be shared. If this shared memory changes then {@link #arrayChanged()} must be called.
+     * will be shared.
      */
     public ByteString(byte[] value, int start, int length, boolean copy) {
         if (start < 0 || start > checkNotNull(value, "value").length - length) {
@@ -111,10 +132,34 @@ public class ByteString {
                             + ") <= " + "value.length(" + value.length + ')');
         }
 
-        if (copy || start != 0 || length != value.length) {
+        if (copy) {
             this.value = Arrays.copyOfRange(value, start, start + length);
+            offset = 0;
+            this.length = length;
         } else {
             this.value = value;
+            this.offset = start;
+            this.length = length;
+        }
+    }
+
+    /**
+     * Create a new object which is equal to {@code value}.
+     * @param value The object to replicate.
+     * @param copy {@code true} mean the underlying storage will be copied.
+     * {@code false} means the underlying storage will be shared.
+     */
+    public ByteString(ByteString value, boolean copy) {
+        checkNotNull(value, "value");
+        this.length = value.length();
+        this.hash = value.hash;
+        if (copy) {
+            this.value = new byte[length];
+            System.arraycopy(value.array(), value.arrayOffset(), this.value, 0, length);
+            this.offset = 0;
+        } else {
+            this.value = value.array();
+            this.offset = value.offset;
         }
     }
 
@@ -123,32 +168,57 @@ public class ByteString {
      * The copy will start at {@link ByteBuffer#position()} and copy {@link ByteBuffer#remaining()} bytes.
      */
     public ByteString(ByteBuffer value) {
-        this.value = getBytes(value);
-    }
-
-    /**
-     * Create a copy of the underlying storage from {@link value}.
-     * The copy will start at {@code start} and copy {@code length} bytes.
-     */
-    public ByteString(ByteBuffer value, int start, int length) {
-        this.value = getBytes(value, start, length, true);
+        this(value, true);
     }
 
     /**
      * Initialize a {@link ByteString} based upon the underlying storage from {@link value}.
-     * The copy will start at {@code start} and copy {@code length} bytes.
-     * if {@code copy} is true a copy will be made of the memory.
-     * if {@code copy} is false the underlying storage will be shared, if possible.
+     * There is a potential to share the underlying array storage if {@link ByteBuffer#hasArray()} is {@code true}.
+     * if {@code copy} is {@code true} a copy will be made of the memory.
+     * if {@code copy} is {@code false} the underlying storage will be shared, if possible.
+     */
+    public ByteString(ByteBuffer value, boolean copy) {
+        this(value, value.position(), checkNotNull(value, "value").remaining(), copy);
+    }
+
+    /**
+     * Initialize a {@link ByteString} based upon the underlying storage from {@link value}.
+     * There is a potential to share the underlying array storage if {@link ByteBuffer#hasArray()} is {@code true}.
+     * if {@code copy} is {@code true} a copy will be made of the memory.
+     * if {@code copy} is {@code false} the underlying storage will be shared, if possible.
      */
     public ByteString(ByteBuffer value, int start, int length, boolean copy) {
-        this.value = getBytes(value, start, length, copy);
+        if (start < 0 || length > checkNotNull(value, "value").capacity() - start) {
+            throw new IndexOutOfBoundsException("expected: " + "0 <= start(" + start + ") <= start + length(" + length
+                            + ") <= " + "value.capacity(" + value.capacity() + ')');
+        }
+
+        if (value.hasArray()) {
+            if (copy) {
+                final int bufferOffset = value.arrayOffset() + start;
+                this.value = Arrays.copyOfRange(value.array(), bufferOffset, bufferOffset + length);
+                offset = 0;
+                this.length = length;
+            } else {
+                this.value = value.array();
+                this.offset = start;
+                this.length = length;
+            }
+        } else {
+            this.value = new byte[length];
+            int oldPos = value.position();
+            value.get(this.value, 0, length);
+            value.position(oldPos);
+            this.offset = 0;
+            this.length = length;
+        }
     }
 
     /**
      * Create a copy of {@link value} into a {@link ByteString} using the encoding type of {@code charset}.
      */
     public ByteString(char[] value, Charset charset) {
-        this.value = getBytes(value, charset);
+        this(value, charset, 0, checkNotNull(value, "value").length);
     }
 
     /**
@@ -156,80 +226,6 @@ public class ByteString {
      * The copy will start at index {@code start} and copy {@code length} bytes.
      */
     public ByteString(char[] value, Charset charset, int start, int length) {
-        this.value = getBytes(value, charset, start, length);
-    }
-
-    /**
-     * Create a copy of {@link value} into a {@link ByteString} using the encoding type of {@code charset}.
-     */
-    public ByteString(CharSequence value, Charset charset) {
-        this.value = getBytes(value, charset);
-    }
-
-    /**
-     * Create a copy of {@link value} into a {@link ByteString} using the encoding type of {@code charset}.
-     * The copy will start at index {@code start} and copy {@code length} bytes.
-     */
-    public ByteString(CharSequence value, Charset charset, int start, int length) {
-        this.value = getBytes(value, charset, start, length);
-    }
-
-    /**
-     * Create a copy of the underlying storage from {@link value} into a byte array.
-     * The copy will start at {@link ByteBuffer#position()} and copy {@link ByteBuffer#remaining()} bytes.
-     */
-    private static byte[] getBytes(ByteBuffer value) {
-        return getBytes(value, value.position(), checkNotNull(value, "value").remaining());
-    }
-
-    /**
-     * Create a copy of the underlying storage from {@link value} into a byte array.
-     * The copy will start at {@code start} and copy {@code length} bytes.
-     */
-    private static byte[] getBytes(ByteBuffer value, int start, int length) {
-        return getBytes(value, start, length, true);
-    }
-
-    /**
-     * Return an array of the underlying storage from {@link value} into a byte array.
-     * The copy will start at {@code start} and copy {@code length} bytes.
-     * if {@code copy} is true a copy will be made of the memory.
-     * if {@code copy} is false the underlying storage will be shared, if possible.
-     */
-    private static byte[] getBytes(ByteBuffer value, int start, int length, boolean copy) {
-        if (start < 0 || length > checkNotNull(value, "value").capacity() - start) {
-            throw new IndexOutOfBoundsException("expected: " + "0 <= start(" + start + ") <= start + length(" + length
-                            + ") <= " + "value.capacity(" + value.capacity() + ')');
-        }
-
-        if (value.hasArray()) {
-            if (copy || start != 0 || length != value.capacity()) {
-                int baseOffset = value.arrayOffset() + start;
-                return Arrays.copyOfRange(value.array(), baseOffset, baseOffset + length);
-            } else {
-                return value.array();
-            }
-        }
-
-        byte[] v = new byte[length];
-        int oldPos = value.position();
-        value.get(v, 0, length);
-        value.position(oldPos);
-        return v;
-    }
-
-    /**
-     * Create a copy of {@link value} into a byte array using the encoding type of {@code charset}.
-     */
-    private static byte[] getBytes(char[] value, Charset charset) {
-        return getBytes(value, charset, 0, checkNotNull(value, "value").length);
-    }
-
-    /**
-     * Create a copy of {@link value} into a byte array using the encoding type of {@code charset}.
-     * The copy will start at index {@code start} and copy {@code length} bytes.
-     */
-    private static byte[] getBytes(char[] value, Charset charset, int start, int length) {
         if (start < 0 || length > checkNotNull(value, "value").length - start) {
             throw new IndexOutOfBoundsException("expected: " + "0 <= start(" + start + ") <= start + length(" + length
                     + ") <= " + "length(" + length + ')');
@@ -239,22 +235,24 @@ public class ByteString {
         CharsetEncoder encoder = CharsetUtil.getEncoder(charset);
         ByteBuffer nativeBuffer = ByteBuffer.allocate((int) (encoder.maxBytesPerChar() * length));
         encoder.encode(cbuf, nativeBuffer, true);
-        final int offset = nativeBuffer.arrayOffset();
-        return Arrays.copyOfRange(nativeBuffer.array(), offset, offset + nativeBuffer.position());
+        final int bufferOffset = nativeBuffer.arrayOffset();
+        this.value = Arrays.copyOfRange(nativeBuffer.array(), bufferOffset, bufferOffset + nativeBuffer.position());
+        this.offset = 0;
+        this.length =  this.value.length;
     }
 
     /**
-     * Create a copy of {@link value} into a byte array using the encoding type of {@code charset}.
+     * Create a copy of {@link value} into a {@link ByteString} using the encoding type of {@code charset}.
      */
-    private static byte[] getBytes(CharSequence value, Charset charset) {
-        return getBytes(value, charset, 0, checkNotNull(value, "value").length());
+    public ByteString(CharSequence value, Charset charset) {
+        this(value, charset, 0, checkNotNull(value, "value").length());
     }
 
     /**
-     * Create a copy of {@link value} into a byte array using the encoding type of {@code charset}.
+     * Create a copy of {@link value} into a {@link ByteString} using the encoding type of {@code charset}.
      * The copy will start at index {@code start} and copy {@code length} bytes.
      */
-    private static byte[] getBytes(CharSequence value, Charset charset, int start, int length) {
+    public ByteString(CharSequence value, Charset charset, int start, int length) {
         if (start < 0 || length > checkNotNull(value, "value").length() - start) {
             throw new IndexOutOfBoundsException("expected: " + "0 <= start(" + start + ") <= start + length(" + length
                     + ") <= " + "length(" + value.length() + ')');
@@ -265,7 +263,9 @@ public class ByteString {
         ByteBuffer nativeBuffer = ByteBuffer.allocate((int) (encoder.maxBytesPerChar() * length));
         encoder.encode(cbuf, nativeBuffer, true);
         final int offset = nativeBuffer.arrayOffset();
-        return Arrays.copyOfRange(nativeBuffer.array(), offset, offset + nativeBuffer.position());
+        this.value = Arrays.copyOfRange(nativeBuffer.array(), offset, offset + nativeBuffer.position());
+        this.offset = 0;
+        this.length = this.value.length;
     }
 
     /**
@@ -275,7 +275,7 @@ public class ByteString {
      *         The last-visited index If the {@link ByteProcessor#process(byte)} returned {@code false}.
      */
     public final int forEachByte(ByteProcessor visitor) throws Exception {
-        return forEachByte(0, value.length, visitor);
+        return forEachByte(0, length(), visitor);
     }
 
     /**
@@ -286,14 +286,15 @@ public class ByteString {
      *         The last-visited index If the {@link ByteProcessor#process(byte)} returned {@code false}.
      */
     public final int forEachByte(int index, int length, ByteProcessor visitor) throws Exception {
-        if (index < 0 || length > value.length - index) {
+        if (index < 0 || length > length() - index) {
             throw new IndexOutOfBoundsException("expected: " + "0 <= index(" + index + ") <= start + length(" + length
-                    + ") <= " + "length(" + value.length + ')');
+                    + ") <= " + "length(" + length() + ')');
         }
 
-        for (int i = index; i < length; ++i) {
+        final int len = offset + length;
+        for (int i = offset + index; i < len; ++i) {
             if (!visitor.process(value[i])) {
-                return i;
+                return i - offset;
             }
         }
         return -1;
@@ -317,36 +318,42 @@ public class ByteString {
      *         The last-visited index If the {@link ByteProcessor#process(byte)} returned {@code false}.
      */
     public final int forEachByteDesc(int index, int length, ByteProcessor visitor) throws Exception {
-        if (index < 0 || length > value.length - index) {
+        if (index < 0 || length > length() - index) {
             throw new IndexOutOfBoundsException("expected: " + "0 <= index(" + index + ") <= start + length(" + length
-                    + ") <= " + "length(" + value.length + ')');
+                    + ") <= " + "length(" + length() + ')');
         }
 
-        for (int i = index + length - 1; i >= index; --i) {
+        final int end = offset + index;
+        for (int i = offset + index + length - 1; i >= end; --i) {
             if (!visitor.process(value[i])) {
-                return i;
+                return i - offset;
             }
         }
         return -1;
     }
 
     public final byte byteAt(int index) {
-        return value[index];
+        // We must do a range check here to enforce the access does not go outside our sub region of the array.
+        // We rely on the array access itself to pick up the array out of bounds conditions
+        if (index < 0 || index >= length) {
+            throw new IndexOutOfBoundsException("index: " + index + " must be in the range [0," + length + ")");
+        }
+        return value[index + offset];
     }
 
     public final boolean isEmpty() {
-        return value.length == 0;
+        return length == 0;
     }
 
     public final int length() {
-        return value.length;
+        return length;
     }
 
     /**
      * During normal use cases the {@link ByteString} should be immutable, but if the underlying array is shared,
      * and changes then this needs to be called.
      */
-    public final void arrayChanged() {
+    public void arrayChanged() {
         hash = 0;
     }
 
@@ -354,9 +361,28 @@ public class ByteString {
      * This gives direct access to the underlying storage array.
      * The {@link #toByteArray()} should be preferred over this method.
      * If the return value is changed then {@link #arrayChanged()} must be called.
+     * @see #arrayOffset()
+     * @see #isEntireArrayUsed()
      */
     public final byte[] array() {
         return value;
+    }
+
+    /**
+     * The offset into {@link #array()} for which data for this ByteString begins.
+     * @see #array()
+     * @see #isEntireArrayUsed()
+     */
+    public final int arrayOffset() {
+        return offset;
+    }
+
+    /**
+     * Determine if the storage represented by {@link #array()} is entirely used.
+     * @see #array()
+     */
+    public final boolean isEntireArrayUsed() {
+        return offset == 0 && length == value.length;
     }
 
     /**
@@ -371,7 +397,7 @@ public class ByteString {
      * The subset is defined by the range [{@code start}, {@code end}).
      */
     public final byte[] toByteArray(int start, int end) {
-        return Arrays.copyOfRange(value, start, end);
+        return Arrays.copyOfRange(value, start + offset, end + offset);
     }
 
     /**
@@ -383,47 +409,79 @@ public class ByteString {
      * @param length the number of characters to copy.
      */
     public final void copy(int srcIdx, byte[] dst, int dstIdx, int length) {
-        final int thisLen = value.length;
-
-        if (srcIdx < 0 || length > thisLen - srcIdx) {
+        if (srcIdx < 0 || length > length() - srcIdx) {
             throw new IndexOutOfBoundsException("expected: " + "0 <= srcIdx(" + srcIdx + ") <= srcIdx + length("
-                            + length + ") <= srcLen(" + thisLen + ')');
+                            + length + ") <= srcLen(" + length() + ')');
         }
 
-        System.arraycopy(value, srcIdx, checkNotNull(dst, "dst"), dstIdx, length);
+        System.arraycopy(value, srcIdx + offset, checkNotNull(dst, "dst"), dstIdx, length);
     }
 
     @Override
     public int hashCode() {
         int h = hash;
         if (h == 0) {
-            for (int i = 0; i < value.length; ++i) {
+            final int end = offset + length;
+            for (int i = offset; i < end; ++i) {
                 h = h * HASH_CODE_PRIME ^ value[i] & HASH_CODE_PRIME;
             }
 
             hash = h;
         }
-        return h;
+        return hash;
     }
 
     /**
      * Copies a range of characters into a new string.
-     *
-     * @param start the offset of the first character.
+     * @param start the offset of the first character (inclusive).
      * @return a new string containing the characters from start to the end of the string.
      * @throws IndexOutOfBoundsException if {@code start < 0} or {@code start > length()}.
      */
-    public final ByteString subSequence(int start) {
+    public ByteString subSequence(int start) {
         return subSequence(start, length());
     }
 
+    /**
+     * Copies a range of characters into a new string.
+     * @param start the offset of the first character (inclusive).
+     * @param end The index to stop at (exclusive).
+     * @return a new string containing the characters from start to the end of the string.
+     * @throws IndexOutOfBoundsException if {@code start < 0} or {@code start > length()}.
+     */
     public ByteString subSequence(int start, int end) {
+        return subSequence(start, end, true);
+    }
+
+    /**
+     * Either copy or share a subset of underlying sub-sequence of bytes.
+     * @param start the offset of the first character (inclusive).
+     * @param end The index to stop at (exclusive).
+     * @param copy If {@code true} then a copy of the underlying storage will be made.
+     * If {@code false} then the underlying storage will be shared.
+     * @return a new string containing the characters from start to the end of the string.
+     * @throws IndexOutOfBoundsException if {@code start < 0} or {@code start > length()}.
+     */
+    public ByteString subSequence(int start, int end, boolean copy) {
+        return subSequence(start, end, copy, DEFAULT_FACTORY);
+    }
+
+    /**
+     * Either copy or share a subset of underlying sub-sequence of bytes.
+     * @param start the offset of the first character (inclusive).
+     * @param end The index to stop at (exclusive).
+     * @param copy If {@code true} then a copy of the underlying storage will be made.
+     * If {@code false} then the underlying storage will be shared.
+     * @param factory The factory used to generate a new {@link ByteString} object.
+     * @return a new string containing the characters from start to the end of the string.
+     * @throws IndexOutOfBoundsException if {@code start < 0} or {@code start > length()}.
+     */
+    protected ByteString subSequence(int start, int end, boolean copy, ByteStringFactory factory) {
         if (start < 0 || start > end || end > length()) {
             throw new IndexOutOfBoundsException("expected: 0 <= start(" + start + ") <= end (" + end + ") <= length("
                             + length() + ')');
         }
 
-        if (start == 0 && end == value.length) {
+        if (start == 0 && end == length()) {
             return this;
         }
 
@@ -431,7 +489,7 @@ public class ByteString {
             return EMPTY_STRING;
         }
 
-        return new ByteString(value, start, end - start, false);
+        return factory.newInstance(value, start + offset, end - start, copy);
     }
 
     public final int parseAsciiInt() {
@@ -458,7 +516,7 @@ public class ByteString {
         int i = start;
         boolean negative = byteAt(i) == '-';
         if (negative && ++i == end) {
-            throw new NumberFormatException(subSequence(start, end).toString());
+            throw new NumberFormatException(subSequence(start, end, false).toString());
         }
 
         return parseAsciiInt(i, end, radix, negative);
@@ -467,25 +525,25 @@ public class ByteString {
     private int parseAsciiInt(int start, int end, int radix, boolean negative) {
         int max = Integer.MIN_VALUE / radix;
         int result = 0;
-        int offset = start;
-        while (offset < end) {
-            int digit = Character.digit((char) (value[offset++] & 0xFF), radix);
+        int currOffset = start;
+        while (currOffset < end) {
+            int digit = Character.digit((char) (value[currOffset++ + offset] & 0xFF), radix);
             if (digit == -1) {
-                throw new NumberFormatException(subSequence(start, end).toString());
+                throw new NumberFormatException(subSequence(start, end, false).toString());
             }
             if (max > result) {
-                throw new NumberFormatException(subSequence(start, end).toString());
+                throw new NumberFormatException(subSequence(start, end, false).toString());
             }
             int next = result * radix - digit;
             if (next > result) {
-                throw new NumberFormatException(subSequence(start, end).toString());
+                throw new NumberFormatException(subSequence(start, end, false).toString());
             }
             result = next;
         }
         if (!negative) {
             result = -result;
             if (result < 0) {
-                throw new NumberFormatException(subSequence(start, end).toString());
+                throw new NumberFormatException(subSequence(start, end, false).toString());
             }
         }
         return result;
@@ -515,7 +573,7 @@ public class ByteString {
         int i = start;
         boolean negative = byteAt(i) == '-';
         if (negative && ++i == end) {
-            throw new NumberFormatException(subSequence(start, end).toString());
+            throw new NumberFormatException(subSequence(start, end, false).toString());
         }
 
         return parseAsciiLong(i, end, radix, negative);
@@ -524,25 +582,25 @@ public class ByteString {
     private long parseAsciiLong(int start, int end, int radix, boolean negative) {
         long max = Long.MIN_VALUE / radix;
         long result = 0;
-        int offset = start;
-        while (offset < end) {
-            int digit = Character.digit((char) (value[offset++] & 0xFF), radix);
+        int currOffset = start;
+        while (currOffset < end) {
+            int digit = Character.digit((char) (value[currOffset++ + offset] & 0xFF), radix);
             if (digit == -1) {
-                throw new NumberFormatException(subSequence(start, end).toString());
+                throw new NumberFormatException(subSequence(start, end, false).toString());
             }
             if (max > result) {
-                throw new NumberFormatException(subSequence(start, end).toString());
+                throw new NumberFormatException(subSequence(start, end, false).toString());
             }
             long next = result * radix - digit;
             if (next > result) {
-                throw new NumberFormatException(subSequence(start, end).toString());
+                throw new NumberFormatException(subSequence(start, end, false).toString());
             }
             result = next;
         }
         if (!negative) {
             result = -result;
             if (result < 0) {
-                throw new NumberFormatException(subSequence(start, end).toString());
+                throw new NumberFormatException(subSequence(start, end, false).toString());
             }
         }
         return result;
@@ -553,11 +611,12 @@ public class ByteString {
     }
 
     public char parseChar(int start) {
-        if (start + 1 >= value.length) {
+        if (start + 1 >= length()) {
             throw new IndexOutOfBoundsException("2 bytes required to convert to character. index " +
                     start + " would go out of bounds.");
         }
-        return (char) (((value[start] & 0xFF) << 8) | (value[start + 1] & 0xFF));
+        final int startWithOffset = start + offset;
+        return (char) (((value[startWithOffset] & 0xFF) << 8) | (value[startWithOffset + 1] & 0xFF));
     }
 
     public final short parseAsciiShort() {
@@ -576,7 +635,7 @@ public class ByteString {
         int intValue = parseAsciiInt(start, end, radix);
         short result = (short) intValue;
         if (result != intValue) {
-            throw new NumberFormatException(subSequence(start, end).toString());
+            throw new NumberFormatException(subSequence(start, end, false).toString());
         }
         return result;
     }
@@ -605,9 +664,11 @@ public class ByteString {
         if (this == obj) {
             return true;
         }
+
         ByteString other = (ByteString) obj;
         return hashCode() == other.hashCode() &&
-               PlatformDependent.equals(array(), 0, array().length, other.array(), 0, other.array().length);
+               PlatformDependent.equals(array(), arrayOffset(), arrayOffset() + length(),
+                                        other.array(), other.arrayOffset(), other.arrayOffset() + other.length());
     }
 
     /**
@@ -645,6 +706,11 @@ public class ByteString {
             return StringUtil.EMPTY_STRING;
         }
 
-        return new String(value, start, length, charset);
+        if (start < 0 || length > length() - start) {
+            throw new IndexOutOfBoundsException("expected: " + "0 <= start(" + start + ") <= srcIdx + length("
+                            + length + ") <= srcLen(" + length() + ')');
+        }
+
+        return new String(value, start + offset, length, charset);
     }
 }

@@ -863,8 +863,9 @@ public final class PlatformDependent {
         if (len1 != len2) {
             return false;
         }
-        for (int i = 0; i < len1; i++) {
-            if (bytes1[startPos1 + i] != bytes2[startPos2 + i]) {
+        final int end = startPos1 + len1;
+        for (int i = startPos1, j = startPos2; i < end; ++i, ++j) {
+            if (bytes1[i] != bytes2[j]) {
                 return false;
             }
         }
