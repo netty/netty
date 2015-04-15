@@ -150,6 +150,8 @@ public class DefaultHttpHeaders extends HttpHeaders {
             if ((c & HIGHEST_INVALID_VALUE_CHAR_MASK) == 0) {
                 // Check the absolutely prohibited characters.
                 switch (c) {
+                case 0x0: // NULL
+                    throw new IllegalArgumentException("a header value contains a prohibited character '\0': " + seq);
                 case 0x0b: // Vertical tab
                     throw new IllegalArgumentException("a header value contains a prohibited character '\\v': " + seq);
                 case '\f':
