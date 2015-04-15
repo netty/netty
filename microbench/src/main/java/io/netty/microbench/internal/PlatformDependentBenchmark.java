@@ -18,6 +18,8 @@ package io.netty.microbench.internal;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.internal.PlatformDependent;
 
+import java.util.Arrays;
+
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Level;
@@ -28,25 +30,21 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Threads;
 
-import java.util.Arrays;
-
 @Threads(1)
 @State(Scope.Benchmark)
 public class PlatformDependentBenchmark extends AbstractMicrobenchmark {
 
     @Param({ "10", "50", "100", "1000", "10000", "100000" })
-    private String size;
+    private int size;
     private byte[] bytes1;
     private byte[] bytes2;
 
     @Setup(Level.Trial)
     public void setup() {
-        int size = Integer.parseInt(this.size);
         bytes1 = new byte[size];
         bytes2 = new byte[size];
         for (int i = 0; i < size; i++) {
-            bytes1[i] = (byte) i;
-            bytes2[i] = (byte) i;
+            bytes1[i] = bytes2[i] = (byte) i;
         }
     }
 

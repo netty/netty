@@ -377,7 +377,7 @@ public final class HttpUtil {
                     throw streamError(streamId, PROTOCOL_ERROR,
                             "Invalid HTTP/2 header '%s' encountered in translation to HTTP/1.x", translatedName);
                 } else {
-                    output.add(new AsciiString(translatedName.array(), false), new AsciiString(value.array(), false));
+                    output.add(new AsciiString(translatedName, false), new AsciiString(value, false));
                 }
             }
             return true;

@@ -23,7 +23,7 @@ void convertTemplates(String templateDir,
     def keyName = keyPrimitive.capitalize()
     def replaceFrom = "(^.*)K([^.]+)\\.template\$"
     def replaceTo = "\\1" + keyName + "\\2.java"
-    def hashCodeFn = keyPrimitive.equals("long") ? "(int)(key ^ (key >>> 32))" : "(int) key"
+    def hashCodeFn = keyPrimitive.equals("long") ? "(int) (key ^ (key >>> 32))" : "(int) key"
     ant.copy(todir: outputDir) {
         fileset(dir: templateDir) {
             include(name: "**/*.template")
