@@ -113,4 +113,13 @@ public abstract class ConstantPool<T extends Constant<T>> {
     }
 
     protected abstract T newConstant(int id, String name);
+
+    @Deprecated
+    public final int nextId() {
+        synchronized (constants) {
+            int id = nextId;
+            nextId++;
+            return id;
+        }
+    }
 }
