@@ -30,9 +30,10 @@ import java.net.NetworkInterface;
  *
  * @param <T>   the type of the value which is valid for the {@link ChannelOption}
  */
-public final class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
+public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
 
     private static final ConstantPool<ChannelOption<Object>> pool = new ConstantPool<ChannelOption<Object>>() {
+        @SuppressWarnings("deprecation")
         @Override
         protected ChannelOption<Object> newConstant(int id, String name) {
             return new ChannelOption<Object>(id, name);
@@ -119,6 +120,11 @@ public final class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
      */
     private ChannelOption(int id, String name) {
         super(id, name);
+    }
+
+    @Deprecated
+    protected ChannelOption(String name) {
+        this(pool.nextId(), name);
     }
 
     /**

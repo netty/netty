@@ -20,13 +20,12 @@ import io.netty.channel.rxtx.RxtxChannelConfig.Databits;
 import io.netty.channel.rxtx.RxtxChannelConfig.Paritybit;
 import io.netty.channel.rxtx.RxtxChannelConfig.Stopbits;
 
-import static io.netty.channel.ChannelOption.*;
-
 /**
  * Option for configuring a serial port connection
  */
-public final class RxtxChannelOption {
+public final class RxtxChannelOption<T> extends ChannelOption<T> {
 
+    @SuppressWarnings("rawtypes")
     private static final Class<RxtxChannelOption> T = RxtxChannelOption.class;
 
     public static final ChannelOption<Integer> BAUD_RATE = valueOf(T, "BAUD_RATE");
@@ -38,5 +37,8 @@ public final class RxtxChannelOption {
     public static final ChannelOption<Integer> WAIT_TIME = valueOf(T, "WAIT_TIME");
     public static final ChannelOption<Integer> READ_TIMEOUT = valueOf(T, "READ_TIMEOUT");
 
-    private RxtxChannelOption() { }
+    @SuppressWarnings({ "unused", "deprecation" })
+    private RxtxChannelOption() {
+        super(null);
+    }
 }

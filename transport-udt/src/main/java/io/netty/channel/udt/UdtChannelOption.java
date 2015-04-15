@@ -23,8 +23,9 @@ import static io.netty.channel.ChannelOption.*;
 /**
  * Options for the UDT transport
  */
-public final class UdtChannelOption {
+public final class UdtChannelOption<T> extends ChannelOption<T> {
 
+    @SuppressWarnings("rawtypes")
     private static final Class<UdtChannelOption> T = UdtChannelOption.class;
 
     /**
@@ -48,5 +49,8 @@ public final class UdtChannelOption {
      */
     public static final ChannelOption<Integer> SYSTEM_SEND_BUFFER_SIZE = valueOf(T, "SYSTEM_SEND_BUFFER_SIZE");
 
-    private UdtChannelOption() { }
+    @SuppressWarnings({ "unused", "deprecation" })
+    private UdtChannelOption() {
+        super(null);
+    }
 }

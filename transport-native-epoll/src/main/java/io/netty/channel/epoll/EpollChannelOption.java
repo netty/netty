@@ -18,7 +18,8 @@ package io.netty.channel.epoll;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.unix.DomainSocketReadMode;
 
-public final class EpollChannelOption {
+public final class EpollChannelOption<T> extends ChannelOption<T> {
+    @SuppressWarnings("rawtypes")
     private static final Class<EpollChannelOption> T = EpollChannelOption.class;
 
     public static final ChannelOption<Boolean> TCP_CORK = ChannelOption.valueOf(T, "TCP_CORK");
@@ -30,5 +31,9 @@ public final class EpollChannelOption {
             ChannelOption.valueOf(T, "DOMAIN_SOCKET_READ_MODE");
     public static final ChannelOption<EpollMode> EPOLL_MODE =
             ChannelOption.valueOf(T, "EPOLL_MODE");
-    private EpollChannelOption() { }
+
+    @SuppressWarnings({ "unused", "deprecation" })
+    private EpollChannelOption() {
+        super(null);
+    }
 }
