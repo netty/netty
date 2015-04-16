@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.DefaultByteBufHolder;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -188,13 +188,14 @@ public class HttpObjectAggregator
         }
     }
 
-    private abstract static class AggregatedFullHttpMessage extends DefaultByteBufHolder implements FullHttpMessage {
+    private abstract static class AggregatedFullHttpMessage implements ByteBufHolder, FullHttpMessage {
         protected final HttpMessage message;
+        private final ByteBuf content;
         private HttpHeaders trailingHeaders;
 
         AggregatedFullHttpMessage(HttpMessage message, ByteBuf content, HttpHeaders trailingHeaders) {
-            super(content);
             this.message = message;
+            this.content = content;
             this.trailingHeaders = trailingHeaders;
         }
 
@@ -239,27 +240,47 @@ public class HttpObjectAggregator
         }
 
         @Override
-        public FullHttpMessage retain(int increment) {
-            super.retain(increment);
-            return this;
+        public ByteBuf content() {
+            return content;
+        }
+
+        @Override
+        public int refCnt() {
+            return content.refCnt();
         }
 
         @Override
         public FullHttpMessage retain() {
-            super.retain();
+            content.retain();
+            return this;
+        }
+
+        @Override
+        public FullHttpMessage retain(int increment) {
+            content.retain(increment);
             return this;
         }
 
         @Override
         public FullHttpMessage touch(Object hint) {
-            super.touch(hint);
+            content.touch(hint);
             return this;
         }
 
         @Override
         public FullHttpMessage touch() {
-            super.touch();
+            content.touch();
             return this;
+        }
+
+        @Override
+        public boolean release() {
+            return content.release();
+        }
+
+        @Override
+        public boolean release(int decrement) {
+            return content.release(decrement);
         }
 
         @Override
