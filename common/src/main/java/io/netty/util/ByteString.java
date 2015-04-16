@@ -393,15 +393,15 @@ public class ByteString {
 
     @Override
     public int hashCode() {
-        if (hash != 0) {
-            return hash;
+        int h = hash;
+        if (h == 0) {
+            for (int i = 0; i < value.length; ++i) {
+                h = h * HASH_CODE_PRIME ^ value[i] & HASH_CODE_PRIME;
+            }
+            
+            hash = h;
         }
-
-        for (int i = 0; i < value.length; ++i) {
-            hash = hash * HASH_CODE_PRIME ^ value[i] & HASH_CODE_PRIME;
-        }
-
-        return hash;
+        return h;
     }
 
     /**
