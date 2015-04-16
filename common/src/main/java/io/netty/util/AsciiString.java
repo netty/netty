@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-
 /**
  * A string which has been encoded into a character encoding whose character always takes a single byte, similarly to
  * ASCII. It internally keeps its content in a byte array unlike {@link String}, which uses a character array, for
