@@ -28,7 +28,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 
 public class DefaultTextHeaders extends DefaultConvertibleHeaders<CharSequence, String> implements TextHeaders {
-    private static final HashCodeGenerator<CharSequence> CHARSEQUECE_CASE_INSENSITIVE_HASH_CODE_GENERATOR =
+    private static final HashCodeGenerator<CharSequence> CHARSEQUENCE_CASE_INSENSITIVE_HASH_CODE_GENERATOR =
             new HashCodeGenerator<CharSequence>() {
         @Override
         public int generateHashCode(CharSequence name) {
@@ -36,7 +36,7 @@ public class DefaultTextHeaders extends DefaultConvertibleHeaders<CharSequence, 
         }
     };
 
-    private static final HashCodeGenerator<CharSequence> CHARSEQUECE_CASE_SENSITIVE_HASH_CODE_GENERATOR =
+    private static final HashCodeGenerator<CharSequence> CHARSEQUENCE_CASE_SENSITIVE_HASH_CODE_GENERATOR =
             new JavaHashCodeGenerator<CharSequence>();
 
     public static class DefaultTextValueTypeConverter implements ValueConverter<CharSequence> {
@@ -188,9 +188,9 @@ public class DefaultTextHeaders extends DefaultConvertibleHeaders<CharSequence, 
     public DefaultTextHeaders(boolean ignoreCase, ValueConverter<CharSequence> valueConverter,
                               NameConverter<CharSequence> nameConverter, boolean singleHeaderFields) {
         super(comparator(ignoreCase), comparator(ignoreCase),
-                ignoreCase ? CHARSEQUECE_CASE_INSENSITIVE_HASH_CODE_GENERATOR
-                        : CHARSEQUECE_CASE_SENSITIVE_HASH_CODE_GENERATOR, valueConverter,
-                CHARSEQUENCE_TO_STRING_CONVERTER, nameConverter);
+              ignoreCase ? CHARSEQUENCE_CASE_INSENSITIVE_HASH_CODE_GENERATOR
+                      : CHARSEQUENCE_CASE_SENSITIVE_HASH_CODE_GENERATOR, valueConverter,
+              CHARSEQUENCE_TO_STRING_CONVERTER, nameConverter);
         valuesComposer = singleHeaderFields ? new SingleHeaderValuesComposer() : new MultipleFieldsValueComposer();
     }
 

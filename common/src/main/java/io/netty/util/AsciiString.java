@@ -30,151 +30,66 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
+
 /**
  * A string which has been encoded into a character encoding whose character always takes a single byte, similarly to
  * ASCII. It internally keeps its content in a byte array unlike {@link String}, which uses a character array, for
  * reduced memory footprint and faster data transfer from/to byte-based data structures such as a byte array and
- * {@link ByteBuffer}. It is often used in conjunction with {@link TextHeaders}.
+ * {@link ByteBuffer}. It is often used in conjunction with {@code TextHeaders}.
  */
 public final class AsciiString extends ByteString implements CharSequence, Comparable<CharSequence> {
 
     private static final char MAX_CHAR_VALUE = 255;
     public static final AsciiString EMPTY_STRING = new AsciiString("");
 
-    public static final Comparator<AsciiString> CASE_INSENSITIVE_ORDER = new Comparator<AsciiString>() {
-        @Override
-        public int compare(AsciiString o1, AsciiString o2) {
-            return CHARSEQUENCE_CASE_INSENSITIVE_ORDER.compare(o1, o2);
-        }
-    };
     public static final Comparator<AsciiString> CASE_SENSITIVE_ORDER = new Comparator<AsciiString>() {
         @Override
-        public int compare(AsciiString o1, AsciiString o2) {
-            return CHARSEQUENCE_CASE_SENSITIVE_ORDER.compare(o1, o2);
+        public int compare(AsciiString one, AsciiString two) {
+            return CHARSEQUENCE_CASE_SENSITIVE_ORDER.compare(one, two);
+        }
+    };
+
+    public static final Comparator<AsciiString> CASE_INSENSITIVE_ORDER = new Comparator<AsciiString>() {
+        @Override
+        public int compare(AsciiString one, AsciiString two) {
+            return CHARSEQUENCE_CASE_INSENSITIVE_ORDER.compare(one, two);
         }
     };
 
     public static final Comparator<CharSequence> CHARSEQUENCE_CASE_INSENSITIVE_ORDER = new Comparator<CharSequence>() {
         @Override
-        public int compare(CharSequence o1, CharSequence o2) {
-            if (o1 == o2) {
+        public int compare(CharSequence one, CharSequence two) {
+            if (one == two) {
                 return 0;
             }
-
-            AsciiString a1 = o1 instanceof AsciiString ? (AsciiString) o1 : null;
-            AsciiString a2 = o2 instanceof AsciiString ? (AsciiString) o2 : null;
-
-            int result;
-            int length1 = o1.length();
-            int length2 = o2.length();
+            int length1 = one.length();
+            int length2 = two.length();
             int minLength = Math.min(length1, length2);
-            if (a1 != null && a2 != null) {
-                byte[] thisValue = a1.value;
-                byte[] thatValue = a2.value;
-                for (int i = 0; i < minLength; i++) {
-                    byte v1 = thisValue[i];
-                    byte v2 = thatValue[i];
-                    if (v1 == v2) {
-                        continue;
-                    }
-                    int c1 = toLowerCase(v1);
-                    int c2 = toLowerCase(v2);
-                    result = c1 - c2;
-                    if (result != 0) {
-                        return result;
-                    }
-                }
-            } else if (a1 != null) {
-                byte[] thisValue = a1.value;
-                for (int i = 0; i < minLength; i++) {
-                    int c1 = toLowerCase(thisValue[i]);
-                    int c2 = toLowerCase(o2.charAt(i));
-                    result = c1 - c2;
-                    if (result != 0) {
-                        return result;
-                    }
-                }
-            } else if (a2 != null) {
-                byte[] thatValue = a2.value;
-                for (int i = 0; i < minLength; i++) {
-                    int c1 = toLowerCase(o1.charAt(i));
-                    int c2 = toLowerCase(thatValue[i]);
-                    result = c1 - c2;
-                    if (result != 0) {
-                        return result;
-                    }
-                }
-            } else {
-                for (int i = 0; i < minLength; i++) {
-                    int c1 = toLowerCase(o1.charAt(i));
-                    int c2 = toLowerCase(o2.charAt(i));
-                    result = c1 - c2;
-                    if (result != 0) {
-                        return result;
-                    }
+            for (int i = 0; i < minLength; i++) {
+                int result = toLowerCase(one.charAt(i)) - toLowerCase(two.charAt(i));
+                if (result != 0) {
+                    return result;
                 }
             }
-
             return length1 - length2;
         }
     };
 
     public static final Comparator<CharSequence> CHARSEQUENCE_CASE_SENSITIVE_ORDER = new Comparator<CharSequence>() {
         @Override
-        public int compare(CharSequence o1, CharSequence o2) {
-            if (o1 == o2) {
+        public int compare(CharSequence one, CharSequence two) {
+            if (one == two) {
                 return 0;
             }
-
-            AsciiString a1 = o1 instanceof AsciiString ? (AsciiString) o1 : null;
-            AsciiString a2 = o2 instanceof AsciiString ? (AsciiString) o2 : null;
-
-            int result;
-            int length1 = o1.length();
-            int length2 = o2.length();
+            int length1 = one.length();
+            int length2 = two.length();
             int minLength = Math.min(length1, length2);
-            if (a1 != null && a2 != null) {
-                byte[] thisValue = a1.value;
-                byte[] thatValue = a2.value;
-                for (int i = 0; i < minLength; i++) {
-                    byte v1 = thisValue[i];
-                    byte v2 = thatValue[i];
-                    result = v1 - v2;
-                    if (result != 0) {
-                        return result;
-                    }
-                }
-            } else if (a1 != null) {
-                byte[] thisValue = a1.value;
-                for (int i = 0; i < minLength; i++) {
-                    int c1 = thisValue[i];
-                    int c2 = o2.charAt(i);
-                    result = c1 - c2;
-                    if (result != 0) {
-                        return result;
-                    }
-                }
-            } else if (a2 != null) {
-                byte[] thatValue = a2.value;
-                for (int i = 0; i < minLength; i++) {
-                    int c1 = o1.charAt(i);
-                    int c2 = thatValue[i];
-                    result = c1 - c2;
-                    if (result != 0) {
-                        return result;
-                    }
-                }
-            } else {
-                for (int i = 0; i < minLength; i++) {
-                    int c1 = o1.charAt(i);
-                    int c2 = o2.charAt(i);
-                    result = c1 - c2;
-                    if (result != 0) {
-                        return result;
-                    }
+            for (int i = 0; i < minLength; i++) {
+                int result = one.charAt(i) - two.charAt(i);
+                if (result != 0) {
+                    return result;
                 }
             }
-
             return length1 - length2;
         }
     };
@@ -382,23 +297,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
      * @throws NullPointerException if {@code string} is {@code null}.
      */
     public int compareTo(CharSequence string) {
-        if (this == string) {
-            return 0;
-        }
-
-        int result;
-        int length1 = length();
-        int length2 = string.length();
-        int minLength = Math.min(length1, length2);
-        byte[] value = this.value;
-        for (int i = 0, j = 0; j < minLength; i++, j++) {
-            result = b2c(value[i]) - string.charAt(j);
-            if (result != 0) {
-                return result;
-            }
-        }
-
-        return length1 - length2;
+        return CHARSEQUENCE_CASE_SENSITIVE_ORDER.compare(this, string);
     }
 
     /**

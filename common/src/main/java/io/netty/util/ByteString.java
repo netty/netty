@@ -99,7 +99,7 @@ public class ByteString {
     }
 
     /**
-     * Construct a new {@link BinaryString} object from a {@code byte[]} array.
+     * Construct a new {@link ByteString} object from a {@code byte[]} array.
      * @param copy {@code true} then a copy of the memory will be made. {@code false} the underlying memory
      * will be shared. If this shared memory changes then {@link #arrayChanged()} must be called.
      */
@@ -117,7 +117,7 @@ public class ByteString {
     }
 
     /**
-     * Create a copy of the underlying storage from {@link value}.
+     * Create a copy of the underlying storage from {@code value}.
      * The copy will start at {@link ByteBuffer#position()} and copy {@link ByteBuffer#remaining()} bytes.
      */
     public ByteString(ByteBuffer value) {
@@ -125,7 +125,7 @@ public class ByteString {
     }
 
     /**
-     * Create a copy of the underlying storage from {@link value}.
+     * Create a copy of the underlying storage from {@code value}.
      * The copy will start at {@code start} and copy {@code length} bytes.
      */
     public ByteString(ByteBuffer value, int start, int length) {
@@ -133,7 +133,7 @@ public class ByteString {
     }
 
     /**
-     * Initialize a {@link ByteString} based upon the underlying storage from {@link value}.
+     * Initialize a {@link ByteString} based upon the underlying storage from {@code value}.
      * The copy will start at {@code start} and copy {@code length} bytes.
      * if {@code copy} is true a copy will be made of the memory.
      * if {@code copy} is false the underlying storage will be shared, if possible.
@@ -143,14 +143,14 @@ public class ByteString {
     }
 
     /**
-     * Create a copy of {@link value} into a {@link ByteString} using the encoding type of {@code charset}.
+     * Create a copy of {@code value} into a {@link ByteString} using the encoding type of {@code charset}.
      */
     public ByteString(char[] value, Charset charset) {
         this.value = getBytes(value, charset);
     }
 
     /**
-     * Create a copy of {@link value} into a {@link ByteString} using the encoding type of {@code charset}.
+     * Create a copy of {@code value} into a {@link ByteString} using the encoding type of {@code charset}.
      * The copy will start at index {@code start} and copy {@code length} bytes.
      */
     public ByteString(char[] value, Charset charset, int start, int length) {
@@ -158,14 +158,14 @@ public class ByteString {
     }
 
     /**
-     * Create a copy of {@link value} into a {@link ByteString} using the encoding type of {@code charset}.
+     * Create a copy of {@code value} into a {@link ByteString} using the encoding type of {@code charset}.
      */
     public ByteString(CharSequence value, Charset charset) {
         this.value = getBytes(value, charset);
     }
 
     /**
-     * Create a copy of {@link value} into a {@link ByteString} using the encoding type of {@code charset}.
+     * Create a copy of {@code value} into a {@link ByteString} using the encoding type of {@code charset}.
      * The copy will start at index {@code start} and copy {@code length} bytes.
      */
     public ByteString(CharSequence value, Charset charset, int start, int length) {
@@ -173,7 +173,7 @@ public class ByteString {
     }
 
     /**
-     * Create a copy of the underlying storage from {@link value} into a byte array.
+     * Create a copy of the underlying storage from {@code value} into a byte array.
      * The copy will start at {@link ByteBuffer#position()} and copy {@link ByteBuffer#remaining()} bytes.
      */
     private static byte[] getBytes(ByteBuffer value) {
@@ -181,7 +181,7 @@ public class ByteString {
     }
 
     /**
-     * Create a copy of the underlying storage from {@link value} into a byte array.
+     * Create a copy of the underlying storage from {@code value} into a byte array.
      * The copy will start at {@code start} and copy {@code length} bytes.
      */
     private static byte[] getBytes(ByteBuffer value, int start, int length) {
@@ -189,7 +189,7 @@ public class ByteString {
     }
 
     /**
-     * Return an array of the underlying storage from {@link value} into a byte array.
+     * Return an array of the underlying storage from {@code value} into a byte array.
      * The copy will start at {@code start} and copy {@code length} bytes.
      * if {@code copy} is true a copy will be made of the memory.
      * if {@code copy} is false the underlying storage will be shared, if possible.
@@ -217,14 +217,14 @@ public class ByteString {
     }
 
     /**
-     * Create a copy of {@link value} into a byte array using the encoding type of {@code charset}.
+     * Create a copy of {@code value} into a byte array using the encoding type of {@code charset}.
      */
     private static byte[] getBytes(char[] value, Charset charset) {
         return getBytes(value, charset, 0, checkNotNull(value, "value").length);
     }
 
     /**
-     * Create a copy of {@link value} into a byte array using the encoding type of {@code charset}.
+     * Create a copy of {@code value} into a byte array using the encoding type of {@code charset}.
      * The copy will start at index {@code start} and copy {@code length} bytes.
      */
     private static byte[] getBytes(char[] value, Charset charset, int start, int length) {
@@ -242,14 +242,14 @@ public class ByteString {
     }
 
     /**
-     * Create a copy of {@link value} into a byte array using the encoding type of {@code charset}.
+     * Create a copy of {@code value} into a byte array using the encoding type of {@code charset}.
      */
     private static byte[] getBytes(CharSequence value, Charset charset) {
         return getBytes(value, charset, 0, checkNotNull(value, "value").length());
     }
 
     /**
-     * Create a copy of {@link value} into a byte array using the encoding type of {@code charset}.
+     * Create a copy of {@code value} into a byte array using the encoding type of {@code charset}.
      * The copy will start at index {@code start} and copy {@code length} bytes.
      */
     private static byte[] getBytes(CharSequence value, Charset charset, int start, int length) {
