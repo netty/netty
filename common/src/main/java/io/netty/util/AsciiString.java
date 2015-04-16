@@ -44,29 +44,29 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
 
     public static final Comparator<AsciiString> CASE_SENSITIVE_ORDER = new Comparator<AsciiString>() {
         @Override
-        public int compare(AsciiString one, AsciiString two) {
-            return CHARSEQUENCE_CASE_SENSITIVE_ORDER.compare(one, two);
+        public int compare(AsciiString o1, AsciiString o2) {
+            return CHARSEQUENCE_CASE_SENSITIVE_ORDER.compare(o1, o2);
         }
     };
 
     public static final Comparator<AsciiString> CASE_INSENSITIVE_ORDER = new Comparator<AsciiString>() {
         @Override
-        public int compare(AsciiString one, AsciiString two) {
-            return CHARSEQUENCE_CASE_INSENSITIVE_ORDER.compare(one, two);
+        public int compare(AsciiString o1, AsciiString o2) {
+            return CHARSEQUENCE_CASE_INSENSITIVE_ORDER.compare(o1, o2);
         }
     };
 
     public static final Comparator<CharSequence> CHARSEQUENCE_CASE_INSENSITIVE_ORDER = new Comparator<CharSequence>() {
         @Override
-        public int compare(CharSequence one, CharSequence two) {
-            if (one == two) {
+        public int compare(CharSequence o1, CharSequence o2) {
+            if (o1 == o2) {
                 return 0;
             }
-            int length1 = one.length();
-            int length2 = two.length();
+            int length1 = o1.length();
+            int length2 = o2.length();
             int minLength = Math.min(length1, length2);
             for (int i = 0; i < minLength; i++) {
-                int result = toLowerCase(one.charAt(i)) - toLowerCase(two.charAt(i));
+                int result = toLowerCase(o1.charAt(i)) - toLowerCase(o2.charAt(i));
                 if (result != 0) {
                     return result;
                 }
@@ -77,15 +77,15 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
 
     public static final Comparator<CharSequence> CHARSEQUENCE_CASE_SENSITIVE_ORDER = new Comparator<CharSequence>() {
         @Override
-        public int compare(CharSequence one, CharSequence two) {
-            if (one == two) {
+        public int compare(CharSequence o1, CharSequence o2) {
+            if (o1 == o2) {
                 return 0;
             }
-            int length1 = one.length();
-            int length2 = two.length();
+            int length1 = o1.length();
+            int length2 = o2.length();
             int minLength = Math.min(length1, length2);
             for (int i = 0; i < minLength; i++) {
-                int result = one.charAt(i) - two.charAt(i);
+                int result = o1.charAt(i) - o2.charAt(i);
                 if (result != 0) {
                     return result;
                 }
