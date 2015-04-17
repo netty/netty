@@ -400,7 +400,7 @@ public class ByteString {
             for (int i = 0; i < value.length; ++i) {
                 h = h * HASH_CODE_PRIME ^ value[i] & HASH_CODE_PRIME;
             }
-            
+
             hash = h;
         }
         return h;
