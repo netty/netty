@@ -20,6 +20,8 @@ import java.util.ArrayList;
 import java.util.Formatter;
 import java.util.List;
 
+import org.apache.commons.lang.ClassUtils;
+
 /**
  * String utility class.
  */
@@ -309,12 +311,13 @@ public final class StringUtil {
             return "null_class";
         }
 
-        Package pkg = clazz.getPackage();
-        if (pkg != null) {
-            return clazz.getName().substring(pkg.getName().length() + 1);
-        } else {
-            return clazz.getName();
-        }
+        return ClassUtils.getShortCanonicalName(clazz.getName());
+//        Package pkg = clazz.getPackage();
+//        if (pkg != null) {
+//            return clazz.getName().substring(pkg.getName().length() + 1);
+//        } else {
+//            return clazz.getName();
+//        }
     }
 
     private StringUtil() {
