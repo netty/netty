@@ -236,7 +236,8 @@ public class DefaultHttp2Connection implements Http2Connection {
     /**
      * Simple stream implementation. Streams can be compared to each other by priority.
      */
-    private class DefaultStream implements Http2Stream {
+    private class DefaultStream implements Http2Stream, DefaultHttp2RemoteFlowController.FastPropertyAccess,
+                                           DefaultHttp2LocalFlowController.FastPropertyAccess {
         private final int id;
         private State state = IDLE;
         private short weight = DEFAULT_PRIORITY_WEIGHT;
@@ -245,11 +246,12 @@ public class DefaultHttp2Connection implements Http2Connection {
         private int totalChildWeights;
         private int prioritizableForTree = 1;
         private boolean resetSent;
-        private PropertyMap data;
+        private Map<Object, Object> data;
+        private DefaultHttp2LocalFlowController.FlowState localFlowState;
+        private DefaultHttp2RemoteFlowController.FlowState remoteFlowState;
 
         DefaultStream(int id) {
             this.id = id;
-            data = new LazyPropertyMap(this);
         }
 
         @Override
@@ -275,17 +277,28 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public final Object setProperty(Object key, Object value) {
+            if (data == null) {
+                data = new HashMap<Object, Object>(4);
+            }
             return data.put(key, value);
         }
 
         @Override
+        @SuppressWarnings("checked")
         public final <V> V getProperty(Object key) {
-            return data.get(key);
+            if (data == null) {
+                return null;
+            }
+            return (V) data.get(key);
         }
 
         @Override
+        @SuppressWarnings("checked")
         public final <V> V removeProperty(Object key) {
-            return data.remove(key);
+            if (data == null) {
+                return null;
+            }
+            return (V) data.remove(key);
         }
 
         @Override
@@ -655,74 +668,25 @@ public class DefaultHttp2Connection implements Http2Connection {
             }
             return false;
         }
-    }
 
-    /**
-     * Allows the data map to be lazily initialized for {@link DefaultStream}.
-     */
-    private interface PropertyMap {
-        Object put(Object key, Object value);
-
-        <V> V get(Object key);
-
-        <V> V remove(Object key);
-    }
-
-    /**
-     * Provides actual {@link HashMap} functionality for {@link DefaultStream}'s application data.
-     */
-    private static final class DefaultProperyMap implements PropertyMap {
-        private final Map<Object, Object> data;
-
-        DefaultProperyMap(int initialSize) {
-            data = new HashMap<Object, Object>(initialSize);
+        @Override
+        public void localFlow(DefaultHttp2LocalFlowController.FlowState flowState) {
+            localFlowState = flowState;
         }
 
         @Override
-        public Object put(Object key, Object value) {
-            return data.put(key, value);
-        }
-
-        @SuppressWarnings("unchecked")
-        @Override
-        public <V> V get(Object key) {
-            return (V) data.get(key);
-        }
-
-        @SuppressWarnings("unchecked")
-        @Override
-        public <V> V remove(Object key) {
-            return (V) data.remove(key);
-        }
-    }
-
-    /**
-     * Provides the lazy initialization for the {@link DefaultStream} data map.
-     */
-    private static final class LazyPropertyMap implements PropertyMap {
-        private static final int DEFAULT_INITIAL_SIZE = 4;
-        private final DefaultStream stream;
-
-        LazyPropertyMap(DefaultStream stream) {
-            this.stream = stream;
+        public DefaultHttp2LocalFlowController.FlowState localFlow() {
+            return localFlowState;
         }
 
         @Override
-        public Object put(Object key, Object value) {
-            stream.data = new DefaultProperyMap(DEFAULT_INITIAL_SIZE);
-            return stream.data.put(key, value);
+        public void remoteFlow(DefaultHttp2RemoteFlowController.FlowState flowState) {
+            remoteFlowState = flowState;
         }
 
         @Override
-        public <V> V get(Object key) {
-            stream.data = new DefaultProperyMap(DEFAULT_INITIAL_SIZE);
-            return stream.data.get(key);
-        }
-
-        @Override
-        public <V> V remove(Object key) {
-            stream.data = new DefaultProperyMap(DEFAULT_INITIAL_SIZE);
-            return stream.data.remove(key);
+        public DefaultHttp2RemoteFlowController.FlowState remoteFlow() {
+            return remoteFlowState;
         }
     }
 
