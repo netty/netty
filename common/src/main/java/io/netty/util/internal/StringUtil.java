@@ -312,12 +312,6 @@ public final class StringUtil {
         }
 
         return ClassUtils.getShortCanonicalName(clazz.getName());
-//        Package pkg = clazz.getPackage();
-//        if (pkg != null) {
-//            return clazz.getName().substring(pkg.getName().length() + 1);
-//        } else {
-//            return clazz.getName();
-//        }
     }
 
     private StringUtil() {
