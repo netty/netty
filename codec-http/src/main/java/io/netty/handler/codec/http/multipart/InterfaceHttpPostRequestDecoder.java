@@ -122,6 +122,16 @@ public interface InterfaceHttpPostRequestDecoder {
     InterfaceHttpData next();
 
     /**
+     * Returns the current InterfaceHttpData if currently in decoding status,
+     * meaning all data are not yet within, or null if there is no InterfaceHttpData
+     * currently in decoding status (either because none yet decoded or none currently partially
+     * decoded). Full decoded ones are accessible through hasNext() and next() methods.
+     *
+     * @return the current InterfaceHttpData if currently in decoding status or null if none.
+     */
+    InterfaceHttpData currentPartialHttpData();
+
+    /**
      * Destroy the {@link InterfaceHttpPostRequestDecoder} and release all it resources. After this method
      * was called it is not possible to operate on it anymore.
      */

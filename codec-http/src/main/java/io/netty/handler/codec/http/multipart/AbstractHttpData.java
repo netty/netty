@@ -106,6 +106,11 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
     }
 
     @Override
+    public long definedLength() {
+        return definedSize;
+    }
+
+    @Override
     public ByteBuf content() {
         try {
             return getByteBuf();
