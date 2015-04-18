@@ -81,4 +81,27 @@ public class StringUtilTest {
     public void substringAfterTest() {
         assertEquals("bar:bar2", substringAfter("foo:bar:bar2", ':'));
     }
+
+    @Test
+    public void testSimpleClassName() throws Exception {
+        testSimpleClassName(String.class);
+    }
+
+    @Test
+    public void testSimpleInnerClassName() throws Exception {
+        testSimpleClassName(TestClass.class);
+    }
+
+    private static void testSimpleClassName(Class<?> clazz) throws Exception {
+        Package pkg = clazz.getPackage();
+        String name;
+        if (pkg != null) {
+            name = clazz.getName().substring(pkg.getName().length() + 1);
+        } else {
+            name = clazz.getName();
+        }
+        assertEquals(name, simpleClassName(clazz));
+    }
+
+    private static final class TestClass { }
 }
