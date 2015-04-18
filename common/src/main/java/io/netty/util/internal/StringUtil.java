@@ -42,6 +42,7 @@ public final class StringUtil {
      * 5 - Extra allowance for anticipated escape characters that may be added.
      */
     private static final int CSV_NUMBER_ESCAPE_CHARACTERS = 2 + 5;
+    private static final char PACKAGE_SEPARATOR_CHAR = '.';
 
     static {
         // Determine the newline character of the current platform.
@@ -314,16 +315,12 @@ public final class StringUtil {
      * with anonymous classes.
      */
     public static String simpleClassName(Class<?> clazz) {
-        if (clazz == null) {
-            return "null_class";
+        String className = ObjectUtil.checkNotNull(clazz, "clazz").getName();
+        final int lastDotIdx = className.lastIndexOf(PACKAGE_SEPARATOR_CHAR);
+        if (lastDotIdx > -1) {
+            return className.substring(lastDotIdx + 1);
         }
-
-        Package pkg = clazz.getPackage();
-        if (pkg != null) {
-            return clazz.getName().substring(pkg.getName().length() + 1);
-        } else {
-            return clazz.getName();
-        }
+        return className;
     }
 
     /**
