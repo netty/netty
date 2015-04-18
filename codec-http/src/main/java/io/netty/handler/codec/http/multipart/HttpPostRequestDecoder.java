@@ -239,6 +239,11 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
     }
 
     @Override
+    public InterfaceHttpData currentPartialHttpData() {
+        return decoder.currentPartialHttpData();
+    }
+
+    @Override
     public void destroy() {
         decoder.destroy();
     }

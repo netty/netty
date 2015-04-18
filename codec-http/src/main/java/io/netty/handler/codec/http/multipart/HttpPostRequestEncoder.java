@@ -506,6 +506,9 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
             Attribute attribute = (Attribute) data;
             internal.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": " + HttpHeaderValues.FORM_DATA + "; "
                     + HttpHeaderValues.NAME + "=\"" + attribute.getName() + "\"\r\n");
+            // Add Content-Length: xxx
+            internal.addValue(HttpHeaderNames.CONTENT_LENGTH + ": " +
+                    attribute.length() + "\r\n");
             Charset localcharset = attribute.getCharset();
             if (localcharset != null) {
                 // Content-Type: text/plain; charset=charset
@@ -654,6 +657,9 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
                         + HttpHeaderValues.NAME + "=\"" + fileUpload.getName() + "\"; "
                         + HttpHeaderValues.FILENAME + "=\"" + fileUpload.getFilename() + "\"\r\n");
             }
+            // Add Content-Length: xxx
+            internal.addValue(HttpHeaderNames.CONTENT_LENGTH + ": " +
+                    fileUpload.length() + "\r\n");
             // Content-Type: image/gif
             // Content-Type: text/plain; charset=ISO-8859-1
             // Content-Transfer-Encoding: binary

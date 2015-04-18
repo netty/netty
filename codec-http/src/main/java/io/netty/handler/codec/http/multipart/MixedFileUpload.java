@@ -152,6 +152,11 @@ public class MixedFileUpload implements FileUpload {
     }
 
     @Override
+    public long definedLength() {
+        return fileUpload.definedLength();
+    }
+
+    @Override
     public boolean renameTo(File dest) throws IOException {
         return fileUpload.renameTo(dest);
     }
