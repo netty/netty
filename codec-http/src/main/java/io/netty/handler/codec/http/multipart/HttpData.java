@@ -99,6 +99,22 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
     long length();
 
     /**
+     * Returns the defined length of the HttpData.
+     *
+     * If no Content-Length is provided in the request, the defined length is
+     * always 0 (whatever during decoding or in final state).
+     *
+     * If Content-Length is provided in the request, this is this given defined length.
+     * This value does not change, whatever during decoding or in the final state.
+     *
+     * This method could be used for instance to know the amount of bytes transmitted for
+     * one particular HttpData, for example one {@link FileUpload} or any known big {@link Attribute}.
+     *
+     * @return the defined length of the HttpData
+     */
+    long definedLength();
+
+    /**
      * Deletes the underlying storage for a file item, including deleting any
      * associated temporary disk file.
      */

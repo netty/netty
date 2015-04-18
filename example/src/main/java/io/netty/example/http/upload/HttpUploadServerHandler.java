@@ -42,6 +42,7 @@ import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
 import io.netty.handler.codec.http.multipart.DiskAttribute;
 import io.netty.handler.codec.http.multipart.DiskFileUpload;
 import io.netty.handler.codec.http.multipart.FileUpload;
+import io.netty.handler.codec.http.multipart.HttpData;
 import io.netty.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.EndOfDataDecoderException;
@@ -69,6 +70,8 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
     private HttpRequest request;
 
     private boolean readingChunks;
+
+    private HttpData partialContent;
 
     private final StringBuilder responseContent = new StringBuilder();
 
@@ -217,12 +220,41 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
             while (decoder.hasNext()) {
                 InterfaceHttpData data = decoder.next();
                 if (data != null) {
+                    // check if current HttpData is a FileUpload and previously set as partial
+                    if (partialContent == data) {
+                        logger.info(" 100% (FinalSize: " + partialContent.length() + ")");
+                        partialContent = null;
+                    }
                     try {
                         // new value
                         writeHttpData(data);
                     } finally {
                         data.release();
                     }
+                }
+            }
+            // Check partial decoding for a FileUpload
+            InterfaceHttpData data = decoder.currentPartialHttpData();
+            if (data != null) {
+                StringBuilder builder = new StringBuilder();
+                if (partialContent == null) {
+                    partialContent = (HttpData) data;
+                    if (partialContent instanceof FileUpload) {
+                        builder.append("Start FileUpload: ")
+                            .append(((FileUpload) partialContent).getFilename()).append(" ");
+                    } else {
+                        builder.append("Start Attribute: ")
+                            .append(partialContent.getName()).append(" ");
+                    }
+                    builder.append("(DefinedSize: ").append(partialContent.definedLength()).append(")");
+                }
+                if (partialContent.definedLength() > 0) {
+                    builder.append(" ").append(partialContent.length() * 100 / partialContent.definedLength())
+                        .append("% ");
+                    logger.info(builder.toString());
+                } else {
+                    builder.append(" ").append(partialContent.length()).append(" ");
+                    logger.info(builder.toString());
                 }
             }
         } catch (EndOfDataDecoderException e1) {
