@@ -33,8 +33,16 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
         this(name, HttpConstants.DEFAULT_CHARSET);
     }
 
+    public MemoryAttribute(String name, long definedSize) {
+        this(name, definedSize, HttpConstants.DEFAULT_CHARSET);
+    }
+
     public MemoryAttribute(String name, Charset charset) {
         super(name, charset, 0);
+    }
+
+    public MemoryAttribute(String name, long definedSize, Charset charset) {
+        super(name, charset, definedSize);
     }
 
     public MemoryAttribute(String name, String value) throws IOException {

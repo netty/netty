@@ -350,6 +350,11 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
         return null;
     }
 
+    @Override
+    public InterfaceHttpData currentPartialHttpData() {
+        return currentAttribute;
+    }
+
     /**
      * This getMethod will parse as much as possible data and fill the list and map
      *
