@@ -20,8 +20,6 @@ import java.util.ArrayList;
 import java.util.Formatter;
 import java.util.List;
 
-import org.apache.commons.lang.ClassUtils;
-
 /**
  * String utility class.
  */
@@ -310,8 +308,44 @@ public final class StringUtil {
         if (clazz == null) {
             return "null_class";
         }
+        return ClassUtil.getShortCanonicalName(clazz.getName());
+    }
 
-        return ClassUtils.getShortCanonicalName(clazz.getName());
+    /**
+     * Checks if a CharSequence is empty ("") or null.
+     * StringUtils.isEmpty(null)      = true
+     * StringUtils.isEmpty("")        = true
+     * StringUtils.isEmpty(" ")       = false
+     * StringUtils.isEmpty("bob")     = false
+     * StringUtils.isEmpty("  bob  ") = false
+     */
+    public static boolean isEmpty(final CharSequence cs) {
+        return cs == null || cs.length() == 0;
+    }
+
+    /**
+     * Deletes all whitespaces from a String as defined by
+     * StringUtils.deleteWhitespace(null)         = null
+     * StringUtils.deleteWhitespace("")           = ""
+     * StringUtils.deleteWhitespace("abc")        = "abc"
+     * StringUtils.deleteWhitespace("   ab  c  ") = "abc"
+     */
+    public static String deleteWhitespace(final String str) {
+        if (StringUtil.isEmpty(str)) {
+            return str;
+        }
+        final int sz = str.length();
+        final char[] chs = new char[sz];
+        int count = 0;
+        for (int i = 0; i < sz; i++) {
+            if (!Character.isWhitespace(str.charAt(i))) {
+                chs[count++] = str.charAt(i);
+            }
+        }
+        if (count == sz) {
+            return str;
+        }
+        return new String(chs, 0, count);
     }
 
     private StringUtil() {
