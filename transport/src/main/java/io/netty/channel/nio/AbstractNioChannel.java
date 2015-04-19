@@ -29,6 +29,7 @@ import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -36,6 +37,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.CancelledKeyException;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.util.concurrent.ScheduledFuture;
@@ -48,6 +50,12 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AbstractNioChannel.class);
+
+    private static final ClosedChannelException CLOSED_CHANNEL_EXCEPTION = new ClosedChannelException();
+
+    static {
+        CLOSED_CHANNEL_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+    }
 
     private final SelectableChannel ch;
     protected final int readInterestOp;
@@ -439,5 +447,21 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         }
 
         return buf;
+    }
+
+    @Override
+    protected void doClose() throws Exception {
+        ChannelPromise promise = connectPromise;
+        if (promise != null) {
+            // Use tryFailure() instead of setFailure() to avoid the race against cancel().
+            promise.tryFailure(CLOSED_CHANNEL_EXCEPTION);
+            connectPromise = null;
+        }
+
+        ScheduledFuture<?> future = connectTimeoutFuture;
+        if (future != null) {
+            future.cancel(false);
+            connectTimeoutFuture = null;
+        }
     }
 }
