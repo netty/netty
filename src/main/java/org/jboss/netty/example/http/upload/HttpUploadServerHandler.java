@@ -42,6 +42,7 @@ import org.jboss.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
 import org.jboss.netty.handler.codec.http.multipart.DiskAttribute;
 import org.jboss.netty.handler.codec.http.multipart.DiskFileUpload;
 import org.jboss.netty.handler.codec.http.multipart.FileUpload;
+import org.jboss.netty.handler.codec.http.multipart.HttpData;
 import org.jboss.netty.handler.codec.http.multipart.HttpDataFactory;
 import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
 import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder.EndOfDataDecoderException;
@@ -49,6 +50,8 @@ import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder.Error
 import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder.NotEnoughDataDecoderException;
 import org.jboss.netty.handler.codec.http.multipart.InterfaceHttpData;
 import org.jboss.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataType;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.CharsetUtil;
 
 import java.io.IOException;
@@ -60,6 +63,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
+    private static final InternalLogger logger =
+            InternalLoggerFactory.getInstance(HttpUploadServerHandler.class);
 
     private static final HttpDataFactory factory =
             new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE); // Disk if size exceed MINSIZE
@@ -80,6 +85,7 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
     private HttpPostRequestDecoder decoder;
     private HttpRequest request;
     private boolean readingChunks;
+    private HttpData partialContent;
 
     @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) {
@@ -217,8 +223,38 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
             while (decoder.hasNext()) {
                 InterfaceHttpData data = decoder.next();
                 if (data != null) {
+                    // check if current HttpData is previously set as partial
+                    if (partialContent == data) {
+                        logger.info(" 100% (FinalSize: " + partialContent.length() + ")");
+                        partialContent = null;
+                    }
                     // new value
                     writeHttpData(data);
+                }
+            }
+            // Check partial decoding
+            InterfaceHttpData data = decoder.currentPartialHttpData();
+            if (data != null) {
+                StringBuilder builder = new StringBuilder();
+                if (partialContent == null) {
+                    partialContent = (HttpData) data;
+                    if (partialContent instanceof FileUpload) {
+                        builder.append("Start FileUpload: ")
+                            .append(((FileUpload) partialContent).getFilename()).append(" ");
+                    } else {
+                        builder.append("Start Attribute: ")
+                            .append(partialContent.getName()).append(" ");
+                    }
+                    builder.append("(DefinedSize: ").append(partialContent.definedLength()).append(")");
+                }
+                if (partialContent.definedLength() > 0) {
+                    builder.append(" ")
+                        .append(partialContent.length() * 100 / partialContent.definedLength())
+                        .append("% ");
+                    logger.info(builder.toString());
+                } else {
+                    builder.append(" ").append(partialContent.length()).append(" ");
+                    logger.info(builder.toString());
                 }
             }
         } catch (EndOfDataDecoderException e1) {

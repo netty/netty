@@ -46,6 +46,14 @@ public interface HttpDataFactory {
 
     /**
      * @param request associated request
+     * @param name name of the attribute
+     * @param definedSize defined size from request for this attribute
+     * @return a new Attribute
+     */
+    Attribute createAttribute(HttpRequest request, String name, long definedSize);
+
+    /**
+     * @param request associated request
      * @param size the size of the Uploaded file
      * @return a new FileUpload
      */

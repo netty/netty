@@ -225,6 +225,10 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
         parseBodyAttributes();
     }
 
+    public InterfaceHttpData currentPartialHttpData() {
+        return currentAttribute;
+    }
+
     /**
      * Utility function to add a new decoded data
      */

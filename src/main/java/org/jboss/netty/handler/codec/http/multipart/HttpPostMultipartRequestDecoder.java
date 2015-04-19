@@ -249,6 +249,14 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         return null;
     }
 
+    public InterfaceHttpData currentPartialHttpData() {
+        if (currentFileUpload != null) {
+            return currentFileUpload;
+        } else {
+            return currentAttribute;
+        }
+    }
+
     /**
      * This method will parse as much as possible data and fill the list and map
      * @throws ErrorDataDecoderException if there is a problem with the charset decoding or
@@ -359,9 +367,25 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             Attribute nameAttribute = currentFieldAttributes
                 .get(HttpPostBodyUtil.NAME);
             if (currentAttribute == null) {
+                Attribute lengthAttribute = currentFieldAttributes
+                        .get(HttpHeaders.Names.CONTENT_LENGTH);
+                long size;
                 try {
-                    currentAttribute = factory.createAttribute(request,
-                            cleanString(nameAttribute.getValue()));
+                    size = lengthAttribute != null? Long.parseLong(lengthAttribute
+                            .getValue()) : 0L;
+                } catch (IOException e) {
+                    throw new ErrorDataDecoderException(e);
+                } catch (NumberFormatException e) {
+                    size = 0;
+                }
+                try {
+                    if (size > 0) {
+                        currentAttribute = factory.createAttribute(request,
+                                cleanString(nameAttribute.getValue()), size);
+                    } else {
+                        currentAttribute = factory.createAttribute(request,
+                                cleanString(nameAttribute.getValue()));
+                    }
                 } catch (NullPointerException e) {
                     throw new ErrorDataDecoderException(e);
                 } catch (IllegalArgumentException e) {
