@@ -31,12 +31,14 @@ import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -45,6 +47,19 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(ByteBuf.class) + ", " +
                     StringUtil.simpleClassName(DefaultFileRegion.class) + ')';
+    private static final ClosedChannelException CLOSED_CHANNEL_EXCEPTION = new ClosedChannelException();
+
+    static {
+        CLOSED_CHANNEL_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+    }
+
+    /**
+     * The future of the current connection attempt.  If not null, subsequent
+     * connection attempts will fail.
+     */
+    private ChannelPromise connectPromise;
+    private ScheduledFuture<?> connectTimeoutFuture;
+    private SocketAddress requestedRemoteAddress;
 
     private volatile boolean inputShutdown;
     private volatile boolean outputShutdown;
@@ -388,14 +403,24 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
         }
     }
 
+    @Override
+    protected void doClose() throws Exception {
+        ChannelPromise promise = connectPromise;
+        if (promise != null) {
+            // Use tryFailure() instead of setFailure() to avoid the race against cancel().
+            promise.tryFailure(CLOSED_CHANNEL_EXCEPTION);
+            connectPromise = null;
+        }
+
+        ScheduledFuture<?> future = connectTimeoutFuture;
+        if (future != null) {
+            future.cancel(false);
+            connectTimeoutFuture = null;
+        }
+        super.doClose();
+    }
+
     class EpollStreamUnsafe extends AbstractEpollUnsafe {
-        /**
-         * The future of the current connection attempt.  If not null, subsequent
-         * connection attempts will fail.
-         */
-        private ChannelPromise connectPromise;
-        private ScheduledFuture<?> connectTimeoutFuture;
-        private SocketAddress requestedRemoteAddress;
 
         private RecvByteBufAllocator.Handle allocHandle;
 
@@ -454,7 +479,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
                         connectTimeoutFuture = eventLoop().schedule(new Runnable() {
                             @Override
                             public void run() {
-                                ChannelPromise connectPromise = EpollStreamUnsafe.this.connectPromise;
+                                ChannelPromise connectPromise = AbstractEpollStreamChannel.this.connectPromise;
                                 ConnectTimeoutException cause =
                                         new ConnectTimeoutException("connection timed out: " + remoteAddress);
                                 if (connectPromise != null && connectPromise.tryFailure(cause)) {
