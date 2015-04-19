@@ -33,12 +33,12 @@ import java.util.Map;
 public final class ClassUtil {
 
     /**
-     * The package separator character: <code>'&#x2e;' == {@value}</code>.
+     * The package separator character: <code>'&#x2e;' == {@value}.
      */
     public static final char PACKAGE_SEPARATOR_CHAR = '.';
 
     /**
-     * The inner class separator character: <code>'$' == {@value}</code>.
+     * The inner class separator character: <code>'$' == {@value}.
      */
     public static final char INNER_CLASS_SEPARATOR_CHAR = '$';
 
