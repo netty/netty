@@ -634,44 +634,6 @@ public class DefaultChannelPipelineTest {
         }
     }
 
-    /**
-     * {@link ChannelInboundHandler#channelReadComplete(ChannelHandlerContext)} should not be suppressed
-     * when a handler has just been added and thus had no chance to get the previous
-     * {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object)}.
-     */
-    @Test
-    public void testProhibitChannelReadCompleteSuppression() throws Exception {
-        final AtomicInteger readComplete = new AtomicInteger();
-
-        EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
-            @Override
-            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                ctx.fireChannelRead(msg);
-
-                // Add a new handler *after* channelRead() is triggered, so that
-                // the new handler does not handle channelRead() at all.
-                ctx.pipeline().addAfter(ctx.name(), "newHandler", new ChannelInboundHandlerAdapter() {
-                    @Override
-                    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-                        readComplete.incrementAndGet();
-                    }
-                });
-            }
-
-            @Override
-            public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-                ctx.fireChannelReadComplete();
-            }
-        });
-
-        ChannelPipeline p = ch.pipeline();
-        p.fireChannelRead(Boolean.TRUE);
-        p.fireChannelReadComplete();
-        ch.finish();
-
-        assertEquals(1, readComplete.get());
-    }
-
     @Test
     public void testChannelReadTriggered() {
         final AtomicInteger read1 = new AtomicInteger();
