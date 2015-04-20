@@ -589,7 +589,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     private void callHandlerAdded0(final AbstractChannelHandlerContext ctx) {
         try {
-            ctx.invokedThisChannelRead = false;
             ctx.handler().handlerAdded(ctx);
         } catch (Throwable t) {
             boolean removed = false;
