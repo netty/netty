@@ -1144,19 +1144,19 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         void removeFromActiveStreams(DefaultStream stream) {
             if (streams.remove(stream)) {
-                try {
-                    // Update the number of active streams initiated by the endpoint.
-                    stream.createdBy().numActiveStreams--;
+                // Update the number of active streams initiated by the endpoint.
+                stream.createdBy().numActiveStreams--;
+            }
+            notifyClosed(stream);
+            removeStream(stream);
+        }
 
-                    for (int i = 0; i < listeners.size(); i++) {
-                        try {
-                            listeners.get(i).onStreamClosed(stream);
-                        } catch (RuntimeException e) {
-                            logger.error("Caught RuntimeException from listener onStreamClosed.", e);
-                        }
-                    }
-                } finally {
-                    removeStream(stream);
+        private void notifyClosed(DefaultStream stream) {
+            for (int i = 0; i < listeners.size(); i++) {
+                try {
+                    listeners.get(i).onStreamClosed(stream);
+                } catch (RuntimeException e) {
+                    logger.error("Caught RuntimeException from listener onStreamClosed.", e);
                 }
             }
         }
