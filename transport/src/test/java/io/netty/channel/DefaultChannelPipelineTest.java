@@ -578,7 +578,7 @@ public class DefaultChannelPipelineTest {
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.pipeline().addLast(group, new ChannelHandlerAdapter() {
+                ch.pipeline().addLast(group, new ChannelInboundHandlerAdapter() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                         if (read1.incrementAndGet() == 1) {
@@ -593,7 +593,7 @@ public class DefaultChannelPipelineTest {
                         ctx.fireChannelReadComplete();
                     }
                 });
-                ch.pipeline().addLast(group, new ChannelHandlerAdapter() {
+                ch.pipeline().addLast(group, new ChannelInboundHandlerAdapter() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                         read2.incrementAndGet();
@@ -634,44 +634,6 @@ public class DefaultChannelPipelineTest {
         }
     }
 
-    /**
-     * {@link ChannelHandler#channelReadComplete(ChannelHandlerContext)} should not be suppressed
-     * when a handler has just been added and thus had no chance to get the previous
-     * {@link ChannelHandler#channelRead(ChannelHandlerContext, Object)}.
-     */
-    @Test
-    public void testProhibitChannelReadCompleteSuppression() throws Exception {
-        final AtomicInteger readComplete = new AtomicInteger();
-
-        EmbeddedChannel ch = new EmbeddedChannel(new ChannelHandlerAdapter() {
-            @Override
-            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                ctx.fireChannelRead(msg);
-
-                // Add a new handler *after* channelRead() is triggered, so that
-                // the new handler does not handle channelRead() at all.
-                ctx.pipeline().addAfter(ctx.name(), "newHandler", new ChannelHandlerAdapter() {
-                    @Override
-                    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-                        readComplete.incrementAndGet();
-                    }
-                });
-            }
-
-            @Override
-            public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-                ctx.fireChannelReadComplete();
-            }
-        });
-
-        ChannelPipeline p = ch.pipeline();
-        p.fireChannelRead(Boolean.TRUE);
-        p.fireChannelReadComplete();
-        ch.finish();
-
-        assertEquals(1, readComplete.get());
-    }
-
     @Test
     public void testChannelReadTriggered() {
         final AtomicInteger read1 = new AtomicInteger();
@@ -684,7 +646,7 @@ public class DefaultChannelPipelineTest {
         final AtomicInteger channelRead3 = new AtomicInteger();
         final AtomicInteger channelReadComplete3 = new AtomicInteger();
 
-        EmbeddedChannel ch = new EmbeddedChannel(new ChannelHandlerAdapter() {
+        EmbeddedChannel ch = new EmbeddedChannel(new ChannelDuplexHandler() {
             @Override
             public void read(ChannelHandlerContext ctx) throws Exception {
                 read1.incrementAndGet();
@@ -702,7 +664,7 @@ public class DefaultChannelPipelineTest {
                 channelReadComplete1.incrementAndGet();
                 ctx.fireChannelReadComplete();
             }
-        }, new ChannelHandlerAdapter() {
+        }, new ChannelDuplexHandler() {
             @Override
             public void read(ChannelHandlerContext ctx) throws Exception {
                 read2.incrementAndGet();
@@ -720,7 +682,7 @@ public class DefaultChannelPipelineTest {
                 channelReadComplete2.incrementAndGet();
                 ctx.fireChannelReadComplete();
             }
-        }, new ChannelHandlerAdapter() {
+        }, new ChannelDuplexHandler() {
             @Override
             public void read(ChannelHandlerContext ctx) throws Exception {
                 read3.incrementAndGet();
@@ -770,7 +732,7 @@ public class DefaultChannelPipelineTest {
         final AtomicInteger channelRead2 = new AtomicInteger();
         final AtomicInteger channelReadComplete2 = new AtomicInteger();
 
-        EmbeddedChannel ch = new EmbeddedChannel(new ChannelHandlerAdapter());
+        EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
 
         // Ensure pipeline is really empty
         ChannelPipeline pipeline = ch.pipeline();
@@ -778,7 +740,7 @@ public class DefaultChannelPipelineTest {
             pipeline.removeFirst();
         }
 
-        pipeline.addLast(new ChannelHandlerAdapter() {
+        pipeline.addLast(new ChannelDuplexHandler() {
             @Override
             public void read(ChannelHandlerContext ctx) throws Exception {
                 read1.incrementAndGet();
@@ -796,7 +758,7 @@ public class DefaultChannelPipelineTest {
                 channelReadComplete1.incrementAndGet();
                 ctx.fireChannelReadComplete();
             }
-        }, new ChannelHandlerAdapter() {
+        }, new ChannelDuplexHandler() {
             @Override
             public void read(ChannelHandlerContext ctx) throws Exception {
                 read2.incrementAndGet();
