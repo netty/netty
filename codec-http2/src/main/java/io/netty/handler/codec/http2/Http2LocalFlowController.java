@@ -28,6 +28,8 @@ public interface Http2LocalFlowController extends Http2FlowController {
      * policies to it for both the {@code stream} as well as the connection. If any flow control
      * policies have been violated, an exception is raised immediately, otherwise the frame is
      * considered to have "passed" flow control.
+     * <p/>
+     * If {@code stream} is closed, flow control should only be applied to the connection window.
      *
      * @param ctx the context from the handler where the frame was read.
      * @param stream the subject stream for the received frame. The connection stream object must
@@ -39,22 +41,24 @@ public interface Http2LocalFlowController extends Http2FlowController {
      * @throws Http2Exception if any flow control errors are encountered.
      */
     void receiveFlowControlledFrame(ChannelHandlerContext ctx, Http2Stream stream, ByteBuf data, int padding,
-            boolean endOfStream) throws Http2Exception;
+                                    boolean endOfStream) throws Http2Exception;
 
     /**
-     * Indicates that the application has consumed a number of bytes for the given stream and is
-     * therefore ready to receive more data from the remote endpoint. The application must consume
-     * any bytes that it receives or the flow control window will collapse. Consuming bytes enables
-     * the flow controller to send {@code WINDOW_UPDATE} to restore a portion of the flow control
-     * window for the stream.
+     * Indicates that the application has consumed a number of bytes for the given stream and is therefore ready to
+     * receive more data from the remote endpoint. The application must consume any bytes that it receives or the flow
+     * control window will collapse. Consuming bytes enables the flow controller to send {@code WINDOW_UPDATE} to
+     * restore a portion of the flow control window for the stream.
+     * <p/>
+     * If {@code stream} is closed (i.e. {@link Http2Stream#state()} method returns {@link Http2Stream.State#CLOSED}),
+     * the consumed bytes are only restored to the connection window. When a stream is closed, the flow controller
+     * automatically restores any unconsumed bytes for that stream to the connection window. This is done to ensure that
+     * the connection window does not degrade over time as streams are closed.
      *
-     * @param ctx the channel handler context to use when sending a {@code WINDOW_UPDATE} if
-     *            appropriate
-     * @param stream the stream for which window space should be freed. The connection stream object
-     *            must not be used.
+     * @param ctx the channel handler context to use when sending a {@code WINDOW_UPDATE} if appropriate
+     * @param stream the stream for which window space should be freed. The connection stream object must not be used.
      * @param numBytes the number of bytes to be returned to the flow control window.
-     * @throws Http2Exception if the number of bytes returned exceeds the {@link #unconsumedBytes}
-     *             for the stream.
+     * @throws Http2Exception if the number of bytes returned exceeds the {@link #unconsumedBytes(Http2Stream)} for the
+     * stream.
      */
     void consumeBytes(ChannelHandlerContext ctx, Http2Stream stream, int numBytes) throws Http2Exception;
 
