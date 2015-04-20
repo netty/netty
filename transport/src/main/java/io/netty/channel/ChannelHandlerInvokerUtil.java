@@ -80,7 +80,6 @@ public final class ChannelHandlerInvokerUtil {
 
     public static void invokeChannelReadNow(final ChannelHandlerContext ctx, final Object msg) {
         try {
-            ((AbstractChannelHandlerContext) ctx).invokedThisChannelRead = true;
             ((ChannelInboundHandler) ctx.handler()).channelRead(ctx, msg);
         } catch (Throwable t) {
             notifyHandlerException(ctx, t);
