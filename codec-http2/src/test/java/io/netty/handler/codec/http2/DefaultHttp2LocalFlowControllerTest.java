@@ -202,6 +202,22 @@ public class DefaultHttp2LocalFlowControllerTest {
     }
 
     @Test
+    public void closeShouldConsumeBytes() throws Http2Exception {
+        receiveFlowControlledFrame(STREAM_ID, 10, 0, false);
+        assertEquals(10, controller.unconsumedBytes(connection.connectionStream()));
+        stream(STREAM_ID).close();
+        assertEquals(0, controller.unconsumedBytes(connection.connectionStream()));
+    }
+
+    @Test
+    public void dataReceivedForClosedStreamShouldImmediatelyConsumeBytes() throws Http2Exception {
+        Http2Stream stream = stream(STREAM_ID);
+        stream.close();
+        receiveFlowControlledFrame(stream, 10, 0, false);
+        assertEquals(0, controller.unconsumedBytes(connection.connectionStream()));
+    }
+
+    @Test
     public void globalRatioShouldImpactStreams() throws Http2Exception {
         float ratio = 0.6f;
         controller.windowUpdateRatio(ratio);
@@ -254,10 +270,15 @@ public class DefaultHttp2LocalFlowControllerTest {
     }
 
     private void receiveFlowControlledFrame(int streamId, int dataSize, int padding,
-            boolean endOfStream) throws Http2Exception {
+                                            boolean endOfStream) throws Http2Exception {
+        receiveFlowControlledFrame(stream(streamId), dataSize, padding, endOfStream);
+    }
+
+    private void receiveFlowControlledFrame(Http2Stream stream, int dataSize, int padding,
+                                            boolean endOfStream) throws Http2Exception {
         final ByteBuf buf = dummyData(dataSize);
         try {
-            controller.receiveFlowControlledFrame(ctx, stream(streamId), buf, padding, endOfStream);
+            controller.receiveFlowControlledFrame(ctx, stream, buf, padding, endOfStream);
         } finally {
             buf.release();
         }
@@ -290,7 +311,7 @@ public class DefaultHttp2LocalFlowControllerTest {
         return controller.windowSize(stream(streamId));
     }
 
-    private Http2Stream stream(int streamId) throws Http2Exception {
-        return connection.requireStream(streamId);
+    private Http2Stream stream(int streamId) {
+        return connection.stream(streamId);
     }
 }
