@@ -134,6 +134,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
     ByteBuf cumulation;
     private Cumulator cumulator = MERGE_CUMULATOR;
     private boolean singleDecode;
+    private boolean decodeWasNull;
     private boolean first;
 
     protected ByteToMessageDecoder() {
@@ -238,6 +239,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
                     cumulation = null;
                 }
                 int size = out.size();
+                decodeWasNull = size == 0;
 
                 for (int i = 0; i < size; i ++) {
                     ctx.fireChannelRead(out.get(i));
@@ -260,6 +262,12 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
             // - https://github.com/netty/netty/issues/2327
             // - https://github.com/netty/netty/issues/1764
             cumulation.discardSomeReadBytes();
+        }
+        if (decodeWasNull) {
+            decodeWasNull = false;
+            if (!ctx.channel().config().isAutoRead()) {
+                ctx.read();
+            }
         }
         ctx.fireChannelReadComplete();
     }
