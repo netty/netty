@@ -130,7 +130,7 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
                     fail(ctx, length);
                 }
             } else {
-                discardedBytes = buffer.readableBytes();
+                discardedBytes += buffer.readableBytes();
                 buffer.readerIndex(buffer.writerIndex());
             }
             return null;
