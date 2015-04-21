@@ -123,16 +123,16 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     @Override
     public void consumeBytes(ChannelHandlerContext ctx, Http2Stream stream, int numBytes)
             throws Http2Exception {
-        if (stream.id() == CONNECTION_STREAM_ID) {
-            throw new UnsupportedOperationException("Returning bytes for the connection window is not supported");
-        }
-        if (numBytes <= 0) {
-            throw new IllegalArgumentException("numBytes must be positive");
-        }
-
         // Streams automatically consume all remaining bytes when they are closed, so just ignore
         // if already closed.
-        if (!isClosed(stream)) {
+        if (stream != null && !isClosed(stream)) {
+            if (stream.id() == CONNECTION_STREAM_ID) {
+                throw new UnsupportedOperationException("Returning bytes for the connection window is not supported");
+            }
+            if (numBytes <= 0) {
+                throw new IllegalArgumentException("numBytes must be positive");
+            }
+
             connectionState().consumeBytes(ctx, numBytes);
             state(stream).consumeBytes(ctx, numBytes);
         }
@@ -208,11 +208,10 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         int dataLength = data.readableBytes() + padding;
 
         // Apply the connection-level flow control
-
         DefaultFlowState connectionState = connectionState();
         connectionState.receiveFlowControlledFrame(dataLength);
 
-        if (!isClosed(stream)) {
+        if (stream != null && !isClosed(stream)) {
             // Apply the stream-level flow control
             DefaultFlowState state = state(stream);
             state.endOfStream(endOfStream);
