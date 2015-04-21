@@ -148,7 +148,6 @@ public class DefaultHttp2ConnectionEncoderTest {
             }
         }).when(connection).forEachActiveStream(any(Http2StreamVisitor.class));
         when(connection.stream(STREAM_ID)).thenReturn(stream);
-        when(connection.requireStream(STREAM_ID)).thenReturn(stream);
         when(connection.local()).thenReturn(local);
         when(connection.remote()).thenReturn(remote);
         when(remote.flowController()).thenReturn(remoteFlow);
@@ -357,7 +356,6 @@ public class DefaultHttp2ConnectionEncoderTest {
     @Test
     public void priorityWriteShouldSetPriorityForStream() throws Exception {
         when(connection.stream(STREAM_ID)).thenReturn(null);
-        when(connection.requireStream(STREAM_ID)).thenReturn(null);
         encoder.writePriority(ctx, STREAM_ID, 0, (short) 255, true, promise);
         verify(stream).setPriority(eq(0), eq((short) 255), eq(true));
         verify(writer).writePriority(eq(ctx), eq(STREAM_ID), eq(0), eq((short) 255), eq(true), eq(promise));
@@ -374,10 +372,8 @@ public class DefaultHttp2ConnectionEncoderTest {
             }
         }).when(local).createStream(eq(STREAM_ID));
         when(connection.stream(STREAM_ID)).thenReturn(null);
-        when(connection.requireStream(STREAM_ID)).thenReturn(null);
         // Just return the stream object as the connection stream to ensure the dependent stream "exists"
         when(connection.stream(0)).thenReturn(stream);
-        when(connection.requireStream(0)).thenReturn(stream);
         encoder.writePriority(ctx, STREAM_ID, 0, (short) 255, true, promise);
         verify(stream, never()).setPriority(anyInt(), anyShort(), anyBoolean());
         verify(writer).writePriority(eq(ctx), eq(STREAM_ID), eq(0), eq((short) 255), eq(true), eq(promise));
@@ -393,7 +389,6 @@ public class DefaultHttp2ConnectionEncoderTest {
             }
         }).when(stream).setPriority(eq(0), eq((short) 255), eq(true));
         when(connection.stream(STREAM_ID)).thenReturn(stream);
-        when(connection.requireStream(STREAM_ID)).thenReturn(stream);
         encoder.writePriority(ctx, STREAM_ID, 0, (short) 255, true, promise);
         verify(stream).setPriority(eq(0), eq((short) 255), eq(true));
         verify(writer).writePriority(eq(ctx), eq(STREAM_ID), eq(0), eq((short) 255), eq(true), eq(promise));

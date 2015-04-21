@@ -1233,8 +1233,8 @@ public class DefaultHttp2RemoteFlowControllerTest {
         return controller.streamableBytesForTree(stream);
     }
 
-    private Http2Stream stream(int streamId) throws Http2Exception {
-        return connection.requireStream(streamId);
+    private Http2Stream stream(int streamId) {
+        return connection.stream(streamId);
     }
 
     private static final class FakeFlowControlled implements Http2RemoteFlowController.FlowControlled {
