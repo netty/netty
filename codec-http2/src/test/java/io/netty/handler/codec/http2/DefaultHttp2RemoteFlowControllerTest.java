@@ -1234,7 +1234,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
     }
 
     private Http2Stream stream(int streamId) throws Http2Exception {
-        return connection.requireStream(streamId);
+        return connection.stream(streamId);
     }
 
     private static final class FakeFlowControlled implements Http2RemoteFlowController.FlowControlled {

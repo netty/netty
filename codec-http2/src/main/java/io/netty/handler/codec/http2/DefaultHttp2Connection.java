@@ -113,17 +113,13 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     @Override
-    public Http2Stream requireStream(int streamId) throws Http2Exception {
-        Http2Stream stream = stream(streamId);
-        if (stream == null) {
-            throw connectionError(PROTOCOL_ERROR, "Stream does not exist %d", streamId);
-        }
-        return stream;
+    public Http2Stream stream(int streamId) {
+        return streamMap.get(streamId);
     }
 
     @Override
-    public Http2Stream stream(int streamId) {
-        return streamMap.get(streamId);
+    public boolean streamMayHaveExisted(int streamId) {
+        return remoteEndpoint.mayHaveCreatedStream(streamId) || localEndpoint.mayHaveCreatedStream(streamId);
     }
 
     @Override
@@ -166,7 +162,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             forEachActiveStream(new Http2StreamVisitor() {
                 @Override
                 public boolean visit(Http2Stream stream) {
-                    if (stream.id() > lastKnownStream && localEndpoint.createdStreamId(stream.id())) {
+                    if (stream.id() > lastKnownStream && localEndpoint.isValidStreamId(stream.id())) {
                         stream.close();
                     }
                     return true;
@@ -197,7 +193,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             forEachActiveStream(new Http2StreamVisitor() {
                 @Override
                 public boolean visit(Http2Stream stream) {
-                    if (stream.id() > lastKnownStream && remoteEndpoint.createdStreamId(stream.id())) {
+                    if (stream.id() > lastKnownStream && remoteEndpoint.isValidStreamId(stream.id())) {
                         stream.close();
                     }
                     return true;
@@ -551,11 +547,11 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         final DefaultEndpoint<? extends Http2FlowController> createdBy() {
-            return localEndpoint.createdStreamId(id) ? localEndpoint : remoteEndpoint;
+            return localEndpoint.isValidStreamId(id) ? localEndpoint : remoteEndpoint;
         }
 
         final boolean isLocal() {
-            return localEndpoint.createdStreamId(id);
+            return localEndpoint.isValidStreamId(id);
         }
 
         final void weight(short weight) {
@@ -880,9 +876,14 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public boolean createdStreamId(int streamId) {
+        public boolean isValidStreamId(int streamId) {
             boolean even = (streamId & 1) == 0;
-            return server == even;
+            return streamId > 0 && server == even;
+        }
+
+        @Override
+        public boolean mayHaveCreatedStream(int streamId) {
+            return isValidStreamId(streamId) && streamId <= lastStreamCreated;
         }
 
         @Override
@@ -1021,7 +1022,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             if (streamId < 0) {
                 throw new Http2NoMoreStreamIdsException();
             }
-            if (!createdStreamId(streamId)) {
+            if (!isValidStreamId(streamId)) {
                 throw connectionError(PROTOCOL_ERROR, "Request stream %d is not correct for %s connection", streamId,
                         server ? "server" : "client");
             }

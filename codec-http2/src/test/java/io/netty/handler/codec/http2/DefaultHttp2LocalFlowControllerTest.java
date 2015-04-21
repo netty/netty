@@ -218,6 +218,18 @@ public class DefaultHttp2LocalFlowControllerTest {
     }
 
     @Test
+    public void dataReceivedForNullStreamShouldImmediatelyConsumeBytes() throws Http2Exception {
+        receiveFlowControlledFrame(null, 10, 0, false);
+        assertEquals(0, controller.unconsumedBytes(connection.connectionStream()));
+    }
+
+    @Test
+    public void consumeBytesForNullStreamShouldIgnore() throws Http2Exception {
+        controller.consumeBytes(ctx, null, 10);
+        assertEquals(0, controller.unconsumedBytes(connection.connectionStream()));
+    }
+
+    @Test
     public void globalRatioShouldImpactStreams() throws Http2Exception {
         float ratio = 0.6f;
         controller.windowUpdateRatio(ratio);
@@ -312,6 +324,6 @@ public class DefaultHttp2LocalFlowControllerTest {
     }
 
     private Http2Stream stream(int streamId) throws Http2Exception {
-        return connection.requireStream(streamId);
+        return connection.stream(streamId);
     }
 }

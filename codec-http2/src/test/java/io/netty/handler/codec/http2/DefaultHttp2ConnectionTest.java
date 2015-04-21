@@ -74,11 +74,6 @@ public class DefaultHttp2ConnectionTest {
         client.addListener(clientListener);
     }
 
-    @Test(expected = Http2Exception.class)
-    public void getStreamOrFailWithoutStreamShouldFail() throws Http2Exception {
-        server.requireStream(100);
-    }
-
     @Test
     public void getStreamWithoutStreamShouldReturnNull() {
         assertNull(server.stream(100));
