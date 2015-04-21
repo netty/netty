@@ -30,6 +30,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
+import io.netty.util.internal.PlatformDependent;
 
 /**
  * Basic implementation of {@link Http2LocalFlowController}.
@@ -43,6 +44,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
 
     private final Http2Connection connection;
     private final Http2FrameWriter frameWriter;
+    private ChannelHandlerContext ctx;
     private volatile float windowUpdateRatio;
     private volatile int initialWindowSize = DEFAULT_WINDOW_SIZE;
 
@@ -73,6 +75,20 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
                 // frames which may have been exchanged while it was in IDLE
                 state(stream).window(initialWindowSize);
             }
+
+            @Override
+            public void onStreamClosed(Http2Stream stream) {
+                try {
+                    // When a stream is closed, consume any remaining bytes so that they
+                    // are restored to the connection window.
+                    FlowState state = state(stream);
+                    if (ctx != null && state.unconsumedBytes() > 0) {
+                        state.consumeBytes(ctx, state.unconsumedBytes());
+                    }
+                } catch (Http2Exception e) {
+                    PlatformDependent.throwException(e);
+                }
+            }
         });
     }
 
@@ -98,7 +114,6 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
 
     @Override
     public void incrementWindowSize(ChannelHandlerContext ctx, Http2Stream stream, int delta) throws Http2Exception {
-        checkNotNull(ctx, "ctx");
         FlowState state = state(stream);
         // Just add the delta to the stream-specific initial window size so that the next time the window
         // expands it will grow to the new initial size.
@@ -109,12 +124,23 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     @Override
     public void consumeBytes(ChannelHandlerContext ctx, Http2Stream stream, int numBytes)
             throws Http2Exception {
-        state(stream).consumeBytes(ctx, numBytes);
+        if (stream.id() == CONNECTION_STREAM_ID) {
+            throw new UnsupportedOperationException("Returning bytes for the connection window is not supported");
+        }
+        if (numBytes <= 0) {
+            throw new IllegalArgumentException("numBytes must be positive");
+        }
+
+        // Streams automatically consume all remaining bytes when they are closed, so just ignore
+        // if already closed.
+        if (!isClosed(stream)) {
+            state(stream).consumeBytes(ctx, numBytes);
+        }
     }
 
     @Override
     public int unconsumedBytes(Http2Stream stream) {
-        return state(stream).unconsumedBytes();
+        return isClosed(stream) ? 0 : state(stream).unconsumedBytes();
     }
 
     private static void checkValidRatio(float ratio) {
@@ -178,15 +204,22 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     @Override
     public void receiveFlowControlledFrame(ChannelHandlerContext ctx, Http2Stream stream, ByteBuf data,
             int padding, boolean endOfStream) throws Http2Exception {
+        this.ctx = checkNotNull(ctx, "ctx");
         int dataLength = data.readableBytes() + padding;
 
         // Apply the connection-level flow control
-        connectionState().receiveFlowControlledFrame(dataLength);
+        FlowState connectionState = connectionState();
+        connectionState.receiveFlowControlledFrame(dataLength);
 
-        // Apply the stream-level flow control
-        FlowState state = state(stream);
-        state.endOfStream(endOfStream);
-        state.receiveFlowControlledFrame(dataLength);
+        if (!isClosed(stream)) {
+            // Apply the stream-level flow control
+            FlowState state = state(stream);
+            state.endOfStream(endOfStream);
+            state.receiveFlowControlledFrame(dataLength);
+        } else if (dataLength > 0) {
+            // Immediately consume the bytes for the connection window.
+            connectionState.consumeBytes(ctx, dataLength);
+        }
     }
 
     private FlowState connectionState() {
@@ -196,6 +229,10 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     private static FlowState state(Http2Stream stream) {
         checkNotNull(stream, "stream");
         return stream.getProperty(FlowState.class);
+    }
+
+    private static boolean isClosed(Http2Stream stream) {
+        return stream.state() == Http2Stream.State.CLOSED;
     }
 
     /**
@@ -322,17 +359,12 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         }
 
         void consumeBytes(ChannelHandlerContext ctx, int numBytes) throws Http2Exception {
-            if (stream.id() == CONNECTION_STREAM_ID) {
-                throw new UnsupportedOperationException("Returning bytes for the connection window is not supported");
-            }
-            if (numBytes <= 0) {
-                throw new IllegalArgumentException("numBytes must be positive");
-            }
-
             // Return bytes to the connection window
-            FlowState connectionState = connectionState();
-            connectionState.returnProcessedBytes(numBytes);
-            connectionState.writeWindowUpdateIfNeeded(ctx);
+            if (stream.id() != CONNECTION_STREAM_ID) {
+                FlowState connectionState = connectionState();
+                connectionState.returnProcessedBytes(numBytes);
+                connectionState.writeWindowUpdateIfNeeded(ctx);
+            }
 
             // Return the bytes processed and update the window.
             returnProcessedBytes(numBytes);
@@ -347,7 +379,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
          * Updates the flow control window for this stream if it is appropriate.
          */
         void writeWindowUpdateIfNeeded(ChannelHandlerContext ctx) throws Http2Exception {
-            if (endOfStream || initialStreamWindowSize <= 0) {
+            if (endOfStream || initialStreamWindowSize <= 0 || isClosed(stream)) {
                 return;
             }
 
