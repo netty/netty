@@ -29,21 +29,17 @@ public interface Http2FrameListener {
      * @param streamId the subject stream for the frame.
      * @param data payload buffer for the frame. This buffer will be released by the codec.
      * @param padding the number of padding bytes found at the end of the frame.
-     * @param endOfStream Indicates whether this is the last frame to be sent from the remote
-     *            endpoint for this stream.
-     * @return the number of bytes that have been processed by the application. The returned bytes
-     *         are used by the inbound flow controller to determine the appropriate time to expand
-     *         the inbound flow control window (i.e. send {@code WINDOW_UPDATE}). Returning a value
-     *         equal to the length of {@code data} + {@code padding} will effectively opt-out of
-     *         application-level flow control for this frame. Returning a value less than the length
-     *         of {@code data} + {@code padding} will defer the returning of the processed bytes,
-     *         which the application must later return via
-     *         {@link Http2InboundFlowState#returnProcessedBytes(ChannelHandlerContext, int)}. The
-     *         returned value must be >= {@code 0} and <= {@code data.readableBytes()} +
-     *         {@code padding}.
+     * @param endOfStream Indicates whether this is the last frame to be sent from the remote endpoint for this stream.
+     * @return the number of bytes that have been processed by the application. The returned bytes are used by the
+     * inbound flow controller to determine the appropriate time to expand the inbound flow control window (i.e. send
+     * {@code WINDOW_UPDATE}). Returning a value equal to the length of {@code data} + {@code padding} will effectively
+     * opt-out of application-level flow control for this frame. Returning a value less than the length of {@code data}
+     * + {@code padding} will defer the returning of the processed bytes, which the application must later return via
+     * {@link Http2LocalFlowController#consumeBytes(io.netty.channel.ChannelHandlerContext, Http2Stream, int)}. The
+     * returned value must be >= {@code 0} and <= {@code data.readableBytes()} + {@code padding}.
      */
     int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
-            boolean endOfStream) throws Http2Exception;
+                   boolean endOfStream) throws Http2Exception;
 
     /**
      * Handles an inbound {@code HEADERS} frame.

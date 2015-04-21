@@ -112,7 +112,8 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             final boolean endOfStream, ChannelPromise promise) {
         final Http2Stream stream;
         try {
-            stream = connection.requireStream(streamId);
+            stream = requireStream(streamId);
+
             // Verify that the stream is in the appropriate state for sending DATA frames.
             switch (stream.state()) {
                 case OPEN:
@@ -250,7 +251,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                 throw connectionError(PROTOCOL_ERROR, "Sending PUSH_PROMISE after GO_AWAY received.");
             }
 
-            Http2Stream stream = connection.requireStream(streamId);
+            Http2Stream stream = requireStream(streamId);
             // Reserve the promised stream.
             connection.local().reservePushStream(promisedStreamId, stream);
         } catch (Throwable e) {
@@ -294,6 +295,20 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     @Override
     public Configuration configuration() {
         return frameWriter.configuration();
+    }
+
+    private Http2Stream requireStream(int streamId) {
+        Http2Stream stream = connection.stream(streamId);
+        if (stream == null) {
+            String message;
+            if (connection.streamMayHaveExisted(streamId)) {
+                message = "Stream no longer exists: " + streamId;
+            } else {
+                message = "Stream does not exist: " + streamId;
+            }
+            throw new IllegalArgumentException(message);
+        }
+        return stream;
     }
 
     /**

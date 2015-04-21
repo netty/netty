@@ -147,7 +147,13 @@ public interface Http2Connection {
          * Indicates whether the given streamId is from the set of IDs used by this endpoint to
          * create new streams.
          */
-        boolean createdStreamId(int streamId);
+        boolean isStreamForEndpoint(int streamId);
+
+        /**
+         * Indicates whether or not this endpoint may have created the given stream. This is {@code true} if
+         * {@link #isStreamForEndpoint(int)} and {@code streamId} <= {@link #lastStreamCreated()}.
+         */
+        boolean mayHaveCreatedStream(int streamId);
 
         /**
          * Indicates whether or not this endpoint is currently allowed to create new streams. This will be
@@ -264,14 +270,15 @@ public interface Http2Connection {
     void removeListener(Listener listener);
 
     /**
-     * Attempts to get the stream for the given ID. If it doesn't exist, throws.
-     */
-    Http2Stream requireStream(int streamId) throws Http2Exception;
-
-    /**
      * Gets the stream if it exists. If not, returns {@code null}.
      */
     Http2Stream stream(int streamId);
+
+    /**
+     * Indicates whether or not the given stream may have existed within this connection. This is a short form
+     * for calling {@link Endpoint#mayHaveCreatedStream(int)} on both endpoints.
+     */
+    boolean streamMayHaveExisted(int streamId);
 
     /**
      * Gets the stream object representing the connection, itself (i.e. stream zero). This object
