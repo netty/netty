@@ -311,7 +311,7 @@ public class DefaultHttp2LocalFlowControllerTest {
         return controller.windowSize(stream(streamId));
     }
 
-    private Http2Stream stream(int streamId) {
-        return connection.stream(streamId);
+    private Http2Stream stream(int streamId) throws Http2Exception {
+        return connection.requireStream(streamId);
     }
 }

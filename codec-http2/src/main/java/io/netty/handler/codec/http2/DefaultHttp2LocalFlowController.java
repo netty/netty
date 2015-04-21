@@ -82,8 +82,10 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
                     // When a stream is closed, consume any remaining bytes so that they
                     // are restored to the connection window.
                     FlowState state = state(stream);
-                    if (ctx != null && state.unconsumedBytes() > 0) {
-                        state.consumeBytes(ctx, state.unconsumedBytes());
+                    int unconsumedBytes = state.unconsumedBytes();
+                    if (ctx != null && unconsumedBytes > 0) {
+                        connectionState().consumeBytes(ctx, unconsumedBytes);
+                        state.consumeBytes(ctx, unconsumedBytes);
                     }
                 } catch (Http2Exception e) {
                     PlatformDependent.throwException(e);
@@ -114,6 +116,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
 
     @Override
     public void incrementWindowSize(ChannelHandlerContext ctx, Http2Stream stream, int delta) throws Http2Exception {
+        checkNotNull(ctx, "ctx");
         FlowState state = state(stream);
         // Just add the delta to the stream-specific initial window size so that the next time the window
         // expands it will grow to the new initial size.
@@ -134,13 +137,14 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         // Streams automatically consume all remaining bytes when they are closed, so just ignore
         // if already closed.
         if (!isClosed(stream)) {
+            connectionState().consumeBytes(ctx, numBytes);
             state(stream).consumeBytes(ctx, numBytes);
         }
     }
 
     @Override
     public int unconsumedBytes(Http2Stream stream) {
-        return isClosed(stream) ? 0 : state(stream).unconsumedBytes();
+        return state(stream).unconsumedBytes();
     }
 
     private static void checkValidRatio(float ratio) {
@@ -359,13 +363,6 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         }
 
         void consumeBytes(ChannelHandlerContext ctx, int numBytes) throws Http2Exception {
-            // Return bytes to the connection window
-            if (stream.id() != CONNECTION_STREAM_ID) {
-                FlowState connectionState = connectionState();
-                connectionState.returnProcessedBytes(numBytes);
-                connectionState.writeWindowUpdateIfNeeded(ctx);
-            }
-
             // Return the bytes processed and update the window.
             returnProcessedBytes(numBytes);
             writeWindowUpdateIfNeeded(ctx);

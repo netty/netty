@@ -49,20 +49,23 @@ public interface Http2LocalFlowController extends Http2FlowController {
      * control window will collapse. Consuming bytes enables the flow controller to send {@code WINDOW_UPDATE} to
      * restore a portion of the flow control window for the stream.
      * <p/>
-     * If {@code stream} is closed, the consumed bytes are only restored to the connection window. When a stream is
-     * closed, the flow controller automatically restores any unconsumed bytes for that stream to the connection window.
-     * This is done to ensure that the connection window does not degrade over time as streams are closed/terminated.
+     * If {@code stream} is closed (i.e. {@link Http2Stream#state()} method returns {@link
+     * io.netty.handler.codec.http2.Http2Stream.State#CLOSED}), the consumed bytes are only restored to the connection
+     * window. When a stream is closed, the flow controller automatically restores any unconsumed bytes for that stream
+     * to the connection window. This is done to ensure that the connection window does not degrade over time as streams
+     * are closed.
      *
      * @param ctx the channel handler context to use when sending a {@code WINDOW_UPDATE} if appropriate
      * @param stream the stream for which window space should be freed. The connection stream object must not be used.
      * @param numBytes the number of bytes to be returned to the flow control window.
-     * @throws Http2Exception if the number of bytes returned exceeds the {@link #unconsumedBytes} for the stream.
+     * @throws Http2Exception if the number of bytes returned exceeds the {@link #unconsumedBytes(Http2Stream)} for the
+     * stream.
      */
     void consumeBytes(ChannelHandlerContext ctx, Http2Stream stream, int numBytes) throws Http2Exception;
 
     /**
      * The number of bytes for the given stream that have been received but not yet consumed by the
-     * application. If {@code stream} is closed, returns {@code zero}.
+     * application.
      *
      * @param stream the stream for which window space should be freed.
      * @return the number of unconsumed bytes for the stream.
