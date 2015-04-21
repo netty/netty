@@ -21,6 +21,7 @@ import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.handler.codec.http2.Http2PromisedRequestVerifier.ALWAYS_VERIFY;
 import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
+import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -269,10 +270,10 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 short weight, boolean exclusive, int padding, boolean endOfStream) throws Http2Exception {
             Http2Stream stream = connection.stream(streamId);
             boolean allowHalfClosedRemote = false;
-            if (stream == null && !connection().streamMayHaveExisted(streamId)) {
+            if (stream == null && !connection.streamMayHaveExisted(streamId)) {
                 stream = connection.remote().createStream(streamId).open(endOfStream);
                 // Allow the state to be HALF_CLOSE_REMOTE if we're creating it in that state.
-                allowHalfClosedRemote = endOfStream;
+                allowHalfClosedRemote = stream.state() == HALF_CLOSED_REMOTE;
             }
 
             if (stream == null || stream.isResetSent() || streamCreatedAfterGoAwaySent(streamId)) {
@@ -327,13 +328,16 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             Http2Stream stream = connection.stream(streamId);
 
             try {
-                if (stream == null && !connection.streamMayHaveExisted(streamId)) {
+                if (stream == null) {
+                    if (connection.streamMayHaveExisted(streamId)) {
+                        // Ignore this frame.
+                        return;
+                    }
+
                     // PRIORITY frames always identify a stream. This means that if a PRIORITY frame is the
                     // first frame to be received for a stream that we must create the stream.
                     stream = connection.remote().createStream(streamId);
-                }
-
-                if (stream == null || streamCreatedAfterGoAwaySent(streamId)) {
+                } else if (streamCreatedAfterGoAwaySent(streamId)) {
                     // Ignore this frame.
                     return;
                 }
@@ -455,9 +459,12 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 Http2Headers headers, int padding) throws Http2Exception {
             Http2Stream parentStream = connection.stream(streamId);
 
-            if (parentStream == null || streamCreatedAfterGoAwaySent(streamId)) {
-                verifyStreamMayHaveExisted(streamId);
+            if (streamCreatedAfterGoAwaySent(streamId)) {
                 return;
+            }
+
+            if (parentStream == null) {
+                throw connectionError(PROTOCOL_ERROR, "Stream does not exist %d", streamId);
             }
 
             switch (parentStream.state()) {
@@ -525,11 +532,11 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         private boolean streamCreatedAfterGoAwaySent(int streamId) {
             // Ignore inbound frames after a GOAWAY was sent and the stream id is greater than
             // the last stream id set in the GOAWAY frame.
-            return connection().goAwaySent() && streamId > connection().remote().lastKnownStream();
+            return connection.goAwaySent() && streamId > connection.remote().lastKnownStream();
         }
 
         private void verifyStreamMayHaveExisted(int streamId) throws Http2Exception {
-            if (!connection().streamMayHaveExisted(streamId)) {
+            if (!connection.streamMayHaveExisted(streamId)) {
                 throw connectionError(PROTOCOL_ERROR, "Stream does not exist %d", streamId);
             }
         }

@@ -33,7 +33,8 @@ public interface Http2LocalFlowController extends Http2FlowController {
      *
      * @param ctx the context from the handler where the frame was read.
      * @param stream the subject stream for the received frame. The connection stream object must not be used. If {@code
-     * null} or closed, only the connection window is impacted.
+     * stream} is {@code null} or closed, flow control should only be applied to the connection window and the bytes are
+     * immediately consumed.
      * @param data payload buffer for the frame.
      * @param padding the number of padding bytes found at the end of the frame.
      * @param endOfStream Indicates whether this is the last frame to be sent from the remote endpoint for this stream.
@@ -53,7 +54,8 @@ public interface Http2LocalFlowController extends Http2FlowController {
      *
      * @param ctx the channel handler context to use when sending a {@code WINDOW_UPDATE} if appropriate
      * @param stream the stream for which window space should be freed. The connection stream object must not be used.
-     * If {@code null} or closed, does nothing.
+     * If {@code stream} is {@code null} or closed (i.e. {@link Http2Stream#state()} method returns {@link
+     * Http2Stream.State#CLOSED}), calling this method has no effect.
      * @param numBytes the number of bytes to be returned to the flow control window.
      * @throws Http2Exception if the number of bytes returned exceeds the {@link #unconsumedBytes(Http2Stream)} for the
      * stream.

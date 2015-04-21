@@ -300,7 +300,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     private Http2Stream requireStream(int streamId) {
         Http2Stream stream = connection.stream(streamId);
         if (stream == null) {
-            String message;
+            final String message;
             if (connection.streamMayHaveExisted(streamId)) {
                 message = "Stream no longer exists: " + streamId;
             } else {

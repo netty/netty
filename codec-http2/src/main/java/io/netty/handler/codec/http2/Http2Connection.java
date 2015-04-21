@@ -147,11 +147,11 @@ public interface Http2Connection {
          * Indicates whether the given streamId is from the set of IDs used by this endpoint to
          * create new streams.
          */
-        boolean isStreamForEndpoint(int streamId);
+        boolean isValidStreamId(int streamId);
 
         /**
          * Indicates whether or not this endpoint may have created the given stream. This is {@code true} if
-         * {@link #isStreamForEndpoint(int)} and {@code streamId} <= {@link #lastStreamCreated()}.
+         * {@link #isValidStreamId(int)} and {@code streamId} <= {@link #lastStreamCreated()}.
          */
         boolean mayHaveCreatedStream(int streamId);
 

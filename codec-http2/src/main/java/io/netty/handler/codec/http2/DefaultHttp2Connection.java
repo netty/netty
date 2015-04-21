@@ -162,7 +162,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             forEachActiveStream(new Http2StreamVisitor() {
                 @Override
                 public boolean visit(Http2Stream stream) {
-                    if (stream.id() > lastKnownStream && localEndpoint.isStreamForEndpoint(stream.id())) {
+                    if (stream.id() > lastKnownStream && localEndpoint.isValidStreamId(stream.id())) {
                         stream.close();
                     }
                     return true;
@@ -193,7 +193,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             forEachActiveStream(new Http2StreamVisitor() {
                 @Override
                 public boolean visit(Http2Stream stream) {
-                    if (stream.id() > lastKnownStream && remoteEndpoint.isStreamForEndpoint(stream.id())) {
+                    if (stream.id() > lastKnownStream && remoteEndpoint.isValidStreamId(stream.id())) {
                         stream.close();
                     }
                     return true;
@@ -547,11 +547,11 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         final DefaultEndpoint<? extends Http2FlowController> createdBy() {
-            return localEndpoint.isStreamForEndpoint(id) ? localEndpoint : remoteEndpoint;
+            return localEndpoint.isValidStreamId(id) ? localEndpoint : remoteEndpoint;
         }
 
         final boolean isLocal() {
-            return localEndpoint.isStreamForEndpoint(id);
+            return localEndpoint.isValidStreamId(id);
         }
 
         final void weight(short weight) {
@@ -876,14 +876,14 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public boolean isStreamForEndpoint(int streamId) {
+        public boolean isValidStreamId(int streamId) {
             boolean even = (streamId & 1) == 0;
-            return server == even;
+            return streamId > 0 && server == even;
         }
 
         @Override
         public boolean mayHaveCreatedStream(int streamId) {
-            return isStreamForEndpoint(streamId) && streamId <= lastStreamCreated;
+            return isValidStreamId(streamId) && streamId <= lastStreamCreated;
         }
 
         @Override
@@ -1022,7 +1022,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             if (streamId < 0) {
                 throw new Http2NoMoreStreamIdsException();
             }
-            if (!isStreamForEndpoint(streamId)) {
+            if (!isValidStreamId(streamId)) {
                 throw connectionError(PROTOCOL_ERROR, "Request stream %d is not correct for %s connection", streamId,
                         server ? "server" : "client");
             }
