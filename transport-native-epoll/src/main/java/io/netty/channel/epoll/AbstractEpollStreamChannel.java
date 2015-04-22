@@ -122,6 +122,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
             throw new IllegalStateException("spliceTo(...) only supported when using "
                     + EpollMode.LEVEL_TRIGGERED.name());
         }
+        checkNotNull(promise, "promise");
         if (!isOpen()) {
             promise.tryFailure(CLOSED_CHANNEL_EXCEPTION);
         } else {
@@ -161,6 +162,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
             throw new IllegalStateException("spliceTo(...) only supported when using "
                     + EpollMode.LEVEL_TRIGGERED.name());
         }
+        checkNotNull(promise, "promise");
         if (!isOpen()) {
             promise.tryFailure(CLOSED_CHANNEL_EXCEPTION);
         } else {
@@ -493,6 +495,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
     @Override
     protected void doClose() throws Exception {
         try {
+            // Calling super.doClose() first so splceTo(...) will fail on next call.
             super.doClose();
             if (pipeIn != -1) {
                 Native.close(pipeIn);
