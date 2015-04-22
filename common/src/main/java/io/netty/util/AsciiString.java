@@ -15,13 +15,16 @@
  */
 package io.netty.util;
 
+import static io.netty.util.internal.StringUtil.asciiToUpperCase;
+import static io.netty.util.internal.StringUtil.asciiToLowerCase;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import static io.netty.util.internal.StringUtil.UPPER_CASE_TO_LOWER_CASE_ASCII_OFFSET;
 import io.netty.util.ByteProcessor.IndexOfProcessor;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.HashCodeGenerator;
 import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -36,9 +39,13 @@ import java.util.regex.PatternSyntaxException;
  * {@link ByteBuffer}. It is often used in conjunction with {@link TextHeaders}.
  */
 public final class AsciiString extends ByteString implements CharSequence, Comparable<CharSequence> {
-
+    private static final HashCodeGenerator CASE_INSENSITIVE_HASHER =
+            PlatformDependent.hashCodeGeneratorAsciiCaseInsensitive();
     private static final char MAX_CHAR_VALUE = 255;
     public static final AsciiString EMPTY_STRING = new AsciiString("");
+
+    private String string;
+    private int caseInsensitiveHashCode = CASE_INSENSITIVE_HASHER.emptyHashValue();
 
     public static final Comparator<AsciiString> CASE_INSENSITIVE_ORDER = new Comparator<AsciiString>() {
         @Override
@@ -75,8 +82,8 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
                     if (v1 == v2) {
                         continue;
                     }
-                    int c1 = toLowerCase(v1);
-                    int c2 = toLowerCase(v2);
+                    int c1 = asciiToLowerCase(v1);
+                    int c2 = asciiToLowerCase(v2);
                     result = c1 - c2;
                     if (result != 0) {
                         return result;
@@ -84,8 +91,8 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
                 }
             } else if (a1 != null) {
                 for (int i = a1.arrayOffset(), j = 0; j < minLength; i++, j++) {
-                    int c1 = toLowerCase(a1.value[i]);
-                    int c2 = toLowerCase(o2.charAt(j));
+                    int c1 = asciiToLowerCase(a1.value[i]);
+                    int c2 = asciiToLowerCase(o2.charAt(j));
                     result = c1 - c2;
                     if (result != 0) {
                         return result;
@@ -93,8 +100,8 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
                 }
             } else if (a2 != null) {
                 for (int i = 0, j = a2.arrayOffset(); i < minLength; i++, j++) {
-                    int c1 = toLowerCase(o1.charAt(i));
-                    int c2 = toLowerCase(a2.value[j]);
+                    int c1 = asciiToLowerCase(o1.charAt(i));
+                    int c2 = asciiToLowerCase(a2.value[j]);
                     result = c1 - c2;
                     if (result != 0) {
                         return result;
@@ -102,8 +109,8 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
                 }
             } else {
                 for (int i = 0; i < minLength; i++) {
-                    int c1 = toLowerCase(o1.charAt(i));
-                    int c2 = toLowerCase(o2.charAt(i));
+                    int c1 = asciiToLowerCase(o1.charAt(i));
+                    int c2 = asciiToLowerCase(o2.charAt(i));
                     result = c1 - c2;
                     if (result != 0) {
                         return result;
@@ -188,34 +195,22 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
      * {@link CharSequence}s into the same {@link TextHeaders}.
      */
     public static int caseInsensitiveHashCode(CharSequence value) {
-        if (value instanceof AsciiString) {
-            try {
-                ByteProcessor processor = new ByteProcessor() {
-                    private int hash;
-                    @Override
-                    public boolean process(byte value) throws Exception {
-                        hash = hash * HASH_CODE_PRIME ^ toLowerCase(value) & HASH_CODE_PRIME;
-                        return true;
-                    }
-
-                    @Override
-                    public int hashCode() {
-                        return hash;
-                    }
-                };
-                ((AsciiString) value).forEachByte(processor);
-                return processor.hashCode();
-            } catch (Exception e) {
-                PlatformDependent.throwException(e);
+        if (value == null) {
+            return CASE_INSENSITIVE_HASHER.emptyHashValue();
+        }
+        if (value.getClass() == AsciiString.class) {
+            return ((AsciiString) value).hashCodeCaseInsensitive();
+        }
+        if (value instanceof CharBuffer) {
+            CharBuffer buffer = (CharBuffer) value;
+            if (buffer.hasArray() && !buffer.isReadOnly()) {
+                final int startPos = buffer.arrayOffset() + buffer.position();
+                return CASE_INSENSITIVE_HASHER.hashCodeAsBytes(
+                        buffer.array(), startPos, startPos + buffer.remaining());
             }
         }
 
-        int hash = 0;
-        final int end = value.length();
-        for (int i = 0; i < end; i++) {
-            hash = hash * HASH_CODE_PRIME ^ toLowerCase(value.charAt(i)) & HASH_CODE_PRIME;
-        }
-        return hash;
+        return CASE_INSENSITIVE_HASHER.hashCodeAsBytes(value, 0, value.length());
     }
 
     /**
@@ -268,8 +263,6 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
 
         return a.equals(b);
     }
-
-    private String string;
 
     /**
      * Returns an {@link AsciiString} containing the given character sequence. If the given string is already a
@@ -335,6 +328,14 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
         }
     }
 
+    public int hashCodeCaseInsensitive() {
+        if (caseInsensitiveHashCode == CASE_INSENSITIVE_HASHER.emptyHashValue() && length() > 0) {
+            caseInsensitiveHashCode =
+                    CASE_INSENSITIVE_HASHER.hashCode(array(), arrayOffset(), arrayOffset() + length());
+        }
+        return caseInsensitiveHashCode;
+    }
+
     @Override
     public char charAt(int index) {
         return b2c(byteAt(index));
@@ -343,6 +344,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
     @Override
     public void arrayChanged() {
         string = null;
+        caseInsensitiveHashCode = CASE_INSENSITIVE_HASHER.emptyHashValue();
         super.arrayChanged();
     }
 
@@ -355,27 +357,6 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
 
     private static char b2c(byte b) {
         return (char) (b & 0xFF);
-    }
-
-    private static byte toLowerCase(byte b) {
-        if ('A' <= b && b <= 'Z') {
-            return (byte) (b + UPPER_CASE_TO_LOWER_CASE_ASCII_OFFSET);
-        }
-        return b;
-    }
-
-    private static char toLowerCase(char c) {
-        if ('A' <= c && c <= 'Z') {
-            return (char) (c + UPPER_CASE_TO_LOWER_CASE_ASCII_OFFSET);
-        }
-        return c;
-    }
-
-    private static byte toUpperCase(byte b) {
-        if ('a' <= b && b <= 'z') {
-            return (byte) (b - UPPER_CASE_TO_LOWER_CASE_ASCII_OFFSET);
-        }
-        return b;
     }
 
     @Override
@@ -516,7 +497,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
         for (int i = 0, j = arrayOffset(); i < thisLen; i++, j++) {
             char c1 = b2c(value[j]);
             char c2 = string.charAt(i);
-            if (c1 != c2 && toLowerCase(c1) != toLowerCase(c2)) {
+            if (c1 != c2 && asciiToLowerCase(c1) != asciiToLowerCase(c2)) {
                 return false;
             }
         }
@@ -795,7 +776,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
         while (thisStart < thisEnd) {
             char c1 = b2c(value[thisStart++]);
             char c2 = string.charAt(start++);
-            if (c1 != c2 && toLowerCase(c1) != toLowerCase(c2)) {
+            if (c1 != c2 && asciiToLowerCase(c1) != asciiToLowerCase(c2)) {
                 return false;
             }
         }
@@ -888,7 +869,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
 
         final byte[] newValue = new byte[length()];
         for (i = 0, j = arrayOffset(); i < newValue.length; ++i, ++j) {
-            newValue[i] = toLowerCase(value[j]);
+            newValue[i] = asciiToLowerCase(value[j]);
         }
 
         return new AsciiString(newValue, false);
@@ -918,7 +899,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
 
         final byte[] newValue = new byte[length()];
         for (i = 0, j = arrayOffset(); i < newValue.length; ++i, ++j) {
-            newValue[i] = toUpperCase(value[j]);
+            newValue[i] = asciiToUpperCase(value[j]);
         }
 
         return new AsciiString(newValue, false);

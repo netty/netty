@@ -16,12 +16,12 @@
 package io.netty.util.internal;
 
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Formatter;
 import java.util.List;
-
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * String utility class.
@@ -37,7 +37,7 @@ public final class StringUtil {
     public static final char CARRIAGE_RETURN = '\r';
     public static final char TAB = '\t';
 
-    public static final byte UPPER_CASE_TO_LOWER_CASE_ASCII_OFFSET = 'a' - 'A';
+    private static final byte UPPER_CASE_TO_LOWER_CASE_ASCII_OFFSET = 'a' - 'A';
     private static final String[] BYTE2HEX_PAD = new String[256];
     private static final String[] BYTE2HEX_NOPAD = new String[256];
 
@@ -373,6 +373,18 @@ public final class StringUtil {
         }
         return escapedDoubleQuote || foundSpecialCharacter && !quoted ?
                 escaped.append(DOUBLE_QUOTE) : value;
+    }
+
+    public static byte asciiToLowerCase(byte b) {
+        return ('A' <= b && b <= 'Z') ? (byte) (b + UPPER_CASE_TO_LOWER_CASE_ASCII_OFFSET) : b;
+    }
+
+    public static char asciiToLowerCase(char c) {
+        return ('A' <= c && c <= 'Z') ? (char) (c + UPPER_CASE_TO_LOWER_CASE_ASCII_OFFSET) : c;
+    }
+
+    public static byte asciiToUpperCase(byte b) {
+        return ('a' <= b && b <= 'z') ? (byte) (b - UPPER_CASE_TO_LOWER_CASE_ASCII_OFFSET) : b;
     }
 
     private static boolean isDoubleQuote(char c) {

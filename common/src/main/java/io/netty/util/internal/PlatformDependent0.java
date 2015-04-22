@@ -15,9 +15,9 @@
  */
 package io.netty.util.internal;
 
+import static io.netty.util.internal.StringUtil.asciiToLowerCase;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import sun.misc.Unsafe;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -30,6 +30,8 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
+import sun.misc.Unsafe;
+
 /**
  * The {@link PlatformDependent} operations which requires access to {@code sun.misc.*}.
  */
@@ -39,7 +41,9 @@ final class PlatformDependent0 {
     private static final Unsafe UNSAFE;
     private static final boolean BIG_ENDIAN = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
     private static final long ADDRESS_FIELD_OFFSET;
-    private static final long ARRAY_BASE_OFFSET;
+    private static final long BYTE_ARRAY_BASE_OFFSET;
+    private static final long CHAR_ARRAY_BASE_OFFSET;
+    private static final long CHAR_ARRAY_INDEX_SCALE;
 
     /**
      * Limits the number of bytes to copy per {@link Unsafe#copyMemory(long, long, long)} to allow safepoint polling
@@ -113,11 +117,13 @@ final class PlatformDependent0 {
 
         if (unsafe == null) {
             ADDRESS_FIELD_OFFSET = -1;
-            ARRAY_BASE_OFFSET = -1;
+            BYTE_ARRAY_BASE_OFFSET = CHAR_ARRAY_BASE_OFFSET = CHAR_ARRAY_INDEX_SCALE = -1;
             UNALIGNED = false;
         } else {
             ADDRESS_FIELD_OFFSET = objectFieldOffset(addressField);
-            ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(byte[].class);
+            BYTE_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(byte[].class);
+            CHAR_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(char[].class);
+            CHAR_ARRAY_INDEX_SCALE = UNSAFE.arrayIndexScale(char[].class);
             boolean unaligned;
             try {
                 Class<?> bitsClass = Class.forName("java.nio.Bits", false, ClassLoader.getSystemClassLoader());
@@ -158,8 +164,16 @@ final class PlatformDependent0 {
         return getLong(buffer, ADDRESS_FIELD_OFFSET);
     }
 
-    static long arrayBaseOffset() {
-        return ARRAY_BASE_OFFSET;
+    static long byteArrayBaseOffset() {
+        return BYTE_ARRAY_BASE_OFFSET;
+    }
+
+    static long charArrayBaseOffset() {
+        return CHAR_ARRAY_BASE_OFFSET;
+    }
+
+    static long charArrayIndexScale() {
+        return CHAR_ARRAY_INDEX_SCALE;
     }
 
     static Object getObject(Object object, long fieldOffset) {
@@ -174,7 +188,7 @@ final class PlatformDependent0 {
         return UNSAFE.getInt(object, fieldOffset);
     }
 
-    private static long getLong(Object object, long fieldOffset) {
+    static long getLong(Object object, long fieldOffset) {
         return UNSAFE.getLong(object, fieldOffset);
     }
 
@@ -327,8 +341,8 @@ final class PlatformDependent0 {
         if (len1 == 0) {
             return true;
         }
-        final long baseOffset1 = ARRAY_BASE_OFFSET + startPos1;
-        final long baseOffset2 = ARRAY_BASE_OFFSET + startPos2;
+        final long baseOffset1 = BYTE_ARRAY_BASE_OFFSET + startPos1;
+        final long baseOffset2 = BYTE_ARRAY_BASE_OFFSET + startPos2;
         int remainingBytes = len1 & 7;
         for (int i = len1 - 8; i >= remainingBytes; i -= 8) {
             if (UNSAFE.getLong(bytes1, baseOffset1 + i) != UNSAFE.getLong(bytes2, baseOffset2 + i)) {
@@ -347,6 +361,14 @@ final class PlatformDependent0 {
                    (remainingBytes == 2 || bytes1[startPos1 + 2] == bytes2[startPos2 + 2]);
         }
         return bytes1[startPos1] == bytes2[startPos2];
+    }
+
+    static HashCodeGenerator hashCodeGenerator() {
+        return NettyHashAscii.INSTANCE;
+    }
+
+    static HashCodeGenerator hashCodeGeneratorAsciiCaseInsensitive() {
+        return NettyHashAsciiCaseInsensitive.INSTANCE;
     }
 
     static <U, W> AtomicReferenceFieldUpdater<U, W> newAtomicReferenceFieldUpdater(
@@ -415,7 +437,653 @@ final class PlatformDependent0 {
         UNSAFE.freeMemory(address);
     }
 
-    private PlatformDependent0() {
+    private abstract static class AbstractNettyHashAscii extends AbstractHashCodeGenerator {
+        private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractNettyHashAscii.class);
+        protected static final long HASH_PRIME = 0x100000001b3L;
+        protected static final long HASH_OFFSET = 0xcbf29ce484222325L;
+        protected static final int EMPTY_HASH = (int) (HASH_OFFSET ^ (HASH_OFFSET >>> 32));
+        protected static final long STRING_VALUE_FIELD_OFFSET;
+        protected static final long STRING_BUILDER_VALUE_FIELD_OFFSET;
+        static {
+            Field stringValueField = AccessController.doPrivileged(new PrivilegedAction<Field>() {
+                @Override
+                public Field run() {
+                    try {
+                        Field f = String.class.getDeclaredField("value");
+                        f.setAccessible(true);
+                        return f;
+                    } catch (NoSuchFieldException e) {
+                        logger.warn("Failed to find String value array." +
+                                "String hash code optimizations are disabled.", e);
+                    } catch (SecurityException e) {
+                        logger.info("No permissions to get String value array." +
+                                "String hash code optimizations are disabled.", e);
+                    }
+                    return null;
+                }
+            });
+            Field stringBuilderValueField = AccessController.doPrivileged(new PrivilegedAction<Field>() {
+                @Override
+                public Field run() {
+                    try {
+                        Field f = StringBuilder.class.getSuperclass().getDeclaredField("value");
+                        f.setAccessible(true);
+                        return f;
+                    } catch (NoSuchFieldException e) {
+                        logger.warn("Failed to find StringBuilder value array." +
+                                " Hash code optimizations for this type are disabled.", e);
+                    } catch (SecurityException e) {
+                        logger.info("No permissions to get StringBuilder value array." +
+                                " Hash code optimizations for this type are disabled.", e);
+                    }
+                    return null;
+                }
+            });
+            STRING_VALUE_FIELD_OFFSET = stringValueField == null ?
+                    -1 : PlatformDependent0.objectFieldOffset(stringValueField);
+            STRING_BUILDER_VALUE_FIELD_OFFSET = stringBuilderValueField == null ?
+                    -1 : PlatformDependent0.objectFieldOffset(stringBuilderValueField);
+        }
+
+        @Override
+        public final int emptyHashValue() {
+            return EMPTY_HASH;
+        }
+
+        @Override
+        public final int hashCodeAsBytes(CharSequence data, int startPos, int endPos) {
+            // CharSequence by itself does not provide access to any underlying data structure, and using
+            // charAt can be costly. For the common types in the CharSequence we can provide an optimized
+            // hashCode by direclty using the underlying char[].
+            if (data.getClass() == String.class && STRING_VALUE_FIELD_OFFSET != -1) {
+                return hashCodeAsBytes(
+                        (char[]) UNSAFE.getObject(data, STRING_VALUE_FIELD_OFFSET), startPos, endPos);
+            }
+            if (data.getClass() == StringBuilder.class && STRING_BUILDER_VALUE_FIELD_OFFSET != -1) {
+                return hashCodeAsBytes(
+                        (char[]) UNSAFE.getObject(data, STRING_BUILDER_VALUE_FIELD_OFFSET), startPos, endPos);
+            }
+            return hashCodeAsBytesDirect(data, startPos, endPos);
+        }
+
+        /**
+         * If optimizations fail which directly get the underlying {@code char[]} from {@code data} and delegate to
+         * {@link #hashCodeAsBytes(char[], int, int)} then this method will be called to manually use
+         * {@link CharSequence#charAt(int)}.
+         */
+        protected abstract int hashCodeAsBytesDirect(CharSequence data, int startPos, int endPos);
     }
 
+    /**
+     * A modified version of <a href="http://www.isthe.com/chongo/tech/comp/fnv/">FNV1-a</a> for a byte stream.
+     */
+    private static final class NettyHashAscii extends AbstractNettyHashAscii {
+        public static final NettyHashAscii INSTANCE = new NettyHashAscii();
+
+        private NettyHashAscii() { }
+
+        @Override
+        public int hashCode(byte[] bytes, int startPos, int endPos) {
+            long hash = HASH_OFFSET;
+            final int len = endPos - startPos;
+            final int remainingBytes = len & 7;
+            final long baseOffset = startPos + BYTE_ARRAY_BASE_OFFSET;
+            if (len > 7) { // This is to reduce overhead for small input sizes.
+                final long rend = remainingBytes + baseOffset;
+                long i = len - 8 + baseOffset;
+                do {
+                    hash ^= UNSAFE.getLong(bytes, i);
+                    hash *= HASH_PRIME;
+                    i -= 8;
+                } while (i >= rend);
+            }
+            // Account for each case of remaining bytes independently. Conditional statements and decrementing a
+            // variable to share code proved to generate measurable amount of overhead for small inputs which are
+            // expected to be common (i.e. Header Names).
+            switch (remainingBytes) {
+            case 7: {
+                hash ^= UNSAFE.getInt(bytes, baseOffset + 3);
+                hash *= HASH_PRIME;
+                hash ^= UNSAFE.getChar(bytes, baseOffset + 1);
+                hash *= HASH_PRIME;
+                hash ^= UNSAFE.getByte(bytes, baseOffset);
+                hash *= HASH_PRIME;
+                break;
+            }
+            case 6: {
+                hash ^= UNSAFE.getInt(bytes, baseOffset + 2);
+                hash *= HASH_PRIME;
+                hash ^= UNSAFE.getChar(bytes, baseOffset);
+                hash *= HASH_PRIME;
+                break;
+            }
+            case 5: {
+                hash ^= UNSAFE.getInt(bytes, baseOffset + 1);
+                hash *= HASH_PRIME;
+                hash ^= UNSAFE.getByte(bytes, baseOffset);
+                hash *= HASH_PRIME;
+                break;
+            }
+            case 4: {
+                hash ^= UNSAFE.getInt(bytes, baseOffset);
+                hash *= HASH_PRIME;
+                break;
+            }
+            case 3:
+                hash ^= UNSAFE.getChar(bytes, baseOffset + 1);
+                hash *= HASH_PRIME;
+                hash ^= UNSAFE.getByte(bytes, baseOffset);
+                hash *= HASH_PRIME;
+                break;
+            case 2:
+                hash ^= UNSAFE.getChar(bytes, baseOffset);
+                hash *= HASH_PRIME;
+                break;
+            case 1:
+                hash ^= UNSAFE.getByte(bytes, baseOffset);
+                hash *= HASH_PRIME;
+                break;
+            default:
+                break;
+            }
+            return (int) (hash ^ (hash >>> 32));
+        }
+
+        @Override
+        public int hashCodeAsBytes(char[] bytes, int startPos, int endPos) {
+            long hash = HASH_OFFSET;
+            final int len = endPos - startPos;
+            final int remainingBytes = len & 7;
+            if (len > 7) { // This is to reduce overhead for small input sizes.
+                final long rend = remainingBytes + startPos;
+                long i = len - 8 + startPos;
+                do {
+                    long v = UNSAFE.getLong(bytes, CHAR_ARRAY_BASE_OFFSET + i * CHAR_ARRAY_INDEX_SCALE);
+                    long v2 = UNSAFE.getLong(bytes, CHAR_ARRAY_BASE_OFFSET + (i + 4) * CHAR_ARRAY_INDEX_SCALE);
+                    hash ^= (v & 0xFF) | (v & 0xFF0000) >>> 8 | (v & 0xFF00000000L) >>> 16 |
+                            (v & 0xFF000000000000L) >>> 24 |
+                            (v2 & 0xFF) << 32 | (v2 & 0xFF0000) << 24 | (v2 & 0xFF00000000L) << 16 |
+                            (v2 & 0xFF000000000000L) << 8;
+                    hash *= HASH_PRIME;
+                    i -= 8;
+                } while (i >= rend);
+            }
+            // Account for each case of remaining bytes independently. Conditional statements and decrementing a
+            // variable to share code proved to generate measurable amount of overhead for small inputs which are
+            // expected to be common (i.e. Header Names).
+            switch (remainingBytes) {
+            case 7: {
+                long v = UNSAFE.getLong(bytes,
+                        CHAR_ARRAY_BASE_OFFSET + (startPos + 3) * CHAR_ARRAY_INDEX_SCALE);
+                hash ^= (int) ((v & 0xFF) | (v & 0xFF0000) >>> 8 |
+                               (v & 0xFF00000000L) >>> 16 | (v & 0xFF000000000000L) >>> 24);
+                hash *= HASH_PRIME;
+                int v2 = UNSAFE.getInt(bytes,
+                        CHAR_ARRAY_BASE_OFFSET + (startPos + 1) * CHAR_ARRAY_INDEX_SCALE);
+                hash ^= (v2 & 0xFF) | (v2 & 0xFF0000) >>> 8;
+                hash *= HASH_PRIME;
+                hash ^= UNSAFE.getByte(bytes,
+                        CHAR_ARRAY_BASE_OFFSET + startPos * CHAR_ARRAY_INDEX_SCALE);
+                hash *= HASH_PRIME;
+                break;
+            }
+            case 6: {
+                long v = UNSAFE.getLong(bytes,
+                        CHAR_ARRAY_BASE_OFFSET + (startPos + 2) * CHAR_ARRAY_INDEX_SCALE);
+                hash ^= (int) ((v & 0xFF) | (v & 0xFF0000) >>> 8 |
+                               (v & 0xFF00000000L) >>> 16 | (v & 0xFF000000000000L) >>> 24);
+                hash *= HASH_PRIME;
+                int v2 = UNSAFE.getInt(bytes,
+                        CHAR_ARRAY_BASE_OFFSET + startPos * CHAR_ARRAY_INDEX_SCALE);
+                hash ^= (v2 & 0xFF) | (v2 & 0xFF0000) >>> 8;
+                hash *= HASH_PRIME;
+                break;
+            }
+            case 5: {
+                long v = UNSAFE.getLong(bytes,
+                        CHAR_ARRAY_BASE_OFFSET + (startPos + 1) * CHAR_ARRAY_INDEX_SCALE);
+                hash ^= (int) ((v & 0xFF) | (v & 0xFF0000) >>> 8 |
+                               (v & 0xFF00000000L) >>> 16 | (v & 0xFF000000000000L) >>> 24);
+                hash *= HASH_PRIME;
+                hash ^= UNSAFE.getByte(bytes,
+                        CHAR_ARRAY_BASE_OFFSET + startPos * CHAR_ARRAY_INDEX_SCALE);
+                hash *= HASH_PRIME;
+                break;
+            }
+            case 4: {
+                long v = UNSAFE.getLong(bytes,
+                        CHAR_ARRAY_BASE_OFFSET + startPos * CHAR_ARRAY_INDEX_SCALE);
+                hash ^= (int) ((v & 0xFF) | (v & 0xFF0000) >>> 8 |
+                               (v & 0xFF00000000L) >>> 16 | (v & 0xFF000000000000L) >>> 24);
+                hash *= HASH_PRIME;
+                break;
+            }
+            case 3: {
+                int v = UNSAFE.getInt(bytes,
+                        CHAR_ARRAY_BASE_OFFSET + (startPos + 1) * CHAR_ARRAY_INDEX_SCALE);
+                hash ^= (v & 0xFF) | (v & 0xFF0000) >>> 8;
+                hash *= HASH_PRIME;
+                hash ^= UNSAFE.getByte(bytes,
+                        CHAR_ARRAY_BASE_OFFSET + startPos * CHAR_ARRAY_INDEX_SCALE);
+                hash *= HASH_PRIME;
+                break;
+            }
+            case 2: {
+                int v = UNSAFE.getInt(bytes,
+                        CHAR_ARRAY_BASE_OFFSET + startPos * CHAR_ARRAY_INDEX_SCALE);
+                hash ^= (v & 0xFF) | (v & 0xFF0000) >>> 8;
+                hash *= HASH_PRIME;
+                break;
+            }
+            case 1:
+                hash ^= UNSAFE.getByte(bytes,
+                        CHAR_ARRAY_BASE_OFFSET + startPos * CHAR_ARRAY_INDEX_SCALE);
+                hash *= HASH_PRIME;
+                break;
+            default:
+                break;
+            }
+            return (int) (hash ^ (hash >>> 32));
+        }
+
+        @Override
+        protected int hashCodeAsBytesDirect(CharSequence data, int startPos, int endPos) {
+            long hash = HASH_OFFSET;
+            final int len = endPos - startPos;
+            int remainingBytes = len & 7;
+            if (len > 7) { // This is to reduce overhead for small input sizes.
+                final int rend = remainingBytes + startPos;
+                int i = len - 8 + startPos;
+                do {
+                    hash ^= (byte) data.charAt(i) |
+                            (((byte) data.charAt(i + 1)) << 8) |
+                            (((byte) data.charAt(i + 2)) << 16) |
+                            (((byte) data.charAt(i + 3)) << 24) |
+                            ((long) ((byte) data.charAt(i + 4)) << 32) |
+                            ((long) ((byte) data.charAt(i + 5)) << 40) |
+                            ((long) ((byte) data.charAt(i + 6)) << 48) |
+                            ((long) ((byte) data.charAt(i + 7)) << 56);
+                    hash *= HASH_PRIME;
+                    i -= 8;
+                } while (i >= rend);
+            }
+            if (remainingBytes >= 4) {
+                remainingBytes -= 4;
+                final int i = startPos + remainingBytes;
+                hash ^= (byte) data.charAt(i) |
+                        (asciiToLowerCase((byte) data.charAt(i + 1)) << 8) |
+                        (asciiToLowerCase((byte) data.charAt(i + 2)) << 16) |
+                        (asciiToLowerCase((byte) data.charAt(i + 3)) << 24);
+                hash *= HASH_PRIME;
+            }
+            switch (remainingBytes) {
+            case 3:
+                hash ^= asciiToLowerCase((byte) data.charAt(startPos + 1)) |
+                (asciiToLowerCase((byte) data.charAt(startPos + 2)) << 8);
+                hash *= HASH_PRIME;
+                hash ^= asciiToLowerCase(data.charAt(startPos));
+                hash *= HASH_PRIME;
+                break;
+            case 2:
+                hash ^= asciiToLowerCase((byte) data.charAt(startPos)) |
+                (asciiToLowerCase((byte) data.charAt(startPos + 1)) << 8);
+                hash *= HASH_PRIME;
+                break;
+            case 1:
+                hash ^= asciiToLowerCase(data.charAt(startPos));
+                hash *= HASH_PRIME;
+                break;
+            default:
+                break;
+            }
+            return (int) (hash ^ (hash >>> 32));
+        }
+    }
+
+    /**
+     * A modified version of <a href="http://www.isthe.com/chongo/tech/comp/fnv/">FNV1-a</a> for a byte stream which
+     * is agnostic to ASCII character case.
+     */
+    private static final class NettyHashAsciiCaseInsensitive extends AbstractNettyHashAscii {
+        public static final NettyHashAsciiCaseInsensitive INSTANCE = new NettyHashAsciiCaseInsensitive();
+        private NettyHashAsciiCaseInsensitive() { }
+
+        @Override
+        public int hashCode(byte[] bytes, int startPos, int endPos) {
+            long hash = HASH_OFFSET;
+            final int len = endPos - startPos;
+            final int remainingBytes = len & 7;
+            final long baseOffset = startPos + BYTE_ARRAY_BASE_OFFSET;
+            if (len > 7) { // This is to reduce overhead for small input sizes.
+                final long rend = remainingBytes + baseOffset;
+                long i = len - 8 + baseOffset;
+                do {
+                    long v = UNSAFE.getLong(bytes, i);
+                    hash ^= asciiToLowerCase((byte) v) |
+                            byteOffset8(v) |
+                            byteOffset16(v) |
+                            byteOffset24(v) |
+                            byteOffset32(v) |
+                            byteOffset40(v) |
+                            byteOffset48(v) |
+                            byteOffset56(v);
+                    hash *= HASH_PRIME;
+                    i -= 8;
+                } while (i >= rend);
+            }
+            // Account for each case of remaining bytes independently. Conditional statements and decrementing a
+            // variable to share code proved to generate measurable amount of overhead for small inputs which are
+            // expected to be common (i.e. Header Names).
+            switch (remainingBytes) {
+            case 7: {
+                int v = UNSAFE.getInt(bytes, baseOffset + 3);
+                hash ^= asciiToLowerCase((byte) v) |
+                        byteOffset8(v) |
+                        byteOffset16(v) |
+                        byteOffset24(v);
+                hash *= HASH_PRIME;
+                char v2 = UNSAFE.getChar(bytes, baseOffset + 1);
+                hash ^= asciiToLowerCase((byte) v2) | byteOffset8(v2);
+                hash *= HASH_PRIME;
+                hash ^= asciiToLowerCase(UNSAFE.getByte(bytes, baseOffset));
+                hash *= HASH_PRIME;
+                break;
+            }
+            case 6: {
+                int v = UNSAFE.getInt(bytes, baseOffset + 2);
+                hash ^= asciiToLowerCase((byte) v) |
+                        byteOffset8(v) |
+                        byteOffset16(v) |
+                        byteOffset24(v);
+                hash *= HASH_PRIME;
+                char v2 = UNSAFE.getChar(bytes, baseOffset);
+                hash ^= asciiToLowerCase((byte) v2) | byteOffset8(v2);
+                hash *= HASH_PRIME;
+                break;
+            }
+            case 5: {
+                int v = UNSAFE.getInt(bytes, baseOffset + 1);
+                hash ^= asciiToLowerCase((byte) v) |
+                        byteOffset8(v) |
+                        byteOffset16(v) |
+                        byteOffset24(v);
+                hash *= HASH_PRIME;
+                hash ^= asciiToLowerCase(UNSAFE.getByte(bytes, baseOffset));
+                hash *= HASH_PRIME;
+                break;
+            }
+            case 4: {
+                int v = UNSAFE.getInt(bytes, baseOffset);
+                hash ^= asciiToLowerCase((byte) v) |
+                        byteOffset8(v) |
+                        byteOffset16(v) |
+                        byteOffset24(v);
+                hash *= HASH_PRIME;
+                break;
+            }
+            case 3: {
+                char v = UNSAFE.getChar(bytes, baseOffset + 1);
+                hash ^= asciiToLowerCase((byte) v) | byteOffset8(v);
+                hash *= HASH_PRIME;
+                hash ^= asciiToLowerCase(UNSAFE.getByte(bytes, baseOffset));
+                hash *= HASH_PRIME;
+                break;
+            }
+            case 2: {
+                char v = UNSAFE.getChar(bytes, baseOffset);
+                hash ^= asciiToLowerCase((byte) v) | byteOffset8(v);
+                hash *= HASH_PRIME;
+                break;
+            }
+            case 1:
+                hash ^= asciiToLowerCase(UNSAFE.getByte(bytes, baseOffset));
+                hash *= HASH_PRIME;
+                break;
+            default:
+                break;
+            }
+            return (int) (hash ^ (hash >>> 32));
+        }
+
+        @Override
+        public int hashCodeAsBytes(char[] bytes, int startPos, int endPos) {
+            long hash = HASH_OFFSET;
+            final int len = endPos - startPos;
+            final int remainingBytes = len & 7;
+            if (len > 7) { // This is to reduce overhead for small input sizes.
+                final long rend = remainingBytes + startPos;
+                long i = len - 8 + startPos;
+                do {
+                    long v = UNSAFE.getLong(bytes, CHAR_ARRAY_BASE_OFFSET + i * CHAR_ARRAY_INDEX_SCALE);
+                    long v2 = UNSAFE.getLong(bytes, CHAR_ARRAY_BASE_OFFSET + (i + 4) * CHAR_ARRAY_INDEX_SCALE);
+                    hash ^= asciiToLowerCase((byte) v) | charOffset8(v) | charOffset16(v) | charOffset24(v) |
+                            (((long) asciiToLowerCase((byte) v2) | charOffset8(v2) |
+                                    charOffset16(v2) | charOffset24(v2)) << 32);
+                    hash *= HASH_PRIME;
+                    i -= 8;
+                } while (i >= rend);
+            }
+            // Account for each case of remaining bytes independently. Conditional statements and decrementing a
+            // variable to share code proved to generate measurable amount of overhead for small inputs which are
+            // expected to be common (i.e. Header Names).
+            switch (remainingBytes) {
+            case 7: {
+                long v = UNSAFE.getLong(bytes,
+                        CHAR_ARRAY_BASE_OFFSET + (startPos + 3) * CHAR_ARRAY_INDEX_SCALE);
+                hash ^= asciiToLowerCase((byte) v) | charOffset8(v) | charOffset16(v) | charOffset24(v);
+                hash *= HASH_PRIME;
+                int v2 = UNSAFE.getInt(bytes,
+                        CHAR_ARRAY_BASE_OFFSET + (startPos + 1) * CHAR_ARRAY_INDEX_SCALE);
+                hash ^= asciiToLowerCase((byte) v2) | charOffset8(v2);
+                hash *= HASH_PRIME;
+                hash ^= asciiToLowerCase(UNSAFE.getByte(bytes,
+                        CHAR_ARRAY_BASE_OFFSET + startPos * CHAR_ARRAY_INDEX_SCALE));
+                hash *= HASH_PRIME;
+                break;
+            }
+            case 6: {
+                long v = UNSAFE.getLong(bytes,
+                        CHAR_ARRAY_BASE_OFFSET + (startPos + 2) * CHAR_ARRAY_INDEX_SCALE);
+                hash ^= asciiToLowerCase((byte) v) | charOffset8(v) | charOffset16(v) | charOffset24(v);
+                hash *= HASH_PRIME;
+                int v2 = UNSAFE.getInt(bytes,
+                        CHAR_ARRAY_BASE_OFFSET + startPos * CHAR_ARRAY_INDEX_SCALE);
+                hash ^= asciiToLowerCase((byte) v2) | charOffset8(v2);
+                hash *= HASH_PRIME;
+                break;
+            }
+            case 5: {
+                long v = UNSAFE.getLong(bytes,
+                        CHAR_ARRAY_BASE_OFFSET + (startPos + 1) * CHAR_ARRAY_INDEX_SCALE);
+                hash ^= asciiToLowerCase((byte) v) | charOffset8(v) | charOffset16(v) | charOffset24(v);
+                hash *= HASH_PRIME;
+                hash ^= asciiToLowerCase(UNSAFE.getByte(bytes,
+                        CHAR_ARRAY_BASE_OFFSET + startPos * CHAR_ARRAY_INDEX_SCALE));
+                hash *= HASH_PRIME;
+                break;
+            }
+            case 4: {
+                long v = UNSAFE.getLong(bytes,
+                        CHAR_ARRAY_BASE_OFFSET + startPos * CHAR_ARRAY_INDEX_SCALE);
+                hash ^= asciiToLowerCase((byte) v) | charOffset8(v) | charOffset16(v) | charOffset24(v);
+                hash *= HASH_PRIME;
+                break;
+            }
+            case 3: {
+                int v = UNSAFE.getInt(bytes,
+                        CHAR_ARRAY_BASE_OFFSET + (startPos + 1) * CHAR_ARRAY_INDEX_SCALE);
+                hash ^= asciiToLowerCase((byte) v) | charOffset8(v);
+                hash *= HASH_PRIME;
+                hash ^= asciiToLowerCase(UNSAFE.getByte(bytes,
+                        CHAR_ARRAY_BASE_OFFSET + startPos * CHAR_ARRAY_INDEX_SCALE));
+                hash *= HASH_PRIME;
+                break;
+            }
+            case 2: {
+                int v = UNSAFE.getInt(bytes,
+                        CHAR_ARRAY_BASE_OFFSET + startPos * CHAR_ARRAY_INDEX_SCALE);
+                hash ^= asciiToLowerCase((byte) v) | charOffset8(v);
+                hash *= HASH_PRIME;
+                break;
+            }
+            case 1:
+                hash ^= asciiToLowerCase(UNSAFE.getByte(bytes,
+                        CHAR_ARRAY_BASE_OFFSET + startPos * CHAR_ARRAY_INDEX_SCALE));
+                hash *= HASH_PRIME;
+                break;
+            default:
+                break;
+            }
+            return (int) (hash ^ (hash >>> 32));
+        }
+
+        @Override
+        protected int hashCodeAsBytesDirect(CharSequence data, int startPos, int endPos) {
+            long hash = HASH_OFFSET;
+            final int len = endPos - startPos;
+            int remainingBytes = len & 7;
+            if (len > 7) { // This is to reduce overhead for small input sizes.
+                final int rend = remainingBytes + startPos;
+                int i = len - 8 + startPos;
+                do {
+                    hash ^= asciiToLowerCase((byte) data.charAt(i)) |
+                            (asciiToLowerCase((byte) data.charAt(i + 1)) << 8) |
+                            (asciiToLowerCase((byte) data.charAt(i + 2)) << 16) |
+                            (asciiToLowerCase((byte) data.charAt(i + 3)) << 24) |
+                            ((long) asciiToLowerCase((byte) data.charAt(i + 4)) << 32) |
+                            ((long) asciiToLowerCase((byte) data.charAt(i + 5)) << 40) |
+                            ((long) asciiToLowerCase((byte) data.charAt(i + 6)) << 48) |
+                            ((long) asciiToLowerCase((byte) data.charAt(i + 7)) << 56);
+                    hash *= HASH_PRIME;
+                    i -= 8;
+                } while (i >= rend);
+            }
+            if (remainingBytes >= 4) {
+                remainingBytes -= 4;
+                final int i = startPos + remainingBytes;
+                hash ^= asciiToLowerCase((byte) data.charAt(i)) |
+                        (asciiToLowerCase((byte) data.charAt(i + 1)) << 8) |
+                        (asciiToLowerCase((byte) data.charAt(i + 2)) << 16) |
+                        (asciiToLowerCase((byte) data.charAt(i + 3)) << 24);
+                hash *= HASH_PRIME;
+            }
+            switch (remainingBytes) {
+            case 3:
+                hash ^= asciiToLowerCase((byte) data.charAt(startPos + 1)) |
+                (asciiToLowerCase((byte) data.charAt(startPos + 2)) << 8);
+                hash *= HASH_PRIME;
+                hash ^= asciiToLowerCase(data.charAt(startPos));
+                hash *= HASH_PRIME;
+                break;
+            case 2:
+                hash ^= asciiToLowerCase((byte) data.charAt(startPos)) |
+                (asciiToLowerCase((byte) data.charAt(startPos + 1)) << 8);
+                hash *= HASH_PRIME;
+                break;
+            case 1:
+                hash ^= asciiToLowerCase(data.charAt(startPos));
+                hash *= HASH_PRIME;
+                break;
+            default:
+                break;
+            }
+            return (int) (hash ^ (hash >>> 32));
+        }
+
+        // The logic below is pretty low level but has been shown to be beneficial in benchmarking.
+        // It essentially avoids an extra shift per byte and casting to/from long/byte/int.
+        private static final long BYTE_8_MASK = 0XFFL << 8;
+        private static final long BYTE_8_A = ((long) 'A') << 8;
+        private static final long BYTE_8_Z = ((long) 'Z') << 8;
+        private static final long BYTE_8_LOWER_CASE = (((long) 'a') << 8) - BYTE_8_A;
+        private static final long BYTE_16_MASK = 0XFFL << 16;
+        private static final long BYTE_16_A = ((long) 'A') << 16;
+        private static final long BYTE_16_Z = ((long) 'Z') << 16;
+        private static final long BYTE_16_LOWER_CASE = (((long) 'a') << 16) - BYTE_16_A;
+        private static final long BYTE_24_MASK = 0XFFL << 24;
+        private static final long BYTE_24_A = ((long) 'A') << 24;
+        private static final long BYTE_24_Z = ((long) 'Z') << 24;
+        private static final long BYTE_24_LOWER_CASE = (((long) 'a') << 24) - BYTE_24_A;
+        private static final long BYTE_32_MASK = 0XFFL << 32;
+        private static final long BYTE_32_A = ((long) 'A') << 32;
+        private static final long BYTE_32_Z = ((long) 'Z') << 32;
+        private static final long BYTE_32_LOWER_CASE = (((long) 'a') << 32) - BYTE_32_A;
+        private static final long BYTE_40_MASK = 0XFFL << 40;
+        private static final long BYTE_40_A = ((long) 'A') << 40;
+        private static final long BYTE_40_Z = ((long) 'Z') << 40;
+        private static final long BYTE_40_LOWER_CASE = (((long) 'a') << 40) - BYTE_40_A;
+        private static final long BYTE_48_MASK = 0XFFL << 48;
+        private static final long BYTE_48_A = ((long) 'A') << 48;
+        private static final long BYTE_48_Z = ((long) 'Z') << 48;
+        private static final long BYTE_48_LOWER_CASE = (((long) 'a') << 48) - BYTE_48_A;
+        private static final long BYTE_56_MASK = 0XFFL << 56;
+        private static final long BYTE_56_A = ((long) 'A') << 56;
+        private static final long BYTE_56_Z = ((long) 'Z') << 56;
+        private static final long BYTE_56_LOWER_CASE = (((long) 'a') << 56) - BYTE_56_A;
+        private static final long CHAR_8_MASK = 0xFFL << 16;
+        private static final long CHAR_8_A = ((long) 'A') << 16;
+        private static final long CHAR_8_Z = ((long) 'Z') << 16;
+        private static final long CHAR_8_LOWER_CASE = (((long) 'a') << 16) - CHAR_8_A;
+        private static final long CHAR_16_MASK = 0xFFL << 32;
+        private static final long CHAR_16_A = ((long) 'A') << 32;
+        private static final long CHAR_16_Z = ((long) 'Z') << 32;
+        private static final long CHAR_16_LOWER_CASE = (((long) 'a') << 32) - CHAR_16_A;
+        private static final long CHAR_24_MASK = 0xFFL << 48;
+        private static final long CHAR_24_A = ((long) 'A') << 48;
+        private static final long CHAR_24_Z = ((long) 'Z') << 48;
+        private static final long CHAR_24_LOWER_CASE = (((long) 'a') << 48) - CHAR_24_A;
+
+        private long charOffset8(long raw) {
+            long masked = raw & CHAR_8_MASK;
+            return ((CHAR_8_A <= masked && masked <= CHAR_8_Z) ? masked + CHAR_8_LOWER_CASE : masked) >>> 8;
+        }
+
+        private long charOffset16(long raw) {
+            long masked = raw & CHAR_16_MASK;
+            return ((CHAR_16_A <= masked && masked <= CHAR_16_Z) ? masked + CHAR_16_LOWER_CASE : masked) >>> 16;
+        }
+
+        private long charOffset24(long raw) {
+            long masked = raw & CHAR_24_MASK;
+            return ((CHAR_24_A <= masked && masked <= CHAR_24_Z) ? masked + CHAR_24_LOWER_CASE : masked) >>> 24;
+        }
+
+        private long byteOffset8(long raw) {
+            long masked = raw & BYTE_8_MASK;
+            return (BYTE_8_A <= masked && masked <= BYTE_8_Z) ? masked + BYTE_8_LOWER_CASE : masked;
+        }
+
+        private long byteOffset16(long raw) {
+            long masked = raw & BYTE_16_MASK;
+            return (BYTE_16_A <= masked && masked <= BYTE_16_Z) ? masked + BYTE_16_LOWER_CASE : masked;
+        }
+
+        private long byteOffset24(long raw) {
+            long masked = raw & BYTE_24_MASK;
+            return (BYTE_24_A <= masked && masked <= BYTE_24_Z) ? masked + BYTE_24_LOWER_CASE : masked;
+        }
+
+        private long byteOffset32(long raw) {
+            long masked = raw & BYTE_32_MASK;
+            return (BYTE_32_A <= masked && masked <= BYTE_32_Z) ? masked + BYTE_32_LOWER_CASE : masked;
+        }
+
+        private long byteOffset40(long raw) {
+            long masked = raw & BYTE_40_MASK;
+            return (BYTE_40_A <= masked && masked <= BYTE_40_Z) ? masked + BYTE_40_LOWER_CASE : masked;
+        }
+
+        private long byteOffset48(long raw) {
+            long masked = raw & BYTE_48_MASK;
+            return (BYTE_48_A <= masked && masked <= BYTE_48_Z) ? masked + BYTE_48_LOWER_CASE : masked;
+        }
+
+        private long byteOffset56(long raw) {
+            long masked = raw & BYTE_56_MASK;
+            return (BYTE_56_A <= masked && masked <= BYTE_56_Z) ? masked + BYTE_56_LOWER_CASE : masked;
+        }
+    }
+
+    private PlatformDependent0() {
+    }
 }

@@ -203,3 +203,10 @@ non-blocking XML processor, which can be obtained at:
   * HOMEPAGE:
     * http://wiki.fasterxml.com/AaltoHome
 
+This product contains a modified version of Fowler/Noll/Vo's Public Domain
+FNV1-a Hash Code Algorithm, which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.fnv1a.txt (Public Domain)
+  * HOMEPAGE:
+    * http://www.isthe.com/chongo/tech/comp/fnv/index.html
