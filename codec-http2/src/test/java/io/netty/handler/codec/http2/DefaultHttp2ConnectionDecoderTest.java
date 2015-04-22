@@ -140,9 +140,9 @@ public class DefaultHttp2ConnectionDecoderTest {
         when(local.flowController()).thenReturn(localFlow);
         when(encoder.flowController()).thenReturn(remoteFlow);
         when(connection.remote()).thenReturn(remote);
-        when(local.createStream(eq(STREAM_ID))).thenReturn(stream);
+        when(local.createIdleStream(eq(STREAM_ID))).thenReturn(stream);
         when(local.reservePushStream(eq(PUSH_STREAM_ID), eq(stream))).thenReturn(pushStream);
-        when(remote.createStream(eq(STREAM_ID))).thenReturn(stream);
+        when(remote.createIdleStream(eq(STREAM_ID))).thenReturn(stream);
         when(remote.reservePushStream(eq(PUSH_STREAM_ID), eq(stream))).thenReturn(pushStream);
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(ctx.channel()).thenReturn(channel);
@@ -347,12 +347,12 @@ public class DefaultHttp2ConnectionDecoderTest {
     public void headersReadAfterGoAwayShouldBeIgnored() throws Exception {
         when(connection.goAwaySent()).thenReturn(true);
         decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
-        verify(remote, never()).createStream(eq(STREAM_ID));
+        verify(remote, never()).createIdleStream(eq(STREAM_ID));
         verify(stream, never()).open(anyBoolean());
 
         // Verify that the event was absorbed and not propagated to the oberver.
         verify(listener, never()).onHeadersRead(eq(ctx), anyInt(), any(Http2Headers.class), anyInt(), anyBoolean());
-        verify(remote, never()).createStream(anyInt());
+        verify(remote, never()).createIdleStream(anyInt());
         verify(stream, never()).open(anyBoolean());
     }
 
@@ -360,22 +360,21 @@ public class DefaultHttp2ConnectionDecoderTest {
     public void headersReadForUnknownStreamShouldBeIgnored() throws Exception {
         when(connection.stream(STREAM_ID)).thenReturn(null);
         decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
-        verify(remote, never()).createStream(eq(STREAM_ID));
+        verify(remote, never()).createStream(anyInt(), anyBoolean());
         verify(stream, never()).open(anyBoolean());
 
         // Verify that the event was absorbed and not propagated to the oberver.
         verify(listener, never()).onHeadersRead(eq(ctx), anyInt(), any(Http2Headers.class), anyInt(), anyBoolean());
-        verify(remote, never()).createStream(anyInt());
+        verify(remote, never()).createStream(anyInt(), anyBoolean());
         verify(stream, never()).open(anyBoolean());
     }
 
     @Test
     public void headersReadForUnknownStreamShouldCreateStream() throws Exception {
         final int streamId = 5;
-        when(remote.createStream(eq(streamId))).thenReturn(stream);
+        when(remote.createStream(eq(streamId), anyBoolean())).thenReturn(stream);
         decode().onHeadersRead(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false);
-        verify(remote).createStream(eq(streamId));
-        verify(stream).open(eq(false));
+        verify(remote).createStream(eq(streamId), eq(false));
         verify(listener).onHeadersRead(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false));
     }
@@ -383,10 +382,9 @@ public class DefaultHttp2ConnectionDecoderTest {
     @Test
     public void headersReadForUnknownStreamShouldCreateHalfClosedStream() throws Exception {
         final int streamId = 5;
-        when(remote.createStream(eq(streamId))).thenReturn(stream);
+        when(remote.createStream(eq(streamId), anyBoolean())).thenReturn(stream);
         decode().onHeadersRead(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, true);
-        verify(remote).createStream(eq(streamId));
-        verify(stream).open(eq(true));
+        verify(remote).createStream(eq(streamId), eq(true));
         verify(listener).onHeadersRead(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true));
     }
@@ -500,7 +498,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         decode().onPriorityRead(ctx, STREAM_ID, STREAM_DEPENDENCY_ID, (short) 255, true);
         verify(stream).setPriority(eq(STREAM_DEPENDENCY_ID), eq((short) 255), eq(true));
         verify(listener).onPriorityRead(eq(ctx), eq(STREAM_ID), eq(STREAM_DEPENDENCY_ID), eq((short) 255), eq(true));
-        verify(remote).createStream(STREAM_ID);
+        verify(remote).createIdleStream(STREAM_ID);
         verify(stream, never()).open(anyBoolean());
     }
 

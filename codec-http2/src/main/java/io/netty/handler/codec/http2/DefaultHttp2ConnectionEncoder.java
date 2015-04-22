@@ -149,21 +149,20 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         try {
             Http2Stream stream = connection.stream(streamId);
             if (stream == null) {
-                stream = connection.local().createStream(streamId);
-            }
-
-            switch (stream.state()) {
-                case RESERVED_LOCAL:
-                case IDLE:
-                    stream.open(endOfStream);
-                    break;
-                case OPEN:
-                case HALF_CLOSED_REMOTE:
-                    // Allowed sending headers in these states.
-                    break;
-                default:
-                    throw new IllegalStateException(String.format(
-                            "Stream %d in unexpected state: %s", stream.id(), stream.state()));
+                stream = connection.local().createStream(streamId, endOfStream);
+            } else {
+                switch (stream.state()) {
+                    case RESERVED_LOCAL:
+                        stream.open(endOfStream);
+                        break;
+                    case OPEN:
+                    case HALF_CLOSED_REMOTE:
+                        // Allowed sending headers in these states.
+                        break;
+                    default:
+                        throw new IllegalStateException(String.format(
+                                "Stream %d in unexpected state: %s", stream.id(), stream.state()));
+                }
             }
 
             // Pass headers to the flow-controller so it can maintain their sequence relative to DATA frames.
@@ -186,7 +185,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             // Update the priority on this stream.
             Http2Stream stream = connection.stream(streamId);
             if (stream == null) {
-                stream = connection.local().createStream(streamId);
+                stream = connection.local().createIdleStream(streamId);
             }
 
             // The set priority operation must be done before sending the frame. The parent may not yet exist
