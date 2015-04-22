@@ -117,9 +117,9 @@ final class Http2TestUtil {
                 Http2Stream stream = connection.stream(streamId);
                 if (stream == null) {
                     if (connection.isServer() && streamId % 2 == 0 || !connection.isServer() && streamId % 2 != 0) {
-                        stream = connection.local().createStream(streamId).open(halfClosed);
+                        stream = connection.local().createStream(streamId, halfClosed);
                     } else {
-                        stream = connection.remote().createStream(streamId).open(halfClosed);
+                        stream = connection.remote().createStream(streamId, halfClosed);
                     }
                 }
                 return stream;
@@ -266,6 +266,7 @@ final class Http2TestUtil {
         private final CountDownLatch settingsAckLatch;
         private final CountDownLatch dataLatch;
         private final CountDownLatch trailersLatch;
+        private final CountDownLatch goAwayLatch;
 
         FrameCountDown(Http2FrameListener listener, CountDownLatch settingsAckLatch, CountDownLatch messageLatch) {
             this(listener, settingsAckLatch, messageLatch, null, null);
@@ -273,11 +274,17 @@ final class Http2TestUtil {
 
         FrameCountDown(Http2FrameListener listener, CountDownLatch settingsAckLatch, CountDownLatch messageLatch,
                 CountDownLatch dataLatch, CountDownLatch trailersLatch) {
+            this(listener, settingsAckLatch, messageLatch, dataLatch, trailersLatch, messageLatch);
+        }
+
+        FrameCountDown(Http2FrameListener listener, CountDownLatch settingsAckLatch, CountDownLatch messageLatch,
+                CountDownLatch dataLatch, CountDownLatch trailersLatch, CountDownLatch goAwayLatch) {
             this.listener = listener;
             this.messageLatch = messageLatch;
             this.settingsAckLatch = settingsAckLatch;
             this.dataLatch = dataLatch;
             this.trailersLatch = trailersLatch;
+            this.goAwayLatch = goAwayLatch;
         }
 
         @Override
@@ -362,7 +369,7 @@ final class Http2TestUtil {
         public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
                 throws Http2Exception {
             listener.onGoAwayRead(ctx, lastStreamId, errorCode, debugData);
-            messageLatch.countDown();
+            goAwayLatch.countDown();
         }
 
         @Override
