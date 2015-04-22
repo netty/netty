@@ -90,6 +90,7 @@ public class Http2ConnectionRoundtripTest {
     private CountDownLatch serverSettingsAckLatch;
     private CountDownLatch dataLatch;
     private CountDownLatch trailersLatch;
+    private CountDownLatch goAwayLatch;
 
     @Before
     public void setup() throws Exception {
@@ -227,7 +228,7 @@ public class Http2ConnectionRoundtripTest {
 
     @Test
     public void noMoreStreamIdsShouldSendGoAway() throws Exception {
-        bootstrapEnv(1, 1, 3, 1);
+        bootstrapEnv(1, 1, 3, 1, 1);
 
         // Create a single stream by sending a HEADERS frame to the server.
         final Http2Headers headers = dummyHeaders();
@@ -249,7 +250,7 @@ public class Http2ConnectionRoundtripTest {
             }
         });
 
-        assertTrue(requestLatch.await(5, SECONDS));
+        assertTrue(goAwayLatch.await(5, SECONDS));
         verify(serverListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(0),
                 eq(Http2Error.PROTOCOL_ERROR.code()), any(ByteBuf.class));
     }
@@ -403,10 +404,16 @@ public class Http2ConnectionRoundtripTest {
 
     private void bootstrapEnv(int dataCountDown, int settingsAckCount,
             int requestCountDown, int trailersCountDown) throws Exception {
+        bootstrapEnv(dataCountDown, settingsAckCount, requestCountDown, trailersCountDown, -1);
+    }
+
+    private void bootstrapEnv(int dataCountDown, int settingsAckCount,
+            int requestCountDown, int trailersCountDown, int goAwayCountDown) throws Exception {
         requestLatch = new CountDownLatch(requestCountDown);
         serverSettingsAckLatch = new CountDownLatch(settingsAckCount);
         dataLatch = new CountDownLatch(dataCountDown);
         trailersLatch = new CountDownLatch(trailersCountDown);
+        goAwayLatch = goAwayCountDown > 0 ? new CountDownLatch(goAwayCountDown) : requestLatch;
         sb = new ServerBootstrap();
         cb = new Bootstrap();
 
@@ -418,7 +425,7 @@ public class Http2ConnectionRoundtripTest {
                 ChannelPipeline p = ch.pipeline();
                 serverFrameCountDown =
                         new FrameCountDown(serverListener, serverSettingsAckLatch,
-                                requestLatch, dataLatch, trailersLatch);
+                                requestLatch, dataLatch, trailersLatch, goAwayLatch);
                 p.addLast(new Http2ConnectionHandler(true, serverFrameCountDown));
             }
         });

@@ -154,9 +154,9 @@ public class DefaultHttp2ConnectionEncoderTest {
         when(writer.configuration()).thenReturn(writerConfig);
         when(writerConfig.frameSizePolicy()).thenReturn(frameSizePolicy);
         when(frameSizePolicy.maxFrameSize()).thenReturn(64);
-        when(local.createStream(eq(STREAM_ID))).thenReturn(stream);
+        when(local.createIdleStream(eq(STREAM_ID))).thenReturn(stream);
         when(local.reservePushStream(eq(PUSH_STREAM_ID), eq(stream))).thenReturn(pushStream);
-        when(remote.createStream(eq(STREAM_ID))).thenReturn(stream);
+        when(remote.createIdleStream(eq(STREAM_ID))).thenReturn(stream);
         when(remote.reservePushStream(eq(PUSH_STREAM_ID), eq(stream))).thenReturn(pushStream);
         when(writer.writeSettings(eq(ctx), any(Http2Settings.class), eq(promise))).thenReturn(future);
         when(writer.writeGoAway(eq(ctx), anyInt(), anyInt(), any(ByteBuf.class), eq(promise)))
@@ -307,10 +307,9 @@ public class DefaultHttp2ConnectionEncoderTest {
         when(stream.id()).thenReturn(streamId);
         when(stream.state()).thenReturn(IDLE);
         mockFutureAddListener(true);
-        when(local.createStream(eq(streamId))).thenReturn(stream);
+        when(local.createStream(eq(streamId), anyBoolean())).thenReturn(stream);
         encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false, promise);
-        verify(local).createStream(eq(streamId));
-        verify(stream).open(eq(false));
+        verify(local).createStream(eq(streamId), eq(false));
         assertNotNull(payloadCaptor.getValue());
         payloadCaptor.getValue().write(0);
         verify(writer).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE), eq(0),
@@ -359,7 +358,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         encoder.writePriority(ctx, STREAM_ID, 0, (short) 255, true, promise);
         verify(stream).setPriority(eq(0), eq((short) 255), eq(true));
         verify(writer).writePriority(eq(ctx), eq(STREAM_ID), eq(0), eq((short) 255), eq(true), eq(promise));
-        verify(local).createStream(STREAM_ID);
+        verify(local).createIdleStream(STREAM_ID);
         verify(stream, never()).open(anyBoolean());
     }
 
@@ -370,14 +369,14 @@ public class DefaultHttp2ConnectionEncoderTest {
             public Http2Stream answer(InvocationOnMock in) throws Throwable {
                 throw new ClosedStreamCreationException(Http2Error.INTERNAL_ERROR);
             }
-        }).when(local).createStream(eq(STREAM_ID));
+        }).when(local).createIdleStream(eq(STREAM_ID));
         when(connection.stream(STREAM_ID)).thenReturn(null);
         // Just return the stream object as the connection stream to ensure the dependent stream "exists"
         when(connection.stream(0)).thenReturn(stream);
         encoder.writePriority(ctx, STREAM_ID, 0, (short) 255, true, promise);
         verify(stream, never()).setPriority(anyInt(), anyShort(), anyBoolean());
         verify(writer).writePriority(eq(ctx), eq(STREAM_ID), eq(0), eq((short) 255), eq(true), eq(promise));
-        verify(local).createStream(STREAM_ID);
+        verify(local).createIdleStream(STREAM_ID);
     }
 
     @Test
@@ -453,16 +452,16 @@ public class DefaultHttp2ConnectionEncoderTest {
         mockSendFlowControlledWriteEverything();
         int streamId = 5;
         when(stream.id()).thenReturn(streamId);
-        when(stream.state()).thenReturn(IDLE);
+        when(stream.state()).thenReturn(HALF_CLOSED_LOCAL);
         mockFutureAddListener(true);
-        when(local.createStream(eq(streamId))).thenReturn(stream);
+        when(local.createStream(eq(streamId), anyBoolean())).thenReturn(stream);
         when(writer.writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE), eq(0),
                                  eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true), eq(promise)))
                 .thenReturn(future);
         encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, true, promise);
-        verify(local).createStream(eq(streamId));
-        verify(stream).open(eq(true));
+        verify(local).createStream(eq(streamId), eq(true));
         // Trigger the write and mark the promise successful to trigger listeners
+        assertNotNull(payloadCaptor.getValue());
         payloadCaptor.getValue().write(0);
         promise.trySuccess();
         verify(lifecycleManager).closeStreamLocal(eq(stream), eq(promise));

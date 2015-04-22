@@ -33,6 +33,7 @@ import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.collection.PrimitiveCollections;
@@ -229,12 +230,47 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
     }
 
+    static State activeState(int streamId, State initialState, boolean isLocal, boolean halfClosed)
+            throws Http2Exception {
+        switch (initialState) {
+        case IDLE:
+            return halfClosed ? isLocal ? HALF_CLOSED_LOCAL : HALF_CLOSED_REMOTE : OPEN;
+        case RESERVED_LOCAL:
+            return HALF_CLOSED_REMOTE;
+        case RESERVED_REMOTE:
+            return HALF_CLOSED_LOCAL;
+        default:
+            throw streamError(streamId, PROTOCOL_ERROR, "Attempting to open a stream in an invalid state: "
+                    + initialState);
+        }
+    }
+
+    void notifyHalfClosed(Http2Stream stream) {
+        for (int i = 0; i < listeners.size(); i++) {
+            try {
+                listeners.get(i).onStreamHalfClosed(stream);
+            } catch (RuntimeException e) {
+                logger.error("Caught RuntimeException from listener onStreamHalfClosed.", e);
+            }
+        }
+    }
+
+    void notifyClosed(Http2Stream stream) {
+        for (int i = 0; i < listeners.size(); i++) {
+            try {
+                listeners.get(i).onStreamClosed(stream);
+            } catch (RuntimeException e) {
+                logger.error("Caught RuntimeException from listener onStreamClosed.", e);
+            }
+        }
+    }
+
     /**
      * Simple stream implementation. Streams can be compared to each other by priority.
      */
     private class DefaultStream implements Http2Stream {
         private final int id;
-        private State state = IDLE;
+        private State state;
         private short weight = DEFAULT_PRIORITY_WEIGHT;
         private DefaultStream parent;
         private IntObjectMap<DefaultStream> children = PrimitiveCollections.emptyIntObjectMap();
@@ -245,8 +281,9 @@ public class DefaultHttp2Connection implements Http2Connection {
         private FlowControlState localFlowState;
         private FlowControlState remoteFlowState;
 
-        DefaultStream(int id) {
+        DefaultStream(int id, State state) {
             this.id = id;
+            this.state = state;
             data = new LazyPropertyMap(this);
         }
 
@@ -375,7 +412,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             if (newParent == null) {
                 // Streams can depend on other streams in the IDLE state. We must ensure
                 // the stream has been "created" in order to use it in the priority tree.
-                newParent = createdBy().createStream(parentStreamId);
+                newParent = createdBy().createIdleStream(parentStreamId);
             } else if (this == newParent) {
                 throw new IllegalArgumentException("A stream cannot depend on itself");
             }
@@ -400,22 +437,16 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public Http2Stream open(boolean halfClosed) throws Http2Exception {
-            switch (state) {
-            case IDLE:
-                state = halfClosed ? isLocal() ? HALF_CLOSED_LOCAL : HALF_CLOSED_REMOTE : OPEN;
-                break;
-            case RESERVED_LOCAL:
-                state = HALF_CLOSED_REMOTE;
-                break;
-            case RESERVED_REMOTE:
-                state = HALF_CLOSED_LOCAL;
-                break;
-            default:
-                throw streamError(id, PROTOCOL_ERROR, "Attempting to open a stream in an invalid state: " + state);
+            state = activeState(id, state, isLocal(), halfClosed);
+            activate();
+            if (halfClosed) {
+                notifyHalfClosed(this);
             }
-
-            activeStreams.activate(this);
             return this;
+        }
+
+        void activate() {
+            activeStreams.activate(this);
         }
 
         @Override
@@ -514,16 +545,6 @@ public class DefaultHttp2Connection implements Http2Connection {
          */
         private boolean isPrioritizable() {
             return state != CLOSED;
-        }
-
-        private void notifyHalfClosed(Http2Stream stream) {
-            for (int i = 0; i < listeners.size(); i++) {
-                try {
-                    listeners.get(i).onStreamHalfClosed(stream);
-                } catch (RuntimeException e) {
-                    logger.error("Caught RuntimeException from listener onStreamHalfClosed.", e);
-                }
-            }
         }
 
         private void initChildrenIfEmpty() {
@@ -802,7 +823,7 @@ public class DefaultHttp2Connection implements Http2Connection {
      */
     private final class ConnectionStream extends DefaultStream {
         ConnectionStream() {
-            super(CONNECTION_STREAM_ID);
+            super(CONNECTION_STREAM_ID, IDLE);
         }
 
         @Override
@@ -891,18 +912,32 @@ public class DefaultHttp2Connection implements Http2Connection {
             return nextStreamId() > 0 && numActiveStreams + 1 <= maxActiveStreams;
         }
 
-        @Override
-        public DefaultStream createStream(int streamId) throws Http2Exception {
+        private DefaultStream createStream(int streamId, State state) throws Http2Exception {
             checkNewStreamAllowed(streamId);
 
             // Create and initialize the stream.
-            DefaultStream stream = new DefaultStream(streamId);
+            DefaultStream stream = new DefaultStream(streamId, state);
 
             // Update the next and last stream IDs.
             nextStreamId = streamId + 2;
             lastStreamCreated = streamId;
 
             addStream(stream);
+            return stream;
+        }
+
+        @Override
+        public DefaultStream createIdleStream(int streamId) throws Http2Exception {
+            return createStream(streamId, IDLE);
+        }
+
+        @Override
+        public DefaultStream createStream(int streamId, boolean halfClosed) throws Http2Exception {
+            DefaultStream stream = createStream(streamId, activeState(streamId, IDLE, isLocal(), halfClosed));
+            stream.activate();
+            if (halfClosed) {
+                notifyHalfClosed(stream);
+            }
             return stream;
         }
 
@@ -925,8 +960,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             checkNewStreamAllowed(streamId);
 
             // Create and initialize the stream.
-            DefaultStream stream = new DefaultStream(streamId);
-            stream.state = isLocal() ? RESERVED_LOCAL : RESERVED_REMOTE;
+            DefaultStream stream = new DefaultStream(streamId, isLocal() ? RESERVED_LOCAL : RESERVED_REMOTE);
 
             // Update the next and last stream IDs.
             nextStreamId = streamId + 2;
@@ -1150,16 +1184,6 @@ public class DefaultHttp2Connection implements Http2Connection {
             }
             notifyClosed(stream);
             removeStream(stream);
-        }
-
-        private void notifyClosed(DefaultStream stream) {
-            for (int i = 0; i < listeners.size(); i++) {
-                try {
-                    listeners.get(i).onStreamClosed(stream);
-                } catch (RuntimeException e) {
-                    logger.error("Caught RuntimeException from listener onStreamClosed.", e);
-                }
-            }
         }
 
         private boolean allowModifications() {

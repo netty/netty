@@ -271,7 +271,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             Http2Stream stream = connection.stream(streamId);
             boolean allowHalfClosedRemote = false;
             if (stream == null && !connection.streamMayHaveExisted(streamId)) {
-                stream = connection.remote().createStream(streamId).open(endOfStream);
+                stream = connection.remote().createStream(streamId, endOfStream);
                 // Allow the state to be HALF_CLOSE_REMOTE if we're creating it in that state.
                 allowHalfClosedRemote = stream.state() == HALF_CLOSED_REMOTE;
             }
@@ -283,7 +283,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
             switch (stream.state()) {
                 case RESERVED_REMOTE:
-                case IDLE:
                     stream.open(endOfStream);
                     break;
                 case OPEN:
@@ -336,7 +335,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
                     // PRIORITY frames always identify a stream. This means that if a PRIORITY frame is the
                     // first frame to be received for a stream that we must create the stream.
-                    stream = connection.remote().createStream(streamId);
+                    stream = connection.remote().createIdleStream(streamId);
                 } else if (streamCreatedAfterGoAwaySent(streamId)) {
                     // Ignore this frame.
                     return;

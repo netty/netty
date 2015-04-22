@@ -171,11 +171,31 @@ public interface Http2Connection {
          * <li>The connection is marked as going away.</li>
          * </ul>
          * <p>
-         * The caller is expected to {@link Http2Stream#open(boolean)} the stream.
+         * If the stream is intended to initialized to {@link Http2Stream.State#OPEN} then use
+         * {@link #createStream(int, boolean)} otherwise optimizations in {@link Listener}s may not work
+         * and memory may be thrashed. The caller is expected to {@link Http2Stream#open(boolean)} the stream.
          * @param streamId The ID of the stream
          * @see Http2Stream#open(boolean)
          */
-        Http2Stream createStream(int streamId) throws Http2Exception;
+        Http2Stream createIdleStream(int streamId) throws Http2Exception;
+
+        /**
+         * Creates a stream initiated by this endpoint. This could fail for the following reasons:
+         * <ul>
+         * <li>The requested stream ID is not the next sequential ID for this endpoint.</li>
+         * <li>The stream already exists.</li>
+         * <li>{@link #canCreateStream()} is {@code false}.</li>
+         * <li>The connection is marked as going away.</li>
+         * </ul>
+         * <p>
+         * This method differs from {@link #createdStreamId(int)} because the initial state of the stream will be
+         * Immediately set before notifying {@link Listener}s. The state transition is sensitive to {@code halfClosed}
+         * and is defined by {@link Http2Stream#open(boolean)}.
+         * @param streamId The ID of the stream
+         * @param halfClosed see {@link Http2Stream#open(boolean)}.
+         * @see Http2Stream#open(boolean)
+         */
+        Http2Stream createStream(int streamId, boolean halfClosed) throws Http2Exception;
 
         /**
          * Creates a push stream in the reserved state for this endpoint and notifies all listeners.
