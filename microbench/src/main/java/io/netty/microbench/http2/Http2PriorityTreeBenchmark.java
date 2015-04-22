@@ -53,7 +53,7 @@ public class Http2PriorityTreeBenchmark extends AbstractMicrobenchmark {
     public void setup() throws Http2Exception {
         connection = new DefaultHttp2Connection(false);
         for (int i = 0; i < numStreams; ++i) {
-            connection.local().createStream(toStreamId(i));
+            connection.local().createStream(toStreamId(i), false);
         }
     }
 
