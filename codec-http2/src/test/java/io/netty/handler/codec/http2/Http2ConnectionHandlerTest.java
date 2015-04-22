@@ -301,14 +301,27 @@ public class Http2ConnectionHandlerTest {
         verify(ctx, times(1)).close(any(ChannelPromise.class));
     }
 
+    @SuppressWarnings("unchecked")
+    @Test
     public void canSendGoAwayFrame() throws Exception {
-        handler = newHandler();
         ByteBuf data = mock(ByteBuf.class);
         long errorCode = Http2Error.INTERNAL_ERROR.code();
+        when(future.isDone()).thenReturn(true);
+        when(future.isSuccess()).thenReturn(true);
+        when(frameWriter.writeGoAway(eq(ctx), eq(STREAM_ID), eq(errorCode), eq(data), eq(promise))).thenReturn(future);
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocation) throws Throwable {
+                invocation.getArgumentAt(0, GenericFutureListener.class).operationComplete(future);
+                return null;
+            }
+        }).when(future).addListener(any(GenericFutureListener.class));
+        handler = newHandler();
         handler.goAway(ctx, STREAM_ID, errorCode, data, promise);
 
         verify(connection).goAwaySent(eq(STREAM_ID), eq(errorCode), eq(data));
         verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID), eq(errorCode), eq(data), eq(promise));
+        verify(ctx).close();
     }
 
     @Test

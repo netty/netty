@@ -66,11 +66,12 @@ public interface Http2LifecycleManager {
             ChannelPromise promise);
 
     /**
-     * Close the connection and prevent the peer from creating streams. After this call the peer
-     * is not allowed to create any new streams and the local endpoint will be limited to creating streams with
-     * {@code stream identifier <= lastStreamId}. This may result in sending a {@code GO_AWAY} frame (assuming we
-     * have not already sent one with {@code Last-Stream-ID <= lastStreamId}), or may just return success if a
-     * {@code GO_AWAY} has previously been sent.
+     * Prevents the peer from creating streams and close the connection if {@code errorCode} is not
+     * {@link Http2Error#NO_ERROR}. After this call the peer is not allowed to create any new streams and the local
+     * endpoint will be limited to creating streams with {@code stream identifier <= lastStreamId}. This may result in
+     * sending a {@code GO_AWAY} frame (assuming we have not already sent one with
+     * {@code Last-Stream-ID <= lastStreamId}), or may just return success if a {@code GO_AWAY} has previously been
+     * sent.
      * @param ctx The context used for communication and buffer allocation if necessary.
      * @param lastStreamId The last stream that the local endpoint is claiming it will accept.
      * @param errorCode The rational as to why the connection is being closed. See {@link Http2Error}.

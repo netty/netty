@@ -562,11 +562,17 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             future.addListener(new GenericFutureListener<ChannelFuture>() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
-                    if (!future.isSuccess()) {
-                        String msg = format("Sending GOAWAY failed: lastStreamId '%d', errorCode '%d', " +
-                                            "debugData '%s'.", lastStreamId, errorCode, debugData);
-                        logger.error(msg, future.cause());
-                        ctx.channel().close();
+                    if (future.isSuccess()) {
+                        if (errorCode != NO_ERROR.code()) {
+                            ctx.close();
+                        }
+                    } else {
+                        if (logger.isErrorEnabled()) {
+                            logger.error(
+                                   format("Sending GOAWAY failed: lastStreamId '%d', errorCode '%d', debugData '%s'.",
+                                           lastStreamId, errorCode, debugData), future.cause());
+                        }
+                        ctx.close();
                     }
                 }
             });
