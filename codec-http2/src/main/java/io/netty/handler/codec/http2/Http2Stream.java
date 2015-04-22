@@ -62,24 +62,18 @@ public interface Http2Stream {
     State state();
 
     /**
-     * Get the state as related to the {@link Http2LocalFlowController}.
+     * Get the state as related to the {@link Http2LocalFlowController}. This is equivalent to calling {@link
+     * Http2Stream#getProperty(Http2Connection.PropertyKey)} with the {@link Http2FlowController#stateKey()} for the
+     * local flow controller.
      */
     FlowControlState localFlowState();
 
     /**
-     * Set the state as related to the {@link Http2LocalFlowController}.
-     */
-    void localFlowState(FlowControlState state);
-
-    /**
-     * Get the state as related to {@link Http2RemoteFlowController}.
+     * Get the state as related to {@link Http2RemoteFlowController}. This is equivalent to calling {@link
+     * Http2Stream#getProperty(Http2Connection.PropertyKey)} with the {@link Http2FlowController#stateKey()} for the
+     * remote flow controller.
      */
     FlowControlState remoteFlowState();
-
-    /**
-     * Set the state as related to {@link Http2RemoteFlowController}.
-     */
-    void remoteFlowState(FlowControlState state);
 
     /**
      * Opens this stream, making it available via {@link Http2Connection#forEachActiveStream(Http2StreamVisitor)} and
@@ -140,17 +134,17 @@ public interface Http2Stream {
      * Associates the application-defined data with this stream.
      * @return The value that was previously associated with {@code key}, or {@code null} if there was none.
      */
-    Object setProperty(Object key, Object value);
+    <V> V setProperty(Http2Connection.PropertyKey key, V value);
 
     /**
      * Returns application-defined data if any was associated with this stream.
      */
-    <V> V getProperty(Object key);
+    <V> V getProperty(Http2Connection.PropertyKey key);
 
     /**
      * Returns and removes application-defined data if any was associated with this stream.
      */
-    <V> V removeProperty(Object key);
+    <V> V removeProperty(Http2Connection.PropertyKey key);
 
     /**
      * Updates an priority for this stream. Calling this method may affect the straucture of the

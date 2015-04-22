@@ -16,6 +16,7 @@ package io.netty.microbench.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_INITIAL_WINDOW_SIZE;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2RemoteFlowController;
 import io.netty.handler.codec.http2.Http2Stream;
@@ -24,6 +25,12 @@ public final class NoopHttp2RemoteFlowController implements Http2RemoteFlowContr
     public static final NoopHttp2RemoteFlowController INSTANCE = new NoopHttp2RemoteFlowController();
 
     private NoopHttp2RemoteFlowController() { }
+
+    @Override
+    public Http2Connection.PropertyKey stateKey() {
+        return null;
+    }
+
     @Override
     public void initialWindowSize(int newWindowSize) throws Http2Exception {
     }

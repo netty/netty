@@ -45,6 +45,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
 
     private final Http2Connection connection;
     private final Http2FrameWriter frameWriter;
+    private final Http2Connection.PropertyKey stateKey;
     private ChannelHandlerContext ctx;
     private volatile float windowUpdateRatio;
     private volatile int initialWindowSize = DEFAULT_WINDOW_SIZE;
@@ -60,14 +61,15 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         windowUpdateRatio(windowUpdateRatio);
 
         // Add a flow state for the connection.
-        connection.connectionStream().localFlowState(
-                new DefaultFlowState(connection.connectionStream(), initialWindowSize));
+        stateKey = connection.newKey();
+        connection.connectionStream()
+                .setProperty(stateKey, new DefaultFlowState(connection.connectionStream(), initialWindowSize));
 
         // Register for notification of new streams.
         connection.addListener(new Http2ConnectionAdapter() {
             @Override
             public void onStreamAdded(Http2Stream stream) {
-                stream.localFlowState(new DefaultFlowState(stream, 0));
+                stream.setProperty(stateKey, new DefaultFlowState(stream, 0));
             }
 
             @Override
@@ -93,6 +95,11 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
                 }
             }
         });
+    }
+
+    @Override
+    public Http2Connection.PropertyKey stateKey() {
+        return stateKey;
     }
 
     @Override
@@ -223,11 +230,12 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     }
 
     private DefaultFlowState connectionState() {
-        return (DefaultFlowState) connection.connectionStream().localFlowState();
+        return (DefaultFlowState) connection.connectionStream().getProperty(stateKey);
     }
 
-    private static DefaultFlowState state(Http2Stream stream) {
-        return (DefaultFlowState) checkNotNull(stream, "stream").localFlowState();
+    private DefaultFlowState state(Http2Stream stream) {
+        checkNotNull(stream, "stream");
+        return stream.getProperty(stateKey);
     }
 
     private static boolean isClosed(Http2Stream stream) {
@@ -410,7 +418,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     /**
      * Provides a means to iterate over all active streams and increment the flow control windows.
      */
-    private static final class WindowUpdateVisitor implements Http2StreamVisitor {
+    private final class WindowUpdateVisitor implements Http2StreamVisitor {
         private CompositeStreamException compositeException;
         private final int delta;
 

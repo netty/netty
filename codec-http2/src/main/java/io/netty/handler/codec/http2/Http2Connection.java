@@ -259,6 +259,17 @@ public interface Http2Connection {
     }
 
     /**
+     * A key to be used for associating application-defined properties with streams within this connection.
+     */
+    interface PropertyKey {
+    }
+
+    /**
+     * Creates a new key that is unique within this {@link Http2Connection}.
+     */
+    PropertyKey newKey();
+
+    /**
      * Adds a listener of stream life-cycle events.
      */
     void addListener(Listener listener);

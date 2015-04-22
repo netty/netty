@@ -38,16 +38,6 @@ import io.netty.util.ByteString;
  * stream. The compression provided by this class will be applied to the data for the entire stream.
  */
 public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionEncoder {
-    private static final Http2ConnectionAdapter CLEAN_UP_LISTENER = new Http2ConnectionAdapter() {
-        @Override
-        public void onStreamRemoved(Http2Stream stream) {
-            final EmbeddedChannel compressor = stream.getProperty(CompressorHttp2ConnectionEncoder.class);
-            if (compressor != null) {
-                cleanup(stream, compressor);
-            }
-        }
-    };
-
     public static final int DEFAULT_COMPRESSION_LEVEL = 6;
     public static final int DEFAULT_WINDOW_BITS = 15;
     public static final int DEFAULT_MEM_LEVEL = 8;
@@ -55,6 +45,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
     private final int compressionLevel;
     private final int windowBits;
     private final int memLevel;
+    private final Http2Connection.PropertyKey propertyKey;
 
     public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate) {
         this(delegate, DEFAULT_COMPRESSION_LEVEL, DEFAULT_WINDOW_BITS, DEFAULT_MEM_LEVEL);
@@ -76,15 +67,23 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         this.windowBits = windowBits;
         this.memLevel = memLevel;
 
-        connection().addListener(CLEAN_UP_LISTENER);
+        propertyKey = connection().newKey();
+        connection().addListener(new Http2ConnectionAdapter() {
+            @Override
+            public void onStreamRemoved(Http2Stream stream) {
+                final EmbeddedChannel compressor = stream.getProperty(propertyKey);
+                if (compressor != null) {
+                    cleanup(stream, compressor);
+                }
+            }
+        });
     }
 
     @Override
     public ChannelFuture writeData(final ChannelHandlerContext ctx, final int streamId, ByteBuf data, int padding,
             final boolean endOfStream, ChannelPromise promise) {
         final Http2Stream stream = connection().stream(streamId);
-        final EmbeddedChannel channel = stream == null ? null :
-            (EmbeddedChannel) stream.getProperty(CompressorHttp2ConnectionEncoder.class);
+        final EmbeddedChannel channel = stream == null ? null : (EmbeddedChannel) stream.getProperty(propertyKey);
         if (channel == null) {
             // The compressor may be null if no compatible encoding type was found in this stream's headers
             return super.writeData(ctx, streamId, data, padding, endOfStream, promise);
@@ -216,7 +215,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
             return;
         }
 
-        EmbeddedChannel compressor = stream.getProperty(CompressorHttp2ConnectionEncoder.class);
+        EmbeddedChannel compressor = stream.getProperty(propertyKey);
         if (compressor == null) {
             if (!endOfStream) {
                 ByteString encoding = headers.get(CONTENT_ENCODING);
@@ -226,7 +225,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                 try {
                     compressor = newContentCompressor(encoding);
                     if (compressor != null) {
-                        stream.setProperty(CompressorHttp2ConnectionEncoder.class, compressor);
+                        stream.setProperty(propertyKey, compressor);
                         ByteString targetContentEncoding = getTargetContentEncoding(encoding);
                         if (IDENTITY.equals(targetContentEncoding)) {
                             headers.remove(CONTENT_ENCODING);
@@ -256,7 +255,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
      * @param stream The stream for which {@code compressor} is the compressor for
      * @param compressor The compressor for {@code stream}
      */
-    private static void cleanup(Http2Stream stream, EmbeddedChannel compressor) {
+    void cleanup(Http2Stream stream, EmbeddedChannel compressor) {
         if (compressor.finish()) {
             for (;;) {
                 final ByteBuf buf = compressor.readOutbound();
@@ -267,7 +266,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                 buf.release();
             }
         }
-        stream.removeProperty(CompressorHttp2ConnectionEncoder.class);
+        stream.removeProperty(propertyKey);
     }
 
     /**
