@@ -607,9 +607,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 } else {
                     splitHeader(line);
                     CharSequence headerName = name;
-                    if (!HttpHeaderNames.CONTENT_LENGTH.equalsIgnoreCase(headerName) &&
-                        !HttpHeaderNames.TRANSFER_ENCODING.equalsIgnoreCase(headerName) &&
-                        !HttpHeaderNames.TRAILER.equalsIgnoreCase(headerName)) {
+                    if (!HttpHeaderNames.CONTENT_LENGTH.contentEqualsIgnoreCase(headerName) &&
+                        !HttpHeaderNames.TRANSFER_ENCODING.contentEqualsIgnoreCase(headerName) &&
+                        !HttpHeaderNames.TRAILER.contentEqualsIgnoreCase(headerName)) {
                         trailer.trailingHeaders().add(headerName, value);
                     }
                     lastHeader = name;

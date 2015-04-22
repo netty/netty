@@ -312,8 +312,8 @@ public final class HttpUtil {
                     AsciiString aValue = AsciiString.of(entry.getValue());
                     // https://tools.ietf.org/html/draft-ietf-httpbis-http2-16#section-8.1.2.2
                     // makes a special exception for TE
-                    if (!aName.equalsIgnoreCase(HttpHeaderNames.TE) ||
-                        aValue.equalsIgnoreCase(HttpHeaderValues.TRAILERS)) {
+                    if (!aName.contentEqualsIgnoreCase(HttpHeaderNames.TE) ||
+                        aValue.contentEqualsIgnoreCase(HttpHeaderValues.TRAILERS)) {
                         out.add(aName, aValue);
                     }
                 }

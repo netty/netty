@@ -107,8 +107,8 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
     protected FullHttpResponse newHandshakeResponse(FullHttpRequest req, HttpHeaders headers) {
 
         // Serve the WebSocket handshake request.
-        if (!HttpHeaderValues.UPGRADE.equalsIgnoreCase(req.headers().get(HttpHeaderNames.CONNECTION))
-                || !HttpHeaderValues.WEBSOCKET.equalsIgnoreCase(req.headers().get(HttpHeaderNames.UPGRADE))) {
+        if (!HttpHeaderValues.UPGRADE.contentEqualsIgnoreCase(req.headers().get(HttpHeaderNames.CONNECTION))
+                || !HttpHeaderValues.WEBSOCKET.contentEqualsIgnoreCase(req.headers().get(HttpHeaderNames.UPGRADE))) {
             throw new WebSocketHandshakeException("not a WebSocket handshake request: missing upgrade");
         }
 

@@ -663,13 +663,13 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                 return null;
             }
             String[] contents = splitMultipartHeader(newline);
-            if (HttpHeaderNames.CONTENT_DISPOSITION.equalsIgnoreCase(contents[0])) {
+            if (HttpHeaderNames.CONTENT_DISPOSITION.contentEqualsIgnoreCase(contents[0])) {
                 boolean checkSecondArg;
                 if (currentStatus == MultiPartStatus.DISPOSITION) {
-                    checkSecondArg = HttpHeaderValues.FORM_DATA.equalsIgnoreCase(contents[1]);
+                    checkSecondArg = HttpHeaderValues.FORM_DATA.contentEqualsIgnoreCase(contents[1]);
                 } else {
-                    checkSecondArg = HttpHeaderValues.ATTACHMENT.equalsIgnoreCase(contents[1])
-                            || HttpHeaderValues.FILE.equalsIgnoreCase(contents[1]);
+                    checkSecondArg = HttpHeaderValues.ATTACHMENT.contentEqualsIgnoreCase(contents[1])
+                            || HttpHeaderValues.FILE.contentEqualsIgnoreCase(contents[1]);
                 }
                 if (checkSecondArg) {
                     // read next values and store them in the map as Attribute
@@ -697,7 +697,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                         currentFieldAttributes.put(attribute.getName(), attribute);
                     }
                 }
-            } else if (HttpHeaderNames.CONTENT_TRANSFER_ENCODING.equalsIgnoreCase(contents[0])) {
+            } else if (HttpHeaderNames.CONTENT_TRANSFER_ENCODING.contentEqualsIgnoreCase(contents[0])) {
                 Attribute attribute;
                 try {
                     attribute = factory.createAttribute(request, HttpHeaderNames.CONTENT_TRANSFER_ENCODING.toString(),
@@ -708,7 +708,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                     throw new ErrorDataDecoderException(e);
                 }
                 currentFieldAttributes.put(HttpHeaderNames.CONTENT_TRANSFER_ENCODING, attribute);
-            } else if (HttpHeaderNames.CONTENT_LENGTH.equalsIgnoreCase(contents[0])) {
+            } else if (HttpHeaderNames.CONTENT_LENGTH.contentEqualsIgnoreCase(contents[0])) {
                 Attribute attribute;
                 try {
                     attribute = factory.createAttribute(request, HttpHeaderNames.CONTENT_LENGTH.toString(),
@@ -719,9 +719,9 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                     throw new ErrorDataDecoderException(e);
                 }
                 currentFieldAttributes.put(HttpHeaderNames.CONTENT_LENGTH, attribute);
-            } else if (HttpHeaderNames.CONTENT_TYPE.equalsIgnoreCase(contents[0])) {
+            } else if (HttpHeaderNames.CONTENT_TYPE.contentEqualsIgnoreCase(contents[0])) {
                 // Take care of possible "multipart/mixed"
-                if (HttpHeaderValues.MULTIPART_MIXED.equalsIgnoreCase(contents[1])) {
+                if (HttpHeaderValues.MULTIPART_MIXED.contentEqualsIgnoreCase(contents[1])) {
                     if (currentStatus == MultiPartStatus.DISPOSITION) {
                         String values = StringUtil.substringAfter(contents[2], '=');
                         multipartMixedBoundary = "--" + values;

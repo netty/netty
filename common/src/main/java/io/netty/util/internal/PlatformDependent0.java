@@ -15,9 +15,9 @@
  */
 package io.netty.util.internal;
 
+import static io.netty.util.internal.StringUtil.asciiToLowerCase;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import sun.misc.Unsafe;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -30,6 +30,8 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
+import sun.misc.Unsafe;
+
 /**
  * The {@link PlatformDependent} operations which requires access to {@code sun.misc.*}.
  */
@@ -39,7 +41,13 @@ final class PlatformDependent0 {
     private static final Unsafe UNSAFE;
     private static final boolean BIG_ENDIAN = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
     private static final long ADDRESS_FIELD_OFFSET;
-    private static final long ARRAY_BASE_OFFSET;
+    private static final long BYTE_ARRAY_BASE_OFFSET;
+    private static final long CHAR_ARRAY_BASE_OFFSET;
+    private static final long CHAR_ARRAY_INDEX_SCALE;
+    private static final HashCodeGenerator UNSAFE_HASER;
+    private static final HashCodeGenerator UNSAFE_HASER_CASE_INSENSITIVE;
+    private static final long STRING_VALUE_FIELD_OFFSET;
+    private static final long STRING_BUILDER_VALUE_FIELD_OFFSET;
 
     /**
      * Limits the number of bytes to copy per {@link Unsafe#copyMemory(long, long, long)} to allow safepoint polling
@@ -113,11 +121,17 @@ final class PlatformDependent0 {
 
         if (unsafe == null) {
             ADDRESS_FIELD_OFFSET = -1;
-            ARRAY_BASE_OFFSET = -1;
+            BYTE_ARRAY_BASE_OFFSET = CHAR_ARRAY_BASE_OFFSET = CHAR_ARRAY_INDEX_SCALE = -1;
             UNALIGNED = false;
+            UNSAFE_HASER = UNSAFE_HASER_CASE_INSENSITIVE = null;
+            STRING_VALUE_FIELD_OFFSET = STRING_BUILDER_VALUE_FIELD_OFFSET = -1;
         } else {
             ADDRESS_FIELD_OFFSET = objectFieldOffset(addressField);
-            ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(byte[].class);
+            BYTE_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(byte[].class);
+            CHAR_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(char[].class);
+            CHAR_ARRAY_INDEX_SCALE = UNSAFE.arrayIndexScale(char[].class);
+            UNSAFE_HASER = new UnsafeHasher();
+            UNSAFE_HASER_CASE_INSENSITIVE = new UnsafeHasherCaseInsensitive();
             boolean unaligned;
             try {
                 Class<?> bitsClass = Class.forName("java.nio.Bits", false, ClassLoader.getSystemClassLoader());
@@ -133,6 +147,45 @@ final class PlatformDependent0 {
 
             UNALIGNED = unaligned;
             logger.debug("java.nio.Bits.unaligned: {}", UNALIGNED);
+
+            Field stringValueField = AccessController.doPrivileged(new PrivilegedAction<Field>() {
+                @Override
+                public Field run() {
+                    try {
+                        Field f = String.class.getDeclaredField("value");
+                        f.setAccessible(true);
+                        return f;
+                    } catch (NoSuchFieldException e) {
+                        logger.warn("Failed to find String value array." +
+                                "String hash code optimizations are disabled.", e);
+                    } catch (SecurityException e) {
+                        logger.info("No permissions to get String value array." +
+                                "String hash code optimizations are disabled.", e);
+                    }
+                    return null;
+                }
+            });
+            Field stringBuilderValueField = AccessController.doPrivileged(new PrivilegedAction<Field>() {
+                @Override
+                public Field run() {
+                    try {
+                        Field f = StringBuilder.class.getSuperclass().getDeclaredField("value");
+                        f.setAccessible(true);
+                        return f;
+                    } catch (NoSuchFieldException e) {
+                        logger.warn("Failed to find StringBuilder value array." +
+                                " Hash code optimizations for this type are disabled.", e);
+                    } catch (SecurityException e) {
+                        logger.info("No permissions to get StringBuilder value array." +
+                                " Hash code optimizations for this type are disabled.", e);
+                    }
+                    return null;
+                }
+            });
+            STRING_VALUE_FIELD_OFFSET = stringValueField == null ?
+                    -1 : UNSAFE.objectFieldOffset(stringValueField);
+            STRING_BUILDER_VALUE_FIELD_OFFSET = stringBuilderValueField == null ?
+                    -1 : UNSAFE.objectFieldOffset(stringBuilderValueField);
         }
     }
 
@@ -158,8 +211,16 @@ final class PlatformDependent0 {
         return getLong(buffer, ADDRESS_FIELD_OFFSET);
     }
 
-    static long arrayBaseOffset() {
-        return ARRAY_BASE_OFFSET;
+    static long byteArrayBaseOffset() {
+        return BYTE_ARRAY_BASE_OFFSET;
+    }
+
+    static long charArrayBaseOffset() {
+        return CHAR_ARRAY_BASE_OFFSET;
+    }
+
+    static long charArrayIndexScale() {
+        return CHAR_ARRAY_INDEX_SCALE;
     }
 
     static Object getObject(Object object, long fieldOffset) {
@@ -174,7 +235,7 @@ final class PlatformDependent0 {
         return UNSAFE.getInt(object, fieldOffset);
     }
 
-    private static long getLong(Object object, long fieldOffset) {
+    static long getLong(Object object, long fieldOffset) {
         return UNSAFE.getLong(object, fieldOffset);
     }
 
@@ -318,35 +379,12 @@ final class PlatformDependent0 {
         }
     }
 
-    static boolean equals(byte[] bytes1, int startPos1, int endPos1, byte[] bytes2, int startPos2, int endPos2) {
-        final int len1 = endPos1 - startPos1;
-        final int len2 = endPos2 - startPos2;
-        if (len1 != len2) {
-            return false;
-        }
-        if (len1 == 0) {
-            return true;
-        }
-        final long baseOffset1 = ARRAY_BASE_OFFSET + startPos1;
-        final long baseOffset2 = ARRAY_BASE_OFFSET + startPos2;
-        int remainingBytes = len1 & 7;
-        for (int i = len1 - 8; i >= remainingBytes; i -= 8) {
-            if (UNSAFE.getLong(bytes1, baseOffset1 + i) != UNSAFE.getLong(bytes2, baseOffset2 + i)) {
-                return false;
-            }
-        }
-        if (remainingBytes >= 4) {
-            remainingBytes -= 4;
-            if (UNSAFE.getInt(bytes1, baseOffset1 + remainingBytes) !=
-                UNSAFE.getInt(bytes2, baseOffset2 + remainingBytes)) {
-                return false;
-            }
-        }
-        if (remainingBytes >= 2) {
-            return UNSAFE.getChar(bytes1, baseOffset1) == UNSAFE.getChar(bytes2, baseOffset2) &&
-                   (remainingBytes == 2 || bytes1[startPos1 + 2] == bytes2[startPos2 + 2]);
-        }
-        return bytes1[startPos1] == bytes2[startPos2];
+    static HashCodeGenerator hashCodeGenerator() {
+        return UNSAFE_HASER;
+    }
+
+    static HashCodeGenerator hashCodeGeneratorAsciiCaseInsensitive() {
+        return UNSAFE_HASER_CASE_INSENSITIVE;
     }
 
     static <U, W> AtomicReferenceFieldUpdater<U, W> newAtomicReferenceFieldUpdater(
@@ -415,7 +453,186 @@ final class PlatformDependent0 {
         UNSAFE.freeMemory(address);
     }
 
-    private PlatformDependent0() {
+    private static char[] array(CharSequence data) {
+        if (data.getClass() == String.class) {
+            return STRING_VALUE_FIELD_OFFSET != -1 ? (char[]) UNSAFE.getObject(data, STRING_VALUE_FIELD_OFFSET) : null;
+        } else if (data.getClass() == StringBuilder.class) {
+            return STRING_BUILDER_VALUE_FIELD_OFFSET != -1 ?
+                    (char[]) UNSAFE.getObject(data, STRING_BUILDER_VALUE_FIELD_OFFSET) : null;
+        }
+        return null;
     }
 
+    private static final class UnsafeHasherCaseInsensitive extends DefaultHashCodeGeneratorCaseInsensitive {
+        @Override
+        public boolean equals(byte[] bytes1, int startPos1, CharSequence bytes2, int startPos2, int len) {
+            char[] bytes2Array = array(bytes2);
+            if (bytes2Array != null) {
+                return equals(bytes1, startPos1, bytes2Array, startPos2, len);
+            }
+            return super.equals(bytes1, startPos1, bytes2, startPos2, len);
+        }
+
+        @Override
+        public boolean equals(CharSequence bytes1, int startPos1, CharSequence bytes2, int startPos2, int len) {
+            // CharSequence by itself does not provide access to any underlying data structure, and using
+            // charAt can be costly. For the common types in the CharSequence we can provide an optimized
+            // hashCode by directly using the underlying char[].
+            char[] bytes1Array = array(bytes1);
+            if (bytes1Array != null) {
+                char[] bytes2Array = array(bytes2);
+                if (bytes2Array != null) {
+                    return equals(bytes1Array, startPos1, bytes2Array, startPos2, len);
+                }
+            }
+            // TODO: consider optimization if 1 returns a char[] and the other doesn't?
+            return super.equals(bytes1, startPos1, bytes2, startPos2, len);
+        }
+
+        private boolean equals(byte[] bytes1, int startPos1, char[] bytes2, int startPos2, int len) {
+            final int end = startPos1 + len;
+            for (int i = startPos1, j = startPos2; i < end; ++i, ++j) {
+                char c1 = (char) (bytes1[i] & 0xFF);
+                char c2 = bytes2[j];
+                if (c1 != c2 && asciiToLowerCase(c1) != asciiToLowerCase(c2)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private boolean equals(char[] bytes1, int startPos1, char[] bytes2, int startPos2, int len) {
+            final int end = startPos1 + len;
+            for (int i = startPos1, j = startPos2; i < end; ++i, ++j) {
+                char c1 = bytes1[i];
+                char c2 = bytes2[j];
+                if (c1 != c2 && asciiToLowerCase(c1) != asciiToLowerCase(c2)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
+    private static final class UnsafeHasher extends DefaultHashCodeGenerator {
+        @Override
+        public boolean equals(byte[] bytes1, int startPos1, CharSequence bytes2, int startPos2, int len) {
+            char[] bytes2Array = array(bytes2);
+            if (bytes2Array != null) {
+                return equals(bytes1, startPos1, bytes2Array, startPos2, len);
+            }
+            return super.equals(bytes1, startPos1, bytes2, startPos2, len);
+        }
+
+        private boolean equals(byte[] bytes1, int startPos1, char[] bytes2, int startPos2, int len) {
+            final int end = startPos1 + len;
+            for (int i = startPos1, j = startPos2; i < end; ++i, ++j) {
+                if ((char) (bytes1[i] & 0xFF) != bytes2[j]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        @Override
+        public boolean equals(CharSequence bytes1, int startPos1, CharSequence bytes2, int startPos2, int len) {
+            // CharSequence by itself does not provide access to any underlying data structure, and using
+            // charAt can be costly. For the common types in the CharSequence we can provide an optimized
+            // hashCode by directly using the underlying char[].
+            char[] bytes1Array = array(bytes1);
+            if (bytes1Array != null) {
+                char[] bytes2Array = array(bytes2);
+                if (bytes2Array != null) {
+                    return equals(bytes1Array, startPos1, bytes2Array, startPos2, len);
+                }
+            }
+            // TODO: consider optimization if 1 returns a char[] and the other doesn't?
+            return super.equals(bytes1, startPos1, bytes2, startPos2, len);
+        }
+
+        @Override
+        public boolean equals(byte[] bytes1, int startPos1, byte[] bytes2, int startPos2, int len) {
+            if (len <= 0) {
+                return true;
+            }
+            int remainingBytes = len & 7;
+            final long baseOffset1 = BYTE_ARRAY_BASE_OFFSET + startPos1;
+            final long baseOffset2 = BYTE_ARRAY_BASE_OFFSET + startPos2;
+            final long end1 = baseOffset1 + remainingBytes;
+            for (long i = baseOffset1 - 8 + len,
+                      j = baseOffset2 - 8 + len; i >= end1; i -= 8, j -= 8) {
+                if (UNSAFE.getLong(bytes1, i) != UNSAFE.getLong(bytes2, j)) {
+                    return false;
+                }
+            }
+            if (remainingBytes >= 4) {
+                remainingBytes -= 4;
+                if (UNSAFE.getInt(bytes1, baseOffset1 + remainingBytes) !=
+                        UNSAFE.getInt(bytes2, baseOffset2 + remainingBytes)) {
+                    return false;
+                }
+            }
+            if (remainingBytes >= 2) {
+                return UNSAFE.getChar(bytes1, baseOffset1) == UNSAFE.getChar(bytes2, baseOffset2) &&
+                        (remainingBytes == 2 || bytes1[startPos1 + 2] == bytes2[startPos2 + 2]);
+            }
+            return bytes1[startPos1] == bytes2[startPos2];
+        }
+
+        private boolean equals(char[] bytes1, int startPos1, char[] bytes2, int startPos2, int len) {
+            final int remainingBytes = len & 7;
+            if (len > 7) {
+                final long rend = remainingBytes + startPos1;
+                int i = len - 8 + startPos1, j = len - 8 + startPos2;
+                do {
+                    if (UNSAFE.getLong(bytes1, CHAR_ARRAY_BASE_OFFSET + i * CHAR_ARRAY_INDEX_SCALE) !=
+                        UNSAFE.getLong(bytes2, CHAR_ARRAY_BASE_OFFSET + j * CHAR_ARRAY_INDEX_SCALE) ||
+                        UNSAFE.getLong(bytes1, CHAR_ARRAY_BASE_OFFSET + (i + 4) * CHAR_ARRAY_INDEX_SCALE) !=
+                        UNSAFE.getLong(bytes2, CHAR_ARRAY_BASE_OFFSET + (j + 4) * CHAR_ARRAY_INDEX_SCALE)) {
+                        return false;
+                    }
+                    i -= 8;
+                    j -= 8;
+                } while (i >= rend);
+            }
+            switch (remainingBytes) {
+            case 7:
+                return UNSAFE.getLong(bytes1, CHAR_ARRAY_BASE_OFFSET + (startPos1 + 3) * CHAR_ARRAY_INDEX_SCALE) ==
+                       UNSAFE.getLong(bytes2, CHAR_ARRAY_BASE_OFFSET + (startPos2 + 3) * CHAR_ARRAY_INDEX_SCALE) &&
+                       UNSAFE.getInt(bytes1, CHAR_ARRAY_BASE_OFFSET + (startPos1 + 1) * CHAR_ARRAY_INDEX_SCALE) ==
+                       UNSAFE.getInt(bytes2, CHAR_ARRAY_BASE_OFFSET + (startPos2 + 1) * CHAR_ARRAY_INDEX_SCALE) &&
+                       UNSAFE.getByte(bytes1, CHAR_ARRAY_BASE_OFFSET + startPos1 * CHAR_ARRAY_INDEX_SCALE) ==
+                       UNSAFE.getByte(bytes2, CHAR_ARRAY_BASE_OFFSET + startPos2 * CHAR_ARRAY_INDEX_SCALE);
+            case 6:
+                return UNSAFE.getLong(bytes1, CHAR_ARRAY_BASE_OFFSET + (startPos1 + 2) * CHAR_ARRAY_INDEX_SCALE) ==
+                       UNSAFE.getLong(bytes2, CHAR_ARRAY_BASE_OFFSET + (startPos2 + 2) * CHAR_ARRAY_INDEX_SCALE) &&
+                       UNSAFE.getInt(bytes1, CHAR_ARRAY_BASE_OFFSET + startPos1 * CHAR_ARRAY_INDEX_SCALE) ==
+                       UNSAFE.getInt(bytes2, CHAR_ARRAY_BASE_OFFSET + startPos2 * CHAR_ARRAY_INDEX_SCALE);
+            case 5:
+                return UNSAFE.getLong(bytes1, CHAR_ARRAY_BASE_OFFSET + (startPos1 + 1) * CHAR_ARRAY_INDEX_SCALE) ==
+                       UNSAFE.getLong(bytes2, CHAR_ARRAY_BASE_OFFSET + (startPos2 + 1) * CHAR_ARRAY_INDEX_SCALE) &&
+                       UNSAFE.getByte(bytes1, CHAR_ARRAY_BASE_OFFSET + startPos1 * CHAR_ARRAY_INDEX_SCALE) ==
+                       UNSAFE.getByte(bytes2, CHAR_ARRAY_BASE_OFFSET + startPos2 * CHAR_ARRAY_INDEX_SCALE);
+            case 4:
+                return UNSAFE.getLong(bytes1, CHAR_ARRAY_BASE_OFFSET + startPos1 * CHAR_ARRAY_INDEX_SCALE) ==
+                       UNSAFE.getLong(bytes2, CHAR_ARRAY_BASE_OFFSET + startPos2 * CHAR_ARRAY_INDEX_SCALE);
+            case 3:
+                return UNSAFE.getInt(bytes1, CHAR_ARRAY_BASE_OFFSET + (startPos1 + 1) * CHAR_ARRAY_INDEX_SCALE) ==
+                       UNSAFE.getInt(bytes2, CHAR_ARRAY_BASE_OFFSET + (startPos2 + 1) * CHAR_ARRAY_INDEX_SCALE) &&
+                       UNSAFE.getByte(bytes1, CHAR_ARRAY_BASE_OFFSET + startPos1 * CHAR_ARRAY_INDEX_SCALE) ==
+                       UNSAFE.getByte(bytes2, CHAR_ARRAY_BASE_OFFSET + startPos2 * CHAR_ARRAY_INDEX_SCALE);
+            case 2:
+                return UNSAFE.getInt(bytes1, CHAR_ARRAY_BASE_OFFSET + startPos1 * CHAR_ARRAY_INDEX_SCALE) ==
+                       UNSAFE.getInt(bytes2, CHAR_ARRAY_BASE_OFFSET + startPos2 * CHAR_ARRAY_INDEX_SCALE);
+            case 1:
+                return UNSAFE.getByte(bytes1, CHAR_ARRAY_BASE_OFFSET + startPos1 * CHAR_ARRAY_INDEX_SCALE) ==
+                       UNSAFE.getByte(bytes2, CHAR_ARRAY_BASE_OFFSET + startPos2 * CHAR_ARRAY_INDEX_SCALE);
+            default:
+                return true;
+            }
+        }
+    }
+
+    private PlatformDependent0() {
+    }
 }
