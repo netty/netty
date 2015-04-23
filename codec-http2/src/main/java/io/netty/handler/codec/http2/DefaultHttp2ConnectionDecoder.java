@@ -443,7 +443,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             // Send an ack back to the remote client.
             // Need to retain the buffer here since it will be released after the write completes.
             encoder.writePing(ctx, true, data.retain(), ctx.newPromise());
-            ctx.flush();
 
             listener.onPingRead(ctx, data);
         }

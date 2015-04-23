@@ -130,6 +130,7 @@ public class Http2ConnectionRoundtripTest {
             public void run() {
                 http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0, false,
                         newPromise());
+                ctx().flush();
             }
         });
 
@@ -174,6 +175,7 @@ public class Http2ConnectionRoundtripTest {
             public void run() {
                 http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0, false,
                         newPromise());
+                ctx().flush();
             }
         });
 
@@ -206,6 +208,7 @@ public class Http2ConnectionRoundtripTest {
             public void run() {
                 http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0, false,
                         newPromise());
+                ctx().flush();
             }
         });
 
@@ -237,6 +240,7 @@ public class Http2ConnectionRoundtripTest {
             public void run() {
                 http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0,
                         true, newPromise());
+                ctx().flush();
             }
         });
 
@@ -247,6 +251,7 @@ public class Http2ConnectionRoundtripTest {
             public void run() {
                 http2Client.encoder().writeHeaders(ctx(), Integer.MAX_VALUE + 1, headers, 0, (short) 16, false, 0,
                         true, newPromise());
+                ctx().flush();
             }
         });
 
@@ -292,6 +297,7 @@ public class Http2ConnectionRoundtripTest {
                     // Write trailers.
                     http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0,
                             true, newPromise());
+                    ctx().flush();
                 }
             });
 
@@ -376,6 +382,7 @@ public class Http2ConnectionRoundtripTest {
                         // Write trailers.
                         http2Client.encoder().writeHeaders(ctx(), streamId, headers, 0, (short) 16,
                                 false, 0, true, newPromise());
+                        ctx().flush();
                     }
                 }
             });

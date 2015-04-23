@@ -46,7 +46,6 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     private final Http2Connection.PropertyKey stateKey;
     private int initialWindowSize = DEFAULT_WINDOW_SIZE;
     private ChannelHandlerContext ctx;
-    private boolean needFlush;
 
     public DefaultHttp2RemoteFlowController(Http2Connection connection) {
         this.connection = checkNotNull(connection, "connection");
@@ -185,7 +184,6 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             AbstractState state = state(stream);
             state.incrementStreamWindow(delta);
             state.writeBytes(state.writableWindow());
-            flush();
         }
     }
 
@@ -207,11 +205,6 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             return;
         }
         state.writeBytes(state.writableWindow());
-        try {
-            flush();
-        } catch (Throwable t) {
-            frame.error(t);
-        }
     }
 
     /**
@@ -238,16 +231,6 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     }
 
     /**
-     * Flushes the {@link ChannelHandlerContext} if we've received any data frames.
-     */
-    private void flush() {
-        if (needFlush) {
-            ctx.flush();
-            needFlush = false;
-        }
-    }
-
-    /**
      * Writes as many pending bytes as possible, according to stream priority.
      */
     private void writePendingBytes() throws Http2Exception {
@@ -260,7 +243,6 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
             // Now write all of the allocated bytes.
             connection.forEachActiveStream(WRITE_ALLOCATED_BYTES);
-            flush();
         }
     }
 
@@ -604,13 +586,10 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         /**
          * Writes the frame and decrements the stream and connection window sizes. If the frame is in the pending
          * queue, the written bytes are removed from this branch of the priority tree.
-         * <p>
-         * Note: this does not flush the {@link ChannelHandlerContext}.
-         * </p>
          */
         private int write(FlowControlled frame, int allowedBytes) {
             int before = frame.size();
-            int writtenBytes = 0;
+            int writtenBytes;
             // In case an exception is thrown we want to remember it and pass it to cancel(Throwable).
             Throwable cause = null;
             try {
@@ -618,7 +597,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
                 // Write the portion of the frame.
                 writing = true;
-                needFlush |= frame.write(max(0, allowedBytes));
+                frame.write(max(0, allowedBytes));
                 if (!cancelled && frame.size() == 0) {
                     // This frame has been fully written, remove this frame and notify it. Since we remove this frame
                     // first, we're guaranteed that its error method will not be called when we call cancel.
