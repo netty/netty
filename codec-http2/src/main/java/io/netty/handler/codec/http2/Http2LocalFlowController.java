@@ -57,10 +57,11 @@ public interface Http2LocalFlowController extends Http2FlowController {
      * If {@code stream} is {@code null} or closed (i.e. {@link Http2Stream#state()} method returns {@link
      * Http2Stream.State#CLOSED}), calling this method has no effect.
      * @param numBytes the number of bytes to be returned to the flow control window.
+     * @return true if a {@code WINDOW_UPDATE} was sent, false otherwise.
      * @throws Http2Exception if the number of bytes returned exceeds the {@link #unconsumedBytes(Http2Stream)} for the
      * stream.
      */
-    void consumeBytes(ChannelHandlerContext ctx, Http2Stream stream, int numBytes) throws Http2Exception;
+    boolean consumeBytes(ChannelHandlerContext ctx, Http2Stream stream, int numBytes) throws Http2Exception;
 
     /**
      * The number of bytes for the given stream that have been received but not yet consumed by the

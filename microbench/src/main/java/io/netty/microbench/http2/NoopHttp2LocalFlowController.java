@@ -57,7 +57,8 @@ public final class NoopHttp2LocalFlowController implements Http2LocalFlowControl
     }
 
     @Override
-    public void consumeBytes(ChannelHandlerContext ctx, Http2Stream stream, int numBytes) throws Http2Exception {
+    public boolean consumeBytes(ChannelHandlerContext ctx, Http2Stream stream, int numBytes) throws Http2Exception {
+        return false;
     }
 
     @Override

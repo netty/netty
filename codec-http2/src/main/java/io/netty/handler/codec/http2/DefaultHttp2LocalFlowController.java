@@ -140,7 +140,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     }
 
     @Override
-    public void consumeBytes(ChannelHandlerContext ctx, Http2Stream stream, int numBytes)
+    public boolean consumeBytes(ChannelHandlerContext ctx, Http2Stream stream, int numBytes)
             throws Http2Exception {
         // Streams automatically consume all remaining bytes when they are closed, so just ignore
         // if already closed.
@@ -152,9 +152,11 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
                 throw new IllegalArgumentException("numBytes must be positive");
             }
 
-            connectionState().consumeBytes(ctx, numBytes);
-            state(stream).consumeBytes(ctx, numBytes);
+            boolean windowUpdateSent = connectionState().consumeBytes(ctx, numBytes);
+            windowUpdateSent |= state(stream).consumeBytes(ctx, numBytes);
+            return windowUpdateSent;
         }
+        return false;
     }
 
     @Override
@@ -374,10 +376,10 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         }
 
         @Override
-        public void consumeBytes(ChannelHandlerContext ctx, int numBytes) throws Http2Exception {
+        public boolean consumeBytes(ChannelHandlerContext ctx, int numBytes) throws Http2Exception {
             // Return the bytes processed and update the window.
             returnProcessedBytes(numBytes);
-            writeWindowUpdateIfNeeded(ctx);
+            return writeWindowUpdateIfNeeded(ctx);
         }
 
         @Override
@@ -386,15 +388,17 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         }
 
         @Override
-        public void writeWindowUpdateIfNeeded(ChannelHandlerContext ctx) throws Http2Exception {
+        public boolean writeWindowUpdateIfNeeded(ChannelHandlerContext ctx) throws Http2Exception {
             if (endOfStream || initialStreamWindowSize <= 0) {
-                return;
+                return false;
             }
 
             int threshold = (int) (initialStreamWindowSize * streamWindowUpdateRatio);
             if (processedWindow <= threshold) {
                 writeWindowUpdate(ctx);
+                return true;
             }
+            return false;
         }
 
         /**
@@ -444,12 +448,13 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         }
 
         @Override
-        public void writeWindowUpdateIfNeeded(ChannelHandlerContext ctx) throws Http2Exception {
+        public boolean writeWindowUpdateIfNeeded(ChannelHandlerContext ctx) throws Http2Exception {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void consumeBytes(ChannelHandlerContext ctx, int numBytes) throws Http2Exception {
+        public boolean consumeBytes(ChannelHandlerContext ctx, int numBytes) throws Http2Exception {
+            return false;
         }
 
         @Override
@@ -503,10 +508,21 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
 
         /**
          * Updates the flow control window for this stream if it is appropriate.
+         *
+         * @return true if {@code WINDOW_UPDATE} was written, false otherwise.
          */
-        void writeWindowUpdateIfNeeded(ChannelHandlerContext ctx) throws Http2Exception;
+        boolean writeWindowUpdateIfNeeded(ChannelHandlerContext ctx) throws Http2Exception;
 
-        void consumeBytes(ChannelHandlerContext ctx, int numBytes) throws Http2Exception;
+        /**
+         * Indicates that the application has consumed {@code numBytes} from the connection or stream and is
+         * ready to receive more data.
+         *
+         * @param ctx the channel handler context to use when sending a {@code WINDOW_UPDATE} if appropriate
+         * @param numBytes the number of bytes to be returned to the flow control window.
+         * @return true if {@code WINDOW_UPDATE} was written, false otherwise.
+         * @throws Http2Exception
+         */
+        boolean consumeBytes(ChannelHandlerContext ctx, int numBytes) throws Http2Exception;
 
         int unconsumedBytes();
 

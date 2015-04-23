@@ -18,6 +18,8 @@ package io.netty.handler.codec.http2;
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
@@ -86,11 +88,11 @@ public class DefaultHttp2LocalFlowControllerTest {
         receiveFlowControlledFrame(STREAM_ID, dataSize, 0, false);
 
         // Return only a few bytes and verify that the WINDOW_UPDATE hasn't been sent.
-        consumeBytes(STREAM_ID, 10);
+        assertFalse(consumeBytes(STREAM_ID, 10));
         verifyWindowUpdateNotSent(CONNECTION_STREAM_ID);
 
         // Return the rest and verify the WINDOW_UPDATE is sent.
-        consumeBytes(STREAM_ID, dataSize - 10);
+        assertTrue(consumeBytes(STREAM_ID, dataSize - 10));
         verifyWindowUpdateSent(STREAM_ID, dataSize);
         verifyWindowUpdateSent(CONNECTION_STREAM_ID, dataSize);
     }
@@ -110,7 +112,7 @@ public class DefaultHttp2LocalFlowControllerTest {
         verifyWindowUpdateNotSent(CONNECTION_STREAM_ID);
         verifyWindowUpdateNotSent(STREAM_ID);
 
-        consumeBytes(STREAM_ID, dataSize);
+        assertTrue(consumeBytes(STREAM_ID, dataSize));
         verifyWindowUpdateSent(CONNECTION_STREAM_ID, dataSize);
         verifyWindowUpdateNotSent(STREAM_ID);
     }
@@ -123,7 +125,7 @@ public class DefaultHttp2LocalFlowControllerTest {
 
         // Don't set end-of-stream so we'll get a window update for the stream as well.
         receiveFlowControlledFrame(STREAM_ID, dataSize, 0, false);
-        consumeBytes(STREAM_ID, dataSize);
+        assertTrue(consumeBytes(STREAM_ID, dataSize));
         verifyWindowUpdateSent(CONNECTION_STREAM_ID, windowDelta);
         verifyWindowUpdateSent(STREAM_ID, windowDelta);
     }
@@ -150,7 +152,7 @@ public class DefaultHttp2LocalFlowControllerTest {
 
         // Send the next frame and verify that the expected window updates were sent.
         receiveFlowControlledFrame(STREAM_ID, initialWindowSize, 0, false);
-        consumeBytes(STREAM_ID, initialWindowSize);
+        assertTrue(consumeBytes(STREAM_ID, initialWindowSize));
         int delta = newInitialWindowSize - initialWindowSize;
         verifyWindowUpdateSent(STREAM_ID, delta);
         verifyWindowUpdateSent(CONNECTION_STREAM_ID, delta);
@@ -172,7 +174,7 @@ public class DefaultHttp2LocalFlowControllerTest {
             verifyWindowUpdateNotSent(CONNECTION_STREAM_ID);
             assertEquals(DEFAULT_WINDOW_SIZE - data1, window(STREAM_ID));
             assertEquals(DEFAULT_WINDOW_SIZE - data1, window(CONNECTION_STREAM_ID));
-            consumeBytes(STREAM_ID, data1);
+            assertTrue(consumeBytes(STREAM_ID, data1));
             verifyWindowUpdateSent(STREAM_ID, data1);
             verifyWindowUpdateSent(CONNECTION_STREAM_ID, data1);
 
@@ -191,8 +193,8 @@ public class DefaultHttp2LocalFlowControllerTest {
             assertEquals(DEFAULT_WINDOW_SIZE - data1, window(STREAM_ID));
             assertEquals(DEFAULT_WINDOW_SIZE - data1, window(newStreamId));
             assertEquals(DEFAULT_WINDOW_SIZE - (data1 << 1), window(CONNECTION_STREAM_ID));
-            consumeBytes(STREAM_ID, data1);
-            consumeBytes(newStreamId, data2);
+            assertFalse(consumeBytes(STREAM_ID, data1));
+            assertTrue(consumeBytes(newStreamId, data2));
             verifyWindowUpdateNotSent(STREAM_ID);
             verifyWindowUpdateNotSent(newStreamId);
             verifyWindowUpdateSent(CONNECTION_STREAM_ID, data1 + data2);
@@ -266,8 +268,8 @@ public class DefaultHttp2LocalFlowControllerTest {
             assertEquals(DEFAULT_WINDOW_SIZE - data2, window(STREAM_ID));
             assertEquals(newDefaultWindowSize - data1, window(newStreamId));
             assertEquals(newDefaultWindowSize - data2 - data1, window(CONNECTION_STREAM_ID));
-            consumeBytes(STREAM_ID, data2);
-            consumeBytes(newStreamId, data1);
+            assertFalse(consumeBytes(STREAM_ID, data2));
+            assertTrue(consumeBytes(newStreamId, data1));
             verifyWindowUpdateNotSent(STREAM_ID);
             verifyWindowUpdateSent(newStreamId, data1);
             verifyWindowUpdateSent(CONNECTION_STREAM_ID, data1 + data2);
@@ -305,8 +307,8 @@ public class DefaultHttp2LocalFlowControllerTest {
         return buffer;
     }
 
-    private void consumeBytes(int streamId, int numBytes) throws Http2Exception {
-        controller.consumeBytes(ctx, stream(streamId), numBytes);
+    private boolean consumeBytes(int streamId, int numBytes) throws Http2Exception {
+        return controller.consumeBytes(ctx, stream(streamId), numBytes);
     }
 
     private void verifyWindowUpdateSent(int streamId, int windowSizeIncrement) {
