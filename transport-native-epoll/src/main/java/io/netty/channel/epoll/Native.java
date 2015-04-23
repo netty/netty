@@ -181,7 +181,7 @@ public final class Native {
     private static native int close0(int fd);
 
     public static int splice(int fd, int offIn, int fdOut, int offOut, int len) throws IOException {
-        int res =  splice0(fd, offIn, fdOut, offOut, len);
+        int res = splice0(fd, offIn, fdOut, offOut, len);
         if (res >= 0) {
             return res;
         }

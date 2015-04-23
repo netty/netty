@@ -37,6 +37,8 @@ import io.netty.util.internal.MpscLinkedQueueNode;
 import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -53,7 +55,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(ByteBuf.class) + ", " +
                     StringUtil.simpleClassName(DefaultFileRegion.class) + ')';
-
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractEpollStreamChannel.class);
     static final ClosedChannelException CLOSED_CHANNEL_EXCEPTION = new ClosedChannelException();
 
     static {
@@ -920,7 +922,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
 
                     // Depending on if we are done with splicing inbound data we set the right promise for the
                     // outbound splicing.
-                    ChannelPromise splicePromise;
+                    final ChannelPromise splicePromise;
                     if (len == 0) {
                         splicePromise = promise;
                     } else {
@@ -1022,10 +1024,10 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
                     if (len != Integer.MAX_VALUE) {
                         len -= splicedIn;
                     }
-                    while (splicedIn > 0) {
+                    do {
                         int splicedOut = Native.splice(pipeIn, -1, fd.intValue(), offset, splicedIn);
                         splicedIn -= splicedOut;
-                    }
+                    } while (splicedIn > 0);
                     if (len == 0) {
                         promise.setSuccess();
                         return true;
@@ -1045,8 +1047,10 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
             if (pipe != -1) {
                 try {
                     Native.close(pipe);
-                } catch (IOException ignore) {
-                    // should never happen on a pipe
+                } catch (IOException e) {
+                    if (logger.isErrorEnabled()) {
+                        logger.error("Error while closing a pipe", e);
+                    }
                 }
             }
         }
