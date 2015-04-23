@@ -309,7 +309,7 @@ public class DefaultHttp2LocalFlowControllerTest {
     }
 
     private int window(int streamId) throws Http2Exception {
-        return stream(streamId).localFlowState().windowSize();
+        return controller.windowSize(stream(streamId));
     }
 
     private Http2Stream stream(int streamId) throws Http2Exception {

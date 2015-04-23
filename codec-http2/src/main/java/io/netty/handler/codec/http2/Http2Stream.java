@@ -34,24 +34,6 @@ public interface Http2Stream {
     }
 
     /**
-     * Represents the state which flow controller implementations are expected to track.
-     */
-    interface FlowControlState {
-        /**
-         * Get the portion of the flow control window that is available for sending/receiving frames which are subject
-         * to flow control. This quantity is measured in number of bytes.
-         */
-        int windowSize();
-
-        /**
-         * Get the initial flow control window size. This quantity is measured in number of bytes.
-         * Note the unavailable window portion can be calculated by
-         * {@link #initialWindowSize()} - {@link #windowSize()}.
-         */
-        int initialWindowSize();
-    }
-
-    /**
      * Gets the unique identifier for this stream within the connection.
      */
     int id();
@@ -60,20 +42,6 @@ public interface Http2Stream {
      * Gets the state of this stream.
      */
     State state();
-
-    /**
-     * Get the state as related to the {@link Http2LocalFlowController}. This is equivalent to calling {@link
-     * Http2Stream#getProperty(Http2Connection.PropertyKey)} with the {@link Http2FlowController#stateKey()} for the
-     * local flow controller.
-     */
-    FlowControlState localFlowState();
-
-    /**
-     * Get the state as related to {@link Http2RemoteFlowController}. This is equivalent to calling {@link
-     * Http2Stream#getProperty(Http2Connection.PropertyKey)} with the {@link Http2FlowController#stateKey()} for the
-     * remote flow controller.
-     */
-    FlowControlState remoteFlowState();
 
     /**
      * Opens this stream, making it available via {@link Http2Connection#forEachActiveStream(Http2StreamVisitor)} and

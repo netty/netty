@@ -22,8 +22,8 @@ import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http2.Http2Stream.FlowControlState;
 import io.netty.handler.codec.http2.Http2Stream.State;
 
 import java.util.ArrayDeque;
@@ -120,11 +120,6 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     }
 
     @Override
-    public Http2Connection.PropertyKey stateKey() {
-        return stateKey;
-    }
-
-    @Override
     public void initialWindowSize(int newWindowSize) throws Http2Exception {
         if (newWindowSize < 0) {
             throw new IllegalArgumentException("Invalid initial window size: " + newWindowSize);
@@ -150,6 +145,16 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     @Override
     public int initialWindowSize() {
         return initialWindowSize;
+    }
+
+    @Override
+    public int windowSize(Http2Stream stream) {
+        return state(stream).windowSize();
+    }
+
+    @Override
+    public int initialWindowSize(Http2Stream stream) {
+        return state(stream).initialWindowSize();
     }
 
     @Override
@@ -418,7 +423,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     /**
      * The remote flow control state for a single stream.
      */
-    private final class DefaultFlowState implements FlowControlState {
+    private final class DefaultFlowState {
         private final Deque<FlowControlled> pendingWriteQueue;
         private final Http2Stream stream;
         private int window;
@@ -436,13 +441,11 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             pendingWriteQueue = new ArrayDeque<FlowControlled>(2);
         }
 
-        @Override
-        public int windowSize() {
+        int windowSize() {
             return window;
         }
 
-        @Override
-        public int initialWindowSize() {
+        int initialWindowSize() {
             return initialWindowSize;
         }
 

@@ -296,11 +296,6 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         }
 
         @Override
-        public Http2Connection.PropertyKey stateKey() {
-            return flowController.stateKey();
-        }
-
-        @Override
         public void initialWindowSize(int newWindowSize) throws Http2Exception {
             flowController.initialWindowSize(newWindowSize);
         }
@@ -308,6 +303,16 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         @Override
         public int initialWindowSize() {
             return flowController.initialWindowSize();
+        }
+
+        @Override
+        public int windowSize(Http2Stream stream) {
+            return flowController.windowSize(stream);
+        }
+
+        @Override
+        public int initialWindowSize(Http2Stream stream) {
+            return flowController.initialWindowSize(stream);
         }
 
         @Override

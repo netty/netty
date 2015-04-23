@@ -1223,7 +1223,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
     }
 
     private int window(int streamId) throws Http2Exception {
-        return stream(streamId).remoteFlowState().windowSize();
+        return controller.windowSize(stream(streamId));
     }
 
     private void incrementWindowSize(int streamId, int delta) throws Http2Exception {

@@ -26,11 +26,11 @@ import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
-import io.netty.handler.codec.http2.Http2Stream.FlowControlState;
 import io.netty.util.internal.PlatformDependent;
 
 /**
@@ -98,11 +98,6 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     }
 
     @Override
-    public Http2Connection.PropertyKey stateKey() {
-        return stateKey;
-    }
-
-    @Override
     public void initialWindowSize(int newWindowSize) throws Http2Exception {
         int delta = newWindowSize - initialWindowSize;
         initialWindowSize = newWindowSize;
@@ -115,6 +110,16 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     @Override
     public int initialWindowSize() {
         return initialWindowSize;
+    }
+
+    @Override
+    public int windowSize(Http2Stream stream) {
+        return state(stream).windowSize();
+    }
+
+    @Override
+    public int initialWindowSize(Http2Stream stream) {
+        return state(stream).initialWindowSize();
     }
 
     @Override
@@ -246,7 +251,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     /**
      * Flow control window state for an individual stream.
      */
-    private final class DefaultFlowState implements FlowControlState {
+    private final class DefaultFlowState {
         private final Http2Stream stream;
 
         /**
@@ -284,13 +289,11 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
             streamWindowUpdateRatio = windowUpdateRatio;
         }
 
-        @Override
-        public int windowSize() {
+        int windowSize() {
             return window;
         }
 
-        @Override
-        public int initialWindowSize() {
+        int initialWindowSize() {
             return initialStreamWindowSize;
         }
 

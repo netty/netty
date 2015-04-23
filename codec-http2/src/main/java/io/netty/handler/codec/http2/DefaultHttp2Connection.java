@@ -241,6 +241,17 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     /**
+     * Verifies that the key is valid and returns it as the internal {@link DefaultPropertyKey} type.
+     *
+     * @throws NullPointerException if the key is {@code null}.
+     * @throws ClassCastException if the key is not of type {@link DefaultPropertyKey}.
+     * @throws IllegalArgumentException if the key was not created by this connection.
+     */
+    final DefaultPropertyKey verifyKey(PropertyKey key) {
+        return checkNotNull((DefaultPropertyKey) key, "key").verifyConnection(this);
+    }
+
+    /**
      * Simple stream implementation. Streams can be compared to each other by priority.
      */
     private class DefaultStream implements Http2Stream {
@@ -269,16 +280,6 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public FlowControlState localFlowState() {
-            return getProperty(local().flowController().stateKey());
-        }
-
-        @Override
-        public FlowControlState remoteFlowState() {
-            return getProperty(remote().flowController().stateKey());
-        }
-
-        @Override
         public boolean isResetSent() {
             return resetSent;
         }
@@ -291,20 +292,17 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public final <V> V setProperty(PropertyKey key, V value) {
-            checkNotNull(key, "key");
-            return properties.add((DefaultPropertyKey) key, value);
+            return properties.add(verifyKey(key), value);
         }
 
         @Override
         public final <V> V getProperty(PropertyKey key) {
-            checkNotNull(key, "key");
-            return properties.get((DefaultPropertyKey) key);
+            return properties.get(verifyKey(key));
         }
 
         @Override
         public final <V> V removeProperty(PropertyKey key) {
-            checkNotNull(key, "key");
-            return properties.remove((DefaultPropertyKey) key);
+            return properties.remove(verifyKey(key));
         }
 
         @Override
@@ -1136,11 +1134,18 @@ public class DefaultHttp2Connection implements Http2Connection {
     /**
      * Implementation of {@link PropertyKey} that specifies the index position of the property.
      */
-    class DefaultPropertyKey implements PropertyKey {
+    final class DefaultPropertyKey implements PropertyKey {
         private final int index;
 
         DefaultPropertyKey(int index) {
             this.index = index;
+        }
+
+        DefaultPropertyKey verifyConnection(Http2Connection connection) {
+            if (connection != DefaultHttp2Connection.this) {
+                throw new IllegalArgumentException("Using a key that was not created by this connection");
+            }
+            return this;
         }
     }
 
