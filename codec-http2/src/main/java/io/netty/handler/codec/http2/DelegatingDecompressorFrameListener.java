@@ -328,7 +328,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         }
 
         @Override
-        public void consumeBytes(ChannelHandlerContext ctx, Http2Stream stream, int numBytes)
+        public boolean consumeBytes(ChannelHandlerContext ctx, Http2Stream stream, int numBytes)
                 throws Http2Exception {
             Http2Decompressor decompressor = decompressor(stream);
             Http2Decompressor copy = null;
@@ -339,7 +339,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
                     // Convert the uncompressed consumed bytes to compressed (on the wire) bytes.
                     numBytes = decompressor.consumeProcessedBytes(numBytes);
                 }
-                flowController.consumeBytes(ctx, stream, numBytes);
+                return flowController.consumeBytes(ctx, stream, numBytes);
             } catch (Http2Exception e) {
                 if (copy != null) {
                     stream.setProperty(propertyKey, copy);
