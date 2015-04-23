@@ -29,6 +29,8 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -231,38 +233,45 @@ public final class NetUtil {
         LOOPBACK_IF = loopbackIface;
         LOCALHOST = loopbackAddr;
 
-        // Determine the default somaxconn (server socket backlog) value of the platform.
-        // The known defaults:
-        // - Windows NT Server 4.0+: 200
-        // - Linux and Mac OS X: 128
-        int somaxconn = PlatformDependent.isWindows() ? 200 : 128;
-        File file = new File("/proc/sys/net/core/somaxconn");
-        if (file.exists()) {
-            BufferedReader in = null;
-            try {
-                in = new BufferedReader(new FileReader(file));
-                somaxconn = Integer.parseInt(in.readLine());
-                if (logger.isDebugEnabled()) {
-                    logger.debug("{}: {}", file, somaxconn);
-                }
-            } catch (Exception e) {
-                logger.debug("Failed to get SOMAXCONN from: {}", file, e);
-            } finally {
-                if (in != null) {
+        // As a SecurityManager may prevent reading the somaxconn file we wrap this in a privileged block.
+        //
+        // See https://github.com/netty/netty/issues/3680
+        SOMAXCONN = AccessController.doPrivileged(new PrivilegedAction<Integer>() {
+            @Override
+            public Integer run() {
+                // Determine the default somaxconn (server socket backlog) value of the platform.
+                // The known defaults:
+                // - Windows NT Server 4.0+: 200
+                // - Linux and Mac OS X: 128
+                int somaxconn = PlatformDependent.isWindows() ? 200 : 128;
+                File file = new File("/proc/sys/net/core/somaxconn");
+                if (file.exists()) {
+                    BufferedReader in = null;
                     try {
-                        in.close();
+                        in = new BufferedReader(new FileReader(file));
+                        somaxconn = Integer.parseInt(in.readLine());
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("{}: {}", file, somaxconn);
+                        }
                     } catch (Exception e) {
-                        // Ignored.
+                        logger.debug("Failed to get SOMAXCONN from: {}", file, e);
+                    } finally {
+                        if (in != null) {
+                            try {
+                                in.close();
+                            } catch (Exception e) {
+                                // Ignored.
+                            }
+                        }
+                    }
+                } else {
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("{}: {} (non-existent)", file, somaxconn);
                     }
                 }
+                return somaxconn;
             }
-        } else {
-            if (logger.isDebugEnabled()) {
-                logger.debug("{}: {} (non-existent)", file, somaxconn);
-            }
-        }
-
-        SOMAXCONN = somaxconn;
+        });
     }
 
     /**
