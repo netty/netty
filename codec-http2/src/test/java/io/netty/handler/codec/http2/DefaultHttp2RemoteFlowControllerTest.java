@@ -26,6 +26,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
@@ -40,7 +41,9 @@ import io.netty.util.collection.IntObjectMap;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import junit.framework.AssertionFailedError;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -83,6 +86,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         MockitoAnnotations.initMocks(this);
 
         when(ctx.newPromise()).thenReturn(promise);
+        when(ctx.flush()).thenThrow(new AssertionFailedError("forbidden"));
 
         connection = new DefaultHttp2Connection(false);
         controller = new DefaultHttp2RemoteFlowController(connection);
@@ -127,19 +131,17 @@ public class DefaultHttp2RemoteFlowControllerTest {
     }
 
     @Test
-    public void payloadSmallerThanWindowShouldBeSentImmediately() throws Http2Exception {
+    public void payloadSmallerThanWindowShouldBeWrittenImmediately() throws Http2Exception {
         FakeFlowControlled data = new FakeFlowControlled(5);
         sendData(STREAM_A, data);
         data.assertFullyWritten();
-        verify(ctx, times(1)).flush();
     }
 
     @Test
-    public void emptyPayloadShouldBeSentImmediately() throws Http2Exception {
+    public void emptyPayloadShouldBeWrittenImmediately() throws Http2Exception {
         FakeFlowControlled data = new FakeFlowControlled(0);
         sendData(STREAM_A, data);
         data.assertFullyWritten();
-        verify(ctx, times(1)).flush();
     }
 
     @Test
@@ -152,7 +154,6 @@ public class DefaultHttp2RemoteFlowControllerTest {
         data.assertNotWritten();
         sendData(STREAM_A, moreData);
         moreData.assertNotWritten();
-        verify(ctx, never()).flush();
     }
 
     @Test
@@ -165,7 +166,6 @@ public class DefaultHttp2RemoteFlowControllerTest {
         data.assertNotWritten();
         sendData(STREAM_A, moreData);
         moreData.assertNotWritten();
-        verify(ctx, never()).flush();
 
         connection.stream(STREAM_A).close();
         data.assertError();
@@ -180,7 +180,6 @@ public class DefaultHttp2RemoteFlowControllerTest {
         sendData(STREAM_A, data);
         // Verify that a partial frame of 5 remains to be sent
         data.assertPartiallyWritten(5);
-        verify(ctx, times(1)).flush();
     }
 
     @Test
@@ -193,14 +192,12 @@ public class DefaultHttp2RemoteFlowControllerTest {
         sendData(STREAM_A, moreData);
         data.assertPartiallyWritten(10);
         moreData.assertNotWritten();
-        verify(ctx, times(1)).flush();
         reset(ctx);
 
         // Update the window and verify that the rest of data and some of moreData are written
         incrementWindowSize(STREAM_A, 15);
         data.assertFullyWritten();
         moreData.assertPartiallyWritten(5);
-        verify(ctx, times(1)).flush();
 
         assertEquals(DEFAULT_WINDOW_SIZE - 25, window(CONNECTION_STREAM_ID));
         assertEquals(0, window(STREAM_A));
@@ -1109,26 +1106,21 @@ public class DefaultHttp2RemoteFlowControllerTest {
     public void flowControlledWriteCompleteThrowsAnException() throws Exception {
         final Http2RemoteFlowController.FlowControlled flowControlled =
                 Mockito.mock(Http2RemoteFlowController.FlowControlled.class);
-        when(flowControlled.size()).thenReturn(100);
-        when(flowControlled.write(anyInt())).thenAnswer(new Answer<Boolean>() {
-            private int invocationCount;
+        final AtomicInteger size = new AtomicInteger(150);
+        doAnswer(new Answer<Integer>() {
             @Override
-            public Boolean answer(InvocationOnMock invocationOnMock) throws Throwable {
-                switch(invocationCount) {
-                    case 0:
-                        when(flowControlled.size()).thenReturn(50);
-                        invocationCount = 1;
-                        return true;
-                    case 1:
-                        when(flowControlled.size()).thenReturn(20);
-                        invocationCount = 2;
-                        return true;
-                    default:
-                        when(flowControlled.size()).thenReturn(0);
-                        return false;
-                }
+            public Integer answer(InvocationOnMock invocationOnMock) throws Throwable {
+                return size.get();
             }
-        });
+        }).when(flowControlled).size();
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+                size.addAndGet(-50);
+                return null;
+            }
+        }).when(flowControlled).write(anyInt());
+
         final Http2Stream stream = stream(STREAM_A);
         doAnswer(new Answer<Void>() {
             public Void answer(InvocationOnMock invocationOnMock) {
@@ -1148,7 +1140,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         verify(flowControlled, never()).error(any(Throwable.class));
         verify(flowControlled).writeComplete();
 
-        assertEquals(100, windowBefore - window(STREAM_A));
+        assertEquals(150, windowBefore - window(STREAM_A));
     }
 
     @Test
@@ -1157,7 +1149,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
                 Mockito.mock(Http2RemoteFlowController.FlowControlled.class);
         final Http2Stream stream = stream(STREAM_A);
         when(flowControlled.size()).thenReturn(100);
-        when(flowControlled.write(anyInt())).thenThrow(new RuntimeException("write failed"));
+        doThrow(new RuntimeException("write failed")).when(flowControlled).write(anyInt());
         doAnswer(new Answer<Void>() {
             public Void answer(InvocationOnMock invocationOnMock) {
                 stream.close();
@@ -1176,25 +1168,25 @@ public class DefaultHttp2RemoteFlowControllerTest {
         final Http2RemoteFlowController.FlowControlled flowControlled =
                 Mockito.mock(Http2RemoteFlowController.FlowControlled.class);
         when(flowControlled.size()).thenReturn(100);
-        when(flowControlled.write(anyInt())).thenAnswer(new Answer<Boolean>() {
+        doAnswer(new Answer<Void>() {
             private int invocationCount;
             @Override
-            public Boolean answer(InvocationOnMock invocationOnMock) throws Throwable {
+            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
                 switch(invocationCount) {
                 case 0:
                     when(flowControlled.size()).thenReturn(50);
                     invocationCount = 1;
-                    return true;
+                    return null;
                 case 1:
                     when(flowControlled.size()).thenReturn(20);
                     invocationCount = 2;
-                    return true;
+                    return null;
                 default:
                     when(flowControlled.size()).thenReturn(10);
                     throw new RuntimeException("Write failed");
                 }
             }
-        });
+        }).when(flowControlled).write(anyInt());
         return flowControlled;
     }
 
@@ -1265,15 +1257,14 @@ public class DefaultHttp2RemoteFlowControllerTest {
         }
 
         @Override
-        public boolean write(int allowedBytes) {
+        public void write(int allowedBytes) {
             if (allowedBytes <= 0 && currentSize != 0) {
                 // Write has been called but no data can be written
-                return false;
+                return;
             }
             writeCalled = true;
             int written = Math.min(currentSize, allowedBytes);
             currentSize -= written;
-            return true;
         }
 
         public int written() {

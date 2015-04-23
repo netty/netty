@@ -30,6 +30,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 
+import junit.framework.AssertionFailedError;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -64,6 +65,7 @@ public class DefaultHttp2LocalFlowControllerTest {
         MockitoAnnotations.initMocks(this);
 
         when(ctx.newPromise()).thenReturn(promise);
+        when(ctx.flush()).thenThrow(new AssertionFailedError("forbidden"));
 
         connection = new DefaultHttp2Connection(false);
         controller = new DefaultHttp2LocalFlowController(connection, frameWriter, updateRatio);

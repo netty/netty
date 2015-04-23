@@ -413,7 +413,6 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
 
             // Send a window update for the stream/connection.
             frameWriter.writeWindowUpdate(ctx, stream.id(), deltaWindowSize, ctx.newPromise());
-            ctx.flush();
         }
     }
 

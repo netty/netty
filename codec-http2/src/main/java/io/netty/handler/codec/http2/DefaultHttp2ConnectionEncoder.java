@@ -199,7 +199,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         }
 
         ChannelFuture future = frameWriter.writePriority(ctx, streamId, streamDependency, weight, exclusive, promise);
-        ctx.flush();
         return future;
     }
 
@@ -224,21 +223,18 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         }
 
         ChannelFuture future = frameWriter.writeSettings(ctx, settings, promise);
-        ctx.flush();
         return future;
     }
 
     @Override
     public ChannelFuture writeSettingsAck(ChannelHandlerContext ctx, ChannelPromise promise) {
         ChannelFuture future = frameWriter.writeSettingsAck(ctx, promise);
-        ctx.flush();
         return future;
     }
 
     @Override
     public ChannelFuture writePing(ChannelHandlerContext ctx, boolean ack, ByteBuf data, ChannelPromise promise) {
         ChannelFuture future = frameWriter.writePing(ctx, ack, data, promise);
-        ctx.flush();
         return future;
     }
 
@@ -258,7 +254,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         }
 
         ChannelFuture future = frameWriter.writePushPromise(ctx, streamId, promisedStreamId, headers, padding, promise);
-        ctx.flush();
         return future;
     }
 
@@ -345,16 +340,13 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         }
 
         @Override
-        public boolean write(int allowedBytes) {
+        public void write(int allowedBytes) {
             int bytesWritten = 0;
+            if (data == null || (allowedBytes == 0 && size != 0)) {
+                // No point writing an empty DATA frame, wait for a bigger allowance.
+                return;
+            }
             try {
-                if (data == null) {
-                    return false;
-                }
-                if (allowedBytes == 0 && size != 0) {
-                    // No point writing an empty DATA frame, wait for a bigger allowance.
-                    return false;
-                }
                 int maxFrameSize = frameWriter().configuration().frameSizePolicy().maxFrameSize();
                 do {
                     int allowedFrameSize = Math.min(maxFrameSize, allowedBytes - bytesWritten);
@@ -386,7 +378,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                     frameWriter().writeData(ctx, stream.id(), toWrite, writeablePadding,
                         size == bytesWritten && endOfStream, writePromise);
                 } while (size != bytesWritten && allowedBytes > bytesWritten);
-                return true;
             } finally {
                 size -= bytesWritten;
             }
@@ -427,10 +418,9 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         }
 
         @Override
-        public boolean write(int allowedBytes) {
+        public void write(int allowedBytes) {
             frameWriter().writeHeaders(ctx, stream.id(), headers, streamDependency, weight, exclusive,
                     padding, endOfStream, promise);
-            return true;
         }
     }
 

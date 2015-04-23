@@ -60,6 +60,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 import java.util.ArrayList;
 import java.util.List;
 
+import junit.framework.AssertionFailedError;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -207,6 +208,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         when(ctx.newSucceededFuture()).thenReturn(future);
         when(ctx.newPromise()).thenReturn(promise);
         when(ctx.write(any())).thenReturn(future);
+        when(ctx.flush()).thenThrow(new AssertionFailedError("forbidden"));
 
         encoder = new DefaultHttp2ConnectionEncoder(connection, writer);
         encoder.lifecycleManager(lifecycleManager);
@@ -217,7 +219,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         final ByteBuf data = dummyData();
         encoder.writeData(ctx, STREAM_ID, data, 0, true, promise);
         assertEquals(payloadCaptor.getValue().size(), 8);
-        assertTrue(payloadCaptor.getValue().write(8));
+        payloadCaptor.getValue().write(8);
         assertEquals(0, payloadCaptor.getValue().size());
         assertEquals("abcdefgh", writtenData.get(0));
         assertEquals(0, data.refCnt());
@@ -229,7 +231,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         final ByteBuf data = dummyData();
         encoder.writeData(ctx, STREAM_ID, data, 0, true, promise);
         assertEquals(payloadCaptor.getValue().size(), 8);
-        assertTrue(payloadCaptor.getValue().write(8));
+        payloadCaptor.getValue().write(8);
         // writer was called 3 times
         assertEquals(3, writtenData.size());
         assertEquals("abc", writtenData.get(0));
@@ -244,7 +246,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         final ByteBuf data = dummyData();
         encoder.writeData(ctx, STREAM_ID, data, 5, true, promise);
         assertEquals(payloadCaptor.getValue().size(), 13);
-        assertTrue(payloadCaptor.getValue().write(13));
+        payloadCaptor.getValue().write(13);
         // writer was called 3 times
         assertEquals(3, writtenData.size());
         assertEquals("abcde", writtenData.get(0));
@@ -262,7 +264,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         ByteBuf data = dummyData();
         encoder.writeData(ctx, STREAM_ID, data, 10, true, promise);
         assertEquals(payloadCaptor.getValue().size(), 18);
-        assertTrue(payloadCaptor.getValue().write(18));
+        payloadCaptor.getValue().write(18);
         // writer was called 4 times
         assertEquals(4, writtenData.size());
         assertEquals("abcde", writtenData.get(0));
@@ -292,7 +294,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         when(frameSizePolicy.maxFrameSize()).thenReturn(5);
         encoder.writeData(ctx, STREAM_ID, data, 10, true, promise);
         assertEquals(payloadCaptor.getValue().size(), 10);
-        assertTrue(payloadCaptor.getValue().write(10));
+        payloadCaptor.getValue().write(10);
         // writer was called 2 times
         assertEquals(2, writtenData.size());
         assertEquals("", writtenData.get(0));

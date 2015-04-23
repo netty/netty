@@ -35,6 +35,7 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -48,6 +49,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.http2.Http2Exception.ClosedStreamCreationException;
+import junit.framework.AssertionFailedError;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -161,6 +163,9 @@ public class DefaultHttp2ConnectionDecoderTest {
 
         // Simulate receiving the SETTINGS ACK for the initial settings.
         decode().onSettingsAckRead(ctx);
+
+        // Disallow any further flushes now that settings ACK has been sent
+        when(ctx.flush()).thenThrow(new AssertionFailedError("forbidden"));
     }
 
     @Test
@@ -605,7 +610,6 @@ public class DefaultHttp2ConnectionDecoderTest {
 
     @Test
     public void settingsReadShouldSetValues() throws Exception {
-        when(connection.isServer()).thenReturn(true);
         Http2Settings settings = new Http2Settings();
         settings.pushEnabled(true);
         settings.initialWindowSize(123);

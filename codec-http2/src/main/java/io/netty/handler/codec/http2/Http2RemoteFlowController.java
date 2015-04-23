@@ -27,8 +27,8 @@ public interface Http2RemoteFlowController extends Http2FlowController {
      * guarantee when the data will be written or whether it will be split into multiple frames
      * before sending.
      * <p>
-     * Manually flushing the {@link ChannelHandlerContext} is not required, since the flow
-     * controller will flush as appropriate.
+     * Manually flushing the {@link ChannelHandlerContext} is required for writes as the flow controller will
+     * <strong>not</strong> flush by itself.
      *
      * @param ctx the context from the handler.
      * @param stream the subject stream. Must not be the connection stream object.
@@ -75,15 +75,14 @@ public interface Http2RemoteFlowController extends Http2FlowController {
          * Writes up to {@code allowedBytes} of the encapsulated payload to the stream. Note that
          * a value of 0 may be passed which will allow payloads with flow-control size == 0 to be
          * written. The flow-controller may call this method multiple times with different values until
-         * the payload is fully written.
+         * the payload is fully written, i.e it's size after the write is 0.
          * <p>
          * When an exception is thrown the {@link Http2RemoteFlowController} will make a call to
          * {@link #error(Throwable)}.
          * </p>
          *
          * @param allowedBytes an upper bound on the number of bytes the payload can write at this time.
-         * @return {@code true} if a flush is required, {@code false} otherwise.
          */
-        boolean write(int allowedBytes);
+        void write(int allowedBytes);
     }
 }
