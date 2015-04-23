@@ -27,8 +27,8 @@ public interface Http2RemoteFlowController extends Http2FlowController {
      * guarantee when the data will be written or whether it will be split into multiple frames
      * before sending.
      * <p>
-     * Manually flushing the {@link ChannelHandlerContext} is not required, since the flow
-     * controller will flush as appropriate.
+     * Manually flushing the {@link ChannelHandlerContext} is required for writes as the flow controller will
+     * not flush by itself except in response to window update events.
      *
      * @param ctx the context from the handler.
      * @param stream the subject stream. Must not be the connection stream object.

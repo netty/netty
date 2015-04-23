@@ -206,12 +206,9 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             frame.error(t);
             return;
         }
+        // Write data to channel but don't flush as more writes may be coming and we want to
+        // allow a flush to coalesce them
         state.writeBytes(state.writableWindow());
-        try {
-            flush();
-        } catch (Throwable t) {
-            frame.error(t);
-        }
     }
 
     /**
