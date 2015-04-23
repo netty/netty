@@ -358,4 +358,11 @@ public class Http2ConnectionHandlerTest {
         verify(data).release();
         verifyNoMoreInteractions(frameWriter);
     }
+
+    @Test
+    public void channelReadCompleteTriggersFlush() throws Exception {
+        handler = newHandler();
+        handler.channelReadComplete(ctx);
+        verify(ctx, times(1)).flush();
+    }
 }

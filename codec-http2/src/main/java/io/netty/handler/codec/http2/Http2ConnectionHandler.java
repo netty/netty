@@ -340,6 +340,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
 
         ChannelFuture future = goAway(ctx, null);
+        ctx.flush();
 
         // If there are no active streams, close immediately after the send is complete.
         // Otherwise wait until all streams are inactive.
@@ -348,6 +349,13 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         } else {
             closeListener = new ClosingChannelFutureListener(ctx, promise);
         }
+    }
+
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        // Trigger flush after read on the assumption that flush is cheap if there is nothing to write and that
+        // for flow-control the read may release window that causes data to be written that can now be flushed.
+        ctx.flush();
     }
 
     /**
@@ -439,6 +447,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         } else {
             onConnectionError(ctx, cause, embedded);
         }
+        ctx.flush();
     }
 
     /**
@@ -483,7 +492,6 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
 
         ChannelFuture future = frameWriter().writeRstStream(ctx, streamId, errorCode, promise);
-        ctx.flush();
 
         // Synchronously set the resetSent flag to prevent any subsequent calls
         // from resulting in multiple reset frames being sent.
@@ -518,7 +526,6 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             connection.goAwaySent(lastStreamId, errorCode, debugData);
 
             ChannelFuture future = frameWriter().writeGoAway(ctx, lastStreamId, errorCode, debugData, promise);
-            ctx.flush();
 
             future.addListener(new GenericFutureListener<ChannelFuture>() {
                 @Override
@@ -546,7 +553,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     /**
-     * Close the remote endpoint with with a {@code GO_AWAY} frame.
+     * Close the remote endpoint with with a {@code GO_AWAY} frame. Does <strong>not</strong> flush
+     * immediately, this is the responsibility of the caller.
      */
     private ChannelFuture goAway(ChannelHandlerContext ctx, Http2Exception cause) {
         long errorCode = cause != null ? cause.error().code() : NO_ERROR.code();
