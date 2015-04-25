@@ -19,6 +19,7 @@ import static io.netty.handler.codec.http.HttpConstants.CR;
 import static io.netty.handler.codec.http.HttpConstants.LF;
 import static io.netty.handler.codec.http.HttpConstants.SP;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.util.AsciiString;
@@ -38,15 +39,15 @@ public class RtspResponseEncoder extends RtspObjectEncoder<HttpResponse> {
     @Override
     protected void encodeInitialLine(ByteBuf buf, HttpResponse response) throws Exception {
         AsciiString version = response.protocolVersion().text();
-        buf.writeBytes(version.array());
+        ByteBufUtil.copy(version, version.arrayOffset(), buf, version.length());
         buf.writeByte(SP);
 
         AsciiString code = response.status().codeAsText();
-        buf.writeBytes(code.array());
+        ByteBufUtil.copy(code, code.arrayOffset(), buf, code.length());
         buf.writeByte(SP);
 
         AsciiString reasonPhrase = response.status().reasonPhrase();
-        buf.writeBytes(reasonPhrase.array());
+        ByteBufUtil.copy(reasonPhrase, reasonPhrase.arrayOffset(), buf, reasonPhrase.length());
         buf.writeBytes(CRLF);
     }
 }
