@@ -16,8 +16,8 @@
 package io.netty.channel.pool;
 
 import io.netty.channel.Channel;
+import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
  * {@link ChannelHealthChecker} implementation that checks if {@link Channel#isActive()} returns {@code true}.
@@ -27,9 +27,6 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  */
 public final class ActiveChannelHealthChecker<C extends Channel, K extends ChannelPoolKey>
         implements ChannelHealthChecker<C, K> {
-
-    private static final Future<Boolean> ACTIVE = ImmediateEventExecutor.INSTANCE.newSucceededFuture(Boolean.TRUE);
-    private static final Future<Boolean> NOT_ACTIVE = ImmediateEventExecutor.INSTANCE.newSucceededFuture(Boolean.FALSE);
 
     private ActiveChannelHealthChecker() { }
 
@@ -43,6 +40,7 @@ public final class ActiveChannelHealthChecker<C extends Channel, K extends Chann
 
     @Override
     public Future<Boolean> isHealthy(PooledChannel<C, K> channel) {
-        return channel.isActive()? ACTIVE: NOT_ACTIVE;
+        EventLoop loop = channel.eventLoop();
+        return channel.isActive()? loop.newSucceededFuture(Boolean.TRUE) : loop.newSucceededFuture(Boolean.FALSE);
     }
 }

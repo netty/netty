@@ -87,7 +87,6 @@ public class SimpleChannelPool<C extends Channel, K extends ChannelPoolKey> impl
         channelFactory = bootstrap.channelFactory();
         this.bootstrap = checkNotNull(bootstrap, "bootstrap").clone();
         this.bootstrap.handler(new ChannelInitializer<PooledChannel<C, K>>() {
-            @SuppressWarnings("unchecked")
             @Override
             protected void initChannel(PooledChannel<C, K> ch) throws Exception {
                 assert ch.eventLoop().inEventLoop();
@@ -179,9 +178,9 @@ public class SimpleChannelPool<C extends Channel, K extends ChannelPoolKey> impl
     private void newChannel(
             final K key, final Promise<PooledChannel<C, K>> promise) {
         Bootstrap bs = bootstrap.clone(loop(key), new ChannelFactory<Channel>() {
-            @SuppressWarnings("unchecked")
             @Override
             public Channel newChannel() {
+                @SuppressWarnings("unchecked")
                 SimplePooledChannel ch = newPooledChannel((C) channelFactory.newChannel(), key);
                 ch.acquired();
                 return ch;
@@ -193,7 +192,6 @@ public class SimpleChannelPool<C extends Channel, K extends ChannelPoolKey> impl
             notifyConnect(f, promise);
         } else {
             f.addListener(new ChannelFutureListener() {
-                @SuppressWarnings("unchecked")
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
                     notifyConnect(future, promise);
@@ -202,9 +200,9 @@ public class SimpleChannelPool<C extends Channel, K extends ChannelPoolKey> impl
         }
     }
 
-    @SuppressWarnings("unchecked")
     private void notifyConnect(ChannelFuture future, Promise<PooledChannel<C, K>> promise) {
         if (future.isSuccess()) {
+            @SuppressWarnings("unchecked")
             PooledChannel<C, K> ch = (PooledChannel<C, K>) future.channel();
             promise.setSuccess(ch);
         } else {

@@ -40,6 +40,8 @@ import java.util.concurrent.TimeoutException;
 public final class FixedChannelPool<C extends Channel, K extends ChannelPoolKey> extends SimpleChannelPool<C, K> {
     private static final TimeoutException TIMEOUT_EXCEPTION =
             new TimeoutException("Acquire operation took longer then configured maximum time");
+    private static final long START_TIME = System.nanoTime();
+
     static {
         TIMEOUT_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
     }
@@ -142,8 +144,7 @@ public final class FixedChannelPool<C extends Channel, K extends ChannelPoolKey>
         } else if (action == null && acquireTimeoutMillis != -1) {
             throw new NullPointerException("action");
         } else if (action != null && acquireTimeoutMillis < 0) {
-            throw new IllegalArgumentException("acquireTimeoutMillis: " + acquireTimeoutMillis
-                                               + " (acquireTimeoutMillis: >= 1)");
+            throw new IllegalArgumentException("acquireTimeoutMillis: " + acquireTimeoutMillis + " (expected: >= 1)");
         } else {
             acquireTimeoutNanos = TimeUnit.MILLISECONDS.toNanos(acquireTimeoutMillis);
             switch (action) {
@@ -175,6 +176,10 @@ public final class FixedChannelPool<C extends Channel, K extends ChannelPoolKey>
         executor = bootstrap.group().next();
         this.maxConnections = maxConnections;
         this.maxPendingAcquires = maxPendingAcquires;
+    }
+
+    private static long nanoTime() {
+        return System.nanoTime() - START_TIME;
     }
 
     @Override
@@ -262,7 +267,7 @@ public final class FixedChannelPool<C extends Channel, K extends ChannelPoolKey>
     private final class AcquireTask extends AcquireListener {
         final K key;
         final Promise<PooledChannel<C, K>> promise;
-        final long creationTime = System.nanoTime();
+        final long creationTime = nanoTime();
         ScheduledFuture<?> timeoutFuture;
 
         public AcquireTask(final K key, Promise<PooledChannel<C, K>> promise) {
@@ -279,7 +284,7 @@ public final class FixedChannelPool<C extends Channel, K extends ChannelPoolKey>
         public final void run() {
             assert executor.inEventLoop();
 
-            long expiredThresholdTime = System.nanoTime() - acquireTimeoutNanos;
+            long expiredThresholdTime = nanoTime() - acquireTimeoutNanos;
             for (;;) {
                 AcquireTask task = pendingAcquireQueue.peek();
                 if (task == null || task.creationTime >= expiredThresholdTime) {
