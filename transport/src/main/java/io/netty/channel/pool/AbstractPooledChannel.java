@@ -39,6 +39,7 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ThreadLocalRandom;
 
 import java.net.SocketAddress;
@@ -48,12 +49,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 public abstract class AbstractPooledChannel<C extends Channel, K extends ChannelPoolKey>
         implements PooledChannel<C, K>  {
+    @SuppressWarnings("rawtypes")
+    private static final AtomicIntegerFieldUpdater<AbstractPooledChannel> ACQUIRED_UPDATER;
+
+    static {
+        @SuppressWarnings("rawtypes")
+        AtomicIntegerFieldUpdater<AbstractPooledChannel> updater =
+                PlatformDependent.newAtomicIntegerFieldUpdater(AbstractPooledChannel.class, "acquired");
+        if (updater == null) {
+            updater = AtomicIntegerFieldUpdater.newUpdater(AbstractPooledChannel.class, "acquired");
+        }
+        ACQUIRED_UPDATER = updater;
+    }
+
     private final long hashCode = ThreadLocalRandom.current().nextLong();
     private final C channel;
     private final K key;
@@ -61,7 +75,8 @@ public abstract class AbstractPooledChannel<C extends Channel, K extends Channel
     private final PooledChannelPipeline pipeline;
     private final ChannelFuture succeededFuture = new SucceededChannelFuture(this, null);
     private final CloseFuture closeFuture = new CloseFuture(this);
-    private final AtomicBoolean acquired = new AtomicBoolean(false);
+    @SuppressWarnings("unused")
+    private volatile int acquired;
 
     protected AbstractPooledChannel(C channel, K key, ChannelPool<C, K> pool) {
         this.channel = checkNotNull(channel, "channel");
@@ -76,7 +91,7 @@ public abstract class AbstractPooledChannel<C extends Channel, K extends Channel
      * {@link ChannelPool} implementation before return this {@link PooledChannel}.
      */
     public void acquired() {
-        if (!acquired.compareAndSet(false, true)) {
+        if (!ACQUIRED_UPDATER.compareAndSet(this, 0, 1)) {
             throw new IllegalStateException("PooledChannel already in use");
         }
     }
@@ -103,7 +118,7 @@ public abstract class AbstractPooledChannel<C extends Channel, K extends Channel
 
     @Override
     public final Future<Void> release(Promise<Void> promise) {
-        if (!acquired.compareAndSet(true, false)) {
+        if (!ACQUIRED_UPDATER.compareAndSet(this, 1, 0)) {
             return promise.setFailure(new IllegalStateException("PooledChannel was already released"));
         }
         return releaseToPool(promise);
