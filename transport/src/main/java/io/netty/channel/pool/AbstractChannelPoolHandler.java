@@ -18,7 +18,7 @@ package io.netty.channel.pool;
 import io.netty.channel.Channel;
 
 /**
- * Base class for {@link ChannelPoolHandler} implementations.
+ * A skeletal {@link ChannelPoolHandler} implementation.
  *
  * @param <C>   the {@link Channel} type to pool.
  * @param <K>   the {@link ChannelPoolKey} that is used to store and lookup the {@link Channel}s.
@@ -28,6 +28,8 @@ public abstract class AbstractChannelPoolHandler<C extends Channel, K extends Ch
 
     /**
      * NOOP implementation, sub-classes may override this.
+     *
+     * {@inheritDoc}
      */
     @Override
     public void channelAcquired(@SuppressWarnings("unused") PooledChannel<C, K> ch) throws Exception {
@@ -36,6 +38,8 @@ public abstract class AbstractChannelPoolHandler<C extends Channel, K extends Ch
 
     /**
      * NOOP implementation, sub-classes may override this.
+     *
+     * {@inheritDoc}
      */
     @Override
     public void channelReleased(@SuppressWarnings("unused") PooledChannel<C, K> ch) throws Exception {

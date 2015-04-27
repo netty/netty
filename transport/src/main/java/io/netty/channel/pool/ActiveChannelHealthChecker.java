@@ -34,8 +34,7 @@ public final class ActiveChannelHealthChecker<C extends Channel, K extends Chann
     private ActiveChannelHealthChecker() { }
 
     @SuppressWarnings("rawtypes")
-    private static final ChannelHealthChecker
-            INSTANCE = new ActiveChannelHealthChecker<Channel, ChannelPoolKey>();
+    private static final ChannelHealthChecker INSTANCE = new ActiveChannelHealthChecker<Channel, ChannelPoolKey>();
 
     @SuppressWarnings("unchecked")
     public static <C extends Channel, K extends ChannelPoolKey> ChannelHealthChecker<C, K> instance() {
@@ -44,9 +43,6 @@ public final class ActiveChannelHealthChecker<C extends Channel, K extends Chann
 
     @Override
     public Future<Boolean> isHealthy(PooledChannel<C, K> channel) {
-        if (channel.isActive()) {
-            return ACTIVE;
-        }
-        return NOT_ACTIVE;
+        return channel.isActive()? ACTIVE: NOT_ACTIVE;
     }
 }
