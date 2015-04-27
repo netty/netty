@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.pool.PooledChannel;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
@@ -797,7 +798,8 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
             throw new IllegalArgumentException("promise already done: " + promise);
         }
 
-        if (promise.channel() != channel()) {
+        Channel ch = promise.channel();
+        if (ch != channel() && (!(ch instanceof PooledChannel) && ((PooledChannel<?, ?>) ch).unwrap() != ch)) {
             throw new IllegalArgumentException(String.format(
                     "promise.channel does not match: %s (expected: %s)", promise.channel(), channel()));
         }

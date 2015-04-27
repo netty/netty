@@ -927,6 +927,8 @@
             <!-- SSLSession implementation -->
             <ignore>javax.net.ssl.SSLEngine</ignore>
             <ignore>javax.net.ssl.X509ExtendedTrustManager</ignore>
+            
+            <ignore>java.util.concurrent.ConcurrentLinkedDeque</ignore>
           </ignores>
         </configuration>
         <executions>

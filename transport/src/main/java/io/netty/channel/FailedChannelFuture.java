@@ -23,7 +23,7 @@ import io.netty.util.internal.PlatformDependent;
  * recommended to use {@link Channel#newFailedFuture(Throwable)}
  * instead of calling the constructor of this future.
  */
-final class FailedChannelFuture extends CompleteChannelFuture {
+public final class FailedChannelFuture extends CompleteChannelFuture {
 
     private final Throwable cause;
 
@@ -33,7 +33,7 @@ final class FailedChannelFuture extends CompleteChannelFuture {
      * @param channel the {@link Channel} associated with this future
      * @param cause   the cause of failure
      */
-    FailedChannelFuture(Channel channel, EventExecutor executor, Throwable cause) {
+    public FailedChannelFuture(Channel channel, EventExecutor executor, Throwable cause) {
         super(channel, executor);
         if (cause == null) {
             throw new NullPointerException("cause");
