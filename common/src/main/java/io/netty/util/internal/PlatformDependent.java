@@ -29,13 +29,16 @@ import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.ByteBuffer;
+import java.util.Deque;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -428,6 +431,17 @@ public final class PlatformDependent {
      */
     public static ClassLoader getSystemClassLoader() {
         return PlatformDependent0.getSystemClassLoader();
+    }
+
+    /**
+     * Returns a new concurrent {@link Deque}.
+     */
+    public static <C> Deque<C> newConcurrentDeque() {
+        if (javaVersion() < 7) {
+            return new LinkedBlockingDeque<C>();
+        } else {
+            return new ConcurrentLinkedDeque<C>();
+        }
     }
 
     private static boolean isAndroid0() {
