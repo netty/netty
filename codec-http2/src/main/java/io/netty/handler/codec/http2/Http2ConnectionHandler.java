@@ -317,12 +317,14 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             byteDecoder = new PrefaceDecoder(ctx);
         }
         byteDecoder.channelActive(ctx);
+        super.channelActive(ctx);
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         if (byteDecoder != null) {
             byteDecoder.channelInactive(ctx);
+            super.channelInactive(ctx);
             byteDecoder = null;
         }
     }
@@ -365,26 +367,6 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         } else {
             closeListener = new ClosingChannelFutureListener(ctx, promise);
         }
-    }
-
-    @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        ctx.deregister(promise);
-    }
-
-    @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
-        ctx.read();
-    }
-
-    @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        ctx.write(msg, promise);
-    }
-
-    @Override
-    public void flush(ChannelHandlerContext ctx) throws Exception {
-        ctx.flush();
     }
 
     /**
