@@ -257,11 +257,9 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                     //increase the size of the array as we needed the whole space for the events
                     events.increase();
                 }
-                if (isShuttingDown()) {
+                if (isShuttingDown() && confirmShutdown()) {
                     closeAll();
-                    if (confirmShutdown()) {
-                        break;
-                    }
+                    break;
                 }
             } catch (Throwable t) {
                 logger.warn("Unexpected exception in the selector loop.", t);

@@ -357,11 +357,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
                 }
 
-                if (isShuttingDown()) {
+                if (isShuttingDown() && confirmShutdown()) {
                     closeAll();
-                    if (confirmShutdown()) {
-                        break;
-                    }
+                    break;
                 }
             } catch (Throwable t) {
                 logger.warn("Unexpected exception in the selector loop.", t);
