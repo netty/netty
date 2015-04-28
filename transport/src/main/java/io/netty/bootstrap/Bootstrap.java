@@ -22,6 +22,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.resolver.DefaultNameResolverGroup;
 import io.netty.resolver.NameResolver;
 import io.netty.resolver.NameResolverGroup;
@@ -279,6 +280,17 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     @SuppressWarnings("CloneDoesntCallSuperClone")
     public Bootstrap clone() {
         return new Bootstrap(this);
+    }
+
+    /**
+     * Returns a deep clone of this bootstrap which has the identical configuration except that it uses
+     * the given {@link EventLoopGroup}. This method is useful when making multiple {@link Channel}s with similar
+     * settings.
+     */
+    public Bootstrap clone(EventLoopGroup group) {
+        Bootstrap bs = new Bootstrap(this);
+        bs.group = group;
+        return bs;
     }
 
     @Override
