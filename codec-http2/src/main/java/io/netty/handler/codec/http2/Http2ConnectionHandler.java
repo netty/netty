@@ -369,6 +369,26 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
     }
 
+    @Override
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        ctx.deregister(promise);
+    }
+
+    @Override
+    public void read(ChannelHandlerContext ctx) throws Exception {
+        ctx.read();
+    }
+
+    @Override
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        ctx.write(msg, promise);
+    }
+
+    @Override
+    public void flush(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
+    }
+
     /**
      * Handles {@link Http2Exception} objects that were thrown from other handlers. Ignores all other exceptions.
      */
