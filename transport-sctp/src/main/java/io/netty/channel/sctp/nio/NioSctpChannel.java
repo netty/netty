@@ -315,6 +315,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         final MessageInfo mi = MessageInfo.createOutgoing(association(), null, packet.streamIdentifier());
         mi.payloadProtocolID(packet.protocolIdentifier());
         mi.streamNumber(packet.streamIdentifier());
+        mi.unordered(packet.isUnordered());
 
         final int writtenBytes = javaChannel().send(nioData, mi);
         return writtenBytes > 0;
@@ -329,7 +330,8 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
                 return m;
             }
 
-            return new SctpMessage(m.protocolIdentifier(), m.streamIdentifier(), newDirectBuffer(m, buf));
+            return new SctpMessage(m.protocolIdentifier(), m.streamIdentifier(), m.isUnordered(),
+                                   newDirectBuffer(m, buf));
         }
 
         throw new UnsupportedOperationException(
