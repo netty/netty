@@ -127,19 +127,19 @@ public class DefaultHttp2RemoteFlowControllerTest {
     }
 
     @Test
-    public void payloadSmallerThanWindowShouldBeSentImmediately() throws Http2Exception {
+    public void payloadSmallerThanWindowShouldBeWrittenImmediately() throws Http2Exception {
         FakeFlowControlled data = new FakeFlowControlled(5);
         sendData(STREAM_A, data);
         data.assertFullyWritten();
-        verify(ctx, times(1)).flush();
+        verify(ctx, times(0)).flush();
     }
 
     @Test
-    public void emptyPayloadShouldBeSentImmediately() throws Http2Exception {
+    public void emptyPayloadShouldBeWrittenImmediately() throws Http2Exception {
         FakeFlowControlled data = new FakeFlowControlled(0);
         sendData(STREAM_A, data);
         data.assertFullyWritten();
-        verify(ctx, times(1)).flush();
+        verify(ctx, times(0)).flush();
     }
 
     @Test
@@ -180,7 +180,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         sendData(STREAM_A, data);
         // Verify that a partial frame of 5 remains to be sent
         data.assertPartiallyWritten(5);
-        verify(ctx, times(1)).flush();
+        verify(ctx, times(0)).flush();
     }
 
     @Test
@@ -193,7 +193,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         sendData(STREAM_A, moreData);
         data.assertPartiallyWritten(10);
         moreData.assertNotWritten();
-        verify(ctx, times(1)).flush();
+        verify(ctx, times(0)).flush();
         reset(ctx);
 
         // Update the window and verify that the rest of data and some of moreData are written
