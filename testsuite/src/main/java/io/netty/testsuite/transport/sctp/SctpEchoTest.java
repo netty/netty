@@ -53,10 +53,20 @@ public class SctpEchoTest extends AbstractSctpTest {
     }
 
     public void testSimpleEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb);
+        testSimpleEcho0(sb, cb, false);
     }
 
-    private static void testSimpleEcho0(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+    @Test
+    public void testSimpleEchoUnordered() throws Throwable {
+        Assume.assumeTrue(TestUtils.isSctpSupported());
+        run();
+    }
+
+    public void testSimpleEchoUnordered(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testSimpleEcho0(sb, cb, true);
+    }
+
+    private static void testSimpleEcho0(ServerBootstrap sb, Bootstrap cb, final boolean unordered) throws Throwable {
         final EchoHandler sh = new EchoHandler();
         final EchoHandler ch = new EchoHandler();
 
@@ -66,7 +76,7 @@ public class SctpEchoTest extends AbstractSctpTest {
                 c.pipeline().addLast(
                         new SctpMessageCompletionHandler(),
                         new SctpInboundByteStreamHandler(0, 0),
-                        new SctpOutboundByteStreamHandler(0, 0),
+                        new SctpOutboundByteStreamHandler(0, 0, unordered),
                         sh);
             }
         });
@@ -76,7 +86,7 @@ public class SctpEchoTest extends AbstractSctpTest {
                 c.pipeline().addLast(
                         new SctpMessageCompletionHandler(),
                         new SctpInboundByteStreamHandler(0, 0),
-                        new SctpOutboundByteStreamHandler(0, 0),
+                        new SctpOutboundByteStreamHandler(0, 0, unordered),
                         ch);
             }
         });
