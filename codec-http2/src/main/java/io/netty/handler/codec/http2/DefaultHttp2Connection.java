@@ -1177,13 +1177,12 @@ public class DefaultHttp2Connection implements Http2Connection {
     /**
      * A registry of all stream property keys known by this connection.
      */
-    private class PropertyKeyRegistry {
+    private final class PropertyKeyRegistry {
         final List<DefaultPropertyKey> keys = new ArrayList<DefaultPropertyKey>(4);
 
         /**
          * Registers a new property key.
          */
-        @SuppressWarnings("unchecked")
         DefaultPropertyKey newKey() {
             DefaultPropertyKey key = new DefaultPropertyKey(keys.size());
             keys.add(key);
