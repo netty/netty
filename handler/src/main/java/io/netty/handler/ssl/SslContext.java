@@ -36,6 +36,7 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSessionContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
+import javax.security.auth.x500.X500Principal;
 import java.io.File;
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
@@ -49,6 +50,7 @@ import java.security.PrivateKey;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.ArrayList;
@@ -296,8 +298,8 @@ public abstract class SslContext {
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
         case OPENSSL:
             return new OpenSslServerContext(
-                    keyCertChainFile, keyFile, keyPassword, trustManagerFactory,
-                    ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
+                    trustCertChainFile, trustManagerFactory, keyCertChainFile, keyFile, keyPassword,
+                    keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
         default:
             throw new Error(provider.toString());
         }
@@ -555,8 +557,8 @@ public abstract class SslContext {
                         keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
             case OPENSSL:
                 return new OpenSslClientContext(
-                        trustCertChainFile, trustManagerFactory, ciphers, cipherFilter, apn,
-                        sessionCacheSize, sessionTimeout);
+                        trustCertChainFile, trustManagerFactory, keyCertChainFile, keyFile, keyPassword,
+                        keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
         }
         // Should never happen!!
         throw new Error();
@@ -730,5 +732,40 @@ public abstract class SslContext {
         ks.load(null, null);
         ks.setKeyEntry("key", key, keyPasswordChars, certChain.toArray(new Certificate[certChain.size()]));
         return ks;
+    }
+
+    /**
+     * Build a {@link TrustManagerFactory} from a certificate chain file.
+     * @param certChainFile The certificate file to build from.
+     * @param trustManagerFactory The existing {@link TrustManagerFactory} that will be used if not {@code null}.
+     * @return A {@link TrustManagerFactory} which contains the certificates in {@code certChainFile}
+     */
+    protected static TrustManagerFactory buildTrustManagerFactory(File certChainFile,
+                                                                  TrustManagerFactory trustManagerFactory)
+            throws NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException {
+        KeyStore ks = KeyStore.getInstance("JKS");
+        ks.load(null, null);
+        CertificateFactory cf = CertificateFactory.getInstance("X.509");
+
+        ByteBuf[] certs = PemReader.readCertificates(certChainFile);
+        try {
+            for (ByteBuf buf: certs) {
+                X509Certificate cert = (X509Certificate) cf.generateCertificate(new ByteBufInputStream(buf));
+                X500Principal principal = cert.getSubjectX500Principal();
+                ks.setCertificateEntry(principal.getName("RFC2253"), cert);
+            }
+        } finally {
+            for (ByteBuf buf: certs) {
+                buf.release();
+            }
+        }
+
+        // Set up trust manager factory to use our key store.
+        if (trustManagerFactory == null) {
+            trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        }
+        trustManagerFactory.init(ks);
+
+        return trustManagerFactory;
     }
 }
