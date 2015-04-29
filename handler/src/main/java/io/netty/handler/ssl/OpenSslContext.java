@@ -26,6 +26,7 @@ import org.apache.tomcat.jni.SSLContext;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
@@ -56,6 +57,8 @@ public abstract class OpenSslContext extends SslContext {
     private final List<String> unmodifiableCiphers;
     private final long sessionCacheSize;
     private final long sessionTimeout;
+    private final OpenSslEngineMap engineMap = new DefaultOpenSslEngineMap();
+
     private final OpenSslApplicationProtocolNegotiator apn;
     /** The OpenSSL SSL_CTX object */
     protected final long ctx;
@@ -277,13 +280,10 @@ public abstract class OpenSslContext extends SslContext {
      */
     @Override
     public final SSLEngine newEngine(ByteBufAllocator alloc) {
-        OpenSslEngineMap engineMap = engineMap();
         final OpenSslEngine engine = new OpenSslEngine(ctx, alloc, isClient(), sessionContext(), apn, engineMap);
         engineMap.add(engine);
         return engine;
     }
-
-    abstract OpenSslEngineMap engineMap();
 
     /**
      * Returns the {@code SSL_CTX} object of this context.
@@ -392,31 +392,28 @@ public abstract class OpenSslContext extends SslContext {
         }
     }
 
-    static OpenSslEngineMap newEngineMap(X509TrustManager trustManager) {
-        if (useExtendedTrustManager(trustManager)) {
-            return new DefaultOpenSslEngineMap();
-        }
-        return OpenSslEngineMap.EMPTY;
-    }
-
     static boolean useExtendedTrustManager(X509TrustManager trustManager) {
          return PlatformDependent.javaVersion() >= 7 && trustManager instanceof X509ExtendedTrustManager;
     }
 
-    abstract static class AbstractCertificateVerifier implements CertificateVerifier {
+    abstract class AbstractCertificateVerifier implements CertificateVerifier {
         @Override
         public final boolean verify(long ssl, byte[][] chain, String auth) {
             X509Certificate[] peerCerts = certificates(chain);
+            final OpenSslEngine engine = engineMap.remove(ssl);
             try {
-                verify(ssl, peerCerts, auth);
+                verify(engine, peerCerts, auth);
                 return true;
-            } catch (Exception e) {
-                logger.debug("verification of certificate failed", e);
+            } catch (Throwable cause) {
+                logger.debug("verification of certificate failed", cause);
+                SSLHandshakeException e = new SSLHandshakeException("General OpenSslEngine problem");
+                e.initCause(cause);
+                engine.handshakeException = e;
             }
             return false;
         }
 
-        abstract void verify(long ssl, X509Certificate[] peerCerts, String auth) throws Exception;
+        abstract void verify(OpenSslEngine engine, X509Certificate[] peerCerts, String auth) throws Exception;
     }
 
     private static final class DefaultOpenSslEngineMap implements OpenSslEngineMap {
