@@ -263,6 +263,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                 final MessageInfo mi = MessageInfo.createOutgoing(association(), null, packet.streamIdentifier());
                 mi.payloadProtocolID(packet.protocolIdentifier());
                 mi.streamNumber(packet.streamIdentifier());
+                mi.unordered(packet.isUnordered());
 
                 ch.send(nioData, mi);
                 written ++;
