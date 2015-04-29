@@ -29,6 +29,7 @@ import org.apache.tomcat.jni.SSL;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSessionBindingEvent;
@@ -159,6 +160,10 @@ public final class OpenSslEngine extends SSLEngine {
     private final OpenSslEngineMap engineMap;
     private final OpenSslApplicationProtocolNegotiator apn;
     private final SSLSession session = new OpenSslSession();
+
+    // This is package-private as we set it from OpenSslContext if an exception is thrown during
+    // the verification step.
+    SSLHandshakeException handshakeException;
 
     /**
      * Creates a new instance
@@ -489,6 +494,22 @@ public final class OpenSslEngine extends SSLEngine {
         return new SSLEngineResult(getEngineStatus(), handshakeStatus0(), bytesConsumed, bytesProduced);
     }
 
+    private SSLException newSSLException(String msg) {
+        if (!handshakeFinished) {
+            return new SSLHandshakeException(msg);
+        }
+        return new SSLException(msg);
+    }
+
+    private void checkPendingHandshakeException() throws SSLHandshakeException {
+        if (handshakeException != null) {
+            SSLHandshakeException exception = handshakeException;
+            handshakeException = null;
+            shutdown();
+            throw exception;
+        }
+    }
+
     public synchronized SSLEngineResult unwrap(
             final ByteBuffer[] srcs, int srcsOffset, final int srcsLength,
             final ByteBuffer[] dsts, final int dstsOffset, final int dstsLength) throws SSLException {
@@ -608,7 +629,9 @@ public final class OpenSslEngine extends SSLEngine {
 
                     // There was an internal error -- shutdown
                     shutdown();
-                    throw new SSLException(err);
+                    throw newSSLException(err);
+                } else {
+                    checkPendingHandshakeException();
                 }
             }
         } else {
@@ -954,8 +977,9 @@ public final class OpenSslEngine extends SSLEngine {
 
                 // There was an internal error -- shutdown
                 shutdown();
-                throw new SSLException(err);
+                throw newSSLException(err);
             }
+            checkPendingHandshakeException();
         } else {
             // if SSL_do_handshake returns > 0 it means the handshake was finished. This means we can update
             // handshakeFinished directly and so eliminate uncessary calls to SSL.isInInit(...)
@@ -1037,6 +1061,7 @@ public final class OpenSslEngine extends SSLEngine {
         if (status == FINISHED) {
             handshakeFinished();
         }
+        checkPendingHandshakeException();
 
         return status;
     }
