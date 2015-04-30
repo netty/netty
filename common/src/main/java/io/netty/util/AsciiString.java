@@ -959,9 +959,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
         int length2 = cs.length();
         if (length1 != length2) {
             return false;
-        }
-
-        if (length1 == 0 && length2 == 0) {
+        } else if (length1 == 0) {
             return true; // since both are empty strings
         }
 
