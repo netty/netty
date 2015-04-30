@@ -28,6 +28,7 @@ import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.OneTimeTask;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.UnresolvedAddressException;
@@ -59,14 +60,14 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         fileDescriptor = fd;
     }
 
-    void setFlag(int flag) {
+    void setFlag(int flag) throws IOException {
         if (!isFlagSet(flag)) {
             flags |= flag;
             modifyEvents();
         }
     }
 
-    void clearFlag(int flag) {
+    void clearFlag(int flag) throws IOException {
         if (isFlagSet(flag)) {
             flags &= ~flag;
             modifyEvents();
@@ -160,7 +161,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         }
     }
 
-    private void modifyEvents() {
+    private void modifyEvents() throws IOException {
         if (isOpen() && isRegistered()) {
             ((EpollEventLoop) eventLoop().unwrap()).modify(this);
         }
@@ -324,7 +325,15 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         }
 
         protected final void clearEpollIn0() {
-            clearFlag(readFlag);
+            assert eventLoop().inEventLoop();
+            try {
+                clearFlag(readFlag);
+            } catch (IOException e) {
+                // When this happens there is something completely wrong with either the filedescriptor or epoll,
+                // so fire the exception through the pipeline and close the Channel.
+                pipeline().fireExceptionCaught(e);
+                unsafe().close(unsafe().voidPromise());
+            }
         }
     }
 }

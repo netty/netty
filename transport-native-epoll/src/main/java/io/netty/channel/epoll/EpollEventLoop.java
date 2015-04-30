@@ -74,7 +74,11 @@ final class EpollEventLoop extends SingleThreadEventLoop {
         try {
             this.epollFd = epollFd = Native.epollCreate();
             this.eventFd = eventFd = Native.eventFd();
-            Native.epollCtlAdd(epollFd, eventFd, Native.EPOLLIN);
+            try {
+                Native.epollCtlAdd(epollFd, eventFd, Native.EPOLLIN);
+            } catch (IOException e) {
+                throw new IllegalStateException("Unable to add eventFd filedescriptor to epoll", e);
+            }
             success = true;
         } finally {
             if (!success) {
@@ -107,7 +111,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     /**
      * Register the given epoll with this {@link io.netty.channel.EventLoop}.
      */
-    void add(AbstractEpollChannel ch) {
+    void add(AbstractEpollChannel ch) throws IOException {
         assert inEventLoop();
         int fd = ch.fd().intValue();
         Native.epollCtlAdd(epollFd, fd, ch.flags);
@@ -117,15 +121,15 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     /**
      * The flags of the given epoll was modified so update the registration
      */
-    void modify(AbstractEpollChannel ch) {
+    void modify(AbstractEpollChannel ch) throws IOException {
         assert inEventLoop();
         Native.epollCtlMod(epollFd, ch.fd().intValue(), ch.flags);
     }
 
     /**
-     * Deregister the given epoll from this {@link io.netty.channel.EventLoop}.
+     * Deregister the given epoll from this {@link EventLoop}.
      */
-    void remove(AbstractEpollChannel ch) {
+    void remove(AbstractEpollChannel ch) throws IOException {
         assert inEventLoop();
 
         if (ch.isOpen()) {
@@ -328,7 +332,14 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                     }
                 } else {
                     // We received an event for an fd which we not use anymore. Remove it from the epoll_event set.
-                    Native.epollCtlDel(epollFd, fd);
+                    try {
+                        Native.epollCtlDel(epollFd, fd);
+                    } catch (IOException ignore) {
+                        // This can happen but is nothing we need to worry about as we only try to delete
+                        // the fd from the epoll set as we not found it in our mappings. So this call to
+                        // epollCtlDel(...) is just to ensure we cleanup stuff and so may fail if it was
+                        // deleted before or the file descriptor was closed before.
+                    }
                 }
             }
         }
