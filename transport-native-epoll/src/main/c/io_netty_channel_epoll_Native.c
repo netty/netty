@@ -686,27 +686,30 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollWait0(JNIEnv* env
     return ready;
 }
 
-JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_epollCtlAdd(JNIEnv* env, jclass clazz, jint efd, jint fd, jint flags) {
-    if (epollCtl(env, efd, EPOLL_CTL_ADD, fd, flags) < 0) {
-        int err = errno;
-        throwRuntimeException(env, exceptionMessage("epoll_ctl() failed: ", err));
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollCtlAdd0(JNIEnv* env, jclass clazz, jint efd, jint fd, jint flags) {
+    int res = epollCtl(env, efd, EPOLL_CTL_ADD, fd, flags);
+    if (res < 0) {
+        return -errno;
     }
+    return res;
 }
 
-JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_epollCtlMod(JNIEnv* env, jclass clazz, jint efd, jint fd, jint flags) {
-    if (epollCtl(env, efd, EPOLL_CTL_MOD, fd, flags) < 0) {
-        int err = errno;
-        throwRuntimeException(env, exceptionMessage("epoll_ctl() failed: ", err));
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollCtlMod0(JNIEnv* env, jclass clazz, jint efd, jint fd, jint flags) {
+    int res = epollCtl(env, efd, EPOLL_CTL_MOD, fd, flags);
+    if (res < 0) {
+        return -errno;
     }
+    return res;
 }
 
-JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_epollCtlDel(JNIEnv* env, jclass clazz, jint efd, jint fd) {
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollCtlDel0(JNIEnv* env, jclass clazz, jint efd, jint fd) {
     // Create an empty event to workaround a bug in older kernels which can not handle NULL.
     struct epoll_event event = { 0 };
-    if (epoll_ctl(efd, EPOLL_CTL_DEL, fd, &event) < 0) {
-        int err = errno;
-        throwRuntimeException(env, exceptionMessage("epoll_ctl() failed: ", err));
+    int res = epoll_ctl(efd, EPOLL_CTL_DEL, fd, &event);
+    if (res < 0) {
+        return -errno;
     }
+    return res;
 }
 
 static inline jint _write(JNIEnv* env, jclass clazz, jint fd, void* buffer, jint pos, jint limit) {
