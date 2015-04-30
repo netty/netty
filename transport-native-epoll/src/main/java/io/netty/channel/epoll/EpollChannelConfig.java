@@ -16,11 +16,13 @@
 package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 
+import java.io.IOException;
 import java.util.Map;
 
 public class EpollChannelConfig extends DefaultChannelConfig {
@@ -133,7 +135,8 @@ public class EpollChannelConfig extends DefaultChannelConfig {
         if (mode == null) {
             throw new NullPointerException("mode");
         }
-        switch (mode) {
+        try {
+            switch (mode) {
             case EDGE_TRIGGERED:
                 checkChannelNotRegistered();
                 channel.setFlag(Native.EPOLLET);
@@ -143,7 +146,10 @@ public class EpollChannelConfig extends DefaultChannelConfig {
                 channel.clearFlag(Native.EPOLLET);
                 break;
             default:
-                throw  new Error();
+                throw new Error();
+            }
+        } catch (IOException e) {
+            throw new ChannelException(e);
         }
         return this;
     }
