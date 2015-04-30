@@ -300,14 +300,6 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             }
         }
 
-        // Wait until renegotiation is done.
-        if (renegoFuture != null) {
-            renegoFuture.sync();
-        }
-        if (serverHandler.renegoFuture != null) {
-            serverHandler.renegoFuture.sync();
-        }
-
         // Ensure all data has been exchanged.
         while (clientRecvCounter.get() < data.length) {
             if (serverException.get() != null) {
@@ -337,6 +329,14 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             } catch (InterruptedException e) {
                 // Ignore.
             }
+        }
+
+        // Wait until renegotiation is done.
+        if (renegoFuture != null) {
+            renegoFuture.sync();
+        }
+        if (serverHandler.renegoFuture != null) {
+            serverHandler.renegoFuture.sync();
         }
 
         serverChannel.close().awaitUninterruptibly();
