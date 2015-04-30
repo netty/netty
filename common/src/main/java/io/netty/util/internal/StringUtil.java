@@ -329,7 +329,7 @@ public final class StringUtil {
      *
      * @param value The value which will be escaped according to
      *              <a href="https://tools.ietf.org/html/rfc4180#section-2">RFC-4180</a>
-     * @return {@link CharSequence} the escaped value if nesessary, or the value unchanged
+     * @return {@link CharSequence} the escaped value if necessary, or the value unchanged
      */
     public static CharSequence escapeCsv(CharSequence value) {
         int length = checkNotNull(value, "value").length();
@@ -354,7 +354,7 @@ public final class StringUtil {
                     } else {
                         boolean isNextCharDoubleQuote = isDoubleQuote(value.charAt(i + 1));
                         if (!isDoubleQuote(value.charAt(i - 1)) &&
-                                (!isNextCharDoubleQuote || isNextCharDoubleQuote && i + 1 == last)) {
+                                (!isNextCharDoubleQuote || i + 1 == last)) {
                             escaped.append(DOUBLE_QUOTE);
                             escapedDoubleQuote = true;
                         }
