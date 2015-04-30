@@ -586,7 +586,7 @@
       <dependency>
         <groupId>com.twitter</groupId>
         <artifactId>hpack</artifactId>
-        <version>0.10.1</version>
+        <version>0.11.0</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jetty.npn</groupId>
@@ -971,7 +971,7 @@
             <!-- SSLSession implementation -->
             <ignore>javax.net.ssl.SSLEngine</ignore>
             <ignore>javax.net.ssl.X509ExtendedTrustManager</ignore>
-            
+
             <ignore>java.util.concurrent.ConcurrentLinkedDeque</ignore>
           </ignores>
         </configuration>
@@ -1466,4 +1466,3 @@
     </pluginManagement>
   </build>
 </project>
-
