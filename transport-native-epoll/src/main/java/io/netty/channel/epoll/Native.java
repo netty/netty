@@ -156,10 +156,29 @@ public final class Native {
     }
     private static native int epollWait0(int efd, long address, int len, int timeout);
 
-    public static native void epollCtlAdd(int efd, final int fd, final int flags);
+    public static void epollCtlAdd(int efd, final int fd, final int flags) throws IOException {
+        int res = epollCtlAdd0(efd, fd, flags);
+        if (res < 0) {
+            throw newIOException("epoll_ctl", res);
+        }
+    }
+    private static native int epollCtlAdd0(int efd, final int fd, final int flags);
 
-    public static native void epollCtlMod(int efd, final int fd, final int flags);
-    public static native void epollCtlDel(int efd, final int fd);
+    public static void epollCtlMod(int efd, final int fd, final int flags) throws IOException {
+        int res = epollCtlMod0(efd, fd, flags);
+        if (res < 0) {
+            throw newIOException("epoll_ctl", res);
+        }
+    }
+    private static native int epollCtlMod0(int efd, final int fd, final int flags);
+
+    public static void epollCtlDel(int efd, final int fd) throws IOException {
+        int res = epollCtlDel0(efd, fd);
+        if (res < 0) {
+            throw newIOException("epoll_ctl", res);
+        }
+    }
+    private static native int epollCtlDel0(int efd, final int fd);
 
     private static native int errnoEBADF();
     private static native int errnoEPIPE();

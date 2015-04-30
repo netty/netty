@@ -38,9 +38,9 @@ void Java_io_netty_channel_epoll_Native_eventFdWrite(JNIEnv* env, jclass clazz, 
 void Java_io_netty_channel_epoll_Native_eventFdRead(JNIEnv* env, jclass clazz, jint fd);
 jint Java_io_netty_channel_epoll_Native_epollCreate(JNIEnv* env, jclass clazz);
 jint Java_io_netty_channel_epoll_Native_epollWait0(JNIEnv* env, jclass clazz, jint efd, jlong address, jint length, jint timeout);
-void Java_io_netty_channel_epoll_Native_epollCtlAdd(JNIEnv* env, jclass clazz, jint efd, jint fd, jint flags);
-void Java_io_netty_channel_epoll_Native_epollCtlMod(JNIEnv* env, jclass clazz, jint efd, jint fd, jint flags);
-void  Java_io_netty_channel_epoll_Native_epollCtlDel(JNIEnv* env, jclass clazz, jint efd, jint fd);
+jint Java_io_netty_channel_epoll_Native_epollCtlAdd0(JNIEnv* env, jclass clazz, jint efd, jint fd, jint flags);
+jint Java_io_netty_channel_epoll_Native_epollCtlMod0(JNIEnv* env, jclass clazz, jint efd, jint fd, jint flags);
+jint Java_io_netty_channel_epoll_Native_epollCtlDel0(JNIEnv* env, jclass clazz, jint efd, jint fd);
 jint Java_io_netty_channel_epoll_Native_write0(JNIEnv* env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit);
 jint Java_io_netty_channel_epoll_Native_writeAddress0(JNIEnv* env, jclass clazz, jint fd, jlong address, jint pos, jint limit);
 jlong Java_io_netty_channel_epoll_Native_writev0(JNIEnv* env, jclass clazz, jint fd, jobjectArray buffers, jint offset, jint length);
