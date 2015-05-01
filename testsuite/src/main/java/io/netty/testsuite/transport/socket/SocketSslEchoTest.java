@@ -39,7 +39,6 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.concurrent.Future;
-import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.AfterClass;
@@ -58,8 +57,13 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.Matchers.anyOf;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.sameInstance;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThat;
 
 @RunWith(Parameterized.class)
 public class SocketSslEchoTest extends AbstractSocketTest {
@@ -332,21 +336,23 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             throw clientException.get();
         }
 
-        // When renegotiation is done, both the client and server side should be notified.
+        // When renegotiation is done, at least the initiating side should be notified.
         try {
-            if (renegotiation.type != RenegotiationType.NONE) {
+            switch (renegotiation.type) {
+            case SERVER_INITIATED:
                 assertThat(serverSslHandler.engine().getSession().getCipherSuite(), is(renegotiation.cipherSuite));
                 assertThat(serverNegoCounter.get(), is(2));
+                assertThat(clientNegoCounter.get(), anyOf(is(1), is(2)));
+                break;
+            case CLIENT_INITIATED:
+                assertThat(serverNegoCounter.get(), anyOf(is(1), is(2)));
                 assertThat(clientSslHandler.engine().getSession().getCipherSuite(), is(renegotiation.cipherSuite));
                 assertThat(clientNegoCounter.get(), is(2));
-            } else {
+                break;
+            case NONE:
                 assertThat(serverNegoCounter.get(), is(1));
                 assertThat(clientNegoCounter.get(), is(1));
             }
-        } catch (Throwable t) {
-            // TODO: Remove this once we fix this test.
-            TestUtils.dump(StringUtil.simpleClassName(this));
-            throw t;
         } finally {
             logStats("STATS");
         }
