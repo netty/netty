@@ -239,7 +239,7 @@ public final class TestUtils {
         });
 
         final byte[] buf = new byte[65536];
-        final LZMA2Options options = new LZMA2Options(9);
+        final LZMA2Options options = new LZMA2Options(LZMA2Options.PRESET_DEFAULT);
 
         for (File file: files) {
             final String filename = file.toString();
@@ -277,8 +277,8 @@ public final class TestUtils {
                 }
                 out.close();
                 in.close();
-            } catch (Exception e) {
-                logger.warn("Failed to compress the heap dump: {}", xzFilename, e);
+            } catch (Throwable t) {
+                logger.warn("Failed to compress the heap dump: {}", xzFilename, t);
             } finally {
                 if (in != null) {
                     try {
