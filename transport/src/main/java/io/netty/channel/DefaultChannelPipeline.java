@@ -1131,13 +1131,22 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception { }
 
         @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception { }
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            // This may not be a configuration error and so don't log anything.
+            // The event may be superfluous for the current pipeline configuration.
+            ReferenceCountUtil.release(evt);
+        }
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            logger.warn(
-                    "An exceptionCaught() event was fired, and it reached at the tail of the pipeline. " +
-                            "It usually means the last handler in the pipeline did not handle the exception.", cause);
+            try {
+                logger.warn(
+                        "An exceptionCaught() event was fired, and it reached at the tail of the pipeline. " +
+                                "It usually means the last handler in the pipeline did not handle the exception.",
+                                cause);
+            } finally {
+                ReferenceCountUtil.release(cause);
+            }
         }
 
         @Override
