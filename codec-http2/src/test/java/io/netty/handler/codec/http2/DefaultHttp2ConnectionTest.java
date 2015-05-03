@@ -93,10 +93,10 @@ public class DefaultHttp2ConnectionTest {
         assertEquals(State.OPEN, stream1.state());
         assertEquals(State.CLOSED, stream2.state());
         assertEquals(State.OPEN, remoteStream.state());
-        assertEquals(3, client.local().lastKnownStream());
+        assertEquals(3, client.local().lastStreamKnownByPeer());
         assertEquals(5, client.local().lastStreamCreated());
         // The remote endpoint must not be affected by a received GOAWAY frame.
-        assertEquals(-1, client.remote().lastKnownStream());
+        assertEquals(-1, client.remote().lastStreamKnownByPeer());
         assertEquals(State.OPEN, remoteStream.state());
     }
 
@@ -111,10 +111,10 @@ public class DefaultHttp2ConnectionTest {
         assertEquals(State.OPEN, stream1.state());
         assertEquals(State.CLOSED, stream2.state());
 
-        assertEquals(3, server.remote().lastKnownStream());
+        assertEquals(3, server.remote().lastStreamKnownByPeer());
         assertEquals(5, server.remote().lastStreamCreated());
         // The local endpoint must not be affected by a sent GOAWAY frame.
-        assertEquals(-1, server.local().lastKnownStream());
+        assertEquals(-1, server.local().lastStreamKnownByPeer());
         assertEquals(State.OPEN, localStream.state());
     }
 
