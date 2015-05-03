@@ -556,10 +556,10 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                                 final ByteBuf debugData, ChannelPromise promise) {
         try {
             final Http2Connection connection = connection();
-            if (connection.goAwaySent() && connection.remote().lastKnownStream() < lastStreamId) {
+            if (connection.goAwaySent() && lastStreamId > connection.remote().lastStreamKnownByPeer()) {
                 throw connectionError(PROTOCOL_ERROR, "Last stream identifier must not increase between " +
                                                       "sending multiple GOAWAY frames (was '%d', is '%d').",
-                                                      connection.remote().lastKnownStream(),
+                                                      connection.remote().lastStreamKnownByPeer(),
                                                       lastStreamId);
             }
             connection.goAwaySent(lastStreamId, errorCode, debugData);
