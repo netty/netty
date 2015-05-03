@@ -35,7 +35,6 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -65,9 +64,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Tests for {@link DefaultHttp2ConnectionDecoder}.
  */
 public class DefaultHttp2ConnectionDecoderTest {
-    private static final int STREAM_ID = 1;
+    private static final int STREAM_ID = 3;
     private static final int PUSH_STREAM_ID = 2;
-    private static final int STREAM_DEPENDENCY_ID = 3;
+    private static final int STREAM_DEPENDENCY_ID = 5;
 
     private Http2ConnectionDecoder decoder;
 
@@ -169,8 +168,9 @@ public class DefaultHttp2ConnectionDecoderTest {
     }
 
     @Test
-    public void dataReadAfterGoAwayShouldApplyFlowControl() throws Exception {
-        when(connection.goAwaySent()).thenReturn(true);
+    public void dataReadAfterGoAwaySentShouldApplyFlowControl() throws Exception {
+        mockGoAwaySent();
+
         final ByteBuf data = dummyData();
         int padding = 10;
         int processedBytes = data.readableBytes() + padding;
@@ -182,6 +182,26 @@ public class DefaultHttp2ConnectionDecoderTest {
 
             // Verify that the event was absorbed and not propagated to the observer.
             verify(listener, never()).onDataRead(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean());
+        } finally {
+            data.release();
+        }
+    }
+
+    @Test
+    public void dataReadAfterGoAwaySentShouldAllowFramesForStreamCreatedByLocalEndpoint() throws Exception {
+        mockGoAwaySentShouldAllowFramesForStreamCreatedByLocalEndpoint();
+
+        final ByteBuf data = dummyData();
+        int padding = 10;
+        int processedBytes = data.readableBytes() + padding;
+        mockFlowControl(processedBytes);
+        try {
+            decode().onDataRead(ctx, STREAM_ID, data, padding, true);
+            verify(localFlow).receiveFlowControlledFrame(eq(ctx), eq(stream), eq(data), eq(padding), eq(true));
+            verify(localFlow).consumeBytes(eq(ctx), eq(stream), eq(processedBytes));
+
+            // Verify that the event was absorbed and not propagated to the observer.
+            verify(listener).onDataRead(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean());
         } finally {
             data.release();
         }
@@ -262,10 +282,10 @@ public class DefaultHttp2ConnectionDecoderTest {
     }
 
     @Test
-    public void dataReadAfterGoAwayForStreamInInvalidStateShouldIgnore() throws Exception {
+    public void dataReadAfterGoAwaySentForStreamInInvalidStateShouldIgnore() throws Exception {
         // Throw an exception when checking stream state.
         when(stream.state()).thenReturn(Http2Stream.State.CLOSED);
-        when(connection.goAwaySent()).thenReturn(true);
+        mockGoAwaySent();
         final ByteBuf data = dummyData();
         try {
             decode().onDataRead(ctx, STREAM_ID, data, 10, true);
@@ -459,11 +479,19 @@ public class DefaultHttp2ConnectionDecoderTest {
     }
 
     @Test
-    public void pushPromiseReadAfterGoAwayShouldBeIgnored() throws Exception {
-        when(connection.goAwaySent()).thenReturn(true);
+    public void pushPromiseReadAfterGoAwaySentShouldBeIgnored() throws Exception {
+        mockGoAwaySent();
         decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
         verify(remote, never()).reservePushStream(anyInt(), any(Http2Stream.class));
         verify(listener, never()).onPushPromiseRead(eq(ctx), anyInt(), anyInt(), any(Http2Headers.class), anyInt());
+    }
+
+    @Test
+    public void pushPromiseReadAfterGoAwayShouldAllowFramesForStreamCreatedByLocalEndpoint() throws Exception {
+        mockGoAwaySentShouldAllowFramesForStreamCreatedByLocalEndpoint();
+        decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
+        verify(remote).reservePushStream(anyInt(), any(Http2Stream.class));
+        verify(listener).onPushPromiseRead(eq(ctx), anyInt(), anyInt(), any(Http2Headers.class), anyInt());
     }
 
     @Test(expected = Http2Exception.class)
@@ -481,11 +509,19 @@ public class DefaultHttp2ConnectionDecoderTest {
     }
 
     @Test
-    public void priorityReadAfterGoAwayShouldBeIgnored() throws Exception {
-        when(connection.goAwaySent()).thenReturn(true);
+    public void priorityReadAfterGoAwaySentShouldBeIgnored() throws Exception {
+        mockGoAwaySent();
         decode().onPriorityRead(ctx, STREAM_ID, 0, (short) 255, true);
         verify(stream, never()).setPriority(anyInt(), anyShort(), anyBoolean());
         verify(listener, never()).onPriorityRead(eq(ctx), anyInt(), anyInt(), anyShort(), anyBoolean());
+    }
+
+    @Test
+    public void priorityReadAfterGoAwaySentShouldAllowFramesForStreamCreatedByLocalEndpoint() throws Exception {
+        mockGoAwaySentShouldAllowFramesForStreamCreatedByLocalEndpoint();
+        decode().onPriorityRead(ctx, STREAM_ID, 0, (short) 255, true);
+        verify(stream).setPriority(anyInt(), anyShort(), anyBoolean());
+        verify(listener).onPriorityRead(eq(ctx), anyInt(), anyInt(), anyShort(), anyBoolean());
     }
 
     @Test
@@ -521,11 +557,19 @@ public class DefaultHttp2ConnectionDecoderTest {
     }
 
     @Test
-    public void windowUpdateReadAfterGoAwayShouldBeIgnored() throws Exception {
-        when(connection.goAwaySent()).thenReturn(true);
+    public void windowUpdateReadAfterGoAwaySentShouldBeIgnored() throws Exception {
+        mockGoAwaySent();
         decode().onWindowUpdateRead(ctx, STREAM_ID, 10);
         verify(remoteFlow, never()).incrementWindowSize(eq(ctx), any(Http2Stream.class), anyInt());
         verify(listener, never()).onWindowUpdateRead(eq(ctx), anyInt(), anyInt());
+    }
+
+    @Test
+    public void windowUpdateReadAfterGoAwaySentShouldAllowFramesForStreamCreatedByLocalEndpoint() throws Exception {
+        mockGoAwaySentShouldAllowFramesForStreamCreatedByLocalEndpoint();
+        decode().onWindowUpdateRead(ctx, STREAM_ID, 10);
+        verify(remoteFlow).incrementWindowSize(eq(ctx), any(Http2Stream.class), anyInt());
+        verify(listener).onWindowUpdateRead(eq(ctx), anyInt(), anyInt());
     }
 
     @Test(expected = Http2Exception.class)
@@ -650,5 +694,17 @@ public class DefaultHttp2ConnectionDecoderTest {
             }
         }).when(listener).onDataRead(any(ChannelHandlerContext.class), anyInt(),
                 any(ByteBuf.class), anyInt(), anyBoolean());
+    }
+
+    private void mockGoAwaySent() {
+        when(connection.goAwaySent()).thenReturn(true);
+        when(remote.isValidStreamId(STREAM_ID)).thenReturn(true);
+        when(remote.lastStreamKnownByPeer()).thenReturn(1);
+    }
+
+    private void mockGoAwaySentShouldAllowFramesForStreamCreatedByLocalEndpoint() {
+        when(connection.goAwaySent()).thenReturn(true);
+        when(remote.isValidStreamId(STREAM_ID)).thenReturn(false);
+        when(remote.lastStreamKnownByPeer()).thenReturn(1);
     }
 }
