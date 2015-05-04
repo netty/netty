@@ -225,7 +225,7 @@ public final class Http2CodecUtil {
                 doneAllocating = true;
                 if (successfulCount == expectedCount) {
                     promise.setSuccess();
-                    return super.setSuccess();
+                    return setSuccess();
                 }
             }
             return this;
@@ -272,10 +272,10 @@ public final class Http2CodecUtil {
         public ChannelPromise setSuccess(Void result) {
             if (allowNotificationEvent()) {
                 ++successfulCount;
-                if (successfulCount == expectedCount && doneAllocating) {
-                    promise.setSuccess(result);
-                    return super.setSuccess(result);
-                }
+            }
+            if (successfulCount == expectedCount && doneAllocating && !isDone()) {
+                promise.setSuccess(result);
+                return super.setSuccess(result);
             }
             return this;
         }
