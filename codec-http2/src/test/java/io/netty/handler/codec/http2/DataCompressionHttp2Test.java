@@ -42,6 +42,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.handler.codec.http2.Http2TestUtil.FrameAdapter;
 import io.netty.handler.codec.http2.Http2TestUtil.FrameCountDown;
 import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
@@ -270,6 +271,12 @@ public class DataCompressionHttp2Test {
         clientConnection = new DefaultHttp2Connection(false);
 
         serverConnection.addListener(new Http2ConnectionAdapter() {
+            @Override
+            public void onStreamActive(Http2Stream stream) {
+                if (stream.state() == State.HALF_CLOSED_LOCAL || stream.state() == State.HALF_CLOSED_REMOTE) {
+                    serverLatch.countDown();
+                }
+            }
             @Override
             public void onStreamHalfClosed(Http2Stream stream) {
                 serverLatch.countDown();
