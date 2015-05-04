@@ -434,9 +434,6 @@ public class DefaultHttp2Connection implements Http2Connection {
         public Http2Stream open(boolean halfClosed) throws Http2Exception {
             state = activeState(id, state, isLocal(), halfClosed);
             activate();
-            if (halfClosed) {
-                notifyHalfClosed(this);
-            }
             return this;
         }
 
@@ -900,9 +897,6 @@ public class DefaultHttp2Connection implements Http2Connection {
         public DefaultStream createStream(int streamId, boolean halfClosed) throws Http2Exception {
             DefaultStream stream = createStream(streamId, activeState(streamId, IDLE, isLocal(), halfClosed));
             stream.activate();
-            if (halfClosed) {
-                notifyHalfClosed(stream);
-            }
             return stream;
         }
 

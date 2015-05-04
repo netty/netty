@@ -43,8 +43,10 @@ public interface Http2Connection {
         void onStreamActive(Http2Stream stream);
 
         /**
-         * Notifies the listener that the given stream is now {@code HALF CLOSED}. The stream can be
-         * inspected to determine which side is {@code CLOSED}.
+         * Notifies the listener that the given stream has transitioned from {@code OPEN} to {@code HALF CLOSED}.
+         * This method will <strong>not</strong> be called until a state transition occurs from when
+         * {@link #onStreamActive(Http2Stream)} was called.
+         * The stream can be inspected to determine which side is {@code HALF CLOSED}.
          * <p>
          * If a {@link RuntimeException} is thrown it will be logged and <strong>not propagated</strong>.
          * Throwing from this method is not supported and is considered a programming error.
