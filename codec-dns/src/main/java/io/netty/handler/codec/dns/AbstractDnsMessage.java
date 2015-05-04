@@ -375,6 +375,11 @@ public abstract class AbstractDnsMessage extends AbstractReferenceCounted implem
     @Override
     protected void deallocate() {
         clear();
+
+        final ResourceLeak leak = this.leak;
+        if (leak != null) {
+            leak.close();
+        }
     }
 
     @Override
