@@ -529,7 +529,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
         /**
          * Helper method for determining whether or not to ignore inbound frames. A stream is considered to be created
-         * after a go away is sent if the following conditions hold:
+         * after a {@code GOAWAY} is sent if the following conditions hold:
          * <p/>
          * <ul>
          *     <li>A {@code GOAWAY} must have been sent by the local endpoint</li>
