@@ -605,8 +605,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                     frame.writeComplete();
                 }
             } catch (Throwable t) {
-                // Mark the state as cancelled, we'll clear the pending queue
-                // via cancel() below.
+                // Mark the state as cancelled, we'll clear the pending queue via cancel() below.
                 cancelled = true;
                 cause = t;
             } finally {
