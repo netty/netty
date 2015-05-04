@@ -99,12 +99,14 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     @Override
     protected void doClose() throws Exception {
         active = false;
-
-        // deregister from epoll now
-        doDeregister();
-
-        FileDescriptor fd = fileDescriptor;
-        fd.close();
+        try {
+            // deregister from epoll now
+            doDeregister();
+        } finally {
+            // Ensure the file descriptor is closed in all cases.
+            FileDescriptor fd = fileDescriptor;
+            fd.close();
+        }
     }
 
     @Override
