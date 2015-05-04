@@ -111,78 +111,6 @@
       </properties>
     </profile>
     <profile>
-      <id>alpn-8</id>
-      <activation>
-        <property>
-          <name>java.version</name>
-          <value>1.8</value>
-        </property>
-      </activation>
-      <properties>
-        <jetty.alpn.version>8.1.0.v20141016</jetty.alpn.version>
-      </properties>
-    </profile>
-    <profile>
-      <id>alpn-8u05</id>
-      <activation>
-        <property>
-          <name>java.version</name>
-          <value>1.8.0_05</value>
-        </property>
-      </activation>
-      <properties>
-        <jetty.alpn.version>8.1.0.v20141016</jetty.alpn.version>
-      </properties>
-    </profile>
-    <profile>
-      <id>alpn-8u11</id>
-      <activation>
-        <property>
-          <name>java.version</name>
-          <value>1.8.0_11</value>
-        </property>
-      </activation>
-      <properties>
-        <jetty.alpn.version>8.1.0.v20141016</jetty.alpn.version>
-      </properties>
-    </profile>
-    <profile>
-      <id>alpn-8u20</id>
-      <activation>
-        <property>
-          <name>java.version</name>
-          <value>1.8.0_20</value>
-        </property>
-      </activation>
-      <properties>
-        <jetty.alpn.version>8.1.0.v20141016</jetty.alpn.version>
-      </properties>
-    </profile>
-    <profile>
-      <id>alpn-8u25</id>
-      <activation>
-        <property>
-          <name>java.version</name>
-          <value>1.8.0_25</value>
-        </property>
-      </activation>
-      <properties>
-        <jetty.alpn.version>8.1.2.v20141202</jetty.alpn.version>
-      </properties>
-    </profile>
-    <profile>
-      <id>alpn-8u31</id>
-      <activation>
-        <property>
-          <name>java.version</name>
-          <value>1.8.0_31</value>
-        </property>
-      </activation>
-      <properties>
-        <jetty.alpn.version>8.1.3.v20150130</jetty.alpn.version>
-      </properties>
-    </profile>
-    <profile>
       <id>linux</id>
       <activation>
         <os>
@@ -246,6 +174,31 @@
       See: http://www.eclipse.org/jetty/documentation/current/npn-chapter.html#npn-versions
       See: http://www.eclipse.org/jetty/documentation/current/alpn-chapter.html#alpn-versions
     -->
+    <profile>
+      <id>npn-alpn-7</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>${jetty.npn.version.latest}</jetty.npn.version>
+        <jetty.alpn.version>${jetty.alpn.version.latest7}</jetty.alpn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>alpn-8</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.8</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.alpn.version>${jetty.alpn.version.latest8}</jetty.alpn.version>
+      </properties>
+    </profile>
     <profile>
       <id>npn-7u9</id>
       <activation>
@@ -486,6 +439,116 @@
       </properties>
     </profile>
     <profile>
+      <id>npn-alpn-7u79</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_79</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.10.v20150130</jetty.npn.version>
+        <jetty.alpn.version>7.1.3.v20150130</jetty.alpn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-alpn-7u80</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_80</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.10.v20150130</jetty.npn.version>
+        <jetty.alpn.version>7.1.3.v20150130</jetty.alpn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>alpn-8u05</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.8.0_05</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.alpn.version>8.1.0.v20141016</jetty.alpn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>alpn-8u11</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.8.0_11</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.alpn.version>8.1.0.v20141016</jetty.alpn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>alpn-8u20</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.8.0_20</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.alpn.version>8.1.0.v20141016</jetty.alpn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>alpn-8u25</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.8.0_25</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.alpn.version>8.1.2.v20141202</jetty.alpn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>alpn-8u31</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.8.0_31</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.alpn.version>8.1.3.v20150130</jetty.alpn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>alpn-8u40</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.8.0_40</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.alpn.version>8.1.3.v20150130</jetty.alpn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>alpn-8u45</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.8.0_45</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.alpn.version>8.1.3.v20150130</jetty.alpn.version>
+      </properties>
+    </profile>
+    <profile>
       <!--
       This profile exists because either ALPN or NPN can exits on the class path at once, but not both.
       The JDK version is typically used to distinguish which should be used but there is some overlap
@@ -508,9 +571,12 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <jboss.marshalling.version>1.3.18.GA</jboss.marshalling.version>
-    <jetty.npn.version>1.1.10.v20150130</jetty.npn.version>
+    <jetty.npn.version.latest>1.1.10.v20150130</jetty.npn.version.latest>
+    <jetty.alpn.version.latest7>7.1.3.v20150130</jetty.alpn.version.latest7>
+    <jetty.alpn.version.latest8>8.1.3.v20150130</jetty.alpn.version.latest8>
+    <jetty.npn.version>${jetty.npn.version.latest}</jetty.npn.version>
     <jetty.npn.path>${settings.localRepository}/org/mortbay/jetty/npn/npn-boot/${jetty.npn.version}/npn-boot-${jetty.npn.version}.jar</jetty.npn.path>
-    <jetty.alpn.version>8.1.3.v20150130</jetty.alpn.version>
+    <jetty.alpn.version>${jetty.alpn.version.latest7}</jetty.alpn.version>
     <jetty.alpn.path>${settings.localRepository}/org/mortbay/jetty/alpn/alpn-boot/${jetty.alpn.version}/alpn-boot-${jetty.alpn.version}.jar</jetty.alpn.path>
     <argLine.common>
       -server
