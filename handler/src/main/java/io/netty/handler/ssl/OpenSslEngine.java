@@ -159,6 +159,7 @@ public final class OpenSslEngine extends SSLEngine {
     private final OpenSslSessionContext sessionContext;
     private final OpenSslEngineMap engineMap;
     private final OpenSslApplicationProtocolNegotiator apn;
+    private final boolean rejectRemoteInitiatedRenegation;
     private final SSLSession session = new OpenSslSession();
 
     // This is package-private as we set it from OpenSslContext if an exception is thrown during
@@ -174,7 +175,7 @@ public final class OpenSslEngine extends SSLEngine {
     @Deprecated
     public OpenSslEngine(long sslCtx, ByteBufAllocator alloc,
                          @SuppressWarnings("unused") String fallbackApplicationProtocol) {
-        this(sslCtx, alloc, false, null, OpenSslContext.NONE_PROTOCOL_NEGOTIATOR, OpenSslEngineMap.EMPTY);
+        this(sslCtx, alloc, false, null, OpenSslContext.NONE_PROTOCOL_NEGOTIATOR, OpenSslEngineMap.EMPTY, false);
     }
 
     /**
@@ -187,7 +188,8 @@ public final class OpenSslEngine extends SSLEngine {
      */
     OpenSslEngine(long sslCtx, ByteBufAllocator alloc,
                   boolean clientMode, OpenSslSessionContext sessionContext,
-                  OpenSslApplicationProtocolNegotiator apn, OpenSslEngineMap engineMap) {
+                  OpenSslApplicationProtocolNegotiator apn, OpenSslEngineMap engineMap,
+                  boolean rejectRemoteInitiatedRenegation) {
         OpenSsl.ensureAvailability();
         if (sslCtx == 0) {
             throw new NullPointerException("sslCtx");
@@ -200,6 +202,7 @@ public final class OpenSslEngine extends SSLEngine {
         this.clientMode = clientMode;
         this.sessionContext = sessionContext;
         this.engineMap = engineMap;
+        this.rejectRemoteInitiatedRenegation = rejectRemoteInitiatedRenegation;
     }
 
     @Override
@@ -634,6 +637,8 @@ public final class OpenSslEngine extends SSLEngine {
                     checkPendingHandshakeException();
                 }
             }
+
+            rejectRemoteInitiatedRenegation();
         } else {
             // Reset to 0 as -1 is used to signal that nothing was written and no priming read needs to be done
             bytesConsumed = 0;
@@ -671,10 +676,11 @@ public final class OpenSslEngine extends SSLEngine {
                     throw new SSLException(e);
                 }
 
+                rejectRemoteInitiatedRenegation();
+
                 if (bytesRead == 0) {
                     break;
                 }
-
                 bytesProduced += bytesRead;
                 pendingApp -= bytesRead;
 
@@ -692,6 +698,15 @@ public final class OpenSslEngine extends SSLEngine {
         }
 
         return new SSLEngineResult(getEngineStatus(), handshakeStatus0(), bytesConsumed, bytesProduced);
+    }
+
+    private void rejectRemoteInitiatedRenegation() throws SSLHandshakeException {
+        if (rejectRemoteInitiatedRenegation && SSL.getHandshakeCount(ssl) > 1) {
+            // TODO: In future versions me may also want to send a fatal_alert to the client and so notify it
+            // that the renegotiation failed.
+            shutdown();
+            throw new SSLHandshakeException("remote-initiated renegotation not allowed");
+        }
     }
 
     public SSLEngineResult unwrap(final ByteBuffer[] srcs, final ByteBuffer[] dsts) throws SSLException {

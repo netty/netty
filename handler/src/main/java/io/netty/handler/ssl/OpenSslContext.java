@@ -17,6 +17,7 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.apache.tomcat.jni.CertificateVerifier;
@@ -45,6 +46,16 @@ import static io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFai
 public abstract class OpenSslContext extends SslContext {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OpenSslContext.class);
+    /**
+     * To make it easier for users to replace JDK implemention with OpenSsl version we also use
+     * {@code jdk.tls.rejectClientInitiatedRenegotiation} to allow disabling client initiated renegotiation.
+     * Java8+ uses this system property as well.
+     *
+     * See also <a href="http://blog.ivanristic.com/2014/03/ssl-tls-improvements-in-java-8.html">
+     * Significant SSL/TLS improvements in Java 8</a>
+     */
+    private static final boolean JDK_REJECT_CLIENT_INITIATED_RENEGOTIATION =
+            SystemPropertyUtil.getBoolean("jdk.tls.rejectClientInitiatedRenegotiation", false);
     private static final List<String> DEFAULT_CIPHERS;
     private static final AtomicIntegerFieldUpdater<OpenSslContext> DESTROY_UPDATER;
 
@@ -54,6 +65,7 @@ public abstract class OpenSslContext extends SslContext {
     private final long aprPool;
     @SuppressWarnings({ "unused", "FieldMayBeFinal" })
     private volatile int aprPoolDestroyed;
+    private volatile boolean rejectRemoteInitiatedRenegotiation;
     private final List<String> unmodifiableCiphers;
     private final long sessionCacheSize;
     private final long sessionTimeout;
@@ -129,6 +141,10 @@ public abstract class OpenSslContext extends SslContext {
         }
         this.mode = mode;
 
+        if (mode == SSL.SSL_MODE_SERVER) {
+            rejectRemoteInitiatedRenegotiation =
+                    JDK_REJECT_CLIENT_INITIATED_RENEGOTIATION;
+        }
         final List<String> convertedCiphers;
         if (ciphers == null) {
             convertedCiphers = null;
@@ -280,7 +296,8 @@ public abstract class OpenSslContext extends SslContext {
      */
     @Override
     public final SSLEngine newEngine(ByteBufAllocator alloc) {
-        final OpenSslEngine engine = new OpenSslEngine(ctx, alloc, isClient(), sessionContext(), apn, engineMap);
+        final OpenSslEngine engine = new OpenSslEngine(
+                ctx, alloc, isClient(), sessionContext(), apn, engineMap, rejectRemoteInitiatedRenegotiation);
         engineMap.add(engine);
         return engine;
     }
@@ -299,6 +316,14 @@ public abstract class OpenSslContext extends SslContext {
     @Deprecated
     public final OpenSslSessionStats stats() {
         return sessionContext().stats();
+    }
+
+    /**
+     * Specify if remote initiated renegotiation is supported or not. If not supported and the remote side tries
+     * to initiate a renegotiation a {@link SSLHandshakeException} will be thrown during decoding.
+     */
+    public void setRejectRemoteInitiatedRenegotiation(boolean rejectRemoteInitiatedRenegotiation) {
+        this.rejectRemoteInitiatedRenegotiation = rejectRemoteInitiatedRenegotiation;
     }
 
     @Override
