@@ -699,12 +699,12 @@ public class DefaultHttp2ConnectionDecoderTest {
     private void mockGoAwaySent() {
         when(connection.goAwaySent()).thenReturn(true);
         when(remote.isValidStreamId(STREAM_ID)).thenReturn(true);
-        when(remote.lastStreamKnownByPeer()).thenReturn(1);
+        when(remote.lastStreamKnownByPeer()).thenReturn(0);
     }
 
     private void mockGoAwaySentShouldAllowFramesForStreamCreatedByLocalEndpoint() {
         when(connection.goAwaySent()).thenReturn(true);
         when(remote.isValidStreamId(STREAM_ID)).thenReturn(false);
-        when(remote.lastStreamKnownByPeer()).thenReturn(1);
+        when(remote.lastStreamKnownByPeer()).thenReturn(0);
     }
 }

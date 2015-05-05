@@ -528,13 +528,16 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         }
 
         /**
-         * Helper method for determining whether or not to ignore inbound frames. This is done after a {@code GOAWAY}
-         * frame was sent by this endpoint and the stream: <br/> <ol> <li>was created remotely and </li> <li>is known by
-         * this endpoint.</li> </ol> <br/> Returns {@code true} if all of these conditions are met and the frame should
-         * be ignored.
+         * Helper method for determining whether or not to ignore inbound frames. A stream is considered to be created
+         * after a go away is sent if the following conditions hold:
          * <p/>
-         * This only applies to streams created by the remote endpoint.  Received frames for streams created locally
-         * should not be ignored as this endpoint may be awaiting their completion.
+         * <ul>
+         *     <li>A {@code GOAWAY} must have been sent by this endpoint</li>
+         *     <li>The {@code streamId} must identify a legitimate stream id for the remote peer to be creating</li>
+         *     <li>{@code streamId} is greater than the Last Known Stream ID which was sent by this endpoint in the
+         *     last {@code GOAWAY} frame</li>
+         * </ul>
+         * <p/>
          */
         private boolean streamCreatedAfterGoAwaySent(int streamId) {
             Http2Connection.Endpoint<?> remote = connection.remote();
