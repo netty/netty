@@ -527,10 +527,22 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             onUnknownFrame0(ctx, frameType, streamId, flags, payload);
         }
 
+        /**
+         * Helper method for determining whether or not to ignore inbound frames. A stream is considered to be created
+         * after a go away is sent if the following conditions hold:
+         * <p/>
+         * <ul>
+         *     <li>A {@code GOAWAY} must have been sent by this endpoint</li>
+         *     <li>The {@code streamId} must identify a legitimate stream id for the remote peer to be creating</li>
+         *     <li>{@code streamId} is greater than the Last Known Stream ID which was sent by this endpoint in the
+         *     last {@code GOAWAY} frame</li>
+         * </ul>
+         * <p/>
+         */
         private boolean streamCreatedAfterGoAwaySent(int streamId) {
-            // Ignore inbound frames after a GOAWAY was sent and the stream id is greater than
-            // the last stream id set in the GOAWAY frame.
-            return connection.goAwaySent() && streamId > connection.remote().lastKnownStream();
+            Http2Connection.Endpoint<?> remote = connection.remote();
+            return connection.goAwaySent() && remote.isValidStreamId(streamId) &&
+                    streamId > remote.lastStreamKnownByPeer();
         }
 
         private void verifyStreamMayHaveExisted(int streamId) throws Http2Exception {

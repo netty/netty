@@ -351,7 +351,7 @@ public class Http2ConnectionHandlerTest {
         assertFalse(promise.isDone());
 
         when(connection.goAwaySent()).thenReturn(true);
-        when(remote.lastKnownStream()).thenReturn(STREAM_ID);
+        when(remote.lastStreamKnownByPeer()).thenReturn(STREAM_ID);
         handler.goAway(ctx, STREAM_ID + 2, errorCode, data, promise);
         assertTrue(promise.isDone());
         assertFalse(promise.isSuccess());

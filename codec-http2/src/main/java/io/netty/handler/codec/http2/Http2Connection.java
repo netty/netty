@@ -188,7 +188,7 @@ public interface Http2Connection {
          * <li>The connection is marked as going away.</li>
          * </ul>
          * <p>
-         * This method differs from {@link #createdStreamId(int)} because the initial state of the stream will be
+         * This method differs from {@link #createIdleStream(int)} because the initial state of the stream will be
          * Immediately set before notifying {@link Listener}s. The state transition is sensitive to {@code halfClosed}
          * and is defined by {@link Http2Stream#open(boolean)}.
          * @param streamId The ID of the stream
@@ -260,7 +260,7 @@ public interface Http2Connection {
          * If a GOAWAY was received for this endpoint, this will be the last stream ID from the
          * GOAWAY frame. Otherwise, this will be {@code -1}.
          */
-        int lastKnownStream();
+        int lastStreamKnownByPeer();
 
         /**
          * Gets the flow controller for this endpoint.

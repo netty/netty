@@ -517,7 +517,7 @@ public class DefaultHttp2ConnectionEncoderTest {
     @Test
     public void canWriteDataFrameAfterGoAwaySent() {
         when(connection.goAwaySent()).thenReturn(true);
-        when(remote.lastKnownStream()).thenReturn(0);
+        when(remote.lastStreamKnownByPeer()).thenReturn(0);
         ByteBuf data = mock(ByteBuf.class);
         encoder.writeData(ctx, STREAM_ID, data, 0, false, promise);
         verify(remoteFlow).sendFlowControlled(eq(ctx), eq(stream), any(FlowControlled.class));
@@ -526,7 +526,7 @@ public class DefaultHttp2ConnectionEncoderTest {
     @Test
     public void canWriteHeaderFrameAfterGoAwaySent() {
         when(connection.goAwaySent()).thenReturn(true);
-        when(remote.lastKnownStream()).thenReturn(0);
+        when(remote.lastStreamKnownByPeer()).thenReturn(0);
         encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false, promise);
         verify(remoteFlow).sendFlowControlled(eq(ctx), eq(stream), any(FlowControlled.class));
     }
@@ -534,7 +534,7 @@ public class DefaultHttp2ConnectionEncoderTest {
     @Test
     public void canWriteDataFrameAfterGoAwayReceived() {
         when(connection.goAwayReceived()).thenReturn(true);
-        when(local.lastKnownStream()).thenReturn(STREAM_ID);
+        when(local.lastStreamKnownByPeer()).thenReturn(STREAM_ID);
         ByteBuf data = mock(ByteBuf.class);
         encoder.writeData(ctx, STREAM_ID, data, 0, false, promise);
         verify(remoteFlow).sendFlowControlled(eq(ctx), eq(stream), any(FlowControlled.class));
@@ -543,7 +543,7 @@ public class DefaultHttp2ConnectionEncoderTest {
     @Test
     public void canWriteHeaderFrameAfterGoAwayReceived() {
         when(connection.goAwayReceived()).thenReturn(true);
-        when(local.lastKnownStream()).thenReturn(STREAM_ID);
+        when(local.lastStreamKnownByPeer()).thenReturn(STREAM_ID);
         encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false, promise);
         verify(remoteFlow).sendFlowControlled(eq(ctx), eq(stream), any(FlowControlled.class));
     }
