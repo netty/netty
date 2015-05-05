@@ -224,7 +224,7 @@ public final class Http2CodecUtil {
             if (!doneAllocating) {
                 doneAllocating = true;
                 if (successfulCount == expectedCount) {
-                    return setSuccess();
+                    return setSuccess(null);
                 }
             }
             return this;
@@ -232,7 +232,7 @@ public final class Http2CodecUtil {
 
         @Override
         public boolean tryFailure(Throwable cause) {
-            if (allowNotificationEvent()) {
+            if (awaitingPromises()) {
                 ++failureCount;
                 if (failureCount == 1) {
                     promise.tryFailure(cause);
@@ -253,7 +253,7 @@ public final class Http2CodecUtil {
          */
         @Override
         public ChannelPromise setFailure(Throwable cause) {
-            if (allowNotificationEvent()) {
+            if (awaitingPromises()) {
                 ++failureCount;
                 if (failureCount == 1) {
                     promise.setFailure(cause);
@@ -263,13 +263,13 @@ public final class Http2CodecUtil {
             return this;
         }
 
-        private boolean allowNotificationEvent() {
+        private boolean awaitingPromises() {
             return successfulCount + failureCount < expectedCount;
         }
 
         @Override
         public ChannelPromise setSuccess(Void result) {
-            if (allowNotificationEvent()) {
+            if (awaitingPromises()) {
                 ++successfulCount;
             }
             if (successfulCount == expectedCount && doneAllocating && !isDone()) {
@@ -283,7 +283,7 @@ public final class Http2CodecUtil {
 
         @Override
         public boolean trySuccess(Void result) {
-            if (allowNotificationEvent()) {
+            if (awaitingPromises()) {
                 ++successfulCount;
                 if (successfulCount == expectedCount && doneAllocating) {
                     promise.trySuccess(result);
