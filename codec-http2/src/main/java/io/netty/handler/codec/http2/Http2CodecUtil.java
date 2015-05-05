@@ -224,7 +224,6 @@ public final class Http2CodecUtil {
             if (!doneAllocating) {
                 doneAllocating = true;
                 if (successfulCount == expectedCount) {
-                    promise.setSuccess();
                     return setSuccess();
                 }
             }
@@ -274,8 +273,10 @@ public final class Http2CodecUtil {
                 ++successfulCount;
             }
             if (successfulCount == expectedCount && doneAllocating && !isDone()) {
+                // Call the base class to toggle the done state.
+                super.setSuccess(result);
+                // Complete the aggregated promise.
                 promise.setSuccess(result);
-                return super.setSuccess(result);
             }
             return this;
         }
