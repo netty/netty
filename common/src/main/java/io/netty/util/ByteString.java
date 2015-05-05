@@ -15,7 +15,7 @@
 package io.netty.util;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
+import io.netty.util.internal.HashCodeGenerator;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
@@ -33,6 +33,9 @@ import java.util.Comparator;
  * this object is immutable.
  */
 public class ByteString {
+    private static final HashCodeGenerator HASHER = PlatformDependent.hashCodeGenerator();
+    public static final ByteString EMPTY_STRING = new ByteString(0);
+
     /**
      * A byte wise comparator between two {@link ByteString} objects.
      */
@@ -76,9 +79,6 @@ public class ByteString {
         }
     };
 
-    public static final ByteString EMPTY_STRING = new ByteString(0);
-    protected static final int HASH_CODE_PRIME = 31;;
-
     /**
      * If this value is modified outside the constructor then call {@link #arrayChanged()}.
      */
@@ -95,7 +95,7 @@ public class ByteString {
     /**
      * The hash code is cached after it is first computed. It can be reset with {@link #arrayChanged()}.
      */
-    private int hash;
+    private int hash = HASHER.emptyHashValue();
 
     /**
      * Used for classes which extend this class and want to initialize the {@link #value} array by them selves.
@@ -342,7 +342,7 @@ public class ByteString {
     }
 
     public final boolean isEmpty() {
-        return length == 0;
+        return length() == 0;
     }
 
     public final int length() {
@@ -382,7 +382,7 @@ public class ByteString {
      * @see #array()
      */
     public final boolean isEntireArrayUsed() {
-        return offset == 0 && length == value.length;
+        return offset == 0 && length() == value.length;
     }
 
     /**
@@ -419,15 +419,10 @@ public class ByteString {
 
     @Override
     public int hashCode() {
-        int h = hash;
-        if (h == 0) {
-            final int end = offset + length;
-            for (int i = offset; i < end; ++i) {
-                h = h * HASH_CODE_PRIME ^ value[i] & HASH_CODE_PRIME;
-            }
-
-            hash = h;
+        if (hash == HASHER.emptyHashValue() && length() > 0) {
+            hash = HASHER.hashCode(value, offset, offset + length());
         }
+
         return hash;
     }
 

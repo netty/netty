@@ -15,6 +15,7 @@
  */
 package io.netty.util.internal;
 
+import static io.netty.util.internal.StringUtil.asciiToLowerCase;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.chmv8.ConcurrentHashMapV8;
 import io.netty.util.internal.logging.InternalLogger;
@@ -74,7 +75,7 @@ public final class PlatformDependent {
             HAS_UNSAFE && !SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
     private static final long MAX_DIRECT_MEMORY = maxDirectMemory0();
 
-    private static final long ARRAY_BASE_OFFSET = PlatformDependent0.arrayBaseOffset();
+    private static final long BYTE_ARRAY_BASE_OFFSET = PlatformDependent0.byteArrayBaseOffset();
 
     private static final boolean HAS_JAVASSIST = hasJavassist0();
 
@@ -345,11 +346,11 @@ public final class PlatformDependent {
     }
 
     public static void copyMemory(byte[] src, int srcIndex, long dstAddr, long length) {
-        PlatformDependent0.copyMemory(src, ARRAY_BASE_OFFSET + srcIndex, null, dstAddr, length);
+        PlatformDependent0.copyMemory(src, BYTE_ARRAY_BASE_OFFSET + srcIndex, null, dstAddr, length);
     }
 
     public static void copyMemory(long srcAddr, byte[] dst, int dstIndex, long length) {
-        PlatformDependent0.copyMemory(null, srcAddr, dst, ARRAY_BASE_OFFSET + dstIndex, length);
+        PlatformDependent0.copyMemory(null, srcAddr, dst, BYTE_ARRAY_BASE_OFFSET + dstIndex, length);
     }
 
     /**
@@ -368,6 +369,26 @@ public final class PlatformDependent {
             return safeEquals(bytes1, startPos1, endPos1, bytes2, startPos2, endPos2);
         }
         return PlatformDependent0.equals(bytes1, startPos1, endPos1, bytes2, startPos2, endPos2);
+    }
+
+    /**
+     * Get access to the appropriate {@link HashCodeGenerator} for your system.
+     */
+    public static HashCodeGenerator hashCodeGenerator() {
+        if (!hasUnsafe() || !PlatformDependent0.unalignedAccess()) {
+            return NettyHashAscii.INSTANCE;
+        }
+        return PlatformDependent0.hashCodeGenerator();
+    }
+
+    /**
+     * Get access to the appropriate {@link HashCodeGenerator} for your system.
+     */
+    public static HashCodeGenerator hashCodeGeneratorAsciiCaseInsensitive() {
+        if (!hasUnsafe() || !PlatformDependent0.unalignedAccess()) {
+            return NettyHashAsciiCaseInsensitive.INSTANCE;
+        }
+        return PlatformDependent0.hashCodeGeneratorAsciiCaseInsensitive();
     }
 
     /**
@@ -884,6 +905,78 @@ public final class PlatformDependent {
             }
         }
         return true;
+    }
+
+    private abstract static class AbstractNettyHashAscii extends AbstractHashCodeGenerator {
+        protected static final int HASH_PRIME = 31;
+
+        @Override
+        public final int emptyHashValue() {
+            return 1;
+        }
+    }
+
+    private static final class NettyHashAscii extends AbstractNettyHashAscii {
+        public static NettyHashAscii INSTANCE = new NettyHashAscii();
+        private NettyHashAscii() { }
+
+        @Override
+        public int hashCode(byte[] bytes, int startPos, int endPos) {
+            int h = 1;
+            for (int i = startPos; i < endPos; ++i) {
+                h = HASH_PRIME * h + bytes[i];
+            }
+            return h;
+        }
+
+        @Override
+        public int hashCodeAsBytes(char[] bytes, int startPos, int endPos) {
+            int h = 1;
+            for (int i = startPos; i < endPos; ++i) {
+                h = HASH_PRIME * h + (byte) bytes[i];
+            }
+            return h;
+        }
+
+        @Override
+        public int hashCodeAsBytes(CharSequence data, int startPos, int endPos) {
+            int h = 1;
+            for (int i = startPos; i < endPos; ++i) {
+                h = HASH_PRIME * h + (byte) data.charAt(i);
+            }
+            return h;
+        }
+    }
+    private static final class NettyHashAsciiCaseInsensitive extends AbstractNettyHashAscii {
+        public static NettyHashAsciiCaseInsensitive INSTANCE = new NettyHashAsciiCaseInsensitive();
+        private NettyHashAsciiCaseInsensitive() { }
+
+        @Override
+        public int hashCode(byte[] bytes, int startPos, int endPos) {
+            int h = 1;
+            for (int i = startPos; i < endPos; ++i) {
+                h = HASH_PRIME * h + asciiToLowerCase(bytes[i]);
+            }
+            return h;
+        }
+
+        @Override
+        public int hashCodeAsBytes(char[] bytes, int startPos, int endPos) {
+            int h = 1;
+            for (int i = startPos; i < endPos; ++i) {
+                h = HASH_PRIME * h + asciiToLowerCase((byte) bytes[i]);
+            }
+            return h;
+        }
+
+        @Override
+        public int hashCodeAsBytes(CharSequence data, int startPos, int endPos) {
+            int h = 1;
+            for (int i = startPos; i < endPos; ++i) {
+                h = HASH_PRIME * h + asciiToLowerCase((byte) data.charAt(i));
+            }
+            return h;
+        }
     }
 
     private PlatformDependent() {
