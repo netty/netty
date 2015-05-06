@@ -15,7 +15,33 @@
  */
 package io.netty.handler.ssl;
 
+import static org.junit.Assume.assumeTrue;
+
 public class OpenSslEngineTest extends SSLEngineTest {
+    @Override
+    public void testMutualAuthSameCerts() throws Exception {
+        assumeTrue(OpenSsl.isAvailable());
+        super.testMutualAuthSameCerts();
+    }
+
+    @Override
+    public void testMutualAuthDiffCerts() throws Exception {
+        assumeTrue(OpenSsl.isAvailable());
+        super.testMutualAuthDiffCerts();
+    }
+
+    @Override
+    public void testMutualAuthDiffCertsServerFailure() throws Exception {
+        assumeTrue(OpenSsl.isAvailable());
+        super.testMutualAuthDiffCertsServerFailure();
+    }
+
+    @Override
+    public void testMutualAuthDiffCertsClientFailure() throws Exception {
+        assumeTrue(OpenSsl.isAvailable());
+        super.testMutualAuthDiffCertsClientFailure();
+    }
+
     @Override
     protected SslProvider sslProvider() {
         return SslProvider.OPENSSL;
