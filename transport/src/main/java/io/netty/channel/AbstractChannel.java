@@ -572,7 +572,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                                 @Override
                                 public void run() {
                                     // Fail all the queued messages
-                                    buffer.failFlushed(CLOSED_CHANNEL_EXCEPTION);
+                                    buffer.failFlushed(CLOSED_CHANNEL_EXCEPTION, false);
                                     buffer.close(CLOSED_CHANNEL_EXCEPTION);
                                     fireChannelInactiveAndDeregister(wasActive);
                                 }
@@ -586,7 +586,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     doClose0(promise);
                 } finally {
                     // Fail all the queued messages.
-                    buffer.failFlushed(CLOSED_CHANNEL_EXCEPTION);
+                    buffer.failFlushed(CLOSED_CHANNEL_EXCEPTION, false);
                     buffer.close(CLOSED_CHANNEL_EXCEPTION);
                 }
                 if (inFlush0) {
@@ -746,9 +746,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             if (!isActive()) {
                 try {
                     if (isOpen()) {
-                        outboundBuffer.failFlushed(NOT_YET_CONNECTED_EXCEPTION);
+                        outboundBuffer.failFlushed(NOT_YET_CONNECTED_EXCEPTION, true);
                     } else {
-                        outboundBuffer.failFlushed(CLOSED_CHANNEL_EXCEPTION);
+                        // Do not trigger channelWritabilityChanged because the channel is closed already.
+                        outboundBuffer.failFlushed(CLOSED_CHANNEL_EXCEPTION, false);
                     }
                 } finally {
                     inFlush0 = false;
@@ -759,8 +760,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             try {
                 doWrite(outboundBuffer);
             } catch (Throwable t) {
-                outboundBuffer.failFlushed(t);
-                if (t instanceof IOException && config().isAutoClose()) {
+                boolean close = t instanceof IOException && config().isAutoClose();
+                // We do not want to trigger channelWritabilityChanged event if the channel is going to be closed.
+                outboundBuffer.failFlushed(t, !close);
+                if (close) {
                     close(voidPromise());
                 }
             } finally {
