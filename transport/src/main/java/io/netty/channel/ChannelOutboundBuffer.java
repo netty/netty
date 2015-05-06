@@ -192,8 +192,8 @@ public final class ChannelOutboundBuffer {
         }
 
         long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, -size);
-        if (notifyWritability && newWriteBufferSize == 0
-            || newWriteBufferSize <= channel.config().getWriteBufferLowWaterMark()) {
+        if (notifyWritability && (newWriteBufferSize == 0
+            || newWriteBufferSize <= channel.config().getWriteBufferLowWaterMark())) {
             setWritable(invokeLater);
         }
     }
