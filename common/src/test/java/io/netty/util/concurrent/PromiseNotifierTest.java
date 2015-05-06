@@ -55,8 +55,8 @@ public class PromiseNotifierTest {
         Future<Void> future = createStrictMock(Future.class);
         expect(future.isSuccess()).andReturn(true);
         expect(future.get()).andReturn(null);
-        expect(p1.setSuccess(null)).andReturn(p1);
-        expect(p2.setSuccess(null)).andReturn(p2);
+        expect(p1.trySuccess(null)).andReturn(true);
+        expect(p2.trySuccess(null)).andReturn(true);
         replay(p1, p2, future);
 
         notifier.operationComplete(future);
@@ -79,8 +79,8 @@ public class PromiseNotifierTest {
         Throwable t = createStrictMock(Throwable.class);
         expect(future.isSuccess()).andReturn(false);
         expect(future.cause()).andReturn(t);
-        expect(p1.setFailure(t)).andReturn(p1);
-        expect(p2.setFailure(t)).andReturn(p2);
+        expect(p1.tryFailure(t)).andReturn(true);
+        expect(p2.tryFailure(t)).andReturn(true);
         replay(p1, p2, future);
 
         notifier.operationComplete(future);
