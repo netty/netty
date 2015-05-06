@@ -311,17 +311,18 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                 if (ch != null) {
                     AbstractEpollUnsafe unsafe = (AbstractEpollUnsafe) ch.unsafe();
 
-                    // First check if EPOLLIN was set, in this case we do not need to check for
-                    // EPOLLRDHUP as EPOLLIN will handle connection-reset case as well.
-                    if ((ev & Native.EPOLLIN) != 0) {
-                        // Something is ready to read, so consume it now
-                        unsafe.epollInReady();
-                    } else if ((ev & Native.EPOLLRDHUP) != 0) {
+                    // First check if EPOLLRDHUP was set, this will notify us for connection-reset in which case
+                    // we may close the channel directly or try to read more data depending on the state of the
+                    // Channel and als depending on the AbstractEpollChannel subtype.
+                    if ((ev & Native.EPOLLRDHUP) != 0) {
                         unsafe.epollRdHupReady();
                     }
-
+                    if ((ev & Native.EPOLLIN) != 0 && ch.isOpen()) {
+                        // The Channel is still open and there is something to read. Do it now.
+                        unsafe.epollInReady();
+                    }
                     if ((ev & Native.EPOLLOUT) != 0 && ch.isOpen()) {
-                        // force flush of data as the epoll is writable again
+                        // Force flush of data as the epoll is writable again
                         unsafe.epollOutReady();
                     }
                 } else {
