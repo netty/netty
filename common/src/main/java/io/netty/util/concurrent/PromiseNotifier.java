@@ -15,15 +15,21 @@
  */
 package io.netty.util.concurrent;
 
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 /**
  * {@link GenericFutureListener} implementation which takes other {@link Future}s
  * and notifies them on completion.
  *
- * @param V the type of value returned by the future
- * @param F the type of future
+ * @param <V> the type of value returned by the future
+ * @param <F> the type of future
  */
 public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureListener<F> {
 
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(PromiseNotifier.class);
     private final Promise<? super V>[] promises;
 
     /**
@@ -33,9 +39,7 @@ public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureLis
      */
     @SafeVarargs
     public PromiseNotifier(Promise<? super V>... promises) {
-        if (promises == null) {
-            throw new NullPointerException("promises");
-        }
+        checkNotNull(promises, "promises");
         for (Promise<? super V> promise: promises) {
             if (promise == null) {
                 throw new IllegalArgumentException("promises contains null Promise");
@@ -49,15 +53,18 @@ public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureLis
         if (future.isSuccess()) {
             V result = future.get();
             for (Promise<? super V> p: promises) {
-                p.setSuccess(result);
+                if (!p.trySuccess(result)) {
+                    logger.warn("Failed to mark a promise as success because it is done already: {}", p);
+                }
             }
             return;
         }
 
         Throwable cause = future.cause();
         for (Promise<? super V> p: promises) {
-            p.setFailure(cause);
+            if (!p.tryFailure(cause)) {
+                logger.warn("Failed to mark a promise as failure because it's done already: {}", p, cause);
+            }
         }
     }
-
 }

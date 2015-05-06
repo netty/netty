@@ -30,6 +30,7 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.channel.PendingWriteQueue;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.concurrent.DefaultPromise;
@@ -1459,7 +1460,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 @Override
                 public void run() {
                     logger.warn("{} Last write attempt timed out; force-closing the connection.", ctx.channel());
-                    ctx.close(promise);
+
+                    // We notify the promise in the TryNotifyListener as there is a "race" where the close(...) call
+                    // by the timeoutFuture and the close call in the flushFuture listener will be called. Because of
+                    // this we need to use trySuccess() and tryFailure(...) as otherwise we can cause an
+                    // IllegalStateException.
+                    ctx.close(ctx.newPromise()).addListener(new ChannelPromiseNotifier(promise));
                 }
             }, closeNotifyTimeoutMillis, TimeUnit.MILLISECONDS);
         } else {
@@ -1476,7 +1482,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 }
                 // Trigger the close in all cases to make sure the promise is notified
                 // See https://github.com/netty/netty/issues/2358
-                ctx.close(promise);
+                //
+                // We notify the promise in the ChannelPromiseNotifier as there is a "race" where the close(...) call
+                // by the timeoutFuture and the close call in the flushFuture listener will be called. Because of
+                // this we need to use trySuccess() and tryFailure(...) as otherwise we can cause an
+                // IllegalStateException.
+                ctx.close(ctx.newPromise()).addListener(new ChannelPromiseNotifier(promise));
             }
         });
     }
