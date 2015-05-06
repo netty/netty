@@ -32,5 +32,4 @@ public final class ChannelPromiseNotifier
     public ChannelPromiseNotifier(ChannelPromise... promises) {
         super(promises);
     }
-
 }
