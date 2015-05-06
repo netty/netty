@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.RandomAccess;
 
 /**
- * A simple list which is reyclable. This implementation does not allow {@code null} elements to be added.
+ * A simple list which is recyclable. This implementation does not allow {@code null} elements to be added.
  */
 public final class RecyclableArrayList extends ArrayList<Object> {
 
