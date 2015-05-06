@@ -604,24 +604,17 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
-            if (inFlush0) {
-                invokeLater(new OneTimeTask() {
-                    @Override
-                    public void run() {
-                        close(promise);
-                    }
-                });
-                return;
-            }
-
             if (outboundBuffer == null) {
-                // This means close() was called before so we just register a listener and return
-                closeFuture.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        promise.setSuccess();
-                    }
-                });
+                // Only needed if no VoidChannelPromise.
+                if (!(promise instanceof VoidChannelPromise)) {
+                    // This means close() was called before so we just register a listener and return
+                    closeFuture.addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            promise.setSuccess();
+                        }
+                    });
+                }
                 return;
             }
 
@@ -639,64 +632,72 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 closeExecutor.execute(new OneTimeTask() {
                     @Override
                     public void run() {
-                        Throwable cause = null;
                         try {
-                            doClose();
-                        } catch (Throwable t) {
-                            cause = t;
+                            // Execute the close.
+                            doClose0(promise);
+                        } finally {
+                            // Call invokeLater so closeAndDeregister is executed in the EventLoop again!
+                            invokeLater(new OneTimeTask() {
+                                @Override
+                                public void run() {
+                                    // Fail all the queued messages
+                                    buffer.failFlushed(CLOSED_CHANNEL_EXCEPTION);
+                                    buffer.close(CLOSED_CHANNEL_EXCEPTION);
+                                    fireChannelInactiveAndDeregister(wasActive);
+                                }
+                            });
                         }
-                        final Throwable error = cause;
-                        // Call invokeLater so closeAndDeregister is executed in the EventLoop again!
-                        invokeLater(new OneTimeTask() {
-                            @Override
-                            public void run() {
-                                closeAndDeregister(buffer, wasActive, promise, error);
-                            }
-                        });
                     }
                 });
             } else {
-                Throwable error = null;
                 try {
-                    doClose();
-                } catch (Throwable t) {
-                    error = t;
+                    // Close the channel and fail the queued messages in all cases.
+                    doClose0(promise);
+                } finally {
+                    // Fail all the queued messages.
+                    buffer.failFlushed(CLOSED_CHANNEL_EXCEPTION);
+                    buffer.close(CLOSED_CHANNEL_EXCEPTION);
                 }
-                closeAndDeregister(buffer, wasActive, promise, error);
+                if (inFlush0) {
+                    invokeLater(new OneTimeTask() {
+                        @Override
+                        public void run() {
+                            fireChannelInactiveAndDeregister(wasActive);
+                        }
+                    });
+                } else {
+                    fireChannelInactiveAndDeregister(wasActive);
+                }
             }
         }
 
-        private void closeAndDeregister(ChannelOutboundBuffer outboundBuffer, final boolean wasActive,
-                                        ChannelPromise promise, Throwable error) {
-            // Fail all the queued messages
+        private void doClose0(ChannelPromise promise) {
             try {
-                outboundBuffer.failFlushed(CLOSED_CHANNEL_EXCEPTION);
-                outboundBuffer.close(CLOSED_CHANNEL_EXCEPTION);
-            } finally {
-                if (wasActive && !isActive()) {
-                    invokeLater(new OneTimeTask() {
-                        @Override
-                        public void run() {
-                            pipeline.fireChannelInactive();
-                            deregister(voidPromise());
-                        }
-                    });
-                } else {
-                    invokeLater(new OneTimeTask() {
-                        @Override
-                        public void run() {
-                            deregister(voidPromise());
-                        }
-                    });
-                }
-
-                // Now complete the closeFuture and promise.
+                doClose();
                 closeFuture.setClosed();
-                if (error != null) {
-                    safeSetFailure(promise, error);
-                } else {
-                    safeSetSuccess(promise);
-                }
+                safeSetSuccess(promise);
+            } catch (Throwable t) {
+                closeFuture.setClosed();
+                safeSetFailure(promise, t);
+            }
+        }
+
+        private void fireChannelInactiveAndDeregister(final boolean wasActive) {
+            if (wasActive && !isActive()) {
+                invokeLater(new OneTimeTask() {
+                    @Override
+                    public void run() {
+                        pipeline.fireChannelInactive();
+                        deregister(voidPromise());
+                    }
+                });
+            } else {
+                invokeLater(new OneTimeTask() {
+                    @Override
+                    public void run() {
+                        deregister(voidPromise());
+                    }
+                });
             }
         }
 
