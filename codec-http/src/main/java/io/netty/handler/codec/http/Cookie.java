@@ -20,78 +20,76 @@ import java.util.Set;
 /**
  * An interface defining an
  * <a href="http://en.wikipedia.org/wiki/HTTP_cookie">HTTP cookie</a>.
+ * @deprecated Use {@link io.netty.handler.codec.http.cookie.Cookie} instead.
  */
-public interface Cookie extends Comparable<Cookie> {
+@Deprecated
+public interface Cookie extends io.netty.handler.codec.http.cookie.Cookie {
 
     /**
-     * Returns the name of this {@link Cookie}.
-     *
-     * @return The name of this {@link Cookie}
+     * @deprecated Use {@link #name()} instead.
      */
+    @Deprecated
     String getName();
 
     /**
-     * Returns the value of this {@link Cookie}.
-     *
-     * @return The value of this {@link Cookie}
+     * @deprecated Use {@link #value()} instead.
      */
+    @Deprecated
     String getValue();
 
     /**
-     * Sets the value of this {@link Cookie}.
-     *
-     * @param value The value to set
+     * @deprecated Use {@link #domain()} instead.
      */
-    void setValue(String value);
-
-    /**
-     * Returns the domain of this {@link Cookie}.
-     *
-     * @return The domain of this {@link Cookie}
-     */
+    @Deprecated
     String getDomain();
 
     /**
-     * Sets the domain of this {@link Cookie}.
-     *
-     * @param domain The domain to use
+     * @deprecated Use {@link #path()} instead.
      */
-    void setDomain(String domain);
-
-    /**
-     * Returns the path of this {@link Cookie}.
-     *
-     * @return The {@link Cookie}'s path
-     */
+    @Deprecated
     String getPath();
 
     /**
-     * Sets the path of this {@link Cookie}.
-     *
-     * @param path The path to use for this {@link Cookie}
+     * @deprecated Use {@link #comment()} instead.
      */
-    void setPath(String path);
+    @Deprecated
+    String getComment();
 
     /**
      * Returns the comment of this {@link Cookie}.
      *
      * @return The comment of this {@link Cookie}
+     *
+     * @deprecated Not part of RFC6265
      */
-    String getComment();
+    @Deprecated
+    String comment();
 
     /**
      * Sets the comment of this {@link Cookie}.
      *
      * @param comment The comment to use
+     *
+     * @deprecated Not part of RFC6265
      */
+    @Deprecated
     void setComment(String comment);
+
+    /**
+     * @deprecated Use {@link #maxAge()} instead.
+     */
+    @Deprecated
+    long getMaxAge();
 
     /**
      * Returns the maximum age of this {@link Cookie} in seconds or {@link Long#MIN_VALUE} if unspecified
      *
      * @return The maximum age of this {@link Cookie}
+     *
+     * @deprecated Not part of RFC6265
      */
-    long getMaxAge();
+    @Deprecated
+    long maxAge();
 
     /**
      * Sets the maximum age of this {@link Cookie} in seconds.
@@ -101,70 +99,62 @@ public interface Cookie extends Comparable<Cookie> {
      * browser is closed.
      *
      * @param maxAge The maximum age of this {@link Cookie} in seconds
+     *
+     * @deprecated Not part of RFC6265
      */
+    @Deprecated
     void setMaxAge(long maxAge);
+
+    /**
+     * @deprecated Use {@link #version()} instead.
+     */
+    @Deprecated
+    int getVersion();
 
     /**
      * Returns the version of this {@link Cookie}.
      *
      * @return The version of this {@link Cookie}
+     *
+     * @deprecated Not part of RFC6265
      */
-    int getVersion();
+    @Deprecated
+    int version();
 
     /**
      * Sets the version of this {@link Cookie}.
      *
      * @param version The new version to use
+     *
+     * @deprecated Not part of RFC6265
      */
+    @Deprecated
     void setVersion(int version);
 
     /**
-     * Checks to see if this {@link Cookie} is secure
-     *
-     * @return True if this {@link Cookie} is secure, otherwise false
+     * @deprecated Use {@link #commentUrl()} instead.
      */
-    boolean isSecure();
-
-    /**
-     * Sets the security getStatus of this {@link Cookie}
-     *
-     * @param secure True if this {@link Cookie} is to be secure, otherwise false
-     */
-    void setSecure(boolean secure);
-
-    /**
-     * Checks to see if this {@link Cookie} can only be accessed via HTTP.
-     * If this returns true, the {@link Cookie} cannot be accessed through
-     * client side script - But only if the browser supports it.
-     * For more information, please look <a href="http://www.owasp.org/index.php/HTTPOnly">here</a>
-     *
-     * @return True if this {@link Cookie} is HTTP-only or false if it isn't
-     */
-    boolean isHttpOnly();
-
-    /**
-     * Determines if this {@link Cookie} is HTTP only.
-     * If set to true, this {@link Cookie} cannot be accessed by a client
-     * side script. However, this works only if the browser supports it.
-     * For for information, please look
-     * <a href="http://www.owasp.org/index.php/HTTPOnly">here</a>.
-     *
-     * @param httpOnly True if the {@link Cookie} is HTTP only, otherwise false.
-     */
-    void setHttpOnly(boolean httpOnly);
+    @Deprecated
+    String getCommentUrl();
 
     /**
      * Returns the comment URL of this {@link Cookie}.
      *
      * @return The comment URL of this {@link Cookie}
+     *
+     * @deprecated Not part of RFC6265
      */
-    String getCommentUrl();
+    @Deprecated
+    String commentUrl();
 
     /**
      * Sets the comment URL of this {@link Cookie}.
      *
      * @param commentUrl The comment URL to use
+     *
+     * @deprecated Not part of RFC6265
      */
+    @Deprecated
     void setCommentUrl(String commentUrl);
 
     /**
@@ -172,7 +162,10 @@ public interface Cookie extends Comparable<Cookie> {
      * at the end of the current session.
      *
      * @return True if this {@link Cookie} is to be discarded, otherwise false
+     *
+     * @deprecated Not part of RFC6265
      */
+    @Deprecated
     boolean isDiscard();
 
     /**
@@ -181,21 +174,36 @@ public interface Cookie extends Comparable<Cookie> {
      * at the end of the current session
      *
      * @param discard True if the {@link Cookie} is to be discarded
+     *
+     * @deprecated Not part of RFC6265
      */
+    @Deprecated
     void setDiscard(boolean discard);
+
+    /**
+     * @deprecated Use {@link #ports()} instead.
+     */
+    @Deprecated
+    Set<Integer> getPorts();
 
     /**
      * Returns the ports that this {@link Cookie} can be accessed on.
      *
      * @return The {@link Set} of ports that this {@link Cookie} can use
+     *
+     * @deprecated Not part of RFC6265
      */
-    Set<Integer> getPorts();
+    @Deprecated
+    Set<Integer> ports();
 
     /**
      * Sets the ports that this {@link Cookie} can be accessed on.
      *
      * @param ports The ports that this {@link Cookie} can be accessed on
+     *
+     * @deprecated Not part of RFC6265
      */
+    @Deprecated
     void setPorts(int... ports);
 
     /**
@@ -203,6 +211,9 @@ public interface Cookie extends Comparable<Cookie> {
      *
      * @param ports The {@link Iterable} collection of ports that this
      *              {@link Cookie} can be accessed on.
+     *
+     * @deprecated Not part of RFC6265
      */
+    @Deprecated
     void setPorts(Iterable<Integer> ports);
 }
