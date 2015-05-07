@@ -312,13 +312,7 @@ public final class ByteBufUtil {
             return -1;
         }
 
-        for (int i = fromIndex; i < toIndex; i ++) {
-            if (buffer.getByte(i) == value) {
-                return i;
-            }
-        }
-
-        return -1;
+        return buffer.forEachByte(fromIndex, toIndex - fromIndex, new IndexOfProcessor(value));
     }
 
     private static int lastIndexOf(ByteBuf buffer, int fromIndex, int toIndex, byte value) {
@@ -327,13 +321,7 @@ public final class ByteBufUtil {
             return -1;
         }
 
-        for (int i = fromIndex - 1; i >= toIndex; i --) {
-            if (buffer.getByte(i) == value) {
-                return i;
-            }
-        }
-
-        return -1;
+        return buffer.forEachByteDesc(toIndex, fromIndex - toIndex, new IndexOfProcessor(value));
     }
 
     /**
@@ -563,6 +551,19 @@ public final class ByteBufUtil {
                 clear();
                 RECYCLER.recycle(this, handle);
             }
+        }
+    }
+
+    private static class IndexOfProcessor implements ByteBufProcessor {
+        private final byte byteToFind;
+
+        public IndexOfProcessor(byte byteToFind) {
+            this.byteToFind = byteToFind;
+        }
+
+        @Override
+        public boolean process(byte value) {
+            return value != byteToFind;
         }
     }
 
