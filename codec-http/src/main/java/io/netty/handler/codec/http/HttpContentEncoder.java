@@ -56,6 +56,9 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         AWAIT_CONTENT
     }
 
+    private static final CharSequence ZERO_LENGTH_HEAD = "HEAD";
+    private static final CharSequence ZERO_LENGTH_CONNECT = "CONNECT";
+
     private final Queue<CharSequence> acceptEncodingQueue = new ArrayDeque<CharSequence>();
     private CharSequence acceptEncoding;
     private EmbeddedChannel encoder;
@@ -73,6 +76,14 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         if (acceptedEncoding == null) {
             acceptedEncoding = HttpHeaderValues.IDENTITY;
         }
+
+        HttpMethod meth = msg.method();
+        if (meth == HttpMethod.HEAD) {
+            acceptedEncoding = ZERO_LENGTH_HEAD;
+        } else if (meth == HttpMethod.CONNECT) {
+            acceptedEncoding = ZERO_LENGTH_CONNECT;
+        }
+
         acceptEncodingQueue.add(acceptedEncoding);
         out.add(ReferenceCountUtil.retain(msg));
     }
@@ -87,12 +98,24 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
 
                 final HttpResponse res = (HttpResponse) msg;
 
+                // Get the list of encodings accepted by the peer.
+                acceptEncoding = acceptEncodingQueue.poll();
+                if (acceptEncoding == null) {
+                    throw new IllegalStateException("cannot send more responses than requests");
+                }
+
                 /*
                  * per rfc2616 4.3 Message Body
                  * All 1xx (informational), 204 (no content), and 304 (not modified) responses MUST NOT include a
                  * message-body. All other responses do include a message-body, although it MAY be of zero length.
+                 *
+                 * 9.4 HEAD
+                 * The HEAD method is identical to GET except that the server MUST NOT return a message-body
+                 * in the response.
+                 *
+                 * This code is now inline with HttpClientDecoder.Decoder
                  */
-                if (isPassthru(res)) {
+                if (isPassthru(res, acceptEncoding)) {
                     if (isFull) {
                         out.add(ReferenceCountUtil.retain(res));
                     } else {
@@ -101,12 +124,6 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                         state = State.PASS_THROUGH;
                     }
                     break;
-                }
-
-                // Get the list of encodings accepted by the peer.
-                acceptEncoding = acceptEncodingQueue.poll();
-                if (acceptEncoding == null) {
-                    throw new IllegalStateException("cannot send more responses than requests");
                 }
 
                 if (isFull) {
@@ -179,9 +196,10 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         }
     }
 
-    private static boolean isPassthru(HttpResponse res) {
+    private static boolean isPassthru(HttpResponse res, CharSequence httpMethod) {
         final int code = res.status().code();
-        return code < 200 || code == 204 || code == 304;
+        boolean expectEmptyBody = httpMethod == ZERO_LENGTH_HEAD || (httpMethod == ZERO_LENGTH_CONNECT && code == 200);
+        return code < 200 || code == 204 || code == 304 || expectEmptyBody;
     }
 
     private static void ensureHeaders(HttpObject msg) {
