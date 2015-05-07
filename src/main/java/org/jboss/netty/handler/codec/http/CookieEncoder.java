@@ -15,7 +15,9 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import java.util.Date;
+import org.jboss.netty.handler.codec.http.cookie.ClientCookieEncoder;
+import org.jboss.netty.handler.codec.http.cookie.ServerCookieEncoder;
+
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -51,6 +53,7 @@ public class CookieEncoder {
 
     private final Set<Cookie> cookies = new TreeSet<Cookie>();
     private final boolean server;
+    private final boolean strict;
 
     /**
      * Creates a new encoder.
@@ -60,7 +63,21 @@ public class CookieEncoder {
      *               this encoder is supposed to encode client-side cookies.
      */
     public CookieEncoder(boolean server) {
+        this(server, false);
+    }
+
+    /**
+     * Creates a new encoder.
+     *
+     * @param server {@code true} if and only if this encoder is supposed to
+     *               encode server-side cookies.  {@code false} if and only if
+     *               this encoder is supposed to encode client-side cookies.
+     * @param strict {@code true} if and only if this encoder is supposed to
+     *               validate characters according to RFC6265.
+     */
+    public CookieEncoder(boolean server, boolean strict) {
         this.server = server;
+        this.strict = strict;
     }
 
     /**
@@ -102,174 +119,13 @@ public class CookieEncoder {
                     "encode() can encode only one cookie on server mode: " + cookies.size() + " cookies added");
         }
 
-        StringBuilder sb = new StringBuilder();
-
-        for (Cookie cookie: cookies) {
-            add(sb, cookie.getName(), cookie.getValue());
-
-            if (cookie.getMaxAge() != Integer.MIN_VALUE) {
-                if (cookie.getVersion() == 0) {
-                    addUnquoted(sb, CookieHeaderNames.EXPIRES,
-                            HttpHeaderDateFormat.get().format(
-                                    new Date(System.currentTimeMillis() +
-                                             cookie.getMaxAge() * 1000L)));
-                } else {
-                    add(sb, CookieHeaderNames.MAX_AGE, cookie.getMaxAge());
-                }
-            }
-
-            if (cookie.getPath() != null) {
-                if (cookie.getVersion() > 0) {
-                    add(sb, CookieHeaderNames.PATH, cookie.getPath());
-                } else {
-                    addUnquoted(sb, CookieHeaderNames.PATH, cookie.getPath());
-                }
-            }
-
-            if (cookie.getDomain() != null) {
-                if (cookie.getVersion() > 0) {
-                    add(sb, CookieHeaderNames.DOMAIN, cookie.getDomain());
-                } else {
-                    addUnquoted(sb, CookieHeaderNames.DOMAIN, cookie.getDomain());
-                }
-            }
-            if (cookie.isSecure()) {
-                sb.append(CookieHeaderNames.SECURE);
-                sb.append((char) HttpConstants.SEMICOLON);
-                sb.append((char) HttpConstants.SP);
-            }
-            if (cookie.isHttpOnly()) {
-                sb.append(CookieHeaderNames.HTTPONLY);
-                sb.append((char) HttpConstants.SEMICOLON);
-                sb.append((char) HttpConstants.SP);
-            }
-            if (cookie.getVersion() >= 1) {
-                if (cookie.getComment() != null) {
-                    add(sb, CookieHeaderNames.COMMENT, cookie.getComment());
-                }
-
-                add(sb, CookieHeaderNames.VERSION, 1);
-
-                if (cookie.getCommentUrl() != null) {
-                    addQuoted(sb, CookieHeaderNames.COMMENTURL, cookie.getCommentUrl());
-                }
-
-                if (!cookie.getPorts().isEmpty()) {
-                    sb.append(CookieHeaderNames.PORT);
-                    sb.append((char) HttpConstants.EQUALS);
-                    sb.append((char) HttpConstants.DOUBLE_QUOTE);
-                    for (int port: cookie.getPorts()) {
-                        sb.append(port);
-                        sb.append((char) HttpConstants.COMMA);
-                    }
-                    sb.setCharAt(sb.length() - 1, (char) HttpConstants.DOUBLE_QUOTE);
-                    sb.append((char) HttpConstants.SEMICOLON);
-                    sb.append((char) HttpConstants.SP);
-                }
-                if (cookie.isDiscard()) {
-                    sb.append(CookieHeaderNames.DISCARD);
-                    sb.append((char) HttpConstants.SEMICOLON);
-                    sb.append((char) HttpConstants.SP);
-                }
-            }
-        }
-
-        if (sb.length() > 0) {
-            sb.setLength(sb.length() - 2);
-        }
-
-        return sb.toString();
+        Cookie cookie = cookies.isEmpty() ? null : cookies.iterator().next();
+        ServerCookieEncoder encoder = strict ? ServerCookieEncoder.STRICT : ServerCookieEncoder.LAX;
+        return encoder.encode(cookie);
     }
 
     private String encodeClientSide() {
-        StringBuilder sb = new StringBuilder();
-
-        for (Cookie cookie: cookies) {
-            if (cookie.getVersion() >= 1) {
-                add(sb, '$' + CookieHeaderNames.VERSION, 1);
-            }
-
-            add(sb, cookie.getName(), cookie.getValue());
-
-            if (cookie.getPath() != null) {
-                add(sb, '$' + CookieHeaderNames.PATH, cookie.getPath());
-            }
-
-            if (cookie.getDomain() != null) {
-                add(sb, '$' + CookieHeaderNames.DOMAIN, cookie.getDomain());
-            }
-
-            if (cookie.getVersion() >= 1) {
-                if (!cookie.getPorts().isEmpty()) {
-                    sb.append('$');
-                    sb.append(CookieHeaderNames.PORT);
-                    sb.append((char) HttpConstants.EQUALS);
-                    sb.append((char) HttpConstants.DOUBLE_QUOTE);
-                    for (int port: cookie.getPorts()) {
-                        sb.append(port);
-                        sb.append((char) HttpConstants.COMMA);
-                    }
-                    sb.setCharAt(sb.length() - 1, (char) HttpConstants.DOUBLE_QUOTE);
-                    sb.append((char) HttpConstants.SEMICOLON);
-                    sb.append((char) HttpConstants.SP);
-                }
-            }
-        }
-
-        if (sb.length() > 0) {
-            sb.setLength(sb.length() - 2);
-        }
-        return sb.toString();
-    }
-
-    private static void add(StringBuilder sb, String name, String val) {
-        if (val == null) {
-            addQuoted(sb, name, "");
-            return;
-        }
-
-        for (int i = 0; i < val.length(); i ++) {
-            char c = val.charAt(i);
-            switch (c) {
-            case '\t': case ' ': case '"': case '(':  case ')': case ',':
-            case '/':  case ':': case ';': case '<':  case '=': case '>':
-            case '?':  case '@': case '[': case '\\': case ']':
-            case '{':  case '}':
-                addQuoted(sb, name, val);
-                return;
-            }
-        }
-
-        addUnquoted(sb, name, val);
-    }
-
-    private static void addUnquoted(StringBuilder sb, String name, String val) {
-        sb.append(name);
-        sb.append((char) HttpConstants.EQUALS);
-        sb.append(val);
-        sb.append((char) HttpConstants.SEMICOLON);
-        sb.append((char) HttpConstants.SP);
-    }
-
-    private static void addQuoted(StringBuilder sb, String name, String val) {
-        if (val == null) {
-            val = "";
-        }
-
-        sb.append(name);
-        sb.append((char) HttpConstants.EQUALS);
-        sb.append((char) HttpConstants.DOUBLE_QUOTE);
-        sb.append(val.replace("\\", "\\\\").replace("\"", "\\\""));
-        sb.append((char) HttpConstants.DOUBLE_QUOTE);
-        sb.append((char) HttpConstants.SEMICOLON);
-        sb.append((char) HttpConstants.SP);
-    }
-
-    private static void add(StringBuilder sb, String name, int val) {
-        sb.append(name);
-        sb.append((char) HttpConstants.EQUALS);
-        sb.append(val);
-        sb.append((char) HttpConstants.SEMICOLON);
-        sb.append((char) HttpConstants.SP);
+        ClientCookieEncoder encoder = strict ? ClientCookieEncoder.STRICT : ClientCookieEncoder.LAX;
+        return encoder.encode(cookies);
     }
 }

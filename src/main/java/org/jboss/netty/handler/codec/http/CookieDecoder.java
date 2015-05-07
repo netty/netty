@@ -15,7 +15,13 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import static org.jboss.netty.handler.codec.http.CookieUtil.firstInvalidCookieNameOctet;
+import static org.jboss.netty.handler.codec.http.CookieUtil.firstInvalidCookieValueOctet;
+import static org.jboss.netty.handler.codec.http.CookieUtil.unwrapValue;
+import org.jboss.netty.handler.codec.http.cookie.CookieHeaderNames;
 import org.jboss.netty.util.internal.StringUtil;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -25,35 +31,55 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
+ * @deprecated Use {@link org.jboss.netty.handler.codec.http.cookie.ClientCookieDecoder}
+ * or {@link org.jboss.netty.handler.codec.http.cookie.ServerCookieDecoder} instead.
+ *
  * Decodes an HTTP header value into {@link Cookie}s.  This decoder can decode
  * the HTTP cookie version 0, 1, and 2.
  *
  * <pre>
  * {@link HttpRequest} req = ...;
  * String value = req.getHeader("Cookie");
- * Set&lt;{@link Cookie}&gt; cookies = new {@link CookieDecoder}().decode(value);
+ * Set&lt;{@link Cookie}&gt; cookies = {@link CookieDecoder}.decode(value);
  * </pre>
  *
- * @see CookieEncoder
- *
- * @apiviz.stereotype utility
- * @apiviz.has        org.jboss.netty.handler.codec.http.Cookie oneway - - decodes
+ * @see org.jboss.netty.handler.codec.http.cookie.ClientCookieDecoder
+ * @see org.jboss.netty.handler.codec.http.cookie.ServerCookieDecoder
  */
-public class CookieDecoder {
+@Deprecated
+public final class CookieDecoder {
+
+    private final InternalLogger logger = InternalLoggerFactory.getInstance(getClass());
+
+    private static final String COMMENT = "Comment";
+
+    private static final String COMMENTURL = "CommentURL";
+
+    private static final String DISCARD = "Discard";
+
+    private static final String PORT = "Port";
+
+    private static final String VERSION = "Version";
 
     private static final char COMMA = ',';
+
+    private final boolean strict;
 
     /**
      * Creates a new decoder.
      */
     public CookieDecoder() {
+        this(false);
     }
 
     /**
-     * @deprecated Use {@link #CookieDecoder()} instead.
+     * Creates a new decoder.
+     *
+     * @param strict {@code true} if and only if this encoder is supposed to
+     *               validate characters according to RFC6265.
      */
-    @Deprecated
-    public CookieDecoder(@SuppressWarnings("unused") boolean lenient) {
+    public CookieDecoder(boolean strict) {
+        this.strict = strict;
     }
 
     /**
@@ -75,7 +101,7 @@ public class CookieDecoder {
 
         // $Version is the only attribute that can appear before the actual
         // cookie name-value pair.
-        if (names.get(0).equalsIgnoreCase(CookieHeaderNames.VERSION)) {
+        if (names.get(0).equalsIgnoreCase(VERSION)) {
             try {
                 version = Integer.parseInt(values.get(0));
             } catch (NumberFormatException e) {
@@ -99,7 +125,11 @@ public class CookieDecoder {
                 value = "";
             }
 
-            Cookie c = new DefaultCookie(name, value);
+            Cookie c = initCookie(name, value);
+
+            if (c == null) {
+                break;
+            }
 
             boolean discard = false;
             boolean secure = false;
@@ -108,22 +138,22 @@ public class CookieDecoder {
             String commentURL = null;
             String domain = null;
             String path = null;
-            int maxAge = Integer.MIN_VALUE;
+            long maxAge = Long.MIN_VALUE;
             List<Integer> ports = new ArrayList<Integer>(2);
 
             for (int j = i + 1; j < names.size(); j++, i++) {
                 name = names.get(j);
                 value = values.get(j);
 
-                if (CookieHeaderNames.DISCARD.equalsIgnoreCase(name)) {
+                if (DISCARD.equalsIgnoreCase(name)) {
                     discard = true;
                 } else if (CookieHeaderNames.SECURE.equalsIgnoreCase(name)) {
                     secure = true;
                 } else if (CookieHeaderNames.HTTPONLY.equalsIgnoreCase(name)) {
                    httpOnly = true;
-                } else if (CookieHeaderNames.COMMENT.equalsIgnoreCase(name)) {
+                } else if (COMMENT.equalsIgnoreCase(name)) {
                     comment = value;
-                } else if (CookieHeaderNames.COMMENTURL.equalsIgnoreCase(name)) {
+                } else if (COMMENTURL.equalsIgnoreCase(name)) {
                     commentURL = value;
                 } else if (CookieHeaderNames.DOMAIN.equalsIgnoreCase(name)) {
                     domain = value;
@@ -135,17 +165,15 @@ public class CookieDecoder {
                             HttpHeaderDateFormat.get().parse(value).getTime() -
                             System.currentTimeMillis();
 
-                        maxAge = (int) (maxAgeMillis / 1000) +
-                                 (maxAgeMillis % 1000 != 0? 1 : 0);
-
+                        maxAge = maxAgeMillis / 1000 + (maxAgeMillis % 1000 != 0? 1 : 0);
                     } catch (ParseException e) {
                         // Ignore.
                     }
                 } else if (CookieHeaderNames.MAX_AGE.equalsIgnoreCase(name)) {
                     maxAge = Integer.parseInt(value);
-                } else if (CookieHeaderNames.VERSION.equalsIgnoreCase(name)) {
+                } else if (VERSION.equalsIgnoreCase(name)) {
                     version = Integer.parseInt(value);
-                } else if (CookieHeaderNames.PORT.equalsIgnoreCase(name)) {
+                } else if (PORT.equalsIgnoreCase(name)) {
                     String[] portList = StringUtil.split(value, COMMA);
                     for (String s1: portList) {
                         try {
@@ -182,7 +210,6 @@ public class CookieDecoder {
 
     private static void extractKeyValuePairs(
             final String header, final List<String> names, final List<String> values) {
-
         final int headerLen  = header.length();
         loop: for (int i = 0;;) {
 
@@ -302,5 +329,49 @@ public class CookieDecoder {
             names.add(name);
             values.add(value);
         }
+    }
+
+    private DefaultCookie initCookie(String name, String value) {
+        if (name == null || name.length() == 0) {
+            logger.debug("Skipping cookie with null name");
+            return null;
+        }
+
+        if (value == null) {
+            logger.debug("Skipping cookie with null value");
+            return null;
+        }
+
+        CharSequence unwrappedValue = unwrapValue(value);
+        if (unwrappedValue == null) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Skipping cookie because starting quotes are not properly balanced in '"
+                    + unwrappedValue + "'");
+            }
+            return null;
+        }
+
+        int invalidOctetPos;
+        if (strict && (invalidOctetPos = firstInvalidCookieNameOctet(name)) >= 0) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Skipping cookie because name '" + name + "' contains invalid char '"
+                    + name.charAt(invalidOctetPos) + "'");
+            }
+            return null;
+        }
+
+        final boolean wrap = unwrappedValue.length() != value.length();
+
+        if (strict && (invalidOctetPos = firstInvalidCookieValueOctet(unwrappedValue)) >= 0) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Skipping cookie because value '" + unwrappedValue
+                    + "' contains invalid char '" + unwrappedValue.charAt(invalidOctetPos) + "'");
+            }
+            return null;
+        }
+
+        DefaultCookie cookie = new DefaultCookie(name, unwrappedValue.toString());
+        cookie.setWrap(wrap);
+        return cookie;
     }
 }

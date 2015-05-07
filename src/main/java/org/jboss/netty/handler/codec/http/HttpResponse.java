@@ -15,17 +15,22 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-
 /**
  * An HTTP response.
  *
- * <h3>Accessing Cookie</h3>
+ * <h3>Accessing Cookies</h3>
  * <p>
- * Unlike the Servlet API, {@link Cookie} support is provided separately via
- * {@link CookieEncoder} and {@link CookieDecoder}.
+ * Unlike the Servlet API, {@link org.jboss.netty.handler.codec.http.cookie.Cookie} support is provided
+ * separately via {@link org.jboss.netty.handler.codec.http.cookie.ServerCookieDecoder},
+ * {@link org.jboss.netty.handler.codec.http.cookie.ClientCookieDecoder},
+ * {@link org.jboss.netty.handler.codec.http.cookie.ServerCookieEncoder},
+ * and {@link org.jboss.netty.handler.codec.http.cookie.ClientCookieEncoder}.
+ *
  * @see HttpRequest
- * @see CookieEncoder
- * @see CookieDecoder
+ * @see org.jboss.netty.handler.codec.http.cookie.ServerCookieDecoder
+ * @see org.jboss.netty.handler.codec.http.cookie.ClientCookieDecoder
+ * @see org.jboss.netty.handler.codec.http.cookie.ServerCookieEncoder
+ * @see org.jboss.netty.handler.codec.http.cookie.ClientCookieEncoder
  */
 public interface HttpResponse extends HttpMessage {
 

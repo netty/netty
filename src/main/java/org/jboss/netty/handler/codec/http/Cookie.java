@@ -18,134 +18,202 @@ package org.jboss.netty.handler.codec.http;
 import java.util.Set;
 
 /**
- * An HTTP <a href="http://en.wikipedia.org/wiki/HTTP_cookie">Cookie</a>.
+ * An interface defining an
+ * <a href="http://en.wikipedia.org/wiki/HTTP_cookie">HTTP cookie</a>.
+ * @deprecated Use {@link io.netty.handler.codec.http.cookie.Cookie} instead.
  */
-public interface Cookie extends Comparable<Cookie> {
+@Deprecated
+public interface Cookie extends org.jboss.netty.handler.codec.http.cookie.Cookie {
 
     /**
-     * Returns the name of this cookie.
+     * @deprecated Use {@link #name()} instead.
      */
+    @Deprecated
     String getName();
 
     /**
-     * Returns the value of this cookie.
+     * @deprecated Use {@link #value()} instead.
      */
+    @Deprecated
     String getValue();
 
     /**
-     * Sets the value of this cookie.
+     * @deprecated Use {@link #domain()} instead.
      */
-    void setValue(String value);
-
-    /**
-     * Returns the domain of this cookie.
-     */
+    @Deprecated
     String getDomain();
 
     /**
-     * Sets the domain of this cookie.
+     * @deprecated Use {@link #path()} instead.
      */
-    void setDomain(String domain);
-
-    /**
-     * Returns the path of this cookie.
-     */
+    @Deprecated
     String getPath();
 
     /**
-     * Sets the path of this cookie.
+     * @deprecated Use {@link #comment()} instead.
      */
-    void setPath(String path);
-
-    /**
-     * Returns the comment of this cookie.
-     */
+    @Deprecated
     String getComment();
 
     /**
-     * Sets the comment of this cookie.
+     * Returns the comment of this {@link Cookie}.
+     *
+     * @return The comment of this {@link Cookie}
+     *
+     * @deprecated Not part of RFC6265
      */
+    @Deprecated
+    String comment();
+
+    /**
+     * Sets the comment of this {@link Cookie}.
+     *
+     * @param comment The comment to use
+     *
+     * @deprecated Not part of RFC6265
+     */
+    @Deprecated
     void setComment(String comment);
 
     /**
-     * Returns the max age of this cookie in seconds.
+     * @deprecated Use {@link #maxAge()} instead.
      */
-    int getMaxAge();
+    @Deprecated
+    long getMaxAge();
 
     /**
-     * Sets the max age of this cookie in seconds.  If {@code 0} is specified,
-     * this cookie will be removed by browser because it will be expired
-     * immediately.  If {@link Integer#MIN_VALUE} is specified, this cookie will be removed
-     * when a user terminates browser.
+     * Returns the maximum age of this {@link Cookie} in seconds or {@link Long#MIN_VALUE} if unspecified
+     *
+     * @return The maximum age of this {@link Cookie}
+     *
+     * @deprecated Not part of RFC6265
      */
-    void setMaxAge(int maxAge);
+    @Deprecated
+    long maxAge();
 
     /**
-     * Returns the version of this cookie.
+     * Sets the maximum age of this {@link Cookie} in seconds.
+     * If an age of {@code 0} is specified, this {@link Cookie} will be
+     * automatically removed by browser because it will expire immediately.
+     * If {@link Long#MIN_VALUE} is specified, this {@link Cookie} will be removed when the
+     * browser is closed.
+     *
+     * @param maxAge The maximum age of this {@link Cookie} in seconds
+     *
+     * @deprecated Not part of RFC6265
      */
+    @Deprecated
+    void setMaxAge(long maxAge);
+
+    /**
+     * @deprecated Use {@link #version()} instead.
+     */
+    @Deprecated
     int getVersion();
 
     /**
-     * Sets the version of this cookie.
+     * Returns the version of this {@link Cookie}.
+     *
+     * @return The version of this {@link Cookie}
+     *
+     * @deprecated Not part of RFC6265
      */
+    @Deprecated
+    int version();
+
+    /**
+     * Sets the version of this {@link Cookie}.
+     *
+     * @param version The new version to use
+     *
+     * @deprecated Not part of RFC6265
+     */
+    @Deprecated
     void setVersion(int version);
 
     /**
-     * Returns the secure flag of this cookie.
+     * @deprecated Use {@link #commentUrl()} instead.
      */
-    boolean isSecure();
-
-    /**
-     * Sets the secure flag of this cookie.
-     */
-    void setSecure(boolean secure);
-
-    /**
-     * Returns if this cookie cannot be accessed through client side script.
-     * This flag works only if the browser supports it.  For more information,
-     * see <a href="http://www.owasp.org/index.php/HTTPOnly">here</a>.
-     */
-    boolean isHttpOnly();
-
-    /**
-     * Sets if this cookie cannot be accessed through client side script.
-     * This flag works only if the browser supports it.  For more information,
-     * see <a href="http://www.owasp.org/index.php/HTTPOnly">here</a>.
-     */
-    void setHttpOnly(boolean httpOnly);
-
-    /**
-     * Returns the comment URL of this cookie.
-     */
+    @Deprecated
     String getCommentUrl();
 
     /**
-     * Sets the comment URL of this cookie.
+     * Returns the comment URL of this {@link Cookie}.
+     *
+     * @return The comment URL of this {@link Cookie}
+     *
+     * @deprecated Not part of RFC6265
      */
+    @Deprecated
+    String commentUrl();
+
+    /**
+     * Sets the comment URL of this {@link Cookie}.
+     *
+     * @param commentUrl The comment URL to use
+     *
+     * @deprecated Not part of RFC6265
+     */
+    @Deprecated
     void setCommentUrl(String commentUrl);
 
     /**
-     * Returns the discard flag of this cookie.
+     * Checks to see if this {@link Cookie} is to be discarded by the browser
+     * at the end of the current session.
+     *
+     * @return True if this {@link Cookie} is to be discarded, otherwise false
+     *
+     * @deprecated Not part of RFC6265
      */
+    @Deprecated
     boolean isDiscard();
 
     /**
-     * Sets the discard flag of this cookie.
+     * Sets the discard flag of this {@link Cookie}.
+     * If set to true, this {@link Cookie} will be discarded by the browser
+     * at the end of the current session
+     *
+     * @param discard True if the {@link Cookie} is to be discarded
+     *
+     * @deprecated Not part of RFC6265
      */
+    @Deprecated
     void setDiscard(boolean discard);
 
     /**
-     * Returns the ports of this cookie.
+     * @deprecated Use {@link #ports()} instead.
      */
+    @Deprecated
     Set<Integer> getPorts();
 
     /**
-     * Sets the ports of this cookie.
+     * Returns the ports that this {@link Cookie} can be accessed on.
+     *
+     * @return The {@link Set} of ports that this {@link Cookie} can use
+     *
+     * @deprecated Not part of RFC6265
      */
+    @Deprecated
+    Set<Integer> ports();
+
+    /**
+     * Sets the ports that this {@link Cookie} can be accessed on.
+     *
+     * @param ports The ports that this {@link Cookie} can be accessed on
+     *
+     * @deprecated Not part of RFC6265
+     */
+    @Deprecated
     void setPorts(int... ports);
 
     /**
-     * Sets the ports of this cookie.
+     * Sets the ports that this {@link Cookie} can be accessed on.
+     *
+     * @param ports The {@link Iterable} collection of ports that this
+     *              {@link Cookie} can be accessed on.
+     *
+     * @deprecated Not part of RFC6265
      */
+    @Deprecated
     void setPorts(Iterable<Integer> ports);
 }
