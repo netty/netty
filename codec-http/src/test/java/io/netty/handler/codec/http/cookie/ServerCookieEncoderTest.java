@@ -13,9 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http;
+package io.netty.handler.codec.http.cookie;
 
 import org.junit.Test;
+
+import io.netty.handler.codec.http.HttpHeaderDateFormat;
 
 import java.text.ParseException;
 import java.util.Date;
@@ -40,7 +42,7 @@ public class ServerCookieEncoderTest {
         cookie.setPath("/apathsomewhere");
         cookie.setSecure(true);
 
-        String encodedCookie = ServerCookieEncoder.encode(cookie);
+        String encodedCookie = ServerCookieEncoder.STRICT.encode(cookie);
 
         Matcher matcher = Pattern.compile(result).matcher(encodedCookie);
         assertTrue(matcher.find());
@@ -52,8 +54,8 @@ public class ServerCookieEncoderTest {
 
     @Test
     public void testEncodingWithNoCookies() {
-        String encodedCookie1 = ClientCookieEncoder.encode();
-        List<String> encodedCookie2 = ServerCookieEncoder.encode();
+        String encodedCookie1 = ClientCookieEncoder.STRICT.encode();
+        List<String> encodedCookie2 = ServerCookieEncoder.STRICT.encode();
         assertNull(encodedCookie1);
         assertNotNull(encodedCookie2);
         assertTrue(encodedCookie2.isEmpty());

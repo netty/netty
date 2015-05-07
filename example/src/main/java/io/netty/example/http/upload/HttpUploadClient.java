@@ -21,8 +21,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.http.ClientCookieEncoder;
-import io.netty.handler.codec.http.DefaultCookie;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -31,6 +29,8 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.QueryStringEncoder;
+import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
+import io.netty.handler.codec.http.cookie.DefaultCookie;
 import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
 import io.netty.handler.codec.http.multipart.DiskAttribute;
 import io.netty.handler.codec.http.multipart.DiskFileUpload;
@@ -180,7 +180,7 @@ public final class HttpUploadClient {
         // headers.set("Connection","keep-alive");
 
         headers.set(
-                HttpHeaderNames.COOKIE, ClientCookieEncoder.encode(
+                HttpHeaderNames.COOKIE, ClientCookieEncoder.STRICT.encode(
                         new DefaultCookie("my-cookie", "foo"),
                         new DefaultCookie("another-cookie", "bar"))
         );

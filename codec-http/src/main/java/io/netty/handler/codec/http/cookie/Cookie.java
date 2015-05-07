@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,9 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http;
-
-import java.util.Set;
+package io.netty.handler.codec.http.cookie;
 
 /**
  * An interface defining an
@@ -45,19 +43,20 @@ public interface Cookie extends Comparable<Cookie> {
     void setValue(String value);
 
     /**
-     * Returns the raw value of this {@link Cookie},
-     * as it was set in original Set-Cookie header.
+     * Returns true if the raw value of this {@link Cookie},
+     * was wrapped with double quotes in original Set-Cookie header.
      *
-     * @return The raw value of this {@link Cookie}
+     * @return If the value of this {@link Cookie} is to be wrapped
      */
-    String rawValue();
+    boolean wrap();
 
     /**
-     * Sets the raw value of this {@link Cookie}.
+     * Sets true if the value of this {@link Cookie}
+     * is to be wrapped with double quotes.
      *
-     * @param rawValue The raw value to set
+     * @param wrap true if wrap
      */
-    void setRawValue(String rawValue);
+    void setWrap(boolean wrap);
 
     /**
      * Returns the domain of this {@link Cookie}.
@@ -88,20 +87,6 @@ public interface Cookie extends Comparable<Cookie> {
     void setPath(String path);
 
     /**
-     * Returns the comment of this {@link Cookie}.
-     *
-     * @return The comment of this {@link Cookie}
-     */
-    String comment();
-
-    /**
-     * Sets the comment of this {@link Cookie}.
-     *
-     * @param comment The comment to use
-     */
-    void setComment(String comment);
-
-    /**
      * Returns the maximum age of this {@link Cookie} in seconds or {@link Long#MIN_VALUE} if unspecified
      *
      * @return The maximum age of this {@link Cookie}
@@ -118,20 +103,6 @@ public interface Cookie extends Comparable<Cookie> {
      * @param maxAge The maximum age of this {@link Cookie} in seconds
      */
     void setMaxAge(long maxAge);
-
-    /**
-     * Returns the version of this {@link Cookie}.
-     *
-     * @return The version of this {@link Cookie}
-     */
-    int version();
-
-    /**
-     * Sets the version of this {@link Cookie}.
-     *
-     * @param version The new version to use
-     */
-    void setVersion(int version);
 
     /**
      * Checks to see if this {@link Cookie} is secure
@@ -167,57 +138,4 @@ public interface Cookie extends Comparable<Cookie> {
      * @param httpOnly True if the {@link Cookie} is HTTP only, otherwise false.
      */
     void setHttpOnly(boolean httpOnly);
-
-    /**
-     * Returns the comment URL of this {@link Cookie}.
-     *
-     * @return The comment URL of this {@link Cookie}
-     */
-    String commentUrl();
-
-    /**
-     * Sets the comment URL of this {@link Cookie}.
-     *
-     * @param commentUrl The comment URL to use
-     */
-    void setCommentUrl(String commentUrl);
-
-    /**
-     * Checks to see if this {@link Cookie} is to be discarded by the browser
-     * at the end of the current session.
-     *
-     * @return True if this {@link Cookie} is to be discarded, otherwise false
-     */
-    boolean isDiscard();
-
-    /**
-     * Sets the discard flag of this {@link Cookie}.
-     * If set to true, this {@link Cookie} will be discarded by the browser
-     * at the end of the current session
-     *
-     * @param discard True if the {@link Cookie} is to be discarded
-     */
-    void setDiscard(boolean discard);
-
-    /**
-     * Returns the ports that this {@link Cookie} can be accessed on.
-     *
-     * @return The {@link Set} of ports that this {@link Cookie} can use
-     */
-    Set<Integer> ports();
-
-    /**
-     * Sets the ports that this {@link Cookie} can be accessed on.
-     *
-     * @param ports The ports that this {@link Cookie} can be accessed on
-     */
-    void setPorts(int... ports);
-
-    /**
-     * Sets the ports that this {@link Cookie} can be accessed on.
-     *
-     * @param ports The {@link Iterable} collection of ports that this
-     *              {@link Cookie} can be accessed on.
-     */
-    void setPorts(Iterable<Integer> ports);
 }

@@ -33,7 +33,7 @@ import java.util.TimeZone;
  * <li>Sun Nov  6 08:49:37 1994: obsolete specification</li>
  * </ul>
  */
-final class HttpHeaderDateFormat extends SimpleDateFormat {
+public final class HttpHeaderDateFormat extends SimpleDateFormat {
     private static final long serialVersionUID = -925286159755905325L;
 
     private final SimpleDateFormat format1 = new HttpHeaderDateFormatObsolete1();
@@ -47,7 +47,7 @@ final class HttpHeaderDateFormat extends SimpleDateFormat {
                 }
             };
 
-    static HttpHeaderDateFormat get() {
+    public static HttpHeaderDateFormat get() {
         return dateFormatThreadLocal.get();
     }
 
