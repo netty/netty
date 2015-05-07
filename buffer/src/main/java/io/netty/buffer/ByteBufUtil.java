@@ -16,6 +16,8 @@
 package io.netty.buffer;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
+import io.netty.util.ByteProcessor;
 import io.netty.util.ByteString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.Recycler;
@@ -365,13 +367,7 @@ public final class ByteBufUtil {
             return -1;
         }
 
-        for (int i = fromIndex; i < toIndex; i ++) {
-            if (buffer.getByte(i) == value) {
-                return i;
-            }
-        }
-
-        return -1;
+        return buffer.forEachByte(fromIndex, toIndex - fromIndex, new ByteProcessor.IndexOfProcessor(value));
     }
 
     private static int lastIndexOf(ByteBuf buffer, int fromIndex, int toIndex, byte value) {
@@ -380,13 +376,7 @@ public final class ByteBufUtil {
             return -1;
         }
 
-        for (int i = fromIndex - 1; i >= toIndex; i --) {
-            if (buffer.getByte(i) == value) {
-                return i;
-            }
-        }
-
-        return -1;
+        return buffer.forEachByteDesc(toIndex, fromIndex - toIndex, new ByteProcessor.IndexOfProcessor(value));
     }
 
     /**
