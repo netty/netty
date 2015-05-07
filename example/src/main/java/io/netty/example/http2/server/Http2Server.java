@@ -60,8 +60,10 @@ public final class Http2Server {
                 .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
                 .applicationProtocolConfig(new ApplicationProtocolConfig(
                     Protocol.ALPN,
-                    SelectorFailureBehavior.CHOOSE_MY_LAST_PROTOCOL,
-                    SelectedListenerFailureBehavior.CHOOSE_MY_LAST_PROTOCOL,
+                    // NO_ADVERTISE is currently the only mode supported by both OpenSsl and JDK providers.
+                    SelectorFailureBehavior.NO_ADVERTISE,
+                    // ACCEPT is currently the only mode supported by both OpenSsl and JDK providers.
+                    SelectedListenerFailureBehavior.ACCEPT,
                     SelectedProtocol.HTTP_2.protocolName(),
                     SelectedProtocol.HTTP_1_1.protocolName()))
                 .build();
