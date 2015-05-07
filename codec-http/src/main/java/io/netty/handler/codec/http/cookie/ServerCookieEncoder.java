@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,9 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http;
+package io.netty.handler.codec.http.cookie;
 
-import static io.netty.handler.codec.http.CookieEncoderUtil.*;
+import static io.netty.handler.codec.http.cookie.CookieUtil.*;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
+import io.netty.handler.codec.http.HttpHeaderDateFormat;
+import io.netty.handler.codec.http.HttpRequest;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -39,7 +43,22 @@ import java.util.List;
  *
  * @see ServerCookieDecoder
  */
-public final class ServerCookieEncoder {
+public final class ServerCookieEncoder extends CookieEncoder {
+
+    /**
+     * Strict encoder that validates that name and value chars are in the valid scope
+     * defined in RFC6265
+     */
+    public static final ServerCookieEncoder STRICT = new ServerCookieEncoder(true);
+
+    /**
+     * Lax instance that doesn't validate name and value
+     */
+    public static final ServerCookieEncoder LAX = new ServerCookieEncoder(false);
+
+    private ServerCookieEncoder(boolean strict) {
+        super(strict);
+    }
 
     /**
      * Encodes the specified cookie name-value pair into a Set-Cookie header value.
@@ -48,7 +67,7 @@ public final class ServerCookieEncoder {
      * @param value the cookie value
      * @return a single Set-Cookie header value
      */
-    public static String encode(String name, String value) {
+    public String encode(String name, String value) {
         return encode(new DefaultCookie(name, value));
     }
 
@@ -58,37 +77,38 @@ public final class ServerCookieEncoder {
      * @param cookie the cookie
      * @return a single Set-Cookie header value
      */
-    public static String encode(Cookie cookie) {
-        if (cookie == null) {
-            throw new NullPointerException("cookie");
-        }
+    public String encode(Cookie cookie) {
+        final String name = checkNotNull(cookie, "cookie").name();
+        final String value = cookie.value() != null ? cookie.value() : "";
+
+        validateCookie(name, value);
 
         StringBuilder buf = stringBuilder();
 
-        addUnquoted(buf, cookie.name(), cookie.value());
+        if (cookie.wrap()) {
+            addQuoted(buf, name, value);
+        } else {
+            add(buf, name, value);
+        }
 
         if (cookie.maxAge() != Long.MIN_VALUE) {
             add(buf, CookieHeaderNames.MAX_AGE, cookie.maxAge());
             Date expires = new Date(cookie.maxAge() * 1000 + System.currentTimeMillis());
-            addUnquoted(buf, CookieHeaderNames.EXPIRES, HttpHeaderDateFormat.get().format(expires));
+            add(buf, CookieHeaderNames.EXPIRES, HttpHeaderDateFormat.get().format(expires));
         }
 
         if (cookie.path() != null) {
-            addUnquoted(buf, CookieHeaderNames.PATH, cookie.path());
+            add(buf, CookieHeaderNames.PATH, cookie.path());
         }
 
         if (cookie.domain() != null) {
-            addUnquoted(buf, CookieHeaderNames.DOMAIN, cookie.domain());
+            add(buf, CookieHeaderNames.DOMAIN, cookie.domain());
         }
         if (cookie.isSecure()) {
-            buf.append(CookieHeaderNames.SECURE);
-            buf.append((char) HttpConstants.SEMICOLON);
-            buf.append((char) HttpConstants.SP);
+            add(buf, CookieHeaderNames.SECURE);
         }
         if (cookie.isHttpOnly()) {
-            buf.append(CookieHeaderNames.HTTPONLY);
-            buf.append((char) HttpConstants.SEMICOLON);
-            buf.append((char) HttpConstants.SP);
+            add(buf, CookieHeaderNames.HTTPONLY);
         }
 
         return stripTrailingSeparator(buf);
@@ -100,12 +120,8 @@ public final class ServerCookieEncoder {
      * @param cookies a bunch of cookies
      * @return the corresponding bunch of Set-Cookie headers
      */
-    public static List<String> encode(Cookie... cookies) {
-        if (cookies == null) {
-            throw new NullPointerException("cookies");
-        }
-
-        if (cookies.length == 0) {
+    public List<String> encode(Cookie... cookies) {
+        if (checkNotNull(cookies, "cookies").length == 0) {
             return Collections.emptyList();
         }
 
@@ -125,12 +141,8 @@ public final class ServerCookieEncoder {
      * @param cookies a bunch of cookies
      * @return the corresponding bunch of Set-Cookie headers
      */
-    public static List<String> encode(Collection<Cookie> cookies) {
-        if (cookies == null) {
-            throw new NullPointerException("cookies");
-        }
-
-        if (cookies.isEmpty()) {
+    public List<String> encode(Collection<? extends Cookie> cookies) {
+        if (checkNotNull(cookies, "cookies").isEmpty()) {
             return Collections.emptyList();
         }
 
@@ -150,12 +162,8 @@ public final class ServerCookieEncoder {
      * @param cookies a bunch of cookies
      * @return the corresponding bunch of Set-Cookie headers
      */
-    public static List<String> encode(Iterable<Cookie> cookies) {
-        if (cookies == null) {
-            throw new NullPointerException("cookies");
-        }
-
-        if (!cookies.iterator().hasNext()) {
+    public List<String> encode(Iterable<? extends Cookie> cookies) {
+        if (!checkNotNull(cookies, "cookies").iterator().hasNext()) {
             return Collections.emptyList();
         }
 
@@ -167,9 +175,5 @@ public final class ServerCookieEncoder {
             encoded.add(encode(c));
         }
         return encoded;
-    }
-
-    private ServerCookieEncoder() {
-        // Unused
     }
 }

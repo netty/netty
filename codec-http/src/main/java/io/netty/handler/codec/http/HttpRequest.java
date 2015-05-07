@@ -15,22 +15,25 @@
  */
 package io.netty.handler.codec.http;
 
-
 /**
  * An HTTP request.
  *
  * <h3>Accessing Query Parameters and Cookie</h3>
  * <p>
  * Unlike the Servlet API, a query string is constructed and decomposed by
- * {@link QueryStringEncoder} and {@link QueryStringDecoder}.  {@link Cookie}
- * support is also provided separately via {@link ClientCookieDecoder}, {@link ServerCookieDecoder},
- * {@link ClientCookieEncoder}, and {@link @ServerCookieEncoder}.
+ * {@link QueryStringEncoder} and {@link QueryStringDecoder}.
+ *
+ * {@link io.netty.handler.codec.http.cookie.Cookie} support is also provided
+ * separately via {@link io.netty.handler.codec.http.cookie.ServerCookieDecoder},
+ * {@link io.netty.handler.codec.http.cookie.ClientCookieDecoder},
+ * {@link io.netty.handler.codec.http.cookie.ServerCookieEncoder},
+ * and {@link @io.netty.handler.codec.http.cookie.ClientCookieEncoder}.
  *
  * @see HttpResponse
- * @see ClientCookieEncoder
- * @see ServerCookieEncoder
- * @see ClientCookieDecoder
- * @see ServerCookieDecoder
+ * @see io.netty.handler.codec.http.cookie.ServerCookieDecoder
+ * @see io.netty.handler.codec.http.cookie.ClientCookieDecoder
+ * @see io.netty.handler.codec.http.cookie.ServerCookieEncoder
+ * @see io.netty.handler.codec.http.cookie.ClientCookieEncoder
  */
 public interface HttpRequest extends HttpMessage {
 
