@@ -538,28 +538,35 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
             ChannelFuture future = frameWriter().writeGoAway(ctx, lastStreamId, errorCode, debugData, promise);
 
-            final String debugString = debugData.toString(UTF_8);
+            // Need to retain the buffer so that it's available when the future completes.
+            debugData.retain();
             future.addListener(new GenericFutureListener<ChannelFuture>() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
-                    if (future.isSuccess()) {
-                        if (errorCode != NO_ERROR.code()) {
-                            if (logger.isWarnEnabled()) {
-                                logger.warn(
-                                        format("Sent GOAWAY: lastStreamId '%d', errorCode '%d', " +
+                    try {
+                        if (future.isSuccess()) {
+                            if (errorCode != NO_ERROR.code()) {
+                                if (logger.isDebugEnabled()) {
+                                    logger.debug(
+                                            format("Sent GOAWAY: lastStreamId '%d', errorCode '%d', " +
+                                                            "debugData '%s'. Forcing shutdown of the connection.",
+                                                    lastStreamId, errorCode, debugData.toString(UTF_8)),
+                                            future.cause());
+                                }
+                                ctx.close();
+                            }
+                        } else {
+                            if (logger.isErrorEnabled()) {
+                                logger.error(
+                                        format("Sending GOAWAY failed: lastStreamId '%d', errorCode '%d', " +
                                                         "debugData '%s'. Forcing shutdown of the connection.",
-                                                lastStreamId, errorCode, debugString), future.cause());
+                                                lastStreamId, errorCode, debugData.toString(UTF_8)), future.cause());
                             }
                             ctx.close();
                         }
-                    } else {
-                        if (logger.isErrorEnabled()) {
-                            logger.error(
-                                    format("Sending GOAWAY failed: lastStreamId '%d', errorCode '%d', " +
-                                                    "debugData '%s'. Forcing shutdown of the connection.",
-                                            lastStreamId, errorCode, debugString), future.cause());
-                        }
-                        ctx.close();
+                    } finally {
+                        // We're done with the debug data now.
+                        debugData.release();
                     }
                 }
             });
