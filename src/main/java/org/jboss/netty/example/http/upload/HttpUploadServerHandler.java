@@ -26,9 +26,9 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.http.Cookie;
-import org.jboss.netty.handler.codec.http.CookieDecoder;
-import org.jboss.netty.handler.codec.http.CookieEncoder;
+import org.jboss.netty.handler.codec.http.cookie.Cookie;
+import org.jboss.netty.handler.codec.http.cookie.ServerCookieDecoder;
+import org.jboss.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -123,8 +123,7 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
             if (value == null) {
                 cookies = Collections.emptySet();
             } else {
-                CookieDecoder decoder = new CookieDecoder();
-                cookies = decoder.decode(value);
+                cookies = ServerCookieDecoder.STRICT.decode(value);
             }
             for (Cookie cookie: cookies) {
                 responseContent.append("COOKIE: " + cookie + "\r\n");
@@ -308,17 +307,10 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
         if (value == null) {
             cookies = Collections.emptySet();
         } else {
-            CookieDecoder decoder = new CookieDecoder();
-            cookies = decoder.decode(value);
+            cookies = ServerCookieDecoder.STRICT.decode(value);
         }
         if (!cookies.isEmpty()) {
-            // Reset the cookies if necessary.
-            CookieEncoder cookieEncoder = new CookieEncoder(true);
-            for (Cookie cookie: cookies) {
-                cookieEncoder.addCookie(cookie);
-                response.headers().add(HttpHeaders.Names.SET_COOKIE, cookieEncoder.encode());
-                cookieEncoder = new CookieEncoder(true);
-            }
+            response.headers().add(HttpHeaders.Names.SET_COOKIE, ServerCookieEncoder.STRICT.encode(cookies));
         }
         // Write the response.
         ChannelFuture future = channel.write(response);
