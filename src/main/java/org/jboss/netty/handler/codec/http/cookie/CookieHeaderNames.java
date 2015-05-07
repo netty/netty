@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,30 +13,20 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.http;
+package org.jboss.netty.handler.codec.http.cookie;
 
-final class CookieHeaderNames {
-    static final String PATH = "Path";
+public final class CookieHeaderNames {
+    public static final String PATH = "Path";
 
-    static final String EXPIRES = "Expires";
+    public static final String EXPIRES = "Expires";
 
-    static final String MAX_AGE = "Max-Age";
+    public static final String MAX_AGE = "Max-Age";
 
-    static final String DOMAIN = "Domain";
+    public static final String DOMAIN = "Domain";
 
-    static final String SECURE = "Secure";
+    public static final String SECURE = "Secure";
 
-    static final String HTTPONLY = "HTTPOnly";
-
-    static final String COMMENT = "Comment";
-
-    static final String COMMENTURL = "CommentURL";
-
-    static final String DISCARD = "Discard";
-
-    static final String PORT = "Port";
-
-    static final String VERSION = "Version";
+    public static final String HTTPONLY = "HTTPOnly";
 
     private CookieHeaderNames() {
         // Unused.

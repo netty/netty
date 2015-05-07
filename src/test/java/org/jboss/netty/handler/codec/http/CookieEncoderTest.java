@@ -18,14 +18,19 @@ package org.jboss.netty.handler.codec.http;
 import static org.junit.Assert.*;
 
 import java.text.DateFormat;
+import java.text.ParseException;
 import java.util.Date;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.junit.Test;
 
 public class CookieEncoderTest {
     @Test
-    public void testEncodingSingleCookieV0() {
-        String result = "myCookie=myValue; Expires=XXX; Path=/apathsomewhere; Domain=.adomainsomewhere; Secure";
+    public void testEncodingSingleCookieV0() throws ParseException {
+        int maxAge = 50;
+        String result = "myCookie=myValue; Max-Age=" + maxAge + "; Expires=(.+?); Path=/apathsomewhere; "
+                + "Domain=.adomainsomewhere; Secure";
         DateFormat df = HttpHeaderDateFormat.get();
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         CookieEncoder encoder = new CookieEncoder(true);
@@ -34,32 +39,26 @@ public class CookieEncoderTest {
         cookie.setCommentUrl("http://aurl.com");
         cookie.setDomain(".adomainsomewhere");
         cookie.setDiscard(true);
-        cookie.setMaxAge(50);
+        cookie.setMaxAge(maxAge);
         cookie.setPath("/apathsomewhere");
         cookie.setPorts(80, 8080);
         cookie.setSecure(true);
 
         String encodedCookie = encoder.encode();
 
-        long currentTime = System.currentTimeMillis();
-        boolean fail = true;
-        // +/- 10-second tolerance
-        for (int delta = 0; delta <= 20000; delta += 250) {
-            if (encodedCookie.equals(result.replace(
-                    "XXX", df.format(new Date(currentTime + 40000 + delta))))) {
-                fail = false;
-                break;
-            }
-        }
-
-        if (fail) {
-            fail("Expected: " + result + ", Actual: " + encodedCookie);
-        }
+        Matcher matcher = Pattern.compile(result).matcher(encodedCookie);
+        assertTrue(matcher.find());
+        Date expiresDate = HttpHeaderDateFormat.get().parse(matcher.group(1));
+        long diff = (expiresDate.getTime() - System.currentTimeMillis()) / 1000;
+        // 2 secs should be fine
+        assertTrue(Math.abs(diff - maxAge) <= 2);
     }
 
     @Test
-    public void testEncodingSingleCookieV1() {
-        String result = "myCookie=myValue; Max-Age=50; Path=\"/apathsomewhere\"; Domain=.adomainsomewhere; Secure; Comment=\"this is a Comment\"; Version=1";
+    public void testEncodingSingleCookieV1() throws ParseException {
+        int maxAge = 50;
+        String result = "myCookie=myValue; Max-Age=" + maxAge + "; Expires=(.+?); Path=/apathsomewhere; "
+                + "Domain=.adomainsomewhere; Secure";
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         CookieEncoder encoder = new CookieEncoder(true);
         encoder.addCookie(cookie);
@@ -70,12 +69,20 @@ public class CookieEncoderTest {
         cookie.setPath("/apathsomewhere");
         cookie.setSecure(true);
         String encodedCookie = encoder.encode();
-        assertEquals(result, encodedCookie);
+
+        Matcher matcher = Pattern.compile(result).matcher(encodedCookie);
+        assertTrue(matcher.find());
+        Date expiresDate = HttpHeaderDateFormat.get().parse(matcher.group(1));
+        long diff = (expiresDate.getTime() - System.currentTimeMillis()) / 1000;
+        // 2 secs should be fine
+        assertTrue(Math.abs(diff - maxAge) <= 2);
     }
 
     @Test
-    public void testEncodingSingleCookieV2() {
-        String result = "myCookie=myValue; Max-Age=50; Path=\"/apathsomewhere\"; Domain=.adomainsomewhere; Secure; Comment=\"this is a Comment\"; Version=1; CommentURL=\"http://aurl.com\"; Port=\"80,8080\"; Discard";
+    public void testEncodingSingleCookieV2() throws ParseException {
+        int maxAge = 50;
+        String result = "myCookie=myValue; Max-Age=" + maxAge + "; Expires=(.+?); Path=/apathsomewhere; "
+                + "Domain=.adomainsomewhere; Secure";
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         CookieEncoder encoder = new CookieEncoder(true);
         encoder.addCookie(cookie);
@@ -89,7 +96,13 @@ public class CookieEncoderTest {
         cookie.setPorts(80, 8080);
         cookie.setSecure(true);
         String encodedCookie = encoder.encode();
-        assertEquals(result, encodedCookie);
+ 
+        Matcher matcher = Pattern.compile(result).matcher(encodedCookie);
+        assertTrue(matcher.find());
+        Date expiresDate = HttpHeaderDateFormat.get().parse(matcher.group(1));
+        long diff = (expiresDate.getTime() - System.currentTimeMillis()) / 1000;
+        // 2 secs should be fine
+        assertTrue(Math.abs(diff - maxAge) <= 2);
     }
 
     @Test
@@ -107,9 +120,9 @@ public class CookieEncoderTest {
 
     @Test
     public void testEncodingMultipleClientCookies() {
-        String c1 = "$Version=1; myCookie=myValue; $Path=\"/apathsomewhere\"; $Domain=.adomainsomewhere; $Port=\"80,8080\"; ";
-        String c2 = "$Version=1; myCookie2=myValue2; $Path=\"/anotherpathsomewhere\"; $Domain=.anotherdomainsomewhere; ";
-        String c3 = "$Version=1; myCookie3=myValue3";
+        String c1 = "myCookie=myValue; ";
+        String c2 = "myCookie2=myValue2; ";
+        String c3 = "myCookie3=myValue3";
         CookieEncoder encoder = new CookieEncoder(false);
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         cookie.setVersion(1);
@@ -137,16 +150,4 @@ public class CookieEncoderTest {
         String encodedCookie = encoder.encode();
         assertEquals(c1 +c2 + c3, encodedCookie);
     }
-
-    @Test
-    public void testEncodingWithNoCookies() {
-    	CookieEncoder encoderForServer = new CookieEncoder(true);
-    	String encodedCookie1 = encoderForServer.encode();
-    	CookieEncoder encoderForClient = new CookieEncoder(false);
-    	String encodedCookie2 = encoderForClient.encode();
-    	assertNotNull(encodedCookie1);
-    	assertNotNull(encodedCookie2);
-
-    }
-
 }
