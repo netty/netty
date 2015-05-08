@@ -15,7 +15,9 @@
  */
 package io.netty.example.http2.server;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -24,7 +26,6 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderUtil;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpRequest;
-
 import static io.netty.handler.codec.http.HttpHeaderNames.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
@@ -33,6 +34,11 @@ import static io.netty.handler.codec.http.HttpVersion.*;
  * HTTP handler that responds with a "Hello World"
  */
 public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<HttpRequest> {
+    private final String establishApproach;
+
+    public HelloWorldHttp1Handler(String establishApproach) {
+        this.establishApproach = checkNotNull(establishApproach, "establishApproach");
+    }
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, HttpRequest req) throws Exception {
@@ -43,6 +49,7 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<HttpRequ
 
         ByteBuf content = ctx.alloc().buffer();
         content.writeBytes(HelloWorldHttp2Handler.RESPONSE_BYTES.duplicate());
+        ByteBufUtil.writeAscii(content, " - via " + req.protocolVersion() + " (" + establishApproach + ")");
 
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
         response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
