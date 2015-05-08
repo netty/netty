@@ -19,7 +19,9 @@ package io.netty.example.http2.server;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty.handler.codec.http2.Http2ServerUpgradeCodec;
@@ -66,6 +68,16 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
 
         ch.pipeline().addLast(sourceCodec);
         ch.pipeline().addLast(upgradeHandler);
+        ch.pipeline().addLast(new SimpleChannelInboundHandler<HttpMessage>() {
+            @Override
+            protected void messageReceived(ChannelHandlerContext ctx, HttpMessage msg) throws Exception {
+                // If this handler is hit then no upgrade has been attempted and the client is just talking HTTP.
+                System.err.println("Directly talking: " + msg.protocolVersion() + " (no upgrade was attempted)");
+                ctx.pipeline().replace(this, "http-hello-world",
+                        new HelloWorldHttp1Handler("Direct. No Upgrade Attempted."));
+                ctx.fireChannelRead(msg);
+            }
+        });
         ch.pipeline().addLast(new UserEventLogger());
     }
 
