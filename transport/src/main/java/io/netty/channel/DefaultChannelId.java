@@ -280,7 +280,7 @@ final class DefaultChannelId implements ChannelId {
     }
 
     private static int scoreAddress(InetAddress addr) {
-        if (addr.isAnyLocalAddress()) {
+        if (addr.isAnyLocalAddress() || addr.isLoopbackAddress()) {
             return 0;
         }
         if (addr.isMulticastAddress()) {
