@@ -54,25 +54,32 @@ public class ByteStringTest {
         bByteString = new ByteString(b, bOffset, length, false);
 
         int i;
+        final int end = aOffset + length;
         // Find an element that can be decremented
-        for (i = 1; i < length; ++i) {
-            if (a[aOffset + 1] > Byte.MIN_VALUE) {
-                --a[aOffset + 1];
+        for (i = aOffset + 1; i < end; ++i) {
+            if (a[i] > Byte.MIN_VALUE) {
+                --a[i];
                 break;
             }
+        }
+        if (i == end) {
+            throw new IllegalStateException("Couldn't find an index to decrement, all random numbers Byte.MIN_VALUE");
         }
         lessThanAByteString = new ByteString(a, aOffset, length, true);
-        ++a[aOffset + i]; // Restore the a array to the original value
+        ++a[i]; // Restore the a array to the original value
 
         // Find an element that can be incremented
-        for (i = 1; i < length; ++i) {
-            if (a[aOffset + 1] < Byte.MAX_VALUE) {
-                ++a[aOffset + 1];
+        for (i = aOffset + 1; i < end; ++i) {
+            if (a[i] < Byte.MAX_VALUE) {
+                ++a[i];
                 break;
             }
         }
+        if (i == end) {
+            throw new IllegalStateException("Couldn't find an index to increment, all random numbers Byte.MAX_VALUE");
+        }
         greaterThanAByteString = new ByteString(a, aOffset, length, true);
-        --a[aOffset + i]; // Restore the a array to the original value
+        --a[i]; // Restore the a array to the original value
     }
 
     @Test
