@@ -25,7 +25,7 @@ public class DefaultCookie implements Cookie {
     private boolean wrap;
     private String domain;
     private String path;
-    private long maxAge = Long.MIN_VALUE;
+    private int maxAge = Integer.MIN_VALUE;
     private boolean secure;
     private boolean httpOnly;
 
@@ -105,11 +105,11 @@ public class DefaultCookie implements Cookie {
         this.path = validateValue("path", path);
     }
 
-    public long maxAge() {
+    public int maxAge() {
         return maxAge;
     }
 
-    public void setMaxAge(long maxAge) {
+    public void setMaxAge(int maxAge) {
         this.maxAge = maxAge;
     }
 
