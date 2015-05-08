@@ -21,6 +21,7 @@ import static io.netty.example.http2.Http2ExampleUtil.UPGRADE_RESPONSE_HEADER;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.logging.LogLevel.INFO;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty.handler.codec.http2.DefaultHttp2Connection;
@@ -112,7 +113,10 @@ public class HelloWorldHttp2Handler extends Http2ConnectionHandler {
                 Http2Headers headers, int streamDependency, short weight,
                 boolean exclusive, int padding, boolean endStream) throws Http2Exception {
             if (endStream) {
-                sendResponse(ctx, streamId, RESPONSE_BYTES.duplicate());
+                ByteBuf content = ctx.alloc().buffer();
+                content.writeBytes(HelloWorldHttp2Handler.RESPONSE_BYTES.duplicate());
+                ByteBufUtil.writeAscii(content, " - via HTTP/2");
+                sendResponse(ctx, streamId, content);
             }
         }
 

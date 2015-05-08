@@ -48,7 +48,7 @@ public class Http2OrHttpHandler extends Http2OrHttpChooser {
 
     @Override
     protected ChannelHandler createHttp1RequestHandler() {
-        return new HelloWorldHttp1Handler();
+        return new HelloWorldHttp1Handler("ALPN Negotiation");
     }
 
     @Override
