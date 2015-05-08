@@ -93,7 +93,7 @@ public final class ServerCookieEncoder extends CookieEncoder {
             add(buf, name, value);
         }
 
-        if (cookie.maxAge() != Long.MIN_VALUE) {
+        if (cookie.maxAge() != Integer.MIN_VALUE) {
             add(buf, CookieHeaderNames.MAX_AGE, cookie.maxAge());
             Date expires = new Date(cookie.maxAge() * 1000 + System.currentTimeMillis());
             add(buf, CookieHeaderNames.EXPIRES, HttpHeaderDateFormat.get().format(expires));

@@ -172,11 +172,11 @@ public class ClientCookieDecoderTest {
     @Test
     public void testDecodingLongDates() {
         Calendar cookieDate = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-        cookieDate.set(9999, Calendar.DECEMBER, 31, 23, 59, 59);
-        long expectedMaxAge = (cookieDate.getTimeInMillis() - System
-                .currentTimeMillis()) / 1000;
+        cookieDate.set(2080, Calendar.DECEMBER, 31, 23, 59, 59);
+        int expectedMaxAge = (int)((cookieDate.getTimeInMillis() - System
+                .currentTimeMillis()) / 1000);
 
-        String source = "Format=EU; expires=Fri, 31-Dec-9999 23:59:59 GMT; path=/";
+        String source = "Format=EU; expires=Fri, 31-Dec-2080 23:59:59 GMT; path=/";
 
         Cookie cookie = ClientCookieDecoder.STRICT.decode(source);
 

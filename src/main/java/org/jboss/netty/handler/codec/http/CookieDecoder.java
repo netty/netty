@@ -138,7 +138,7 @@ public final class CookieDecoder {
             String commentURL = null;
             String domain = null;
             String path = null;
-            long maxAge = Long.MIN_VALUE;
+            int maxAge = Integer.MIN_VALUE;
             List<Integer> ports = new ArrayList<Integer>(2);
 
             for (int j = i + 1; j < names.size(); j++, i++) {
@@ -165,7 +165,7 @@ public final class CookieDecoder {
                             HttpHeaderDateFormat.get().parse(value).getTime() -
                             System.currentTimeMillis();
 
-                        maxAge = maxAgeMillis / 1000 + (maxAgeMillis % 1000 != 0? 1 : 0);
+                        maxAge = (int) (maxAgeMillis / 1000 + (maxAgeMillis % 1000 != 0? 1 : 0));
                     } catch (ParseException e) {
                         // Ignore.
                     }
