@@ -154,7 +154,7 @@ public final class ClientCookieDecoder extends CookieDecoder {
         private final DefaultCookie cookie;
         private String domain;
         private String path;
-        private long maxAge = Long.MIN_VALUE;
+        private int maxAge = Integer.MIN_VALUE;
         private String expires;
         private boolean secure;
         private boolean httpOnly;
@@ -163,18 +163,18 @@ public final class ClientCookieDecoder extends CookieDecoder {
             this.cookie = cookie;
         }
 
-        private long mergeMaxAgeAndExpire(long maxAge, String expires) {
+        private int mergeMaxAgeAndExpire(int maxAge, String expires) {
             // max age has precedence over expires
-            if (maxAge != Long.MIN_VALUE) {
+            if (maxAge != Integer.MIN_VALUE) {
                 return maxAge;
             } else if (expires != null) {
                 Date expiresDate = HttpHeaderDateFormat.get().parse(expires, new ParsePosition(0));
                 if (expiresDate != null) {
                     long maxAgeMillis = expiresDate.getTime() - System.currentTimeMillis();
-                    return maxAgeMillis / 1000 + (maxAgeMillis % 1000 != 0 ? 1 : 0);
+                    return (int) (maxAgeMillis / 1000 + (maxAgeMillis % 1000 != 0 ? 1 : 0));
                 }
             }
-            return Long.MIN_VALUE;
+            return Integer.MIN_VALUE;
         }
 
         public Cookie cookie() {
@@ -239,7 +239,7 @@ public final class ClientCookieDecoder extends CookieDecoder {
 
         private void setMaxAge(String value) {
             try {
-                maxAge = Math.max(Long.valueOf(value), 0L);
+                maxAge = Math.max(Integer.valueOf(value), 0);
             } catch (NumberFormatException e1) {
                 // ignore failure to parse -> treat as session cookie
             }

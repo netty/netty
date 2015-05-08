@@ -154,7 +154,7 @@ public class DefaultCookie extends org.jboss.netty.handler.codec.http.cookie.Def
     }
 
     @Deprecated
-    public long getMaxAge() {
+    public int getMaxAge() {
         return maxAge();
     }
 
