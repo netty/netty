@@ -118,7 +118,7 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
             HttpPostBodyUtil.FORM_DATA + "; " + HttpPostBodyUtil.NAME + "=\"" + getName() +
                 "\"; " + HttpPostBodyUtil.FILENAME + "=\"" + filename + "\"\r\n" +
                 HttpHeaders.Names.CONTENT_TYPE + ": " + contentType +
-                (charset != null? "; " + HttpHeaders.Values.CHARSET + '=' + charset + "\r\n" : "\r\n") +
+                (charset != null? "; " + HttpHeaders.Values.CHARSET + '=' + charset.name() + "\r\n" : "\r\n") +
                 HttpHeaders.Names.CONTENT_LENGTH + ": " + length() + "\r\n" +
                 "Completed: " + isCompleted() +
                 "\r\nIsInMemory: " + isInMemory() + "\r\nRealFile: " +
