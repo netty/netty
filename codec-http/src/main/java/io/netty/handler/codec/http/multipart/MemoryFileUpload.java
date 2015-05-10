@@ -124,7 +124,7 @@ public class MemoryFileUpload extends AbstractMemoryHttpData implements FileUplo
                HttpHeaderValues.FORM_DATA + "; " + HttpHeaderValues.NAME + "=\"" + getName() +
             "\"; " + HttpHeaderValues.FILENAME + "=\"" + filename + "\"\r\n" +
             HttpHeaderNames.CONTENT_TYPE + ": " + contentType +
-            (getCharset() != null? "; " + HttpHeaderValues.CHARSET + '=' + getCharset() + "\r\n" : "\r\n") +
+            (getCharset() != null? "; " + HttpHeaderValues.CHARSET + '=' + getCharset().name() + "\r\n" : "\r\n") +
             HttpHeaderNames.CONTENT_LENGTH + ": " + length() + "\r\n" +
             "Completed: " + isCompleted() +
             "\r\nIsInMemory: " + isInMemory();
