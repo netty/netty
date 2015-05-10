@@ -474,7 +474,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
                 // Content-Type: charset=charset
                 internal.addValue(HttpHeaders.Names.CONTENT_TYPE + ": " +
                         HttpPostBodyUtil.DEFAULT_TEXT_CONTENT_TYPE + "; " +
-                        HttpHeaders.Values.CHARSET + '=' + localcharset + "\r\n");
+                        HttpHeaders.Values.CHARSET + '=' + localcharset.name() + "\r\n");
             }
             // CRLF between body header and data
             internal.addValue("\r\n");
@@ -629,7 +629,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
                         "\r\n\r\n");
             } else if (fileUpload.getCharset() != null) {
                 internal.addValue("; " + HttpHeaders.Values.CHARSET + '=' +
-                        fileUpload.getCharset() + "\r\n\r\n");
+                        fileUpload.getCharset().name() + "\r\n\r\n");
             } else {
                 internal.addValue("\r\n\r\n");
             }
