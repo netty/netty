@@ -73,7 +73,7 @@ import java.util.List;
  * <pre>
  * // In your {@link ChannelInitializer}:
  * {@link ChannelPipeline} p = channel.pipeline();
- * {@link SslContext} sslCtx = {@link #newBuilderForClient() SslContext.newBuilderForClient()}.build();
+ * {@link SslContext} sslCtx = {@link SslContextBuilder#forClient() SslContextBuilder.forClient()}.build();
  * p.addLast("ssl", {@link #newEngine(ByteBufAllocator, String, int) sslCtx.newEngine(channel.alloc(), host, port)});
  * ...
  * </pre>
