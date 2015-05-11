@@ -50,6 +50,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
         this.length = length;
         this.maxLength = maxLength;
         setIndex(0, 0);
+        discardMarks();
         tmpNioBuf = null;
         initThread = Thread.currentThread();
     }

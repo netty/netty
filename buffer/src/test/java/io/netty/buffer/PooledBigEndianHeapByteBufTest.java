@@ -15,24 +15,13 @@
  */
 package io.netty.buffer;
 
-import static org.junit.Assert.*;
-
 /**
  * Tests big-endian heap channel buffers
  */
-public class PooledBigEndianHeapByteBufTest extends AbstractByteBufTest {
-
-    private ByteBuf buffer;
+public class PooledBigEndianHeapByteBufTest extends AbstractPooledByteBufTest {
 
     @Override
-    protected ByteBuf newBuffer(int length) {
-        buffer = PooledByteBufAllocator.DEFAULT.heapBuffer(length);
-        assertEquals(0, buffer.writerIndex());
-        return buffer;
-    }
-
-    @Override
-    protected ByteBuf[] components() {
-        return new ByteBuf[] { buffer };
+    protected ByteBuf alloc(int length) {
+        return PooledByteBufAllocator.DEFAULT.heapBuffer(length);
     }
 }
