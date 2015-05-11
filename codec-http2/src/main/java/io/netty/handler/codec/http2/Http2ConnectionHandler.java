@@ -25,7 +25,6 @@ import static io.netty.handler.codec.http2.Http2Exception.isStreamError;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.String.format;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelFuture;
@@ -36,8 +35,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
-import io.netty.util.CharsetUtil;
-import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -575,45 +572,26 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             }
             connection.goAwaySent(lastStreamId, errorCode, debugData);
 
+            // Need to retain before we write the buffer because if we do it after the refCnt could already be 0 and
+            // result in an IllegalRefCountException.
+            debugData.retain();
             ChannelFuture future = frameWriter().writeGoAway(ctx, lastStreamId, errorCode, debugData, promise);
 
-            // Need to retain the buffer so that it's available when the future completes.
-            debugData.retain();
-            future.addListener(new GenericFutureListener<ChannelFuture>() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    try {
-                        if (future.isSuccess()) {
-                            if (errorCode != NO_ERROR.code()) {
-                                if (logger.isDebugEnabled()) {
-                                    logger.debug(
-                                            format("Sent GOAWAY: lastStreamId '%d', errorCode '%d', " +
-                                                            "debugData '%s'. Forcing shutdown of the connection.",
-                                                    lastStreamId, errorCode, debugData.toString(UTF_8)),
-                                            future.cause());
-                                }
-                                ctx.close();
-                            }
-                        } else {
-                            if (logger.isErrorEnabled()) {
-                                logger.error(
-                                        format("Sending GOAWAY failed: lastStreamId '%d', errorCode '%d', " +
-                                                        "debugData '%s'. Forcing shutdown of the connection.",
-                                                lastStreamId, errorCode, debugData.toString(UTF_8)), future.cause());
-                            }
-                            ctx.close();
-                        }
-                    } finally {
-                        // We're done with the debug data now.
-                        debugData.release();
+            if (future.isDone()) {
+                processGoAwayWriteResult(ctx, lastStreamId, errorCode, debugData, future);
+            } else {
+                future.addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        processGoAwayWriteResult(ctx, lastStreamId, errorCode, debugData, future);
                     }
-                }
-            });
+                });
+            }
 
             return future;
-        } catch (Http2Exception e) {
+        } catch (Throwable cause) { // Make sure to catch Throwable because we are doing a retain() in this method.
             debugData.release();
-            return promise.setFailure(e);
+            return promise.setFailure(cause);
         }
     }
 
@@ -633,6 +611,35 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      */
     private static ByteBuf clientPrefaceString(Http2Connection connection) {
         return connection.isServer() ? connectionPrefaceBuf() : null;
+    }
+
+    private static void processGoAwayWriteResult(final ChannelHandlerContext ctx, final int lastStreamId,
+            final long errorCode, final ByteBuf debugData, ChannelFuture future) {
+        try {
+            if (future.isSuccess()) {
+                if (errorCode != NO_ERROR.code()) {
+                    if (logger.isDebugEnabled()) {
+                        logger.debug(
+                                format("Sent GOAWAY: lastStreamId '%d', errorCode '%d', " +
+                                        "debugData '%s'. Forcing shutdown of the connection.",
+                                        lastStreamId, errorCode, debugData.toString(UTF_8)),
+                                        future.cause());
+                    }
+                    ctx.close();
+                }
+            } else {
+                if (logger.isErrorEnabled()) {
+                    logger.error(
+                            format("Sending GOAWAY failed: lastStreamId '%d', errorCode '%d', " +
+                                    "debugData '%s'. Forcing shutdown of the connection.",
+                                    lastStreamId, errorCode, debugData.toString(UTF_8)), future.cause());
+                }
+                ctx.close();
+            }
+        } finally {
+            // We're done with the debug data now.
+            debugData.release();
+        }
     }
 
     /**
