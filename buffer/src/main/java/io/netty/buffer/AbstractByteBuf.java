@@ -1151,4 +1151,8 @@ public abstract class AbstractByteBuf extends ByteBuf {
             throw new IllegalReferenceCountException(0);
         }
     }
+
+    void discardMarks() {
+        markedReaderIndex = markedWriterIndex = 0;
+    }
 }

@@ -22,19 +22,12 @@ import static org.junit.Assert.*;
 /**
  * Tests little-endian heap channel buffers
  */
-public class PooledLittleEndianHeapByteBufTest extends AbstractByteBufTest {
-
-    private ByteBuf buffer;
+public class PooledLittleEndianHeapByteBufTest extends AbstractPooledByteBufTest {
 
     @Override
-    protected ByteBuf newBuffer(int length) {
-        buffer = PooledByteBufAllocator.DEFAULT.heapBuffer(length).order(ByteOrder.LITTLE_ENDIAN);
-        assertEquals(0, buffer.writerIndex());
+    protected ByteBuf alloc(int length) {
+        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.heapBuffer(length).order(ByteOrder.LITTLE_ENDIAN);
+        assertSame(ByteOrder.LITTLE_ENDIAN, buffer.order());
         return buffer;
-    }
-
-    @Override
-    protected ByteBuf[] components() {
-        return new ByteBuf[] { buffer };
     }
 }

@@ -22,20 +22,12 @@ import static org.junit.Assert.*;
 /**
  * Tests big-endian direct channel buffers
  */
-public class PooledBigEndianDirectByteBufTest extends AbstractByteBufTest {
-
-    private ByteBuf buffer;
+public class PooledBigEndianDirectByteBufTest extends AbstractPooledByteBufTest {
 
     @Override
-    protected ByteBuf newBuffer(int length) {
-        buffer = PooledByteBufAllocator.DEFAULT.directBuffer(length);
+    protected ByteBuf alloc(int length) {
+        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.directBuffer(length);
         assertSame(ByteOrder.BIG_ENDIAN, buffer.order());
-        assertEquals(0, buffer.writerIndex());
         return buffer;
-    }
-
-    @Override
-    protected ByteBuf[] components() {
-        return new ByteBuf[] { buffer };
     }
 }
