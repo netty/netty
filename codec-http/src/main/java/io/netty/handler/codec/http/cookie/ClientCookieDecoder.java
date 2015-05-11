@@ -138,11 +138,10 @@ public final class ClientCookieDecoder extends CookieDecoder {
                     return null;
                 }
 
-                cookieBuilder = new CookieBuilder(cookie);
+                cookieBuilder = new CookieBuilder(cookie, header);
             } else {
                 // cookie attribute
-                String attrValue = valueBegin == -1 ? null : header.substring(valueBegin, valueEnd);
-                cookieBuilder.appendAttribute(header, nameBegin, nameEnd, attrValue);
+                cookieBuilder.appendAttribute(nameBegin, nameEnd, valueBegin, valueEnd);
             }
         }
         return cookieBuilder.cookie();
@@ -150,27 +149,33 @@ public final class ClientCookieDecoder extends CookieDecoder {
 
     private static class CookieBuilder {
 
+        private final String header;
         private final DefaultCookie cookie;
         private String domain;
         private String path;
         private long maxAge = Long.MIN_VALUE;
-        private String expires;
+        private int expiresStart;
+        private int expiresEnd;
         private boolean secure;
         private boolean httpOnly;
 
-        public CookieBuilder(DefaultCookie cookie) {
+        public CookieBuilder(DefaultCookie cookie, String header) {
             this.cookie = cookie;
+            this.header = header;
         }
 
-        private long mergeMaxAgeAndExpire(long maxAge, String expires) {
+        private long mergeMaxAgeAndExpires() {
             // max age has precedence over expires
             if (maxAge != Long.MIN_VALUE) {
                 return maxAge;
-            } else if (expires != null) {
-                Date expiresDate = HttpHeaderDateFormat.get().parse(expires, new ParsePosition(0));
-                if (expiresDate != null) {
-                    long maxAgeMillis = expiresDate.getTime() - System.currentTimeMillis();
-                    return maxAgeMillis / 1000 + (maxAgeMillis % 1000 != 0 ? 1 : 0);
+            } else {
+                String expires = computeValue(expiresStart, expiresEnd);
+                if (expires != null) {
+                    Date expiresDate = HttpHeaderDateFormat.get().parse(expires, new ParsePosition(0));
+                    if (expiresDate != null) {
+                        long maxAgeMillis = expiresDate.getTime() - System.currentTimeMillis();
+                        return maxAgeMillis / 1000 + (maxAgeMillis % 1000 != 0 ? 1 : 0);
+                    }
                 }
             }
             return Long.MIN_VALUE;
@@ -179,7 +184,7 @@ public final class ClientCookieDecoder extends CookieDecoder {
         public Cookie cookie() {
             cookie.setDomain(domain);
             cookie.setPath(path);
-            cookie.setMaxAge(mergeMaxAgeAndExpire(maxAge, expires));
+            cookie.setMaxAge(mergeMaxAgeAndExpires());
             cookie.setSecure(secure);
             cookie.setHttpOnly(httpOnly);
             return cookie;
@@ -189,51 +194,41 @@ public final class ClientCookieDecoder extends CookieDecoder {
          * Parse and store a key-value pair. First one is considered to be the
          * cookie name/value. Unknown attribute names are silently discarded.
          *
-         * @param header
-         *            the HTTP header
          * @param keyStart
          *            where the key starts in the header
          * @param keyEnd
          *            where the key ends in the header
-         * @param value
-         *            the decoded value
+         * @param valueStart
+         *            where the value starts in the header
+         * @param valueEnd
+         *            where the value ends in the header
          */
-        public void appendAttribute(String header, int keyStart, int keyEnd,
-                String value) {
-            setCookieAttribute(header, keyStart, keyEnd, value);
-        }
-
-        private void setCookieAttribute(String header, int keyStart,
-                int keyEnd, String value) {
+        public void appendAttribute(int keyStart, int keyEnd, int valueStart, int valueEnd) {
             int length = keyEnd - keyStart;
 
             if (length == 4) {
-                parse4(header, keyStart, value);
+                parse4(keyStart, valueStart, valueEnd);
             } else if (length == 6) {
-                parse6(header, keyStart, value);
+                parse6(keyStart, valueStart, valueEnd);
             } else if (length == 7) {
-                parse7(header, keyStart, value);
+                parse7(keyStart, valueStart, valueEnd);
             } else if (length == 8) {
-                parse8(header, keyStart, value);
+                parse8(keyStart, valueStart, valueEnd);
             }
         }
 
-        private void parse4(String header, int nameStart, String value) {
+        private void parse4(int nameStart, int valueStart, int valueEnd) {
             if (header.regionMatches(true, nameStart, CookieHeaderNames.PATH, 0, 4)) {
-                path = value;
+                path = computeValue(valueStart, valueEnd);
             }
         }
 
-        private void parse6(String header, int nameStart, String value) {
+        private void parse6(int nameStart, int valueStart, int valueEnd) {
             if (header.regionMatches(true, nameStart, CookieHeaderNames.DOMAIN, 0, 5)) {
-                domain = value.length() > 0 ? value.toString() : null;
+                domain = computeValue(valueStart, valueEnd);
             } else if (header.regionMatches(true, nameStart, CookieHeaderNames.SECURE, 0, 5)) {
                 secure = true;
             }
-        }
-
-        private void setExpire(String value) {
-            expires = value;
         }
 
         private void setMaxAge(String value) {
@@ -244,18 +239,23 @@ public final class ClientCookieDecoder extends CookieDecoder {
             }
         }
 
-        private void parse7(String header, int nameStart, String value) {
+        private void parse7(int nameStart, int valueStart, int valueEnd) {
             if (header.regionMatches(true, nameStart, CookieHeaderNames.EXPIRES, 0, 7)) {
-                setExpire(value);
+                expiresStart = valueStart;
+                expiresEnd = valueEnd;
             } else if (header.regionMatches(true, nameStart, CookieHeaderNames.MAX_AGE, 0, 7)) {
-                setMaxAge(value);
+                setMaxAge(computeValue(valueStart, valueEnd));
             }
         }
 
-        private void parse8(String header, int nameStart, String value) {
+        private void parse8(int nameStart, int valueStart, int valueEnd) {
             if (header.regionMatches(true, nameStart, CookieHeaderNames.HTTPONLY, 0, 8)) {
                 httpOnly = true;
             }
+        }
+
+        private String computeValue(int valueStart, int valueEnd) {
+            return valueStart == -1 || valueStart == valueEnd ? null : header.substring(valueStart, valueEnd);
         }
     }
 }

@@ -277,4 +277,11 @@ public class ClientCookieDecoderTest {
         Cookie cookie = ClientCookieDecoder.STRICT.decode(emptyDomain);
         assertNull(cookie.domain());
     }
+
+    @Test
+    public void testIgnoreEmptyPath() {
+        String emptyPath = "sessionid=OTY4ZDllNTgtYjU3OC00MWRjLTkzMWMtNGUwNzk4MTY0MTUw;Domain=;Path=";
+        Cookie cookie = ClientCookieDecoder.STRICT.decode(emptyPath);
+        assertNull(cookie.path());
+    }
 }
