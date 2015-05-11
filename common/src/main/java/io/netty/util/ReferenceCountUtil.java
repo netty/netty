@@ -16,6 +16,7 @@
 package io.netty.util;
 
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -25,6 +26,33 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 public final class ReferenceCountUtil {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ReferenceCountUtil.class);
+
+    public static final boolean CHECK_REFERENCE_COUNT_VERBOSE;
+
+    static {
+        CHECK_REFERENCE_COUNT_VERBOSE = SystemPropertyUtil.getBoolean(
+                "io.netty.util.referenceCounted.checkVerbose", true);
+        logger.debug("-Dio.netty.util.referenceCounted.checkVerbose: {}", CHECK_REFERENCE_COUNT_VERBOSE);
+    }
+
+    /**
+     * Ensure the specified message is not released yet if its {@link ReferenceCounted}.
+     * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
+     */
+    public static void ensureAccessible(Object msg) {
+        if (msg instanceof ReferenceCounted) {
+            ensureAccessible((ReferenceCounted) msg);
+        }
+    }
+
+    /**
+     * Ensure the specified message is not released yet.
+     */
+    public static void ensureAccessible(ReferenceCounted msg) {
+        if (msg.refCnt() == 0) {
+            throw new IllegalReferenceCountException(0);
+        }
+    }
 
     /**
      * Try to call {@link ReferenceCounted#retain()} if the specified message implements {@link ReferenceCounted}.

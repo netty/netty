@@ -15,7 +15,7 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
@@ -1174,8 +1174,8 @@ public abstract class AbstractByteBuf extends ByteBuf {
      * if the buffer was released before.
      */
     protected final void ensureAccessible() {
-        if (refCnt() == 0) {
-            throw new IllegalReferenceCountException(0);
+        if (ReferenceCountUtil.CHECK_REFERENCE_COUNT_VERBOSE) {
+            ReferenceCountUtil.ensureAccessible(this);
         }
     }
 

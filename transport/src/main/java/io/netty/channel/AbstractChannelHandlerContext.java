@@ -276,6 +276,9 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
 
     private void invokeUserEventTriggered(Object event) {
         try {
+            if (!ReferenceCountUtil.CHECK_REFERENCE_COUNT_VERBOSE) {
+                ReferenceCountUtil.ensureAccessible(event);
+            }
             ((ChannelInboundHandler) handler()).userEventTriggered(this, event);
         } catch (Throwable t) {
             notifyHandlerException(t);
@@ -305,6 +308,9 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
 
     private void invokeChannelRead(Object msg) {
         try {
+            if (!ReferenceCountUtil.CHECK_REFERENCE_COUNT_VERBOSE) {
+                ReferenceCountUtil.ensureAccessible(msg);
+            }
             ((ChannelInboundHandler) handler()).channelRead(this, msg);
         } catch (Throwable t) {
             notifyHandlerException(t);
@@ -630,6 +636,9 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
 
     private void invokeWrite(Object msg, ChannelPromise promise) {
         try {
+            if (!ReferenceCountUtil.CHECK_REFERENCE_COUNT_VERBOSE) {
+                ReferenceCountUtil.ensureAccessible(msg);
+            }
             ((ChannelOutboundHandler) handler()).write(this, msg, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
