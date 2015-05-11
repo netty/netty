@@ -71,6 +71,16 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public ByteBuf slice(int index, int length) {
+        return PooledSlicedByteBuf.newInstance(this, index, length);
+    }
+
+    @Override
+    public ByteBuf duplicate() {
+        return PooledDuplicatedByteBuf.newInstance(this);
+    }
+
+    @Override
     public final int capacity() {
         return length;
     }
