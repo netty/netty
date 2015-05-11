@@ -18,6 +18,7 @@ package io.netty.handler.codec.http2;
 import static io.netty.util.CharsetUtil.UTF_8;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -135,10 +136,9 @@ public final class Http2CodecUtil {
             return Unpooled.EMPTY_BUFFER;
         }
 
-        // Create the debug message.
-        byte[] msg = cause.getMessage().getBytes(UTF_8);
-        ByteBuf debugData = ctx.alloc().buffer(msg.length);
-        debugData.writeBytes(msg);
+        // Create the debug message. `* 3` because UTF-8 max character consumes 3 bytes.
+        ByteBuf debugData = ctx.alloc().buffer(cause.getMessage().length() * 3);
+        ByteBufUtil.writeUtf8(debugData, cause.getMessage());
         return debugData;
     }
 
