@@ -39,6 +39,7 @@ public final class SslContextBuilder {
      *
      * @param keyCertChainFile an X.509 certificate chain file in PEM format
      * @param keyFile a PKCS#8 private key file in PEM format
+     * @see #keyManager(File, File)
      */
     public static SslContextBuilder forServer(File keyCertChainFile, File keyFile) {
         return new SslContextBuilder(true).keyManager(keyCertChainFile, keyFile);
@@ -51,10 +52,21 @@ public final class SslContextBuilder {
      * @param keyFile a PKCS#8 private key file in PEM format
      * @param keyPassword the password of the {@code keyFile}, or {@code null} if it's not
      *     password-protected
+     * @see #keyManager(File, File, String)
      */
     public static SslContextBuilder forServer(
             File keyCertChainFile, File keyFile, String keyPassword) {
         return new SslContextBuilder(true).keyManager(keyCertChainFile, keyFile, keyPassword);
+    }
+
+    /**
+     * Creates a builder for new server-side {@link SslContext}.
+     *
+     * @param keyManagerFactory non-{@code null} factory for server's private key
+     * @see #keyManager(KeyManagerFactory)
+     */
+    public static SslContextBuilder forServer(KeyManagerFactory keyManagerFactory) {
+        return new SslContextBuilder(true).keyManager(keyManagerFactory);
     }
 
     private final boolean forServer;
