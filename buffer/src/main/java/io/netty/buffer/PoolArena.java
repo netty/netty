@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 
 abstract class PoolArena<T> {
 
+    private static final int CACHE_LINE_SIZE = PlatformDependent.cacheLineSize();
     static final int numTinySubpagePools = 512 >>> 4;
 
     final PooledByteBufAllocator parent;
@@ -33,6 +34,7 @@ abstract class PoolArena<T> {
     final int chunkSize;
     final int subpageOverflowMask;
     final int numSmallSubpagePools;
+    private final boolean powerOfCacheLine;
     private final PoolSubpage<T>[] tinySubpagePools;
     private final PoolSubpage<T>[] smallSubpagePools;
 
@@ -46,12 +48,14 @@ abstract class PoolArena<T> {
     // TODO: Test if adding padding helps under contention
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
 
-    protected PoolArena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
+    protected PoolArena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize,
+                        boolean powerOfCacheLine) {
         this.parent = parent;
         this.pageSize = pageSize;
         this.maxOrder = maxOrder;
         this.pageShifts = pageShifts;
         this.chunkSize = chunkSize;
+        this.powerOfCacheLine = powerOfCacheLine;
         subpageOverflowMask = ~(pageSize - 1);
         tinySubpagePools = newSubpagePoolArray(numTinySubpagePools);
         for (int i = 0; i < tinySubpagePools.length; i ++) {
@@ -123,8 +127,19 @@ abstract class PoolArena<T> {
         return (normCapacity & 0xFFFFFE00) == 0;
     }
 
+    private static int powerOfCacheLineSize(int capacity) {
+        int a = capacity % CACHE_LINE_SIZE;
+        if (a == 0) {
+            return capacity;
+        } else {
+            return capacity + (CACHE_LINE_SIZE - a);
+        }
+    }
+
     private void allocate(PoolThreadCache cache, PooledByteBuf<T> buf, final int reqCapacity) {
-        final int normCapacity = normalizeCapacity(reqCapacity);
+        final int normCapacity = powerOfCacheLine?
+                powerOfCacheLineSize(normalizeCapacity(reqCapacity)) : normalizeCapacity(reqCapacity);
+
         if (isTinyOrSmall(normCapacity)) { // capacity < pageSize
             int tableIdx;
             PoolSubpage<T>[] table;
@@ -380,8 +395,9 @@ abstract class PoolArena<T> {
 
     static final class HeapArena extends PoolArena<byte[]> {
 
-        HeapArena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
-            super(parent, pageSize, maxOrder, pageShifts, chunkSize);
+        HeapArena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize,
+                  boolean powerOfCacheLineSize) {
+            super(parent, pageSize, maxOrder, pageShifts, chunkSize, powerOfCacheLineSize);
         }
 
         @Override
@@ -423,8 +439,9 @@ abstract class PoolArena<T> {
 
         private static final boolean HAS_UNSAFE = PlatformDependent.hasUnsafe();
 
-        DirectArena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
-            super(parent, pageSize, maxOrder, pageShifts, chunkSize);
+        DirectArena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize,
+                    boolean powerOfCacheLineSize) {
+            super(parent, pageSize, maxOrder, pageShifts, chunkSize, powerOfCacheLineSize);
         }
 
         @Override
