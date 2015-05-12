@@ -60,4 +60,24 @@ public class ServerCookieEncoderTest {
         assertNotNull(encodedCookie2);
         assertTrue(encodedCookie2.isEmpty());
     }
+
+    @Test
+    public void testEncodingLargeMaxValue() throws ParseException {
+        int maxAge = Integer.MAX_VALUE / 1000 + 84600;
+
+        String result =
+                "myCookie=myValue; Max-Age=" + maxAge + "; Expires=(.+)";
+        Cookie cookie = new DefaultCookie("myCookie", "myValue");
+        cookie.setMaxAge(maxAge);
+
+        String encodedCookie = ServerCookieEncoder.STRICT.encode(cookie);
+        Matcher matcher = Pattern.compile(result).matcher(encodedCookie);
+        System.out.println(encodedCookie);
+        assertTrue(matcher.find());
+        Date expiresDate = HttpHeaderDateFormat.get().parse(matcher.group(1));
+        long diff = (expiresDate.getTime() - System.currentTimeMillis()) / 1000;
+        // 2 secs should be fine
+        assertTrue(Math.abs(diff - maxAge) <= 2);
+
+    }
 }
