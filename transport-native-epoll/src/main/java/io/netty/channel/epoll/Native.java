@@ -58,7 +58,7 @@ public final class Native {
     public static final int IOV_MAX = iovMax();
     public static final int UIO_MAX_IOV = uioMaxIov();
     public static final boolean IS_SUPPORTING_SENDMMSG = isSupportingSendmmsg();
-
+    public static final long SSIZE_MAX = ssizeMax();
     private static final byte[] IPV4_MAPPED_IPV6_PREFIX = {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, (byte) 0xff, (byte) 0xff };
 
@@ -695,6 +695,7 @@ public final class Native {
     private static native int epollrdhup();
     private static native int epollet();
 
+    private static native long ssizeMax();
     private Native() {
         // utility
     }
