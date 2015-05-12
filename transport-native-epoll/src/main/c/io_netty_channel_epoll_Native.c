@@ -31,6 +31,7 @@
 #include <fcntl.h>
 #include <sys/utsname.h>
 #include <stddef.h>
+#include <limits.h>
 #include "io_netty_channel_epoll_Native.h"
 
 /**
@@ -1628,4 +1629,8 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_splice0(JNIEnv* env, j
         return -err;
     }
     return (jint) res;
+}
+
+JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_ssizeMax(JNIEnv* env, jclass clazz) {
+    return SSIZE_MAX;
 }

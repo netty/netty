@@ -104,6 +104,7 @@ jint Java_io_netty_channel_epoll_Native_getSoError(JNIEnv* env, jclass clazz, ji
 jstring Java_io_netty_channel_epoll_Native_kernelVersion(JNIEnv* env, jclass clazz);
 jint Java_io_netty_channel_epoll_Native_iovMax(JNIEnv* env, jclass clazz);
 jint Java_io_netty_channel_epoll_Native_uioMaxIov(JNIEnv* env, jclass clazz);
+jlong Java_io_netty_channel_epoll_Native_ssizeMax(JNIEnv* env, jclass clazz);
 jboolean Java_io_netty_channel_epoll_Native_isSupportingSendmmsg(JNIEnv* env, jclass clazz);
 
 jint Java_io_netty_channel_epoll_Native_errnoEBADF(JNIEnv* env, jclass clazz);

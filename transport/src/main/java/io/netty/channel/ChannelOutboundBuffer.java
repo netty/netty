@@ -370,6 +370,19 @@ public final class ChannelOutboundBuffer {
                 final int readableBytes = buf.writerIndex() - readerIndex;
 
                 if (readableBytes > 0) {
+                    if (Integer.MAX_VALUE - readableBytes < nioBufferSize) {
+                        // If the nioBufferSize + readableBytes will overflow an Integer we stop populate the
+                        // ByteBuffer array. This is done as bsd/osx don't allow to write more bytes then
+                        // Integer.MAX_VALUE with one writev(...) call and so will return 'EINVAL', which will
+                        // raise an IOException. On Linux it may work depending on the
+                        // architecture and kernel but to be safe we also enforce the limit here.
+                        // This said writing more the Integer.MAX_VALUE is not a good idea anyway.
+                        //
+                        // See also:
+                        // - https://www.freebsd.org/cgi/man.cgi?query=write&sektion=2
+                        // - http://linux.die.net/man/2/writev
+                        break;
+                    }
                     nioBufferSize += readableBytes;
                     int count = entry.count;
                     if (count == -1) {
