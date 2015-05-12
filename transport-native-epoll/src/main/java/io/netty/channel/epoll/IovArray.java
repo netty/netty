@@ -89,18 +89,28 @@ final class IovArray implements MessageProcessor {
 
         final long addr = buf.memoryAddress();
         final int offset = buf.readerIndex();
-        add(addr, offset, len);
-        return true;
+        return add(addr, offset, len);
     }
 
-    private void add(long addr, int offset, int len) {
+    private boolean add(long addr, int offset, int len) {
         if (len == 0) {
             // No need to add an empty buffer.
-            return;
+            return true;
         }
 
         final long baseOffset = memoryAddress(count++);
         final long lengthOffset = baseOffset + ADDRESS_SIZE;
+
+        if (Native.SSIZE_MAX - len < size) {
+            // If the size + len will overflow an SSIZE_MAX we stop populate the IovArray. This is done as linux
+            //  not allow to write more bytes then SSIZE_MAX with one writev(...) call and so will
+            // return 'EINVAL', which will raise an IOException.
+            //
+            // See also:
+            // - http://linux.die.net/man/2/writev
+            return false;
+        }
+        size += len;
 
         if (ADDRESS_SIZE == 8) {
             // 64bit
@@ -111,8 +121,7 @@ final class IovArray implements MessageProcessor {
             PlatformDependent.putInt(baseOffset, (int) addr + offset);
             PlatformDependent.putInt(lengthOffset, len);
         }
-
-        size += len;
+        return true;
     }
 
     /**
@@ -135,7 +144,9 @@ final class IovArray implements MessageProcessor {
             }
             long addr = PlatformDependent.directBufferAddress(nioBuffer);
 
-            add(addr, offset, len);
+            if (!add(addr, offset, len)) {
+                return false;
+            }
         }
         return true;
     }
