@@ -23,6 +23,9 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class PooledByteBufAllocator extends AbstractByteBufAllocator {
@@ -125,6 +128,9 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     private final int smallCacheSize;
     private final int normalCacheSize;
 
+    private final List<PoolArenaMetric> heapArenaMetrics;
+    private final List<PoolArenaMetric> directArenaMetrics;
+
     final PoolThreadLocalCache threadCache;
 
     public PooledByteBufAllocator() {
@@ -164,20 +170,31 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
         if (nHeapArena > 0) {
             heapArenas = newArenaArray(nHeapArena);
+            List<PoolArenaMetric> metrics = new ArrayList<PoolArenaMetric>(heapArenas.length);
             for (int i = 0; i < heapArenas.length; i ++) {
-                heapArenas[i] = new PoolArena.HeapArena(this, pageSize, maxOrder, pageShifts, chunkSize);
+                PoolArena.HeapArena arena = new PoolArena.HeapArena(this, pageSize, maxOrder, pageShifts, chunkSize);
+                heapArenas[i] = arena;
+                metrics.add(arena);
             }
+            heapArenaMetrics = Collections.unmodifiableList(metrics);
         } else {
             heapArenas = null;
+            heapArenaMetrics = Collections.emptyList();
         }
 
         if (nDirectArena > 0) {
             directArenas = newArenaArray(nDirectArena);
+            List<PoolArenaMetric> metrics = new ArrayList<PoolArenaMetric>(directArenas.length);
             for (int i = 0; i < directArenas.length; i ++) {
-                directArenas[i] = new PoolArena.DirectArena(this, pageSize, maxOrder, pageShifts, chunkSize);
+                PoolArena.DirectArena arena = new PoolArena.DirectArena(
+                        this, pageSize, maxOrder, pageShifts, chunkSize);
+                directArenas[i] = arena;
+                metrics.add(arena);
             }
+            directArenaMetrics = Collections.unmodifiableList(metrics);
         } else {
             directArenas = null;
+            directArenaMetrics = Collections.emptyList();
         }
     }
 
@@ -283,9 +300,11 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     final class PoolThreadLocalCache extends FastThreadLocal<PoolThreadCache> {
         private final AtomicInteger index = new AtomicInteger();
+        final AtomicInteger caches = new AtomicInteger();
 
         @Override
         protected PoolThreadCache initialValue() {
+            caches.incrementAndGet();
             final int idx = index.getAndIncrement();
             final PoolArena<byte[]> heapArena;
             final PoolArena<ByteBuffer> directArena;
@@ -301,7 +320,6 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             } else {
                 directArena = null;
             }
-
             return new PoolThreadCache(
                     heapArena, directArena, tinyCacheSize, smallCacheSize, normalCacheSize,
                     DEFAULT_MAX_CACHED_BUFFER_CAPACITY, DEFAULT_CACHE_TRIM_INTERVAL);
@@ -310,25 +328,91 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         @Override
         protected void onRemoval(PoolThreadCache value) {
             value.free();
+            caches.decrementAndGet();
         }
     }
 
-//    Too noisy at the moment.
-//
-//    public String toString() {
-//        StringBuilder buf = new StringBuilder();
-//        buf.append(heapArenas.length);
-//        buf.append(" heap arena(s):");
-//        buf.append(StringUtil.NEWLINE);
-//        for (PoolArena<byte[]> a: heapArenas) {
-//            buf.append(a);
-//        }
-//        buf.append(directArenas.length);
-//        buf.append(" direct arena(s):");
-//        buf.append(StringUtil.NEWLINE);
-//        for (PoolArena<ByteBuffer> a: directArenas) {
-//            buf.append(a);
-//        }
-//        return buf.toString();
-//    }
+    /**
+     * Return the number of heap arenas.
+     */
+    public int numHeapArenas() {
+        return heapArenaMetrics.size();
+    }
+
+    /**
+     * Return the number of direct arenas.
+     */
+    public int numDirectArenas() {
+        return directArenaMetrics.size();
+    }
+
+    /**
+     * Return a {@link List} of all heap {@link PoolArenaMetric}s that are provided by this pool.
+     */
+    public List<PoolArenaMetric> heapArenas() {
+        return heapArenaMetrics;
+    }
+
+    /**
+     * Return a {@link List} of all direct {@link PoolArenaMetric}s that are provided by this pool.
+     */
+    public List<PoolArenaMetric> directArenas() {
+        return directArenaMetrics;
+    }
+
+    /**
+     * Return the number of thread local caches used by this {@link PooledByteBufAllocator}.
+     */
+    public int numThreadLocalCaches() {
+        return threadCache.caches.get();
+    }
+
+    /**
+     * Return the size of the tiny cache.
+     */
+    public int tinyCacheSize() {
+        return tinyCacheSize;
+    }
+
+    /**
+     * Return the size of the small cache.
+     */
+    public int smallCacheSize() {
+        return smallCacheSize;
+    }
+
+    /**
+     * Return the size of the normal cache.
+     */
+    public int normalCacheSize() {
+        return normalCacheSize;
+    }
+
+    // Too noisy at the moment.
+    //
+    //public String toString() {
+    //    StringBuilder buf = new StringBuilder();
+    //    int heapArenasLen = heapArenas == null ? 0 : heapArenas.length;
+    //    buf.append(heapArenasLen);
+    //    buf.append(" heap arena(s):");
+    //    buf.append(StringUtil.NEWLINE);
+    //    if (heapArenasLen > 0) {
+    //        for (PoolArena<byte[]> a: heapArenas) {
+    //            buf.append(a);
+    //        }
+    //    }
+    //
+    //    int directArenasLen = directArenas == null ? 0 : directArenas.length;
+    //
+    //    buf.append(directArenasLen);
+    //    buf.append(" direct arena(s):");
+    //    buf.append(StringUtil.NEWLINE);
+    //    if (directArenasLen > 0) {
+    //        for (PoolArena<ByteBuffer> a: directArenas) {
+    //            buf.append(a);
+    //        }
+    //    }
+    //
+    //    return buf.toString();
+    //}
 }
