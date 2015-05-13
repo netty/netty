@@ -16,12 +16,16 @@
 
 package io.netty.buffer;
 
+import io.netty.util.internal.LongCounter;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
-abstract class PoolArena<T> {
+abstract class PoolArena<T> implements PoolArenaMetric {
 
     static final int numTinySubpagePools = 512 >>> 4;
 
@@ -42,6 +46,23 @@ abstract class PoolArena<T> {
     private final PoolChunkList<T> qInit;
     private final PoolChunkList<T> q075;
     private final PoolChunkList<T> q100;
+
+    private final List<PoolChunkListMetric> chunkListMetrics;
+
+    // Metrics for allocations and deallocations
+    private long allocations;
+    private long allocationsTiny;
+    private long allocationsSmall;
+    private long allocationsNormal;
+    // We need to use the LongCounter here as this is not guarded via synchronized block.
+    private final LongCounter allocationsHuge = PlatformDependent.newLongCounter();
+
+    private long deallocations;
+    private long deallocationsTiny;
+    private long deallocationsSmall;
+    private long deallocationsNormal;
+    // We need to use the LongCounter here as this is not guarded via synchronized block.
+    private final LongCounter deallocationsHuge = PlatformDependent.newLongCounter();
 
     // TODO: Test if adding padding helps under contention
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
@@ -77,6 +98,15 @@ abstract class PoolArena<T> {
         q025.prevList = q000;
         q000.prevList = null;
         qInit.prevList = qInit;
+
+        List<PoolChunkListMetric> metrics = new ArrayList<PoolChunkListMetric>(6);
+        metrics.add(qInit);
+        metrics.add(q000);
+        metrics.add(q025);
+        metrics.add(q050);
+        metrics.add(q075);
+        metrics.add(q100);
+        chunkListMetrics = Collections.unmodifiableList(metrics);
     }
 
     private PoolSubpage<T> newSubpagePoolHead(int pageSize) {
@@ -128,7 +158,8 @@ abstract class PoolArena<T> {
         if (isTinyOrSmall(normCapacity)) { // capacity < pageSize
             int tableIdx;
             PoolSubpage<T>[] table;
-            if (isTiny(normCapacity)) { // < 512
+            boolean tiny = isTiny(normCapacity);
+            if (tiny) { // < 512
                 if (cache.allocateTiny(this, buf, reqCapacity, normCapacity)) {
                     // was able to allocate out of the cache so move on
                     return;
@@ -152,6 +183,13 @@ abstract class PoolArena<T> {
                     long handle = s.allocate();
                     assert handle >= 0;
                     s.chunk.initBufWithSubpage(buf, handle, reqCapacity);
+
+                    ++allocations;
+                    if (tiny) {
+                        ++allocationsTiny;
+                    } else {
+                        ++allocationsSmall;
+                    }
                     return;
                 }
             }
@@ -169,6 +207,9 @@ abstract class PoolArena<T> {
     }
 
     private synchronized void allocateNormal(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
+        ++allocations;
+        ++allocationsNormal;
+
         if (q050.allocate(buf, reqCapacity, normCapacity) || q025.allocate(buf, reqCapacity, normCapacity) ||
             q000.allocate(buf, reqCapacity, normCapacity) || qInit.allocate(buf, reqCapacity, normCapacity) ||
             q075.allocate(buf, reqCapacity, normCapacity) || q100.allocate(buf, reqCapacity, normCapacity)) {
@@ -184,11 +225,13 @@ abstract class PoolArena<T> {
     }
 
     private void allocateHuge(PooledByteBuf<T> buf, int reqCapacity) {
+        allocationsHuge.increment();
         buf.initUnpooled(newUnpooledChunk(reqCapacity), reqCapacity);
     }
 
     void free(PoolChunk<T> chunk, long handle, int normCapacity, boolean sameThreads) {
         if (chunk.unpooled) {
+            allocationsHuge.decrement();
             destroyChunk(chunk);
         } else {
             if (sameThreads) {
@@ -199,7 +242,16 @@ abstract class PoolArena<T> {
                 }
             }
 
+            boolean tinyOrSmall = isTinyOrSmall(normCapacity);
             synchronized (this) {
+                ++deallocations;
+                if (!tinyOrSmall) {
+                    ++deallocationsNormal;
+                } else if (isTiny(normCapacity)) {
+                    ++deallocationsTiny;
+                } else {
+                    ++deallocationsSmall;
+                }
                 chunk.parent.free(chunk, handle);
             }
         }
@@ -302,12 +354,146 @@ abstract class PoolArena<T> {
         }
     }
 
+    @Override
+    public int numTinySubpages() {
+        return tinySubpagePools.length;
+    }
+
+    @Override
+    public int numSmallSubpages() {
+        return smallSubpagePools.length;
+    }
+
+    @Override
+    public int numChunkLists() {
+        return chunkListMetrics.size();
+    }
+
+    @Override
+    public List<PoolSubPageMetric> tinySubpages() {
+        return subPageMetricsList(tinySubpagePools);
+    }
+
+    @Override
+    public List<PoolSubPageMetric> smallSubpages() {
+        return subPageMetricsList(smallSubpagePools);
+    }
+
+    @Override
+    public List<PoolChunkListMetric> chunkLists() {
+        return chunkListMetrics;
+    }
+
+    private static List<PoolSubPageMetric> subPageMetricsList(PoolSubpage<?>[] pages) {
+        List<PoolSubPageMetric> metrics = new ArrayList<PoolSubPageMetric>();
+        for (int i = 1; i < pages.length; i ++) {
+            PoolSubpage<?> head = pages[i];
+            if (head.next == head) {
+                continue;
+            }
+            PoolSubpage<?> s = head.next;
+            for (;;) {
+                metrics.add(s);
+                s = s.next;
+                if (s == head) {
+                    break;
+                }
+            }
+        }
+        return metrics;
+    }
+
+    @Override
+    public long numAllocations() {
+        // We need to add the huge allocations here as these are tracked seperatly to minimize the synchronization
+        // overhead for huge allocations / deallocations.
+        return allocations + allocationsHuge.value();
+    }
+
+    @Override
+    public long numTinyAllocations() {
+        return allocationsTiny;
+    }
+
+    @Override
+    public long numSmallAllocations() {
+        return allocationsSmall;
+    }
+
+    @Override
+    public long numNormalAllocations() {
+        return allocationsNormal;
+    }
+
+    @Override
+    public long numDeallocations() {
+        // We need to add the huge deallocations here as these are tracked seperatly to minimize the synchronization
+        // overhead for huge allocations / deallocations.
+        return deallocations + deallocationsHuge.value();
+    }
+
+    @Override
+    public long numTinyDeallocations() {
+        return deallocationsTiny;
+    }
+
+    @Override
+    public long numSmallDeallocations() {
+        return deallocationsSmall;
+    }
+
+    @Override
+    public long numNormalDeallocations() {
+        return deallocationsNormal;
+    }
+
+    @Override
+    public long numHugeAllocations() {
+        return allocationsHuge.value();
+    }
+
+    @Override
+    public long numHugeDeallocations() {
+        return deallocationsHuge.value();
+    }
+
+    @Override
+    public long numActiveAllocations() {
+        long val = numAllocations() - numDeallocations();
+        return val >= 0 ? val : 0;
+    }
+
+    @Override
+    public long numActiveTinyAllocations() {
+        long val = numTinyAllocations() - numTinyDeallocations();
+        return val >= 0 ? val : 0;
+    }
+
+    @Override
+    public long numActiveSmallAllocations() {
+        long val = numSmallAllocations() - numSmallDeallocations();
+        return val >= 0 ? val : 0;
+    }
+
+    @Override
+    public long numActiveNormalAllocations() {
+        long val = numNormalAllocations() - numNormalDeallocations();
+        return val >= 0 ? val : 0;
+    }
+
+    @Override
+    public long numActiveHugeAllocations() {
+        long val = numHugeAllocations() - numHugeDeallocations();
+        return val >= 0 ? val : 0;
+    }
+
     protected abstract PoolChunk<T> newChunk(int pageSize, int maxOrder, int pageShifts, int chunkSize);
     protected abstract PoolChunk<T> newUnpooledChunk(int capacity);
     protected abstract PooledByteBuf<T> newByteBuf(int maxCapacity);
     protected abstract void memoryCopy(T src, int srcOffset, T dst, int dstOffset, int length);
     protected abstract void destroyChunk(PoolChunk<T> chunk);
 
+    @Override
     public synchronized String toString() {
         StringBuilder buf = new StringBuilder()
             .append("Chunk(s) at 0~25%:")
