@@ -144,8 +144,8 @@ abstract class PoolArena<T> {
                 table = smallSubpagePools;
             }
 
+            final PoolSubpage<T> head = table[tableIdx];
             synchronized (this) {
-                final PoolSubpage<T> head = table[tableIdx];
                 final PoolSubpage<T> s = head.next;
                 if (s != head) {
                     assert s.doNotDestroy && s.elemSize == normCapacity;
@@ -154,21 +154,25 @@ abstract class PoolArena<T> {
                     s.chunk.initBufWithSubpage(buf, handle, reqCapacity);
                     return;
                 }
+                allocateNormal(buf, reqCapacity, normCapacity);
+                return;
             }
-        } else if (normCapacity <= chunkSize) {
+        }
+        if (normCapacity <= chunkSize) {
             if (cache.allocateNormal(this, buf, reqCapacity, normCapacity)) {
                 // was able to allocate out of the cache so move on
                 return;
             }
+            synchronized (this) {
+                allocateNormal(buf, reqCapacity, normCapacity);
+            }
         } else {
             // Huge allocations are never served via the cache so just call allocateHuge
             allocateHuge(buf, reqCapacity);
-            return;
         }
-        allocateNormal(buf, reqCapacity, normCapacity);
     }
 
-    private synchronized void allocateNormal(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
+    private void allocateNormal(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
         if (q050.allocate(buf, reqCapacity, normCapacity) || q025.allocate(buf, reqCapacity, normCapacity) ||
             q000.allocate(buf, reqCapacity, normCapacity) || qInit.allocate(buf, reqCapacity, normCapacity) ||
             q075.allocate(buf, reqCapacity, normCapacity) || q100.allocate(buf, reqCapacity, normCapacity)) {
