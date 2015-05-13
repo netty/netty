@@ -100,8 +100,7 @@ package io.netty.buffer;
  * where as per convention defined above
  * the second value (i.e, x) indicates that the first node which is free to be allocated is at depth x (from root)
  */
-
-final class PoolChunk<T> {
+final class PoolChunk<T> implements PoolChunkMetric {
 
     final PoolArena<T> arena;
     final T memory;
@@ -186,7 +185,8 @@ final class PoolChunk<T> {
         return new PoolSubpage[size];
     }
 
-    int usage() {
+    @Override
+    public int usage() {
         final int freeBytes = this.freeBytes;
         if (freeBytes == 0) {
             return 100;
@@ -412,6 +412,16 @@ final class PoolChunk<T> {
 
     private int subpageIdx(int memoryMapIdx) {
         return memoryMapIdx ^ maxSubpageAllocs; // remove highest set bit, to get offset
+    }
+
+    @Override
+    public int chunkSize() {
+        return chunkSize;
+    }
+
+    @Override
+    public int freeBytes() {
+        return freeBytes;
     }
 
     @Override

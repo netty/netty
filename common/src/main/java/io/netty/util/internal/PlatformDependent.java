@@ -17,6 +17,7 @@ package io.netty.util.internal;
 
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.chmv8.ConcurrentHashMapV8;
+import io.netty.util.internal.chmv8.LongAdderV8;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -40,6 +41,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.regex.Matcher;
@@ -224,6 +226,17 @@ public final class PlatformDependent {
             return new ConcurrentHashMapV8<K, V>();
         } else {
             return new ConcurrentHashMap<K, V>();
+        }
+    }
+
+    /**
+     * Creates a new fastest {@link LongCounter} implementaion for the current platform.
+     */
+    public static LongCounter newLongCounter() {
+        if (HAS_UNSAFE) {
+            return new LongAdderV8();
+        } else {
+            return new AtomicLongCounter();
         }
     }
 
@@ -884,6 +897,28 @@ public final class PlatformDependent {
             }
         }
         return true;
+    }
+
+    private static final class AtomicLongCounter extends AtomicLong implements LongCounter {
+        @Override
+        public void add(long delta) {
+            addAndGet(delta);
+        }
+
+        @Override
+        public void increment() {
+            incrementAndGet();
+        }
+
+        @Override
+        public void decrement() {
+            decrementAndGet();
+        }
+
+        @Override
+        public long value() {
+            return get();
+        }
     }
 
     private PlatformDependent() {
