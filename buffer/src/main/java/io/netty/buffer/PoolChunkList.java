@@ -18,7 +18,13 @@ package io.netty.buffer;
 
 import io.netty.util.internal.StringUtil;
 
-final class PoolChunkList<T> {
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+
+final class PoolChunkList<T> implements PoolChunkListMetric {
+    private static final Iterator<PoolChunkMetric> EMPTY_METRICS = Collections.<PoolChunkMetric>emptyList().iterator();
     private final PoolArena<T> arena;
     private final PoolChunkList<T> nextList;
     PoolChunkList<T> prevList;
@@ -106,6 +112,32 @@ final class PoolChunkList<T> {
                 next.prev = cur.prev;
             }
         }
+    }
+
+    @Override
+    public int minUsage() {
+        return minUsage;
+    }
+
+    @Override
+    public int maxUsage() {
+        return maxUsage;
+    }
+
+    @Override
+    public Iterator<PoolChunkMetric> iterator() {
+        if (head == null) {
+            return EMPTY_METRICS;
+        }
+        List<PoolChunkMetric> metrics = new ArrayList<PoolChunkMetric>();
+        for (PoolChunk<T> cur = head;;) {
+            metrics.add(cur);
+            cur = cur.next;
+            if (cur == null) {
+                break;
+            }
+        }
+        return metrics.iterator();
     }
 
     @Override
