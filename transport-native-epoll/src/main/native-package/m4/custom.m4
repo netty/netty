@@ -17,11 +17,22 @@ dnl ---------------------------------------------------------------------------
 AC_DEFUN([CUSTOM_M4_SETUP],
 [
 
-  dnl Lets link against libaio
-  LDFLAGS="$LDFLAGS -laio"
-  AC_SUBST(LDFLAGS)
+  dnl 
+  dnl  libaio is optional.. so if we have both the header and lib
+  dnl  installed, the build will #define HAVE_LIB_AIO 1
+  dnl
+  AC_CHECK_HEADER([libaio.h],[
+    dnl Lets link against libaio
+    LDFLAGS="$LDFLAGS -laio"
+    AC_CHECK_LIB([aio], [io_queue_init], [
+        AC_DEFINE([HAVE_LIB_AIO], [1], [Define to 1 if you have the aio library.])
+        AC_SUBST(LDFLAGS)
+    ])
+  ])
 
-  AC_CHECK_HEADER([libaio.h],,AC_MSG_ERROR([cannot find headers for libaio]))
-  AC_CHECK_LIB([aio], [io_queue_init], [AC_MSG_ERROR([cannot link to the libaio library])])
-  
+  dnl
+  dnl epoll is required.  Fail if we can't find it's headers.
+  dnl
+  AC_CHECK_HEADER([sys/epoll.h],,[AC_MSG_ERROR([cannot find sys/epoll.h headers])])
+
 ])
