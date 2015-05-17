@@ -288,18 +288,18 @@ public abstract class OpenSslContext extends SslContext {
 
     @Override
     public final SSLEngine newEngine(ByteBufAllocator alloc, String peerHost, int peerPort) {
-        throw new UnsupportedOperationException();
+        final OpenSslEngine engine = new OpenSslEngine(ctx, alloc, isClient(), sessionContext(), apn, engineMap,
+                rejectRemoteInitiatedRenegotiation, peerHost, peerPort);
+        engineMap.add(engine);
+        return engine;
     }
 
     /**
-     * Returns a new server-side {@link javax.net.ssl.SSLEngine} with the current configuration.
+     * Returns a new server-side {@link SSLEngine} with the current configuration.
      */
     @Override
     public final SSLEngine newEngine(ByteBufAllocator alloc) {
-        final OpenSslEngine engine = new OpenSslEngine(
-                ctx, alloc, isClient(), sessionContext(), apn, engineMap, rejectRemoteInitiatedRenegotiation);
-        engineMap.add(engine);
-        return engine;
+        return newEngine(alloc, null, -1);
     }
 
     /**
