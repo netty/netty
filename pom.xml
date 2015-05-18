@@ -603,6 +603,7 @@
     <module>common</module>
     <module>buffer</module>
     <module>codec</module>
+    <module>codec-haproxy</module>
     <module>codec-http</module>
     <module>codec-socks</module>
     <module>transport</module>
