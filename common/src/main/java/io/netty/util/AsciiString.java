@@ -16,9 +16,11 @@
 package io.netty.util;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import static io.netty.util.internal.StringUtil.UPPER_CASE_TO_LOWER_CASE_ASCII_OFFSET;
+import static io.netty.util.internal.StringUtil.asciiToLowerCase;
+import static io.netty.util.internal.StringUtil.asciiToUpperCase;
 import io.netty.util.ByteProcessor.IndexOfProcessor;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.HashCodeGenerator;
 import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteBuffer;
@@ -36,9 +38,13 @@ import java.util.regex.PatternSyntaxException;
  * {@link ByteBuffer}. It is often used in conjunction with {@link TextHeaders}.
  */
 public final class AsciiString extends ByteString implements CharSequence, Comparable<CharSequence> {
-
+    private static final HashCodeGenerator CASE_INSENSITIVE_HASHER =
+            PlatformDependent.hashCodeGeneratorAsciiCaseInsensitive();
     private static final char MAX_CHAR_VALUE = 255;
     public static final AsciiString EMPTY_STRING = new AsciiString("");
+
+    private String string;
+    private int caseInsensitiveHashCode = CASE_INSENSITIVE_HASHER.emptyHashValue();
 
     public static final Comparator<AsciiString> CASE_INSENSITIVE_ORDER = new Comparator<AsciiString>() {
         @Override
@@ -75,8 +81,8 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
                     if (v1 == v2) {
                         continue;
                     }
-                    int c1 = toLowerCase(v1);
-                    int c2 = toLowerCase(v2);
+                    int c1 = asciiToLowerCase(v1);
+                    int c2 = asciiToLowerCase(v2);
                     result = c1 - c2;
                     if (result != 0) {
                         return result;
@@ -84,8 +90,8 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
                 }
             } else if (a1 != null) {
                 for (int i = a1.arrayOffset(), j = 0; j < minLength; i++, j++) {
-                    int c1 = toLowerCase(a1.value[i]);
-                    int c2 = toLowerCase(o2.charAt(j));
+                    int c1 = asciiToLowerCase(a1.value[i]);
+                    int c2 = asciiToLowerCase(o2.charAt(j));
                     result = c1 - c2;
                     if (result != 0) {
                         return result;
@@ -93,8 +99,8 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
                 }
             } else if (a2 != null) {
                 for (int i = 0, j = a2.arrayOffset(); i < minLength; i++, j++) {
-                    int c1 = toLowerCase(o1.charAt(i));
-                    int c2 = toLowerCase(a2.value[j]);
+                    int c1 = asciiToLowerCase(o1.charAt(i));
+                    int c2 = asciiToLowerCase(a2.value[j]);
                     result = c1 - c2;
                     if (result != 0) {
                         return result;
@@ -102,8 +108,8 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
                 }
             } else {
                 for (int i = 0; i < minLength; i++) {
-                    int c1 = toLowerCase(o1.charAt(i));
-                    int c2 = toLowerCase(o2.charAt(i));
+                    int c1 = asciiToLowerCase(o1.charAt(i));
+                    int c2 = asciiToLowerCase(o2.charAt(i));
                     result = c1 - c2;
                     if (result != 0) {
                         return result;
@@ -188,88 +194,60 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
      * {@link CharSequence}s into the same {@link TextHeaders}.
      */
     public static int caseInsensitiveHashCode(CharSequence value) {
-        if (value instanceof AsciiString) {
-            try {
-                ByteProcessor processor = new ByteProcessor() {
-                    private int hash;
-                    @Override
-                    public boolean process(byte value) throws Exception {
-                        hash = hash * HASH_CODE_PRIME ^ toLowerCase(value) & HASH_CODE_PRIME;
-                        return true;
-                    }
-
-                    @Override
-                    public int hashCode() {
-                        return hash;
-                    }
-                };
-                ((AsciiString) value).forEachByte(processor);
-                return processor.hashCode();
-            } catch (Exception e) {
-                PlatformDependent.throwException(e);
-            }
+        if (value == null) {
+            return CASE_INSENSITIVE_HASHER.emptyHashValue();
+        }
+        if (value.getClass() == AsciiString.class) {
+            return ((AsciiString) value).hashCodeCaseInsensitive();
         }
 
-        int hash = 0;
-        final int end = value.length();
-        for (int i = 0; i < end; i++) {
-            hash = hash * HASH_CODE_PRIME ^ toLowerCase(value.charAt(i)) & HASH_CODE_PRIME;
-        }
-        return hash;
+        return CASE_INSENSITIVE_HASHER.hashCode(value);
     }
 
     /**
      * Returns {@code true} if both {@link CharSequence}'s are equals when ignore the case. This only supports 8-bit
      * ASCII.
      */
-    public static boolean equalsIgnoreCase(CharSequence a, CharSequence b) {
+    public static boolean contentEqualsIgnoreCase(CharSequence a, CharSequence b) {
         if (a == b) {
             return true;
-        }
-
-        if (a instanceof AsciiString) {
-            AsciiString aa = (AsciiString) a;
-            return aa.equalsIgnoreCase(b);
-        }
-
-        if (b instanceof AsciiString) {
-            AsciiString ab = (AsciiString) b;
-            return ab.equalsIgnoreCase(a);
         }
 
         if (a == null || b == null) {
             return false;
         }
 
-        return a.toString().equalsIgnoreCase(b.toString());
+        if (a.getClass() == AsciiString.class) {
+            return ((AsciiString) a).contentEqualsIgnoreCase(b);
+        }
+        if (b.getClass() == AsciiString.class) {
+            return ((AsciiString) b).contentEqualsIgnoreCase(a);
+        }
+
+        return CASE_INSENSITIVE_HASHER.equals(a, b);
     }
 
     /**
      * Returns {@code true} if both {@link CharSequence}'s are equals. This only supports 8-bit ASCII.
      */
-    public static boolean equals(CharSequence a, CharSequence b) {
+    public static boolean contentEquals(CharSequence a, CharSequence b) {
         if (a == b) {
             return true;
-        }
-
-        if (a instanceof AsciiString) {
-            AsciiString aa = (AsciiString) a;
-            return aa.equals(b);
-        }
-
-        if (b instanceof AsciiString) {
-            AsciiString ab = (AsciiString) b;
-            return ab.equals(a);
         }
 
         if (a == null || b == null) {
             return false;
         }
 
-        return a.equals(b);
-    }
+        if (a.getClass() == AsciiString.class) {
+            return ((AsciiString) a).contentEquals(b);
+        }
+        if (b.getClass() == AsciiString.class) {
+            return ((AsciiString) b).contentEquals(a);
+        }
 
-    private String string;
+        return HASHER.equals(a, b);
+    }
 
     /**
      * Returns an {@link AsciiString} containing the given character sequence. If the given string is already a
@@ -335,6 +313,14 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
         }
     }
 
+    public int hashCodeCaseInsensitive() {
+        if (caseInsensitiveHashCode == CASE_INSENSITIVE_HASHER.emptyHashValue() && length() > 0) {
+            caseInsensitiveHashCode =
+                    CASE_INSENSITIVE_HASHER.hashCode(array(), arrayOffset(), arrayOffset() + length());
+        }
+        return caseInsensitiveHashCode;
+    }
+
     @Override
     public char charAt(int index) {
         return b2c(byteAt(index));
@@ -343,39 +329,16 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
     @Override
     public void arrayChanged() {
         string = null;
+        caseInsensitiveHashCode = CASE_INSENSITIVE_HASHER.emptyHashValue();
         super.arrayChanged();
     }
 
     private static byte c2b(char c) {
-        if (c > MAX_CHAR_VALUE) {
-            return '?';
-        }
-        return (byte) c;
+        return (byte) (c > MAX_CHAR_VALUE ? '?' : c);
     }
 
     private static char b2c(byte b) {
         return (char) (b & 0xFF);
-    }
-
-    private static byte toLowerCase(byte b) {
-        if ('A' <= b && b <= 'Z') {
-            return (byte) (b + UPPER_CASE_TO_LOWER_CASE_ASCII_OFFSET);
-        }
-        return b;
-    }
-
-    private static char toLowerCase(char c) {
-        if ('A' <= c && c <= 'Z') {
-            return (char) (c + UPPER_CASE_TO_LOWER_CASE_ASCII_OFFSET);
-        }
-        return c;
-    }
-
-    private static byte toUpperCase(byte b) {
-        if ('a' <= b && b <= 'z') {
-            return (byte) (b - UPPER_CASE_TO_LOWER_CASE_ASCII_OFFSET);
-        }
-        return b;
     }
 
     @Override
@@ -498,29 +461,16 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
      * @param string the string to compare.
      * @return {@code true} if the specified string is equal to this string, {@code false} otherwise.
      */
-    public boolean equalsIgnoreCase(CharSequence string) {
-        if (string == this) {
-            return true;
-        }
-
-        if (string == null) {
+    public boolean contentEqualsIgnoreCase(CharSequence string) {
+        if (string == null || string.length() != length()) {
             return false;
         }
 
-        final int thisLen = value.length;
-        final int thatLen = string.length();
-        if (thisLen != thatLen) {
-            return false;
+        if (string.getClass() == AsciiString.class) {
+            AsciiString rhs = (AsciiString) string;
+            return CASE_INSENSITIVE_HASHER.equals(array(), arrayOffset(), rhs.array(), rhs.arrayOffset(), length());
         }
-
-        for (int i = 0, j = arrayOffset(); i < thisLen; i++, j++) {
-            char c1 = b2c(value[j]);
-            char c2 = string.charAt(i);
-            if (c1 != c2 && toLowerCase(c1) != toLowerCase(c2)) {
-                return false;
-            }
-        }
-        return true;
+        return CASE_INSENSITIVE_HASHER.equals(array(), arrayOffset(), string, 0, length());
     }
 
     /**
@@ -752,13 +702,11 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
             return true;
         }
 
-        final int thatEnd = start + length;
-        for (int i = start, j = thisStart + arrayOffset(); i < thatEnd; i++, j++) {
-            if (b2c(value[j]) != string.charAt(i)) {
-                return false;
-            }
+        if (string.getClass() == AsciiString.class) {
+            AsciiString rhs = (AsciiString) string;
+            return HASHER.equals(array(), thisStart + arrayOffset(), rhs.array(), start + rhs.arrayOffset(), length);
         }
-        return true;
+        return HASHER.equals(array(), thisStart + arrayOffset(), string, start, length);
     }
 
     /**
@@ -795,7 +743,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
         while (thisStart < thisEnd) {
             char c1 = b2c(value[thisStart++]);
             char c2 = string.charAt(start++);
-            if (c1 != c2 && toLowerCase(c1) != toLowerCase(c2)) {
+            if (c1 != c2 && asciiToLowerCase(c1) != asciiToLowerCase(c2)) {
                 return false;
             }
         }
@@ -888,7 +836,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
 
         final byte[] newValue = new byte[length()];
         for (i = 0, j = arrayOffset(); i < newValue.length; ++i, ++j) {
-            newValue[i] = toLowerCase(value[j]);
+            newValue[i] = asciiToLowerCase(value[j]);
         }
 
         return new AsciiString(newValue, false);
@@ -918,7 +866,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
 
         final byte[] newValue = new byte[length()];
         for (i = 0, j = arrayOffset(); i < newValue.length; ++i, ++j) {
-            newValue[i] = toUpperCase(value[j]);
+            newValue[i] = asciiToUpperCase(value[j]);
         }
 
         return new AsciiString(newValue, false);
@@ -951,19 +899,15 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
      * @return {@code true} if equal, otherwise {@code false}
      */
     public boolean contentEquals(CharSequence cs) {
-        if (cs == null) {
-            throw new NullPointerException();
-        }
-
-        int length1 = length();
-        int length2 = cs.length();
-        if (length1 != length2) {
+        if (cs == null || cs.length() != length()) {
             return false;
-        } else if (length1 == 0) {
-            return true; // since both are empty strings
         }
 
-        return regionMatches(0, cs, 0, length2);
+        if (cs.getClass() == AsciiString.class) {
+            return equals(cs);
+        }
+
+        return HASHER.equals(array(), arrayOffset(), cs, 0, length());
     }
 
     /**

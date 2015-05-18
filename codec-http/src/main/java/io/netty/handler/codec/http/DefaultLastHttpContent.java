@@ -116,9 +116,9 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
             public CharSequence convertName(CharSequence name) {
                 name = super.convertName(name);
                 if (validate) {
-                    if (HttpHeaderNames.CONTENT_LENGTH.equalsIgnoreCase(name)
-                                    || HttpHeaderNames.TRANSFER_ENCODING.equalsIgnoreCase(name)
-                                    || HttpHeaderNames.TRAILER.equalsIgnoreCase(name)) {
+                    if (HttpHeaderNames.CONTENT_LENGTH.contentEqualsIgnoreCase(name)
+                                    || HttpHeaderNames.TRANSFER_ENCODING.contentEqualsIgnoreCase(name)
+                                    || HttpHeaderNames.TRAILER.contentEqualsIgnoreCase(name)) {
                         throw new IllegalArgumentException("prohibited trailing header: " + name);
                     }
                 }

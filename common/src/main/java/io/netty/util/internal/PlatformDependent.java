@@ -74,7 +74,7 @@ public final class PlatformDependent {
             HAS_UNSAFE && !SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
     private static final long MAX_DIRECT_MEMORY = maxDirectMemory0();
 
-    private static final long ARRAY_BASE_OFFSET = PlatformDependent0.arrayBaseOffset();
+    private static final long BYTE_ARRAY_BASE_OFFSET = PlatformDependent0.byteArrayBaseOffset();
 
     private static final boolean HAS_JAVASSIST = hasJavassist0();
 
@@ -83,6 +83,8 @@ public final class PlatformDependent {
     private static final int BIT_MODE = bitMode0();
 
     private static final int ADDRESS_SIZE = addressSize0();
+    private static final HashCodeGenerator SAFE_HASHER = new DefaultHashCodeGenerator();
+    private static final HashCodeGenerator SAFE_HASER_CASE_INSENSITIVE = new DefaultHashCodeGeneratorCaseInsensitive();
 
     static {
         if (logger.isDebugEnabled()) {
@@ -345,29 +347,31 @@ public final class PlatformDependent {
     }
 
     public static void copyMemory(byte[] src, int srcIndex, long dstAddr, long length) {
-        PlatformDependent0.copyMemory(src, ARRAY_BASE_OFFSET + srcIndex, null, dstAddr, length);
+        PlatformDependent0.copyMemory(src, BYTE_ARRAY_BASE_OFFSET + srcIndex, null, dstAddr, length);
     }
 
     public static void copyMemory(long srcAddr, byte[] dst, int dstIndex, long length) {
-        PlatformDependent0.copyMemory(null, srcAddr, dst, ARRAY_BASE_OFFSET + dstIndex, length);
+        PlatformDependent0.copyMemory(null, srcAddr, dst, BYTE_ARRAY_BASE_OFFSET + dstIndex, length);
     }
 
     /**
-     * Compare two {@code byte} arrays for equality. For performance reasons no bounds checking on the
-     * parameters is performed.
-     *
-     * @param bytes1 the first byte array.
-     * @param startPos1 the position (inclusive) to start comparing in {@code bytes1}.
-     * @param endPos1 the position (exclusive) to stop comparing in {@code bytes1}.
-     * @param bytes2 the second byte array.
-     * @param startPos2 the position (inclusive) to start comparing in {@code bytes2}.
-     * @param endPos2 the position (exclusive) to stop comparing in {@code bytes2}.
+     * Get access to the appropriate {@link HashCodeGenerator} for your system.
      */
-    public static boolean equals(byte[] bytes1, int startPos1, int endPos1, byte[] bytes2, int startPos2, int endPos2) {
+    public static HashCodeGenerator hashCodeGenerator() {
         if (!hasUnsafe() || !PlatformDependent0.unalignedAccess()) {
-            return safeEquals(bytes1, startPos1, endPos1, bytes2, startPos2, endPos2);
+            return SAFE_HASHER;
         }
-        return PlatformDependent0.equals(bytes1, startPos1, endPos1, bytes2, startPos2, endPos2);
+        return PlatformDependent0.hashCodeGenerator();
+    }
+
+    /**
+     * Get access to the appropriate {@link HashCodeGenerator} for your system.
+     */
+    public static HashCodeGenerator hashCodeGeneratorAsciiCaseInsensitive() {
+        if (!hasUnsafe() || !PlatformDependent0.unalignedAccess()) {
+            return SAFE_HASER_CASE_INSENSITIVE;
+        }
+        return PlatformDependent0.hashCodeGeneratorAsciiCaseInsensitive();
     }
 
     /**
@@ -868,22 +872,6 @@ public final class PlatformDependent {
             return -1;
         }
         return PlatformDependent0.addressSize();
-    }
-
-    private static boolean safeEquals(byte[] bytes1, int startPos1, int endPos1,
-                                      byte[] bytes2, int startPos2, int endPos2) {
-        final int len1 = endPos1 - startPos1;
-        final int len2 = endPos2 - startPos2;
-        if (len1 != len2) {
-            return false;
-        }
-        final int end = startPos1 + len1;
-        for (int i = startPos1, j = startPos2; i < end; ++i, ++j) {
-            if (bytes1[i] != bytes2[j]) {
-                return false;
-            }
-        }
-        return true;
     }
 
     private PlatformDependent() {

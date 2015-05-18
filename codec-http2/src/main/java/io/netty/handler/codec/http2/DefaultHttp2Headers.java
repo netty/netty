@@ -14,7 +14,7 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.util.internal.StringUtil.UPPER_CASE_TO_LOWER_CASE_ASCII_OFFSET;
+import static io.netty.util.internal.StringUtil.asciiToLowerCase;
 import io.netty.handler.codec.BinaryHeaders;
 import io.netty.handler.codec.DefaultBinaryHeaders;
 import io.netty.util.AsciiString;
@@ -40,8 +40,7 @@ public class DefaultHttp2Headers extends DefaultBinaryHeaders implements Http2He
 
         @Override
         public boolean process(byte value) throws Exception {
-            result[i++] = (value >= 'A' && value <= 'Z')
-                    ? (byte) (value + UPPER_CASE_TO_LOWER_CASE_ASCII_OFFSET) : value;
+            result[i++] = asciiToLowerCase(value);
             return true;
         }
 
