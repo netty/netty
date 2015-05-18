@@ -16,7 +16,7 @@
 
 package io.netty.buffer;
 
-final class PoolSubpage<T> {
+final class PoolSubpage<T> implements PoolSubPageMetric {
 
     final PoolChunk<T> chunk;
     private final int memoryMapIdx;
@@ -202,6 +202,7 @@ final class PoolSubpage<T> {
         return 0x4000000000000000L | (long) bitmapIdx << 32 | memoryMapIdx;
     }
 
+    @Override
     public String toString() {
         if (!doNotDestroy) {
             return "(" + memoryMapIdx + ": not in use)";
@@ -209,5 +210,25 @@ final class PoolSubpage<T> {
 
         return String.valueOf('(') + memoryMapIdx + ": " + (maxNumElems - numAvail) + '/' + maxNumElems +
                ", offset: " + runOffset + ", length: " + pageSize + ", elemSize: " + elemSize + ')';
+    }
+
+    @Override
+    public int numMaxElements() {
+        return maxNumElems;
+    }
+
+    @Override
+    public int numAvailable() {
+        return numAvail;
+    }
+
+    @Override
+    public int elementSize() {
+        return elemSize;
+    }
+
+    @Override
+    public int pageSize() {
+        return pageSize;
     }
 }
