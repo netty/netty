@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
@@ -69,7 +68,7 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     @Override
     protected int _getUnsignedMedium(int index) {
         index = idx(index);
-        return (memory.get(index) & 0xff) << 16 | (memory.get(index + 1) & 0xff) << 8 | memory.get(index + 2) & 0xff;
+        return DirectByteBufUtil._getUnsignedMedium(this, index);
     }
 
     @Override
@@ -84,137 +83,54 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     @Override
     public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
-        checkDstIndex(index, length, dstIndex, dst.capacity());
-        if (dst.hasArray()) {
-            getBytes(index, dst.array(), dst.arrayOffset() + dstIndex, length);
-        } else if (dst.nioBufferCount() > 0) {
-            for (ByteBuffer bb: dst.nioBuffers(dstIndex, length)) {
-                int bbLen = bb.remaining();
-                getBytes(index, bb);
-                index += bbLen;
-            }
-        } else {
-            dst.setBytes(dstIndex, this, index, length);
-        }
+        DirectByteBufUtil.getBytes(this, index, dst, dstIndex, length);
         return this;
     }
 
     @Override
     public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
-        getBytes(index, dst, dstIndex, length, false);
+        DirectByteBufUtil.getBytes(this, memory, index, dst, dstIndex, length);
         return this;
-    }
-
-    private void getBytes(int index, byte[] dst, int dstIndex, int length, boolean internal) {
-        checkDstIndex(index, length, dstIndex, dst.length);
-        ByteBuffer tmpBuf;
-        if (internal) {
-            tmpBuf = internalNioBuffer();
-        } else {
-            tmpBuf = memory.duplicate();
-        }
-        index = idx(index);
-        tmpBuf.clear().position(index).limit(index + length);
-        tmpBuf.get(dst, dstIndex, length);
     }
 
     @Override
     public ByteBuf readBytes(byte[] dst, int dstIndex, int length) {
-        checkReadableBytes(length);
-        getBytes(readerIndex, dst, dstIndex, length, true);
-        readerIndex += length;
+        DirectByteBufUtil.readBytes(this, memory, dst, dstIndex, length);
         return this;
     }
 
     @Override
     public ByteBuf getBytes(int index, ByteBuffer dst) {
-        getBytes(index, dst, false);
+        DirectByteBufUtil.getBytes(this, memory, index, dst);
         return this;
-    }
-
-    private void getBytes(int index, ByteBuffer dst, boolean internal) {
-        checkIndex(index);
-        int bytesToCopy = Math.min(capacity() - index, dst.remaining());
-        ByteBuffer tmpBuf;
-        if (internal) {
-            tmpBuf = internalNioBuffer();
-        } else {
-            tmpBuf = memory.duplicate();
-        }
-        index = idx(index);
-        tmpBuf.clear().position(index).limit(index + bytesToCopy);
-        dst.put(tmpBuf);
     }
 
     @Override
     public ByteBuf readBytes(ByteBuffer dst) {
-        int length = dst.remaining();
-        checkReadableBytes(length);
-        getBytes(readerIndex, dst, true);
-        readerIndex += length;
+        DirectByteBufUtil.readBytes(this, memory, dst);
         return this;
     }
 
     @Override
     public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
-        getBytes(index, out, length, false);
+        DirectByteBufUtil.getBytes(this, memory, index, out, length);
         return this;
-    }
-
-    private void getBytes(int index, OutputStream out, int length, boolean internal) throws IOException {
-        checkIndex(index, length);
-        if (length == 0) {
-            return;
-        }
-
-        byte[] tmp = new byte[length];
-        ByteBuffer tmpBuf;
-        if (internal) {
-            tmpBuf = internalNioBuffer();
-        } else {
-            tmpBuf = memory.duplicate();
-        }
-        tmpBuf.clear().position(idx(index));
-        tmpBuf.get(tmp);
-        out.write(tmp);
     }
 
     @Override
     public ByteBuf readBytes(OutputStream out, int length) throws IOException {
-        checkReadableBytes(length);
-        getBytes(readerIndex, out, length, true);
-        readerIndex += length;
+        DirectByteBufUtil.readBytes(this, memory, out, length);
         return this;
     }
 
     @Override
     public int getBytes(int index, GatheringByteChannel out, int length) throws IOException {
-        return getBytes(index, out, length, false);
-    }
-
-    private int getBytes(int index, GatheringByteChannel out, int length, boolean internal) throws IOException {
-        checkIndex(index, length);
-        if (length == 0) {
-            return 0;
-        }
-
-        ByteBuffer tmpBuf;
-        if (internal) {
-            tmpBuf = internalNioBuffer();
-        } else {
-            tmpBuf = memory.duplicate();
-        }
-        index = idx(index);
-        tmpBuf.clear().position(index).limit(index + length);
-        return out.write(tmpBuf);
+        return DirectByteBufUtil.getBytes(this, memory, index, out, length);
     }
 
     @Override
     public int readBytes(GatheringByteChannel out, int length) throws IOException {
-        checkReadableBytes(length);
-        int readBytes = getBytes(readerIndex, out, length, true);
-        readerIndex += readBytes;
-        return readBytes;
+        return DirectByteBufUtil.readBytes(this, memory, out, length);
     }
 
     @Override
@@ -230,9 +146,7 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     @Override
     protected void _setMedium(int index, int value) {
         index = idx(index);
-        memory.put(index, (byte) (value >>> 16));
-        memory.put(index + 1, (byte) (value >>> 8));
-        memory.put(index + 2, (byte) value);
+        DirectByteBufUtil._setMedium(this, index, value);
     }
 
     @Override
@@ -247,78 +161,35 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     @Override
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
-        checkSrcIndex(index, length, srcIndex, src.capacity());
-        if (src.hasArray()) {
-            setBytes(index, src.array(), src.arrayOffset() + srcIndex, length);
-        } else if (src.nioBufferCount() > 0) {
-            for (ByteBuffer bb: src.nioBuffers(srcIndex, length)) {
-                int bbLen = bb.remaining();
-                setBytes(index, bb);
-                index += bbLen;
-            }
-        } else {
-            src.getBytes(srcIndex, this, index, length);
-        }
+        DirectByteBufUtil.setBytes(this, index, src, srcIndex, length);
         return this;
     }
 
     @Override
     public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
-        checkSrcIndex(index, length, srcIndex, src.length);
-        ByteBuffer tmpBuf = internalNioBuffer();
-        index = idx(index);
-        tmpBuf.clear().position(index).limit(index + length);
-        tmpBuf.put(src, srcIndex, length);
+        DirectByteBufUtil.setBytes(this, index, src, srcIndex, length);
         return this;
     }
 
     @Override
     public ByteBuf setBytes(int index, ByteBuffer src) {
-        checkIndex(index, src.remaining());
-        ByteBuffer tmpBuf = internalNioBuffer();
-        if (src == tmpBuf) {
-            src = src.duplicate();
-        }
-
-        index = idx(index);
-        tmpBuf.clear().position(index).limit(index + src.remaining());
-        tmpBuf.put(src);
+        DirectByteBufUtil.setBytes(this, index, src);
         return this;
     }
 
     @Override
     public int setBytes(int index, InputStream in, int length) throws IOException {
-        checkIndex(index, length);
-        byte[] tmp = new byte[length];
-        int readBytes = in.read(tmp);
-        if (readBytes <= 0) {
-            return readBytes;
-        }
-        ByteBuffer tmpBuf = internalNioBuffer();
-        tmpBuf.clear().position(idx(index));
-        tmpBuf.put(tmp, 0, readBytes);
-        return readBytes;
+        return DirectByteBufUtil.setBytes(this, index, in, length);
     }
 
     @Override
     public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
-        checkIndex(index, length);
-        ByteBuffer tmpBuf = internalNioBuffer();
-        index = idx(index);
-        tmpBuf.clear().position(index).limit(index + length);
-        try {
-            return in.read(tmpBuf);
-        } catch (ClosedChannelException ignored) {
-            return -1;
-        }
+        return DirectByteBufUtil.setBytes(this, index, in, length);
     }
 
     @Override
     public ByteBuf copy(int index, int length) {
-        checkIndex(index, length);
-        ByteBuf copy = alloc().directBuffer(length, maxCapacity());
-        copy.writeBytes(this, index, length);
-        return copy;
+        return DirectByteBufUtil.copy(this, index, length);
     }
 
     @Override
@@ -328,9 +199,7 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     @Override
     public ByteBuffer nioBuffer(int index, int length) {
-        checkIndex(index, length);
-        index = idx(index);
-        return ((ByteBuffer) memory.duplicate().position(index).limit(index + length)).slice();
+        return DirectByteBufUtil.nioBuffer(this, memory, index, length);
     }
 
     @Override
@@ -340,9 +209,7 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     @Override
     public ByteBuffer internalNioBuffer(int index, int length) {
-        checkIndex(index, length);
-        index = idx(index);
-        return (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);
+        return DirectByteBufUtil.internalNioBuffer(this, index, length);
     }
 
     @Override

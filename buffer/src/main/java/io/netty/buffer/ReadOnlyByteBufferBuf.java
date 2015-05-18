@@ -262,6 +262,7 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
         throw new ReadOnlyBufferException();
     }
 
+    @Override
     protected final ByteBuffer internalNioBuffer() {
         ByteBuffer tmpNioBuf = this.tmpNioBuf;
         if (tmpNioBuf == null) {

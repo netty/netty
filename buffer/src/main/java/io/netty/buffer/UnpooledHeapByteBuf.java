@@ -15,14 +15,11 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.internal.PlatformDependent;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.channels.ClosedChannelException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
@@ -159,104 +156,64 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
-        checkDstIndex(index, length, dstIndex, dst.capacity());
-        if (dst.hasMemoryAddress()) {
-            PlatformDependent.copyMemory(array, index, dst.memoryAddress() + dstIndex, length);
-        } else if (dst.hasArray()) {
-            getBytes(index, dst.array(), dst.arrayOffset() + dstIndex, length);
-        } else {
-            dst.setBytes(dstIndex, array, index, length);
-        }
+        HeapByteBufUtil.getBytes(this, index, dst, dstIndex, length);
         return this;
     }
 
     @Override
     public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
-        checkDstIndex(index, length, dstIndex, dst.length);
-        System.arraycopy(array, index, dst, dstIndex, length);
+        HeapByteBufUtil.getBytes(this, index, dst, dstIndex, length);
         return this;
     }
 
     @Override
     public ByteBuf getBytes(int index, ByteBuffer dst) {
-        ensureAccessible();
-        dst.put(array, index, Math.min(capacity() - index, dst.remaining()));
+        HeapByteBufUtil.getBytes(this, index, dst);
         return this;
     }
 
     @Override
     public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
-        ensureAccessible();
-        out.write(array, index, length);
+        HeapByteBufUtil.getBytes(this, index, out, length);
         return this;
     }
 
     @Override
     public int getBytes(int index, GatheringByteChannel out, int length) throws IOException {
-        ensureAccessible();
-        return getBytes(index, out, length, false);
-    }
-
-    private int getBytes(int index, GatheringByteChannel out, int length, boolean internal) throws IOException {
-        ensureAccessible();
-        ByteBuffer tmpBuf;
-        if (internal) {
-            tmpBuf = internalNioBuffer();
-        } else {
-            tmpBuf = ByteBuffer.wrap(array);
-        }
-        return out.write((ByteBuffer) tmpBuf.clear().position(index).limit(index + length));
+        return HeapByteBufUtil.getBytes(this, index, out, length);
     }
 
     @Override
     public int readBytes(GatheringByteChannel out, int length) throws IOException {
-        checkReadableBytes(length);
-        int readBytes = getBytes(readerIndex, out, length, true);
-        readerIndex += readBytes;
-        return readBytes;
+        return HeapByteBufUtil.readBytes(this, out, length);
     }
 
     @Override
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
-        checkSrcIndex(index, length, srcIndex, src.capacity());
-        if (src.hasMemoryAddress()) {
-            PlatformDependent.copyMemory(src.memoryAddress() + srcIndex, array, index, length);
-        } else  if (src.hasArray()) {
-            setBytes(index, src.array(), src.arrayOffset() + srcIndex, length);
-        } else {
-            src.getBytes(srcIndex, array, index, length);
-        }
+        HeapByteBufUtil.setBytes(this, index, src, srcIndex, length);
         return this;
     }
 
     @Override
     public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
-        checkSrcIndex(index, length, srcIndex, src.length);
-        System.arraycopy(src, srcIndex, array, index, length);
+        HeapByteBufUtil.setBytes(this, index, src, srcIndex, length);
         return this;
     }
 
     @Override
     public ByteBuf setBytes(int index, ByteBuffer src) {
-        ensureAccessible();
-        src.get(array, index, src.remaining());
+        HeapByteBufUtil.setBytes(this, index, src);
         return this;
     }
 
     @Override
     public int setBytes(int index, InputStream in, int length) throws IOException {
-        ensureAccessible();
-        return in.read(array, index, length);
+        return HeapByteBufUtil.setBytes(this, index, in, length);
     }
 
     @Override
     public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
-        ensureAccessible();
-        try {
-            return in.read((ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length));
-        } catch (ClosedChannelException ignored) {
-            return -1;
-        }
+        return HeapByteBufUtil.setBytes(this, index, in, length);
     }
 
     @Override
@@ -266,8 +223,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuffer nioBuffer(int index, int length) {
-        ensureAccessible();
-        return ByteBuffer.wrap(array, index, length).slice();
+        return HeapByteBufUtil.nioBuffer(this, index, length);
     }
 
     @Override
@@ -277,8 +233,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuffer internalNioBuffer(int index, int length) {
-        checkIndex(index, length);
-        return (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);
+        return HeapByteBufUtil.internalNioBuffer(this, index, length);
     }
 
     @Override
@@ -289,7 +244,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected byte _getByte(int index) {
-        return array[index];
+        return HeapByteBufUtil._getByte(array, index);
     }
 
     @Override
@@ -300,7 +255,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected short _getShort(int index) {
-        return (short) (array[index] << 8 | array[index + 1] & 0xFF);
+        return HeapByteBufUtil._getShort(array, index);
     }
 
     @Override
@@ -311,9 +266,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected int _getUnsignedMedium(int index) {
-        return  (array[index]     & 0xff) << 16 |
-                (array[index + 1] & 0xff) <<  8 |
-                 array[index + 2] & 0xff;
+        return HeapByteBufUtil._getUnsignedMedium(array, index);
     }
 
     @Override
@@ -324,10 +277,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected int _getInt(int index) {
-        return  (array[index]     & 0xff) << 24 |
-                (array[index + 1] & 0xff) << 16 |
-                (array[index + 2] & 0xff) <<  8 |
-                 array[index + 3] & 0xff;
+        return HeapByteBufUtil._getInt(array, index);
     }
 
     @Override
@@ -338,14 +288,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected long _getLong(int index) {
-        return  ((long) array[index]     & 0xff) << 56 |
-                ((long) array[index + 1] & 0xff) << 48 |
-                ((long) array[index + 2] & 0xff) << 40 |
-                ((long) array[index + 3] & 0xff) << 32 |
-                ((long) array[index + 4] & 0xff) << 24 |
-                ((long) array[index + 5] & 0xff) << 16 |
-                ((long) array[index + 6] & 0xff) <<  8 |
-                 (long) array[index + 7] & 0xff;
+        return HeapByteBufUtil._getLong(array, index);
     }
 
     @Override
@@ -369,8 +312,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void _setShort(int index, int value) {
-        array[index]     = (byte) (value >>> 8);
-        array[index + 1] = (byte) value;
+        HeapByteBufUtil._setShort(array, index, value);
     }
 
     @Override
@@ -382,9 +324,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void _setMedium(int index, int value) {
-        array[index]     = (byte) (value >>> 16);
-        array[index + 1] = (byte) (value >>> 8);
-        array[index + 2] = (byte) value;
+        HeapByteBufUtil._setMedium(array, index, value);
     }
 
     @Override
@@ -396,10 +336,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void _setInt(int index, int value) {
-        array[index]     = (byte) (value >>> 24);
-        array[index + 1] = (byte) (value >>> 16);
-        array[index + 2] = (byte) (value >>> 8);
-        array[index + 3] = (byte) value;
+        HeapByteBufUtil._setInt(array, index, value);
     }
 
     @Override
@@ -411,25 +348,16 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void _setLong(int index, long value) {
-        array[index]     = (byte) (value >>> 56);
-        array[index + 1] = (byte) (value >>> 48);
-        array[index + 2] = (byte) (value >>> 40);
-        array[index + 3] = (byte) (value >>> 32);
-        array[index + 4] = (byte) (value >>> 24);
-        array[index + 5] = (byte) (value >>> 16);
-        array[index + 6] = (byte) (value >>> 8);
-        array[index + 7] = (byte) value;
+        HeapByteBufUtil._setLong(array, index, value);
     }
 
     @Override
     public ByteBuf copy(int index, int length) {
-        checkIndex(index, length);
-        byte[] copiedArray = new byte[length];
-        System.arraycopy(array, index, copiedArray, 0, length);
-        return new UnpooledHeapByteBuf(alloc(), copiedArray, maxCapacity());
+        return HeapByteBufUtil.copy(this, index, length);
     }
 
-    private ByteBuffer internalNioBuffer() {
+    @Override
+    ByteBuffer internalNioBuffer() {
         ByteBuffer tmpNioBuf = this.tmpNioBuf;
         if (tmpNioBuf == null) {
             this.tmpNioBuf = tmpNioBuf = ByteBuffer.wrap(array);
