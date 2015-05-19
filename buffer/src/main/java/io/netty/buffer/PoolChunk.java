@@ -358,7 +358,8 @@ final class PoolChunk<T> implements PoolChunkMetric {
         if (bitmapIdx == 0) {
             byte val = value(memoryMapIdx);
             assert val == unusable : String.valueOf(val);
-            buf.init(this, handle, runOffset(memoryMapIdx), reqCapacity, runLength(memoryMapIdx));
+            buf.init(this, handle, runOffset(memoryMapIdx), reqCapacity, runLength(memoryMapIdx),
+                     arena.parent.threadCache.get());
         } else {
             initBufWithSubpage(buf, handle, bitmapIdx, reqCapacity);
         }
@@ -379,7 +380,8 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
         buf.init(
             this, handle,
-            runOffset(memoryMapIdx) + (bitmapIdx & 0x3FFFFFFF) * subpage.elemSize, reqCapacity, subpage.elemSize);
+            runOffset(memoryMapIdx) + (bitmapIdx & 0x3FFFFFFF) * subpage.elemSize, reqCapacity, subpage.elemSize,
+            arena.parent.threadCache.get());
     }
 
     private byte value(int id) {

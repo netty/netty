@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import io.netty.buffer.PooledByteBufAllocator.PoolThreadLocalCache;
 import io.netty.util.Recycler;
 import io.netty.util.internal.PlatformDependent;
 
@@ -53,8 +54,9 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     }
 
     @Override
-    void init(PoolChunk<ByteBuffer> chunk, long handle, int offset, int length, int maxLength) {
-        super.init(chunk, handle, offset, length, maxLength);
+    void init(PoolChunk<ByteBuffer> chunk, long handle, int offset, int length, int maxLength,
+              PoolThreadCache cache) {
+        super.init(chunk, handle, offset, length, maxLength, cache);
         initMemoryAddress();
     }
 
