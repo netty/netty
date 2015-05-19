@@ -40,6 +40,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
@@ -440,6 +441,18 @@ public final class PlatformDependent {
      */
     public static <T> Queue<T> newMpscQueue() {
         return new MpscLinkedQueue<T>();
+    }
+
+    /**
+     * Create a new {@link Queue} which is safe to use for multiple producers (different threads) and a single
+     * consumer (one thread!) with the given fixes {@code capacity}.
+     */
+    public static <T> Queue<T> newFixedMpscQueue(int capacity) {
+        if (hasUnsafe()) {
+            return new MpscArrayQueue<T>(capacity);
+        } else {
+            return new LinkedBlockingQueue<T>(capacity);
+        }
     }
 
     /**
