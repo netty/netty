@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 final class PlatformDependent0 {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PlatformDependent0.class);
-    private static final Unsafe UNSAFE;
+    static final Unsafe UNSAFE;
     private static final boolean BIG_ENDIAN = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
     private static final long ADDRESS_FIELD_OFFSET;
 

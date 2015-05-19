@@ -68,6 +68,15 @@ It can be obtained at:
   * HOMEPAGE:
     * https://github.com/akka/akka/blob/wip-2.2.3-for-scala-2.11/akka-actor/src/main/java/akka/dispatch/AbstractNodeQueue.java
 
+This product contains a modified portion of Nitsan Wakart's 'JCTools', Java Concurrency Tools for the JVM,
+ which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.jctools.txt (ASL2 License)
+  * HOMEPAGE:
+    * https://github.com/JCTools/JCTools
+
+
 This product optionally depends on 'JZlib', a re-implementation of zlib in
 pure Java, which can be obtained at:
 

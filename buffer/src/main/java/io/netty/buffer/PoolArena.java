@@ -229,19 +229,15 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         buf.initUnpooled(newUnpooledChunk(reqCapacity), reqCapacity);
     }
 
-    void free(PoolChunk<T> chunk, long handle, int normCapacity, boolean sameThreads) {
+    void free(PoolChunk<T> chunk, long handle, int normCapacity, PoolThreadCache cache) {
         if (chunk.unpooled) {
             allocationsHuge.decrement();
             destroyChunk(chunk);
         } else {
-            if (sameThreads) {
-                PoolThreadCache cache = parent.threadCache.get();
-                if (cache.add(this, chunk, handle, normCapacity)) {
-                    // cached so not free it.
-                    return;
-                }
+            if (cache != null && cache.add(this, chunk, handle, normCapacity)) {
+                // cached so not free it.
+                return;
             }
-
             boolean tinyOrSmall = isTinyOrSmall(normCapacity);
             synchronized (this) {
                 if (!tinyOrSmall) {
@@ -349,7 +345,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         buf.setIndex(readerIndex, writerIndex);
 
         if (freeOldMemory) {
-            free(oldChunk, oldHandle, oldMaxLength, buf.initThread == Thread.currentThread());
+            free(oldChunk, oldHandle, oldMaxLength, buf.cache);
         }
     }
 
