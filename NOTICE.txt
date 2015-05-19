@@ -98,6 +98,14 @@ a constant-size alphabet written by Yuta Mori. It can be obtained at:
   * HOMEPAGE:
     * https://code.google.com/p/libdivsufsort/
 
+This product contains a modified portion of Nitsan Wakart's 'JCTools', Java Concurrency Tools for the JVM,
+ which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.jctools.txt (ASL2 License)
+  * HOMEPAGE:
+    * https://github.com/JCTools/JCTools
+
 This product optionally depends on 'JZlib', a re-implementation of zlib in
 pure Java, which can be obtained at:
 
