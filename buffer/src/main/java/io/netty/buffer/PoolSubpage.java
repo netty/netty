@@ -72,7 +72,10 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
             }
         }
 
-        addToPool();
+        PoolSubpage<T> head = chunk.arena.findSubpagePoolHead(elemSize);
+        synchronized (head) {
+            addToPool(head);
+        }
     }
 
     /**
@@ -83,21 +86,29 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
             return toHandle(0);
         }
 
-        if (numAvail == 0 || !doNotDestroy) {
-            return -1;
+        /**
+         * Synchronize on the head of the SubpagePool stored in the {@link PoolArena. This is needed as we synchronize
+         * on it when calling {@link PoolArena#allocate(PoolThreadCache, int, int)} und try to allocate out of the
+         * {@link PoolSubpage} pool for a given size.
+         */
+        PoolSubpage<T> head = chunk.arena.findSubpagePoolHead(elemSize);
+        synchronized (head) {
+            if (numAvail == 0 || !doNotDestroy) {
+                return -1;
+            }
+
+            final int bitmapIdx = getNextAvail();
+            int q = bitmapIdx >>> 6;
+            int r = bitmapIdx & 63;
+            assert (bitmap[q] >>> r & 1) == 0;
+            bitmap[q] |= 1L << r;
+
+            if (-- numAvail == 0) {
+                removeFromPool();
+            }
+
+            return toHandle(bitmapIdx);
         }
-
-        final int bitmapIdx = getNextAvail();
-        int q = bitmapIdx >>> 6;
-        int r = bitmapIdx & 63;
-        assert (bitmap[q] >>> r & 1) == 0;
-        bitmap[q] |= 1L << r;
-
-        if (-- numAvail == 0) {
-            removeFromPool();
-        }
-
-        return toHandle(bitmapIdx);
     }
 
     /**
@@ -110,36 +121,44 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
             return true;
         }
 
-        int q = bitmapIdx >>> 6;
-        int r = bitmapIdx & 63;
-        assert (bitmap[q] >>> r & 1) != 0;
-        bitmap[q] ^= 1L << r;
+        /**
+         * Synchronize on the head of the SubpagePool stored in the {@link PoolArena. This is needed as we synchronize
+         * on it when calling {@link PoolArena#allocate(PoolThreadCache, int, int)} und try to allocate out of the
+         * {@link PoolSubpage} pool for a given size.
+         */
+        PoolSubpage<T> head = chunk.arena.findSubpagePoolHead(elemSize);
 
-        setNextAvail(bitmapIdx);
+        synchronized (head) {
+            int q = bitmapIdx >>> 6;
+            int r = bitmapIdx & 63;
+            assert (bitmap[q] >>> r & 1) != 0;
+            bitmap[q] ^= 1L << r;
 
-        if (numAvail ++ == 0) {
-            addToPool();
-            return true;
-        }
+            setNextAvail(bitmapIdx);
 
-        if (numAvail != maxNumElems) {
-            return true;
-        } else {
-            // Subpage not in use (numAvail == maxNumElems)
-            if (prev == next) {
-                // Do not remove if this subpage is the only one left in the pool.
+            if (numAvail ++ == 0) {
+                addToPool(head);
                 return true;
             }
 
-            // Remove this subpage from the pool if there are other subpages left in the pool.
-            doNotDestroy = false;
-            removeFromPool();
-            return false;
+            if (numAvail != maxNumElems) {
+                return true;
+            } else {
+                // Subpage not in use (numAvail == maxNumElems)
+                if (prev == next) {
+                    // Do not remove if this subpage is the only one left in the pool.
+                    return true;
+                }
+
+                // Remove this subpage from the pool if there are other subpages left in the pool.
+                doNotDestroy = false;
+                removeFromPool();
+                return false;
+            }
         }
     }
 
-    private void addToPool() {
-        PoolSubpage<T> head = chunk.arena.findSubpagePoolHead(elemSize);
+    private void addToPool(PoolSubpage<T> head) {
         assert prev == null && next == null;
         prev = head;
         next = head.next;
