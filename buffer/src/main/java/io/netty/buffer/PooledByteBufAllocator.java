@@ -38,6 +38,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     private static final int DEFAULT_NORMAL_CACHE_SIZE;
     private static final int DEFAULT_MAX_CACHED_BUFFER_CAPACITY;
     private static final int DEFAULT_CACHE_TRIM_INTERVAL;
+    private static final boolean DEFAULT_POWER_OF_CACHE_LINE_SIZE;
 
     private static final int MIN_PAGE_SIZE = 4096;
     private static final int MAX_CHUNK_SIZE = (int) (((long) Integer.MAX_VALUE + 1) / 2);
@@ -94,6 +95,11 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         DEFAULT_CACHE_TRIM_INTERVAL = SystemPropertyUtil.getInt(
                 "io.netty.allocator.cacheTrimInterval", 8192);
 
+        // Specify if all allocations should be round up to match poer of cache line size. This can be important
+        // if you allocate a lot with different threads and so see false-sharing. The only "downside" is that it
+        // produces some memory overhead as the minimum of bytes that you will ever allocate is [size of cache line].
+        DEFAULT_POWER_OF_CACHE_LINE_SIZE = SystemPropertyUtil.getBoolean(
+                "io.netty.allocator.powerOfCacheLineSize", false);
         if (logger.isDebugEnabled()) {
             logger.debug("-Dio.netty.allocator.numHeapArenas: {}", DEFAULT_NUM_HEAP_ARENA);
             logger.debug("-Dio.netty.allocator.numDirectArenas: {}", DEFAULT_NUM_DIRECT_ARENA);
@@ -113,6 +119,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             logger.debug("-Dio.netty.allocator.normalCacheSize: {}", DEFAULT_NORMAL_CACHE_SIZE);
             logger.debug("-Dio.netty.allocator.maxCachedBufferCapacity: {}", DEFAULT_MAX_CACHED_BUFFER_CAPACITY);
             logger.debug("-Dio.netty.allocator.cacheTrimInterval: {}", DEFAULT_CACHE_TRIM_INTERVAL);
+            logger.debug("-Dio.netty.allocator.powerOfCacheLineSize: {}", DEFAULT_POWER_OF_CACHE_LINE_SIZE);
         }
     }
 
@@ -146,6 +153,13 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     public PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder,
                                   int tinyCacheSize, int smallCacheSize, int normalCacheSize) {
+        this(preferDirect, nHeapArena, nDirectArena, pageSize, maxOrder, tinyCacheSize,
+             smallCacheSize, normalCacheSize, DEFAULT_POWER_OF_CACHE_LINE_SIZE);
+    }
+
+    public PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder,
+                                  int tinyCacheSize, int smallCacheSize,
+                                  int normalCacheSize, boolean powerOfCacheLine) {
         super(preferDirect);
         threadCache = new PoolThreadLocalCache();
         this.tinyCacheSize = tinyCacheSize;
@@ -165,7 +179,8 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         if (nHeapArena > 0) {
             heapArenas = newArenaArray(nHeapArena);
             for (int i = 0; i < heapArenas.length; i ++) {
-                heapArenas[i] = new PoolArena.HeapArena(this, pageSize, maxOrder, pageShifts, chunkSize);
+                heapArenas[i] = new PoolArena.HeapArena(this, pageSize, maxOrder, pageShifts, chunkSize,
+                                                        powerOfCacheLine);
             }
         } else {
             heapArenas = null;
@@ -174,7 +189,8 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         if (nDirectArena > 0) {
             directArenas = newArenaArray(nDirectArena);
             for (int i = 0; i < directArenas.length; i ++) {
-                directArenas[i] = new PoolArena.DirectArena(this, pageSize, maxOrder, pageShifts, chunkSize);
+                directArenas[i] = new PoolArena.DirectArena(this, pageSize, maxOrder, pageShifts, chunkSize,
+                                                            powerOfCacheLine);
             }
         } else {
             directArenas = null;
