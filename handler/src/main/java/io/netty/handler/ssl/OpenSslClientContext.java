@@ -15,8 +15,6 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufInputStream;
 import org.apache.tomcat.jni.SSL;
 import org.apache.tomcat.jni.SSLContext;
 
@@ -26,13 +24,8 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
-import javax.security.auth.x500.X500Principal;
 import java.io.File;
-import java.io.IOException;
 import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
 /**
@@ -223,12 +216,13 @@ public final class OpenSslClientContext extends OpenSslContext {
                 SSLContext.setVerify(ctx, SSL.SSL_VERIFY_NONE, VERIFY_DEPTH);
 
                 try {
-                    // Set up trust manager factory to use our key store.
-                    if (trustManagerFactory == null) {
+                    if (trustCertChainFile != null) {
+                        trustManagerFactory = buildTrustManagerFactory(trustCertChainFile, trustManagerFactory);
+                    } else if (trustManagerFactory == null) {
                         trustManagerFactory = TrustManagerFactory.getInstance(
                                 TrustManagerFactory.getDefaultAlgorithm());
+                        trustManagerFactory.init((KeyStore) null);
                     }
-                    initTrustManagerFactory(trustCertChainFile, trustManagerFactory);
                     final X509TrustManager manager = chooseTrustManager(trustManagerFactory.getTrustManagers());
 
                     // Use this to prevent an error when running on java < 7
@@ -261,28 +255,6 @@ public final class OpenSslClientContext extends OpenSslContext {
                 destroyPools();
             }
         }
-    }
-
-    private static void initTrustManagerFactory(File certChainFile, TrustManagerFactory trustManagerFactory)
-            throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException {
-        KeyStore ks = KeyStore.getInstance("JKS");
-        ks.load(null, null);
-        if (certChainFile != null) {
-            ByteBuf[] certs = PemReader.readCertificates(certChainFile);
-            try {
-                for (ByteBuf buf: certs) {
-                    X509Certificate cert = (X509Certificate) X509_CERT_FACTORY.generateCertificate(
-                            new ByteBufInputStream(buf));
-                    X500Principal principal = cert.getSubjectX500Principal();
-                    ks.setCertificateEntry(principal.getName("RFC2253"), cert);
-                }
-            } finally {
-                for (ByteBuf buf: certs) {
-                    buf.release();
-                }
-            }
-        }
-        trustManagerFactory.init(ks);
     }
 
     @Override
