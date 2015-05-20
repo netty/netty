@@ -180,7 +180,12 @@ abstract class PoolArena<T> implements PoolArenaMetric {
             }
 
             final PoolSubpage<T> head = table[tableIdx];
-            synchronized (this) {
+
+            /**
+             * Synchronize on the head. This is needed as {@link PoolSubpage#allocate()} and
+             * {@link PoolSubpage#free(int)} may modify the doubly linked list as well.
+             */
+            synchronized (head) {
                 final PoolSubpage<T> s = head.next;
                 if (s != head) {
                     assert s.doNotDestroy && s.elemSize == normCapacity;
@@ -195,27 +200,24 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                     }
                     return;
                 }
-                allocateNormal(buf, reqCapacity, normCapacity);
-                return;
             }
+            allocateNormal(buf, reqCapacity, normCapacity);
+            return;
         }
         if (normCapacity <= chunkSize) {
             if (cache.allocateNormal(this, buf, reqCapacity, normCapacity)) {
                 // was able to allocate out of the cache so move on
                 return;
             }
-            synchronized (this) {
-                allocateNormal(buf, reqCapacity, normCapacity);
-            }
+            allocateNormal(buf, reqCapacity, normCapacity);
         } else {
             // Huge allocations are never served via the cache so just call allocateHuge
             allocateHuge(buf, reqCapacity);
         }
     }
 
-    private void allocateNormal(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
-        ++allocationsNormal;
-
+    private synchronized void allocateNormal(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
+            ++allocationsNormal;
         if (q050.allocate(buf, reqCapacity, normCapacity) || q025.allocate(buf, reqCapacity, normCapacity) ||
             q000.allocate(buf, reqCapacity, normCapacity) || qInit.allocate(buf, reqCapacity, normCapacity) ||
             q075.allocate(buf, reqCapacity, normCapacity) || q100.allocate(buf, reqCapacity, normCapacity)) {
