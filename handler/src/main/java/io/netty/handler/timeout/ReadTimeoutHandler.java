@@ -66,11 +66,13 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
 
     private final long timeoutNanos;
 
+    private long lastReadTime;
+
     private volatile ScheduledFuture<?> timeout;
-    private volatile long lastReadTime;
 
     private volatile int state; // 0 - none, 1 - Initialized, 2 - Destroyed;
 
+    private volatile boolean reading;
     private boolean closed;
 
     /**
@@ -146,8 +148,15 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        lastReadTime = System.nanoTime();
+        reading = true;
         ctx.fireChannelRead(msg);
+    }
+
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        lastReadTime = System.nanoTime();
+        reading = false;
+        ctx.fireChannelReadComplete();
     }
 
     private void initialize(ChannelHandlerContext ctx) {
@@ -204,7 +213,11 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
             }
 
             long currentTime = System.nanoTime();
-            long nextDelay = timeoutNanos - (currentTime - lastReadTime);
+            long nextDelay = timeoutNanos;
+            if (!reading) {
+                nextDelay -= currentTime - lastReadTime;
+            }
+
             if (nextDelay <= 0) {
                 // Read timed out - set a new timeout and notify the callback.
                 timeout = ctx.executor().schedule(this, timeoutNanos, TimeUnit.NANOSECONDS);
