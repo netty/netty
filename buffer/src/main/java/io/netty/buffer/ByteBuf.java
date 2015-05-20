@@ -1679,6 +1679,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * This method is identical to {@code buf.slice(0, buf.capacity())}.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
      * this buffer.
+     * The reader and writer marks will not be duplicated!
      */
     public abstract ByteBuf duplicate();
 
