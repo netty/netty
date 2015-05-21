@@ -55,6 +55,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Http2ConnectionHandler.class);
     private final Http2ConnectionDecoder decoder;
     private final Http2ConnectionEncoder encoder;
+    private final Http2Settings initialSettings;
     private ChannelFutureListener closeListener;
     private BaseDecoder byteDecoder;
 
@@ -68,6 +69,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     public Http2ConnectionHandler(Http2Connection connection, Http2FrameReader frameReader,
                                   Http2FrameWriter frameWriter, Http2FrameListener listener) {
+        initialSettings = null;
         encoder = new DefaultHttp2ConnectionEncoder(connection, frameWriter);
         decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader, listener);
     }
@@ -78,6 +80,32 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      */
     public Http2ConnectionHandler(Http2ConnectionDecoder decoder,
                                   Http2ConnectionEncoder encoder) {
+        this.initialSettings = null;
+        this.decoder = checkNotNull(decoder, "decoder");
+        this.encoder = checkNotNull(encoder, "encoder");
+        if (encoder.connection() != decoder.connection()) {
+            throw new IllegalArgumentException("Encoder and Decoder do not share the same connection object");
+        }
+    }
+
+    public Http2ConnectionHandler(Http2Connection connection, Http2FrameListener listener,
+                                  Http2Settings initialSettings) {
+        this(connection, new DefaultHttp2FrameReader(), new DefaultHttp2FrameWriter(), listener,
+                initialSettings);
+    }
+
+    public Http2ConnectionHandler(Http2Connection connection, Http2FrameReader frameReader,
+                                  Http2FrameWriter frameWriter, Http2FrameListener listener,
+                                  Http2Settings initialSettings) {
+        this.initialSettings = initialSettings;
+        encoder = new DefaultHttp2ConnectionEncoder(connection, frameWriter);
+        decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader, listener);
+    }
+
+    public Http2ConnectionHandler(Http2ConnectionDecoder decoder,
+                                  Http2ConnectionEncoder encoder,
+                                  Http2Settings initialSettings) {
+        this.initialSettings = initialSettings;
         this.decoder = checkNotNull(decoder, "decoder");
         this.encoder = checkNotNull(encoder, "encoder");
         if (encoder.connection() != decoder.connection()) {
@@ -278,7 +306,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             }
 
             // Both client and server must send their initial settings.
-            encoder.writeSettings(ctx, decoder.localSettings(), ctx.newPromise()).addListener(
+            encoder.writeSettings(ctx, initialSettings(), ctx.newPromise()).addListener(
                     ChannelFutureListener.CLOSE_ON_FAILURE);
         }
     }
@@ -593,6 +621,13 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             debugData.release();
             return promise.setFailure(cause);
         }
+    }
+
+    /**
+     * Gets the initial settings to be sent to the remote endpoint.
+     */
+    private Http2Settings initialSettings() {
+        return initialSettings != null ? initialSettings : decoder.localSettings();
     }
 
     /**
