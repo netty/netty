@@ -31,10 +31,10 @@ import java.util.Map;
  * This decoder is for one time use only.  Create a new instance for each URI:
  * <pre>
  * {@link QueryStringDecoder} decoder = new {@link QueryStringDecoder}("/hello?recipient=world&x=1;y=2");
- * assert decoder.getPath().equals("/hello");
- * assert decoder.getParameters().get("recipient").get(0).equals("world");
- * assert decoder.getParameters().get("x").get(0).equals("1");
- * assert decoder.getParameters().get("y").get(0).equals("2");
+ * assert decoder.path().equals("/hello");
+ * assert decoder.parameters().get("recipient").get(0).equals("world");
+ * assert decoder.parameters().get("x").get(0).equals("1");
+ * assert decoder.parameters().get("y").get(0).equals("2");
  * </pre>
  *
  * This decoder can also decode the content of an HTTP POST request whose
