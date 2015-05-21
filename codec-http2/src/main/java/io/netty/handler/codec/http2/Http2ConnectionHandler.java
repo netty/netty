@@ -303,7 +303,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             }
 
             // Both client and server must send their initial settings.
-            encoder.writeSettings(ctx, getInitialSettings(), ctx.newPromise()).addListener(
+            encoder.writeSettings(ctx, initialSettings(), ctx.newPromise()).addListener(
                     ChannelFutureListener.CLOSE_ON_FAILURE);
         }
     }
@@ -587,7 +587,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     /**
      * Gets the initial settings to be sent to the remote endpoint.
      */
-    private Http2Settings getInitialSettings() {
+    private Http2Settings initialSettings() {
         return initialSettings != null ? initialSettings : decoder.localSettings();
     }
 
