@@ -16,19 +16,17 @@
 package io.netty.handler.ssl;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionListener;
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
-import io.netty.util.internal.PlatformDependent;
-
-import java.util.LinkedHashSet;
-import java.util.List;
-
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLException;
-
 import org.eclipse.jetty.alpn.ALPN;
 import org.eclipse.jetty.alpn.ALPN.ClientProvider;
 import org.eclipse.jetty.alpn.ALPN.ServerProvider;
+
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
+import java.util.LinkedHashSet;
+import java.util.List;
 
 final class JdkAlpnSslEngine extends JdkSslEngine {
     private static boolean available;
@@ -62,12 +60,15 @@ final class JdkAlpnSslEngine extends JdkSslEngine {
                     "protocolSelector");
             ALPN.put(engine, new ServerProvider() {
                 @Override
-                public String select(List<String> protocols) {
+                public String select(List<String> protocols) throws SSLException {
                     try {
                         return protocolSelector.select(protocols);
+                    } catch (SSLException e) {
+                        throw e;
                     } catch (Throwable t) {
-                        PlatformDependent.throwException(t);
-                        return null;
+                        // Ensure that all exceptions are propagated as SSLExceptions
+                        // so that the SslHandler properly fails the handshake.
+                        throw new SSLException(t);
                     }
                 }
 
@@ -87,11 +88,15 @@ final class JdkAlpnSslEngine extends JdkSslEngine {
                 }
 
                 @Override
-                public void selected(String protocol) {
+                public void selected(String protocol) throws SSLException {
                     try {
                         protocolListener.selected(protocol);
+                    } catch (SSLException e) {
+                        throw e;
                     } catch (Throwable t) {
-                        PlatformDependent.throwException(t);
+                        // Ensure that all exceptions are propagated as SSLExceptions
+                        // so that the SslHandler properly fails the handshake.
+                        throw new SSLException(t);
                     }
                 }
 
