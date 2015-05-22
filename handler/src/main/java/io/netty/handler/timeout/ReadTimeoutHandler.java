@@ -212,10 +212,9 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
                 return;
             }
 
-            long currentTime = System.nanoTime();
             long nextDelay = timeoutNanos;
             if (!reading) {
-                nextDelay -= currentTime - lastReadTime;
+                nextDelay -= System.nanoTime() - lastReadTime;
             }
 
             if (nextDelay <= 0) {
