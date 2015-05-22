@@ -28,8 +28,8 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  */
 public class FileDescriptor {
 
-    private final int fd;
-    private volatile boolean open = true;
+    protected final int fd;
+    protected volatile boolean open = true;
 
     public FileDescriptor(int fd) {
         if (fd < 0) {

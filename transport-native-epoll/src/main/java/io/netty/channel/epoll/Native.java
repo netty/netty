@@ -43,11 +43,15 @@ import java.util.Locale;
 public final class Native {
 
     static {
-        String name = SystemPropertyUtil.get("os.name").toLowerCase(Locale.UK).trim();
-        if (!name.startsWith("linux")) {
-            throw new IllegalStateException("Only supported on Linux");
-        }
-        NativeLibraryLoader.load("netty-transport-native-epoll", PlatformDependent.getClassLoader(Native.class));
+       loadLibrary();
+    }
+
+    public static void loadLibrary() {
+       String name = SystemPropertyUtil.get("os.name").toLowerCase(Locale.UK).trim();
+       if (!name.startsWith("linux")) {
+          throw new IllegalStateException("Only supported on Linux");
+       }
+       NativeLibraryLoader.load("netty-transport-native-epoll", PlatformDependent.getClassLoader(Native.class));
     }
 
     // EventLoop operations and constants

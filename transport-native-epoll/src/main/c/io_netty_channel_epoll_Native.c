@@ -375,6 +375,10 @@ static int init_in_addr(JNIEnv* env, jbyteArray address, struct in_addr* addr) {
 }
 // util methods end
 
+// prototypes for the load hook from DirectFileDescriptorController.c
+void directFile_JNI_OnLoad(JNIEnv* env);
+void directFile_JNI_OnUnLoad(JNIEnv* env);
+
 jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     JNIEnv* env;
     if ((*vm)->GetEnv(vm, (void**) &env, JNI_VERSION_1_6) != JNI_OK) {
@@ -605,6 +609,9 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
             return JNI_ERR;
         }
 
+        // load hook from DirectFileDescriptorController
+        directFile_JNI_OnLoad(env);
+
         return JNI_VERSION_1_6;
     }
 }
@@ -634,6 +641,9 @@ void JNI_OnUnload(JavaVM* vm, void* reserved) {
         if (netUtilClass != NULL) {
             (*env)->DeleteGlobalRef(env, netUtilClass);
         }
+
+        // unload hook from DirectFileDescriptorController
+        directFile_JNI_OnUnLoad(env);
     }
 }
 
