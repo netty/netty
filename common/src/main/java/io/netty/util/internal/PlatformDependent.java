@@ -151,8 +151,8 @@ public final class PlatformDependent {
     }
 
     /**
-     * Returns {@code true} if the platform has reliable low-level direct buffer access API and a user specified
-     * {@code -Dio.netty.preferDirect} option.
+     * Returns {@code true} if the platform has reliable low-level direct buffer access API and a user has not specified
+     * {@code -Dio.netty.noPreferDirect} option.
      */
     public static boolean directBufferPreferred() {
         return DIRECT_BUFFER_PREFERRED;
