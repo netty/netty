@@ -652,7 +652,7 @@
       <dependency>
         <groupId>org.eclipse.jetty.alpn</groupId>
         <artifactId>alpn-api</artifactId>
-        <version>1.1.0.v20141014</version>
+        <version>1.1.2.v20150522</version>
       </dependency>
       <dependency>
         <groupId>org.mortbay.jetty.alpn</groupId>
