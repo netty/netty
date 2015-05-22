@@ -47,7 +47,10 @@ import io.netty.handler.codec.http.HttpObjectDecoder;
  *     value, a {@link TooLongFrameException} will be raised.</td>
  * </tr>
  * </table>
+ *
+ * @deprecated Use {@link RtspDecoder} instead.
  */
+@Deprecated
 public abstract class RtspObjectDecoder extends HttpObjectDecoder {
 
     /**
