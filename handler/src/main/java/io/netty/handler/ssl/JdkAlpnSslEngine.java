@@ -16,20 +16,17 @@
 package io.netty.handler.ssl;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionListener;
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
-import io.netty.util.internal.PlatformDependent;
-
-import java.util.LinkedHashSet;
-import java.util.List;
-
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLHandshakeException;
-
 import org.eclipse.jetty.alpn.ALPN;
 import org.eclipse.jetty.alpn.ALPN.ClientProvider;
 import org.eclipse.jetty.alpn.ALPN.ServerProvider;
+
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
+import java.util.LinkedHashSet;
+import java.util.List;
 
 final class JdkAlpnSslEngine extends JdkSslEngine {
     private static boolean available;
