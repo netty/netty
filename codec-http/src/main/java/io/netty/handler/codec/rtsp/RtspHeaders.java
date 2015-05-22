@@ -24,6 +24,7 @@ import io.netty.handler.codec.http.HttpHeaders;
  * Standard RTSP header names and values.
  */
 @Deprecated
+@SuppressWarnings("deprecation")
 public final class RtspHeaders {
 
     /**
