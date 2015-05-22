@@ -63,7 +63,7 @@ final class JdkAlpnSslEngine extends JdkSslEngine {
                 public String select(List<String> protocols) throws SSLException {
                     try {
                         return protocolSelector.select(protocols);
-                    } catch(SSLException e) {
+                    } catch (SSLException e) {
                         throw e;
                     } catch (Throwable t) {
                         // Ensure that all exceptions are propagated as SSLExceptions
@@ -91,7 +91,7 @@ final class JdkAlpnSslEngine extends JdkSslEngine {
                 public void selected(String protocol) throws SSLException {
                     try {
                         protocolListener.selected(protocol);
-                    } catch(SSLException e) {
+                    } catch (SSLException e) {
                         throw e;
                     } catch (Throwable t) {
                         // Ensure that all exceptions are propagated as SSLExceptions
