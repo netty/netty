@@ -25,6 +25,7 @@ import java.util.List;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
 
 import org.eclipse.jetty.alpn.ALPN;
 import org.eclipse.jetty.alpn.ALPN.ClientProvider;
@@ -68,8 +69,9 @@ final class JdkAlpnSslEngine extends JdkSslEngine {
                     } catch(SSLException e) {
                         throw e;
                     } catch (Throwable t) {
-                        PlatformDependent.throwException(t);
-                        return null;
+                        // Ensure that all exceptions are propagated as SSLExceptions
+                        // so that the SslHandler properly fails the handshake.
+                        throw new SSLException(t.getMessage());
                     }
                 }
 
@@ -95,7 +97,9 @@ final class JdkAlpnSslEngine extends JdkSslEngine {
                     } catch(SSLException e) {
                         throw e;
                     } catch (Throwable t) {
-                        PlatformDependent.throwException(t);
+                        // Ensure that all exceptions are propagated as SSLExceptions
+                        // so that the SslHandler properly fails the handshake.
+                        throw new SSLException(t.getMessage());
                     }
                 }
 
