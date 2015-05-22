@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -36,10 +36,10 @@ import java.net.InetSocketAddress;
  */
 public final class SctpMultiHomingEchoServer {
 
-    static final String SERVER_PRIMARY_HOST = System.getProperty("host.primary", "127.0.0.1");
-    static final String SERVER_SECONDARY_HOST = System.getProperty("host.secondary", "127.0.0.2");
+    private static final String SERVER_PRIMARY_HOST = System.getProperty("host.primary", "127.0.0.1");
+    private static final String SERVER_SECONDARY_HOST = System.getProperty("host.secondary", "127.0.0.2");
 
-    static final int SERVER_PORT = Integer.parseInt(System.getProperty("port", "8007"));
+    private static final int SERVER_PORT = Integer.parseInt(System.getProperty("port", "8007"));
 
     public static void main(String[] args) throws Exception {
         // Configure the server.
