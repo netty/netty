@@ -24,8 +24,11 @@ import io.netty.handler.codec.http.HttpObjectEncoder;
 /**
  * Encodes an RTSP message represented in {@link FullHttpMessage} into
  * a {@link ByteBuf}.
+ *
+ * @deprecated Use {@link RtspEncoder} instead.
  */
 @Sharable
+@Deprecated
 public abstract class RtspObjectEncoder<H extends HttpMessage> extends HttpObjectEncoder<H> {
 
     /**
