@@ -62,9 +62,11 @@ final class JdkAlpnSslEngine extends JdkSslEngine {
                     "protocolSelector");
             ALPN.put(engine, new ServerProvider() {
                 @Override
-                public String select(List<String> protocols) {
+                public String select(List<String> protocols) throws SSLException {
                     try {
                         return protocolSelector.select(protocols);
+                    } catch(SSLException e) {
+                        throw e;
                     } catch (Throwable t) {
                         PlatformDependent.throwException(t);
                         return null;
@@ -87,9 +89,11 @@ final class JdkAlpnSslEngine extends JdkSslEngine {
                 }
 
                 @Override
-                public void selected(String protocol) {
+                public void selected(String protocol) throws SSLException {
                     try {
                         protocolListener.selected(protocol);
+                    } catch(SSLException e) {
+                        throw e;
                     } catch (Throwable t) {
                         PlatformDependent.throwException(t);
                     }
