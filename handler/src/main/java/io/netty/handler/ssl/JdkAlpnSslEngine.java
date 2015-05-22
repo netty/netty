@@ -71,7 +71,7 @@ final class JdkAlpnSslEngine extends JdkSslEngine {
                     } catch (Throwable t) {
                         // Ensure that all exceptions are propagated as SSLExceptions
                         // so that the SslHandler properly fails the handshake.
-                        throw new SSLException(t.getMessage());
+                        throw new SSLException(t);
                     }
                 }
 
@@ -99,7 +99,7 @@ final class JdkAlpnSslEngine extends JdkSslEngine {
                     } catch (Throwable t) {
                         // Ensure that all exceptions are propagated as SSLExceptions
                         // so that the SslHandler properly fails the handshake.
-                        throw new SSLException(t.getMessage());
+                        throw new SSLException(t);
                     }
                 }
 
