@@ -16,17 +16,19 @@
 package io.netty.handler.ssl;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionListener;
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
-import org.eclipse.jetty.alpn.ALPN;
-import org.eclipse.jetty.alpn.ALPN.ClientProvider;
-import org.eclipse.jetty.alpn.ALPN.ServerProvider;
+
+import java.util.LinkedHashSet;
+import java.util.List;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
-import java.util.LinkedHashSet;
-import java.util.List;
+import javax.net.ssl.SSLHandshakeException;
+
+import org.eclipse.jetty.alpn.ALPN;
+import org.eclipse.jetty.alpn.ALPN.ClientProvider;
+import org.eclipse.jetty.alpn.ALPN.ServerProvider;
 
 final class JdkAlpnSslEngine extends JdkSslEngine {
     private static boolean available;
@@ -63,12 +65,12 @@ final class JdkAlpnSslEngine extends JdkSslEngine {
                 public String select(List<String> protocols) throws SSLException {
                     try {
                         return protocolSelector.select(protocols);
-                    } catch (SSLException e) {
+                    } catch (SSLHandshakeException e) {
                         throw e;
                     } catch (Throwable t) {
-                        // Ensure that all exceptions are propagated as SSLExceptions
-                        // so that the SslHandler properly fails the handshake.
-                        throw new SSLException(t);
+                        SSLHandshakeException e = new SSLHandshakeException(t.getMessage());
+                        e.initCause(t);
+                        throw e;
                     }
                 }
 
@@ -91,12 +93,12 @@ final class JdkAlpnSslEngine extends JdkSslEngine {
                 public void selected(String protocol) throws SSLException {
                     try {
                         protocolListener.selected(protocol);
-                    } catch (SSLException e) {
+                    } catch (SSLHandshakeException e) {
                         throw e;
                     } catch (Throwable t) {
-                        // Ensure that all exceptions are propagated as SSLExceptions
-                        // so that the SslHandler properly fails the handshake.
-                        throw new SSLException(t);
+                        SSLHandshakeException e = new SSLHandshakeException(t.getMessage());
+                        e.initCause(t);
+                        throw e;
                     }
                 }
 
