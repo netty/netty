@@ -17,6 +17,7 @@
 package io.netty.buffer;
 
 
+import io.netty.buffer.PoolArena.SizeClass;
 import io.netty.util.ThreadDeathWatcher;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -77,8 +78,10 @@ final class PoolThreadCache {
         this.heapArena = heapArena;
         this.directArena = directArena;
         if (directArena != null) {
-            tinySubPageDirectCaches = createSubPageCaches(tinyCacheSize, PoolArena.numTinySubpagePools);
-            smallSubPageDirectCaches = createSubPageCaches(smallCacheSize, directArena.numSmallSubpagePools);
+            tinySubPageDirectCaches = createSubPageCaches(
+                    tinyCacheSize, PoolArena.numTinySubpagePools, SizeClass.Tiny);
+            smallSubPageDirectCaches = createSubPageCaches(
+                    smallCacheSize, directArena.numSmallSubpagePools, SizeClass.Small);
 
             numShiftsNormalDirect = log2(directArena.pageSize);
             normalDirectCaches = createNormalCaches(
@@ -92,8 +95,10 @@ final class PoolThreadCache {
         }
         if (heapArena != null) {
             // Create the caches for the heap allocations
-            tinySubPageHeapCaches = createSubPageCaches(tinyCacheSize, PoolArena.numTinySubpagePools);
-            smallSubPageHeapCaches = createSubPageCaches(smallCacheSize, heapArena.numSmallSubpagePools);
+            tinySubPageHeapCaches = createSubPageCaches(
+                    tinyCacheSize, PoolArena.numTinySubpagePools, SizeClass.Tiny);
+            smallSubPageHeapCaches = createSubPageCaches(
+                    smallCacheSize, heapArena.numSmallSubpagePools, SizeClass.Small);
 
             numShiftsNormalHeap = log2(heapArena.pageSize);
             normalHeapCaches = createNormalCaches(
@@ -111,13 +116,14 @@ final class PoolThreadCache {
         ThreadDeathWatcher.watch(thread, freeTask);
     }
 
-    private static <T> SubPageMemoryRegionCache<T>[] createSubPageCaches(int cacheSize, int numCaches) {
+    private static <T> SubPageMemoryRegionCache<T>[] createSubPageCaches(
+            int cacheSize, int numCaches, SizeClass sizeClass) {
         if (cacheSize > 0) {
             @SuppressWarnings("unchecked")
             SubPageMemoryRegionCache<T>[] cache = new SubPageMemoryRegionCache[numCaches];
             for (int i = 0; i < cache.length; i++) {
                 // TODO: maybe use cacheSize / cache.length
-                cache[i] = new SubPageMemoryRegionCache<T>(cacheSize);
+                cache[i] = new SubPageMemoryRegionCache<T>(cacheSize, sizeClass);
             }
             return cache;
         } else {
@@ -191,21 +197,25 @@ final class PoolThreadCache {
      * Returns {@code true} if it fit into the cache {@code false} otherwise.
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    boolean add(PoolArena<?> area, PoolChunk chunk, long handle, int normCapacity) {
-        MemoryRegionCache<?> cache;
-        if (area.isTinyOrSmall(normCapacity)) {
-            if (PoolArena.isTiny(normCapacity)) {
-                cache = cacheForTiny(area, normCapacity);
-            } else {
-                cache = cacheForSmall(area, normCapacity);
-            }
-        } else {
-            cache = cacheForNormal(area, normCapacity);
-        }
+    boolean add(PoolArena<?> area, PoolChunk chunk, long handle, int normCapacity, SizeClass sizeClass) {
+        MemoryRegionCache<?> cache = cache(area, normCapacity, sizeClass);
         if (cache == null) {
             return false;
         }
         return cache.add(chunk, handle);
+    }
+
+    private MemoryRegionCache<?> cache(PoolArena<?> area, int normCapacity, SizeClass sizeClass) {
+        switch (sizeClass) {
+        case Normal:
+            return cacheForNormal(area, normCapacity);
+        case Small:
+            return cacheForSmall(area, normCapacity);
+        case Tiny:
+            return cacheForTiny(area, normCapacity);
+        default:
+            throw new Error();
+        }
     }
 
     /**
@@ -309,8 +319,8 @@ final class PoolThreadCache {
      * Cache used for buffers which are backed by TINY or SMALL size.
      */
     private static final class SubPageMemoryRegionCache<T> extends MemoryRegionCache<T> {
-        SubPageMemoryRegionCache(int size) {
-            super(size);
+        SubPageMemoryRegionCache(int size, SizeClass sizeClass) {
+            super(size, sizeClass);
         }
 
         @Override
@@ -325,7 +335,7 @@ final class PoolThreadCache {
      */
     private static final class NormalMemoryRegionCache<T> extends MemoryRegionCache<T> {
         NormalMemoryRegionCache(int size) {
-            super(size);
+            super(size, SizeClass.Normal);
         }
 
         @Override
@@ -343,6 +353,7 @@ final class PoolThreadCache {
      */
     private abstract static class MemoryRegionCache<T> {
         private final Entry<T>[] entries;
+        private final SizeClass sizeClass;
         private final int maxUnusedCached;
         private int head;
         private int tail;
@@ -350,12 +361,13 @@ final class PoolThreadCache {
         private int entriesInUse;
 
         @SuppressWarnings("unchecked")
-        MemoryRegionCache(int size) {
+        MemoryRegionCache(int size, SizeClass sizeClass) {
             entries = new Entry[powerOfTwo(size)];
             for (int i = 0; i < entries.length; i++) {
                 entries[i] = new Entry<T>();
             }
             maxUnusedCached = size / 2;
+            this.sizeClass = sizeClass;
         }
 
         private static int powerOfTwo(int res) {
@@ -460,15 +472,12 @@ final class PoolThreadCache {
         }
 
         @SuppressWarnings({ "unchecked", "rawtypes" })
-        private static boolean freeEntry(Entry entry) {
+        private boolean freeEntry(Entry entry) {
             PoolChunk chunk = entry.chunk;
             if (chunk == null) {
                 return false;
             }
-            // need to synchronize on the area from which it was allocated before.
-            synchronized (chunk.arena) {
-                chunk.parent.free(chunk, entry.handle);
-            }
+            chunk.arena.freeChunk(chunk, entry.handle, sizeClass);
             entry.chunk = null;
             return true;
         }
