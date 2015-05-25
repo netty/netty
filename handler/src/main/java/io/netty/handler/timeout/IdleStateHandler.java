@@ -97,6 +97,15 @@ import java.util.concurrent.TimeUnit;
 public class IdleStateHandler extends ChannelDuplexHandler {
     private static final long MIN_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(1);
 
+    // Not create a new ChannelFutureListener per write operation to reduce GC pressure.
+    private final ChannelFutureListener writeListener = new ChannelFutureListener() {
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
+            lastWriteTime = System.nanoTime();
+            firstWriterIdleEvent = firstAllIdleEvent = true;
+        }
+    };
+
     private final long readerIdleTimeNanos;
     private final long writerIdleTimeNanos;
     private final long allIdleTimeNanos;
@@ -113,6 +122,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     private boolean firstAllIdleEvent = true;
 
     private volatile int state; // 0 - none, 1 - initialized, 2 - destroyed
+    private volatile boolean reading;
 
     /**
      * Creates a new instance firing {@link IdleStateEvent}s.
@@ -249,20 +259,27 @@ public class IdleStateHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        lastReadTime = System.nanoTime();
-        firstReaderIdleEvent = firstAllIdleEvent = true;
+        if (readerIdleTimeNanos > 0 || allIdleTimeNanos > 0) {
+            reading = true;
+            firstReaderIdleEvent = firstAllIdleEvent = true;
+        }
         ctx.fireChannelRead(msg);
     }
 
     @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        if (readerIdleTimeNanos > 0 || allIdleTimeNanos > 0) {
+            lastReadTime = System.nanoTime();
+            reading = false;
+        }
+        ctx.fireChannelReadComplete();
+    }
+
+    @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        promise.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                lastWriteTime = System.nanoTime();
-                firstWriterIdleEvent = firstAllIdleEvent = true;
-            }
-        });
+        if (writerIdleTimeNanos > 0 || allIdleTimeNanos > 0) {
+            promise.addListener(writeListener);
+        }
         ctx.write(msg, promise);
     }
 
@@ -336,9 +353,11 @@ public class IdleStateHandler extends ChannelDuplexHandler {
                 return;
             }
 
-            long currentTime = System.nanoTime();
-            long lastReadTime = IdleStateHandler.this.lastReadTime;
-            long nextDelay = readerIdleTimeNanos - (currentTime - lastReadTime);
+            long nextDelay = readerIdleTimeNanos;
+            if (!reading) {
+                nextDelay -= System.nanoTime() - lastReadTime;
+            }
+
             if (nextDelay <= 0) {
                 // Reader is idle - set a new timeout and notify the callback.
                 readerIdleTimeout =
@@ -376,9 +395,8 @@ public class IdleStateHandler extends ChannelDuplexHandler {
                 return;
             }
 
-            long currentTime = System.nanoTime();
             long lastWriteTime = IdleStateHandler.this.lastWriteTime;
-            long nextDelay = writerIdleTimeNanos - (currentTime - lastWriteTime);
+            long nextDelay = writerIdleTimeNanos - (System.nanoTime() - lastWriteTime);
             if (nextDelay <= 0) {
                 // Writer is idle - set a new timeout and notify the callback.
                 writerIdleTimeout = ctx.executor().schedule(
@@ -416,9 +434,10 @@ public class IdleStateHandler extends ChannelDuplexHandler {
                 return;
             }
 
-            long currentTime = System.nanoTime();
-            long lastIoTime = Math.max(lastReadTime, lastWriteTime);
-            long nextDelay = allIdleTimeNanos - (currentTime - lastIoTime);
+            long nextDelay = allIdleTimeNanos;
+            if (!reading) {
+                nextDelay -= System.nanoTime() - Math.max(lastReadTime, lastWriteTime);
+            }
             if (nextDelay <= 0) {
                 // Both reader and writer are idle - set a new timeout and
                 // notify the callback.
