@@ -25,23 +25,27 @@ import java.util.List;
 
 final class PoolChunkList<T> implements PoolChunkListMetric {
     private static final Iterator<PoolChunkMetric> EMPTY_METRICS = Collections.<PoolChunkMetric>emptyList().iterator();
-    private final PoolArena<T> arena;
     private final PoolChunkList<T> nextList;
-    PoolChunkList<T> prevList;
-
     private final int minUsage;
     private final int maxUsage;
 
     private PoolChunk<T> head;
 
+    // This is only update once when create the linked like list of PoolChunkList in PoolArena constructor.
+    private PoolChunkList<T> prevList;
+
     // TODO: Test if adding padding helps under contention
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
 
-    PoolChunkList(PoolArena<T> arena, PoolChunkList<T> nextList, int minUsage, int maxUsage) {
-        this.arena = arena;
+    PoolChunkList(PoolChunkList<T> nextList, int minUsage, int maxUsage) {
         this.nextList = nextList;
         this.minUsage = minUsage;
         this.maxUsage = maxUsage;
+    }
+
+    void prevList(PoolChunkList<T> prevList) {
+        assert this.prevList == null;
+        this.prevList = prevList;
     }
 
     boolean allocate(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
@@ -67,17 +71,19 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
         }
     }
 
-    void free(PoolChunk<T> chunk, long handle) {
+    boolean free(PoolChunk<T> chunk, long handle) {
         chunk.free(handle);
         if (chunk.usage() < minUsage) {
             remove(chunk);
             if (prevList == null) {
                 assert chunk.usage() == 0;
-                arena.destroyChunk(chunk);
+                return false;
             } else {
                 prevList.add(chunk);
+                return true;
             }
         }
+        return true;
     }
 
     void add(PoolChunk<T> chunk) {

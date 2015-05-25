@@ -27,6 +27,12 @@ import java.util.List;
 
 abstract class PoolArena<T> implements PoolArenaMetric {
 
+    enum SizeClass {
+        Tiny,
+        Small,
+        Normal
+    }
+
     static final int numTinySubpagePools = 512 >>> 4;
 
     final PooledByteBufAllocator parent;
@@ -83,19 +89,19 @@ abstract class PoolArena<T> implements PoolArenaMetric {
             smallSubpagePools[i] = newSubpagePoolHead(pageSize);
         }
 
-        q100 = new PoolChunkList<T>(this, null, 100, Integer.MAX_VALUE);
-        q075 = new PoolChunkList<T>(this, q100, 75, 100);
-        q050 = new PoolChunkList<T>(this, q075, 50, 100);
-        q025 = new PoolChunkList<T>(this, q050, 25, 75);
-        q000 = new PoolChunkList<T>(this, q025, 1, 50);
-        qInit = new PoolChunkList<T>(this, q000, Integer.MIN_VALUE, 25);
+        q100 = new PoolChunkList<T>(null, 100, Integer.MAX_VALUE);
+        q075 = new PoolChunkList<T>(q100, 75, 100);
+        q050 = new PoolChunkList<T>(q075, 50, 100);
+        q025 = new PoolChunkList<T>(q050, 25, 75);
+        q000 = new PoolChunkList<T>(q025, 1, 50);
+        qInit = new PoolChunkList<T>(q000, Integer.MIN_VALUE, 25);
 
-        q100.prevList = q075;
-        q075.prevList = q050;
-        q050.prevList = q025;
-        q025.prevList = q000;
-        q000.prevList = null;
-        qInit.prevList = qInit;
+        q100.prevList(q075);
+        q075.prevList(q050);
+        q050.prevList(q025);
+        q025.prevList(q000);
+        q000.prevList(null);
+        qInit.prevList(qInit);
 
         List<PoolChunkListMetric> metrics = new ArrayList<PoolChunkListMetric>(6);
         metrics.add(qInit);
@@ -234,25 +240,46 @@ abstract class PoolArena<T> implements PoolArenaMetric {
             allocationsHuge.decrement();
             destroyChunk(chunk);
         } else {
+            SizeClass sizeClass = sizeClass(normCapacity);
             if (sameThreads) {
-                PoolThreadCache cache = parent.threadCache.get();
-                if (cache.add(this, chunk, handle, normCapacity)) {
+                PoolThreadCache cache = parent.threadCache();
+                if (cache.add(this, chunk, handle, normCapacity, sizeClass)) {
                     // cached so not free it.
                     return;
                 }
             }
+            freeChunk(chunk, handle, sizeClass);
+        }
+    }
 
-            boolean tinyOrSmall = isTinyOrSmall(normCapacity);
-            synchronized (this) {
-                if (!tinyOrSmall) {
-                    ++deallocationsNormal;
-                } else if (isTiny(normCapacity)) {
-                    ++deallocationsTiny;
-                } else {
-                    ++deallocationsSmall;
-                }
-                chunk.parent.free(chunk, handle);
+    private SizeClass sizeClass(int normCapacity) {
+        if (!isTinyOrSmall(normCapacity)) {
+            return SizeClass.Normal;
+        }
+        return isTiny(normCapacity) ? SizeClass.Tiny : SizeClass.Small;
+    }
+
+    void freeChunk(PoolChunk<T> chunk, long handle, SizeClass sizeClass) {
+        final boolean destroyChunk;
+        synchronized (this) {
+            switch (sizeClass) {
+            case Normal:
+                ++deallocationsNormal;
+                break;
+            case Small:
+                ++deallocationsSmall;
+                break;
+            case Tiny:
+                ++deallocationsTiny;
+                break;
+            default:
+                throw new Error();
             }
+            destroyChunk = !chunk.parent.free(chunk, handle);
+        }
+        if (destroyChunk) {
+            // destroyChunk not need to be called while holding the synchronized lock.
+            destroyChunk(chunk);
         }
     }
 
@@ -328,7 +355,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         int readerIndex = buf.readerIndex();
         int writerIndex = buf.writerIndex();
 
-        allocate(parent.threadCache.get(), buf, newCapacity);
+        allocate(parent.threadCache(), buf, newCapacity);
         if (newCapacity > oldCapacity) {
             memoryCopy(
                     oldMemory, oldOffset,
