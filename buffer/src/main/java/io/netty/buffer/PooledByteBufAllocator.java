@@ -127,11 +127,9 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     private final int tinyCacheSize;
     private final int smallCacheSize;
     private final int normalCacheSize;
-
     private final List<PoolArenaMetric> heapArenaMetrics;
     private final List<PoolArenaMetric> directArenaMetrics;
-
-    final PoolThreadLocalCache threadCache;
+    private final PoolThreadLocalCache threadCache;
 
     public PooledByteBufAllocator() {
         this(false);
@@ -386,6 +384,10 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
      */
     public int normalCacheSize() {
         return normalCacheSize;
+    }
+
+    final PoolThreadCache threadCache() {
+        return threadCache.get();
     }
 
     // Too noisy at the moment.
