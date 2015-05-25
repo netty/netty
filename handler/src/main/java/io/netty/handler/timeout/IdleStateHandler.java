@@ -256,13 +256,16 @@ public class IdleStateHandler extends ChannelDuplexHandler {
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        promise.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                lastWriteTime = System.nanoTime();
-                firstWriterIdleEvent = firstAllIdleEvent = true;
-            }
-        });
+        // Allow writing with void promise if handler is only configured for read timeout events.
+        if (writerIdleTimeNanos > 0 || allIdleTimeNanos > 0) {
+            promise.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    lastWriteTime = System.nanoTime();
+                    firstWriterIdleEvent = firstAllIdleEvent = true;
+                }
+            });
+        }
         ctx.write(msg, promise);
     }
 
