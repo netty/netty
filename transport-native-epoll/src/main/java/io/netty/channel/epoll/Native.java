@@ -25,6 +25,7 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -471,7 +472,7 @@ public final class Native {
                 // connect not complete yet need to wait for EPOLLOUT event
                 return false;
             }
-            throw newIOException("connect", res);
+            throw newConnectException("connect", res);
         }
         return true;
     }
@@ -486,12 +487,16 @@ public final class Native {
                 // connect still in progress
                 return false;
             }
-            throw newIOException("finishConnect", res);
+            throw newConnectException("finishConnect", res);
         }
         return true;
     }
 
     private static native int finishConnect0(int fd);
+
+    private static ConnectException newConnectException(String method, int err) {
+        return new ConnectException(method + "() failed: " + ERRORS[-err]);
+    }
 
     public static InetSocketAddress remoteAddress(int fd) {
         byte[] addr = remoteAddress0(fd);
