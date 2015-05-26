@@ -16,10 +16,16 @@
 package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
+import io.netty.testsuite.util.TestUtils;
+import io.netty.util.NetUtil;
+import io.netty.util.concurrent.GlobalEventExecutor;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -58,6 +64,41 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
         } finally {
             future.channel().close();
         }
+    }
+
+    @Test(timeout = 30000)
+    public void testConnectRefused() throws Throwable {
+        run();
+    }
+
+    public void testConnectRefused(Bootstrap cb) throws Throwable {
+        testConnectRefused0(cb, false);
+    }
+
+    @Test(timeout = 30000)
+    public void testConnectRefusedHalfClosure() throws Throwable {
+        run();
+    }
+
+    public void testConnectRefusedHalfClosure(Bootstrap cb) throws Throwable {
+        testConnectRefused0(cb, true);
+    }
+
+    private static void testConnectRefused0(Bootstrap cb, boolean halfClosure) throws Throwable {
+        final Promise<Error> errorPromise = GlobalEventExecutor.INSTANCE.newPromise();
+        ChannelHandler handler = new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                Channel channel = ctx.channel();
+                errorPromise.setFailure(new AssertionError("should have never been called"));
+            }
+        };
+
+        cb.handler(handler);
+        cb.option(ChannelOption.ALLOW_HALF_CLOSURE, halfClosure);
+        ChannelFuture future = cb.connect(NetUtil.LOCALHOST, TestUtils.getFreePort()).awaitUninterruptibly();
+        assertTrue(future.cause() instanceof ConnectException);
+        assertNull(errorPromise.cause());
     }
 
     @Test
