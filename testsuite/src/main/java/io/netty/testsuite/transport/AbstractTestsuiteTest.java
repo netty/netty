@@ -57,7 +57,7 @@ public abstract class AbstractTestsuiteTest<T extends AbstractBootstrap<?, ?>> {
                         "Running: %s %d of %d with %s",
                         testName.getMethodName(), ++ i, combos.size(), StringUtil.simpleClassName(allocator)));
                 try {
-                    Method m = getClass().getDeclaredMethod(
+                    Method m = getClass().getMethod(
                             TestUtils.testMethodName(testName), clazz);
                     m.invoke(this, cb);
                 } catch (InvocationTargetException ex) {

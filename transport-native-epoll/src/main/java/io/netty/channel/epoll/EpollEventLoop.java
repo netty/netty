@@ -309,9 +309,21 @@ final class EpollEventLoop extends SingleThreadEventLoop {
 
                 AbstractEpollChannel ch = channels.get(fd);
                 if (ch != null) {
+                    // Don't change the ordering of processing EPOLLOUT | EPOLLRDHUP / EPOLLIN if you're not 100%
+                    // sure about it!
+                    // Re-ordering can easily introduce bugs and bad side-effects, as we found out painfully in the
+                    // past.
                     AbstractEpollUnsafe unsafe = (AbstractEpollUnsafe) ch.unsafe();
 
-                    // First check if EPOLLRDHUP was set, this will notify us for connection-reset in which case
+                    // First check for EPOLLOUT as we may need to fail the connect ChannelPromise before try
+                    // to read from the file descriptor.
+                    // See https://github.com/netty/netty/issues/3785
+                    if ((ev & Native.EPOLLOUT) != 0 && ch.isOpen()) {
+                        // Force flush of data as the epoll is writable again
+                        unsafe.epollOutReady();
+                    }
+
+                    // Check if EPOLLRDHUP was set, this will notify us for connection-reset in which case
                     // we may close the channel directly or try to read more data depending on the state of the
                     // Channel and als depending on the AbstractEpollChannel subtype.
                     if ((ev & Native.EPOLLRDHUP) != 0) {
@@ -320,10 +332,6 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                     if ((ev & Native.EPOLLIN) != 0 && ch.isOpen()) {
                         // The Channel is still open and there is something to read. Do it now.
                         unsafe.epollInReady();
-                    }
-                    if ((ev & Native.EPOLLOUT) != 0 && ch.isOpen()) {
-                        // Force flush of data as the epoll is writable again
-                        unsafe.epollOutReady();
                     }
                 } else {
                     // We received an event for an fd which we not use anymore. Remove it from the epoll_event set.
