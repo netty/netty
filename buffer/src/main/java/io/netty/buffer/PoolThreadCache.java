@@ -441,11 +441,12 @@ final class PoolThreadCache {
         @SuppressWarnings({ "unchecked", "rawtypes" })
         private  void freeEntry(Entry entry) {
             PoolChunk chunk = entry.chunk;
+            long handle = entry.handle;
 
             // recycle now so PoolChunk can be GC'ed.
             entry.recycle();
 
-            chunk.arena.freeChunk(chunk, entry.handle, sizeClass);
+            chunk.arena.freeChunk(chunk, handle, sizeClass);
         }
 
         static final class Entry<T> {
