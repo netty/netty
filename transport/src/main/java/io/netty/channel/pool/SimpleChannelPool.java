@@ -37,7 +37,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * Simple {@link ChannelPool} implementation which will create new {@link Channel}s if someone tries to acquire
  * a {@link Channel} but none is in the pool atm. No limit on the maximal concurrent {@link Channel}s is enforced.
  *
- * This implementation uses FIFO order for {@link Channel}s in the {@link ChannelPool}.
+ * This implementation uses LIFO order for {@link Channel}s in the {@link ChannelPool}.
  *
  */
 public class SimpleChannelPool implements ChannelPool {
