@@ -16,9 +16,7 @@
 package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.unix.DomainSocketChannelConfig;
@@ -28,8 +26,7 @@ import java.util.Map;
 
 public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
         implements DomainSocketChannelConfig {
-    private volatile DomainSocketReadMode mode =
-            DomainSocketReadMode.BYTES;
+    private volatile DomainSocketReadMode mode = DomainSocketReadMode.BYTES;
 
     EpollDomainSocketChannelConfig(AbstractEpollChannel channel) {
         super(channel);
