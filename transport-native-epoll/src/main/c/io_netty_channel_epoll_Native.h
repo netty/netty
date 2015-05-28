@@ -80,6 +80,7 @@ void Java_io_netty_channel_epoll_Native_setReceiveBufferSize(JNIEnv* env, jclass
 void Java_io_netty_channel_epoll_Native_setSendBufferSize(JNIEnv* env, jclass clazz, jint fd, jint optval);
 void Java_io_netty_channel_epoll_Native_setKeepAlive(JNIEnv* env, jclass clazz, jint fd, jint optval);
 void Java_io_netty_channel_epoll_Native_setTcpCork(JNIEnv* env, jclass clazz, jint fd, jint optval);
+void Java_io_netty_channel_epoll_Native_setTcpNotSentLowAt(JNIEnv* env, jclass clazz, jint fd, jint optval);
 void Java_io_netty_channel_epoll_Native_setSoLinger(JNIEnv* env, jclass clazz, jint fd, jint optval);
 void Java_io_netty_channel_epoll_Native_setTrafficClass(JNIEnv* env, jclass clazz, jint fd, jint optval);
 void Java_io_netty_channel_epoll_Native_setBroadcast(JNIEnv* env, jclass clazz, jint fd, jint optval);
@@ -93,6 +94,7 @@ jint Java_io_netty_channel_epoll_Native_isTcpNoDelay(JNIEnv* env, jclass clazz, 
 jint Java_io_netty_channel_epoll_Native_getReceiveBufferSize(JNIEnv* env, jclass clazz, jint fd);
 jint Java_io_netty_channel_epoll_Native_getSendBufferSize(JNIEnv* env, jclass clazz, jint fd);
 jint Java_io_netty_channel_epoll_Native_isTcpCork(JNIEnv* env, jclass clazz, jint fd);
+jint Java_io_netty_channel_epoll_Native_getTcpNotSentLowAt(JNIEnv* env, jclass clazz, jint fd);
 jint Java_io_netty_channel_epoll_Native_getSoLinger(JNIEnv* env, jclass clazz, jint fd);
 jint Java_io_netty_channel_epoll_Native_getTrafficClass(JNIEnv* env, jclass clazz, jint fd);
 jint Java_io_netty_channel_epoll_Native_isBroadcast(JNIEnv* env, jclass clazz, jint fd);
