@@ -626,6 +626,7 @@ public final class Native {
     public static native int isReusePort(int fd);
     public static native int isTcpNoDelay(int fd);
     public static native int isTcpCork(int fd);
+    public static native int getTcpNotSentLowAt(int fd);
     public static native int getSoLinger(int fd);
     public static native int getTrafficClass(int fd);
     public static native int isBroadcast(int fd);
@@ -641,6 +642,7 @@ public final class Native {
     public static native void setSendBufferSize(int fd, int sendBufferSize);
     public static native void setTcpNoDelay(int fd, int tcpNoDelay);
     public static native void setTcpCork(int fd, int tcpCork);
+    public static native void setTcpNotSentLowAt(int fd, int tcpNotSentLowAt);
     public static native void setSoLinger(int fd, int soLinger);
     public static native void setTrafficClass(int fd, int tcpNoDelay);
     public static native void setBroadcast(int fd, int broadcast);

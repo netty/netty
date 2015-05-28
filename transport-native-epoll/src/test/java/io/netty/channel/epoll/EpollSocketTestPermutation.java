@@ -56,6 +56,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
         return list;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public List<BootstrapFactory<ServerBootstrap>> serverSocket() {
         return Arrays.asList(
@@ -76,6 +77,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
         );
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public List<BootstrapFactory<Bootstrap>> clientSocket() {
         return Arrays.asList(
@@ -97,6 +99,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
     @Override
     public List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> datagram() {
         // Make the list of Bootstrap factories.
+        @SuppressWarnings("unchecked")
         List<BootstrapFactory<Bootstrap>> bfs = Arrays.asList(
                 new BootstrapFactory<Bootstrap>() {
                     @Override
