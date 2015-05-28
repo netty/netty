@@ -27,7 +27,7 @@ import java.util.Map;
 import static io.netty.channel.ChannelOption.*;
 
 public final class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChannelConfig {
-
+    private static final long MAX_UINT32_T = 0xFFFFFFFFL;
     private final EpollSocketChannel channel;
     private volatile boolean allowHalfClosure;
 
@@ -48,8 +48,8 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
         return getOptions(
                 super.getOptions(),
                 SO_RCVBUF, SO_SNDBUF, TCP_NODELAY, SO_KEEPALIVE, SO_REUSEADDR, SO_LINGER, IP_TOS,
-                ALLOW_HALF_CLOSURE, EpollChannelOption.TCP_CORK, EpollChannelOption.TCP_KEEPCNT,
-                EpollChannelOption.TCP_KEEPIDLE, EpollChannelOption.TCP_KEEPINTVL);
+                ALLOW_HALF_CLOSURE, EpollChannelOption.TCP_CORK, EpollChannelOption.TCP_NOTSENT_LOWAT,
+                EpollChannelOption.TCP_KEEPCNT, EpollChannelOption.TCP_KEEPIDLE, EpollChannelOption.TCP_KEEPINTVL);
     }
 
     @SuppressWarnings("unchecked")
@@ -81,6 +81,9 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
         }
         if (option == EpollChannelOption.TCP_CORK) {
             return (T) Boolean.valueOf(isTcpCork());
+        }
+        if (option == EpollChannelOption.TCP_NOTSENT_LOWAT) {
+            return (T) Long.valueOf(getTcpNotSentLowAt());
         }
         if (option == EpollChannelOption.TCP_KEEPIDLE) {
             return (T) Integer.valueOf(getTcpKeepIdle());
@@ -116,6 +119,8 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
             setAllowHalfClosure((Boolean) value);
         } else if (option == EpollChannelOption.TCP_CORK) {
             setTcpCork((Boolean) value);
+        } else if (option == EpollChannelOption.TCP_NOTSENT_LOWAT) {
+            setTcpNotSentLowAt((Long) value);
         } else if (option == EpollChannelOption.TCP_KEEPIDLE) {
             setTcpKeepIdle((Integer) value);
         } else if (option == EpollChannelOption.TCP_KEEPCNT) {
@@ -169,6 +174,14 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
      */
     public boolean isTcpCork() {
         return Native.isTcpCork(channel.fd().intValue()) == 1;
+    }
+
+    /**
+     * Get the {@code TCP_NOTSENT_LOWAT} option on the socket. See {@code man 7 tcp} for more details.
+     * @return value is a uint32_t
+     */
+    public long getTcpNotSentLowAt() {
+        return Native.getTcpNotSentLowAt(channel.fd().intValue()) & MAX_UINT32_T;
     }
 
     /**
@@ -239,6 +252,18 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
      */
     public EpollSocketChannelConfig setTcpCork(boolean tcpCork) {
         Native.setTcpCork(channel.fd().intValue(), tcpCork ? 1 : 0);
+        return this;
+    }
+
+    /**
+     * Set the {@code TCP_NOTSENT_LOWAT} option on the socket. See {@code man 7 tcp} for more details.
+     * @param tcpNotSentLowAt is a uint32_t
+     */
+    public EpollSocketChannelConfig setTcpNotSentLowAt(long tcpNotSentLowAt) {
+        if (tcpNotSentLowAt < 0 || tcpNotSentLowAt > MAX_UINT32_T) {
+            throw new IllegalArgumentException("tcpNotSentLowAt must be a uint32_t");
+        }
+        Native.setTcpNotSentLowAt(channel.fd().intValue(), (int) tcpNotSentLowAt);
         return this;
     }
 
