@@ -595,7 +595,7 @@
     </argLine.common>
     <!-- Default to ALPN. Then classpath is used to refine selection. See forcenpn profile to force NPN -->
     <argLine.bootcp>-Xbootclasspath/p:${jetty.alpn.path}</argLine.bootcp>
-    <argLine.leak>-verbose:gc</argLine.leak> <!-- Overridden when 'leak' profile is active -->
+    <argLine.leak>-D_</argLine.leak> <!-- Overridden when 'leak' profile is active -->
     <argLine.coverage>-D_</argLine.coverage> <!-- Overridden when 'coverage' profile is active -->
   </properties>
 
