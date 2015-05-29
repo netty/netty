@@ -15,8 +15,11 @@
  */
 package io.netty.handler.codec.haproxy;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.ProtocolDetectionResult;
+import io.netty.handler.codec.ProtocolDetectionState;
 import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.AddressFamily;
 import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.TransportProtocol;
 import io.netty.util.CharsetUtil;
@@ -895,5 +898,52 @@ public class HAProxyMessageDecoderTest {
         ch.writeInbound(copiedBuffer(header));
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testDetectProtocol() {
+        final ByteBuf validHeaderV1 = copiedBuffer("PROXY TCP4 192.168.0.1 192.168.0.11 56324 443\r\n",
+                                                   CharsetUtil.US_ASCII);
+        ProtocolDetectionResult<HAProxyProtocolVersion> result = HAProxyMessageDecoder.detectProtocol(validHeaderV1);
+        assertEquals(ProtocolDetectionState.DETECTED, result.state());
+        assertEquals(HAProxyProtocolVersion.V1, result.detectedProtocol());
+        validHeaderV1.release();
+
+        final ByteBuf invalidHeader = copiedBuffer("Invalid header", CharsetUtil.US_ASCII);
+        result = HAProxyMessageDecoder.detectProtocol(invalidHeader);
+        assertEquals(ProtocolDetectionState.INVALID, result.state());
+        assertNull(result.detectedProtocol());
+        invalidHeader.release();
+
+        final ByteBuf validHeaderV2 = buffer();
+        validHeaderV2.writeByte(0x0D);
+        validHeaderV2.writeByte(0x0A);
+        validHeaderV2.writeByte(0x0D);
+        validHeaderV2.writeByte(0x0A);
+        validHeaderV2.writeByte(0x00);
+        validHeaderV2.writeByte(0x0D);
+        validHeaderV2.writeByte(0x0A);
+        validHeaderV2.writeByte(0x51);
+        validHeaderV2.writeByte(0x55);
+        validHeaderV2.writeByte(0x49);
+        validHeaderV2.writeByte(0x54);
+        validHeaderV2.writeByte(0x0A);
+        result = HAProxyMessageDecoder.detectProtocol(validHeaderV2);
+        assertEquals(ProtocolDetectionState.DETECTED, result.state());
+        assertEquals(HAProxyProtocolVersion.V2, result.detectedProtocol());
+        validHeaderV2.release();
+
+        final ByteBuf incompleteHeader = buffer();
+        incompleteHeader.writeByte(0x0D);
+        incompleteHeader.writeByte(0x0A);
+        incompleteHeader.writeByte(0x0D);
+        incompleteHeader.writeByte(0x0A);
+        incompleteHeader.writeByte(0x00);
+        incompleteHeader.writeByte(0x0D);
+        incompleteHeader.writeByte(0x0A);
+        result = HAProxyMessageDecoder.detectProtocol(incompleteHeader);
+        assertEquals(ProtocolDetectionState.NEEDS_MORE_DATA, result.state());
+        assertNull(result.detectedProtocol());
+        incompleteHeader.release();
     }
 }
