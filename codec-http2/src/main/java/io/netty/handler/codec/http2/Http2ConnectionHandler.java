@@ -442,20 +442,16 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     public void closeStream(final Http2Stream stream, ChannelFuture future) {
         stream.close();
 
-        future.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                // If this connection is closing and the graceful shutdown has completed, close the connection
-                // once this operation completes.
-                if (closeListener != null && isGracefulShutdownComplete()) {
-                    ChannelFutureListener closeListener = Http2ConnectionHandler.this.closeListener;
-                    // This method could be called multiple times
-                    // and we don't want to notify the closeListener multiple times.
-                    Http2ConnectionHandler.this.closeListener = null;
-                    closeListener.operationComplete(future);
+        if (future.isDone()) {
+            checkCloseConnection(future);
+        } else {
+            future.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    checkCloseConnection(future);
                 }
-            }
-        });
+            });
+        }
     }
 
     /**
@@ -581,6 +577,26 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         } catch (Throwable cause) { // Make sure to catch Throwable because we are doing a retain() in this method.
             debugData.release();
             return promise.setFailure(cause);
+        }
+    }
+
+    /**
+     * Closes the connection if the graceful shutdown process has completed.
+     * @param future Represents the status that will be passed to the {@link #closeListener}.
+     */
+    private void checkCloseConnection(ChannelFuture future) {
+        // If this connection is closing and the graceful shutdown has completed, close the connection
+        // once this operation completes.
+        if (closeListener != null && isGracefulShutdownComplete()) {
+            ChannelFutureListener closeListener = Http2ConnectionHandler.this.closeListener;
+            // This method could be called multiple times
+            // and we don't want to notify the closeListener multiple times.
+            Http2ConnectionHandler.this.closeListener = null;
+            try {
+                closeListener.operationComplete(future);
+            } catch (Exception e) {
+                throw new IllegalStateException("Close listener threw an unexpected exception", e);
+            }
         }
     }
 
