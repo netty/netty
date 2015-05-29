@@ -30,6 +30,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
@@ -245,6 +246,7 @@ public final class ChannelOutboundBuffer {
     public boolean remove() {
         Entry e = flushedEntry;
         if (e == null) {
+            clearNioBuffers();
             return false;
         }
         Object msg = e.msg;
@@ -279,6 +281,7 @@ public final class ChannelOutboundBuffer {
     private boolean remove0(Throwable cause, boolean notifyWritability) {
         Entry e = flushedEntry;
         if (e == null) {
+            clearNioBuffers();
             return false;
         }
         Object msg = e.msg;
@@ -344,6 +347,17 @@ public final class ChannelOutboundBuffer {
                 }
                 break;
             }
+        }
+        clearNioBuffers();
+    }
+
+    // Clear all ByteBuffer from the array so these can be GC'ed.
+    // See https://github.com/netty/netty/issues/3837
+    private void clearNioBuffers() {
+        int count = nioBufferCount;
+        if (count > 0) {
+            nioBufferCount = 0;
+            Arrays.fill(NIO_BUFFERS.get(), 0, count, null);
         }
     }
 
@@ -651,6 +665,7 @@ public final class ChannelOutboundBuffer {
         } finally {
             inFail = false;
         }
+        clearNioBuffers();
     }
 
     private static void safeSuccess(ChannelPromise promise) {
