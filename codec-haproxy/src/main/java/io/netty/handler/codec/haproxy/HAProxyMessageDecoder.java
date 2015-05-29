@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.LineBasedFrameDecoder;
+import io.netty.handler.codec.ProtocolDetectionResult;
 import io.netty.util.CharsetUtil;
 
 import java.util.List;
@@ -72,10 +73,30 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
             (byte) 0x0A
     };
 
+    private static final byte[] TEXT_PREFIX = {
+            (byte) 'P',
+            (byte) 'R',
+            (byte) 'O',
+            (byte) 'X',
+            (byte) 'Y',
+    };
+
     /**
      * Binary header prefix length
      */
     private static final int BINARY_PREFIX_LENGTH = BINARY_PREFIX.length;
+
+    /**
+     * {@link ProtocolDetectionResult} for {@link HAProxyProtocolVersion#V1}.
+     */
+    private static final ProtocolDetectionResult<HAProxyProtocolVersion> DETECTION_RESULT_V1 =
+            ProtocolDetectionResult.detected(HAProxyProtocolVersion.V1);
+
+    /**
+     * {@link ProtocolDetectionResult} for {@link HAProxyProtocolVersion#V2}.
+     */
+    private static final ProtocolDetectionResult<HAProxyProtocolVersion> DETECTION_RESULT_V2 =
+            ProtocolDetectionResult.detected(HAProxyProtocolVersion.V2);
 
     /**
      * {@code true} if we're discarding input because we're already over maxLength
@@ -147,15 +168,7 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
         }
 
         int idx = buffer.readerIndex();
-
-        for (int i = 0; i < BINARY_PREFIX_LENGTH; i++) {
-            final byte b = buffer.getByte(idx + i);
-            if (b != BINARY_PREFIX[i]) {
-                return 1;
-            }
-        }
-
-        return buffer.getByte(idx + BINARY_PREFIX_LENGTH);
+        return match(BINARY_PREFIX, buffer, idx) ? buffer.getByte(idx + BINARY_PREFIX_LENGTH) : 1;
     }
 
     /**
@@ -356,5 +369,34 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
             ppex = new HAProxyProtocolException();
         }
         throw ppex;
+    }
+
+    /**
+     * Returns the {@link ProtocolDetectionResult} for the given {@link ByteBuf}.
+     */
+    public static ProtocolDetectionResult<HAProxyProtocolVersion> detectProtocol(ByteBuf buffer) {
+        if (buffer.readableBytes() < 12) {
+            return ProtocolDetectionResult.needsMoreData();
+        }
+
+        int idx = buffer.readerIndex();
+
+        if (match(BINARY_PREFIX, buffer, idx)) {
+            return DETECTION_RESULT_V2;
+        }
+        if (match(TEXT_PREFIX, buffer, idx)) {
+            return DETECTION_RESULT_V1;
+        }
+        return ProtocolDetectionResult.invalid();
+    }
+
+    private static boolean match(byte[] prefix, ByteBuf buffer, int idx) {
+        for (int i = 0; i < prefix.length; i++) {
+            final byte b = buffer.getByte(idx + i);
+            if (b != prefix[i]) {
+                return false;
+            }
+        }
+        return true;
     }
 }
