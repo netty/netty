@@ -33,6 +33,7 @@
 #include <stddef.h>
 #include <limits.h>
 #include "io_netty_channel_epoll_Native.h"
+#include "exception_helper.h"
 
 /**
  * On older Linux kernels, epoll can't handle timeout
@@ -93,25 +94,46 @@ static int socketType;
 static const char* ip4prefix = "::ffff:";
 
 // util methods
-static inline void throwRuntimeException(JNIEnv* env, char* message) {
+void throwRuntimeException(JNIEnv* env, char* message) {
     (*env)->ThrowNew(env, runtimeExceptionClass, message);
 }
 
-static inline void throwIOException(JNIEnv* env, char* message) {
+void throwRuntimeExceptionErrorNo(JNIEnv* env, char* message, int errorNumber) {
+    char* allocatedMessage = exceptionMessage(message, errorNumber);
+    (*env)->ThrowNew(env, runtimeExceptionClass, allocatedMessage);
+    free(allocatedMessage);
+}
+
+void throwIOException(JNIEnv* env, char* message) {
     (*env)->ThrowNew(env, ioExceptionClass, message);
 }
 
-static inline void throwClosedChannelException(JNIEnv* env) {
+void throwIOExceptionErrorNo(JNIEnv* env, char* message, int errorNumber) {
+    char* allocatedMessage = exceptionMessage(message, errorNumber);
+    (*env)->ThrowNew(env, ioExceptionClass, allocatedMessage);
+    free(allocatedMessage);
+}
+
+void throwClosedChannelException(JNIEnv* env) {
     jobject exception = (*env)->NewObject(env, closedChannelExceptionClass, closedChannelExceptionMethodId);
     (*env)->Throw(env, exception);
 }
 
-static inline void throwOutOfMemoryError(JNIEnv* env) {
+void throwOutOfMemoryError(JNIEnv* env) {
     jclass exceptionClass = (*env)->FindClass(env, "java/lang/OutOfMemoryError");
     (*env)->ThrowNew(env, exceptionClass, "");
 }
 
-static inline char* exceptionMessage(char* msg, int error) {
+/** Notice: every usage of exceptionMessage needs to release the allocated memory for the sequence of char */
+char* exceptionMessage(char* msg, int error) {
+    if (error < 0) {
+        // some functions return negative values
+        // and it's hard to keep track of when to send -error and when not
+        // this will just take care when things are forgotten
+        // what would generate a proper error
+        error = error * -1;
+    }
+    //strerror is returning a constant, so no need to free anything coming from strerror
     char* err = strerror(error);
     char* result = malloc(strlen(msg) + strlen(err) + 1);
     strcpy(result, msg);
@@ -136,7 +158,7 @@ static inline jint getOption(JNIEnv* env, jint fd, int level, int optname, void*
         return 0;
     }
     int err = errno;
-    throwRuntimeException(env, exceptionMessage("getsockopt() failed: ", err));
+    throwRuntimeExceptionErrorNo(env, "getsockopt() failed: ", err);
     return code;
 }
 
@@ -144,7 +166,7 @@ static inline int setOption(JNIEnv* env, jint fd, int level, int optname, const 
     int rc = setsockopt(fd, level, optname, optval, len);
     if (rc < 0) {
         int err = errno;
-        throwRuntimeException(env, exceptionMessage("setsockopt() failed: ", err));
+        throwRuntimeExceptionErrorNo(env, "setsockopt() failed: ", err);
     }
     return rc;
 }
@@ -615,7 +637,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_eventFd(JNIEnv* env, j
 
     if (eventFD < 0) {
         int err = errno;
-        throwRuntimeException(env, exceptionMessage("eventfd() failed: ", err));
+        throwRuntimeExceptionErrorNo(env, "eventfd() failed: ", err);
     }
     return eventFD;
 }
@@ -625,7 +647,7 @@ JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_eventFdWrite(JNIEnv* e
 
     if (eventFD < 0) {
         int err = errno;
-        throwRuntimeException(env, exceptionMessage("eventfd_write() failed: ", err));
+        throwRuntimeExceptionErrorNo(env, "eventfd_write() failed: ", err);
     }
 }
 
@@ -649,9 +671,9 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollCreate(JNIEnv* en
     if (efd < 0) {
         int err = errno;
         if (epoll_create1) {
-            throwRuntimeException(env, exceptionMessage("epoll_create1() failed: ", err));
+            throwRuntimeExceptionErrorNo(env, "epoll_create1() failed: ", err);
         } else {
-            throwRuntimeException(env, exceptionMessage("epoll_create() failed: ", err));
+            throwRuntimeExceptionErrorNo(env, "epoll_create() failed: ", err);
         }
         return efd;
     }
@@ -659,7 +681,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollCreate(JNIEnv* en
         if (fcntl(efd, F_SETFD, FD_CLOEXEC) < 0) {
             int err = errno;
             close(efd);
-            throwRuntimeException(env, exceptionMessage("fcntl() failed: ", err));
+            throwRuntimeExceptionErrorNo(env, "fcntl() failed: ", err);
             return err;
         }
     }
@@ -856,7 +878,7 @@ static inline jobject recvFrom0(JNIEnv* env, jint fd, void* buffer, jint pos, ji
             throwClosedChannelException(env);
             return NULL;
         }
-        throwIOException(env, exceptionMessage("recvfrom() failed: ", err));
+        throwIOExceptionErrorNo(env, "recvfrom() failed: ", err);
         return NULL;
     }
 
@@ -1375,7 +1397,7 @@ JNIEXPORT jstring JNICALL Java_io_netty_channel_epoll_Native_kernelVersion(JNIEn
         return (*env)->NewStringUTF(env, name.release);
     }
     int err = errno;
-    throwRuntimeException(env, exceptionMessage("uname() failed: ", err));
+    throwRuntimeExceptionErrorNo(env, "uname() failed: ", err);
     return NULL;
 }
 
