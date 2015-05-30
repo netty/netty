@@ -48,7 +48,6 @@ import javax.net.ssl.SSLException;
 public class Http2Server {
 
     public static final int PORT = Integer.parseInt(System.getProperty("http2-port", "8443"));
-    static final int MAX_CONTENT_LENGTH = 1024 * 100;
 
     private final EventLoopGroup group;
 
@@ -63,7 +62,7 @@ public class Http2Server {
         b.group(group).channel(NioServerSocketChannel.class).childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
-                ch.pipeline().addLast(sslCtx.newHandler(ch.alloc()), new Http2OrHttpHandler(MAX_CONTENT_LENGTH));
+                ch.pipeline().addLast(sslCtx.newHandler(ch.alloc()), new Http2OrHttpHandler());
             }
         });
 
