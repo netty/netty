@@ -15,8 +15,17 @@
  */
 package io.netty.example.spdy.server;
 
-import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.spdy.SpdyFrameCodec;
+import io.netty.handler.codec.spdy.SpdyHttpDecoder;
+import io.netty.handler.codec.spdy.SpdyHttpEncoder;
+import io.netty.handler.codec.spdy.SpdyHttpResponseStreamIdHandler;
 import io.netty.handler.codec.spdy.SpdyOrHttpChooser;
+import io.netty.handler.codec.spdy.SpdySessionHandler;
+import io.netty.handler.codec.spdy.SpdyVersion;
 
 /**
  * Negotiates with the browser if SPDY or HTTP is going to be used. Once decided, the Netty pipeline is setup with
@@ -26,17 +35,22 @@ public class SpdyOrHttpHandler extends SpdyOrHttpChooser {
 
     private static final int MAX_CONTENT_LENGTH = 1024 * 100;
 
-    public SpdyOrHttpHandler() {
-        this(MAX_CONTENT_LENGTH, MAX_CONTENT_LENGTH);
-    }
-
-    public SpdyOrHttpHandler(int maxSpdyContentLength, int maxHttpContentLength) {
-        super(maxSpdyContentLength, maxHttpContentLength);
+    @Override
+    protected void configureSpdy(ChannelHandlerContext ctx, SpdyVersion version) throws Exception {
+        ChannelPipeline p = ctx.pipeline();
+        p.addLast(new SpdyFrameCodec(version));
+        p.addLast(new SpdySessionHandler(version, true));
+        p.addLast(new SpdyHttpEncoder(version));
+        p.addLast(new SpdyHttpDecoder(version, MAX_CONTENT_LENGTH));
+        p.addLast(new SpdyHttpResponseStreamIdHandler());
+        p.addLast(new SpdyServerHandler());
     }
 
     @Override
-    protected ChannelInboundHandler createHttpRequestHandlerForHttp() {
-        return new SpdyServerHandler();
+    protected void configureHttp1(ChannelHandlerContext ctx) throws Exception {
+        ChannelPipeline p = ctx.pipeline();
+        p.addLast(new HttpServerCodec());
+        p.addLast(new HttpObjectAggregator(MAX_CONTENT_LENGTH));
+        p.addLast(new SpdyServerHandler());
     }
-
 }
