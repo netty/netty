@@ -189,7 +189,14 @@ public class HttpContentCompressorTest {
 
     @Test
     public void testFullContent() throws Exception {
-        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
+        // Lower the required content size for compression to 5 bytes, so that our "hello world"
+        // content gets compressed....
+        EmbeddedChannel ch = new EmbeddedChannel(
+                new HttpContentCompressor(HttpContentCompressor.DEFAULT_COMPRESSION_LEVEL,
+                                          HttpContentCompressor.DEFAULT_WINDOW_BITS,
+                                          HttpContentCompressor.DEFAULT_MEM_LEVEL,
+                                          5,
+                                          HttpContentCompressor.DEFAULT_COMPRESSABLE_CONTENT_TYPES));
         ch.writeInbound(newRequest());
 
         FullHttpResponse res = new DefaultFullHttpResponse(
@@ -215,6 +222,71 @@ public class HttpContentCompressorTest {
     }
 
     /**
+     * If the length of the content is below a certain limit, {@link HttpContentEncoder} should skip encoding
+     * the content.
+     */
+    @Test
+    public void testTinyFullContent() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
+        ch.writeInbound(newRequest());
+
+        FullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+                                                           HttpResponseStatus.OK,
+                                                           Unpooled.copiedBuffer("Hello, World", CharsetUtil.US_ASCII));
+        res.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, res.content().readableBytes());
+        ch.writeOutbound(res);
+
+        Object o = ch.readOutbound();
+        assertThat(o, is(instanceOf(FullHttpResponse.class)));
+
+        res = (FullHttpResponse) o;
+        assertThat(res.headers().get(HttpHeaderNames.TRANSFER_ENCODING), is(nullValue()));
+
+        // Content encoding shouldn't be modified.
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is(nullValue()));
+        assertThat(res.content().toString(CharsetUtil.US_ASCII), is("Hello, World"));
+        res.release();
+
+        assertThat(ch.readOutbound(), is(nullValue()));
+    }
+
+    /**
+     * If the content is long enough but its type is not considered compressable,
+     * {@link HttpContentEncoder} should skip encoding the content.
+     */
+    @Test
+    public void testUncompressableFullContent() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
+        ch.writeInbound(newRequest());
+
+        FullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+                                                           HttpResponseStatus.OK,
+                                                           Unpooled.copiedBuffer("Hello, World",
+                                                                                 CharsetUtil.US_ASCII));
+        // This is a lie, but ensures that our response would be compressed and not skipped
+        // because it is too small
+        res.headers().setInt(HttpHeaderNames.CONTENT_LENGTH,
+                             HttpContentCompressor.DEFAULT_MIN_COMPRESSABLE_CONTENT_LENGTH + 100);
+        // Set an uncompressable content type...
+        res.headers()
+           .set(HttpHeaderNames.CONTENT_TYPE, "image/jpeg");
+        ch.writeOutbound(res);
+
+        Object o = ch.readOutbound();
+        assertThat(o, is(instanceOf(FullHttpResponse.class)));
+
+        res = (FullHttpResponse) o;
+        assertThat(res.headers().get(HttpHeaderNames.TRANSFER_ENCODING), is(nullValue()));
+
+        // Content encoding shouldn't be modified.
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is(nullValue()));
+        assertThat(res.content().toString(CharsetUtil.US_ASCII), is("Hello, World"));
+        res.release();
+
+        assertThat(ch.readOutbound(), is(nullValue()));
+    }
+
+    /**
      * If the length of the content is unknown, {@link HttpContentEncoder} should not skip encoding the content
      * even if the actual length is turned out to be 0.
      */
@@ -223,7 +295,9 @@ public class HttpContentCompressorTest {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(newRequest());
 
-        ch.writeOutbound(new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK));
+        DefaultHttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        response.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
+        ch.writeOutbound(response);
         assertEncodedResponse(ch);
 
         ch.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT);
@@ -248,8 +322,9 @@ public class HttpContentCompressorTest {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(newRequest());
 
-        FullHttpResponse res = new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER);
+        FullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+                                                           HttpResponseStatus.OK,
+                                                           Unpooled.EMPTY_BUFFER);
         ch.writeOutbound(res);
 
         Object o = ch.readOutbound();
@@ -272,8 +347,9 @@ public class HttpContentCompressorTest {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(newRequest());
 
-        FullHttpResponse res = new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER);
+        FullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+                                                           HttpResponseStatus.OK,
+                                                           Unpooled.EMPTY_BUFFER);
         res.trailingHeaders().set("X-Test", "Netty");
         ch.writeOutbound(res);
 
