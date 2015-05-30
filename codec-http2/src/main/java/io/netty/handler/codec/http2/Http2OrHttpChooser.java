@@ -15,34 +15,35 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2CodecUtil.TLS_UPGRADE_PROTOCOL_NAME;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpRequestDecoder;
-import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.ssl.SslHandler;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.List;
 
-import javax.net.ssl.SSLEngine;
+import static io.netty.handler.codec.http2.Http2CodecUtil.*;
 
 /**
- * {@link io.netty.channel.ChannelHandler} which is responsible to setup the
- * {@link io.netty.channel.ChannelPipeline} either for HTTP or HTTP2. This offers an easy way for
+ * {@link ChannelHandler} which is responsible to setup the
+ * {@link ChannelPipeline} either for HTTP or HTTP2. This offers an easy way for
  * users to support both at the same time while not care to much about the low-level details.
  */
 public abstract class Http2OrHttpChooser extends ByteToMessageDecoder {
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Http2OrHttpChooser.class);
 
     public enum SelectedProtocol {
         /** Must be updated to match the HTTP/2 draft number. */
         HTTP_2(TLS_UPGRADE_PROTOCOL_NAME),
         HTTP_1_1("http/1.1"),
-        HTTP_1_0("http/1.0"),
-        UNKNOWN("Unknown");
+        HTTP_1_0("http/1.0");
 
         private final String name;
 
@@ -55,11 +56,10 @@ public abstract class Http2OrHttpChooser extends ByteToMessageDecoder {
         }
 
         /**
-         * Get an instance of this enum based on the protocol name returned by the NPN server provider
+         * Get an instance of this enum based on the protocol name returned by the ALPN server provider
          *
-         * @param name
-         *            the protocol name
-         * @return the SelectedProtocol instance
+         * @param name the protocol name
+         * @return the selected protocol or {@code null} if there is no match
          */
         public static SelectedProtocol protocol(String name) {
             for (SelectedProtocol protocol : SelectedProtocol.values()) {
@@ -67,25 +67,15 @@ public abstract class Http2OrHttpChooser extends ByteToMessageDecoder {
                     return protocol;
                 }
             }
-            return UNKNOWN;
+            return null;
         }
     }
 
-    private final int maxHttpContentLength;
-
-    protected Http2OrHttpChooser(int maxHttpContentLength) {
-        this.maxHttpContentLength = maxHttpContentLength;
-    }
-
-    /**
-     * Return the {@link SelectedProtocol} for the {@link javax.net.ssl.SSLEngine}. If its not known
-     * yet implementations MUST return {@link SelectedProtocol#UNKNOWN}.
-     */
-    protected abstract SelectedProtocol getProtocol(SSLEngine engine);
+    protected Http2OrHttpChooser() { }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        if (initPipeline(ctx)) {
+        if (configurePipeline(ctx)) {
             // When we reached here we can remove this handler as its now clear
             // what protocol we want to use
             // from this point on. This will also take care of forward all
@@ -94,62 +84,87 @@ public abstract class Http2OrHttpChooser extends ByteToMessageDecoder {
         }
     }
 
-    private boolean initPipeline(ChannelHandlerContext ctx) {
+    private boolean configurePipeline(ChannelHandlerContext ctx) {
         // Get the SslHandler from the ChannelPipeline so we can obtain the
         // SslEngine from it.
         SslHandler handler = ctx.pipeline().get(SslHandler.class);
         if (handler == null) {
-            // HTTP2 is negotiated through SSL.
-            throw new IllegalStateException("SslHandler is needed for HTTP2");
+            // HTTP/2 is negotiated through SSL.
+            throw new IllegalStateException("cannot find a SslHandler in the pipeline (required for HTTP/2)");
         }
 
-        SelectedProtocol protocol = getProtocol(handler.engine());
+        if (!handler.handshakeFuture().isDone()) {
+            return false;
+        }
+
+        SelectedProtocol protocol;
+        try {
+            protocol = selectProtocol(handler);
+        } catch (Exception e) {
+            throw new IllegalStateException("failed to get the selected protocol", e);
+        }
+
+        if (protocol == null) {
+            throw new IllegalStateException("unknown protocol");
+        }
+
         switch (protocol) {
-            case UNKNOWN:
-                // Not done with choosing the protocol, so just return here for now,
-                return false;
             case HTTP_2:
-                addHttp2Handlers(ctx);
+                try {
+                    configureHttp2(ctx);
+                } catch (Exception e) {
+                    throw new IllegalStateException("failed to configure a HTTP/2 pipeline", e);
+                }
                 break;
             case HTTP_1_0:
             case HTTP_1_1:
-                addHttpHandlers(ctx);
+                try {
+                    configureHttp1(ctx);
+                } catch (Exception e) {
+                    throw new IllegalStateException("failed to configure a HTTP/1 pipeline", e);
+                }
                 break;
-            default:
-                throw new IllegalStateException("Unknown SelectedProtocol");
         }
         return true;
     }
 
     /**
-     * Add all {@link io.netty.channel.ChannelHandler}'s that are needed for HTTP_2.
+     * Returns the {@link SelectedProtocol} for the current SSL session.  By default, this method returns the first
+     * known protocol.
+     *
+     * @return the selected application-level protocol, or {@code null} if the application-level protocol name of
+     *         the specified {@code sslHandler} is neither {@code "http/1.1"}, {@code "http/1.0"} nor {@code "h2"}
      */
-    protected void addHttp2Handlers(ChannelHandlerContext ctx) {
-        ChannelPipeline pipeline = ctx.pipeline();
-        pipeline.addLast("http2ConnectionHandler", createHttp2RequestHandler());
+    protected SelectedProtocol selectProtocol(SslHandler sslHandler) throws Exception {
+        final String appProto = sslHandler.applicationProtocol();
+        return appProto != null? SelectedProtocol.protocol(appProto) : SelectedProtocol.HTTP_1_1;
     }
 
     /**
-     * Add all {@link io.netty.channel.ChannelHandler}'s that are needed for HTTP.
+     * Configures the {@link Channel} of the specified {@code ctx} for HTTP/2.
+     * <p>
+     * A typical implementation of this method will add a new {@link Http2ConnectionHandler} implementation
+     * to the pipeline.
+     * </p>
      */
-    protected void addHttpHandlers(ChannelHandlerContext ctx) {
-        ChannelPipeline pipeline = ctx.pipeline();
-        pipeline.addLast("httpRequestDecoder", new HttpRequestDecoder());
-        pipeline.addLast("httpResponseEncoder", new HttpResponseEncoder());
-        pipeline.addLast("httpChunkAggregator", new HttpObjectAggregator(maxHttpContentLength));
-        pipeline.addLast("httpRequestHandler", createHttp1RequestHandler());
+    protected abstract void configureHttp2(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * Configures the {@link Channel} of the specified {@code ctx} for HTTP/1.
+     * <p>
+     * A typical implementation of this method will look like the following:
+     * <pre>
+     * {@link ChannelPipeline} p = ctx.pipeline();
+     * p.addLast(new {@link HttpServerCodec}());
+     * p.addLast(new <i>YourHttpRequestHandler</i>());
+     * </pre>
+     * </p>
+     */
+    protected abstract void configureHttp1(ChannelHandlerContext ctx) throws Exception;
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        logger.warn("{} Failed to select the application-level protocol:", ctx.channel(), cause);
+        ctx.close();
     }
-
-    /**
-     * Create the {@link io.netty.channel.ChannelHandler} that is responsible for handling the http
-     * requests when the {@link SelectedProtocol} was {@link SelectedProtocol#HTTP_1_0} or
-     * {@link SelectedProtocol#HTTP_1_1}
-     */
-    protected abstract ChannelHandler createHttp1RequestHandler();
-
-    /**
-     * Create the {@link ChannelHandler} that is responsible for handling the http responses
-     * when the when the {@link SelectedProtocol} was {@link SelectedProtocol#HTTP_2}.
-     */
-    protected abstract Http2ConnectionHandler createHttp2RequestHandler();
 }

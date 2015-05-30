@@ -22,6 +22,7 @@ import java.util.List;
  * Utility class for application protocol common operations.
  */
 final class ApplicationProtocolUtil {
+
     private static final int DEFAULT_LIST_SIZE = 2;
 
     private ApplicationProtocolUtil() {

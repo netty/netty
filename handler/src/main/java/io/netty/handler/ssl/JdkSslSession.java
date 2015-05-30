@@ -24,7 +24,7 @@ import javax.security.cert.X509Certificate;
 import java.security.Principal;
 import java.security.cert.Certificate;
 
-final class JdkSslSession implements SSLSession {
+final class JdkSslSession implements SSLSession, ApplicationProtocolAccessor {
     private final SSLEngine engine;
     private volatile String applicationProtocol;
 
@@ -32,39 +32,22 @@ final class JdkSslSession implements SSLSession {
         this.engine = engine;
     }
 
-    void setApplicationProtocol(String applicationProtocol) {
-        if (applicationProtocol != null) {
-            applicationProtocol = applicationProtocol.replace(':', '_');
-        }
-        this.applicationProtocol = applicationProtocol;
+    private SSLSession unwrap() {
+        return engine.getSession();
     }
 
     @Override
     public String getProtocol() {
-        final String protocol = unwrap().getProtocol();
-        final String applicationProtocol = this.applicationProtocol;
-
-        if (applicationProtocol == null) {
-            if (protocol != null) {
-                return protocol.replace(':', '_');
-            } else {
-                return null;
-            }
-        }
-
-        final StringBuilder buf = new StringBuilder(32);
-        if (protocol != null) {
-            buf.append(protocol.replace(':', '_'));
-            buf.append(':');
-        } else {
-            buf.append("null:");
-        }
-        buf.append(applicationProtocol);
-        return buf.toString();
+        return unwrap().getProtocol();
     }
 
-    private SSLSession unwrap() {
-        return engine.getSession();
+    @Override
+    public String getApplicationProtocol() {
+        return applicationProtocol;
+    }
+
+    void setApplicationProtocol(String applicationProtocol) {
+        this.applicationProtocol = applicationProtocol;
     }
 
     @Override
