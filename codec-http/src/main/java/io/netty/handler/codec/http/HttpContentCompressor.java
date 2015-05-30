@@ -24,10 +24,15 @@ import java.util.regex.Pattern;
 
 /**
  * Compresses an {@link HttpMessage} and an {@link HttpContent} in {@code gzip} or
- * {@code deflate} encoding while respecting the {@code "Accept-Encoding"} header.
- * If there is no matching encoding, no compression is done.  For more
- * information on how this handler modifies the message, please refer to
- * {@link HttpContentEncoder}.
+ * {@code deflate} encoding while respecting the {@code "Accept-Encoding"} header. If there is no matching encoding,
+ * no compression is done.
+ *
+ * Note that only a {@link FullHttpResponse} or a response with {@code "Transfer-Encoding: chunked"}
+ * will be compressed. Also the {@code "Content-Length"} and {@code "Content-Type"} are checked against
+ * the given <tt>minCompressableContentLength</tt> and <tt>compressableContentTypes</tt> to determined if
+ * a compression would be effective at all.
+ *
+ * For more information on how this handler modifies the message, please refer to {@link HttpContentEncoder}.
  */
 public class HttpContentCompressor extends HttpContentEncoder {
 
@@ -91,17 +96,23 @@ public class HttpContentCompressor extends HttpContentEncoder {
      * Creates a new handler with the specified compression level, window size,
      * and memory level..
      *
-     * @param compressionLevel {@code 1} yields the fastest compression and {@code 9} yields the
-     *                         best compression.  {@code 0} means no compression.  The default
-     *                         compression level is {@code 6}.
-     * @param windowBits       The base two logarithm of the size of the history buffer.  The
-     *                         value should be in the range {@code 9} to {@code 15} inclusive.
-     *                         Larger values result in better compression at the expense of
-     *                         memory usage.  The default value is {@code 15}.
-     * @param memLevel         How much memory should be allocated for the internal compression
-     *                         state.  {@code 1} uses minimum memory and {@code 9} uses maximum
-     *                         memory.  Larger values result in better and faster compression
-     *                         at the expense of memory usage.  The default value is {@code 8}
+     * @param compressionLevel             {@code 1} yields the fastest compression and {@code 9} yields the
+     *                                     best compression.  {@code 0} means no compression.  The default
+     *                                     compression level is {@code 6}.
+     * @param windowBits                   The base two logarithm of the size of the history buffer.  The
+     *                                     value should be in the range {@code 9} to {@code 15} inclusive.
+     *                                     Larger values result in better compression at the expense of
+     *                                     memory usage.  The default value is {@code 15}.
+     * @param memLevel                     How much memory should be allocated for the internal compression
+     *                                     state.  {@code 1} uses minimum memory and {@code 9} uses maximum
+     *                                     memory.  Larger values result in better and faster compression
+     *                                     at the expense of memory usage.  The default value is {@code 8}
+     * @param minCompressableContentLength The minimum content size for the compressor to be enabled. If a given
+     *                                     request does not provide a content-length header, it will always
+     *                                     be compressed.
+     * @param compressableContentTypes     A regular expression that determines which content types to compress.
+     *                                     If a request does not contain a content-type header, it will always
+     *                                     be compressed.
      */
     public HttpContentCompressor(int compressionLevel,
                                  int windowBits,
