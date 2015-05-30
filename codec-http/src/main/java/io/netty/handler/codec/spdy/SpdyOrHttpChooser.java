@@ -16,18 +16,16 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandler;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpRequestDecoder;
-import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.ssl.SslHandler;
-import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import javax.net.ssl.SSLEngine;
 import java.util.List;
 
 /**
@@ -37,13 +35,14 @@ import java.util.List;
  */
 public abstract class SpdyOrHttpChooser extends ByteToMessageDecoder {
 
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(SpdyOrHttpChooser.class);
+
     // TODO: Replace with generic NPN handler
 
     public enum SelectedProtocol {
         SPDY_3_1("spdy/3.1"),
         HTTP_1_1("http/1.1"),
-        HTTP_1_0("http/1.0"),
-        UNKNOWN("Unknown");
+        HTTP_1_0("http/1.0");
 
         private final String name;
 
@@ -58,9 +57,8 @@ public abstract class SpdyOrHttpChooser extends ByteToMessageDecoder {
         /**
          * Get an instance of this enum based on the protocol name returned by the NPN server provider
          *
-         * @param name
-         *            the protocol name
-         * @return the SelectedProtocol instance
+         * @param name the protocol name
+         * @return the selected protocol or {@code null} if there is no match
          */
         public static SelectedProtocol protocol(String name) {
             for (SelectedProtocol protocol : SelectedProtocol.values()) {
@@ -68,36 +66,15 @@ public abstract class SpdyOrHttpChooser extends ByteToMessageDecoder {
                     return protocol;
                 }
             }
-            return UNKNOWN;
+            return null;
         }
     }
 
-    private final int maxSpdyContentLength;
-    private final int maxHttpContentLength;
-
-    protected SpdyOrHttpChooser(int maxSpdyContentLength, int maxHttpContentLength) {
-        this.maxSpdyContentLength = maxSpdyContentLength;
-        this.maxHttpContentLength = maxHttpContentLength;
-    }
-
-    /**
-     * Return the {@link SelectedProtocol} for the {@link SSLEngine}. If its not known yet implementations MUST return
-     * {@link SelectedProtocol#UNKNOWN}.
-     *
-     */
-    protected SelectedProtocol getProtocol(SSLEngine engine) {
-        String[] protocol = StringUtil.split(engine.getSession().getProtocol(), ':');
-        if (protocol.length < 2) {
-            // Use HTTP/1.1 as default
-            return SelectedProtocol.HTTP_1_1;
-        }
-        SelectedProtocol selectedProtocol = SelectedProtocol.protocol(protocol[1]);
-        return selectedProtocol;
-    }
+    protected SpdyOrHttpChooser() { }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        if (initPipeline(ctx)) {
+        if (configurePipeline(ctx)) {
             // When we reached here we can remove this handler as its now clear
             // what protocol we want to use
             // from this point on. This will also take care of forward all
@@ -106,72 +83,95 @@ public abstract class SpdyOrHttpChooser extends ByteToMessageDecoder {
         }
     }
 
-    private boolean initPipeline(ChannelHandlerContext ctx) {
+    private boolean configurePipeline(ChannelHandlerContext ctx) {
         // Get the SslHandler from the ChannelPipeline so we can obtain the
         // SslEngine from it.
         SslHandler handler = ctx.pipeline().get(SslHandler.class);
         if (handler == null) {
             // SslHandler is needed by SPDY by design.
-            throw new IllegalStateException("SslHandler is needed for SPDY");
+            throw new IllegalStateException("cannot find a SslHandler in the pipeline (required for SPDY)");
         }
 
-        SelectedProtocol protocol = getProtocol(handler.engine());
-        switch (protocol) {
-        case UNKNOWN:
-            // Not done with choosing the protocol, so just return here for now,
+        if (!handler.handshakeFuture().isDone()) {
             return false;
+        }
+
+        SelectedProtocol protocol;
+        try {
+            protocol = selectProtocol(handler);
+        } catch (Exception e) {
+            throw new IllegalStateException("failed to get the selected protocol", e);
+        }
+
+        if (protocol == null) {
+            throw new IllegalStateException("unknown protocol");
+        }
+
+        switch (protocol) {
         case SPDY_3_1:
-            addSpdyHandlers(ctx, SpdyVersion.SPDY_3_1);
+            try {
+                configureSpdy(ctx, SpdyVersion.SPDY_3_1);
+            } catch (Exception e) {
+                throw new IllegalStateException("failed to configure a SPDY pipeline", e);
+            }
             break;
         case HTTP_1_0:
         case HTTP_1_1:
-            addHttpHandlers(ctx);
+            try {
+                configureHttp1(ctx);
+            } catch (Exception e) {
+                throw new IllegalStateException("failed to configure a HTTP/1 pipeline", e);
+            }
             break;
-        default:
-            throw new IllegalStateException("Unknown SelectedProtocol");
         }
         return true;
     }
 
     /**
-     * Add all {@link ChannelHandler}'s that are needed for SPDY with the given version.
-     */
-    protected void addSpdyHandlers(ChannelHandlerContext ctx, SpdyVersion version) {
-        ChannelPipeline pipeline = ctx.pipeline();
-        pipeline.addLast("spdyFrameCodec", new SpdyFrameCodec(version));
-        pipeline.addLast("spdySessionHandler", new SpdySessionHandler(version, true));
-        pipeline.addLast("spdyHttpEncoder", new SpdyHttpEncoder(version));
-        pipeline.addLast("spdyHttpDecoder", new SpdyHttpDecoder(version, maxSpdyContentLength));
-        pipeline.addLast("spdyStreamIdHandler", new SpdyHttpResponseStreamIdHandler());
-        pipeline.addLast("httpRequestHandler", createHttpRequestHandlerForSpdy());
-    }
-
-    /**
-     * Add all {@link ChannelHandler}'s that are needed for HTTP.
-     */
-    protected void addHttpHandlers(ChannelHandlerContext ctx) {
-        ChannelPipeline pipeline = ctx.pipeline();
-        pipeline.addLast("httpRequestDecoder", new HttpRequestDecoder());
-        pipeline.addLast("httpResponseEncoder", new HttpResponseEncoder());
-        pipeline.addLast("httpChunkAggregator", new HttpObjectAggregator(maxHttpContentLength));
-        pipeline.addLast("httpRequestHandler", createHttpRequestHandlerForHttp());
-    }
-
-    /**
-     * Create the {@link ChannelInboundHandler} that is responsible for handling the http requests
-     * when the {@link SelectedProtocol} was {@link SelectedProtocol#HTTP_1_0} or
-     * {@link SelectedProtocol#HTTP_1_1}
-     */
-    protected abstract ChannelInboundHandler createHttpRequestHandlerForHttp();
-
-    /**
-     * Create the {@link ChannelInboundHandler} that is responsible for handling the http responses
-     * when the {@link SelectedProtocol} was {@link SelectedProtocol#SPDY_3_1}.
+     * Returns the {@link SelectedProtocol} for the current SSL session.  By default, this method returns the first
+     * known protocol.
      *
-     * By default this getMethod will just delecate to {@link #createHttpRequestHandlerForHttp()}, but sub-classes may
-     * override this to change the behaviour.
+     * @return the selected application-level protocol, or {@code null} if the application-level protocol name of
+     *         the specified {@code sslHandler} is neither {@code "http/1.1"}, {@code "http/1.0"} nor {@code "spdy/3.1"}
      */
-    protected ChannelInboundHandler createHttpRequestHandlerForSpdy() {
-        return createHttpRequestHandlerForHttp();
+    protected SelectedProtocol selectProtocol(SslHandler sslHandler) throws Exception {
+        final String appProto = sslHandler.applicationProtocol();
+        return appProto != null? SelectedProtocol.protocol(appProto) : SelectedProtocol.HTTP_1_1;
+    }
+
+    /**
+     * Configures the {@link Channel} of the specified {@code ctx} for HTTP/2.
+     * <p>
+     * A typical implementation of this method will look like the following:
+     * <pre>
+     * {@link ChannelPipeline} p = ctx.pipeline();
+     * p.addLast(new {@link SpdyFrameCodec}(version));
+     * p.addLast(new {@link SpdySessionHandler}(version, true));
+     * p.addLast(new {@link SpdyHttpEncoder}(version));
+     * p.addLast(new {@link SpdyHttpDecoder}(version, <i>maxSpdyContentLength</i>));
+     * p.addLast(new {@link SpdyHttpResponseStreamIdHandler}());
+     * p.addLast(new <i>YourHttpRequestHandler</i>());
+     * </pre>
+     * </p>
+     */
+    protected abstract void configureSpdy(ChannelHandlerContext ctx, SpdyVersion version) throws Exception;
+
+    /**
+     * Configures the {@link Channel} of the specified {@code ctx} for HTTP/1.
+     * <p>
+     * A typical implementation of this method will look like the following:
+     * <pre>
+     * {@link ChannelPipeline} p = ctx.pipeline();
+     * p.addLast(new {@link HttpServerCodec}());
+     * p.addLast(new <i>YourHttpRequestHandler</i>());
+     * </pre>
+     * </p>
+     */
+    protected abstract void configureHttp1(ChannelHandlerContext ctx) throws Exception;
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        logger.warn("{} Failed to select the application-level protocol:", ctx.channel(), cause);
+        ctx.close();
     }
 }

@@ -50,6 +50,7 @@ import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLEngineResult.Status;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLSession;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -350,6 +351,20 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      */
     public SSLEngine engine() {
         return engine;
+    }
+
+    /**
+     * Returns the name of the current application-level protocol.
+     *
+     * @return the protocol name or {@code null} if application-level protocol has not been negotiated
+     */
+    public String applicationProtocol() {
+        SSLSession sess = engine().getSession();
+        if (!(sess instanceof ApplicationProtocolAccessor)) {
+            return null;
+        }
+
+        return ((ApplicationProtocolAccessor) sess).getApplicationProtocol();
     }
 
     /**

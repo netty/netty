@@ -944,7 +944,7 @@ public final class OpenSslEngine extends SSLEngine {
                     SSL.setOptions(ssl, SSL.SSL_OP_NO_TLSv1_2);
                 }
             } else {
-                throw new IllegalStateException("failed to enable protocols: " + protocols);
+                throw new IllegalStateException("failed to enable protocols: " + Arrays.asList(protocols));
             }
         }
     }
@@ -1062,7 +1062,6 @@ public final class OpenSslEngine extends SSLEngine {
     private static String selectApplicationProtocol(List<String> protocols,
                                              SelectedListenerFailureBehavior behavior,
                                              String applicationProtocol) throws SSLException {
-        applicationProtocol = applicationProtocol.replace(':', '_');
         if (behavior == SelectedListenerFailureBehavior.ACCEPT) {
             return applicationProtocol;
         } else {
@@ -1074,7 +1073,7 @@ public final class OpenSslEngine extends SSLEngine {
                 if (behavior == SelectedListenerFailureBehavior.CHOOSE_MY_LAST_PROTOCOL) {
                     return protocols.get(size - 1);
                 } else {
-                    throw new SSLException("Unknown protocol " + applicationProtocol);
+                    throw new SSLException("unknown protocol " + applicationProtocol);
                 }
             }
         }
@@ -1262,7 +1261,7 @@ public final class OpenSslEngine extends SSLEngine {
         shutdown();
     }
 
-    private final class OpenSslSession implements SSLSession {
+    private final class OpenSslSession implements SSLSession, ApplicationProtocolAccessor {
         // SSLSession implementation seems to not need to be thread-safe so no need for volatile etc.
         private X509Certificate[] x509PeerCerts;
 
@@ -1481,20 +1480,18 @@ public final class OpenSslEngine extends SSLEngine {
 
         @Override
         public String getProtocol() {
-            String applicationProtocol = OpenSslEngine.this.applicationProtocol;
-            final String version;
             synchronized (OpenSslEngine.this) {
                 if (destroyed == 0) {
-                    version = SSL.getVersion(ssl);
+                    return SSL.getVersion(ssl);
                 } else {
                     return StringUtil.EMPTY_STRING;
                 }
             }
-            if (applicationProtocol == null || applicationProtocol.isEmpty()) {
-                return version;
-            } else {
-                return version + ':' + applicationProtocol;
-            }
+        }
+
+        @Override
+        public String getApplicationProtocol() {
+            return applicationProtocol;
         }
 
         @Override
