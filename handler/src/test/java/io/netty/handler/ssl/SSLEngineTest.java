@@ -262,14 +262,8 @@ public abstract class SSLEngineTest {
     private static void verifyApplicationLevelProtocol(Channel channel, String expectedApplicationProtocol) {
         SslHandler handler = channel.pipeline().get(SslHandler.class);
         assertNotNull(handler);
-        String[] protocol = handler.engine().getSession().getProtocol().split(":");
-        assertNotNull(protocol);
-        if (expectedApplicationProtocol != null && !expectedApplicationProtocol.isEmpty()) {
-            assertTrue("protocol.length must be greater than 1 but is " + protocol.length, protocol.length > 1);
-            assertEquals(expectedApplicationProtocol, protocol[1]);
-        } else {
-            assertEquals(1, protocol.length);
-        }
+        String appProto = handler.applicationProtocol();
+        assertEquals(appProto, expectedApplicationProtocol);
     }
 
     private static void writeAndVerifyReceived(ByteBuf message, Channel sendChannel, CountDownLatch receiverLatch,
