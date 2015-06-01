@@ -276,7 +276,6 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                 renegoFuture = clientSslHandler.renegotiate();
                 logStats("CLIENT RENEGOTIATES");
                 assertThat(renegoFuture, is(not(sameInstance(clientHandshakeFuture))));
-                assertThat(renegoFuture.isDone(), is(false));
             }
         }
 
