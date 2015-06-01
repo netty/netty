@@ -48,4 +48,9 @@ public abstract class AbstractDatagramTest extends AbstractComboTestsuiteTest<Bo
         bootstrap2.localAddress(0).remoteAddress(addr);
         bootstrap2.option(ChannelOption.ALLOCATOR, allocator);
     }
+
+    protected void refreshLocalAddress(Bootstrap bootstrap) {
+        addr = new InetSocketAddress(NetUtil.LOCALHOST4, TestUtils.getFreePort());
+        bootstrap.localAddress(addr);
+    }
 }
