@@ -30,7 +30,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -413,9 +412,7 @@ public class DirectFileDescriptorTest {
         }
 
         public static void checkLeaks() throws InterruptedException {
-            long timeout = System.nanoTime() + TimeUnit.NANOSECONDS.convert(5, TimeUnit.SECONDS);
-
-            while (timeout > System.currentTimeMillis() && count.get() != 0) {
+            for (int i = 0; count.get() != 0 && i < 50; i++) {
                 WeakReference reference = new WeakReference(new Object());
                 while (reference.get() != null) {
                     System.gc();

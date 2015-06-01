@@ -114,10 +114,6 @@ static inline struct iocb * getIOCB(struct io_control * control) {
         if (control->iocbGet >= control->queueSize) {
            control->iocbGet = 0;
         }
-    } else {
-        #ifdef DEBUG
-            fprintf (stderr, "Could not find iocb\n");
-        #endif
     }
 
     pthread_mutex_unlock(&(control->iocbLock));
@@ -153,6 +149,24 @@ JNIEXPORT jobject JNICALL Java_io_netty_channel_libaio_DirectFileDescriptorContr
     io_context_t libaioContext;
     int i = 0;
 
+    struct iocb ** iocb = (struct iocb **)malloc(sizeof(struct iocb *) * queueSize);
+    if (iocb == NULL) {
+       throwOutOfMemoryError(env);
+       return NULL;
+    }
+
+    for (i = 0; i < queueSize; i++) {
+       iocb[i] = (struct iocb *)malloc(sizeof(struct iocb));
+       if (iocb[i] == NULL) {
+           // it's unlikely this would happen at this point
+           // for that reason I'm not cleaning up individual IOCBs here
+           // we could increase support here with a cleanup of any previously allocated iocb
+           // But I'm afraid of adding not needed complexity here
+           throwOutOfMemoryError(env);
+           return NULL;
+       }
+    }
+
     int res = io_queue_init(queueSize, &libaioContext);
     if (res) {
         // Error, so need to release whatever was done before
@@ -161,23 +175,19 @@ JNIEXPORT jobject JNICALL Java_io_netty_channel_libaio_DirectFileDescriptorContr
         throwRuntimeExceptionErrorNo(env, "Cannot initialize queue:", res);
         return NULL;
     }
+
     struct io_control * theControl = (struct io_control *) malloc(sizeof(struct io_control));
     if (theControl == NULL) {
         throwOutOfMemoryError(env);
-        return;
+        return NULL;
     }
 
     res = pthread_mutex_init(&(theControl->iocbLock), 0);
-    if (res)
-    {
+    if (res) {
+        free(theControl);
+        free(libaioContext);
         throwRuntimeExceptionErrorNo(env, "Can't initialize mutext:", res);
-        return;
-    }
-
-    struct iocb ** iocb = (struct iocb **)malloc(sizeof(struct iocb *) * queueSize);
-
-    for (i = 0; i < queueSize; i++) {
-       iocb[i] = (struct iocb *)malloc(sizeof(struct iocb));
+        return NULL;
     }
 
     struct io_event * events = (struct io_event *)malloc(sizeof(struct io_event) * queueSize);
