@@ -119,6 +119,7 @@ jint Java_io_netty_channel_epoll_Native_epollin(JNIEnv* env, jclass clazz);
 jint Java_io_netty_channel_epoll_Native_epollout(JNIEnv* env, jclass clazz);
 jint Java_io_netty_channel_epoll_Native_epollrdhup(JNIEnv* env, jclass clazz);
 jint Java_io_netty_channel_epoll_Native_epollet(JNIEnv* env, jclass clazz);
+jint Java_io_netty_channel_epoll_Native_epollerr(JNIEnv* env, jclass clazz);
 jint Java_io_netty_channel_epoll_Native_sizeofEpollEvent(JNIEnv* env, jclass clazz);
 jint Java_io_netty_channel_epoll_Native_offsetofEpollData(JNIEnv* env, jclass clazz);
 

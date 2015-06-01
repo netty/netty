@@ -1598,6 +1598,10 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollrdhup(JNIEnv* env
     return EPOLLRDHUP;
 }
 
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollerr(JNIEnv* env, jclass clazz) {
+    return EPOLLERR;
+}
+
 JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_sizeofEpollEvent(JNIEnv* env, jclass clazz) {
     return sizeof(struct epoll_event);
 }
