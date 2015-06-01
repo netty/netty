@@ -55,6 +55,7 @@ public final class Native {
     public static final int EPOLLOUT = epollout();
     public static final int EPOLLRDHUP = epollrdhup();
     public static final int EPOLLET = epollet();
+    public static final int EPOLLERR = epollerr();
 
     public static final int IOV_MAX = iovMax();
     public static final int UIO_MAX_IOV = uioMaxIov();
@@ -701,6 +702,7 @@ public final class Native {
     private static native int epollout();
     private static native int epollrdhup();
     private static native int epollet();
+    private static native int epollerr();
 
     private static native long ssizeMax();
     private Native() {
