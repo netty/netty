@@ -24,6 +24,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
+import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
@@ -38,7 +39,7 @@ public final class Http2CodecUtil {
     public static final int HTTP_UPGRADE_STREAM_ID = 1;
     public static final String HTTP_UPGRADE_SETTINGS_HEADER = "HTTP2-Settings";
     public static final String HTTP_UPGRADE_PROTOCOL_NAME = "h2c";
-    public static final String TLS_UPGRADE_PROTOCOL_NAME = "h2";
+    public static final String TLS_UPGRADE_PROTOCOL_NAME = ApplicationProtocolNames.HTTP_2;
 
     public static final int PING_FRAME_PAYLOAD_LENGTH = 8;
     public static final short MAX_UNSIGNED_BYTE = 0xFF;
