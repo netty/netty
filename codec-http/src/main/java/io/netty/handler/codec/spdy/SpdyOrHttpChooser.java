@@ -17,11 +17,12 @@ package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -29,15 +30,11 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.util.List;
 
 /**
- * {@link ChannelInboundHandler} which is responsible to setup the {@link ChannelPipeline} either for
- * HTTP or SPDY. This offers an easy way for users to support both at the same time while not care to
- * much about the low-level details.
+ * @deprecated Use {@link ApplicationProtocolNegotiationHandler} instead.
  */
 public abstract class SpdyOrHttpChooser extends ByteToMessageDecoder {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SpdyOrHttpChooser.class);
-
-    // TODO: Replace with generic NPN handler
 
     public enum SelectedProtocol {
         SPDY_3_1("spdy/3.1"),
