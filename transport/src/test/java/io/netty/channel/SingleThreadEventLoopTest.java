@@ -44,7 +44,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
 public class SingleThreadEventLoopTest {
@@ -158,10 +158,8 @@ public class SingleThreadEventLoopTest {
                 endTime.set(System.nanoTime());
             }
         }, 500, TimeUnit.MILLISECONDS).get();
-
-        long delta = endTime.get() - startTime;
-        String message = String.format("delta: %d, minDelta: %d", delta, TimeUnit.MILLISECONDS.toNanos(500));
-        assertTrue(message, delta >= TimeUnit.MILLISECONDS.toNanos(500));
+        assertThat(endTime.get() - startTime,
+                   is(greaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(500))));
     }
 
     @Test
@@ -191,8 +189,26 @@ public class SingleThreadEventLoopTest {
         assertTrue(f.cancel(true));
         assertEquals(5, timestamps.size());
 
-        // Check if the task was run without lag.
-        verifyTimestampDeltas(timestamps, 90);
+        // Check if the task was run without a lag.
+        verifyTimestampRate(timestamps, 100, 20);
+    }
+
+    private static void verifyTimestampRate(Queue<Long> timestamps, long rateMillis, long toleranceMillis) {
+        Long firstTimestamp = null;
+        int cnt = 0;
+        for (Long t: timestamps) {
+            if (firstTimestamp == null) {
+                firstTimestamp = t;
+                continue;
+            }
+
+            cnt ++;
+
+            long timepoint = t - firstTimestamp;
+            assertThat(timepoint,
+                       is(greaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(rateMillis * cnt - toleranceMillis))));
+            assertThat(timepoint, is(lessThan(TimeUnit.MILLISECONDS.toNanos(rateMillis * cnt + toleranceMillis))));
+        }
     }
 
     @Test
@@ -234,13 +250,11 @@ public class SingleThreadEventLoopTest {
                 continue;
             }
 
-            long delta = t.longValue() - previousTimestamp.longValue();
+            long diff = t.longValue() - previousTimestamp.longValue();
             if (i == 0) {
-                String message = String.format("delta: %d, minDelta: %d", delta, TimeUnit.MILLISECONDS.toNanos(400));
-                assertTrue(message, delta >= TimeUnit.MILLISECONDS.toNanos(400));
+                assertThat(diff, is(greaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(400))));
             } else {
-                String message = String.format("delta: %d, maxDelta: %d", delta, TimeUnit.MILLISECONDS.toNanos(10));
-                assertTrue(message, delta <= TimeUnit.MILLISECONDS.toNanos(10));
+                assertThat(diff, is(lessThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(10))));
             }
             previousTimestamp = t;
             i ++;
@@ -274,8 +288,18 @@ public class SingleThreadEventLoopTest {
         assertTrue(f.cancel(true));
         assertEquals(3, timestamps.size());
 
-        // Check if the task was run without lag.
-        verifyTimestampDeltas(timestamps, TimeUnit.MILLISECONDS.toNanos(150));
+        // Check if the task was run without a lag.
+        Long previousTimestamp = null;
+        for (Long t: timestamps) {
+            if (previousTimestamp == null) {
+                previousTimestamp = t;
+                continue;
+            }
+
+            assertThat(t.longValue() - previousTimestamp.longValue(),
+                       is(greaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(150))));
+            previousTimestamp = t;
+        }
     }
 
     @Test
@@ -407,9 +431,8 @@ public class SingleThreadEventLoopTest {
             loopA.awaitTermination(Integer.MAX_VALUE, TimeUnit.SECONDS);
         }
 
-        long delta = System.nanoTime() - startTime;
-        String message = String.format("delta: %d, minDelta: %d", delta, TimeUnit.MILLISECONDS.toNanos(1));
-        assertTrue(message, delta >= TimeUnit.SECONDS.toNanos(1));
+        assertThat(System.nanoTime() - startTime,
+                   is(greaterThanOrEqualTo(TimeUnit.SECONDS.toNanos(1))));
     }
 
     @Test(timeout = 5000)
@@ -601,7 +624,8 @@ public class SingleThreadEventLoopTest {
         assertSame(loopA, channel.eventLoop().unwrap());
 
         ScheduledFuture<?> scheduleFuture;
-        if (PeriodicScheduleMethod.FIXED_RATE == method) {
+        switch (method) {
+        case FIXED_RATE:
             scheduleFuture = channel.eventLoop().scheduleAtFixedRate(new Runnable() {
                 @Override
                 public void run() {
@@ -609,7 +633,8 @@ public class SingleThreadEventLoopTest {
                     timestamps.add(System.nanoTime());
                 }
             }, 100, 200, TimeUnit.MILLISECONDS);
-        } else {
+            break;
+        case FIXED_DELAY:
             scheduleFuture = channel.eventLoop().scheduleWithFixedDelay(new Runnable() {
                 @Override
                 public void run() {
@@ -617,6 +642,9 @@ public class SingleThreadEventLoopTest {
                     timestamps.add(System.nanoTime());
                 }
             }, 100, 200, TimeUnit.MILLISECONDS);
+            break;
+        default:
+            throw new Error();
         }
 
         assertTrue(((PausableEventExecutor) channel.eventLoop()).isAcceptingNewTasks());
@@ -647,7 +675,15 @@ public class SingleThreadEventLoopTest {
 
         message = String.format("size: %d, minSize: 5", timestamps.size());
         assertTrue(message, timestamps.size() >= 5);
-        verifyTimestampDeltas(timestamps, TimeUnit.MILLISECONDS.toNanos(190));
+
+        switch (method) {
+        case FIXED_DELAY:
+            verifyTimestampDeltas(timestamps, TimeUnit.MILLISECONDS.toNanos(190));
+            break;
+        case FIXED_RATE:
+            verifyTimestampRate(timestamps, 200, 40);
+            break;
+        }
     }
 
     private enum PeriodicScheduleMethod {
