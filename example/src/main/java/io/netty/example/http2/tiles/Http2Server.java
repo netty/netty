@@ -16,8 +16,6 @@
 
 package io.netty.example.http2.tiles;
 
-import static io.netty.handler.codec.http2.Http2OrHttpChooser.SelectedProtocol.HTTP_1_1;
-import static io.netty.handler.codec.http2.Http2OrHttpChooser.SelectedProtocol.HTTP_2;
 import static io.netty.handler.codec.http2.Http2SecurityUtil.CIPHERS;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -31,6 +29,7 @@ import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
+import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
@@ -70,17 +69,19 @@ public class Http2Server {
         return ch.closeFuture();
     }
 
-    private SslContext configureTLS() throws CertificateException, SSLException {
+    private static SslContext configureTLS() throws CertificateException, SSLException {
         SelfSignedCertificate ssc = new SelfSignedCertificate();
-        ApplicationProtocolConfig apn = new ApplicationProtocolConfig(Protocol.ALPN,
-                  // NO_ADVERTISE is currently the only mode supported by both OpenSsl and JDK providers.
-                  SelectorFailureBehavior.NO_ADVERTISE,
-                  // ACCEPT is currently the only mode supported by both OpenSsl and JDK providers.
-                  SelectedListenerFailureBehavior.ACCEPT,
-                  HTTP_2.protocolName(), HTTP_1_1.protocolName());
-        final SslContext sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey(), null)
+        ApplicationProtocolConfig apn = new ApplicationProtocolConfig(
+                Protocol.ALPN,
+                // NO_ADVERTISE is currently the only mode supported by both OpenSsl and JDK providers.
+                SelectorFailureBehavior.NO_ADVERTISE,
+                // ACCEPT is currently the only mode supported by both OpenSsl and JDK providers.
+                SelectedListenerFailureBehavior.ACCEPT,
+                ApplicationProtocolNames.HTTP_2,
+                ApplicationProtocolNames.HTTP_1_1);
+
+        return SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey(), null)
                                 .ciphers(CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
                                 .applicationProtocolConfig(apn).build();
-        return sslCtx;
     }
 }
