@@ -39,7 +39,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
 public class SingleThreadEventLoopTest {
@@ -146,7 +146,8 @@ public class SingleThreadEventLoopTest {
                 endTime.set(System.nanoTime());
             }
         }, 500, TimeUnit.MILLISECONDS).get();
-        assertTrue(endTime.get() - startTime >= TimeUnit.MILLISECONDS.toNanos(500));
+        assertThat(endTime.get() - startTime,
+                   is(greaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(500))));
     }
 
     @Test
@@ -177,15 +178,19 @@ public class SingleThreadEventLoopTest {
         assertEquals(5, timestamps.size());
 
         // Check if the task was run without a lag.
-        Long previousTimestamp = null;
+        Long firstTimestamp = null;
+        int cnt = 0;
         for (Long t: timestamps) {
-            if (previousTimestamp == null) {
-                previousTimestamp = t;
+            if (firstTimestamp == null) {
+                firstTimestamp = t;
                 continue;
             }
 
-            assertTrue(t.longValue() - previousTimestamp.longValue() >= TimeUnit.MILLISECONDS.toNanos(90));
-            previousTimestamp = t;
+            long timepoint = t - firstTimestamp;
+            assertThat(timepoint, is(greaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(100 * cnt + 80))));
+            assertThat(timepoint, is(lessThan(TimeUnit.MILLISECONDS.toNanos(100 * (cnt + 1) + 20))));
+
+            cnt ++;
         }
     }
 
@@ -230,9 +235,9 @@ public class SingleThreadEventLoopTest {
 
             long diff = t.longValue() - previousTimestamp.longValue();
             if (i == 0) {
-                assertTrue(diff >= TimeUnit.MILLISECONDS.toNanos(400));
+                assertThat(diff, is(greaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(400))));
             } else {
-                assertTrue(diff <= TimeUnit.MILLISECONDS.toNanos(10));
+                assertThat(diff, is(lessThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(10))));
             }
             previousTimestamp = t;
             i ++;
@@ -274,7 +279,8 @@ public class SingleThreadEventLoopTest {
                 continue;
             }
 
-            assertTrue(t.longValue() - previousTimestamp.longValue() >= TimeUnit.MILLISECONDS.toNanos(150));
+            assertThat(t.longValue() - previousTimestamp.longValue(),
+                       is(greaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(150))));
             previousTimestamp = t;
         }
     }
@@ -408,7 +414,8 @@ public class SingleThreadEventLoopTest {
             loopA.awaitTermination(Integer.MAX_VALUE, TimeUnit.SECONDS);
         }
 
-        assertTrue(System.nanoTime() - startTime >= TimeUnit.SECONDS.toNanos(1));
+        assertThat(System.nanoTime() - startTime,
+                   is(greaterThanOrEqualTo(TimeUnit.SECONDS.toNanos(1))));
     }
 
     @Test(timeout = 5000)

@@ -67,7 +67,7 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     }
 
     /**
-     * Marker interface for {@linkRunnable} that will not trigger an {@link #wakeup(boolean)} in all cases.
+     * Marker interface for {@link Runnable} that will not trigger an {@link #wakeup(boolean)} in all cases.
      */
     interface NonWakeupRunnable extends Runnable { }
 }
