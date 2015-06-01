@@ -30,6 +30,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -67,18 +68,17 @@ public class DirectFileDescriptorTest {
 
     @Test
     public void testOpen() throws Exception {
-        DirectFileDescriptor fileDescriptor = control.newFile(temporaryFolder.newFile("test.bin"));
+        DirectFileDescriptor fileDescriptor = control.newFile(temporaryFolder.newFile("test.bin"), true);
         fileDescriptor.close();
     }
 
     @Test
     public void testSubmitWriteAndRead() throws Exception {
-
         Object callback = new Object();
 
         Object[] callbacks = new Object[50];
 
-        DirectFileDescriptor fileDescriptor = control.newFile(temporaryFolder.newFile("test.bin"));
+        DirectFileDescriptor fileDescriptor = control.newFile(temporaryFolder.newFile("test.bin"), true);
 
         // ByteBuffer buffer = ByteBuffer.allocateDirect(512);
         ByteBuffer buffer = control.newAlignedBuffer(512, 512);
@@ -89,7 +89,7 @@ public class DirectFileDescriptorTest {
 
         buffer.rewind();
 
-        fileDescriptor.write(0, 512, buffer, callback);
+        Assert.assertTrue(fileDescriptor.write(0, 512, buffer, callback));
 
         int retValue = control.poll(callbacks, 1, 50);
         System.out.println("Return from poll::" + retValue);
@@ -105,7 +105,7 @@ public class DirectFileDescriptorTest {
             buffer.put((byte) 'B');
         }
 
-        fileDescriptor.write(0, 512, buffer, null);
+        Assert.assertTrue(fileDescriptor.write(0, 512, buffer, null));
 
         Assert.assertEquals(1, control.poll(callbacks, 1, 50));
 
@@ -116,7 +116,7 @@ public class DirectFileDescriptorTest {
 
         buffer.rewind();
 
-        fileDescriptor.read(0, 512, buffer, null);
+        Assert.assertTrue(fileDescriptor.read(0, 512, buffer, null));
 
         Assert.assertEquals(1, control.poll(callbacks, 1, 50));
 
@@ -125,6 +125,61 @@ public class DirectFileDescriptorTest {
         }
 
         DirectFileDescriptorController.freeBuffer(buffer);
+
+        fileDescriptor.close();
+    }
+
+    @Test
+    /**
+     * This file is making use of libaio without O_DIRECT
+     * We won't need special buffers on this case.
+     */
+    public void testSubmitWriteAndReadRegularBuffers() throws Exception {
+        Object callback = new Object();
+
+        Object[] callbacks = new Object[50];
+
+        File file = temporaryFolder.newFile("test.bin");
+
+        fillupFile(file, 50);
+
+        DirectFileDescriptor fileDescriptor = control.newFile(file, false);
+
+        ByteBuffer buffer = ByteBuffer.allocateDirect(50);
+
+        for (int i = 0; i < 50; i++) {
+            buffer.put((byte) 'a');
+        }
+
+        buffer.rewind();
+
+        Assert.assertTrue(fileDescriptor.write(0, 50, buffer, callback));
+
+        int retValue = control.poll(callbacks, 1, 50);
+        System.out.println("Return from poll::" + retValue);
+        Assert.assertEquals(1, retValue);
+
+        Assert.assertSame(callback, callbacks[0]);
+
+        buffer.rewind();
+
+        for (int i = 0; i < 50; i++) {
+            buffer.put((byte) 'B');
+        }
+
+        Assert.assertTrue(fileDescriptor.write(0, 50, buffer, null));
+
+        Assert.assertEquals(1, control.poll(callbacks, 1, 50));
+
+        buffer.rewind();
+
+        Assert.assertTrue(fileDescriptor.read(0, 50, buffer, null));
+
+        Assert.assertEquals(1, control.poll(callbacks, 1, 50));
+
+        for (int i = 0; i < 50; i++) {
+            Assert.assertEquals('B', buffer.get());
+        }
 
         fileDescriptor.close();
     }
@@ -140,12 +195,12 @@ public class DirectFileDescriptorTest {
 
         fillupFile(file, 100);
 
-        DirectFileDescriptor fileDescriptor = control.newFile(file);
+        DirectFileDescriptor fileDescriptor = control.newFile(file, true);
 
         // ByteBuffer buffer = ByteBuffer.allocateDirect(512);
         ByteBuffer buffer = DirectFileDescriptorController.newAlignedBuffer(512, 512);
 
-        fileDescriptor.read(0, 512, buffer, callback);
+        Assert.assertTrue(fileDescriptor.read(0, 512, buffer, callback));
 
         Assert.assertEquals(1, control.poll(callbacks, 1, 50));
 
@@ -167,14 +222,14 @@ public class DirectFileDescriptorTest {
 
         fillupFile(file, 10);
 
-        DirectFileDescriptor fileDescriptor = control.newFile(file);
+        DirectFileDescriptor fileDescriptor = control.newFile(file, true);
 
         ByteBuffer buffer = ByteBuffer.allocateDirect(300);
         for (int i = 0; i < 300; i++) {
             buffer.put((byte) 'z');
         }
 
-        fileDescriptor.write(0, 300, buffer, callback);
+        Assert.assertTrue(fileDescriptor.write(0, 300, buffer, callback));
 
         Assert.assertEquals(1, control.poll(callbacks, 1, 50));
 
@@ -190,13 +245,13 @@ public class DirectFileDescriptorTest {
             buffer.put((byte) 'z');
         }
 
-        fileDescriptor.write(0, 512, buffer, callback);
+        Assert.assertTrue(fileDescriptor.write(0, 512, buffer, callback));
 
         Assert.assertEquals(1, control.poll(callbacks, 1, 1));
 
         Assert.assertSame(callback, callbacks[0]);
 
-        fileDescriptor.write(5, 512, buffer, callback);
+        Assert.assertTrue(fileDescriptor.write(5, 512, buffer, callback));
 
         Assert.assertEquals(1, control.poll(callbacks, 1, 1));
 
@@ -216,7 +271,7 @@ public class DirectFileDescriptorTest {
 
         Object[] callbacks = new Object[50];
 
-        DirectFileDescriptor fileDescriptor = control.newFile(file);
+        DirectFileDescriptor fileDescriptor = control.newFile(file, true);
 
         ByteBuffer bufferWrite = DirectFileDescriptorController.newAlignedBuffer(512, 512);
         for (int i = 0; i < 512; i++) {
@@ -226,7 +281,7 @@ public class DirectFileDescriptorTest {
         for (int j = 0; j < 100; j++) {
             for (int i = 0; i < 49; i++) {
                 CountClass countClass = new CountClass();
-                fileDescriptor.write(i * 512, 512, bufferWrite, countClass);
+                Assert.assertTrue(fileDescriptor.write(i * 512, 512, bufferWrite, countClass));
             }
 
             Assert.assertEquals(49, control.poll(callbacks, 49, 50));
@@ -256,7 +311,7 @@ public class DirectFileDescriptorTest {
 
         try {
             // this should throw an exception, we shouldn't be able to open a directory!
-            control.newFile(temporaryFolder.getRoot());
+            control.newFile(temporaryFolder.getRoot(), true);
         } catch (IOException expected) {
             exceptionThrown = true;
         }
@@ -265,7 +320,7 @@ public class DirectFileDescriptorTest {
 
         exceptionThrown = false;
 
-        DirectFileDescriptor fileDescriptor = control.newFile(temporaryFolder.newFile());
+        DirectFileDescriptor fileDescriptor = control.newFile(temporaryFolder.newFile(), true);
         fileDescriptor.close();
         try {
             fileDescriptor.close();
@@ -275,7 +330,7 @@ public class DirectFileDescriptorTest {
 
         Assert.assertTrue(exceptionThrown);
 
-        fileDescriptor = control.newFile(temporaryFolder.newFile());
+        fileDescriptor = control.newFile(temporaryFolder.newFile(), true);
 
         ByteBuffer buffer = fileDescriptor.newBuffer(512);
 
@@ -283,27 +338,22 @@ public class DirectFileDescriptorTest {
             buffer.put((byte) 'a');
         }
 
-        exceptionThrown = false;
-        try {
-            for (int i = 0; i < 60; i++) {
-                fileDescriptor.write(i * 512, 512, buffer, new CountClass());
-            }
-        } catch (IOException e) {
-            exceptionThrown = true;
+        for (int i = 0; i < 50; i++) {
+            Assert.assertTrue(fileDescriptor.write(i * 512, 512, buffer, new CountClass()));
         }
 
-        Assert.assertTrue(exceptionThrown);
+        Assert.assertFalse(fileDescriptor.write(0, 512, buffer, new CountClass()));
 
         Object[] callbacks = new Object[100];
         Assert.assertEquals(50, control.poll(callbacks, 50, 100));
 
         // it should be possible to write now after queue space being released
-        fileDescriptor.write(0, 512, buffer, new CountClass());
+        Assert.assertTrue(fileDescriptor.write(0, 512, buffer, new CountClass()));
         Assert.assertEquals(1, control.poll(callbacks, 1, 100));
 
         CountClass errorCallback = new CountClass();
         // odd positions will have failures through O_DIRECT
-        fileDescriptor.read(3, 512, buffer, errorCallback);
+        Assert.assertTrue(fileDescriptor.read(3, 512, buffer, errorCallback));
         Assert.assertEquals(1, control.poll(callbacks, 1, 50));
         Assert.assertTrue(callbacks[0] instanceof ErrorInfo);
         Assert.assertSame(errorCallback, ((ErrorInfo) callbacks[0]).callback());
@@ -363,7 +413,7 @@ public class DirectFileDescriptorTest {
         }
 
         public static void checkLeaks() throws InterruptedException {
-            long timeout = System.currentTimeMillis() + 5000;
+            long timeout = System.nanoTime() + TimeUnit.NANOSECONDS.convert(5, TimeUnit.SECONDS);
 
             while (timeout > System.currentTimeMillis() && count.get() != 0) {
                 WeakReference reference = new WeakReference(new Object());

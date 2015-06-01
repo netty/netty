@@ -18,11 +18,8 @@ package io.netty.channel.libaio;
 import io.netty.channel.epoll.Native;
 import io.netty.channel.unix.FileDescriptor;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * This is an extension to {@link FileDescriptor} where the file is open with O_DIRECT.
@@ -36,36 +33,11 @@ public final class DirectFileDescriptor extends FileDescriptor {
      * This represents a structure allocated on the native
      * this is a io_context_t
      */
-    private ByteBuffer libaioContext;
+    private ByteBuffer ioContext;
 
-    private DirectFileDescriptor(int fd, ByteBuffer libaioContext) {
+    DirectFileDescriptor(int fd, ByteBuffer libaioContext) {
         super(fd);
-        this.libaioContext = libaioContext;
-    }
-    /**
-     * Open a new {@link FileDescriptor} for the given path.
-     */
-    static DirectFileDescriptor from(String path, ByteBuffer ioContext) throws IOException {
-        checkNotNull(path, "path");
-        checkNotNull(ioContext, "ioContext");
-
-        if (ioContext == null) {
-            throw new IOException("Could not initialize libaio context");
-        }
-
-        int res = DirectFileDescriptorController.open(path);
-        if (res < 0) {
-            throw Native.newIOException("open", res);
-        }
-
-        return new DirectFileDescriptor(res, ioContext);
-    }
-
-    /**
-     * Open a new {@link FileDescriptor} for the given {@link File}.
-     */
-    public static DirectFileDescriptor from(File file, ByteBuffer context) throws IOException {
-        return from(checkNotNull(file, "file").getPath(), context);
+        this.ioContext = libaioContext;
     }
 
     /**
@@ -80,39 +52,43 @@ public final class DirectFileDescriptor extends FileDescriptor {
     /**
      * It will submit a write to the queue. The callback sent here will be received on the
      *   {@link DirectFileDescriptorController#poll(java.nio.ByteBuffer, Object[], int, int).
+     * In case of the libaio queue is full (e.g. returning E_AGAIN) this method will return false.
 
      * Notice: this won't hold a global reference on buffer, callback should hold a reference towards bufferWrite.
      *         And don't free the buffer until the callback was called as this could crash the VM.
      *
      * @param position The position on the file to write. Notice this has to be a multiple of 512.
      * @param size The size of the buffer to use while writing.
-     * @param buffer a Native buffer allocated by {@link #newBuffer(int)}.
+     * @param buffer if you are using O_DIRECT the buffer here needs to be allocated by {@link #newBuffer(int)}.
      * @param callback A callback to be returned on the poll method.
-     * @throws IOException
+     * @return true if successful, false if the queue was full on that case poll and try again
+     * @throws IOException in case of error
      *
      * @see DirectFileDescriptorController#poll(ByteBuffer, Object[], int, int)
      */
-    public void write(long position, int size, ByteBuffer buffer, Object callback) throws IOException {
-        DirectFileDescriptorController.submitWrite(this.fd, libaioContext, position, size, buffer, callback);
+    public boolean write(long position, int size, ByteBuffer buffer, Object callback) throws IOException {
+        return DirectFileDescriptorController.submitWrite(this.fd, ioContext, position, size, buffer, callback);
     }
 
     /**
      * It will submit a read to the queue. The callback sent here will be received on the
      *   {@link DirectFileDescriptorController#poll(java.nio.ByteBuffer, Object[], int, int)}.
+     * In case of the libaio queue is full (e.g. returning E_AGAIN) this method will return false.
      *
      * Notice: this won't hold a global reference on buffer, callback should hold a reference towards bufferWrite.
      *         And don't free the buffer until the callback was called as this could crash the VM.
      * *
      * @param position The position on the file to read. Notice this has to be a multiple of 512.
      * @param size The size of the buffer to use while reading.
-     * @param buffer a Native buffer allocated by {@link #newBuffer(int)}.
+     * @param buffer if you are using O_DIRECT the buffer here needs to be allocated by {@link #newBuffer(int)}.
      * @param callback A callback to be returned on the poll method.
+     * @return true if successful, false if the queue was full on that case poll and try again
      * @throws IOException
      *
      * @see DirectFileDescriptorController#poll(ByteBuffer, Object[], int, int)
      */
-    public void read(long position, int size, ByteBuffer buffer, Object callback)  throws IOException {
-        DirectFileDescriptorController.submitRead(this.fd, libaioContext, position, size, buffer, callback);
+    public boolean read(long position, int size, ByteBuffer buffer, Object callback)  throws IOException {
+        return DirectFileDescriptorController.submitRead(this.fd, ioContext, position, size, buffer, callback);
     }
 
     /**
@@ -126,7 +102,6 @@ public final class DirectFileDescriptor extends FileDescriptor {
      * @return the buffer allocated.
      */
     public ByteBuffer newBuffer(int size) {
-        // TODO: do I need to use the alignment of the file itself or not?
         return DirectFileDescriptorController.newAlignedBuffer(size, 512);
     }
 }

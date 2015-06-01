@@ -21,6 +21,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 /**
  * This class is used as an aggregator for the {@link DirectFileDescriptor}.
  *
@@ -41,9 +43,9 @@ public class DirectFileDescriptorController {
     }
 
     /**
-     *  the native context including the structure created.
+     *  the native ioContext including the structure created.
      */
-    ByteBuffer context;
+    ByteBuffer ioContext;
 
     /**
      * The queue size here will use resources defined on the kernel parameter
@@ -52,7 +54,7 @@ public class DirectFileDescriptorController {
      * @param queueSize the size to be initialize on libaio io_queue_init.
      */
     public DirectFileDescriptorController(int queueSize) {
-        this.context = newContext(queueSize);
+        this.ioContext = newContext(queueSize);
     }
 
     /**
@@ -62,9 +64,9 @@ public class DirectFileDescriptorController {
      * this could cause core dumps or VM crashes.
      */
     public void close() {
-        if (context != null) {
-            deleteContext(context);
-            context = null;
+        if (ioContext != null) {
+            deleteContext(ioContext);
+            ioContext = null;
         }
     }
 
@@ -75,17 +77,25 @@ public class DirectFileDescriptorController {
     }
 
     /**
-     * It will open a new file using O_DIRECT.
+     * It will open a new file. If you set the direct flag = false then you won't need to use the special buffer.
+     * @param direct should use O_DIRECT when opening the file.
      */
-    public DirectFileDescriptor newFile(File file) throws IOException {
-        return DirectFileDescriptor.from(file, context);
+    public DirectFileDescriptor newFile(File file, boolean direct) throws IOException {
+        return newFile(file.getPath(), direct);
     }
 
     /**
-     * It will open a new file using O_DIRECT.
+     * It will open a new file.  If you set the direct flag = false then you won't need to use the special buffer.
+     * @param direct should use O_DIRECT when opening the file.
      */
-    public DirectFileDescriptor newFile(String file) throws IOException {
-        return DirectFileDescriptor.from(file, context);
+    public DirectFileDescriptor newFile(String file, boolean direct) throws IOException {
+        checkNotNull(file, "path");
+        checkNotNull(ioContext, "IOContext");
+
+        // note: the native layer will throw an IOException in case of errors
+        int res = DirectFileDescriptorController.open(file, direct);
+
+        return new DirectFileDescriptor(res, ioContext);
     }
 
     /**
@@ -107,7 +117,7 @@ public class DirectFileDescriptorController {
      * @see DirectFileDescriptor#read(long, int, ByteBuffer, Object)
      */
     public int poll(Object[] callbacks, int min, int max) {
-        return poll(context, callbacks, min, max);
+        return poll(ioContext, callbacks, min, max);
     }
 
     /**
@@ -120,7 +130,7 @@ public class DirectFileDescriptorController {
      */
     static native void deleteContext(ByteBuffer buffer);
 
-    static native int open(String path);
+    static native int open(String path, boolean direct);
 
     static native void close(int fd);
 
@@ -139,7 +149,7 @@ public class DirectFileDescriptorController {
     /**
      * Documented at {@link DirectFileDescriptor#write(long, int, java.nio.ByteBuffer, Object)}.
      */
-    static native void submitWrite(int fd,
+    static native boolean submitWrite(int fd,
                                    ByteBuffer libaioContext,
                                    long position, int size, ByteBuffer bufferWrite,
                                    Object callback) throws IOException;
@@ -147,7 +157,7 @@ public class DirectFileDescriptorController {
     /**
      * Documented at {@link DirectFileDescriptor#read(long, int, java.nio.ByteBuffer, Object)}.
      */
-    static native void submitRead(int fd,
+    static native boolean submitRead(int fd,
                                   ByteBuffer libaioContext,
                                   long position, int size, ByteBuffer bufferWrite,
                                   Object callback) throws IOException;

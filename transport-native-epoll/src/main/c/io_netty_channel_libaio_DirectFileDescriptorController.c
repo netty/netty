@@ -158,8 +158,20 @@ JNIEXPORT jobject JNICALL Java_io_netty_channel_libaio_DirectFileDescriptorContr
         // Error, so need to release whatever was done before
         free(libaioContext);
 
-        throwRuntimeException(env, exceptionMessage("Cannot initialize queue:", -res));
+        throwRuntimeExceptionErrorNo(env, "Cannot initialize queue:", res);
         return NULL;
+    }
+    struct io_control * theControl = (struct io_control *) malloc(sizeof(struct io_control));
+    if (theControl == NULL) {
+        throwOutOfMemoryError(env);
+        return;
+    }
+
+    res = pthread_mutex_init(&(theControl->iocbLock), 0);
+    if (res)
+    {
+        throwRuntimeExceptionErrorNo(env, "Can't initialize mutext:", res);
+        return;
     }
 
     struct iocb ** iocb = (struct iocb **)malloc(sizeof(struct iocb *) * queueSize);
@@ -170,8 +182,6 @@ JNIEXPORT jobject JNICALL Java_io_netty_channel_libaio_DirectFileDescriptorContr
 
     struct io_event * events = (struct io_event *)malloc(sizeof(struct io_event) * queueSize);
 
-    struct io_control * theControl = (struct io_control *) malloc(sizeof(struct io_control));
-
     theControl->ioContext = libaioContext;
     theControl->events = events;
     theControl->iocb = iocb;
@@ -179,7 +189,6 @@ JNIEXPORT jobject JNICALL Java_io_netty_channel_libaio_DirectFileDescriptorContr
     theControl->iocbPut = 0;
     theControl->iocbGet = 0;
     theControl->used = 0;
-    pthread_mutex_init(&(theControl->iocbLock), 0);
 
     return (*env)->NewDirectByteBuffer(env, theControl, sizeof(struct io_control));
 }
@@ -195,54 +204,64 @@ JNIEXPORT void JNICALL Java_io_netty_channel_libaio_DirectFileDescriptorControll
     }
 
     free(theControl->iocb);
-
     free(theControl->events);
-
     free(theControl);
 }
 
 JNIEXPORT void JNICALL Java_io_netty_channel_libaio_DirectFileDescriptorController_close(JNIEnv* env, jclass clazz, jint fd) {
    if (close(fd) < 0) {
-       throwIOException(env, exceptionMessage("Error closing file:", errno));
+       throwIOExceptionErrorNo(env, "Error closing file:", errno);
    }
 }
 
-JNIEXPORT int JNICALL Java_io_netty_channel_libaio_DirectFileDescriptorController_open(JNIEnv* env, jclass clazz, jstring path) {
+JNIEXPORT int JNICALL Java_io_netty_channel_libaio_DirectFileDescriptorController_open(JNIEnv* env, jclass clazz,
+                        jstring path, jboolean direct) {
     const char* f_path = (*env)->GetStringUTFChars(env, path, 0);
 
-    int res = open(f_path, O_RDWR | O_CREAT | O_DIRECT, 0666);
+    int res;
+    if (direct) {
+      res = open(f_path, O_RDWR | O_CREAT | O_DIRECT, 0666);
+    } else {
+      res = open(f_path, O_RDWR | O_CREAT, 0666);
+    }
 
     (*env)->ReleaseStringUTFChars(env, path, f_path);
 
     if (res < 0) {
-       throwIOException(env, exceptionMessage("Cannot open file:", errno));
+       throwIOExceptionErrorNo(env, "Cannot open file:", errno);
     }
 
     return res;
 }
 
-static inline void submit(JNIEnv * env, io_context_t ioContext,  struct iocb * iocb) {
-    int result = io_submit(ioContext, 1, &iocb);
+static inline jboolean submit(JNIEnv * env, struct io_control * theControl, struct iocb * iocb) {
+    int result = io_submit(theControl->ioContext, 1, &iocb);
 
     if (result < 0) {
-        if (result == -EAGAIN) {
-            throwIOException(env, "Not enough space on libaio queue");
+        // Putting the Global Ref and IOCB back in case of a failure
+        (*env)->DeleteGlobalRef(env, (jobject)iocb->data);
+        putIOCB(theControl, iocb);
+
+        if (result != -EAGAIN) {
+            // EGAIN will just return FALSE, meaning poll and try again
+            throwIOExceptionErrorNo(env, "Error while submitting IO:", -result);
         }
-        else {
-            throwIOException(env, exceptionMessage("Error while submitting IO:", -result));
-        }
+
+        return JNI_FALSE;
+    }
+    else {
+        return JNI_TRUE;
     }
 }
 
-JNIEXPORT void JNICALL Java_io_netty_channel_libaio_DirectFileDescriptorController_submitWrite
+JNIEXPORT jboolean JNICALL Java_io_netty_channel_libaio_DirectFileDescriptorController_submitWrite
   (JNIEnv * env, jclass clazz, jint fileHandle, jobject contextPointer, jlong position, jint size, jobject bufferWrite, jobject callback) {
     struct io_control * theControl = getIOControl(env, contextPointer);
 
     struct iocb * iocb = getIOCB(theControl);
 
     if (iocb == NULL) {
-       throwIOException(env, "Not enough space on the queue for submitting");
-       return;
+        return JNI_FALSE;
     }
 
     io_prep_pwrite(iocb, fileHandle, getBuffer(env, bufferWrite), size, position);
@@ -253,18 +272,17 @@ JNIEXPORT void JNICALL Java_io_netty_channel_libaio_DirectFileDescriptorControll
     // also as the real intention is to hold the reference until the life cycle is complete
     iocb->data = (void *) (*env)->NewGlobalRef(env, callback);
 
-    submit(env, theControl->ioContext, iocb);
+    return submit(env, theControl, iocb);
 }
 
-JNIEXPORT void JNICALL Java_io_netty_channel_libaio_DirectFileDescriptorController_submitRead
+JNIEXPORT jboolean JNICALL Java_io_netty_channel_libaio_DirectFileDescriptorController_submitRead
   (JNIEnv * env, jclass clazz, jint fileHandle, jobject contextPointer, jlong position, jint size, jobject bufferRead, jobject callback) {
     struct io_control * theControl = getIOControl(env, contextPointer);
 
     struct iocb * iocb = getIOCB(theControl);
 
     if (iocb == NULL) {
-       throwIOException(env, "Not enough space on the queue for submitting");
-       return;
+        return JNI_FALSE;
     }
 
     io_prep_pread(iocb, fileHandle, getBuffer(env, bufferRead), size, position);
@@ -275,7 +293,7 @@ JNIEXPORT void JNICALL Java_io_netty_channel_libaio_DirectFileDescriptorControll
     // also as the real intention is to hold the reference until the life cycle is complete
     iocb->data = (void *) (*env)->NewGlobalRef(env, callback);
 
-    submit(env, theControl->ioContext, iocb);
+    return submit(env, theControl, iocb);
 }
 
 JNIEXPORT jint JNICALL Java_io_netty_channel_libaio_DirectFileDescriptorController_poll
@@ -284,11 +302,12 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_libaio_DirectFileDescriptorControll
     struct io_control * theControl = getIOControl(env, contextPointer);
 
     int result = io_getevents(theControl->ioContext, min, max, theControl->events, 0);
+    int retVal = result;
 
     for (i = 0; i < result; i++) {
-        struct iocb * iocbp = (struct iocb *)theControl->events[i].obj;
-
-        int eventResult = theControl->events[i].res;
+        struct io_event * event = &(theControl->events[i]);
+        struct iocb * iocbp = event->obj;
+        int eventResult = event->res;
 
         #ifdef DEBUG
             fprintf (stderr, "Poll res: %d totalRes=%d\n", eventResult, result);
@@ -309,10 +328,13 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_libaio_DirectFileDescriptorControll
                                                    jstrError);
 
             if (errorObject == NULL) {
-                return -1;
+                // if errorObject is null here, I will just do what I can to finish the loop and
+                // releasing everything I can
+                throwOutOfMemoryError(env);
+                retVal = -1;
+            } else {
+                (*env)->SetObjectArrayElement(env, callbacks, i, errorObject);
             }
-
-            (*env)->SetObjectArrayElement(env, callbacks, i, errorObject);
         } else {
             (*env)->SetObjectArrayElement(env, callbacks, i, (jobject)iocbp->data);
         }
@@ -324,6 +346,8 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_libaio_DirectFileDescriptorControll
 
         putIOCB(theControl, iocbp);
     }
+
+    return retVal;
 }
 
 JNIEXPORT jobject JNICALL Java_io_netty_channel_libaio_DirectFileDescriptorController_newAlignedBuffer
@@ -340,7 +364,7 @@ JNIEXPORT jobject JNICALL Java_io_netty_channel_libaio_DirectFileDescriptorContr
     int result = posix_memalign(&buffer, alignment, size);
 
     if (result) {
-        throwRuntimeException(env, exceptionMessage("Can't allocate posix buffer:", result));
+        throwRuntimeExceptionErrorNo(env, "Can't allocate posix buffer:", result);
         return NULL;
     }
 
