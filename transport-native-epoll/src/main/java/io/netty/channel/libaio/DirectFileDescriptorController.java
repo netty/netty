@@ -77,18 +77,22 @@ public class DirectFileDescriptorController {
     }
 
     /**
-     * It will open a new file. If you set the direct flag = false then you won't need to use the special buffer.
+     * It will open a file. If you set the direct flag = false then you won't need to use the special buffer.
+     * Notice: This will create an empty file if the file doesn't already exist.
+     *
      * @param direct should use O_DIRECT when opening the file.
      */
-    public DirectFileDescriptor newFile(File file, boolean direct) throws IOException {
-        return newFile(file.getPath(), direct);
+    public DirectFileDescriptor openFile(File file, boolean direct) throws IOException {
+        return openFile(file.getPath(), direct);
     }
 
     /**
-     * It will open a new file.  If you set the direct flag = false then you won't need to use the special buffer.
+     * It will open a file. If you set the direct flag = false then you won't need to use the special buffer.
+     * Notice: This will create an empty file if the file doesn't already exist.
+     *
      * @param direct should use O_DIRECT when opening the file.
      */
-    public DirectFileDescriptor newFile(String file, boolean direct) throws IOException {
+    public DirectFileDescriptor openFile(String file, boolean direct) throws IOException {
         checkNotNull(file, "path");
         checkNotNull(ioContext, "IOContext");
 

@@ -67,7 +67,7 @@ public class DirectFileDescriptorTest {
 
     @Test
     public void testOpen() throws Exception {
-        DirectFileDescriptor fileDescriptor = control.newFile(temporaryFolder.newFile("test.bin"), true);
+        DirectFileDescriptor fileDescriptor = control.openFile(temporaryFolder.newFile("test.bin"), true);
         fileDescriptor.close();
     }
 
@@ -77,7 +77,7 @@ public class DirectFileDescriptorTest {
 
         Object[] callbacks = new Object[50];
 
-        DirectFileDescriptor fileDescriptor = control.newFile(temporaryFolder.newFile("test.bin"), true);
+        DirectFileDescriptor fileDescriptor = control.openFile(temporaryFolder.newFile("test.bin"), true);
 
         // ByteBuffer buffer = ByteBuffer.allocateDirect(512);
         ByteBuffer buffer = control.newAlignedBuffer(512, 512);
@@ -142,7 +142,7 @@ public class DirectFileDescriptorTest {
 
         fillupFile(file, 50);
 
-        DirectFileDescriptor fileDescriptor = control.newFile(file, false);
+        DirectFileDescriptor fileDescriptor = control.openFile(file, false);
 
         ByteBuffer buffer = ByteBuffer.allocateDirect(50);
 
@@ -194,7 +194,7 @@ public class DirectFileDescriptorTest {
 
         fillupFile(file, 100);
 
-        DirectFileDescriptor fileDescriptor = control.newFile(file, true);
+        DirectFileDescriptor fileDescriptor = control.openFile(file, true);
 
         // ByteBuffer buffer = ByteBuffer.allocateDirect(512);
         ByteBuffer buffer = DirectFileDescriptorController.newAlignedBuffer(512, 512);
@@ -221,7 +221,7 @@ public class DirectFileDescriptorTest {
 
         fillupFile(file, 10);
 
-        DirectFileDescriptor fileDescriptor = control.newFile(file, true);
+        DirectFileDescriptor fileDescriptor = control.openFile(file, true);
 
         ByteBuffer buffer = ByteBuffer.allocateDirect(300);
         for (int i = 0; i < 300; i++) {
@@ -270,7 +270,7 @@ public class DirectFileDescriptorTest {
 
         Object[] callbacks = new Object[50];
 
-        DirectFileDescriptor fileDescriptor = control.newFile(file, true);
+        DirectFileDescriptor fileDescriptor = control.openFile(file, true);
 
         ByteBuffer bufferWrite = DirectFileDescriptorController.newAlignedBuffer(512, 512);
         for (int i = 0; i < 512; i++) {
@@ -310,7 +310,7 @@ public class DirectFileDescriptorTest {
 
         try {
             // this should throw an exception, we shouldn't be able to open a directory!
-            control.newFile(temporaryFolder.getRoot(), true);
+            control.openFile(temporaryFolder.getRoot(), true);
         } catch (IOException expected) {
             exceptionThrown = true;
         }
@@ -319,7 +319,7 @@ public class DirectFileDescriptorTest {
 
         exceptionThrown = false;
 
-        DirectFileDescriptor fileDescriptor = control.newFile(temporaryFolder.newFile(), true);
+        DirectFileDescriptor fileDescriptor = control.openFile(temporaryFolder.newFile(), true);
         fileDescriptor.close();
         try {
             fileDescriptor.close();
@@ -329,7 +329,7 @@ public class DirectFileDescriptorTest {
 
         Assert.assertTrue(exceptionThrown);
 
-        fileDescriptor = control.newFile(temporaryFolder.newFile(), true);
+        fileDescriptor = control.openFile(temporaryFolder.newFile(), true);
 
         ByteBuffer buffer = fileDescriptor.newBuffer(512);
 
