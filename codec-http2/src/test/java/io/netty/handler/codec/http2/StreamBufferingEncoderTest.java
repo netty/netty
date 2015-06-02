@@ -44,6 +44,7 @@ import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.http2.StreamBufferingEncoder.Http2ChannelClosedException;
 import io.netty.handler.codec.http2.StreamBufferingEncoder.Http2GoAwayException;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 import org.junit.After;
@@ -76,6 +77,9 @@ public class StreamBufferingEncoderTest {
 
     @Mock
     private ChannelConfig config;
+
+    @Mock
+    private EventExecutor executor;
 
     @Mock
     private ChannelPromise promise;
@@ -114,7 +118,9 @@ public class StreamBufferingEncoderTest {
         when(ctx.channel()).thenReturn(channel);
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(channel.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
+        when(executor.inEventLoop()).thenReturn(true);
         when(ctx.newPromise()).thenReturn(promise);
+        when(ctx.executor()).thenReturn(executor);
         when(promise.channel()).thenReturn(channel);
         when(channel.isActive()).thenReturn(false);
         when(channel.config()).thenReturn(config);
