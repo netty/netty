@@ -34,6 +34,9 @@ import io.netty.util.internal.PlatformDependent;
 
 /**
  * Basic implementation of {@link Http2LocalFlowController}.
+ * <p>
+ * This class is <strong>NOT</strong> thread safe. The assumption is all methods must be invoked from a single thread.
+ * Typically this thread is the event loop thread for the {@link ChannelHandlerContext} managed by this class.
  */
 public class DefaultHttp2LocalFlowController implements Http2LocalFlowController {
     /**
@@ -46,8 +49,8 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     private final Http2FrameWriter frameWriter;
     private final Http2Connection.PropertyKey stateKey;
     private ChannelHandlerContext ctx;
-    private volatile float windowUpdateRatio;
-    private volatile int initialWindowSize = DEFAULT_WINDOW_SIZE;
+    private float windowUpdateRatio;
+    private int initialWindowSize = DEFAULT_WINDOW_SIZE;
 
     public DefaultHttp2LocalFlowController(Http2Connection connection, Http2FrameWriter frameWriter) {
         this(connection, frameWriter, DEFAULT_WINDOW_UPDATE_RATIO);
@@ -110,6 +113,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
 
     @Override
     public void initialWindowSize(int newWindowSize) throws Http2Exception {
+        assert ctx == null || ctx.executor().inEventLoop();
         int delta = newWindowSize - initialWindowSize;
         initialWindowSize = newWindowSize;
 
@@ -135,6 +139,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
 
     @Override
     public void incrementWindowSize(Http2Stream stream, int delta) throws Http2Exception {
+        assert ctx != null && ctx.executor().inEventLoop();
         FlowState state = state(stream);
         // Just add the delta to the stream-specific initial window size so that the next time the window
         // expands it will grow to the new initial size.
@@ -144,6 +149,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
 
     @Override
     public boolean consumeBytes(Http2Stream stream, int numBytes) throws Http2Exception {
+        assert ctx != null && ctx.executor().inEventLoop();
         if (numBytes < 0) {
             throw new IllegalArgumentException("numBytes must not be negative");
         }
@@ -184,6 +190,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
      * @throws IllegalArgumentException If the ratio is out of bounds (0, 1).
      */
     public void windowUpdateRatio(float ratio) {
+        assert ctx == null || ctx.executor().inEventLoop();
         checkValidRatio(ratio);
         windowUpdateRatio = ratio;
     }
@@ -211,6 +218,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
      * @throws Http2Exception If a protocol-error occurs while generating {@code WINDOW_UPDATE} frames
      */
     public void windowUpdateRatio(Http2Stream stream, float ratio) throws Http2Exception {
+        assert ctx != null && ctx.executor().inEventLoop();
         checkValidRatio(ratio);
         FlowState state = state(stream);
         state.windowUpdateRatio(ratio);
@@ -230,6 +238,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     @Override
     public void receiveFlowControlledFrame(Http2Stream stream, ByteBuf data, int padding,
             boolean endOfStream) throws Http2Exception {
+        assert ctx != null && ctx.executor().inEventLoop();
         int dataLength = data.readableBytes() + padding;
 
         // Apply the connection-level flow control
@@ -283,14 +292,14 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
          * This is what is used to determine how many bytes need to be returned relative to {@link #processedWindow}.
          * Each stream has their own initial window size.
          */
-        private volatile int initialStreamWindowSize;
+        private int initialStreamWindowSize;
 
         /**
          * This is used to determine when {@link #processedWindow} is sufficiently far away from
          * {@link #initialStreamWindowSize} such that a {@code WINDOW_UPDATE} should be sent.
          * Each stream has their own window update ratio.
          */
-        private volatile float streamWindowUpdateRatio;
+        private float streamWindowUpdateRatio;
 
         private int lowerBound;
         private boolean endOfStream;
@@ -303,6 +312,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
 
         @Override
         public void window(int initialWindowSize) {
+            assert ctx == null || ctx.executor().inEventLoop();
             window = processedWindow = initialStreamWindowSize = initialWindowSize;
         }
 
@@ -328,6 +338,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
 
         @Override
         public void windowUpdateRatio(float ratio) {
+            assert ctx == null || ctx.executor().inEventLoop();
             streamWindowUpdateRatio = ratio;
         }
 

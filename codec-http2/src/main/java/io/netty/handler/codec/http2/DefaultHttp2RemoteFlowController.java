@@ -32,6 +32,9 @@ import java.util.Deque;
 
 /**
  * Basic implementation of {@link Http2RemoteFlowController}.
+ * <p>
+ * This class is <strong>NOT</strong> thread safe. The assumption is all methods must be invoked from a single thread.
+ * Typically this thread is the event loop thread for the {@link ChannelHandlerContext} managed by this class.
  */
 public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowController {
     private static final int MIN_WRITABLE_CHUNK = 32 * 1024;
@@ -164,6 +167,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
     @Override
     public void initialWindowSize(int newWindowSize) throws Http2Exception {
+        assert ctx == null || ctx.executor().inEventLoop();
         if (newWindowSize < 0) {
             throw new IllegalArgumentException("Invalid initial window size: " + newWindowSize);
         }
@@ -202,6 +206,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
     @Override
     public void incrementWindowSize(Http2Stream stream, int delta) throws Http2Exception {
+        assert ctx == null || ctx.executor().inEventLoop();
         if (stream.id() == CONNECTION_STREAM_ID) {
             // Update the connection window
             connectionState().incrementStreamWindow(delta);
@@ -224,6 +229,8 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
     @Override
     public void addFlowControlled(Http2Stream stream, FlowControlled frame) {
+        // The context can be null assuming the frame will be queued and send later when the context is set.
+        assert ctx == null || ctx.executor().inEventLoop();
         checkNotNull(frame, "frame");
         final AbstractState state;
         try {
