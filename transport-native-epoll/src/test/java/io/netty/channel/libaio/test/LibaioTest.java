@@ -15,8 +15,8 @@
  */
 package io.netty.channel.libaio.test;
 
-import io.netty.channel.libaio.DirectFileDescriptor;
-import io.netty.channel.libaio.DirectFileDescriptorController;
+import io.netty.channel.libaio.LibaioFile;
+import io.netty.channel.libaio.LibaioContext;
 import io.netty.channel.libaio.ErrorInfo;
 import org.junit.After;
 import org.junit.Assert;
@@ -33,19 +33,19 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * This test is using a different package from {@link DirectFileDescriptor}
+ * This test is using a different package from {@link io.netty.channel.libaio.LibaioFile}
  * as I need to validate public methods on the API
  */
-public class DirectFileDescriptorTest {
+public class LibaioTest {
 
     @Rule
     public TemporaryFolder temporaryFolder;
 
-    public DirectFileDescriptorController control;
+    public LibaioContext control;
 
     @Before
     public void setUpFactory() {
-        control = new DirectFileDescriptorController(50);
+        control = new LibaioContext(50);
     }
 
     @After
@@ -53,7 +53,7 @@ public class DirectFileDescriptorTest {
         control.close();
     }
 
-    public DirectFileDescriptorTest() {
+    public LibaioTest() {
         /**
          *  I didn't use /tmp for three reasons
          *  - Most systems now will use tmpfs which is not compatible with O_DIRECT
@@ -67,7 +67,7 @@ public class DirectFileDescriptorTest {
 
     @Test
     public void testOpen() throws Exception {
-        DirectFileDescriptor fileDescriptor = control.openFile(temporaryFolder.newFile("test.bin"), true);
+        LibaioFile fileDescriptor = control.openFile(temporaryFolder.newFile("test.bin"), true);
         fileDescriptor.close();
     }
 
@@ -77,7 +77,7 @@ public class DirectFileDescriptorTest {
 
         Object[] callbacks = new Object[50];
 
-        DirectFileDescriptor fileDescriptor = control.openFile(temporaryFolder.newFile("test.bin"), true);
+        LibaioFile fileDescriptor = control.openFile(temporaryFolder.newFile("test.bin"), true);
 
         // ByteBuffer buffer = ByteBuffer.allocateDirect(512);
         ByteBuffer buffer = control.newAlignedBuffer(512, 512);
@@ -96,9 +96,9 @@ public class DirectFileDescriptorTest {
 
         Assert.assertSame(callback, callbacks[0]);
 
-        DirectFileDescriptorController.freeBuffer(buffer);
+        LibaioContext.freeBuffer(buffer);
 
-        buffer = DirectFileDescriptorController.newAlignedBuffer(512, 512);
+        buffer = LibaioContext.newAlignedBuffer(512, 512);
 
         for (int i = 0; i < 512; i++) {
             buffer.put((byte) 'B');
@@ -108,10 +108,10 @@ public class DirectFileDescriptorTest {
 
         Assert.assertEquals(1, control.poll(callbacks, 1, 50));
 
-        DirectFileDescriptorController.freeBuffer(buffer);
+        LibaioContext.freeBuffer(buffer);
 
         // ByteBuffer buffer = ByteBuffer.allocateDirect(512);
-        buffer = DirectFileDescriptorController.newAlignedBuffer(512, 512);
+        buffer = LibaioContext.newAlignedBuffer(512, 512);
 
         buffer.rewind();
 
@@ -123,7 +123,7 @@ public class DirectFileDescriptorTest {
             Assert.assertEquals('B', buffer.get());
         }
 
-        DirectFileDescriptorController.freeBuffer(buffer);
+        LibaioContext.freeBuffer(buffer);
 
         fileDescriptor.close();
     }
@@ -142,7 +142,7 @@ public class DirectFileDescriptorTest {
 
         fillupFile(file, 50);
 
-        DirectFileDescriptor fileDescriptor = control.openFile(file, false);
+        LibaioFile fileDescriptor = control.openFile(file, false);
 
         ByteBuffer buffer = ByteBuffer.allocateDirect(50);
 
@@ -194,10 +194,10 @@ public class DirectFileDescriptorTest {
 
         fillupFile(file, 100);
 
-        DirectFileDescriptor fileDescriptor = control.openFile(file, true);
+        LibaioFile fileDescriptor = control.openFile(file, true);
 
         // ByteBuffer buffer = ByteBuffer.allocateDirect(512);
-        ByteBuffer buffer = DirectFileDescriptorController.newAlignedBuffer(512, 512);
+        ByteBuffer buffer = LibaioContext.newAlignedBuffer(512, 512);
 
         Assert.assertTrue(fileDescriptor.read(0, 512, buffer, callback));
 
@@ -221,7 +221,7 @@ public class DirectFileDescriptorTest {
 
         fillupFile(file, 10);
 
-        DirectFileDescriptor fileDescriptor = control.openFile(file, true);
+        LibaioFile fileDescriptor = control.openFile(file, true);
 
         ByteBuffer buffer = ByteBuffer.allocateDirect(300);
         for (int i = 0; i < 300; i++) {
@@ -270,9 +270,9 @@ public class DirectFileDescriptorTest {
 
         Object[] callbacks = new Object[50];
 
-        DirectFileDescriptor fileDescriptor = control.openFile(file, true);
+        LibaioFile fileDescriptor = control.openFile(file, true);
 
-        ByteBuffer bufferWrite = DirectFileDescriptorController.newAlignedBuffer(512, 512);
+        ByteBuffer bufferWrite = LibaioContext.newAlignedBuffer(512, 512);
         for (int i = 0; i < 512; i++) {
             bufferWrite.put((byte) 'B');
         }
@@ -300,7 +300,7 @@ public class DirectFileDescriptorTest {
 
         try {
             // There is no space for a queue this huge, the native layer should throw the exception
-            DirectFileDescriptorController newController = new DirectFileDescriptorController(1000000);
+            LibaioContext newController = new LibaioContext(1000000);
         } catch (RuntimeException e) {
             exceptionThrown = true;
         }
@@ -319,7 +319,7 @@ public class DirectFileDescriptorTest {
 
         exceptionThrown = false;
 
-        DirectFileDescriptor fileDescriptor = control.openFile(temporaryFolder.newFile(), true);
+        LibaioFile fileDescriptor = control.openFile(temporaryFolder.newFile(), true);
         fileDescriptor.close();
         try {
             fileDescriptor.close();
@@ -365,7 +365,7 @@ public class DirectFileDescriptorTest {
 
         exceptionThrown = false;
         try {
-            DirectFileDescriptorController.newAlignedBuffer(300, 512);
+            LibaioContext.newAlignedBuffer(300, 512);
         } catch (RuntimeException e) {
             exceptionThrown = true;
         }
@@ -374,14 +374,14 @@ public class DirectFileDescriptorTest {
 
         exceptionThrown = false;
         try {
-            DirectFileDescriptorController.newAlignedBuffer(-512, 512);
+            LibaioContext.newAlignedBuffer(-512, 512);
         } catch (RuntimeException e) {
             exceptionThrown = true;
         }
 
         Assert.assertTrue(exceptionThrown);
 
-        DirectFileDescriptorController.freeBuffer(buffer);
+        LibaioContext.freeBuffer(buffer);
     }
 
     private void fillupFile(File file, int blocks) throws IOException {

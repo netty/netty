@@ -24,20 +24,20 @@ import java.nio.ByteBuffer;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
- * This class is used as an aggregator for the {@link DirectFileDescriptor}.
+ * This class is used as an aggregator for the {@link LibaioFile}.
  *
  * It holds native data, and it will share a libaio queue that can be used by multiple files.
  *
  * You need to use the poll methods to read the result of write and read submissions.
  *
- * You also need to use the special buffer created by {@link DirectFileDescriptor} as you need special alignments
+ * You also need to use the special buffer created by {@link LibaioFile} as you need special alignments
  * when dealing with O_DIRECT files.
  *
  * A Single controller can server multiple files. There's no need to create one controller per file.
  *
  * Interesting reading for this: <a href="https://ext4.wiki.kernel.org/index.php/Clarifying_Direct_IO's_Semantics"/>.
  */
-public class DirectFileDescriptorController {
+public class LibaioContext {
     static {
         Native.loadLibrary();
     }
@@ -53,7 +53,7 @@ public class DirectFileDescriptorController {
      *
      * @param queueSize the size to be initialize on libaio io_queue_init.
      */
-    public DirectFileDescriptorController(int queueSize) {
+    public LibaioContext(int queueSize) {
         this.ioContext = newContext(queueSize);
     }
 
@@ -82,7 +82,7 @@ public class DirectFileDescriptorController {
      *
      * @param direct should use O_DIRECT when opening the file.
      */
-    public DirectFileDescriptor openFile(File file, boolean direct) throws IOException {
+    public LibaioFile openFile(File file, boolean direct) throws IOException {
         return openFile(file.getPath(), direct);
     }
 
@@ -92,14 +92,14 @@ public class DirectFileDescriptorController {
      *
      * @param direct should use O_DIRECT when opening the file.
      */
-    public DirectFileDescriptor openFile(String file, boolean direct) throws IOException {
+    public LibaioFile openFile(String file, boolean direct) throws IOException {
         checkNotNull(file, "path");
         checkNotNull(ioContext, "IOContext");
 
         // note: the native layer will throw an IOException in case of errors
-        int res = DirectFileDescriptorController.open(file, direct);
+        int res = LibaioContext.open(file, direct);
 
-        return new DirectFileDescriptor(res, ioContext);
+        return new LibaioFile(res, ioContext);
     }
 
     /**
@@ -117,8 +117,8 @@ public class DirectFileDescriptorController {
      * @param max The maximum number of elements to receive.
      * @return Number of callbacks returned.
      *
-     * @see DirectFileDescriptor#write(long, int, ByteBuffer, Object)
-     * @see DirectFileDescriptor#read(long, int, ByteBuffer, Object)
+     * @see LibaioFile#write(long, int, ByteBuffer, Object)
+     * @see LibaioFile#read(long, int, ByteBuffer, Object)
      */
     public int poll(Object[] callbacks, int min, int max) {
         return poll(ioContext, callbacks, min, max);
@@ -141,7 +141,7 @@ public class DirectFileDescriptorController {
     /**
      * Buffers for O_DIRECT need to use posix_memalign.
      *
-     * Documented at {@link DirectFileDescriptor#newBuffer(int)}.
+     * Documented at {@link LibaioFile#newBuffer(int)}.
      */
     public static native ByteBuffer newAlignedBuffer(int size, int alignment);
 
@@ -151,7 +151,7 @@ public class DirectFileDescriptorController {
     public static native void freeBuffer(ByteBuffer buffer);
 
     /**
-     * Documented at {@link DirectFileDescriptor#write(long, int, java.nio.ByteBuffer, Object)}.
+     * Documented at {@link LibaioFile#write(long, int, java.nio.ByteBuffer, Object)}.
      */
     static native boolean submitWrite(int fd,
                                    ByteBuffer libaioContext,
@@ -159,7 +159,7 @@ public class DirectFileDescriptorController {
                                    Object callback) throws IOException;
 
     /**
-     * Documented at {@link DirectFileDescriptor#read(long, int, java.nio.ByteBuffer, Object)}.
+     * Documented at {@link LibaioFile#read(long, int, java.nio.ByteBuffer, Object)}.
      */
     static native boolean submitRead(int fd,
                                   ByteBuffer libaioContext,

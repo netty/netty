@@ -24,7 +24,7 @@ import java.nio.ByteBuffer;
 /**
  * This is an extension to {@link FileDescriptor} where the file is open with O_DIRECT.
  */
-public final class DirectFileDescriptor extends FileDescriptor {
+public final class LibaioFile extends FileDescriptor {
     static {
         Native.loadLibrary();
     }
@@ -35,7 +35,7 @@ public final class DirectFileDescriptor extends FileDescriptor {
      */
     private ByteBuffer ioContext;
 
-    DirectFileDescriptor(int fd, ByteBuffer libaioContext) {
+    LibaioFile(int fd, ByteBuffer libaioContext) {
         super(fd);
         this.ioContext = libaioContext;
     }
@@ -46,12 +46,12 @@ public final class DirectFileDescriptor extends FileDescriptor {
     @Override
     public void close() throws IOException {
         open = false;
-        DirectFileDescriptorController.close(fd);
+        LibaioContext.close(fd);
     }
 
     /**
      * It will submit a write to the queue. The callback sent here will be received on the
-     *   {@link DirectFileDescriptorController#poll(java.nio.ByteBuffer, Object[], int, int).
+     *   {@link LibaioContext#poll(java.nio.ByteBuffer, Object[], int, int).
      * In case of the libaio queue is full (e.g. returning E_AGAIN) this method will return false.
 
      * Notice: this won't hold a global reference on buffer, callback should hold a reference towards bufferWrite.
@@ -67,12 +67,12 @@ public final class DirectFileDescriptor extends FileDescriptor {
      * @see DirectFileDescriptorController#poll(ByteBuffer, Object[], int, int)
      */
     public boolean write(long position, int size, ByteBuffer buffer, Object callback) throws IOException {
-        return DirectFileDescriptorController.submitWrite(this.fd, ioContext, position, size, buffer, callback);
+        return LibaioContext.submitWrite(this.fd, ioContext, position, size, buffer, callback);
     }
 
     /**
      * It will submit a read to the queue. The callback sent here will be received on the
-     *   {@link DirectFileDescriptorController#poll(java.nio.ByteBuffer, Object[], int, int)}.
+     *   {@link LibaioContext#poll(java.nio.ByteBuffer, Object[], int, int)}.
      * In case of the libaio queue is full (e.g. returning E_AGAIN) this method will return false.
      *
      * Notice: this won't hold a global reference on buffer, callback should hold a reference towards bufferWrite.
@@ -85,10 +85,10 @@ public final class DirectFileDescriptor extends FileDescriptor {
      * @return true if successful, false if the queue was full on that case poll and try again
      * @throws IOException
      *
-     * @see DirectFileDescriptorController#poll(ByteBuffer, Object[], int, int)
+     * @see LibaioContext#poll(ByteBuffer, Object[], int, int)
      */
     public boolean read(long position, int size, ByteBuffer buffer, Object callback)  throws IOException {
-        return DirectFileDescriptorController.submitRead(this.fd, ioContext, position, size, buffer, callback);
+        return LibaioContext.submitRead(this.fd, ioContext, position, size, buffer, callback);
     }
 
     /**
@@ -96,12 +96,12 @@ public final class DirectFileDescriptor extends FileDescriptor {
      * Buffers here are allocated with posix_memalign.
      *
      * You need to explicitly free the buffer created from here using the
-     *          {@link DirectFileDescriptorController#freeBuffer(ByteBuffer)}.
+     *          {@link LibaioContext#freeBuffer(ByteBuffer)}.
      *
      * @param size the size of the buffer.
      * @return the buffer allocated.
      */
     public ByteBuffer newBuffer(int size) {
-        return DirectFileDescriptorController.newAlignedBuffer(size, 512);
+        return LibaioContext.newAlignedBuffer(size, 512);
     }
 }
