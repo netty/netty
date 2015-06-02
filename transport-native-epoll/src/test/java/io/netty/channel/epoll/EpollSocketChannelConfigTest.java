@@ -16,6 +16,7 @@
 package io.netty.channel.epoll;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.*;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
@@ -64,22 +65,41 @@ public class EpollSocketChannelConfigTest {
 
     @Test
     public void testRandomTcpNotSentLowAt() {
-        final long value = randLong(0, 0xFFFFFFFFL);
-        ch.config().setTcpNotSentLowAt(value);
-        assertEquals(value, ch.config().getTcpNotSentLowAt());
+        final long expected = randLong(0, 0xFFFFFFFFL);
+        final long actual;
+        try {
+            ch.config().setTcpNotSentLowAt(expected);
+            actual = ch.config().getTcpNotSentLowAt();
+        } catch (RuntimeException e) {
+            assumeNoException(e);
+            return; // Needed to prevent compile error for final variables to be used below
+        }
+        assertEquals(expected, actual);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testInvalidHighTcpNotSentLowAt() {
-        final long value = 0xFFFFFFFFL + 1;
-        ch.config().setTcpNotSentLowAt(value);
+        try {
+            final long value = 0xFFFFFFFFL + 1;
+            ch.config().setTcpNotSentLowAt(value);
+        } catch (IllegalArgumentException e) {
+            return;
+        } catch (RuntimeException e) {
+            assumeNoException(e);
+        }
         fail();
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testInvalidLowTcpNotSentLowAt() {
-        final long value = -1;
-        ch.config().setTcpNotSentLowAt(value);
+        try {
+            final long value = -1;
+            ch.config().setTcpNotSentLowAt(value);
+        } catch (IllegalArgumentException e) {
+            return;
+        } catch (RuntimeException e) {
+            assumeNoException(e);
+        }
         fail();
     }
 
