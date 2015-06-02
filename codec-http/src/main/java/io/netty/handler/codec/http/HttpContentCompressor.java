@@ -146,7 +146,8 @@ public class HttpContentCompressor extends HttpContentEncoder {
      *                                 a response does not contain a content type will always be compressor. If the
      *                                 parameter is <tt>null</tt>, the content compressor is put into legacy mode,
      *                                 which will compress all responses independent of their length, content type
-     *                                 and response type.
+     *                                 and response type. By default all <tt>text/*</tt> and <tt>application/json</tt>
+     *                                 are compressed.
      * @return the compressor itself for fluent method calls
      */
     public HttpContentCompressor withCompressableContentTypes(Pattern compressableContentTypes) {
