@@ -51,7 +51,7 @@ public final class LibaioFile extends FileDescriptor {
 
     /**
      * It will submit a write to the queue. The callback sent here will be received on the
-     *   {@link LibaioContext#poll(java.nio.ByteBuffer, Object[], int, int).
+     *   {@link LibaioContext#poll(java.nio.ByteBuffer, Object[], int, int)}.
      * In case of the libaio queue is full (e.g. returning E_AGAIN) this method will return false.
 
      * Notice: this won't hold a global reference on buffer, callback should hold a reference towards bufferWrite.

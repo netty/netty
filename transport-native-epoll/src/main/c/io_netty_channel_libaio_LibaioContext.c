@@ -54,11 +54,11 @@ jclass errorInfoClass = NULL;
 jmethodID errorInfoConstr = NULL;
 
 /**
-  This is being invoked by Native.c /  JNI_OnLoad..
-
-  There is only one point of entrance of Loading the library,
-  this will be a hook so extra stuff that needs to be loaded here.
-*/
+ * This is being invoked by Native.c /  JNI_OnLoad..
+ *
+ * There is only one point of entrance of Loading the library,
+ * this will be a hook so extra stuff that needs to be loaded here.
+ */
 jint directFile_JNI_OnLoad(JNIEnv* env) {
     errorInfoClass = (*env)->FindClass(env, "io/netty/channel/libaio/ErrorInfo");
     if (errorInfoClass == NULL) {
@@ -98,8 +98,8 @@ static inline struct io_control * getIOControl(JNIEnv* env, jobject pointer) {
 }
 
 /**
- remove an iocb from the pool of IOCBs. Returns null if full
-*/
+ * remove an iocb from the pool of IOCBs. Returns null if full
+ */
 static inline struct iocb * getIOCB(struct io_control * control) {
     struct iocb * iocb = 0;
 
@@ -123,8 +123,8 @@ static inline struct iocb * getIOCB(struct io_control * control) {
 }
 
 /**
-  Put an iocb back on the pool of IOCBs
-*/
+ * Put an iocb back on the pool of IOCBs
+ */
 static inline void putIOCB(struct io_control * control, struct iocb * iocbBack) {
     pthread_mutex_lock(&(control->iocbLock));
 
@@ -145,8 +145,8 @@ static inline void * getBuffer(JNIEnv* env, jobject pointer) {
 }
 
 /**
-  Everything that is allocated here will be freed at deleteContext when the class is unloaded.
-*/
+ * Everything that is allocated here will be freed at deleteContext when the class is unloaded.
+ */
 JNIEXPORT jobject JNICALL Java_io_netty_channel_libaio_LibaioContext_newContext(JNIEnv* env, jclass clazz, jint queueSize) {
     io_context_t libaioContext;
     int i = 0;
@@ -261,9 +261,8 @@ static inline jboolean submit(JNIEnv * env, struct io_control * theControl, stru
 
         return JNI_FALSE;
     }
-    else {
-        return JNI_TRUE;
-    }
+
+    return JNI_TRUE;
 }
 
 JNIEXPORT jboolean JNICALL Java_io_netty_channel_libaio_LibaioContext_submitWrite

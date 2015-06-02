@@ -35,7 +35,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  *
  * A Single controller can server multiple files. There's no need to create one controller per file.
  *
- * Interesting reading for this: <a href="https://ext4.wiki.kernel.org/index.php/Clarifying_Direct_IO's_Semantics"/>.
+ * <a href="https://ext4.wiki.kernel.org/index.php/Clarifying_Direct_IO's_Semantics">Interesting reading for this.</a>
  */
 public class LibaioContext {
     static {
