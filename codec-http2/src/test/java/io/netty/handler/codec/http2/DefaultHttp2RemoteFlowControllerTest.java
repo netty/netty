@@ -43,6 +43,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2FrameWriter.Configuration;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+import io.netty.util.concurrent.EventExecutor;
 
 import java.util.Arrays;
 import java.util.List;
@@ -89,6 +90,9 @@ public class DefaultHttp2RemoteFlowControllerTest {
     private ChannelConfig config;
 
     @Mock
+    private EventExecutor executor;
+
+    @Mock
     private ChannelPromise promise;
 
     @Mock
@@ -104,6 +108,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         when(ctx.flush()).thenThrow(new AssertionFailedError("forbidden"));
         setChannelWritability(true);
         when(channel.config()).thenReturn(config);
+        when(executor.inEventLoop()).thenReturn(true);
 
         initConnectionAndController();
 
@@ -1444,6 +1449,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
     private void resetCtx() {
         reset(ctx);
         when(ctx.channel()).thenReturn(channel);
+        when(ctx.executor()).thenReturn(executor);
     }
 
     private void setChannelWritability(boolean isWritable) {
