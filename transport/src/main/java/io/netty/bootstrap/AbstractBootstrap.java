@@ -72,7 +72,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     /**
-     * The {@link EventLoopGroup} which is used to handle all the events for the to-be-creates
+     * The {@link EventLoopGroup} which is used to handle all the events for the to-be-created
      * {@link Channel}
      */
     @SuppressWarnings("unchecked")
