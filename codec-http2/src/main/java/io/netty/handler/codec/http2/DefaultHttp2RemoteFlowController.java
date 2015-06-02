@@ -162,8 +162,15 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         return ctx;
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This method must be called from the same event loop context as the {@link ChannelHandlerContext}
+     * managed by this flow controller.
+     */
     @Override
     public void initialWindowSize(int newWindowSize) throws Http2Exception {
+        assert ctx == null || ctx.executor().inEventLoop();
         if (newWindowSize < 0) {
             throw new IllegalArgumentException("Invalid initial window size: " + newWindowSize);
         }
@@ -200,8 +207,15 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         return state(stream).initialWindowSize();
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This method must be called from the same event loop context as the {@link ChannelHandlerContext}
+     * managed by this flow controller.
+     */
     @Override
     public void incrementWindowSize(Http2Stream stream, int delta) throws Http2Exception {
+        assert ctx == null || ctx.executor().inEventLoop();
         if (stream.id() == CONNECTION_STREAM_ID) {
             // Update the connection window
             connectionState().incrementStreamWindow(delta);
@@ -222,8 +236,16 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         return this.listener;
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This method must be called from the same event loop context as the {@link ChannelHandlerContext}
+     * managed by this flow controller.
+     */
     @Override
     public void addFlowControlled(Http2Stream stream, FlowControlled frame) {
+        // The context can be null assuming the frame will be queued and send later when the context is set.
+        assert ctx == null || ctx.executor().inEventLoop();
         checkNotNull(frame, "frame");
         final AbstractState state;
         try {

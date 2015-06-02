@@ -31,8 +31,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-
+import io.netty.util.concurrent.EventExecutor;
 import junit.framework.AssertionFailedError;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -56,6 +57,9 @@ public class DefaultHttp2LocalFlowControllerTest {
     private ChannelHandlerContext ctx;
 
     @Mock
+    private EventExecutor executor;
+
+    @Mock
     private ChannelPromise promise;
 
     private DefaultHttp2Connection connection;
@@ -75,6 +79,8 @@ public class DefaultHttp2LocalFlowControllerTest {
 
         connection.local().createStream(STREAM_ID, false);
         controller.channelHandlerContext(ctx);
+        when(ctx.executor()).thenReturn(executor);
+        when(executor.inEventLoop()).thenReturn(true);
     }
 
     @Test
