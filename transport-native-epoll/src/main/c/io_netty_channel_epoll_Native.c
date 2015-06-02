@@ -35,6 +35,11 @@
 #include "io_netty_channel_epoll_Native.h"
 #include "exception_helper.h"
 
+// TCP_NOTSENT_LOWAT is defined in linux 3.12. We define this here so older kernels can compile.
+#ifndef TCP_NOTSENT_LOWAT
+#define TCP_NOTSENT_LOWAT 25
+#endif
+
 /**
  * On older Linux kernels, epoll can't handle timeout
  * values bigger than (LONG_MAX - 999ULL)/HZ.
