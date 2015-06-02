@@ -59,10 +59,10 @@ jmethodID errorInfoConstr = NULL;
   There is only one point of entrance of Loading the library,
   this will be a hook so extra stuff that needs to be loaded here.
 */
-void directFile_JNI_OnLoad(JNIEnv* env) {
+jint directFile_JNI_OnLoad(JNIEnv* env) {
     errorInfoClass = (*env)->FindClass(env, "io/netty/channel/libaio/ErrorInfo");
     if (errorInfoClass == NULL) {
-       return;
+       return JNI_ERR;
     }
 
     // The ErrorInfoClass is barely used. The VM would crash in the event of an error without this GlobalRef
@@ -72,11 +72,13 @@ void directFile_JNI_OnLoad(JNIEnv* env) {
     errorInfoConstr = (*env)->GetMethodID(env, errorInfoClass, "<init>", "(Ljava/lang/Object;ILjava/lang/String;)V");
 
     if (errorInfoConstr == NULL) {
-       return;
+       return JNI_ERR;
     }
 
     /// The ErrorInfoClass is barely used. The VM would crash in the event of an error without this GlobalRef
     errorInfoConstr = (jmethodID)(*env)->NewGlobalRef(env, (jobject)(errorInfoConstr));
+
+    return JNI_VERSION_1_6;
 }
 
 void directFile_JNI_OnUnLoad(JNIEnv* env) {

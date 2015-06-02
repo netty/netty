@@ -376,7 +376,7 @@ static int init_in_addr(JNIEnv* env, jbyteArray address, struct in_addr* addr) {
 // util methods end
 
 // prototypes for the load hook from DirectFileDescriptorController.c
-void directFile_JNI_OnLoad(JNIEnv* env);
+jint directFile_JNI_OnLoad(JNIEnv* env);
 void directFile_JNI_OnUnLoad(JNIEnv* env);
 
 jint JNI_OnLoad(JavaVM* vm, void* reserved) {
@@ -610,9 +610,7 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
         }
 
         // load hook from DirectFileDescriptorController
-        directFile_JNI_OnLoad(env);
-
-        return JNI_VERSION_1_6;
+        return directFile_JNI_OnLoad(env);
     }
 }
 
