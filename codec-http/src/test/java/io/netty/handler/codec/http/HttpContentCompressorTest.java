@@ -29,20 +29,28 @@ public class HttpContentCompressorTest {
 
     @Test
     public void testGetTargetContentEncoding() throws Exception {
-        HttpContentCompressor compressor = new HttpContentCompressor();
+        HttpContentCompressor compressor = HttpContentCompressor.create();
 
         String[] tests = {
-            // Accept-Encoding -> Content-Encoding
-            "", null,
-            "*", "gzip",
-            "*;q=0.0", null,
-            "gzip", "gzip",
-            "compress, gzip;q=0.5", "gzip",
-            "gzip; q=0.5, identity", "gzip",
-            "gzip ; q=0.1", "gzip",
-            "gzip; q=0, deflate", "deflate",
-            " deflate ; q=0 , *;q=0.5", "gzip",
-        };
+                // Accept-Encoding -> Content-Encoding
+                "",
+                null,
+                "*",
+                "gzip",
+                "*;q=0.0",
+                null,
+                "gzip",
+                "gzip",
+                "compress, gzip;q=0.5",
+                "gzip",
+                "gzip; q=0.5, identity",
+                "gzip",
+                "gzip ; q=0.1",
+                "gzip",
+                "gzip; q=0, deflate",
+                "deflate",
+                " deflate ; q=0 , *;q=0.5",
+                "gzip", };
         for (int i = 0; i < tests.length; i += 2) {
             String acceptEncoding = tests[i];
             String contentEncoding = tests[i + 1];
@@ -50,20 +58,25 @@ public class HttpContentCompressorTest {
             String targetEncoding = null;
             if (targetWrapper != null) {
                 switch (targetWrapper) {
-                case GZIP:
-                    targetEncoding = "gzip";
-                    break;
-                case ZLIB:
-                    targetEncoding = "deflate";
-                    break;
-                default:
-                    fail();
+                    case GZIP:
+                        targetEncoding = "gzip";
+                        break;
+                    case ZLIB:
+                        targetEncoding = "deflate";
+                        break;
+                    default:
+                        fail();
                 }
             }
             assertEquals(contentEncoding, targetEncoding);
         }
     }
 
+    /**
+     * Normally a split request would not be compressed. But if the call the legacy constructor,
+     * we expect the class to behave in a backwawrd compatible manner.
+     */
+    @SuppressWarnings("deprecation")
     @Test
     public void testSplitContent() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
@@ -104,7 +117,7 @@ public class HttpContentCompressorTest {
 
     @Test
     public void testChunkedContent() throws Exception {
-        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
+        EmbeddedChannel ch = new EmbeddedChannel(HttpContentCompressor.create());
         ch.writeInbound(newRequest());
 
         HttpResponse res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
@@ -145,7 +158,7 @@ public class HttpContentCompressorTest {
 
     @Test
     public void testChunkedContentWithTrailingHeader() throws Exception {
-        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
+        EmbeddedChannel ch = new EmbeddedChannel(HttpContentCompressor.create());
         ch.writeInbound(newRequest());
 
         HttpResponse res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
@@ -191,17 +204,12 @@ public class HttpContentCompressorTest {
     public void testFullContent() throws Exception {
         // Lower the required content size for compression to 5 bytes, so that our "hello world"
         // content gets compressed....
-        EmbeddedChannel ch = new EmbeddedChannel(
-                new HttpContentCompressor(HttpContentCompressor.DEFAULT_COMPRESSION_LEVEL,
-                                          HttpContentCompressor.DEFAULT_WINDOW_BITS,
-                                          HttpContentCompressor.DEFAULT_MEM_LEVEL,
-                                          5,
-                                          HttpContentCompressor.DEFAULT_COMPRESSABLE_CONTENT_TYPES));
+        EmbeddedChannel ch = new EmbeddedChannel(HttpContentCompressor.create().withMinCompressableContentLength(5));
         ch.writeInbound(newRequest());
 
-        FullHttpResponse res = new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                Unpooled.copiedBuffer("Hello, World", CharsetUtil.US_ASCII));
+        FullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+                                                           HttpResponseStatus.OK,
+                                                           Unpooled.copiedBuffer("Hello, World", CharsetUtil.US_ASCII));
         res.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, res.content().readableBytes());
         ch.writeOutbound(res);
 
@@ -227,7 +235,7 @@ public class HttpContentCompressorTest {
      */
     @Test
     public void testTinyFullContent() throws Exception {
-        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
+        EmbeddedChannel ch = new EmbeddedChannel(HttpContentCompressor.create());
         ch.writeInbound(newRequest());
 
         FullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
@@ -256,20 +264,17 @@ public class HttpContentCompressorTest {
      */
     @Test
     public void testUncompressableFullContent() throws Exception {
-        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
+        EmbeddedChannel ch = new EmbeddedChannel(HttpContentCompressor.create());
         ch.writeInbound(newRequest());
 
         FullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
                                                            HttpResponseStatus.OK,
-                                                           Unpooled.copiedBuffer("Hello, World",
-                                                                                 CharsetUtil.US_ASCII));
+                                                           Unpooled.copiedBuffer("Hello, World", CharsetUtil.US_ASCII));
         // This is a lie, but ensures that our response would be compressed and not skipped
         // because it is too small
-        res.headers().setInt(HttpHeaderNames.CONTENT_LENGTH,
-                             HttpContentCompressor.DEFAULT_MIN_COMPRESSABLE_CONTENT_LENGTH + 100);
+        res.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 4096);
         // Set an uncompressable content type...
-        res.headers()
-           .set(HttpHeaderNames.CONTENT_TYPE, "image/jpeg");
+        res.headers().set(HttpHeaderNames.CONTENT_TYPE, "image/jpeg");
         ch.writeOutbound(res);
 
         Object o = ch.readOutbound();
@@ -292,7 +297,7 @@ public class HttpContentCompressorTest {
      */
     @Test
     public void testEmptySplitContent() throws Exception {
-        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
+        EmbeddedChannel ch = new EmbeddedChannel(HttpContentCompressor.create());
         ch.writeInbound(newRequest());
 
         DefaultHttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
@@ -301,7 +306,7 @@ public class HttpContentCompressorTest {
         assertEncodedResponse(ch);
 
         ch.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT);
-        HttpContent chunk = (HttpContent) ch.readOutbound();
+        HttpContent chunk = ch.readOutbound();
         assertThat(ByteBufUtil.hexDump(chunk.content()), is("1f8b080000000000000003000000000000000000"));
         assertThat(chunk, is(instanceOf(HttpContent.class)));
         chunk.release();
@@ -319,12 +324,11 @@ public class HttpContentCompressorTest {
      */
     @Test
     public void testEmptyFullContent() throws Exception {
-        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
+        EmbeddedChannel ch = new EmbeddedChannel(HttpContentCompressor.create());
         ch.writeInbound(newRequest());
 
-        FullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
-                                                           HttpResponseStatus.OK,
-                                                           Unpooled.EMPTY_BUFFER);
+        FullHttpResponse res =
+                new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER);
         ch.writeOutbound(res);
 
         Object o = ch.readOutbound();
@@ -344,12 +348,11 @@ public class HttpContentCompressorTest {
 
     @Test
     public void testEmptyFullContentWithTrailer() throws Exception {
-        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
+        EmbeddedChannel ch = new EmbeddedChannel(HttpContentCompressor.create());
         ch.writeInbound(newRequest());
 
-        FullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
-                                                           HttpResponseStatus.OK,
-                                                           Unpooled.EMPTY_BUFFER);
+        FullHttpResponse res =
+                new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER);
         res.trailingHeaders().set("X-Test", "Netty");
         ch.writeOutbound(res);
 

@@ -26,34 +26,147 @@ import java.util.regex.Pattern;
  * Compresses an {@link HttpMessage} and an {@link HttpContent} in {@code gzip} or
  * {@code deflate} encoding while respecting the {@code "Accept-Encoding"} header. If there is no matching encoding,
  * no compression is done.
- *
+ * <p/>
  * Note that only a {@link FullHttpResponse} or a response with {@code "Transfer-Encoding: chunked"}
  * will be compressed. Also the {@code "Content-Length"} and {@code "Content-Type"} are checked against
  * the given <tt>minCompressableContentLength</tt> and <tt>compressableContentTypes</tt> to determined if
  * a compression would be effective at all.
- *
+ * <p/>
+ * Note that if one of the deprecated constructors is invoked, all requests independent of their request type,
+ * transfer encoding, content type and content length. This is for backward compatibility reasons.
+ * <p/>
  * For more information on how this handler modifies the message, please refer to {@link HttpContentEncoder}.
  */
 public class HttpContentCompressor extends HttpContentEncoder {
 
-    public static final int DEFAULT_COMPRESSION_LEVEL = 6;
-    public static final int DEFAULT_WINDOW_BITS = 15;
-    public static final int DEFAULT_MEM_LEVEL = 8;
-    public static final int DEFAULT_MIN_COMPRESSABLE_CONTENT_LENGTH = 1024;
-    public static final Pattern DEFAULT_COMPRESSABLE_CONTENT_TYPES = Pattern.compile("(text/.*|application/json.*)");
+    private int compressionLevel;
+    private int windowBits;
+    private int memLevel;
+    private int minCompressableContentLength;
+    private Pattern compressableContentTypes;
 
-    private final int compressionLevel;
-    private final int windowBits;
-    private final int memLevel;
-    private final int minCompressableContentLength;
-    private final Pattern compressableContentTypes;
+    /**
+     * Creates a new content compressor with default settings.
+     * <p/>
+     * Use the <tt>with...</tt> methods to further customize the settings.
+     * <p/>
+     * A compressor created by this method will only compress FullHttpResponses or responses with {@code
+     * "Transfer-Encoding: chunked"}.
+     *
+     * @return a new content compressor with sane default settings
+     */
+    public static HttpContentCompressor create() {
+        return new HttpContentCompressor(6, 15, 8, 1024, Pattern.compile("(text/.*|application/json.*)"));
+    }
+
+    /*
+     * Once the deprecated constructors can be removed, this could be simplified to be the default constructor,
+     * as the only caller is HttpContentCompressor.create()
+     */
+    private HttpContentCompressor(int compressionLevel,
+                                  int windowBits,
+                                  int memLevel,
+                                  int minCompressableContentLength,
+                                  Pattern compressableContentTypes) {
+        this.compressionLevel = compressionLevel;
+        this.windowBits = windowBits;
+        this.memLevel = memLevel;
+        this.minCompressableContentLength = minCompressableContentLength;
+        this.compressableContentTypes = compressableContentTypes;
+    }
+
+    /**
+     * Specifies a new compression level for this content compressor.
+     *
+     * @param compressionLevel {@code 1} yields the fastest compression and {@code 9} yields the
+     *                         best compression.  {@code 0} means no compression.  The default
+     *                         compression level is {@code 6}.
+     * @return the compressor itself for fluent method calls
+     */
+    public HttpContentCompressor withCompressionLevel(int compressionLevel) {
+        if (compressionLevel < 0 || compressionLevel > 9) {
+            throw new IllegalArgumentException("compressionLevel: " + compressionLevel +
+                                               " (expected: 0-9)");
+        }
+        this.compressionLevel = compressionLevel;
+        return this;
+    }
+
+    /**
+     * Specifies a new window size for this content compressor.
+     *
+     * @param windowBits the base two logarithm of the size of the history buffer.  The
+     *                   value should be in the range {@code 9} to {@code 15} inclusive.
+     *                   Larger values result in better compression at the expense of
+     *                   memory usage.  The default value is {@code 15}.
+     * @return the compressor itself for fluent method calls
+     */
+    public HttpContentCompressor withWindowBits(int windowBits) {
+        if (windowBits < 9 || windowBits > 15) {
+            throw new IllegalArgumentException("windowBits: " + windowBits + " (expected: 9-15)");
+        }
+        this.windowBits = windowBits;
+        return this;
+    }
+
+    /**
+     * Specifies a new memory level for this content compressor.
+     *
+     * @param memLevel how much memory should be allocated for the internal compression
+     *                 state.  {@code 1} uses minimum memory and {@code 9} uses maximum
+     *                 memory.  Larger values result in better and faster compression
+     *                 at the expense of memory usage.  The default value is {@code 8}
+     * @return the compressor itself for fluent method calls
+     */
+    public HttpContentCompressor withMemLevel(int memLevel) {
+        if (memLevel < 1 || memLevel > 9) {
+            throw new IllegalArgumentException("memLevel: " + memLevel + " (expected: 1-9)");
+        }
+        this.memLevel = memLevel;
+        return this;
+    }
+
+    /**
+     * Specifies the minimal content length for a response to be compressed.
+     *
+     * @param minCompressableContentLength the minimal content length in bytes for a response to be compressed at all.
+     *                                     Note that response without content length will always be compressed.
+     *                                     The default value is {@code 1024}
+     * @return the compressor itself for fluent method calls
+     */
+    public HttpContentCompressor withMinCompressableContentLength(int minCompressableContentLength) {
+        this.minCompressableContentLength = minCompressableContentLength;
+        return this;
+    }
+
+    /**
+     * Specifies a pattern which matches all content types to be compressed.
+     *
+     * @param compressableContentTypes a regular expression matching all content types eligible for compression. If
+     *                                 a response does not contain a content type will always be compressor. If the
+     *                                 parameter is <tt>null</tt>, the content compressor is put into legacy mode,
+     *                                 which will compress all responses independent of their length, content type
+     *                                 and response type.
+     * @return the compressor itself for fluent method calls
+     */
+    public HttpContentCompressor withCompressableContentTypes(Pattern compressableContentTypes) {
+        this.compressableContentTypes = compressableContentTypes;
+        return this;
+    }
 
     /**
      * Creates a new handler with the default compression level (<tt>6</tt>),
      * default window size (<tt>15</tt>) and default memory level (<tt>8</tt>).
+     * <p/>
+     *
+     * @deprecated Use the static factory method {@link #create()} and the <tt>with...</tt> methods to create
+     * and configure a new content compressor. Note: Creating a content compressor via <tt>create</tt> will
+     * apply a content length and content type filter, along with check which only compresses FullHttpResponses
+     * or ones with {@code "Transfer-Encoding: chunked"}.
      */
+    @Deprecated
     public HttpContentCompressor() {
-        this(DEFAULT_COMPRESSION_LEVEL);
+        this(6);
     }
 
     /**
@@ -63,9 +176,14 @@ public class HttpContentCompressor extends HttpContentEncoder {
      * @param compressionLevel {@code 1} yields the fastest compression and {@code 9} yields the
      *                         best compression.  {@code 0} means no compression.  The default
      *                         compression level is {@code 6}.
+     * @deprecated Use the static factory method {@link #create()} and the <tt>with...</tt> methods to create
+     * and configure a new content compressor. Note: Creating a content compressor via <tt>create</tt> will
+     * apply a content length and content type filter, along with check which only compresses FullHttpResponses
+     * or ones with {@code "Transfer-Encoding: chunked"}.
      */
+    @Deprecated
     public HttpContentCompressor(int compressionLevel) {
-        this(compressionLevel, DEFAULT_WINDOW_BITS, DEFAULT_MEM_LEVEL);
+        this(compressionLevel, 15, 8);
     }
 
     /**
@@ -83,45 +201,16 @@ public class HttpContentCompressor extends HttpContentEncoder {
      *                         state.  {@code 1} uses minimum memory and {@code 9} uses maximum
      *                         memory.  Larger values result in better and faster compression
      *                         at the expense of memory usage.  The default value is {@code 8}
+     * @deprecated Use the static factory method {@link #create()} and the <tt>with...</tt> methods to create
+     * and configure a new content compressor. Note: Creating a content compressor via <tt>create</tt> will
+     * apply a content length and content type filter, along with check which only compresses FullHttpResponses
+     * or ones with {@code "Transfer-Encoding: chunked"}.
      */
+    @Deprecated
     public HttpContentCompressor(int compressionLevel, int windowBits, int memLevel) {
-        this(compressionLevel,
-             windowBits,
-             memLevel,
-             DEFAULT_MIN_COMPRESSABLE_CONTENT_LENGTH,
-             DEFAULT_COMPRESSABLE_CONTENT_TYPES);
-    }
-
-    /**
-     * Creates a new handler with the specified compression level, window size,
-     * and memory level..
-     *
-     * @param compressionLevel             {@code 1} yields the fastest compression and {@code 9} yields the
-     *                                     best compression.  {@code 0} means no compression.  The default
-     *                                     compression level is {@code 6}.
-     * @param windowBits                   The base two logarithm of the size of the history buffer.  The
-     *                                     value should be in the range {@code 9} to {@code 15} inclusive.
-     *                                     Larger values result in better compression at the expense of
-     *                                     memory usage.  The default value is {@code 15}.
-     * @param memLevel                     How much memory should be allocated for the internal compression
-     *                                     state.  {@code 1} uses minimum memory and {@code 9} uses maximum
-     *                                     memory.  Larger values result in better and faster compression
-     *                                     at the expense of memory usage.  The default value is {@code 8}
-     * @param minCompressableContentLength The minimum content size for the compressor to be enabled. If a given
-     *                                     request does not provide a content-length header, it will always
-     *                                     be compressed.
-     * @param compressableContentTypes     A regular expression that determines which content types to compress.
-     *                                     If a request does not contain a content-type header, it will always
-     *                                     be compressed.
-     */
-    public HttpContentCompressor(int compressionLevel,
-                                 int windowBits,
-                                 int memLevel,
-                                 int minCompressableContentLength,
-                                 Pattern compressableContentTypes) {
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException("compressionLevel: " + compressionLevel +
-                                                       " (expected: 0-9)");
+                                               " (expected: 0-9)");
         }
         if (windowBits < 9 || windowBits > 15) {
             throw new IllegalArgumentException("windowBits: " + windowBits + " (expected: 9-15)");
@@ -129,14 +218,11 @@ public class HttpContentCompressor extends HttpContentEncoder {
         if (memLevel < 1 || memLevel > 9) {
             throw new IllegalArgumentException("memLevel: " + memLevel + " (expected: 1-9)");
         }
-        if (compressableContentTypes == null) {
-            throw new IllegalArgumentException("compressableContentTypes: must not be null");
-        }
         this.compressionLevel = compressionLevel;
         this.windowBits = windowBits;
         this.memLevel = memLevel;
-        this.minCompressableContentLength = minCompressableContentLength;
-        this.compressableContentTypes = compressableContentTypes;
+        // Make compressor backwards compatible by disabling type and request filtering...
+        this.compressableContentTypes = null;
     }
 
     @Override
@@ -180,6 +266,11 @@ public class HttpContentCompressor extends HttpContentEncoder {
         if (contentEncoding != null && !HttpHeaderValues.IDENTITY.equalsIgnoreCase(contentEncoding)) {
             // Another encoding is already being applied -> no compression
             return false;
+        }
+
+        // If compressableContentTypes is null we always turn on compression for backward compatibility
+        if (compressableContentTypes == null) {
+            return true;
         }
 
         if (!(response instanceof FullHttpResponse)) {
