@@ -62,13 +62,13 @@ public final class WebSocketClient {
 
     public static void main(String[] args) throws Exception {
         URI uri = new URI(URL);
-        String scheme = uri.getScheme() == null? "http" : uri.getScheme();
+        String scheme = uri.getScheme() == null? "ws" : uri.getScheme();
         final String host = uri.getHost() == null? "127.0.0.1" : uri.getHost();
         final int port;
         if (uri.getPort() == -1) {
-            if ("http".equalsIgnoreCase(scheme)) {
+            if ("ws".equalsIgnoreCase(scheme)) {
                 port = 80;
-            } else if ("https".equalsIgnoreCase(scheme)) {
+            } else if ("wss".equalsIgnoreCase(scheme)) {
                 port = 443;
             } else {
                 port = -1;
