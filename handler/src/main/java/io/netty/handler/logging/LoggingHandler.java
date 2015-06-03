@@ -417,7 +417,7 @@ public class LoggingHandler extends ChannelHandlerAdapter {
 
         // Dump the rows which have 16 bytes.
         for (int row = 0; row < fullRows; row ++) {
-            int rowStartIndex = row << 4;
+            int rowStartIndex = (row << 4) + startIndex;
 
             // Per-row prefix.
             appendHexDumpRowPrefix(dump, row, rowStartIndex);
@@ -438,7 +438,7 @@ public class LoggingHandler extends ChannelHandlerAdapter {
 
         // Dump the last row which has less than 16 bytes.
         if (remainder != 0) {
-            int rowStartIndex = fullRows << 4;
+            int rowStartIndex = (fullRows << 4) + startIndex;
             appendHexDumpRowPrefix(dump, fullRows, rowStartIndex);
 
             // Hex dump
