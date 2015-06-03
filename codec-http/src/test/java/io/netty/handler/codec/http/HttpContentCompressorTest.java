@@ -50,7 +50,7 @@ public class HttpContentCompressorTest {
                 "gzip; q=0, deflate",
                 "deflate",
                 " deflate ; q=0 , *;q=0.5",
-                "gzip",};
+                "gzip", };
         for (int i = 0; i < tests.length; i += 2) {
             String acceptEncoding = tests[i];
             String contentEncoding = tests[i + 1];
@@ -204,7 +204,7 @@ public class HttpContentCompressorTest {
     public void testFullContent() throws Exception {
         // Lower the required content size for compression to 5 bytes, so that our "hello world"
         // content gets compressed....
-        EmbeddedChannel ch = new EmbeddedChannel(HttpContentCompressor.create().withMinCompressableContentLength(5));
+        EmbeddedChannel ch = new EmbeddedChannel(HttpContentCompressor.create().setMinCompressableContentLength(5));
         ch.writeInbound(newRequest());
 
         FullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,

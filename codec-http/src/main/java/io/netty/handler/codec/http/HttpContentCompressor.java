@@ -39,7 +39,8 @@ import java.util.regex.Pattern;
  */
 public class HttpContentCompressor extends HttpContentEncoder {
 
-    private static final Pattern RECOMMENDED_COMPRESSABLE_CONTENT_TYPES = Pattern.compile("(text/.*|application/json.*)");
+    private static final Pattern RECOMMENDED_COMPRESSABLE_CONTENT_TYPES =
+            Pattern.compile("(text/.*|application/json.*)");
     private int compressionLevel;
     private int windowBits;
     private int memLevel;
