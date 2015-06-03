@@ -198,8 +198,7 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
                         return;
                     }
                     // closed the xml comment
-                    if (in.getByte(idx + 1) == '-'
-                            && in.getByte(idx + 2) == '>') {
+                    if (in.getByte(idx + 1) == '-' && in.getByte(idx + 2) == '>') {
                         idx += 2;
                         state = markState;
                     }
@@ -234,7 +233,7 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
                     if ((idx + 1) >= wrtIdx) {
                         return;
                     }
-                    byte c_next = in.getByte(idx + 1);
+                    char c_next = (char) in.getByte(idx + 1);
                     if (c_next == '/') {
                         state = XmlState.END;
                         idx++;
@@ -243,7 +242,7 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
                             return;
                         }
                         // <!-- comment --> start found
-                        if (in.getByte(idx + 2) == '-' && in.getByte(idx + 3) == '-') {
+                        if (isCommentBlockStart(in, idx)) {
                             setAndMarkState(XmlState.COMMENT);
                             idx += 3;
                             continue;
@@ -331,9 +330,12 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
         nodeCount = 0;
         inXmlFrame = false;
     }
+    private static boolean isCommentBlockStart(final ByteBuf in, final int i) {
+        return in.getByte(i + 2) == '-'
+                && in.getByte(i + 3) == '-';
+    }
     private static boolean isCDATABlockStart(final ByteBuf in, final int i) {
-        return i < in.writerIndex() - 8
-                && in.getByte(i + 2) == '['
+        return in.getByte(i + 2) == '['
                 && in.getByte(i + 3) == 'C'
                 && in.getByte(i + 4) == 'D'
                 && in.getByte(i + 5) == 'A'
