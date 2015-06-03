@@ -200,6 +200,9 @@ import java.nio.charset.UnsupportedCharsetException;
  * <p>
  * In case a completely fresh copy of an existing buffer is required, please
  * call {@link #copy()} method instead.
+ * <p>
+ * Also be aware that obtaining derived buffers will NOT call {@link #retain()} and so the
+ * reference count will NOT be increased.
  *
  * <h3>Conversion to existing JDK types</h3>
  *
@@ -1190,6 +1193,9 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * Returns a new slice of this buffer's sub-region starting at the current
      * {@code readerIndex} and increases the {@code readerIndex} by the size
      * of the new slice (= {@code length}).
+     * <p>
+     * Also be aware that this method will NOT call {@link #retain()} and so the
+     * reference count will NOT be increased.
      *
      * @param length the size of the new slice
      *
@@ -1660,6 +1666,9 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * identical to {@code buf.slice(buf.readerIndex(), buf.readableBytes())}.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
      * this buffer.
+     * <p>
+     * Also be aware that this method will NOT call {@link #retain()} and so the
+     * reference count will NOT be increased.
      */
     public abstract ByteBuf slice();
 
@@ -1669,6 +1678,9 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * they maintain separate indexes and marks.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
      * this buffer.
+     * <p>
+     * Also be aware that this method will NOT call {@link #retain()} and so the
+     * reference count will NOT be increased.
      */
     public abstract ByteBuf slice(int index, int length);
 
@@ -1679,7 +1691,9 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * This method is identical to {@code buf.slice(0, buf.capacity())}.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
      * this buffer.
-     * The reader and writer marks will not be duplicated.
+     * <p>
+     * The reader and writer marks will not be duplicated. Also be aware that this method will
+     * NOT call {@link #retain()} and so the reference count will NOT be increased.
      */
     public abstract ByteBuf duplicate();
 
