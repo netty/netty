@@ -49,13 +49,14 @@ public class BufferingHttp2ConnectionEncoder extends DecoratingHttp2ConnectionEn
      * Thrown by {@link BufferingHttp2ConnectionEncoder} if buffered streams are terminated due to
      * receipt of a {@code GOAWAY}.
      */
-    public static final class GoAwayClosedStreamException extends Exception {
+    public static final class GoAwayClosedStreamException extends Http2Exception {
         private static final long serialVersionUID = 1326785622777291198L;
         private final int lastStreamId;
         private final long errorCode;
         private final ByteBuf debugData;
 
         public GoAwayClosedStreamException(int lastStreamId, long errorCode, ByteBuf debugData) {
+            super(Http2Error.STREAM_CLOSED);
             this.lastStreamId = lastStreamId;
             this.errorCode = errorCode;
             this.debugData = debugData;
