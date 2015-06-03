@@ -92,6 +92,12 @@ public final class Http2CodecUtil {
     public static final int DEFAULT_MAX_FRAME_SIZE = MAX_FRAME_SIZE_LOWER_BOUND;
 
     /**
+     * The assumed minimum value for {@code SETTINGS_MAX_CONCURRENT_STREAMS} as
+     * recommended by the HTTP/2 spec.
+     */
+    public static final int SMALLEST_MAX_CONCURRENT_STREAMS = 100;
+
+    /**
      * Indicates whether or not the given value for max frame size falls within the valid range.
      */
     public static boolean isMaxFrameSizeValid(int maxFrameSize) {
