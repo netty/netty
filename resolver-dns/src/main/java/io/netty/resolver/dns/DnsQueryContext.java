@@ -28,7 +28,6 @@ import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsResponse;
-import io.netty.resolver.dns.DnsNameResolver.DnsCacheEntry;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.OneTimeTask;
@@ -219,6 +218,6 @@ final class DnsQueryContext {
             return;
         }
 
-        parent.cache(question, new DnsCacheEntry(cause), negativeTtl);
+        parent.cacheFailure(question, cause, negativeTtl);
     }
 }

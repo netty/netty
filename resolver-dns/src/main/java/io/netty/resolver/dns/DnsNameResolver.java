@@ -685,16 +685,19 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
         final EventLoop eventLoop = ch.eventLoop();
         final DnsCacheEntry cachedResult = queryCache.get(question);
         if (cachedResult != null) {
-            if (cachedResult.response != null) {
-                return eventLoop.newSucceededFuture(cachedResult.response.retain());
+            AddressedEnvelope<DnsResponse, InetSocketAddress> response = cachedResult.retainedResponse();
+            if (response != null) {
+                return eventLoop.newSucceededFuture(response);
             } else {
-                return eventLoop.newFailedFuture(cachedResult.cause);
+                Throwable cause = cachedResult.cause();
+                if (cause != null) {
+                    return eventLoop.newFailedFuture(cause);
+                }
             }
-        } else {
-            return query0(
-                    nameServerAddresses, question,
-                    eventLoop.<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>>newPromise());
         }
+        return query0(
+                nameServerAddresses, question,
+                eventLoop.<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>>newPromise());
     }
 
     /**
@@ -716,14 +719,18 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
 
         final DnsCacheEntry cachedResult = queryCache.get(question);
         if (cachedResult != null) {
-            if (cachedResult.response != null) {
-                return cast(promise).setSuccess(cachedResult.response.retain());
+            AddressedEnvelope<DnsResponse, InetSocketAddress> response = cachedResult.retainedResponse();
+            if (response != null) {
+                return cast(promise).setSuccess(response);
             } else {
-                return cast(promise).setFailure(cachedResult.cause);
+                Throwable cause = cachedResult.cause();
+                if (cause != null) {
+                    return cast(promise).setFailure(cause);
+                }
             }
-        } else {
-            return query0(nameServerAddresses, question, promise);
         }
+
+        return query0(nameServerAddresses, question, promise);
     }
 
     private Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query0(
@@ -739,7 +746,16 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
         }
     }
 
-    void cache(final DnsQuestion question, DnsCacheEntry entry, long delaySeconds) {
+    void cacheSuccess(
+            DnsQuestion question, AddressedEnvelope<? extends DnsResponse, InetSocketAddress> res, long delaySeconds) {
+        cache(question, new DnsCacheEntry(res), delaySeconds);
+    }
+
+    void cacheFailure(DnsQuestion question, Throwable cause, long delaySeconds) {
+        cache(question, new DnsCacheEntry(cause), delaySeconds);
+    }
+
+    private void cache(final DnsQuestion question, DnsCacheEntry entry, long delaySeconds) {
         DnsCacheEntry oldEntry = queryCache.put(question, entry);
         if (oldEntry != null) {
             oldEntry.release();
@@ -747,13 +763,15 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
 
         boolean scheduled = false;
         try {
-            entry.expirationFuture = ch.eventLoop().schedule(new OneTimeTask() {
-                @Override
-                public void run() {
-                    clearCache(question);
-                }
-            }, delaySeconds, TimeUnit.SECONDS);
-
+            entry.scheduleExpiration(
+                    ch.eventLoop(),
+                    new OneTimeTask() {
+                        @Override
+                        public void run() {
+                            clearCache(question);
+                        }
+                    },
+                    delaySeconds, TimeUnit.SECONDS);
             scheduled = true;
         } finally {
             if (!scheduled) {
@@ -852,7 +870,7 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
             // Ensure that the found TTL is between minTtl and maxTtl.
             ttl = Math.max(minTtl(), Math.min(maxTtl, ttl));
 
-            DnsNameResolver.this.cache(question, new DnsCacheEntry(res), ttl);
+            DnsNameResolver.this.cacheSuccess(question, res, ttl);
         }
 
         @Override
@@ -861,32 +879,4 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
         }
     }
 
-    static final class DnsCacheEntry {
-        final AddressedEnvelope<DnsResponse, InetSocketAddress> response;
-        final Throwable cause;
-        volatile ScheduledFuture<?> expirationFuture;
-
-        @SuppressWarnings("unchecked")
-        DnsCacheEntry(AddressedEnvelope<? extends DnsResponse, InetSocketAddress> response) {
-            this.response = (AddressedEnvelope<DnsResponse, InetSocketAddress>) response.retain();
-            cause = null;
-        }
-
-        DnsCacheEntry(Throwable cause) {
-            this.cause = cause;
-            response = null;
-        }
-
-        void release() {
-            AddressedEnvelope<DnsResponse, InetSocketAddress> response = this.response;
-            if (response != null) {
-                ReferenceCountUtil.safeRelease(response);
-            }
-
-            ScheduledFuture<?> expirationFuture = this.expirationFuture;
-            if (expirationFuture != null) {
-                expirationFuture.cancel(false);
-            }
-        }
-    }
 }
