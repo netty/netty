@@ -55,4 +55,16 @@ public class HttpHeadersTest {
         assertThat(HttpHeaders.equalsIgnoreCase("bar", null), is(false));
         assertThat(HttpHeaders.equalsIgnoreCase("FoO", "fOo"), is(true));
     }
+
+    @Test(expected = NullPointerException.class)
+    public void testSetNullHeaderValueValidate() {
+        HttpHeaders headers = new DefaultHttpHeaders(true);
+        headers.set("test", (CharSequence) null);
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void testSetNullHeaderValueNotValidate() {
+        HttpHeaders headers = new DefaultHttpHeaders(false);
+        headers.set("test", (CharSequence) null);
+    }
 }
