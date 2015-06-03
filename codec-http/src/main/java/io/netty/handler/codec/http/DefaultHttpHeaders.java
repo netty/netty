@@ -29,6 +29,8 @@ import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 public class DefaultHttpHeaders extends HttpHeaders {
 
     private static final int BUCKET_SIZE = 17;
@@ -382,9 +384,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
     }
 
     private static CharSequence toCharSequence(Object value) {
-        if (value == null) {
-            return null;
-        }
+        checkNotNull(value, "value");
         if (value instanceof CharSequence) {
             return (CharSequence) value;
         }
