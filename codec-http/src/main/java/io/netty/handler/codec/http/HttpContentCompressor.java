@@ -29,7 +29,7 @@ import java.util.regex.Pattern;
  * <p/>
  * Note that only a {@link FullHttpResponse} or a response with {@code "Transfer-Encoding: chunked"}
  * will be compressed. Also the {@code "Content-Length"} and {@code "Content-Type"} are checked against
- * the given <tt>minCompressableContentLength</tt> and <tt>compressableContentTypes</tt> to determined if
+ * the given {@code minCompressableContentLength} and {@code compressableContentTypes} to determined if
  * a compression would be effective at all.
  * <p/>
  * Note that if one of the deprecated constructors is invoked, all requests independent of their request type,
@@ -39,6 +39,7 @@ import java.util.regex.Pattern;
  */
 public class HttpContentCompressor extends HttpContentEncoder {
 
+    private static final Pattern RECOMMENDED_COMPRESSABLE_CONTENT_TYPES = Pattern.compile("(text/.*|application/json.*)");
     private int compressionLevel;
     private int windowBits;
     private int memLevel;
@@ -48,7 +49,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
     /**
      * Creates a new content compressor with default settings.
      * <p/>
-     * Use the <tt>with...</tt> methods to further customize the settings.
+     * Use the {@code set...} methods to further customize the settings.
      * <p/>
      * A compressor created by this method will only compress FullHttpResponses or responses with {@code
      * "Transfer-Encoding: chunked"}.
@@ -56,7 +57,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
      * @return a new content compressor with sane default settings
      */
     public static HttpContentCompressor create() {
-        return new HttpContentCompressor(6, 15, 8, 1024, Pattern.compile("(text/.*|application/json.*)"));
+        return new HttpContentCompressor(6, 15, 8, 1024, RECOMMENDED_COMPRESSABLE_CONTENT_TYPES);
     }
 
     /*
@@ -83,10 +84,10 @@ public class HttpContentCompressor extends HttpContentEncoder {
      *                         compression level is {@code 6}.
      * @return the compressor itself for fluent method calls
      */
-    public HttpContentCompressor withCompressionLevel(int compressionLevel) {
+    public HttpContentCompressor setCompressionLevel(int compressionLevel) {
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException("compressionLevel: " + compressionLevel +
-                                               " (expected: 0-9)");
+                    " (expected: 0-9)");
         }
         this.compressionLevel = compressionLevel;
         return this;
@@ -101,7 +102,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
      *                   memory usage.  The default value is {@code 15}.
      * @return the compressor itself for fluent method calls
      */
-    public HttpContentCompressor withWindowBits(int windowBits) {
+    public HttpContentCompressor setWindowBits(int windowBits) {
         if (windowBits < 9 || windowBits > 15) {
             throw new IllegalArgumentException("windowBits: " + windowBits + " (expected: 9-15)");
         }
@@ -118,7 +119,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
      *                 at the expense of memory usage.  The default value is {@code 8}
      * @return the compressor itself for fluent method calls
      */
-    public HttpContentCompressor withMemLevel(int memLevel) {
+    public HttpContentCompressor setMemLevel(int memLevel) {
         if (memLevel < 1 || memLevel > 9) {
             throw new IllegalArgumentException("memLevel: " + memLevel + " (expected: 1-9)");
         }
@@ -134,7 +135,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
      *                                     The default value is {@code 1024}
      * @return the compressor itself for fluent method calls
      */
-    public HttpContentCompressor withMinCompressableContentLength(int minCompressableContentLength) {
+    public HttpContentCompressor setMinCompressableContentLength(int minCompressableContentLength) {
         this.minCompressableContentLength = minCompressableContentLength;
         return this;
     }
@@ -144,24 +145,24 @@ public class HttpContentCompressor extends HttpContentEncoder {
      *
      * @param compressableContentTypes a regular expression matching all content types eligible for compression. If
      *                                 a response does not contain a content type will always be compressor. If the
-     *                                 parameter is <tt>null</tt>, the content compressor is put into legacy mode,
+     *                                 parameter is {@code null}, the content compressor is put into legacy mode,
      *                                 which will compress all responses independent of their length, content type
-     *                                 and response type. By default all <tt>text/*</tt> and <tt>application/json</tt>
+     *                                 and response type. By default all {@code text/*} and {@code application/json}
      *                                 are compressed.
      * @return the compressor itself for fluent method calls
      */
-    public HttpContentCompressor withCompressableContentTypes(Pattern compressableContentTypes) {
+    public HttpContentCompressor setCompressableContentTypes(Pattern compressableContentTypes) {
         this.compressableContentTypes = compressableContentTypes;
         return this;
     }
 
     /**
-     * Creates a new handler with the default compression level (<tt>6</tt>),
-     * default window size (<tt>15</tt>) and default memory level (<tt>8</tt>).
+     * Creates a new handler with the default compression level ({@code 6}),
+     * default window size ({@code 15}) and default memory level ({@code 8}).
      * <p/>
      *
-     * @deprecated Use the static factory method {@link #create()} and the <tt>with...</tt> methods to create
-     * and configure a new content compressor. Note: Creating a content compressor via <tt>create</tt> will
+     * @deprecated Use the static factory method {@link #create()} and the {@code set...} methods to create
+     * and configure a new content compressor. Note: Creating a content compressor via {@code create} will
      * apply a content length and content type filter, along with check which only compresses FullHttpResponses
      * or ones with {@code "Transfer-Encoding: chunked"}.
      */
@@ -172,13 +173,13 @@ public class HttpContentCompressor extends HttpContentEncoder {
 
     /**
      * Creates a new handler with the specified compression level, default
-     * window size (<tt>15</tt>) and default memory level (<tt>8</tt>).
+     * window size ({@code 15}) and default memory level ({@code 8}).
      *
      * @param compressionLevel {@code 1} yields the fastest compression and {@code 9} yields the
      *                         best compression.  {@code 0} means no compression.  The default
      *                         compression level is {@code 6}.
-     * @deprecated Use the static factory method {@link #create()} and the <tt>with...</tt> methods to create
-     * and configure a new content compressor. Note: Creating a content compressor via <tt>create</tt> will
+     * @deprecated Use the static factory method {@link #create()} and the {@code set...} methods to create
+     * and configure a new content compressor. Note: Creating a content compressor via {@code create} will
      * apply a content length and content type filter, along with check which only compresses FullHttpResponses
      * or ones with {@code "Transfer-Encoding: chunked"}.
      */
@@ -202,8 +203,8 @@ public class HttpContentCompressor extends HttpContentEncoder {
      *                         state.  {@code 1} uses minimum memory and {@code 9} uses maximum
      *                         memory.  Larger values result in better and faster compression
      *                         at the expense of memory usage.  The default value is {@code 8}
-     * @deprecated Use the static factory method {@link #create()} and the <tt>with...</tt> methods to create
-     * and configure a new content compressor. Note: Creating a content compressor via <tt>create</tt> will
+     * @deprecated Use the static factory method {@link #create()} and the {@code set...} methods to create
+     * and configure a new content compressor. Note: Creating a content compressor via {@code create} will
      * apply a content length and content type filter, along with check which only compresses FullHttpResponses
      * or ones with {@code "Transfer-Encoding: chunked"}.
      */
@@ -211,7 +212,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
     public HttpContentCompressor(int compressionLevel, int windowBits, int memLevel) {
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException("compressionLevel: " + compressionLevel +
-                                               " (expected: 0-9)");
+                    " (expected: 0-9)");
         }
         if (windowBits < 9 || windowBits > 15) {
             throw new IllegalArgumentException("windowBits: " + windowBits + " (expected: 9-15)");
@@ -239,28 +240,29 @@ public class HttpContentCompressor extends HttpContentEncoder {
 
         String targetContentEncoding;
         switch (wrapper) {
-            case GZIP:
-                targetContentEncoding = "gzip";
-                break;
-            case ZLIB:
-                targetContentEncoding = "deflate";
-                break;
-            default:
-                throw new Error();
+        case GZIP:
+            targetContentEncoding = "gzip";
+            break;
+        case ZLIB:
+            targetContentEncoding = "deflate";
+            break;
+        default:
+            throw new Error();
         }
 
         return new Result(targetContentEncoding,
-                          new EmbeddedChannel(ZlibCodecFactory.newZlibEncoder(wrapper,
-                                                                              compressionLevel,
-                                                                              windowBits,
-                                                                              memLevel)));
+                new EmbeddedChannel(
+                        ZlibCodecFactory.newZlibEncoder(wrapper,
+                        compressionLevel,
+                        windowBits,
+                        memLevel)));
     }
 
     /**
      * Determines if the given response can and should be compressed.
      *
      * @param response the response to check.
-     * @return <tt>true</tt> if the response should be compressed, <tt>false</tt> otherwise.
+     * @return {@code true} if the response should be compressed, {@code false} otherwise.
      */
     protected boolean isCompressable(HttpResponse response) {
         CharSequence contentEncoding = response.headers().get(HttpHeaderNames.CONTENT_ENCODING);
@@ -294,17 +296,17 @@ public class HttpContentCompressor extends HttpContentEncoder {
      * <p/>
      * Only requests which are larger than a certain size and contain reasonable compressable content should
      * be compressed. If wouldn't make sense to compress a 100 byte JSON response or a JPEG image. The parameters
-     * for this decision are set by <tt>minCompressableContentLength</tt> and <tt>compressableContentTypes</tt>.
+     * for this decision are set by {@code minCompressableContentLength} and {@code compressableContentTypes}.
      * <p/>
      * This method is made public so that other handlers can decide which kind of response to generate. For example
      * when sending a file it might be better to send it via <code>new HttpChunkedInput(new ChunkedFile(..))</code>
      * which enables compression rather than via <code>new DefaultFileRegion(...)</code> which permits a zero
      * copy transfer - but without compression.
      *
-     * @param contentLength the expected length of the content in bytes or <tt>0</tt> if the length is unknown
-     * @param contentType   the expected type of the content as mime type (e.g. text/xml) or <tt>null</tt> if
+     * @param contentLength the expected length of the content in bytes or {@code 0} if the length is unknown
+     * @param contentType   the expected type of the content as mime type (e.g. text/xml) or {@code null} if
      *                      the type is not yet known
-     * @return <tt>true</tt> if it is considered effective to turn on compression, <tt>false</tt> otherwise
+     * @return {@code true} if it is considered effective to turn on compression, {@code false} otherwise
      */
     public boolean isCompressionEffective(int contentLength, CharSequence contentType) {
         if (minCompressableContentLength > 0) {

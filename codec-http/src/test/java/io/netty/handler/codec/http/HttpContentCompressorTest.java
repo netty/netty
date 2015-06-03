@@ -50,7 +50,7 @@ public class HttpContentCompressorTest {
                 "gzip; q=0, deflate",
                 "deflate",
                 " deflate ; q=0 , *;q=0.5",
-                "gzip", };
+                "gzip",};
         for (int i = 0; i < tests.length; i += 2) {
             String acceptEncoding = tests[i];
             String contentEncoding = tests[i + 1];
@@ -58,14 +58,14 @@ public class HttpContentCompressorTest {
             String targetEncoding = null;
             if (targetWrapper != null) {
                 switch (targetWrapper) {
-                    case GZIP:
-                        targetEncoding = "gzip";
-                        break;
-                    case ZLIB:
-                        targetEncoding = "deflate";
-                        break;
-                    default:
-                        fail();
+                case GZIP:
+                    targetEncoding = "gzip";
+                    break;
+                case ZLIB:
+                    targetEncoding = "deflate";
+                    break;
+                default:
+                    fail();
                 }
             }
             assertEquals(contentEncoding, targetEncoding);
@@ -208,8 +208,8 @@ public class HttpContentCompressorTest {
         ch.writeInbound(newRequest());
 
         FullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
-                                                           HttpResponseStatus.OK,
-                                                           Unpooled.copiedBuffer("Hello, World", CharsetUtil.US_ASCII));
+                HttpResponseStatus.OK,
+                Unpooled.copiedBuffer("Hello, World", CharsetUtil.US_ASCII));
         res.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, res.content().readableBytes());
         ch.writeOutbound(res);
 
@@ -239,8 +239,8 @@ public class HttpContentCompressorTest {
         ch.writeInbound(newRequest());
 
         FullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
-                                                           HttpResponseStatus.OK,
-                                                           Unpooled.copiedBuffer("Hello, World", CharsetUtil.US_ASCII));
+                HttpResponseStatus.OK,
+                Unpooled.copiedBuffer("Hello, World", CharsetUtil.US_ASCII));
         res.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, res.content().readableBytes());
         ch.writeOutbound(res);
 
@@ -268,8 +268,8 @@ public class HttpContentCompressorTest {
         ch.writeInbound(newRequest());
 
         FullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
-                                                           HttpResponseStatus.OK,
-                                                           Unpooled.copiedBuffer("Hello, World", CharsetUtil.US_ASCII));
+                HttpResponseStatus.OK,
+                Unpooled.copiedBuffer("Hello, World", CharsetUtil.US_ASCII));
         // This is a lie, but ensures that our response would be compressed and not skipped
         // because it is too small
         res.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 4096);
