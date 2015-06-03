@@ -38,7 +38,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
-import io.netty.handler.codec.http2.BufferingHttp2ConnectionEncoder.GoAwayClosedStreamException;
+import io.netty.handler.codec.http2.StreamBufferingEncoder.GoAwayClosedStreamException;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import org.junit.Before;
 import org.junit.Test;
@@ -51,12 +51,12 @@ import org.mockito.stubbing.Answer;
 import org.mockito.verification.VerificationMode;
 
 /**
- * Tests for {@link BufferingHttp2ConnectionEncoder}.
+ * Tests for {@link StreamBufferingEncoder}.
  */
 @RunWith(JUnit4.class)
-public class BufferingHttp2ConnectionEncoderTest {
+public class StreamBufferingEncoderTest {
 
-    private BufferingHttp2ConnectionEncoder encoder;
+    private StreamBufferingEncoder encoder;
 
     private Http2Connection connection;
 
@@ -93,7 +93,7 @@ public class BufferingHttp2ConnectionEncoderTest {
 
         DefaultHttp2ConnectionEncoder defaultEncoder =
                 new DefaultHttp2ConnectionEncoder(connection, writer);
-        encoder = new BufferingHttp2ConnectionEncoder(defaultEncoder);
+        encoder = new StreamBufferingEncoder(defaultEncoder);
         DefaultHttp2ConnectionDecoder decoder =
                 new DefaultHttp2ConnectionDecoder(connection, encoder,
                         mock(Http2FrameReader.class), mock(Http2FrameListener.class));

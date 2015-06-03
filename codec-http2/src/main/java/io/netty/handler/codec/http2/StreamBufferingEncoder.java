@@ -40,40 +40,16 @@ import java.util.TreeMap;
  * number of concurrent streams is increased, this encoder will automatically try to empty its
  * buffer and create as many new streams as possible.
  * <p/>
- * <p>This implementation makes the buffering mostly transparent and can be used as a drop in
- * replacement for {@link io.netty.handler.codec.http2.DefaultHttp2ConnectionEncoder}.
+ * <p>
+ * If a {@code GOAWAY} frame is received from the remote endpoint, all buffered writes for streams
+ * with an ID less than the specified {@code lastStreamId} will immediately fail with a
+ * {@link io.netty.handler.codec.http2.Http2Exception.StreamException} with error
+ * {@link Http2Error#STREAM_CLOSED}.
+ * <p/>
+ * <p>This implementation makes the buffering mostly transparent and is expected to be used as a
+ * drop-in decorator of {@link io.netty.handler.codec.http2.DefaultHttp2ConnectionEncoder}.
  */
-public class BufferingHttp2ConnectionEncoder extends DecoratingHttp2ConnectionEncoder {
-
-    /**
-     * Thrown by {@link BufferingHttp2ConnectionEncoder} if buffered streams are terminated due to
-     * receipt of a {@code GOAWAY}.
-     */
-    public static final class GoAwayClosedStreamException extends Http2Exception {
-        private static final long serialVersionUID = 1326785622777291198L;
-        private final int lastStreamId;
-        private final long errorCode;
-        private final ByteBuf debugData;
-
-        public GoAwayClosedStreamException(int lastStreamId, long errorCode, ByteBuf debugData) {
-            super(Http2Error.STREAM_CLOSED);
-            this.lastStreamId = lastStreamId;
-            this.errorCode = errorCode;
-            this.debugData = debugData;
-        }
-
-        public int lastStreamId() {
-            return lastStreamId;
-        }
-
-        public long errorCode() {
-            return errorCode;
-        }
-
-        public ByteBuf debugData() {
-            return debugData;
-        }
-    }
+public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
 
     /**
      * Buffer for any streams and corresponding frames that could not be created due to the maximum
@@ -86,19 +62,19 @@ public class BufferingHttp2ConnectionEncoder extends DecoratingHttp2ConnectionEn
     private int largestCreatedStreamId;
     private boolean receivedSettings;
 
-    public BufferingHttp2ConnectionEncoder(Http2ConnectionEncoder delegate) {
+    public StreamBufferingEncoder(Http2ConnectionEncoder delegate) {
         this(delegate, SMALLEST_MAX_CONCURRENT_STREAMS);
     }
 
-    public BufferingHttp2ConnectionEncoder(Http2ConnectionEncoder delegate,
-                                           int initialMaxConcurrentStreams) {
+    public StreamBufferingEncoder(Http2ConnectionEncoder delegate,
+                                  int initialMaxConcurrentStreams) {
         super(delegate);
         this.initialMaxConcurrentStreams = initialMaxConcurrentStreams;
         connection().addListener(new Http2ConnectionAdapter() {
 
             @Override
             public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
-                cancelGoAwayStreams(lastStreamId, errorCode, debugData);
+                cancelGoAwayStreams(lastStreamId);
             }
 
             @Override
@@ -221,14 +197,14 @@ public class BufferingHttp2ConnectionEncoder extends DecoratingHttp2ConnectionEn
         }
     }
 
-    private void cancelGoAwayStreams(int lastStreamId, long errorCode, ByteBuf debugData) {
+    private void cancelGoAwayStreams(int lastStreamId) {
         Iterator<PendingStream> iter = pendingStreams.values().iterator();
-        Exception e = new GoAwayClosedStreamException(lastStreamId, errorCode, debugData);
         while (iter.hasNext()) {
             PendingStream stream = iter.next();
             if (stream.streamId > lastStreamId) {
                 iter.remove();
-                stream.close(e);
+                stream.close(Http2Exception.streamError(stream.streamId, Http2Error.STREAM_CLOSED,
+                        "Buffered stream closed due to received GOAWAY"));
             }
         }
     }
