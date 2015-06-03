@@ -38,7 +38,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
-import io.netty.handler.codec.http2.StreamBufferingEncoder.GoAwayClosedStreamException;
+import io.netty.handler.codec.http2.StreamBufferingEncoder.GoAwayException;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import org.junit.Before;
 import org.junit.Test;
@@ -215,7 +215,7 @@ public class StreamBufferingEncoderTest {
 
         assertEquals(1, connection.numActiveStreams());
         assertEquals(2, encoder.numBufferedStreams());
-        verify(promise, never()).setFailure(any(GoAwayClosedStreamException.class));
+        verify(promise, never()).setFailure(any(GoAwayException.class));
     }
 
     @Test

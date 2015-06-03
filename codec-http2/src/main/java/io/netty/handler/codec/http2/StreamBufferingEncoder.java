@@ -43,13 +43,42 @@ import java.util.TreeMap;
  * <p>
  * If a {@code GOAWAY} frame is received from the remote endpoint, all buffered writes for streams
  * with an ID less than the specified {@code lastStreamId} will immediately fail with a
- * {@link io.netty.handler.codec.http2.Http2Exception.StreamException} with error
- * {@link Http2Error#STREAM_CLOSED}.
+ * {@link StreamBufferingEncoder.GoAwayException}.
  * <p/>
  * <p>This implementation makes the buffering mostly transparent and is expected to be used as a
  * drop-in decorator of {@link io.netty.handler.codec.http2.DefaultHttp2ConnectionEncoder}.
  */
 public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
+
+    /**
+     * Thrown by {@link StreamBufferingEncoder} if buffered streams are terminated due to
+     * receipt of a {@code GOAWAY}.
+     */
+    public static final class GoAwayException extends Http2Exception {
+        private static final long serialVersionUID = 1326785622777291198L;
+        private final int lastStreamId;
+        private final long errorCode;
+        private final ByteBuf debugData;
+
+        private GoAwayException(int lastStreamId, long errorCode, ByteBuf debugData) {
+            super(Http2Error.STREAM_CLOSED);
+            this.lastStreamId = lastStreamId;
+            this.errorCode = errorCode;
+            this.debugData = debugData;
+        }
+
+        public int lastStreamId() {
+            return lastStreamId;
+        }
+
+        public long errorCode() {
+            return errorCode;
+        }
+
+        public ByteBuf debugData() {
+            return debugData;
+        }
+    }
 
     /**
      * Buffer for any streams and corresponding frames that could not be created due to the maximum
@@ -74,7 +103,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
 
             @Override
             public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
-                cancelGoAwayStreams(lastStreamId);
+                cancelGoAwayStreams(lastStreamId, errorCode, debugData);
             }
 
             @Override
@@ -197,14 +226,14 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         }
     }
 
-    private void cancelGoAwayStreams(int lastStreamId) {
+    private void cancelGoAwayStreams(int lastStreamId, long errorCode, ByteBuf debugData) {
         Iterator<PendingStream> iter = pendingStreams.values().iterator();
+        Exception e = new GoAwayException(lastStreamId, errorCode, debugData);
         while (iter.hasNext()) {
             PendingStream stream = iter.next();
             if (stream.streamId > lastStreamId) {
                 iter.remove();
-                stream.close(Http2Exception.streamError(stream.streamId, Http2Error.STREAM_CLOSED,
-                        "Buffered stream closed due to received GOAWAY"));
+                stream.close(e);
             }
         }
     }
