@@ -25,12 +25,15 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -79,6 +82,9 @@ public class DefaultHttp2RemoteFlowControllerTest {
     @Mock
     private ChannelPromise promise;
 
+    @Mock
+    private Http2RemoteFlowController.Listener listener;
+
     private DefaultHttp2Connection connection;
 
     @Before
@@ -90,6 +96,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         connection = new DefaultHttp2Connection(false);
         controller = new DefaultHttp2RemoteFlowController(connection);
+        controller.listener(listener);
         connection.remote().flowController(controller);
 
         connection.local().createStream(STREAM_A, false);
@@ -134,14 +141,49 @@ public class DefaultHttp2RemoteFlowControllerTest {
     public void payloadSmallerThanWindowShouldBeWrittenImmediately() throws Http2Exception {
         FakeFlowControlled data = new FakeFlowControlled(5);
         sendData(STREAM_A, data);
+        data.assertNotWritten();
+        verifyZeroInteractions(listener);
+        controller.writePendingBytes();
         data.assertFullyWritten();
+        verify(listener, times(1)).streamWritten(stream(STREAM_A), 5);
     }
 
     @Test
     public void emptyPayloadShouldBeWrittenImmediately() throws Http2Exception {
         FakeFlowControlled data = new FakeFlowControlled(0);
         sendData(STREAM_A, data);
+        data.assertNotWritten();
+        controller.writePendingBytes();
         data.assertFullyWritten();
+        verify(listener, times(1)).streamWritten(stream(STREAM_A), 0);
+    }
+
+    @Test
+    public void unflushedPayloadsShouldBeDroppedOnCancel() throws Http2Exception {
+        FakeFlowControlled data = new FakeFlowControlled(5);
+        sendData(STREAM_A, data);
+        connection.stream(STREAM_A).close();
+        controller.writePendingBytes();
+        data.assertNotWritten();
+        controller.writePendingBytes();
+        data.assertNotWritten();
+        verifyZeroInteractions(listener);
+    }
+
+    @Test
+    public void payloadsShouldMerge() throws Http2Exception {
+        controller.initialWindowSize(15);
+        FakeFlowControlled data1 = new FakeFlowControlled(5, true);
+        FakeFlowControlled data2 = new FakeFlowControlled(10, true);
+        sendData(STREAM_A, data1);
+        sendData(STREAM_A, data2);
+        data1.assertNotWritten();
+        data1.assertNotWritten();
+        data2.assertMerged();
+        controller.writePendingBytes();
+        data1.assertFullyWritten();
+        data2.assertNotWritten();
+        verify(listener, times(1)).streamWritten(stream(STREAM_A), 15);
     }
 
     @Test
@@ -151,9 +193,12 @@ public class DefaultHttp2RemoteFlowControllerTest {
         FakeFlowControlled data = new FakeFlowControlled(15);
         FakeFlowControlled moreData = new FakeFlowControlled(0);
         sendData(STREAM_A, data);
+        controller.writePendingBytes();
         data.assertNotWritten();
         sendData(STREAM_A, moreData);
+        controller.writePendingBytes();
         moreData.assertNotWritten();
+        verifyZeroInteractions(listener);
     }
 
     @Test
@@ -163,13 +208,16 @@ public class DefaultHttp2RemoteFlowControllerTest {
         FakeFlowControlled data = new FakeFlowControlled(15);
         FakeFlowControlled moreData = new FakeFlowControlled(0);
         sendData(STREAM_A, data);
+        controller.writePendingBytes();
         data.assertNotWritten();
         sendData(STREAM_A, moreData);
+        controller.writePendingBytes();
         moreData.assertNotWritten();
 
         connection.stream(STREAM_A).close();
         data.assertError();
         moreData.assertError();
+        verifyZeroInteractions(listener);
     }
 
     @Test
@@ -178,26 +226,35 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         final FakeFlowControlled data = new FakeFlowControlled(10);
         sendData(STREAM_A, data);
+        controller.writePendingBytes();
         // Verify that a partial frame of 5 remains to be sent
         data.assertPartiallyWritten(5);
+        verify(listener, times(1)).streamWritten(stream(STREAM_A), 5);
+        verifyNoMoreInteractions(listener);
     }
 
     @Test
-    public void windowUpdateShouldTriggerWrite() throws Http2Exception {
+    public void windowUpdateAndFlushShouldTriggerWrite() throws Http2Exception {
         controller.initialWindowSize(10);
 
         FakeFlowControlled data = new FakeFlowControlled(20);
         FakeFlowControlled moreData = new FakeFlowControlled(10);
         sendData(STREAM_A, data);
         sendData(STREAM_A, moreData);
+        controller.writePendingBytes();
         data.assertPartiallyWritten(10);
         moreData.assertNotWritten();
+        verify(listener, times(1)).streamWritten(stream(STREAM_A), 10);
         reset(ctx);
 
         // Update the window and verify that the rest of data and some of moreData are written
         incrementWindowSize(STREAM_A, 15);
+        controller.writePendingBytes();
+
         data.assertFullyWritten();
         moreData.assertPartiallyWritten(5);
+        verify(listener, times(1)).streamWritten(stream(STREAM_A), 15);
+        verifyNoMoreInteractions(listener);
 
         assertEquals(DEFAULT_WINDOW_SIZE - 25, window(CONNECTION_STREAM_ID));
         assertEquals(0, window(STREAM_A));
@@ -212,6 +269,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         FakeFlowControlled data = new FakeFlowControlled(10);
         sendData(STREAM_A, data);
+        controller.writePendingBytes();
         data.assertNotWritten();
 
         // Verify that the entire frame was sent.
@@ -228,25 +286,33 @@ public class DefaultHttp2RemoteFlowControllerTest {
         FakeFlowControlled dataA = new FakeFlowControlled(10);
         // Queue data for stream A and allow most of it to be written.
         sendData(STREAM_A, dataA);
+        controller.writePendingBytes();
         dataA.assertNotWritten();
         incrementWindowSize(CONNECTION_STREAM_ID, 8);
+        controller.writePendingBytes();
         dataA.assertPartiallyWritten(8);
         assertEquals(65527, window(STREAM_A));
         assertEquals(0, window(CONNECTION_STREAM_ID));
+        verify(listener, times(1)).streamWritten(stream(STREAM_A), 8);
 
         // Queue data for stream B and allow the rest of A and all of B to be written.
         FakeFlowControlled dataB = new FakeFlowControlled(10);
         sendData(STREAM_B, dataB);
+        controller.writePendingBytes();
         dataB.assertNotWritten();
         incrementWindowSize(CONNECTION_STREAM_ID, 12);
+        controller.writePendingBytes();
         assertEquals(0, window(CONNECTION_STREAM_ID));
 
         // Verify the rest of A is written.
         dataA.assertFullyWritten();
         assertEquals(65525, window(STREAM_A));
+        verify(listener, times(1)).streamWritten(stream(STREAM_A), 2);
 
         dataB.assertFullyWritten();
         assertEquals(65525, window(STREAM_B));
+        verify(listener, times(1)).streamWritten(stream(STREAM_B), 10);
+        verifyNoMoreInteractions(listener);
     }
 
     @Test
@@ -260,7 +326,9 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         // Deplete the stream A window to 0
         sendData(STREAM_A, data1);
+        controller.writePendingBytes();
         data1.assertFullyWritten();
+        verify(listener, times(1)).streamWritten(stream(STREAM_A), 20);
 
         // Make the window size for stream A negative
         controller.initialWindowSize(initWindow - secondWindowSize);
@@ -268,21 +336,26 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         // Queue up a write. It should not be written now because the window is negative
         sendData(STREAM_A, data2);
+        controller.writePendingBytes();
         data2.assertNotWritten();
 
         // Open the window size back up a bit (no send should happen)
         incrementWindowSize(STREAM_A, 5);
+        controller.writePendingBytes();
         assertEquals(-5, window(STREAM_A));
         data2.assertNotWritten();
 
         // Open the window size back up a bit (no send should happen)
         incrementWindowSize(STREAM_A, 5);
+        controller.writePendingBytes();
         assertEquals(0, window(STREAM_A));
         data2.assertNotWritten();
 
         // Open the window size back up and allow the write to happen
         incrementWindowSize(STREAM_A, 5);
+        controller.writePendingBytes();
         data2.assertFullyWritten();
+        verify(listener, times(1)).streamWritten(stream(STREAM_A), 5);
     }
 
     @Test
@@ -290,13 +363,15 @@ public class DefaultHttp2RemoteFlowControllerTest {
         controller.initialWindowSize(0);
 
         // First send a frame that will get buffered.
-        FakeFlowControlled data = new FakeFlowControlled(10);
+        FakeFlowControlled data = new FakeFlowControlled(10, false);
         sendData(STREAM_A, data);
+        controller.writePendingBytes();
         data.assertNotWritten();
 
         // Now send an empty frame on the same stream and verify that it's also buffered.
-        FakeFlowControlled data2 = new FakeFlowControlled(0);
+        FakeFlowControlled data2 = new FakeFlowControlled(0, false);
         sendData(STREAM_A, data2);
+        controller.writePendingBytes();
         data2.assertNotWritten();
 
         // Re-expand the window and verify that both frames were sent.
@@ -304,6 +379,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         data.assertFullyWritten();
         data2.assertFullyWritten();
+        verify(listener, times(1)).streamWritten(stream(STREAM_A), 10);
     }
 
     @Test
@@ -312,11 +388,13 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         FakeFlowControlled data = new FakeFlowControlled(10);
         sendData(STREAM_A, data);
+        controller.writePendingBytes();
         data.assertNotWritten();
 
         // Verify that a partial frame of 5 was sent.
         controller.initialWindowSize(5);
         data.assertPartiallyWritten(5);
+        verify(listener, times(1)).streamWritten(stream(STREAM_A), 5);
     }
 
     @Test
@@ -326,11 +404,16 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         FakeFlowControlled data = new FakeFlowControlled(10);
         sendData(STREAM_A, data);
+        controller.writePendingBytes();
         data.assertNotWritten();
 
         // Verify that the entire frame was sent.
         incrementWindowSize(CONNECTION_STREAM_ID, 10);
+        data.assertNotWritten();
+        controller.writePendingBytes();
         data.assertFullyWritten();
+        verify(listener, times(1)).streamWritten(stream(STREAM_A), 10);
+
         assertEquals(0, window(CONNECTION_STREAM_ID));
         assertEquals(DEFAULT_WINDOW_SIZE - 10, window(STREAM_A));
         assertEquals(DEFAULT_WINDOW_SIZE, window(STREAM_B));
@@ -345,11 +428,15 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         FakeFlowControlled data = new FakeFlowControlled(10);
         sendData(STREAM_A, data);
+        controller.writePendingBytes();
         data.assertNotWritten();
 
         // Verify that a partial frame of 5 was sent.
         incrementWindowSize(CONNECTION_STREAM_ID, 5);
+        data.assertNotWritten();
+        controller.writePendingBytes();
         data.assertPartiallyWritten(5);
+        verify(listener, times(1)).streamWritten(stream(STREAM_A), 5);
         assertEquals(0, window(CONNECTION_STREAM_ID));
         assertEquals(DEFAULT_WINDOW_SIZE - 5, window(STREAM_A));
         assertEquals(DEFAULT_WINDOW_SIZE, window(STREAM_B));
@@ -364,11 +451,15 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         FakeFlowControlled data = new FakeFlowControlled(10);
         sendData(STREAM_A, data);
+        controller.writePendingBytes();
         data.assertNotWritten();
 
         // Verify that the entire frame was sent.
         incrementWindowSize(STREAM_A, 10);
+        data.assertNotWritten();
+        controller.writePendingBytes();
         data.assertFullyWritten();
+        verify(listener, times(1)).streamWritten(stream(STREAM_A), 10);
         assertEquals(DEFAULT_WINDOW_SIZE - 10, window(CONNECTION_STREAM_ID));
         assertEquals(0, window(STREAM_A));
         assertEquals(DEFAULT_WINDOW_SIZE, window(STREAM_B));
@@ -383,11 +474,15 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         FakeFlowControlled data = new FakeFlowControlled(10);
         sendData(STREAM_A, data);
+        controller.writePendingBytes();
         data.assertNotWritten();
 
         // Verify that a partial frame of 5 was sent.
         incrementWindowSize(STREAM_A, 5);
+        data.assertNotWritten();
+        controller.writePendingBytes();
         data.assertPartiallyWritten(5);
+        verify(listener, times(1)).streamWritten(stream(STREAM_A), 5);
         assertEquals(DEFAULT_WINDOW_SIZE - 5, window(CONNECTION_STREAM_ID));
         assertEquals(0, window(STREAM_A));
         assertEquals(DEFAULT_WINDOW_SIZE, window(STREAM_B));
@@ -427,6 +522,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         sendData(STREAM_B, dataB);
         sendData(STREAM_C, dataC);
         sendData(STREAM_D, dataD);
+        controller.writePendingBytes();
         dataA.assertNotWritten();
         dataB.assertNotWritten();
         dataC.assertNotWritten();
@@ -434,6 +530,8 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         // Verify that the entire frame was sent.
         incrementWindowSize(CONNECTION_STREAM_ID, 10);
+        controller.writePendingBytes();
+
         assertEquals(0, window(CONNECTION_STREAM_ID));
 
         // A is not written
@@ -443,12 +541,15 @@ public class DefaultHttp2RemoteFlowControllerTest {
         // B is partially written
         assertEquals(DEFAULT_WINDOW_SIZE - 5, window(STREAM_B), 2);
         dataB.assertPartiallyWritten(5);
+        verify(listener, times(1)).streamWritten(stream(STREAM_B), 5);
 
         // Verify that C and D each shared half of A's allowance. Since A's allowance (5) cannot
         // be split evenly, one will get 3 and one will get 2.
         assertEquals(2 * DEFAULT_WINDOW_SIZE - 5, window(STREAM_C) + window(STREAM_D), 5);
         dataC.assertPartiallyWritten(3);
+        verify(listener, times(1)).streamWritten(stream(STREAM_C), 3);
         dataD.assertPartiallyWritten(2);
+        verify(listener, times(1)).streamWritten(stream(STREAM_D), 2);
     }
 
     /**
@@ -480,6 +581,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         sendData(STREAM_B, dataB);
         sendData(STREAM_C, dataC);
         sendData(STREAM_D, dataD);
+        controller.writePendingBytes();
 
         dataA.assertNotWritten();
         dataB.assertNotWritten();
@@ -488,6 +590,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         // Verify that the entire frame was sent.
         incrementWindowSize(CONNECTION_STREAM_ID, 10);
+        controller.writePendingBytes();
         assertEquals(0, window(CONNECTION_STREAM_ID));
         assertEquals(DEFAULT_WINDOW_SIZE - 10, window(STREAM_A));
         assertEquals(0, window(STREAM_B));
@@ -495,6 +598,8 @@ public class DefaultHttp2RemoteFlowControllerTest {
         assertEquals(DEFAULT_WINDOW_SIZE, window(STREAM_D));
 
         dataA.assertFullyWritten();
+        verify(listener, times(1)).streamWritten(stream(STREAM_A), 10);
+
         dataB.assertNotWritten();
         dataC.assertNotWritten();
         dataD.assertNotWritten();
@@ -530,6 +635,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         sendData(STREAM_B, dataB);
         sendData(STREAM_C, dataC);
         sendData(STREAM_D, dataD);
+        controller.writePendingBytes();
 
         dataA.assertNotWritten();
         dataB.assertNotWritten();
@@ -538,6 +644,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         // Verify that the entire frame was sent.
         incrementWindowSize(CONNECTION_STREAM_ID, 10);
+        controller.writePendingBytes();
         assertEquals(0, window(CONNECTION_STREAM_ID));
         assertEquals(DEFAULT_WINDOW_SIZE - 5, window(STREAM_A));
         assertEquals(0, window(STREAM_B));
@@ -546,9 +653,12 @@ public class DefaultHttp2RemoteFlowControllerTest {
         // Verify that C and D each shared half of A's allowance. Since A's allowance (5) cannot
         // be split evenly, one will get 3 and one will get 2.
         dataA.assertFullyWritten();
+        verify(listener, times(1)).streamWritten(stream(STREAM_A), 5);
         dataB.assertNotWritten();
         dataC.assertPartiallyWritten(3);
+        verify(listener, times(1)).streamWritten(stream(STREAM_C), 3);
         dataD.assertPartiallyWritten(2);
+        verify(listener, times(1)).streamWritten(stream(STREAM_D), 2);
     }
 
     /**
@@ -592,6 +702,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         sendData(STREAM_B, dataB);
         sendData(STREAM_C, dataC);
         sendData(STREAM_D, dataD);
+        controller.writePendingBytes();
 
         dataA.assertNotWritten();
         dataB.assertNotWritten();
@@ -603,6 +714,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         // Verify that the entire frame was sent.
         incrementWindowSize(CONNECTION_STREAM_ID, 10);
+        controller.writePendingBytes();
         assertEquals(0, window(CONNECTION_STREAM_ID));
         assertEquals(DEFAULT_WINDOW_SIZE - 5, window(STREAM_A), 2);
         assertEquals(0, window(STREAM_B));
@@ -611,9 +723,11 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         // Verify that A and D split the bytes.
         dataA.assertPartiallyWritten(5);
+        verify(listener, times(1)).streamWritten(stream(STREAM_A), 5);
         dataB.assertNotWritten();
         dataC.assertNotWritten();
         dataD.assertPartiallyWritten(5);
+        verify(listener, times(1)).streamWritten(stream(STREAM_D), 5);
     }
 
     /**
@@ -646,6 +760,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         sendData(STREAM_B, dataB);
         sendData(STREAM_C, dataC);
         sendData(STREAM_D, dataD);
+        controller.writePendingBytes();
 
         dataA.assertNotWritten();
         dataB.assertNotWritten();
@@ -654,6 +769,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         // Allow 1000 bytes to be sent.
         incrementWindowSize(CONNECTION_STREAM_ID, 1000);
+        controller.writePendingBytes();
 
         // All writes sum == 1000
         assertEquals(1000, dataA.written() + dataB.written() + dataC.written() + dataD.written());
@@ -662,6 +778,10 @@ public class DefaultHttp2RemoteFlowControllerTest {
         dataB.assertPartiallyWritten(445, allowedError);
         dataC.assertPartiallyWritten(223, allowedError);
         dataD.assertPartiallyWritten(223, allowedError);
+        verify(listener, times(1)).streamWritten(eq(stream(STREAM_A)), anyInt());
+        verify(listener, times(1)).streamWritten(eq(stream(STREAM_B)), anyInt());
+        verify(listener, times(1)).streamWritten(eq(stream(STREAM_C)), anyInt());
+        verify(listener, times(1)).streamWritten(eq(stream(STREAM_D)), anyInt());
 
         assertEquals(0, window(CONNECTION_STREAM_ID));
         assertEquals(DEFAULT_WINDOW_SIZE - dataA.written(), window(STREAM_A));
@@ -701,15 +821,19 @@ public class DefaultHttp2RemoteFlowControllerTest {
         sendData(STREAM_B, dataB);
         sendData(STREAM_C, dataC);
         sendData(STREAM_D, dataD);
+        controller.writePendingBytes();
 
         dataA.assertNotWritten();
         dataB.assertNotWritten();
         // The write will occur on C, because it's an empty frame.
         dataC.assertFullyWritten();
+        verify(listener, times(1)).streamWritten(stream(STREAM_C), 0);
         dataD.assertNotWritten();
 
         // Allow 1000 bytes to be sent.
         incrementWindowSize(CONNECTION_STREAM_ID, 999);
+        controller.writePendingBytes();
+
         assertEquals(0, window(CONNECTION_STREAM_ID));
         assertEquals(DEFAULT_WINDOW_SIZE - 333, window(STREAM_A), 50);
         assertEquals(DEFAULT_WINDOW_SIZE - 333, window(STREAM_B), 50);
@@ -717,8 +841,11 @@ public class DefaultHttp2RemoteFlowControllerTest {
         assertEquals(DEFAULT_WINDOW_SIZE - 333, window(STREAM_D), 50);
 
         dataA.assertPartiallyWritten(333);
+        verify(listener, times(1)).streamWritten(stream(STREAM_A), 333);
         dataB.assertPartiallyWritten(333);
+        verify(listener, times(1)).streamWritten(stream(STREAM_B), 333);
         dataD.assertPartiallyWritten(333);
+        verify(listener, times(1)).streamWritten(stream(STREAM_D), 333);
     }
 
     /**
@@ -759,6 +886,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         sendData(STREAM_B, dataB);
         sendData(STREAM_C, dataC);
         sendData(STREAM_D, dataD);
+        controller.writePendingBytes();
 
         dataA.assertNotWritten();
         dataB.assertNotWritten();
@@ -828,6 +956,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         sendData(STREAM_B, dataB);
         sendData(STREAM_C, dataC);
         sendData(STREAM_D, dataD);
+        controller.writePendingBytes();
 
         dataA.assertNotWritten();
         dataB.assertNotWritten();
@@ -905,6 +1034,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         sendData(STREAM_C, dataC);
         sendData(STREAM_D, dataD);
         sendData(STREAM_E, dataE);
+        controller.writePendingBytes();
 
         dataA.assertNotWritten();
         dataB.assertNotWritten();
@@ -966,6 +1096,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         sendData(STREAM_B, dataB);
         sendData(STREAM_C, dataC);
         sendData(STREAM_D, dataD);
+        controller.writePendingBytes();
 
         dataA.assertNotWritten();
         dataB.assertNotWritten();
@@ -1033,6 +1164,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         sendData(STREAM_B, dataB);
         sendData(STREAM_C, dataC);
         sendData(STREAM_D, dataD);
+        controller.writePendingBytes();
 
         dataA.assertNotWritten();
         dataB.assertNotWritten();
@@ -1065,7 +1197,8 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         int windowBefore = window(STREAM_A);
 
-        controller.sendFlowControlled(ctx, stream, flowControlled);
+        controller.addFlowControlled(ctx, stream, flowControlled);
+        controller.writePendingBytes();
 
         verify(flowControlled, times(3)).write(anyInt());
         verify(flowControlled).error(any(Throwable.class));
@@ -1088,7 +1221,8 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         boolean exceptionThrown = false;
         try {
-            controller.sendFlowControlled(ctx, stream, flowControlled);
+            controller.addFlowControlled(ctx, stream, flowControlled);
+            controller.writePendingBytes();
         } catch (RuntimeException e) {
             exceptionThrown = true;
         } finally {
@@ -1131,7 +1265,8 @@ public class DefaultHttp2RemoteFlowControllerTest {
         int windowBefore = window(STREAM_A);
 
         try {
-            controller.sendFlowControlled(ctx, stream, flowControlled);
+            controller.addFlowControlled(ctx, stream, flowControlled);
+            controller.writePendingBytes();
         } catch (Exception e) {
             fail();
         }
@@ -1157,7 +1292,8 @@ public class DefaultHttp2RemoteFlowControllerTest {
             }
         }).when(flowControlled).error(any(Throwable.class));
 
-        controller.sendFlowControlled(ctx, stream, flowControlled);
+        controller.addFlowControlled(ctx, stream, flowControlled);
+        controller.writePendingBytes();
 
         verify(flowControlled).write(anyInt());
         verify(flowControlled).error(any(Throwable.class));
@@ -1203,7 +1339,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
     private void sendData(int streamId, FakeFlowControlled data) throws Http2Exception {
         Http2Stream stream = stream(streamId);
-        controller.sendFlowControlled(ctx, stream, data);
+        controller.addFlowControlled(ctx, stream, data);
     }
 
     private void setPriority(int stream, int parent, int weight, boolean exclusive) throws Http2Exception {
@@ -1235,11 +1371,21 @@ public class DefaultHttp2RemoteFlowControllerTest {
         private int currentSize;
         private int originalSize;
         private boolean writeCalled;
+        private final boolean mergeable;
+        private boolean merged;
+
         private Throwable t;
 
         private FakeFlowControlled(int size) {
             this.currentSize = size;
             this.originalSize = size;
+            this.mergeable = false;
+        }
+
+        private FakeFlowControlled(int size, boolean mergeable) {
+            this.currentSize = size;
+            this.originalSize = size;
+            this.mergeable = mergeable;
         }
 
         @Override
@@ -1267,6 +1413,17 @@ public class DefaultHttp2RemoteFlowControllerTest {
             currentSize -= written;
         }
 
+        @Override
+        public boolean merge(Http2RemoteFlowController.FlowControlled next) {
+            if (mergeable && next instanceof FakeFlowControlled) {
+                this.originalSize += ((FakeFlowControlled) next).originalSize;
+                this.currentSize += ((FakeFlowControlled) next).originalSize;
+                ((FakeFlowControlled) next).merged = true;
+                return true;
+            }
+            return false;
+        }
+
         public int written() {
             return originalSize - currentSize;
         }
@@ -1287,6 +1444,10 @@ public class DefaultHttp2RemoteFlowControllerTest {
         public void assertFullyWritten() {
             assertTrue(writeCalled);
             assertEquals(0, currentSize);
+        }
+
+        public boolean assertMerged() {
+            return merged;
         }
 
         public void assertError() {

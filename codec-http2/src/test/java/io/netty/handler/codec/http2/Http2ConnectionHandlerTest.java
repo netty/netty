@@ -77,7 +77,13 @@ public class Http2ConnectionHandlerTest {
     private Http2Connection.Endpoint<Http2RemoteFlowController> remote;
 
     @Mock
+    private Http2RemoteFlowController remoteFlowController;
+
+    @Mock
     private Http2Connection.Endpoint<Http2LocalFlowController> local;
+
+    @Mock
+    private Http2LocalFlowController localFlowController;
 
     @Mock
     private ChannelHandlerContext ctx;
@@ -134,7 +140,9 @@ public class Http2ConnectionHandlerTest {
         when(future.channel()).thenReturn(channel);
         when(channel.isActive()).thenReturn(true);
         when(connection.remote()).thenReturn(remote);
+        when(remote.flowController()).thenReturn(remoteFlowController);
         when(connection.local()).thenReturn(local);
+        when(local.flowController()).thenReturn(localFlowController);
         doAnswer(new Answer<Http2Stream>() {
             @Override
             public Http2Stream answer(InvocationOnMock in) throws Throwable {
