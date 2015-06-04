@@ -18,7 +18,6 @@ package io.netty.handler.codec.http2;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static java.lang.Math.min;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
@@ -190,16 +189,11 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         // new setting before we attempt to create any new streams.
         super.remoteSettings(settings);
 
-        // Update maxConcurrentStreams from the settings. If it has increased, try to create more streams.
-        Long maxConcurrentStreamsSetting = settings.maxConcurrentStreams();
-        if (maxConcurrentStreamsSetting != null) {
-            int newMaxConcurrentStreams = (int) min(Integer.MAX_VALUE, maxConcurrentStreamsSetting);
-            boolean shouldCreateStreams = newMaxConcurrentStreams > maxConcurrentStreams;
-            maxConcurrentStreams = newMaxConcurrentStreams;
-            if (shouldCreateStreams) {
-                tryCreatePendingStreams();
-            }
-        }
+        // Get the updated value for SETTINGS_MAX_CONCURRENT_STREAMS.
+        maxConcurrentStreams = connection().local().maxActiveStreams();
+
+        // Try to create new streams up to the new threshold.
+        tryCreatePendingStreams();
     }
 
     @Override
