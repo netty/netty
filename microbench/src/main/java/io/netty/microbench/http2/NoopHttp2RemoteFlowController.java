@@ -51,7 +51,20 @@ public final class NoopHttp2RemoteFlowController implements Http2RemoteFlowContr
     }
 
     @Override
-    public void sendFlowControlled(ChannelHandlerContext ctx, Http2Stream stream, FlowControlled payload) {
+    public void writePendingBytes() throws Http2Exception {
+    }
+
+    @Override
+    public void listener(Listener listener) {
+    }
+
+    @Override
+    public Listener listener() {
+        return null;
+    }
+
+    @Override
+    public void addFlowControlled(ChannelHandlerContext ctx, Http2Stream stream, FlowControlled payload) {
         // Don't check size beforehand because Headers payload returns 0 all the time.
         do {
             payload.write(MAX_INITIAL_WINDOW_SIZE);

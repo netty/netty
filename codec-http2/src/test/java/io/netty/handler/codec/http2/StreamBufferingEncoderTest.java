@@ -27,6 +27,7 @@ import io.netty.handler.codec.http2.StreamBufferingEncoder.GoAwayException;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -116,8 +117,11 @@ public class StreamBufferingEncoderTest {
         encoderWriteHeaders(3, promise);
 
         writeVerifyWriteHeaders(times(2), 3, promise);
-        verify(writer, times(3))
-                .writeData(eq(ctx), eq(3), any(ByteBuf.class), eq(0), eq(false), eq(promise));
+        // Contiguous data writes are coalesced
+        ArgumentCaptor<ByteBuf> bufCaptor = ArgumentCaptor.forClass(ByteBuf.class);
+        verify(writer, times(1))
+                .writeData(eq(ctx), eq(3), bufCaptor.capture(), eq(0), eq(false), eq(promise));
+        assertEquals(data().readableBytes() * 3, bufCaptor.getValue().readableBytes());
     }
 
     @Test
@@ -396,6 +400,8 @@ public class StreamBufferingEncoderTest {
     private void setMaxConcurrentStreams(int newValue) {
         try {
             encoder.remoteSettings(new Http2Settings().maxConcurrentStreams(newValue));
+            // Flush the remote flow controller to write data
+            encoder.flowController().writePendingBytes();
         } catch (Http2Exception e) {
             throw new RuntimeException(e);
         }
@@ -404,6 +410,11 @@ public class StreamBufferingEncoderTest {
     private void encoderWriteHeaders(int streamId, ChannelPromise promise) {
         encoder.writeHeaders(ctx, streamId, new DefaultHttp2Headers(), 0, DEFAULT_PRIORITY_WEIGHT,
                 false, 0, false, promise);
+        try {
+            encoder.flowController().writePendingBytes();
+        } catch (Http2Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void writeVerifyWriteHeaders(VerificationMode mode, int streamId,

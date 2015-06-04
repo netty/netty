@@ -88,6 +88,7 @@ public class DataCompressionHttp2Test {
     private CountDownLatch clientSettingsAckLatch;
     private Http2Connection serverConnection;
     private Http2Connection clientConnection;
+    private Http2ConnectionHandler clientHandler;
     private ByteArrayOutputStream serverOut;
 
     @Before
@@ -123,9 +124,9 @@ public class DataCompressionHttp2Test {
         FrameAdapter.getOrCreateStream(clientConnection, 3, false);
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
-            public void run() {
+            public void run() throws Http2Exception {
                 clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, true, newPromiseClient());
-                ctxClient().flush();
+                clientHandler.flush(ctxClient());
             }
         });
         awaitServer();
@@ -148,10 +149,10 @@ public class DataCompressionHttp2Test {
             FrameAdapter.getOrCreateStream(clientConnection, 3, false);
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
-                public void run() {
+                public void run() throws Http2Exception {
                     clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
                     clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true, newPromiseClient());
-                    ctxClient().flush();
+                    clientHandler.flush(ctxClient());
                 }
             });
             awaitServer();
@@ -177,10 +178,10 @@ public class DataCompressionHttp2Test {
             FrameAdapter.getOrCreateStream(clientConnection, 3, false);
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
-                public void run() {
+                public void run() throws Http2Exception {
                     clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
                     clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true, newPromiseClient());
-                    ctxClient().flush();
+                    clientHandler.flush(ctxClient());
                 }
             });
             awaitServer();
@@ -206,13 +207,13 @@ public class DataCompressionHttp2Test {
             // our {@link Http2TestUtil$FrameAdapter} does.
             Http2Stream stream = FrameAdapter.getOrCreateStream(serverConnection, 3, false);
             FrameAdapter.getOrCreateStream(clientConnection, 3, false);
-            runInChannel(clientChannel, new Http2Runnable() {
+            runInChannel(clientChannel, new Http2Runnable()  {
                 @Override
-                public void run() {
+                public void run() throws Http2Exception {
                     clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
                     clientEncoder.writeData(ctxClient(), 3, data1.retain(), 0, false, newPromiseClient());
                     clientEncoder.writeData(ctxClient(), 3, data2.retain(), 0, true, newPromiseClient());
-                    ctxClient().flush();
+                    clientHandler.flush(ctxClient());
                 }
             });
             awaitServer();
@@ -242,10 +243,10 @@ public class DataCompressionHttp2Test {
             FrameAdapter.getOrCreateStream(clientConnection, 3, false);
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
-                public void run() {
+                public void run() throws Http2Exception {
                     clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
                     clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true, newPromiseClient());
-                    ctxClient().flush();
+                    clientHandler.flush(ctxClient());
                 }
             });
             awaitServer();
@@ -330,8 +331,8 @@ public class DataCompressionHttp2Test {
                                 new DefaultHttp2FrameReader(),
                                 new DelegatingDecompressorFrameListener(clientConnection,
                                         clientFrameCountDown));
-                Http2ConnectionHandler connectionHandler = new Http2ConnectionHandler(decoder, clientEncoder);
-                p.addLast(connectionHandler);
+                clientHandler = new Http2ConnectionHandler(decoder, clientEncoder);
+                p.addLast(clientHandler);
             }
         });
 

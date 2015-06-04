@@ -55,6 +55,8 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.http2.Http2Exception.ClosedStreamCreationException;
 import io.netty.handler.codec.http2.Http2RemoteFlowController.FlowControlled;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 import java.util.ArrayList;
@@ -64,6 +66,7 @@ import junit.framework.AssertionFailedError;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -99,6 +102,9 @@ public class DefaultHttp2ConnectionEncoderTest {
     private ChannelPromise promise;
 
     @Mock
+    private ChannelPromise voidPromise;
+
+    @Mock
     private ChannelFuture future;
 
     @Mock
@@ -132,6 +138,10 @@ public class DefaultHttp2ConnectionEncoderTest {
         MockitoAnnotations.initMocks(this);
 
         promise = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
+        when(voidPromise.addListener(Matchers.<GenericFutureListener<Future<? super Void>>>any())).thenThrow(
+                new AssertionFailedError());
+        when(voidPromise.addListeners(Matchers.<GenericFutureListener<Future<? super Void>>>any())).thenThrow(
+                new AssertionFailedError());
 
         when(channel.isActive()).thenReturn(true);
         when(stream.id()).thenReturn(STREAM_ID);
@@ -202,7 +212,7 @@ public class DefaultHttp2ConnectionEncoderTest {
                     }
                 });
         payloadCaptor = ArgumentCaptor.forClass(Http2RemoteFlowController.FlowControlled.class);
-        doNothing().when(remoteFlow).sendFlowControlled(eq(ctx), eq(stream), payloadCaptor.capture());
+        doNothing().when(remoteFlow).addFlowControlled(eq(ctx), eq(stream), payloadCaptor.capture());
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(ctx.channel()).thenReturn(channel);
         when(ctx.newSucceededFuture()).thenReturn(future);
@@ -223,6 +233,52 @@ public class DefaultHttp2ConnectionEncoderTest {
         assertEquals(0, payloadCaptor.getValue().size());
         assertEquals("abcdefgh", writtenData.get(0));
         assertEquals(0, data.refCnt());
+    }
+
+    @Test
+    public void dataFramesShouldMerge() throws Exception {
+        final ByteBuf data = dummyData().retain();
+        DefaultChannelPromise secondPromise = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
+        encoder.writeData(ctx, STREAM_ID, data, 0, true, promise);
+        encoder.writeData(ctx, STREAM_ID, data, 0, true, secondPromise);
+        List<FlowControlled> capturedWrites = payloadCaptor.getAllValues();
+        FlowControlled mergedPayload = capturedWrites.get(0);
+        mergedPayload.merge(capturedWrites.get(1));
+
+        assertEquals(16, mergedPayload.size());
+        assertFalse(secondPromise.isSuccess());
+        mergedPayload.write(16);
+        assertEquals(0, mergedPayload.size());
+        assertEquals("abcdefghabcdefgh", writtenData.get(0));
+        assertEquals(0, data.refCnt());
+        // Second promise is notified after write of the merged payload completes
+        assertTrue(secondPromise.isSuccess());
+    }
+
+    @Test
+    public void dataFramesShouldMergeUseVoidPromise() throws Exception {
+        final ByteBuf data = dummyData().retain();
+        when(voidPromise.isVoid()).thenReturn(true);
+        encoder.writeData(ctx, STREAM_ID, data, 0, true, voidPromise);
+        encoder.writeData(ctx, STREAM_ID, data, 0, true, voidPromise);
+        List<FlowControlled> capturedWrites = payloadCaptor.getAllValues();
+        FlowControlled mergedPayload = capturedWrites.get(0);
+        assertTrue(mergedPayload.merge(capturedWrites.get(1)));
+
+        assertEquals(16, mergedPayload.size());
+        mergedPayload.write(16);
+        assertEquals(0, mergedPayload.size());
+        assertEquals("abcdefghabcdefgh", writtenData.get(0));
+        assertEquals(0, data.refCnt());
+    }
+
+    @Test
+    public void dataFramesDontMergeWithHeaders() throws Exception {
+        final ByteBuf data = dummyData().retain();
+        encoder.writeData(ctx, STREAM_ID, data, 0, true, promise);
+        encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false, promise);
+        List<FlowControlled> capturedWrites = payloadCaptor.getAllValues();
+        assertFalse(capturedWrites.get(0).merge(capturedWrites.get(1)));
     }
 
     @Test
@@ -443,7 +499,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         mockSendFlowControlledWriteEverything();
         ByteBuf data = dummyData();
         encoder.writeData(ctx, STREAM_ID, data.retain(), 0, true, promise);
-        verify(remoteFlow).sendFlowControlled(eq(ctx), eq(stream), any(FlowControlled.class));
+        verify(remoteFlow).addFlowControlled(eq(ctx), eq(stream), any(FlowControlled.class));
         verify(lifecycleManager).closeStreamLocal(stream, promise);
         assertEquals(data.toString(UTF_8), writtenData.get(0));
         data.release();
@@ -520,7 +576,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         when(remote.lastStreamKnownByPeer()).thenReturn(0);
         ByteBuf data = mock(ByteBuf.class);
         encoder.writeData(ctx, STREAM_ID, data, 0, false, promise);
-        verify(remoteFlow).sendFlowControlled(eq(ctx), eq(stream), any(FlowControlled.class));
+        verify(remoteFlow).addFlowControlled(eq(ctx), eq(stream), any(FlowControlled.class));
     }
 
     @Test
@@ -528,7 +584,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         when(connection.goAwaySent()).thenReturn(true);
         when(remote.lastStreamKnownByPeer()).thenReturn(0);
         encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false, promise);
-        verify(remoteFlow).sendFlowControlled(eq(ctx), eq(stream), any(FlowControlled.class));
+        verify(remoteFlow).addFlowControlled(eq(ctx), eq(stream), any(FlowControlled.class));
     }
 
     @Test
@@ -537,7 +593,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         when(local.lastStreamKnownByPeer()).thenReturn(STREAM_ID);
         ByteBuf data = mock(ByteBuf.class);
         encoder.writeData(ctx, STREAM_ID, data, 0, false, promise);
-        verify(remoteFlow).sendFlowControlled(eq(ctx), eq(stream), any(FlowControlled.class));
+        verify(remoteFlow).addFlowControlled(eq(ctx), eq(stream), any(FlowControlled.class));
     }
 
     @Test
@@ -545,7 +601,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         when(connection.goAwayReceived()).thenReturn(true);
         when(local.lastStreamKnownByPeer()).thenReturn(STREAM_ID);
         encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false, promise);
-        verify(remoteFlow).sendFlowControlled(eq(ctx), eq(stream), any(FlowControlled.class));
+        verify(remoteFlow).addFlowControlled(eq(ctx), eq(stream), any(FlowControlled.class));
     }
 
     private void mockSendFlowControlledWriteEverything() {
@@ -557,7 +613,7 @@ public class DefaultHttp2ConnectionEncoderTest {
                 flowControlled.writeComplete();
                 return null;
             }
-        }).when(remoteFlow).sendFlowControlled(eq(ctx), eq(stream), payloadCaptor.capture());
+        }).when(remoteFlow).addFlowControlled(eq(ctx), eq(stream), payloadCaptor.capture());
     }
 
     private void mockFutureAddListener(boolean success) {
