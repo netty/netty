@@ -330,7 +330,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         }
 
         @Override
-        public void release(Throwable t) {
+        void release(Throwable t) {
             super.release(t);
             ReferenceCountUtil.safeRelease(data);
         }
