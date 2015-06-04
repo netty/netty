@@ -43,15 +43,18 @@ import java.util.Locale;
 public final class Native {
 
     static {
-       loadLibrary();
+        String name = SystemPropertyUtil.get("os.name").toLowerCase(Locale.UK).trim();
+        if (!name.startsWith("linux")) {
+            throw new IllegalStateException("Only supported on Linux");
+        }
+        NativeLibraryLoader.load("netty-transport-native-epoll", PlatformDependent.getClassLoader(Native.class));
     }
 
+    /**
+     * This is an empty method just so {@link io.netty.channel.libaio.LibaioFile} would
+     * force a the Native load
+     */
     public static void loadLibrary() {
-       String name = SystemPropertyUtil.get("os.name").toLowerCase(Locale.UK).trim();
-       if (!name.startsWith("linux")) {
-          throw new IllegalStateException("Only supported on Linux");
-       }
-       NativeLibraryLoader.load("netty-transport-native-epoll", PlatformDependent.getClassLoader(Native.class));
     }
 
     // EventLoop operations and constants
