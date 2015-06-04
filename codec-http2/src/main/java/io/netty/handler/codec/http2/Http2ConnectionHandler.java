@@ -167,6 +167,17 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         connection().remote().createStream(HTTP_UPGRADE_STREAM_ID, true);
     }
 
+    @Override
+    public void flush(ChannelHandlerContext ctx) throws Http2Exception {
+        // Trigger pending writes in the remote flow controller.
+        connection().remote().flowController().writePendingBytes();
+        try {
+            super.flush(ctx);
+        } catch (Throwable t) {
+            throw new Http2Exception(INTERNAL_ERROR, "Error flushing" , t);
+        }
+    }
+
     private abstract class BaseDecoder {
         public abstract void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception;
         public void handlerRemoved(ChannelHandlerContext ctx) throws Exception { }
@@ -449,7 +460,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         // Trigger flush after read on the assumption that flush is cheap if there is nothing to write and that
         // for flow-control the read may release window that causes data to be written that can now be flushed.
-        ctx.flush();
+        flush(ctx);
     }
 
     /**

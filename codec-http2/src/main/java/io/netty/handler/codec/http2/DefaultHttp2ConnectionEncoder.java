@@ -19,6 +19,8 @@ import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.SlicedByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -130,7 +132,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         }
 
         // Hand control of the frame to the flow controller.
-        flowController().sendFlowControlled(ctx, stream,
+        flowController().addFlowControlled(ctx, stream,
                 new FlowControlledData(ctx, stream, data, padding, endOfStream, promise));
         return promise;
     }
@@ -166,7 +168,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             }
 
             // Pass headers to the flow-controller so it can maintain their sequence relative to DATA frames.
-            flowController().sendFlowControlled(ctx, stream,
+            flowController().addFlowControlled(ctx, stream,
                     new FlowControlledHeaders(ctx, stream, headers, streamDependency, weight,
                             exclusive, padding, endOfStream, promise));
             return promise;
@@ -318,10 +320,10 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         private ByteBuf data;
         private int size;
 
-        private FlowControlledData(ChannelHandlerContext ctx, Http2Stream stream, ByteBuf data, int padding,
+        private FlowControlledData(ChannelHandlerContext ctx, Http2Stream stream, ByteBuf buf, int padding,
                                     boolean endOfStream, ChannelPromise promise) {
             super(ctx, stream, padding, endOfStream, promise);
-            this.data = data;
+            this.data = buf;
             size = data.readableBytes() + padding;
         }
 
@@ -367,7 +369,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                     padding -= writeablePadding;
                     bytesWritten += writeableData + writeablePadding;
                     ChannelPromise writePromise;
-                    if (size == bytesWritten) {
+                    if (size == bytesWritten && !promise.isVoid()) {
                         // Can use the original promise if it's the last write
                         writePromise = promise;
                     } else {
@@ -375,12 +377,66 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                         writePromise = ctx.newPromise();
                         writePromise.addListener(this);
                     }
+                    if (toWrite instanceof SlicedByteBuf && data instanceof CompositeByteBuf) {
+                        // If we're writing a subset of a composite buffer then we want to release
+                        // any underlying buffers that have been consumed. CompositeByteBuf only releases
+                        // underlying buffers on write if all of its data has been consumed and its refCnt becomes
+                        // 0.
+                        final CompositeByteBuf toFree = (CompositeByteBuf) data;
+                        writePromise.addListener(new ChannelFutureListener() {
+                            @Override
+                            public void operationComplete(ChannelFuture future) throws Exception {
+                                toFree.discardReadComponents();
+                            }
+                        });
+                    }
                     frameWriter().writeData(ctx, stream.id(), toWrite, writeablePadding,
-                        size == bytesWritten && endOfStream, writePromise);
+                            size == bytesWritten && endOfStream, writePromise);
                 } while (size != bytesWritten && allowedBytes > bytesWritten);
             } finally {
                 size -= bytesWritten;
             }
+        }
+
+        @Override
+        public boolean merge(Http2RemoteFlowController.FlowControlled next) {
+            if (FlowControlledData.class != next.getClass()) {
+                return false;
+            }
+            final FlowControlledData nextData = (FlowControlledData) next;
+            // Given that we're merging data into a frame it doesn't really make sense to accumulate padding.
+            padding = Math.max(nextData.padding, padding);
+            endOfStream = nextData.endOfStream;
+            final CompositeByteBuf compositeByteBuf;
+            if (data instanceof CompositeByteBuf) {
+                compositeByteBuf = (CompositeByteBuf) data;
+            } else {
+                compositeByteBuf = ctx.alloc().compositeBuffer(Integer.MAX_VALUE);
+                compositeByteBuf.addComponent(data);
+                compositeByteBuf.writerIndex(data.readableBytes());
+                data = compositeByteBuf;
+            }
+            compositeByteBuf.addComponent(nextData.data);
+            compositeByteBuf.writerIndex(compositeByteBuf.writerIndex() + nextData.data.readableBytes());
+            size = data.readableBytes() + padding;
+            if (!nextData.promise.isVoid()) {
+                // Replace current promise if void otherwise chain them.
+                if (promise.isVoid()) {
+                    promise = nextData.promise;
+                } else {
+                    promise.addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            if (future.isSuccess()) {
+                                nextData.promise.trySuccess();
+                            } else {
+                                nextData.promise.tryFailure(future.cause());
+                            }
+                        }
+                    });
+                }
+            }
+            return true;
         }
     }
 
@@ -419,8 +475,17 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
         @Override
         public void write(int allowedBytes) {
+            if (promise.isVoid()) {
+                promise = ctx.newPromise();
+                promise.addListener(this);
+            }
             frameWriter().writeHeaders(ctx, stream.id(), headers, streamDependency, weight, exclusive,
                     padding, endOfStream, promise);
+        }
+
+        @Override
+        public boolean merge(Http2RemoteFlowController.FlowControlled next) {
+            return false;
         }
     }
 
@@ -431,8 +496,8 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             ChannelFutureListener {
         protected final ChannelHandlerContext ctx;
         protected final Http2Stream stream;
-        protected final ChannelPromise promise;
-        protected final boolean endOfStream;
+        protected ChannelPromise promise;
+        protected boolean endOfStream;
         protected int padding;
 
         public FlowControlledBase(final ChannelHandlerContext ctx, final Http2Stream stream, int padding,
@@ -445,8 +510,9 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             this.endOfStream = endOfStream;
             this.stream = stream;
             this.promise = promise;
-            // Ensure error() gets called in case something goes wrong after the frame is passed to Netty.
-            promise.addListener(this);
+            if (!promise.isVoid()) {
+                promise.addListener(this);
+            }
         }
 
         @Override

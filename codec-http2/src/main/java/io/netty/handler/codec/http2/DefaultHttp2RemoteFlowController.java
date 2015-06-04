@@ -38,7 +38,10 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     private final Http2StreamVisitor WRITE_ALLOCATED_BYTES = new Http2StreamVisitor() {
         @Override
         public boolean visit(Http2Stream stream) {
-            state(stream).writeAllocatedBytes();
+            int written = state(stream).writeAllocatedBytes();
+            if (written != -1 && listener != null) {
+                listener.streamWritten(stream, written);
+            }
             return true;
         }
     };
@@ -46,6 +49,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     private final Http2Connection.PropertyKey stateKey;
     private int initialWindowSize = DEFAULT_WINDOW_SIZE;
     private ChannelHandlerContext ctx;
+    private Listener listener;
 
     public DefaultHttp2RemoteFlowController(Http2Connection connection) {
         this.connection = checkNotNull(connection, "connection");
@@ -175,20 +179,29 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
     @Override
     public void incrementWindowSize(ChannelHandlerContext ctx, Http2Stream stream, int delta) throws Http2Exception {
+        // This call does not trigger any writes, all writes will occur when writePendingBytes is called.
         if (stream.id() == CONNECTION_STREAM_ID) {
-            // Update the connection window and write any pending frames for all streams.
+            // Update the connection window
             connectionState().incrementStreamWindow(delta);
-            writePendingBytes();
         } else {
-            // Update the stream window and write any pending frames for the stream.
+            // Update the stream window
             AbstractState state = state(stream);
             state.incrementStreamWindow(delta);
-            state.writeBytes(state.writableWindow());
         }
     }
 
     @Override
-    public void sendFlowControlled(ChannelHandlerContext ctx, Http2Stream stream, FlowControlled frame) {
+    public void listener(Listener listener) {
+        this.listener = listener;
+    }
+
+    @Override
+    public Listener listener() {
+        return this.listener;
+    }
+
+    @Override
+    public void addFlowControlled(ChannelHandlerContext ctx, Http2Stream stream, FlowControlled frame) {
         checkNotNull(ctx, "ctx");
         checkNotNull(frame, "frame");
         if (this.ctx != null && this.ctx != ctx) {
@@ -202,9 +215,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             state.enqueueFrame(frame);
         } catch (Throwable t) {
             frame.error(t);
-            return;
         }
-        state.writeBytes(state.writableWindow());
     }
 
     /**
@@ -233,17 +244,19 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     /**
      * Writes as many pending bytes as possible, according to stream priority.
      */
-    private void writePendingBytes() throws Http2Exception {
+    @Override
+    public void writePendingBytes() throws Http2Exception {
         Http2Stream connectionStream = connection.connectionStream();
         int connectionWindowSize = state(connectionStream).windowSize();
 
         if (connectionWindowSize > 0) {
             // Allocate the bytes for the connection window to the streams, but do not write.
             allocateBytesForTree(connectionStream, connectionWindowSize);
-
-            // Now write all of the allocated bytes.
-            connection.forEachActiveStream(WRITE_ALLOCATED_BYTES);
         }
+
+        // Now write all of the allocated bytes, must write as there may be empty frames with
+        // EOS = true
+        connection.forEachActiveStream(WRITE_ALLOCATED_BYTES);
     }
 
     /**
@@ -469,7 +482,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
 
         @Override
-        void writeAllocatedBytes() {
+        int writeAllocatedBytes() {
             int numBytes = allocated;
 
             // Restore the number of streamable bytes to this branch.
@@ -477,7 +490,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             resetAllocated();
 
             // Perform the write.
-            writeBytes(numBytes);
+            return writeBytes(numBytes);
         }
 
         /**
@@ -522,7 +535,10 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         @Override
         void enqueueFrame(FlowControlled frame) {
             incrementPendingBytes(frame.size());
-            pendingWriteQueue.offer(frame);
+            FlowControlled last = pendingWriteQueue.peekLast();
+            if (last == null || !last.merge(frame)) {
+                pendingWriteQueue.offer(frame);
+            }
         }
 
         @Override
@@ -564,23 +580,19 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
         @Override
         int writeBytes(int bytes) {
+            boolean wrote = false;
             int bytesAttempted = 0;
-            while (hasFrame()) {
-                int maxBytes = min(bytes - bytesAttempted, writableWindow());
-                bytesAttempted += write(peek(), maxBytes);
-                if (bytes - bytesAttempted <= 0 && !isNextFrameEmpty()) {
-                    // The frame had data and all of it was written.
-                    break;
-                }
+            int writableBytes = min(bytes, writableWindow());
+            while (hasFrame() && (writableBytes > 0 || peek().size() == 0)) {
+                wrote = true;
+                bytesAttempted += write(peek(), writableBytes);
+                writableBytes = min(bytes - bytesAttempted, writableWindow());
             }
-            return bytesAttempted;
-        }
-
-        /**
-         * @return {@code true} if there is a next frame and its size is zero.
-         */
-        private boolean isNextFrameEmpty() {
-            return hasFrame() && peek().size() == 0;
+            if (wrote) {
+                return bytesAttempted;
+            } else {
+                return -1;
+            }
         }
 
         /**
@@ -709,7 +721,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
 
         @Override
-        void writeAllocatedBytes() {
+        int writeAllocatedBytes() {
             throw new UnsupportedOperationException();
         }
 
@@ -789,9 +801,11 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         abstract int initialWindowSize();
 
         /**
-         * Write bytes allocated bytes for this stream.
+         * Write the allocated bytes for this stream.
+         *
+         * @return the number of bytes written for a stream or {@code -1} if no write occurred.
          */
-        abstract void writeAllocatedBytes();
+        abstract int writeAllocatedBytes();
 
         /**
          * Returns the number of pending bytes for this node that will fit within the
@@ -830,7 +844,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         /**
          * Writes up to the number of bytes from the pending queue. May write less if limited by the writable window, by
          * the number of pending writes available, or because a frame does not support splitting on arbitrary
-         * boundaries.
+         * boundaries. Will return {@code -1} if there are no frames to write.
          */
         abstract int writeBytes(int bytes);
 
