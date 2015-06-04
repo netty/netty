@@ -87,20 +87,13 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
      * concurrent stream limit being hit.
      */
     private final TreeMap<Integer, PendingStream> pendingStreams = new TreeMap<Integer, PendingStream>();
-
-    /**
-     * The largest stream ID that has actually been created by the delegate decoder. Any stream
-     * whose ID is less than or equal to this value will NOT be buffered.
-     */
-    private int largestCreatedStreamId;
     private int maxConcurrentStreams;
 
     public StreamBufferingEncoder(Http2ConnectionEncoder delegate) {
         this(delegate, SMALLEST_MAX_CONCURRENT_STREAMS);
     }
 
-    public StreamBufferingEncoder(Http2ConnectionEncoder delegate,
-                                  int initialMaxConcurrentStreams) {
+    public StreamBufferingEncoder(Http2ConnectionEncoder delegate, int initialMaxConcurrentStreams) {
         super(delegate);
         this.maxConcurrentStreams = initialMaxConcurrentStreams;
         connection().addListener(new Http2ConnectionAdapter() {
@@ -135,13 +128,11 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
                                       int streamDependency, short weight, boolean exclusive,
                                       int padding, boolean endOfStream, ChannelPromise promise) {
-        if (existingStream(streamId) || connection().goAwayReceived()) {
+        if (isExistingStream(streamId) || connection().goAwayReceived()) {
             return super.writeHeaders(ctx, streamId, headers, streamDependency, weight,
                     exclusive, padding, endOfStream, promise);
         }
         if (canCreateStream()) {
-            assert streamId > largestCreatedStreamId;
-            largestCreatedStreamId = streamId;
             return super.writeHeaders(ctx, streamId, headers, streamDependency, weight,
                     exclusive, padding, endOfStream, promise);
         }
@@ -158,7 +149,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     @Override
     public ChannelFuture writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
                                         ChannelPromise promise) {
-        if (existingStream(streamId)) {
+        if (isExistingStream(streamId)) {
             return super.writeRstStream(ctx, streamId, errorCode, promise);
         }
         // Since the delegate doesn't know about any buffered streams we have to handle cancellation
@@ -180,7 +171,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     @Override
     public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
                                    int padding, boolean endOfStream, ChannelPromise promise) {
-        if (existingStream(streamId)) {
+        if (isExistingStream(streamId)) {
             return super.writeData(ctx, streamId, data, padding, endOfStream, promise);
         }
         PendingStream pendingStream = pendingStreams.get(streamId);
@@ -200,8 +191,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         // new setting before we attempt to create any new streams.
         super.remoteSettings(settings);
 
-        // Update maxConcurrentStreams from the settings. If it has increased, try to create
-        // more streams.
+        // Update maxConcurrentStreams from the settings. If it has increased, try to create more streams.
         Long maxConcurrentStreamsSetting = settings.maxConcurrentStreams();
         if (maxConcurrentStreamsSetting != null) {
             int newMaxConcurrentStreams = (int) min(Integer.MAX_VALUE, maxConcurrentStreamsSetting);
@@ -224,7 +214,6 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
             Map.Entry<Integer, PendingStream> entry = pendingStreams.pollFirstEntry();
             PendingStream pendingStream = entry.getValue();
             pendingStream.sendFrames();
-            largestCreatedStreamId = pendingStream.streamId;
         }
     }
 
@@ -255,8 +244,8 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         return connection().local().numActiveStreams() < maxConcurrentStreams;
     }
 
-    private boolean existingStream(int streamId) {
-        return streamId <= largestCreatedStreamId;
+    private boolean isExistingStream(int streamId) {
+        return streamId <= connection().local().lastStreamCreated();
     }
 
     private static class PendingStream {
