@@ -23,18 +23,38 @@ import io.netty.channel.ChannelHandlerContext;
 public interface Http2RemoteFlowController extends Http2FlowController {
 
     /**
-     * Writes or queues a payload for transmission to the remote endpoint. There is no
-     * guarantee when the data will be written or whether it will be split into multiple frames
+     * Queues a payload for transmission to the remote endpoint. There is no guarantee as to when the data
+     * will be written or how it will be allocated to frames.
      * before sending.
      * <p>
-     * Manually flushing the {@link ChannelHandlerContext} is required for writes as the flow controller will
-     * <strong>not</strong> flush by itself.
+     * Writes do not actually occur until {@link #writePendingBytes()} is called.
      *
      * @param ctx the context from the handler.
      * @param stream the subject stream. Must not be the connection stream object.
      * @param payload payload to write subject to flow-control accounting and ordering rules.
      */
-    void sendFlowControlled(ChannelHandlerContext ctx, Http2Stream stream, FlowControlled payload);
+    void addFlowControlled(ChannelHandlerContext ctx, Http2Stream stream, FlowControlled payload);
+
+    /**
+     * Write all data pending in the flow controller up to the flow-control limits.
+     *
+     * @throws Http2Exception throws if a protocol-related error occurred.
+     */
+    void writePendingBytes() throws Http2Exception;
+
+    /**
+     * Set the active listener on the flow-controller.
+     *
+     * @param listener to notify when the a write occurs, can be {@code null}.
+     */
+    void listener(Listener listener);
+
+    /**
+     * Get the current listener to flow-control events.
+     *
+     * @return the current listener or {@code null} if one is not set.
+     */
+    Listener listener();
 
     /**
      * Implementations of this interface are used to progressively write chunks of the underlying
@@ -84,5 +104,30 @@ public interface Http2RemoteFlowController extends Http2FlowController {
          * @param allowedBytes an upper bound on the number of bytes the payload can write at this time.
          */
         void write(int allowedBytes);
+
+        /**
+         * Merge the contents of the {@code next} message into this message so they can be written out as one unit.
+         * This allows many small messages to be written as a single DATA frame.
+         *
+         * @return {@code true} if {@code next} was successfully merged and does not need to be enqueued,
+         *     {@code false} otherwise.
+         */
+        boolean merge(FlowControlled next);
+    }
+
+    /**
+     * Listener to the number of flow-controlled bytes written per stream.
+     */
+    interface Listener {
+
+        /**
+         * Report the number of {@code writtenBytes} for a {@code stream}. Called after the
+         * flow-controller has flushed bytes for the given stream.
+         *
+         * @param stream that had bytes written.
+         * @param writtenBytes the number of bytes written for a stream, can be 0 in the case of an
+         *                     empty DATA frame.
+         */
+        void streamWritten(Http2Stream stream, int writtenBytes);
     }
 }
