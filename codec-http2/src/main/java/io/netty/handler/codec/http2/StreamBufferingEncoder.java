@@ -179,8 +179,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
             pendingStream.frames.add(new DataFrame(data, padding, endOfStream, promise));
         } else {
             ReferenceCountUtil.safeRelease(data);
-            promise.setFailure(
-                    connectionError(PROTOCOL_ERROR, "Stream does not exist %d", streamId));
+            promise.setFailure(connectionError(PROTOCOL_ERROR, "Stream does not exist %d", streamId));
         }
         return promise;
     }
@@ -248,7 +247,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         return streamId <= connection().local().lastStreamCreated();
     }
 
-    private static class PendingStream {
+    private static final class PendingStream {
         final ChannelHandlerContext ctx;
         final int streamId;
         final Queue<Frame> frames = new ArrayDeque<Frame>(2);
@@ -292,7 +291,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         abstract void send(ChannelHandlerContext ctx, int streamId);
     }
 
-    private class HeadersFrame extends Frame {
+    private final class HeadersFrame extends Frame {
         final Http2Headers headers;
         final int streamDependency;
         final short weight;
@@ -318,7 +317,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         }
     }
 
-    private class DataFrame extends Frame {
+    private final class DataFrame extends Frame {
         final ByteBuf data;
         final int padding;
         final boolean endOfStream;
