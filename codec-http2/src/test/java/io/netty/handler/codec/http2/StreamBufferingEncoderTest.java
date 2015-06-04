@@ -33,6 +33,7 @@ import static org.mockito.Mockito.when;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -83,7 +84,7 @@ public class StreamBufferingEncoderTest {
         when(frameSizePolicy.maxFrameSize()).thenReturn(DEFAULT_MAX_FRAME_SIZE);
         when(writer.writeRstStream(eq(ctx), anyInt(), anyLong(), eq(promise))).thenAnswer(
                 successAnswer());
-        when(writer.writeGoAway(eq(ctx), anyInt(), anyLong(), any(ByteBuf.class), eq(promise)))
+        when(writer.writeGoAway(eq(ctx), anyInt(), anyLong(), any(ByteBuf.class), any(ChannelPromise.class)))
                 .thenAnswer(successAnswer());
 
         connection = new DefaultHttp2Connection(false);
@@ -98,6 +99,7 @@ public class StreamBufferingEncoderTest {
         Http2ConnectionHandler handler = new Http2ConnectionHandler(decoder, encoder);
         // Set LifeCycleManager on encoder and decoder
         when(ctx.channel()).thenReturn(channel);
+        when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(channel.isActive()).thenReturn(false);
         handler.handlerAdded(ctx);
     }
@@ -333,6 +335,22 @@ public class StreamBufferingEncoderTest {
 
         assertEquals(0, encoder.numBufferedStreams());
         assertEquals(numStreams, connection.local().numActiveStreams());
+    }
+
+    @Test
+    public void exhaustedStreamsDoNotBuffer() throws Http2Exception {
+        // Write the highest possible stream ID for the client.
+        // This will cause the next stream ID to be negative.
+        encoderWriteHeaders(Integer.MAX_VALUE, promise);
+
+        // Disallow any further streams.
+        setMaxConcurrentStreams(0);
+
+        // Simulate numeric overflow for the next stream ID.
+        encoderWriteHeaders(-1, promise);
+
+        // Verify that the write fails.
+        verify(promise).setFailure(any(Http2Exception.class));
     }
 
     @Test
