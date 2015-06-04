@@ -18,6 +18,7 @@ package io.netty.handler.codec.http2;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static java.lang.Math.min;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
@@ -46,7 +47,8 @@ import java.util.TreeMap;
  * {@link StreamBufferingEncoder.GoAwayException}.
  * <p/>
  * <p>This implementation makes the buffering mostly transparent and is expected to be used as a
- * drop-in decorator of {@link io.netty.handler.codec.http2.DefaultHttp2ConnectionEncoder}.
+ * drop-in decorator of {@link DefaultHttp2ConnectionEncoder}.
+ * </p>
  */
 public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
 
@@ -60,7 +62,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         private final long errorCode;
         private final ByteBuf debugData;
 
-        private GoAwayException(int lastStreamId, long errorCode, ByteBuf debugData) {
+        public GoAwayException(int lastStreamId, long errorCode, ByteBuf debugData) {
             super(Http2Error.STREAM_CLOSED);
             this.lastStreamId = lastStreamId;
             this.errorCode = errorCode;
@@ -84,12 +86,14 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
      * Buffer for any streams and corresponding frames that could not be created due to the maximum
      * concurrent stream limit being hit.
      */
-    private final TreeMap<Integer, PendingStream> pendingStreams =
-            new TreeMap<Integer, PendingStream>();
-    private final int initialMaxConcurrentStreams;
-    // Smallest stream id whose corresponding frames do not get buffered.
+    private final TreeMap<Integer, PendingStream> pendingStreams = new TreeMap<Integer, PendingStream>();
+
+    /**
+     * The largest stream ID that has actually been created by the delegate decoder. Any stream
+     * whose ID is less than or equal to this value will NOT be buffered.
+     */
     private int largestCreatedStreamId;
-    private boolean receivedSettings;
+    private int maxConcurrentStreams;
 
     public StreamBufferingEncoder(Http2ConnectionEncoder delegate) {
         this(delegate, SMALLEST_MAX_CONCURRENT_STREAMS);
@@ -98,7 +102,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     public StreamBufferingEncoder(Http2ConnectionEncoder delegate,
                                   int initialMaxConcurrentStreams) {
         super(delegate);
-        this.initialMaxConcurrentStreams = initialMaxConcurrentStreams;
+        this.maxConcurrentStreams = initialMaxConcurrentStreams;
         connection().addListener(new Http2ConnectionAdapter() {
 
             @Override
@@ -124,8 +128,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
                                       int padding, boolean endStream, ChannelPromise promise) {
         return writeHeaders(ctx, streamId, headers, 0, Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT,
-                false,
-                padding, endStream, promise);
+                false, padding, endStream, promise);
     }
 
     @Override
@@ -169,16 +172,14 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
             stream.close(null);
             promise.setSuccess();
         } else {
-            promise.setFailure(
-                    connectionError(PROTOCOL_ERROR, "Stream does not exist %d", streamId));
+            promise.setFailure(connectionError(PROTOCOL_ERROR, "Stream does not exist %d", streamId));
         }
         return promise;
     }
 
     @Override
     public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
-                                   int padding,
-                                   boolean endOfStream, ChannelPromise promise) {
+                                   int padding, boolean endOfStream, ChannelPromise promise) {
         if (existingStream(streamId)) {
             return super.writeData(ctx, streamId, data, padding, endOfStream, promise);
         }
@@ -194,13 +195,22 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     }
 
     @Override
-    public ChannelFuture writeSettingsAck(ChannelHandlerContext ctx, ChannelPromise promise) {
-        receivedSettings = true;
-        ChannelFuture future = super.writeSettingsAck(ctx, promise);
-        // After having received a SETTINGS frame, the maximum number of concurrent streams
-        // might have changed. So try to create some buffered streams.
-        tryCreatePendingStreams();
-        return future;
+    public void remoteSettings(Http2Settings settings) throws Http2Exception {
+        // Need to let the delegate decoder handle the settings first, so that it sees the
+        // new setting before we attempt to create any new streams.
+        super.remoteSettings(settings);
+
+        // Update maxConcurrentStreams from the settings. If it has increased, try to create
+        // more streams.
+        Long maxConcurrentStreamsSetting = settings.maxConcurrentStreams();
+        if (maxConcurrentStreamsSetting != null) {
+            int newMaxConcurrentStreams = (int) min(Integer.MAX_VALUE, maxConcurrentStreamsSetting);
+            boolean shouldCreateStreams = newMaxConcurrentStreams > maxConcurrentStreams;
+            maxConcurrentStreams = newMaxConcurrentStreams;
+            if (shouldCreateStreams) {
+                tryCreatePendingStreams();
+            }
+        }
     }
 
     @Override
@@ -242,9 +252,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
      * Determines whether or not we're allowed to create a new stream right now.
      */
     private boolean canCreateStream() {
-        Http2Connection.Endpoint<?> local = connection().local();
-        return (receivedSettings || local.numActiveStreams() < initialMaxConcurrentStreams)
-                && local.canCreateStream();
+        return connection().local().numActiveStreams() < maxConcurrentStreams;
     }
 
     private boolean existingStream(int streamId) {

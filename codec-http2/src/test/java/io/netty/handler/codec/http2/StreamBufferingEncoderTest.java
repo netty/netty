@@ -42,8 +42,6 @@ import io.netty.handler.codec.http2.StreamBufferingEncoder.GoAwayException;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -53,7 +51,6 @@ import org.mockito.verification.VerificationMode;
 /**
  * Tests for {@link StreamBufferingEncoder}.
  */
-@RunWith(JUnit4.class)
 public class StreamBufferingEncoderTest {
 
     private StreamBufferingEncoder encoder;
@@ -123,7 +120,7 @@ public class StreamBufferingEncoderTest {
     @Test
     public void ensureCanCreateNextStreamWhenStreamCloses() {
         encoder.writeSettingsAck(ctx, promise);
-        connection.local().maxActiveStreams(1);
+        setMaxConcurrentStreams(1);
 
         encoderWriteHeaders(3, promise);
         assertEquals(0, encoder.numBufferedStreams());
@@ -134,7 +131,7 @@ public class StreamBufferingEncoderTest {
         assertEquals(1, encoder.numBufferedStreams());
 
         // Now prevent us from creating another stream.
-        connection.local().maxActiveStreams(0);
+        setMaxConcurrentStreams(0);
 
         // Close the previous stream.
         connection.stream(3).close();
@@ -150,7 +147,7 @@ public class StreamBufferingEncoderTest {
     @Test
     public void alternatingWritesToActiveAndBufferedStreams() {
         encoder.writeSettingsAck(ctx, promise);
-        connection.local().maxActiveStreams(1);
+        setMaxConcurrentStreams(1);
 
         encoderWriteHeaders(3, promise);
         assertEquals(0, encoder.numBufferedStreams());
@@ -169,7 +166,7 @@ public class StreamBufferingEncoderTest {
     @Test
     public void bufferingNewStreamFailsAfterGoAwayReceived() {
         encoder.writeSettingsAck(ctx, promise);
-        connection.local().maxActiveStreams(0);
+        setMaxConcurrentStreams(0);
         connection.goAwayReceived(1, 8, null);
 
         promise = mock(ChannelPromise.class);
@@ -181,7 +178,7 @@ public class StreamBufferingEncoderTest {
     @Test
     public void receivingGoAwayFailsBufferedStreams() {
         encoder.writeSettingsAck(ctx, promise);
-        connection.local().maxActiveStreams(5);
+        setMaxConcurrentStreams(5);
 
         int streamId = 3;
         for (int i = 0; i < 9; i++) {
@@ -201,7 +198,7 @@ public class StreamBufferingEncoderTest {
     @Test
     public void sendingGoAwayShouldNotFailStreams() {
         encoder.writeSettingsAck(ctx, promise);
-        connection.local().maxActiveStreams(1);
+        setMaxConcurrentStreams(1);
 
         encoderWriteHeaders(3, promise);
         assertEquals(0, encoder.numBufferedStreams());
@@ -221,7 +218,7 @@ public class StreamBufferingEncoderTest {
     @Test
     public void endStreamDoesNotFailBufferedStream() {
         encoder.writeSettingsAck(ctx, promise);
-        connection.local().maxActiveStreams(0);
+        setMaxConcurrentStreams(0);
 
         encoderWriteHeaders(3, promise);
         assertEquals(1, encoder.numBufferedStreams());
@@ -234,7 +231,7 @@ public class StreamBufferingEncoderTest {
 
         // Simulate that we received a SETTINGS frame which
         // increased MAX_CONCURRENT_STREAMS to 1.
-        connection.local().maxActiveStreams(1);
+        setMaxConcurrentStreams(1);
         encoder.writeSettingsAck(ctx, promise);
 
         assertEquals(1, connection.numActiveStreams());
@@ -245,7 +242,7 @@ public class StreamBufferingEncoderTest {
     @Test
     public void rstStreamClosesBufferedStream() {
         encoder.writeSettingsAck(ctx, promise);
-        connection.local().maxActiveStreams(0);
+        setMaxConcurrentStreams(0);
 
         encoderWriteHeaders(3, promise);
         assertEquals(1, encoder.numBufferedStreams());
@@ -261,7 +258,7 @@ public class StreamBufferingEncoderTest {
     @Test
     public void bufferUntilActiveStreamsAreReset() {
         encoder.writeSettingsAck(ctx, promise);
-        connection.local().maxActiveStreams(1);
+        setMaxConcurrentStreams(1);
 
         encoderWriteHeaders(3, promise);
         assertEquals(0, encoder.numBufferedStreams());
@@ -288,7 +285,7 @@ public class StreamBufferingEncoderTest {
     @Test
     public void bufferUntilMaxStreamsIncreased() {
         encoder.writeSettingsAck(ctx, promise);
-        connection.local().maxActiveStreams(2);
+        setMaxConcurrentStreams(2);
 
         encoderWriteHeaders(3, promise);
         encoderWriteHeaders(5, promise);
@@ -303,7 +300,7 @@ public class StreamBufferingEncoderTest {
 
         // Simulate that we received a SETTINGS frame which
         // increased MAX_CONCURRENT_STREAMS to 5.
-        connection.local().maxActiveStreams(5);
+        setMaxConcurrentStreams(5);
         encoder.writeSettingsAck(ctx, promise);
 
         assertEquals(0, encoder.numBufferedStreams());
@@ -318,7 +315,7 @@ public class StreamBufferingEncoderTest {
     }
 
     @Test
-    public void bufferUntilSettingsReceived() {
+    public void bufferUntilSettingsReceived() throws Http2Exception {
         int initialLimit = SMALLEST_MAX_CONCURRENT_STREAMS;
         int numStreams = initialLimit * 2;
         for (int ix = 0, nextStreamId = 3; ix < numStreams; ++ix, nextStreamId += 2) {
@@ -332,7 +329,7 @@ public class StreamBufferingEncoderTest {
         assertEquals(numStreams / 2, encoder.numBufferedStreams());
 
         // Simulate that we received a SETTINGS frame.
-        encoder.writeSettingsAck(ctx, promise);
+        setMaxConcurrentStreams(initialLimit * 2);
 
         assertEquals(0, encoder.numBufferedStreams());
         assertEquals(numStreams, connection.local().numActiveStreams());
@@ -341,7 +338,7 @@ public class StreamBufferingEncoderTest {
     @Test
     public void closedBufferedStreamReleasesByteBuf() {
         encoder.writeSettingsAck(ctx, promise);
-        connection.local().maxActiveStreams(0);
+        setMaxConcurrentStreams(0);
         ByteBuf data = mock(ByteBuf.class);
         encoderWriteHeaders(3, promise);
         assertEquals(1, encoder.numBufferedStreams());
@@ -354,6 +351,14 @@ public class StreamBufferingEncoderTest {
         verify(rstPromise).setSuccess();
         verify(promise, times(2)).setSuccess();
         verify(data).release();
+    }
+
+    private void setMaxConcurrentStreams(int newValue) {
+        try {
+            encoder.remoteSettings(new Http2Settings().maxConcurrentStreams(newValue));
+        } catch (Http2Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void encoderWriteHeaders(int streamId, ChannelPromise promise) {
