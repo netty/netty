@@ -315,6 +315,7 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
     }
 
     @Override
+    @Deprecated
     public EpollSocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
         super.setMaxMessagesPerRead(maxMessagesPerRead);
         return this;

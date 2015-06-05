@@ -15,7 +15,6 @@
  */
 package io.netty.channel.sctp;
 
-
 import com.sun.nio.sctp.SctpChannel;
 import com.sun.nio.sctp.SctpStandardSocketOptions;
 import io.netty.buffer.ByteBufAllocator;
@@ -29,8 +28,10 @@ import io.netty.util.internal.PlatformDependent;
 import java.io.IOException;
 import java.util.Map;
 
-import static io.netty.channel.ChannelOption.*;
-import static io.netty.channel.sctp.SctpChannelOption.*;
+import static io.netty.channel.ChannelOption.SO_RCVBUF;
+import static io.netty.channel.ChannelOption.SO_SNDBUF;
+import static io.netty.channel.sctp.SctpChannelOption.SCTP_INIT_MAXSTREAMS;
+import static io.netty.channel.sctp.SctpChannelOption.SCTP_NODELAY;
 
 /**
  * The default {@link SctpChannelConfig} implementation for SCTP.
@@ -180,6 +181,7 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
     }
 
     @Override
+    @Deprecated
     public SctpChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
         super.setMaxMessagesPerRead(maxMessagesPerRead);
         return this;

@@ -274,15 +274,16 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
             if (messageInfo == null) {
                 return 0;
             }
-            buf.add(new SctpMessage(messageInfo, buffer.writerIndex(buffer.writerIndex() + data.position() - pos)));
+
+            allocHandle.lastBytesRead(data.position() - pos);
+            buf.add(new SctpMessage(messageInfo,
+                    buffer.writerIndex(buffer.writerIndex() + allocHandle.lastBytesRead())));
             free = false;
             return 1;
         } catch (Throwable cause) {
             PlatformDependent.throwException(cause);
             return -1;
         }  finally {
-            int bytesRead = buffer.readableBytes();
-            allocHandle.record(bytesRead);
             if (free) {
                 buffer.release();
             }

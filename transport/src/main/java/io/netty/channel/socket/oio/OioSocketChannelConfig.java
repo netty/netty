@@ -82,6 +82,7 @@ public interface OioSocketChannelConfig extends SocketChannelConfig {
     OioSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
 
     @Override
+    @Deprecated
     OioSocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead);
 
     @Override

@@ -26,6 +26,7 @@ import io.netty.channel.RecvByteBufAllocator;
 public interface DomainSocketChannelConfig extends ChannelConfig {
 
     @Override
+    @Deprecated
     DomainSocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead);
 
     @Override

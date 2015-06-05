@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,9 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package io.netty.channel.epoll;
 
-/**
- * A DNS client that queries a server and checks if query information and
- * responses are valid to ensure codec is correct.
- */
-package io.netty.handler.codec.dns;
+import io.netty.channel.RecvByteBufAllocator;
+
+abstract class EpollRecvByteAllocatorHandle extends RecvByteBufAllocator.DelegatingHandle {
+    private final boolean isEdgeTriggered;
+
+    public EpollRecvByteAllocatorHandle(RecvByteBufAllocator.Handle handle, boolean isEdgeTriggered) {
+        super(handle);
+        this.isEdgeTriggered = isEdgeTriggered;
+    }
+
+    public final boolean isEdgeTriggered() {
+        return isEdgeTriggered;
+    }
+}

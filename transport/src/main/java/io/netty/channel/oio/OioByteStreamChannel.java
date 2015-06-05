@@ -18,6 +18,7 @@ package io.netty.channel.oio;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.FileRegion;
+import io.netty.channel.RecvByteBufAllocator;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -103,8 +104,9 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
 
     @Override
     protected int doReadBytes(ByteBuf buf) throws Exception {
-        int length = Math.max(1, Math.min(available(), buf.maxWritableBytes()));
-        return buf.writeBytes(is, length);
+        final RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
+        allocHandle.attemptedBytesRead(Math.max(1, Math.min(available(), buf.maxWritableBytes())));
+        return buf.writeBytes(is, allocHandle.attemptedBytesRead());
     }
 
     @Override

@@ -35,12 +35,6 @@ public abstract class AbstractOioChannel extends AbstractChannel {
     private final Runnable readTask = new Runnable() {
         @Override
         public void run() {
-            if (!isReadPending() && !config().isAutoRead()) {
-                // ChannelConfig.setAutoRead(false) was called in the meantime so just return
-                return;
-            }
-
-            setReadPending(false);
             doRead();
         }
     };

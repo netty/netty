@@ -23,6 +23,7 @@ import java.net.SocketAddress;
 public final class ChannelMetadata {
 
     private final boolean hasDisconnect;
+    private final int minMaxMessagesPerRead;
 
     /**
      * Create a new instance
@@ -32,7 +33,24 @@ public final class ChannelMetadata {
      *                                      again, such as UDP/IP.
      */
     public ChannelMetadata(boolean hasDisconnect) {
+        this(hasDisconnect, 1);
+    }
+
+    /**
+     * Create a new instance
+     *
+     * @param hasDisconnect     {@code true} if and only if the channel has the {@code disconnect()} operation
+     *                          that allows a user to disconnect and then call {@link Channel#connect(SocketAddress)}
+     *                                      again, such as UDP/IP.
+     * @param minMaxMessagesPerRead If a {@link MaxMessagesRecvByteBufAllocator} is in use, then this is the minimum
+     * value enforced for {@link MaxMessagesRecvByteBufAllocator#maxMessagesPerRead()}. Must be {@code > 0}.
+     */
+    public ChannelMetadata(boolean hasDisconnect, int minMaxMessagesPerRead) {
+        if (minMaxMessagesPerRead <= 0) {
+            throw new IllegalArgumentException("minMaxMessagesPerRead: " + minMaxMessagesPerRead + " (expected > 0)");
+        }
         this.hasDisconnect = hasDisconnect;
+        this.minMaxMessagesPerRead = minMaxMessagesPerRead;
     }
 
     /**
@@ -42,5 +60,13 @@ public final class ChannelMetadata {
      */
     public boolean hasDisconnect() {
         return hasDisconnect;
+    }
+
+    /**
+     * If a {@link MaxMessagesRecvByteBufAllocator} is in use, then this is the minimum value enforced for
+     * {@link MaxMessagesRecvByteBufAllocator#maxMessagesPerRead()}.
+     */
+    public int minMaxMessagesPerRead() {
+        return minMaxMessagesPerRead;
     }
 }
