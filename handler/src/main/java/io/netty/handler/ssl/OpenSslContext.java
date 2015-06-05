@@ -37,7 +37,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
@@ -57,12 +56,13 @@ public abstract class OpenSslContext extends SslContext {
     private static final boolean JDK_REJECT_CLIENT_INITIATED_RENEGOTIATION =
             SystemPropertyUtil.getBoolean("jdk.tls.rejectClientInitiatedRenegotiation", false);
     private static final List<String> DEFAULT_CIPHERS;
-    private static final AtomicIntegerFieldUpdater<OpenSslContext> DESTROY_UPDATER;
 
     // TODO: Maybe make configurable ?
     protected static final int VERIFY_DEPTH = 10;
 
-    private final long aprPool;
+    /** The OpenSSL SSL_CTX object */
+    protected volatile long ctx;
+    private long aprPool;
     @SuppressWarnings({ "unused", "FieldMayBeFinal" })
     private volatile int aprPoolDestroyed;
     private volatile boolean rejectRemoteInitiatedRenegotiation;
@@ -70,10 +70,7 @@ public abstract class OpenSslContext extends SslContext {
     private final long sessionCacheSize;
     private final long sessionTimeout;
     private final OpenSslEngineMap engineMap = new DefaultOpenSslEngineMap();
-
     private final OpenSslApplicationProtocolNegotiator apn;
-    /** The OpenSSL SSL_CTX object */
-    protected final long ctx;
     private final int mode;
 
     static final OpenSslApplicationProtocolNegotiator NONE_PROTOCOL_NEGOTIATOR =
@@ -117,13 +114,6 @@ public abstract class OpenSslContext extends SslContext {
         if (logger.isDebugEnabled()) {
             logger.debug("Default cipher suite (OpenSSL): " + ciphers);
         }
-
-        AtomicIntegerFieldUpdater<OpenSslContext> updater =
-                PlatformDependent.newAtomicIntegerFieldUpdater(OpenSslContext.class, "aprPoolDestroyed");
-        if (updater == null) {
-            updater = AtomicIntegerFieldUpdater.newUpdater(OpenSslContext.class, "aprPoolDestroyed");
-        }
-        DESTROY_UPDATER = updater;
     }
 
     OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apnCfg,
@@ -245,7 +235,7 @@ public abstract class OpenSslContext extends SslContext {
             success = true;
         } finally {
             if (!success) {
-                destroyPools();
+                destroy();
             }
         }
     }
@@ -303,8 +293,13 @@ public abstract class OpenSslContext extends SslContext {
     }
 
     /**
-     * Returns the {@code SSL_CTX} object of this context.
+     * Returns the pointer to the {@code SSL_CTX} object for this {@link OpenSslContext}.
+     * Be aware that it is freed as soon as the {@link #finalize()}  method is called.
+     * At this point {@code 0} will be returned.
+     *
+     * @deprecated use {@link #sslCtxPointer()}
      */
+    @Deprecated
     public final long context() {
         return ctx;
     }
@@ -330,13 +325,7 @@ public abstract class OpenSslContext extends SslContext {
     @SuppressWarnings("FinalizeDeclaration")
     protected final void finalize() throws Throwable {
         super.finalize();
-        synchronized (OpenSslContext.class) {
-            if (ctx != 0) {
-                SSLContext.free(ctx);
-            }
-        }
-
-        destroyPools();
+        destroy();
     }
 
     /**
@@ -351,10 +340,27 @@ public abstract class OpenSslContext extends SslContext {
     @Override
     public abstract OpenSslSessionContext sessionContext();
 
-    protected final void destroyPools() {
-        // Guard against multiple destroyPools() calls triggered by construction exception and finalize() later
-        if (aprPool != 0 && DESTROY_UPDATER.compareAndSet(this, 0, 1)) {
-            Pool.destroy(aprPool);
+    /**
+     * Returns the pointer to the {@code SSL_CTX} object for this {@link OpenSslContext}.
+     * Be aware that it is freed as soon as the {@link #finalize()}  method is called.
+     * At this point {@code 0} will be returned.
+     */
+    public final long sslCtxPointer() {
+        return ctx;
+    }
+
+    protected final void destroy() {
+        synchronized (OpenSslContext.class) {
+            if (ctx != 0) {
+                SSLContext.free(ctx);
+                ctx = 0;
+            }
+
+            // Guard against multiple destroyPools() calls triggered by construction exception and finalize() later
+            if (aprPool != 0) {
+                Pool.destroy(aprPool);
+                aprPool = 0;
+            }
         }
     }
 
@@ -450,7 +456,7 @@ public abstract class OpenSslContext extends SslContext {
 
         @Override
         public void add(OpenSslEngine engine) {
-            engines.put(engine.ssl(), engine);
+            engines.put(engine.sslPointer(), engine);
         }
     }
 }
