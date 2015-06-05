@@ -44,6 +44,8 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
                     buf = new AdvancedLeakAwareByteBuf(buf, leak);
                 }
                 break;
+            default:
+                break;
         }
         return buf;
     }

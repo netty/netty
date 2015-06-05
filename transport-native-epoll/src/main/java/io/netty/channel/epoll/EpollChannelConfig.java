@@ -65,6 +65,7 @@ public class EpollChannelConfig extends DefaultChannelConfig {
     }
 
     @Override
+    @Deprecated
     public EpollChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
         super.setMaxMessagesPerRead(maxMessagesPerRead);
         return this;

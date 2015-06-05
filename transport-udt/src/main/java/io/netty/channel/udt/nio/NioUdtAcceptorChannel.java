@@ -43,7 +43,7 @@ public abstract class NioUdtAcceptorChannel extends AbstractNioMessageChannel im
     protected static final InternalLogger logger =
             InternalLoggerFactory.getInstance(NioUdtAcceptorChannel.class);
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
     private final UdtServerChannelConfig config;
 

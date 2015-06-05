@@ -23,6 +23,7 @@ import java.net.SocketAddress;
  * <a href="http://en.wikipedia.org/wiki/Unix_domain_socket">Unix Domain Socket</a>.
  */
 public final class DomainSocketAddress extends SocketAddress {
+    private static final long serialVersionUID = -6934618000832236893L;
     private final String socketPath;
 
     public DomainSocketAddress(String socketPath) {

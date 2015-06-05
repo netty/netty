@@ -18,6 +18,7 @@ package io.netty.channel.oio;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.RecvByteBufAllocator;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -37,17 +38,23 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
     @Override
     protected void doRead() {
         final ChannelConfig config = config();
-        final ChannelPipeline pipeline = pipeline();
-        boolean closed = false;
-        final int maxMessagesPerRead = config.getMaxMessagesPerRead();
+        if (!config.isAutoRead() && !isReadPending()) {
+            // ChannelConfig.setAutoRead(false) was called in the meantime
+            return;
+        }
+        // OIO reads are scheduled as a runnable object, the read is not pending as soon as the runnable is run.
+        setReadPending(false);
 
+        final ChannelPipeline pipeline = pipeline();
+        final RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
+        allocHandle.reset(config);
+
+        boolean closed = false;
         Throwable exception = null;
-        int localRead = 0;
-        int totalRead = 0;
         try {
-            for (;;) {
+            do {
                 // Perform a read.
-                localRead = doReadMessages(readBuf);
+                int localRead = doReadMessages(readBuf);
                 if (localRead == 0) {
                     break;
                 }
@@ -56,24 +63,18 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
                     break;
                 }
 
-                // Notify with the received messages and clear the buffer.
-                int size = readBuf.size();
-                for (int i = 0; i < size; i ++) {
-                    pipeline.fireChannelRead(readBuf.get(i));
-                }
-                readBuf.clear();
-
-                // Do not read beyond maxMessagesPerRead.
-                // Do not continue reading if autoRead has been turned off.
-                totalRead += localRead;
-                if (totalRead >= maxMessagesPerRead || !config.isAutoRead()) {
-                    break;
-                }
-            }
+                allocHandle.incMessagesRead(localRead);
+            } while (allocHandle.continueReading());
         } catch (Throwable t) {
             exception = t;
         }
 
+        int size = readBuf.size();
+        for (int i = 0; i < size; i ++) {
+            pipeline.fireChannelRead(readBuf.get(i));
+        }
+        readBuf.clear();
+        allocHandle.readComplete();
         pipeline.fireChannelReadComplete();
 
         if (exception != null) {
@@ -81,14 +82,14 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
                 closed = true;
             }
 
-            pipeline().fireExceptionCaught(exception);
+            pipeline.fireExceptionCaught(exception);
         }
 
         if (closed) {
             if (isOpen()) {
                 unsafe().close(unsafe().voidPromise());
             }
-        } else if (localRead == 0 && isActive()) {
+        } else if (allocHandle.lastBytesRead() == 0 && isActive()) {
             // If the read amount was 0 and the channel is still active we need to trigger a new read()
             // as otherwise we will never try to read again and the user will never know.
             // Just call read() is ok here as it will be submitted to the EventLoop as a task and so we are

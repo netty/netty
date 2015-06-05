@@ -20,7 +20,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
 import java.io.Closeable;
-import java.io.IOException;
 
 /**
  * Allows to acquire and release {@link Channel} and so act as a pool of these.

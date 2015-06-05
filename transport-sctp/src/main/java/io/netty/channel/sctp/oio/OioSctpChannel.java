@@ -19,6 +19,7 @@ import com.sun.nio.sctp.Association;
 import com.sun.nio.sctp.MessageInfo;
 import com.sun.nio.sctp.NotificationHandler;
 import com.sun.nio.sctp.SctpChannel;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
@@ -184,8 +185,8 @@ public class OioSctpChannel extends AbstractOioMessageChannel
 
         Set<SelectionKey> reableKeys = readSelector.selectedKeys();
         try {
-            for (SelectionKey ignored : reableKeys) {
-                RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
+            for (@SuppressWarnings("unused") SelectionKey ignored : reableKeys) {
+                final RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
                 ByteBuf buffer = allocHandle.allocate(config().getAllocator());
                 boolean free = true;
 
@@ -197,14 +198,14 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                     }
 
                     data.flip();
-                    msgs.add(new SctpMessage(messageInfo, buffer.writerIndex(buffer.writerIndex() + data.remaining())));
+                    allocHandle.lastBytesRead(data.remaining());
+                    msgs.add(new SctpMessage(messageInfo,
+                            buffer.writerIndex(buffer.writerIndex() + allocHandle.lastBytesRead())));
                     free = false;
-                    readMessages ++;
+                    ++readMessages;
                 } catch (Throwable cause) {
                     PlatformDependent.throwException(cause);
                 }  finally {
-                    int bytesRead = buffer.readableBytes();
-                    allocHandle.record(bytesRead);
                     if (free) {
                         buffer.release();
                     }

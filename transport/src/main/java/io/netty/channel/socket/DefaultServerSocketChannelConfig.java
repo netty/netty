@@ -27,7 +27,9 @@ import java.net.ServerSocket;
 import java.net.SocketException;
 import java.util.Map;
 
-import static io.netty.channel.ChannelOption.*;
+import static io.netty.channel.ChannelOption.SO_BACKLOG;
+import static io.netty.channel.ChannelOption.SO_RCVBUF;
+import static io.netty.channel.ChannelOption.SO_REUSEADDR;
 
 /**
  * The default {@link ServerSocketChannelConfig} implementation.
@@ -152,6 +154,7 @@ public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
     }
 
     @Override
+    @Deprecated
     public ServerSocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
         super.setMaxMessagesPerRead(maxMessagesPerRead);
         return this;

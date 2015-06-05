@@ -16,6 +16,7 @@
 package io.netty.channel.oio;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelMetadata;
@@ -73,47 +74,83 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
         return false;
     }
 
+    void setInputShutdown() {
+        inputShutdown = true;
+    }
+
+    private void closeOnRead(ChannelPipeline pipeline) {
+        setInputShutdown();
+        if (isOpen()) {
+            if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
+                pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+            } else {
+                unsafe().close(unsafe().voidPromise());
+            }
+        }
+    }
+
+    private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close,
+            RecvByteBufAllocator.Handle allocHandle) {
+        if (byteBuf != null) {
+            if (byteBuf.isReadable()) {
+                setReadPending(false);
+                pipeline.fireChannelRead(byteBuf);
+            } else {
+                byteBuf.release();
+            }
+        }
+        allocHandle.readComplete();
+        pipeline.fireChannelReadComplete();
+        pipeline.fireExceptionCaught(cause);
+        if (close || cause instanceof IOException) {
+            closeOnRead(pipeline);
+        }
+    }
+
     @Override
     protected void doRead() {
-        if (checkInputShutdown()) {
+        final ChannelConfig config = config();
+        if (isInputShutdown() || !config.isAutoRead() && !isReadPending()) {
+            // ChannelConfig.setAutoRead(false) was called in the meantime
             return;
         }
-        final ChannelConfig config = config();
+        // OIO reads are scheduled as a runnable object, the read is not pending as soon as the runnable is run.
+        setReadPending(false);
+
         final ChannelPipeline pipeline = pipeline();
+        final ByteBufAllocator allocator = config.getAllocator();
+        final RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
+        allocHandle.reset(config);
 
-        RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
-
-        ByteBuf byteBuf = allocHandle.allocate(alloc());
-
-        boolean closed = false;
+        ByteBuf byteBuf = null;
         boolean read = false;
-        Throwable exception = null;
-        int localReadAmount = 0;
         try {
-            int totalReadAmount = 0;
-
-            for (;;) {
-                localReadAmount = doReadBytes(byteBuf);
-                if (localReadAmount > 0) {
-                    read = true;
-                } else if (localReadAmount < 0) {
-                    closed = true;
+            byteBuf = allocHandle.allocate(allocator);
+            do {
+                allocHandle.lastBytesRead(doReadBytes(byteBuf));
+                if (allocHandle.lastBytesRead() <= 0) {
+                    if (!read) { // nothing was read. release the buffer.
+                        byteBuf.release();
+                        byteBuf = null;
+                    }
+                    break;
                 }
+                read = true;
 
                 final int available = available();
                 if (available <= 0) {
                     break;
                 }
 
+                // Oio collects consecutive read operations into 1 ByteBuf before propagating up the pipeline.
                 if (!byteBuf.isWritable()) {
                     final int capacity = byteBuf.capacity();
                     final int maxCapacity = byteBuf.maxCapacity();
                     if (capacity == maxCapacity) {
-                        if (read) {
-                            read = false;
-                            pipeline.fireChannelRead(byteBuf);
-                            byteBuf = alloc().buffer();
-                        }
+                        allocHandle.incMessagesRead(1);
+                        read = false;
+                        pipeline.fireChannelRead(byteBuf);
+                        byteBuf = allocHandle.allocate(allocator);
                     } else {
                         final int writerIndex = byteBuf.writerIndex();
                         if (writerIndex + available > maxCapacity) {
@@ -123,55 +160,23 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                         }
                     }
                 }
+            } while (allocHandle.continueReading());
 
-                if (totalReadAmount >= Integer.MAX_VALUE - localReadAmount) {
-                    // Avoid overflow.
-                    totalReadAmount = Integer.MAX_VALUE;
-                    break;
-                }
-
-                totalReadAmount += localReadAmount;
-
-                if (!config.isAutoRead()) {
-                    // stop reading until next Channel.read() call
-                    // See https://github.com/netty/netty/issues/1363
-                    break;
-                }
-            }
-            allocHandle.record(totalReadAmount);
-
-        } catch (Throwable t) {
-            exception = t;
-        } finally {
             if (read) {
                 pipeline.fireChannelRead(byteBuf);
-            } else {
-                // nothing read into the buffer so release it
-                byteBuf.release();
+                byteBuf = null;
             }
 
+            allocHandle.readComplete();
             pipeline.fireChannelReadComplete();
-            if (exception != null) {
-                if (exception instanceof IOException) {
-                    closed = true;
-                    pipeline().fireExceptionCaught(exception);
-                } else {
-                    pipeline.fireExceptionCaught(exception);
-                    unsafe().close(voidPromise());
-                }
-            }
 
-            if (closed) {
-                inputShutdown = true;
-                if (isOpen()) {
-                    if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
-                        pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
-                    } else {
-                        unsafe().close(unsafe().voidPromise());
-                    }
-                }
+            if (allocHandle.lastBytesRead() < 0) {
+                closeOnRead(pipeline);
             }
-            if (localReadAmount == 0 && isActive()) {
+        } catch (Throwable t) {
+            handleReadException(pipeline, byteBuf, t, allocHandle.lastBytesRead() < 0, allocHandle);
+        } finally {
+            if (allocHandle.lastBytesRead() == 0 && isActive()) {
                 // If the read amount was 0 and the channel is still active we need to trigger a new read()
                 // as otherwise we will never try to read again and the user will never know.
                 // Just call read() is ok here as it will be submitted to the EventLoop as a task and so we are

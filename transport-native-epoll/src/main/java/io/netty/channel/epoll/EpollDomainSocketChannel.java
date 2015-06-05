@@ -22,6 +22,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.DomainSocketChannel;
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.util.internal.OneTimeTask;
 
 import java.net.SocketAddress;
 
@@ -140,12 +141,10 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
             }
 
             final ChannelPipeline pipeline = pipeline();
+            final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
+            allocHandle.reset(config);
 
             try {
-                // if edgeTriggered is used we need to read all messages as we are not notified again otherwise.
-                final int maxMessagesPerRead = edgeTriggered
-                        ? Integer.MAX_VALUE : config.getMaxMessagesPerRead();
-                int messages = 0;
                 do {
                     int socketFd = Native.recvFd(fd().intValue());
                     if (socketFd == 0) {
@@ -155,32 +154,30 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
                         close(voidPromise());
                         return;
                     }
-                    readPending = false;
 
+                    readPending = false;
+                    allocHandle.incMessagesRead(1);
                     try {
                         pipeline.fireChannelRead(new FileDescriptor(socketFd));
                     } catch (Throwable t) {
-                        // keep on reading as we use epoll ET and need to consume everything from the socket
-                        pipeline.fireChannelReadComplete();
-                        pipeline.fireExceptionCaught(t);
-                    } finally {
-                        if (!edgeTriggered && !config.isAutoRead()) {
-                            // This is not using EPOLLET so we can stop reading
-                            // ASAP as we will get notified again later with
-                            // pending data
-                            break;
+                        // If ET is enabled we need to consume everything from the socket
+                        if (edgeTriggered) {
+                            pipeline.fireExceptionCaught(t);
+                        } else {
+                            throw t;
                         }
                     }
-                } while (++ messages < maxMessagesPerRead);
+                } while (allocHandle.continueReading());
 
+                allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
-
             } catch (Throwable t) {
+                allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
                 pipeline.fireExceptionCaught(t);
                 // trigger a read again as there may be something left to read and because of epoll ET we
                 // will not get notified again until we read everything from the socket
-                eventLoop().execute(new Runnable() {
+                eventLoop().execute(new OneTimeTask() {
                     @Override
                     public void run() {
                         epollInReady();

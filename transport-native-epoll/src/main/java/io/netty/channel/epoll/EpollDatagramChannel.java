@@ -16,6 +16,7 @@
 package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelFuture;
@@ -473,7 +474,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     final class EpollDatagramChannelUnsafe extends AbstractEpollUnsafe {
-
         private final List<Object> readBuf = new ArrayList<Object>();
 
         @Override
@@ -512,10 +512,15 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         }
 
         @Override
+        protected EpollRecvByteAllocatorHandle newEpollHandle(RecvByteBufAllocator.Handle handle) {
+            return new EpollRecvByteAllocatorMessageHandle(handle, isFlagSet(Native.EPOLLET));
+        }
+
+        @Override
         void epollInReady() {
             assert eventLoop().inEventLoop();
             DatagramChannelConfig config = config();
-    boolean edgeTriggered = isFlagSet(Native.EPOLLET);
+            boolean edgeTriggered = isFlagSet(Native.EPOLLET);
 
             if (!readPending && !edgeTriggered && !config.isAutoRead()) {
                 // ChannelConfig.setAutoRead(false) was called in the meantime
@@ -523,65 +528,64 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 return;
             }
 
-            RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
-
             final ChannelPipeline pipeline = pipeline();
+            final ByteBufAllocator allocator = config.getAllocator();
+            final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
+            allocHandle.reset(config);
+
             Throwable exception = null;
             try {
-                // if edgeTriggered is used we need to read all messages as we are not notified again otherwise.
-                final int maxMessagesPerRead = edgeTriggered
-                        ? Integer.MAX_VALUE : config.getMaxMessagesPerRead();
-                int messages = 0;
                 do {
                     ByteBuf data = null;
                     try {
-                        data = allocHandle.allocate(config.getAllocator());
-                        int writerIndex = data.writerIndex();
-                        DatagramSocketAddress remoteAddress;
+                        data = allocHandle.allocate(allocator);
+                        allocHandle.attemptedBytesRead(data.writableBytes());
+                        final DatagramSocketAddress remoteAddress;
                         if (data.hasMemoryAddress()) {
                             // has a memory address so use optimized call
                             remoteAddress = Native.recvFromAddress(
-                                    fd().intValue(), data.memoryAddress(), writerIndex, data.capacity());
+                                    fd().intValue(), data.memoryAddress(), data.writerIndex(), data.capacity());
                         } else {
-                            ByteBuffer nioData = data.internalNioBuffer(writerIndex, data.writableBytes());
+                            ByteBuffer nioData = data.internalNioBuffer(data.writerIndex(), data.writableBytes());
                             remoteAddress = Native.recvFrom(
                                     fd().intValue(), nioData, nioData.position(), nioData.limit());
                         }
 
                         if (remoteAddress == null) {
+                            data.release();
+                            data = null;
                             break;
                         }
 
-                        int readBytes = remoteAddress.receivedAmount;
-                        data.writerIndex(data.writerIndex() + readBytes);
-                        allocHandle.record(readBytes);
+                        allocHandle.incMessagesRead(1);
+                        allocHandle.lastBytesRead(remoteAddress.receivedAmount);
+                        data.writerIndex(data.writerIndex() + allocHandle.lastBytesRead());
                         readPending = false;
 
                         readBuf.add(new DatagramPacket(data, (InetSocketAddress) localAddress(), remoteAddress));
                         data = null;
                     } catch (Throwable t) {
-                        // We do not break from the loop here and remember the last exception,
-                        // because we need to consume everything from the socket used with epoll ET.
-                        exception = t;
-                    } finally {
                         if (data != null) {
                             data.release();
+                            data = null;
                         }
-                        if (!edgeTriggered && !config.isAutoRead()) {
-                            // This is not using EPOLLET so we can stop reading
-                            // ASAP as we will get notified again later with
-                            // pending data
+                        if (edgeTriggered) {
+                            // We do not break from the loop here and remember the last exception,
+                            // because we need to consume everything from the socket used with epoll ET.
+                            pipeline.fireExceptionCaught(t);
+                        } else {
+                            exception = t;
                             break;
                         }
                     }
-                } while (++ messages < maxMessagesPerRead);
+                } while (allocHandle.continueReading());
 
                 int size = readBuf.size();
                 for (int i = 0; i < size; i ++) {
                     pipeline.fireChannelRead(readBuf.get(i));
                 }
-
                 readBuf.clear();
+                allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
 
                 if (exception != null) {

@@ -15,7 +15,6 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.IllegalReferenceCountException;
 import org.junit.Test;
 
 import java.io.IOException;
