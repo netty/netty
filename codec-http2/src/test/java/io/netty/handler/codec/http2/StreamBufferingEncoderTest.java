@@ -84,7 +84,8 @@ public class StreamBufferingEncoderTest {
         when(frameSizePolicy.maxFrameSize()).thenReturn(DEFAULT_MAX_FRAME_SIZE);
         when(writer.writeRstStream(eq(ctx), anyInt(), anyLong(), eq(promise))).thenAnswer(
                 successAnswer());
-        when(writer.writeGoAway(eq(ctx), anyInt(), anyLong(), any(ByteBuf.class), any(ChannelPromise.class)))
+        when(writer.writeGoAway(eq(ctx), anyInt(), anyLong(), any(ByteBuf.class),
+                any(ChannelPromise.class)))
                 .thenAnswer(successAnswer());
 
         connection = new DefaultHttp2Connection(false);
@@ -332,6 +333,27 @@ public class StreamBufferingEncoderTest {
 
         // Simulate that we received a SETTINGS frame.
         setMaxConcurrentStreams(initialLimit * 2);
+
+        assertEquals(0, encoder.numBufferedStreams());
+        assertEquals(numStreams, connection.local().numActiveStreams());
+    }
+
+    @Test
+    public void bufferUntilSettingsReceivedWithNoMaxConcurrentStreamValue() throws Http2Exception {
+        int initialLimit = SMALLEST_MAX_CONCURRENT_STREAMS;
+        int numStreams = initialLimit * 2;
+        for (int ix = 0, nextStreamId = 3; ix < numStreams; ++ix, nextStreamId += 2) {
+            encoderWriteHeaders(nextStreamId, promise);
+            if (ix < initialLimit) {
+                writeVerifyWriteHeaders(times(1), nextStreamId, promise);
+            } else {
+                writeVerifyWriteHeaders(never(), nextStreamId, promise);
+            }
+        }
+        assertEquals(numStreams / 2, encoder.numBufferedStreams());
+
+        // Simulate that we received an empty SETTINGS frame.
+        encoder.remoteSettings(new Http2Settings());
 
         assertEquals(0, encoder.numBufferedStreams());
         assertEquals(numStreams, connection.local().numActiveStreams());
