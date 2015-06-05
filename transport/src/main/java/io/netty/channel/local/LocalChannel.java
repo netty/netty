@@ -282,6 +282,8 @@ public class LocalChannel extends AbstractChannel {
             throw new NotYetConnectedException();
         case CLOSED:
             throw new ClosedChannelException();
+        case CONNECTED:
+            break;
         }
 
         final LocalChannel peer = this.peer;

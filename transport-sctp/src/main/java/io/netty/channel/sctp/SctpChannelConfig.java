@@ -102,6 +102,7 @@ public interface SctpChannelConfig extends ChannelConfig {
     SctpChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
 
     @Override
+    @Deprecated
     SctpChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead);
 
     @Override

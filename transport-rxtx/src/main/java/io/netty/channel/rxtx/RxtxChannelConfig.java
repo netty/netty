@@ -274,6 +274,7 @@ public interface RxtxChannelConfig extends ChannelConfig {
     RxtxChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
 
     @Override
+    @Deprecated
     RxtxChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead);
 
     @Override

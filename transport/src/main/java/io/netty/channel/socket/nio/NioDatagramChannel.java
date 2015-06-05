@@ -232,6 +232,7 @@ public final class NioDatagramChannel
         RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
 
         ByteBuf data = allocHandle.allocate(config.getAllocator());
+        allocHandle.attemptedBytesRead(data.writableBytes());
         boolean free = true;
         try {
             ByteBuffer nioData = data.internalNioBuffer(data.writerIndex(), data.writableBytes());
@@ -241,11 +242,9 @@ public final class NioDatagramChannel
                 return 0;
             }
 
-            int readBytes = nioData.position() - pos;
-            data.writerIndex(data.writerIndex() + readBytes);
-            allocHandle.record(readBytes);
-
-            buf.add(new DatagramPacket(data, localAddress(), remoteAddress));
+            allocHandle.lastBytesRead(nioData.position() - pos);
+            buf.add(new DatagramPacket(data.writerIndex(data.writerIndex() + allocHandle.lastBytesRead()),
+                    localAddress(), remoteAddress));
             free = false;
             return 1;
         } catch (Throwable cause) {

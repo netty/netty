@@ -110,6 +110,7 @@ public class EpollServerChannelConfig extends EpollChannelConfig {
     }
 
     @Override
+    @Deprecated
     public EpollServerChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
         super.setMaxMessagesPerRead(maxMessagesPerRead);
         return this;

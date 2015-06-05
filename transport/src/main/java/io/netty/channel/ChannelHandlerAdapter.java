@@ -20,7 +20,6 @@ import io.netty.util.internal.InternalThreadLocalMap;
 
 import java.net.SocketAddress;
 import java.util.Map;
-import java.util.WeakHashMap;
 
 /**
  * Skelton implementation of a {@link ChannelHandler}.

@@ -157,6 +157,7 @@ public interface DatagramChannelConfig extends ChannelConfig {
     DatagramChannelConfig setNetworkInterface(NetworkInterface networkInterface);
 
     @Override
+    @Deprecated
     DatagramChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead);
 
     @Override

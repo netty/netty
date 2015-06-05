@@ -67,6 +67,7 @@ public interface OioServerSocketChannelConfig extends ServerSocketChannelConfig 
     OioServerSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
 
     @Override
+    @Deprecated
     OioServerSocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead);
 
     @Override

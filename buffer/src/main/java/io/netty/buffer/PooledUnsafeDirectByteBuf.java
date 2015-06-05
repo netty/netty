@@ -16,7 +16,6 @@
 
 package io.netty.buffer;
 
-import io.netty.buffer.PooledByteBufAllocator.PoolThreadLocalCache;
 import io.netty.util.Recycler;
 import io.netty.util.internal.PlatformDependent;
 

@@ -286,6 +286,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     }
 
     @Override
+    @Deprecated
     public SocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
         super.setMaxMessagesPerRead(maxMessagesPerRead);
         return this;

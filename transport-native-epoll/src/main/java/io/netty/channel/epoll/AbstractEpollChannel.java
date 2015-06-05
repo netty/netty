@@ -23,6 +23,7 @@ import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.EventLoop;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
@@ -34,7 +35,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.UnresolvedAddressException;
 
 abstract class AbstractEpollChannel extends AbstractChannel implements UnixChannel {
-    private static final ChannelMetadata DATA = new ChannelMetadata(false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     private final int readFlag;
     private final FileDescriptor fileDescriptor;
     protected int flags = Native.EPOLLET;
@@ -93,7 +94,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     @Override
     public ChannelMetadata metadata() {
-        return DATA;
+        return METADATA;
     }
 
     @Override
@@ -230,6 +231,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     protected final int doReadBytes(ByteBuf byteBuf) throws Exception {
         int writerIndex = byteBuf.writerIndex();
         int localReadAmount;
+        unsafe().recvBufAllocHandle().attemptedBytesRead(byteBuf.writableBytes());
         if (byteBuf.hasMemoryAddress()) {
             localReadAmount = Native.readAddress(
                     fileDescriptor.intValue(), byteBuf.memoryAddress(), writerIndex, byteBuf.capacity());
@@ -294,6 +296,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     protected abstract class AbstractEpollUnsafe extends AbstractUnsafe {
         protected boolean readPending;
+        private EpollRecvByteAllocatorHandle allocHandle;
 
         /**
          * Called once EPOLLIN event is ready to be processed
@@ -306,6 +309,20 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         void epollRdHupReady() {
             // NOOP
         }
+
+        @Override
+        public EpollRecvByteAllocatorHandle recvBufAllocHandle() {
+            if (allocHandle == null) {
+                allocHandle = newEpollHandle(super.recvBufAllocHandle());
+            }
+            return allocHandle;
+        }
+
+        /**
+         * Create a new {@EpollRecvByteAllocatorHandle} instance.
+         * @param handle The handle to wrap with EPOLL specific logic.
+         */
+        protected abstract EpollRecvByteAllocatorHandle newEpollHandle(RecvByteBufAllocator.Handle handle);
 
         @Override
         protected void flush0() {

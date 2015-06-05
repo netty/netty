@@ -94,6 +94,7 @@ public interface SctpServerChannelConfig extends ChannelConfig {
     SctpServerChannelConfig setInitMaxStreams(InitMaxStreams initMaxStreams);
 
     @Override
+    @Deprecated
     SctpServerChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead);
 
     @Override

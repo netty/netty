@@ -161,6 +161,7 @@ public interface SocketChannelConfig extends ChannelConfig {
     SocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
 
     @Override
+    @Deprecated
     SocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead);
 
     @Override

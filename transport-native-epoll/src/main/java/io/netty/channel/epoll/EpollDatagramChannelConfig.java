@@ -178,6 +178,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
     }
 
     @Override
+    @Deprecated
     public EpollDatagramChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
         super.setMaxMessagesPerRead(maxMessagesPerRead);
         return this;

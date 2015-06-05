@@ -119,16 +119,22 @@ public interface ChannelConfig {
     ChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
 
     /**
+     * @deprecated Use {@link MaxMessagesRecvByteBufAllocator}
+     * <p>
      * Returns the maximum number of messages to read per read loop.
      * a {@link ChannelHandler#channelRead(ChannelHandlerContext, Object) channelRead()} event.
      * If this value is greater than 1, an event loop might attempt to read multiple times to procure multiple messages.
      */
+    @Deprecated
     int getMaxMessagesPerRead();
 
     /**
+     * @deprecated Use {@link MaxMessagesRecvByteBufAllocator}
+     * <p>
      * Sets the maximum number of messages to read per read loop.
      * If this value is greater than 1, an event loop might attempt to read multiple times to procure multiple messages.
      */
+    @Deprecated
     ChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead);
 
     /**
@@ -165,14 +171,12 @@ public interface ChannelConfig {
     ChannelConfig setAllocator(ByteBufAllocator allocator);
 
     /**
-     * Returns {@link RecvByteBufAllocator} which is used for the channel
-     * to allocate receive buffers.
+     * Returns {@link RecvByteBufAllocator} which is used for the channel to allocate receive buffers.
      */
-    RecvByteBufAllocator getRecvByteBufAllocator();
+    <T extends RecvByteBufAllocator> T getRecvByteBufAllocator();
 
     /**
-     * Set the {@link ByteBufAllocator} which is used for the channel
-     * to allocate receive buffers.
+     * Set the {@link RecvByteBufAllocator} which is used for the channel to allocate receive buffers.
      */
     ChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator);
 
