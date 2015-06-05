@@ -332,6 +332,36 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
         return new DefaultChannelGroupFuture(this, futures, executor);
     }
 
+    /**
+     * Returns the {@link ChannelGroupFuture} which will be notified when all {@link Channel}s that are part of this
+     * {@link ChannelGroup}, at the time of calling, are closed.
+     */
+    public ChannelGroupFuture newCloseFuture() {
+        return newCloseFuture(ChannelMatchers.all());
+    }
+
+    /**
+     * Returns the {@link ChannelGroupFuture} which will be notified when all {@link Channel}s that are part of this
+     * {@link ChannelGroup}, at the time of calling, are closed.
+     */
+    public ChannelGroupFuture newCloseFuture(ChannelMatcher matcher) {
+        Map<Channel, ChannelFuture> futures =
+                new LinkedHashMap<Channel, ChannelFuture>(size());
+
+        for (Channel c: serverChannels) {
+            if (matcher.matches(c)) {
+                futures.put(c, c.closeFuture());
+            }
+        }
+        for (Channel c: nonServerChannels) {
+            if (matcher.matches(c)) {
+                futures.put(c, c.closeFuture());
+            }
+        }
+
+        return new DefaultChannelGroupFuture(this, futures, executor);
+    }
+
     @Override
     public int hashCode() {
         return System.identityHashCode(this);
