@@ -228,7 +228,12 @@ public final class OpenSslEngine extends SSLEngine {
         return null;
     }
 
-    long ssl() {
+    /**
+     * Returns the pointer to the {@code SSL} object for this {@link OpenSslEngine}.
+     * Be aware that it is freed as soon as the {@link #finalize()} or {@link #shutdown} method is called.
+     * At this point {@code 0} will be returned.
+     */
+    public synchronized long sslPointer() {
         return ssl;
     }
 

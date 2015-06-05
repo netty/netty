@@ -406,7 +406,7 @@ public final class OpenSslServerContext extends OpenSslContext {
             success = true;
         } finally {
             if (!success) {
-                destroyPools();
+                destroy();
             }
         }
     }
