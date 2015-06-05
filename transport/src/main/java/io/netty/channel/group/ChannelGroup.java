@@ -223,4 +223,16 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
      * the operation is done for all channels
      */
     ChannelGroupFuture deregister(ChannelMatcher matcher);
+
+    /**
+     * Returns the {@link ChannelGroupFuture} which will be notified when all {@link Channel}s that are part of this
+     * {@link ChannelGroup}, at the time of calling, are closed.
+     */
+    ChannelGroupFuture newCloseFuture();
+
+    /**
+     * Returns the {@link ChannelGroupFuture} which will be notified when all {@link Channel}s that are part of this
+     * {@link ChannelGroup}, at the time of calling, are closed.
+     */
+    ChannelGroupFuture newCloseFuture(ChannelMatcher matcher);
 }

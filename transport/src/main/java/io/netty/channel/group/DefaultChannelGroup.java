@@ -340,6 +340,30 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     }
 
     @Override
+    public ChannelGroupFuture newCloseFuture() {
+        return newCloseFuture(ChannelMatchers.all());
+    }
+
+    @Override
+    public ChannelGroupFuture newCloseFuture(ChannelMatcher matcher) {
+        Map<Channel, ChannelFuture> futures =
+                new LinkedHashMap<Channel, ChannelFuture>(size());
+
+        for (Channel c: serverChannels.values()) {
+            if (matcher.matches(c)) {
+                futures.put(c, c.closeFuture());
+            }
+        }
+        for (Channel c: nonServerChannels.values()) {
+            if (matcher.matches(c)) {
+                futures.put(c, c.closeFuture());
+            }
+        }
+
+        return new DefaultChannelGroupFuture(this, futures, executor);
+    }
+
+    @Override
     public int hashCode() {
         return System.identityHashCode(this);
     }
