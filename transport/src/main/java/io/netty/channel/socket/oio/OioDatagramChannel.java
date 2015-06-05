@@ -200,7 +200,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     @Override
     protected int doReadMessages(List<Object> buf) throws Exception {
         DatagramChannelConfig config = config();
-        RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
+        final RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
 
         ByteBuf data = config.getAllocator().heapBuffer(allocHandle.guess());
         boolean free = true;
@@ -210,9 +210,8 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
 
             InetSocketAddress remoteAddr = (InetSocketAddress) tmpPacket.getSocketAddress();
 
-            int readBytes = tmpPacket.getLength();
-            allocHandle.record(readBytes);
-            buf.add(new DatagramPacket(data.writerIndex(readBytes), localAddress(), remoteAddr));
+            allocHandle.lastBytesRead(tmpPacket.getLength());
+            buf.add(new DatagramPacket(data.writerIndex(allocHandle.lastBytesRead()), localAddress(), remoteAddr));
             free = false;
             return 1;
         } catch (SocketTimeoutException e) {

@@ -72,8 +72,8 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             }
         }
 
-        private void handleReadException(ChannelPipeline pipeline,
-                                         ByteBuf byteBuf, Throwable cause, boolean close) {
+        private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close,
+                RecvByteBufAllocator.Handle allocHandle) {
             if (byteBuf != null) {
                 if (byteBuf.isReadable()) {
                     setReadPending(false);
@@ -82,6 +82,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     byteBuf.release();
                 }
             }
+            allocHandle.readComplete();
             pipeline.fireChannelReadComplete();
             pipeline.fireExceptionCaught(cause);
             if (close || cause instanceof IOException) {
@@ -100,62 +101,39 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
             final ChannelPipeline pipeline = pipeline();
             final ByteBufAllocator allocator = config.getAllocator();
-            final int maxMessagesPerRead = config.getMaxMessagesPerRead();
-            RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
+            final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
+            allocHandle.reset(config);
 
             ByteBuf byteBuf = null;
-            int messages = 0;
-            boolean close = false;
             try {
-                int totalReadAmount = 0;
-                boolean readPendingReset = false;
+                boolean needReadPendingReset = true;
                 do {
                     byteBuf = allocHandle.allocate(allocator);
-                    int writable = byteBuf.writableBytes();
-                    int localReadAmount = doReadBytes(byteBuf);
-                    if (localReadAmount <= 0) {
-                        // not was read release the buffer
+                    allocHandle.lastBytesRead(doReadBytes(byteBuf));
+                    if (allocHandle.lastBytesRead() <= 0) {
+                        // nothing was read. release the buffer.
                         byteBuf.release();
                         byteBuf = null;
-                        close = localReadAmount < 0;
                         break;
                     }
-                    if (!readPendingReset) {
-                        readPendingReset = true;
+
+                    allocHandle.incMessagesRead(1);
+                    if (needReadPendingReset) {
+                        needReadPendingReset = false;
                         setReadPending(false);
                     }
                     pipeline.fireChannelRead(byteBuf);
                     byteBuf = null;
+                } while (allocHandle.continueReading());
 
-                    if (totalReadAmount >= Integer.MAX_VALUE - localReadAmount) {
-                        // Avoid overflow.
-                        totalReadAmount = Integer.MAX_VALUE;
-                        break;
-                    }
-
-                    totalReadAmount += localReadAmount;
-
-                    // stop reading
-                    if (!config.isAutoRead()) {
-                        break;
-                    }
-
-                    if (localReadAmount < writable) {
-                        // Read less than what the buffer can hold,
-                        // which might mean we drained the recv buffer completely.
-                        break;
-                    }
-                } while (++ messages < maxMessagesPerRead);
-
+                allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
-                allocHandle.record(totalReadAmount);
 
-                if (close) {
+                if (allocHandle.lastBytesRead() < 0) {
                     closeOnRead(pipeline);
-                    close = false;
                 }
             } catch (Throwable t) {
-                handleReadException(pipeline, byteBuf, t, close);
+                handleReadException(pipeline, byteBuf, t, allocHandle.lastBytesRead() < 0, allocHandle);
             } finally {
                 // Check if there is a readPending which was not processed yet.
                 // This could be for two reasons:

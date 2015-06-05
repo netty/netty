@@ -58,7 +58,9 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
 
         return true;
     }
+
     @Override
+    @Deprecated
     public EpollDomainSocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
         super.setMaxMessagesPerRead(maxMessagesPerRead);
         return this;

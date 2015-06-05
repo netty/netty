@@ -15,9 +15,6 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,7 +28,7 @@ import java.util.List;
  * amount of the allocated buffer two times consecutively.  Otherwise, it keeps
  * returning the same prediction.
  */
-public class AdaptiveRecvByteBufAllocator implements RecvByteBufAllocator {
+public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufAllocator {
 
     static final int DEFAULT_MINIMUM = 64;
     static final int DEFAULT_INITIAL = 1024;
@@ -84,14 +81,14 @@ public class AdaptiveRecvByteBufAllocator implements RecvByteBufAllocator {
         }
     }
 
-    private static final class HandleImpl implements Handle {
+    private final class HandleImpl extends MaxMessageHandle {
         private final int minIndex;
         private final int maxIndex;
         private int index;
         private int nextReceiveBufferSize;
         private boolean decreaseNow;
 
-        HandleImpl(int minIndex, int maxIndex, int initial) {
+        public HandleImpl(int minIndex, int maxIndex, int initial) {
             this.minIndex = minIndex;
             this.maxIndex = maxIndex;
 
@@ -100,17 +97,11 @@ public class AdaptiveRecvByteBufAllocator implements RecvByteBufAllocator {
         }
 
         @Override
-        public ByteBuf allocate(ByteBufAllocator alloc) {
-            return alloc.ioBuffer(nextReceiveBufferSize);
-        }
-
-        @Override
         public int guess() {
             return nextReceiveBufferSize;
         }
 
-        @Override
-        public void record(int actualReadBytes) {
+        private void record(int actualReadBytes) {
             if (actualReadBytes <= SIZE_TABLE[Math.max(0, index - INDEX_DECREMENT - 1)]) {
                 if (decreaseNow) {
                     index = Math.max(index - INDEX_DECREMENT, minIndex);
@@ -124,6 +115,11 @@ public class AdaptiveRecvByteBufAllocator implements RecvByteBufAllocator {
                 nextReceiveBufferSize = SIZE_TABLE[index];
                 decreaseNow = false;
             }
+        }
+
+        @Override
+        public void readComplete() {
+            record(totalBytesRead());
         }
     }
 

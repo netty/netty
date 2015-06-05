@@ -15,6 +15,7 @@
  */
 package io.netty.channel.epoll;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
@@ -47,8 +48,6 @@ import java.nio.channels.ClosedChannelException;
 import java.util.Queue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
 
@@ -595,9 +594,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
     }
 
     class EpollStreamUnsafe extends AbstractEpollUnsafe {
-
-        private RecvByteBufAllocator.Handle allocHandle;
-
         private void closeOnRead(ChannelPipeline pipeline) {
             inputShutdown = true;
             if (isOpen()) {
@@ -619,6 +615,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
                     byteBuf.release();
                 }
             }
+            recvBufAllocHandle().readComplete();
             pipeline.fireChannelReadComplete();
             pipeline.fireExceptionCaught(cause);
             if (close || cause instanceof IOException) {
@@ -770,12 +767,17 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
         void epollRdHupReady() {
             if (isActive()) {
                 // If it is still active, we need to call epollInReady as otherwise we may miss to
-                // read pending data from the underyling file descriptor.
+                // read pending data from the underlying file descriptor.
                 // See https://github.com/netty/netty/issues/3709
                 epollInReady();
             } else {
                 closeOnRead(pipeline());
             }
+        }
+
+        @Override
+        protected EpollRecvByteAllocatorHandle newEpollHandle(RecvByteBufAllocator.Handle handle) {
+            return new EpollRecvByteAllocatorStreamingHandle(handle, isFlagSet(Native.EPOLLET));
         }
 
         @Override
@@ -791,84 +793,69 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
 
             final ChannelPipeline pipeline = pipeline();
             final ByteBufAllocator allocator = config.getAllocator();
-            RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
-            if (allocHandle == null) {
-                this.allocHandle = allocHandle = config.getRecvByteBufAllocator().newHandle();
-            }
+            final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
+            allocHandle.reset(config);
 
             ByteBuf byteBuf = null;
             boolean close = false;
             try {
-                // if edgeTriggered is used we need to read all messages as we are not notified again otherwise.
-                final int maxMessagesPerRead = edgeTriggered
-                        ? Integer.MAX_VALUE : config.getMaxMessagesPerRead();
-                int messages = 0;
-                int totalReadAmount = 0;
                 do {
-                    SpliceInTask spliceTask = spliceQueue.peek();
-                    if (spliceTask != null) {
-                        if (spliceTask.spliceIn(allocHandle)) {
-                            // We need to check if it is still active as if not we removed all SpliceTasks in
-                            // doClose(...)
-                            if (isActive()) {
-                                spliceQueue.remove();
+                    try {
+                        SpliceInTask spliceTask = spliceQueue.peek();
+                        if (spliceTask != null) {
+                            if (spliceTask.spliceIn(allocHandle)) {
+                                // We need to check if it is still active as if not we removed all SpliceTasks in
+                                // doClose(...)
+                                if (isActive()) {
+                                    spliceQueue.remove();
+                                }
+                                continue;
+                            } else {
+                                break;
                             }
-                            continue;
-                        } else {
+                        }
+
+                        // we use a direct buffer here as the native implementations only be able
+                        // to handle direct buffers.
+                        byteBuf = allocHandle.allocate(allocator);
+                        allocHandle.lastBytesRead(doReadBytes(byteBuf));
+                        if (allocHandle.lastBytesRead() <= 0) {
+                            // nothing was read, release the buffer.
+                            byteBuf.release();
+                            byteBuf = null;
+                            close = allocHandle.lastBytesRead() < 0;
                             break;
                         }
+                        readPending = false;
+                        allocHandle.incMessagesRead(1);
+                        pipeline.fireChannelRead(byteBuf);
+                        byteBuf = null;
+                    } catch (Throwable t) {
+                        if (edgeTriggered) { // We must keep reading if ET is enabled
+                            if (byteBuf != null) {
+                                byteBuf.release();
+                                byteBuf = null;
+                            }
+                            pipeline.fireExceptionCaught(t);
+                        } else {
+                            // byteBuf is release in outer exception handling if necessary.
+                            throw t;
+                        }
                     }
+                } while (allocHandle.continueReading());
 
-                    // we use a direct buffer here as the native implementations only be able
-                    // to handle direct buffers.
-                    byteBuf = allocHandle.allocate(allocator);
-                    int writable = byteBuf.writableBytes();
-                    int localReadAmount = doReadBytes(byteBuf);
-                    if (localReadAmount <= 0) {
-                        // not was read release the buffer
-                        byteBuf.release();
-                        close = localReadAmount < 0;
-                        break;
-                    }
-                    readPending = false;
-                    pipeline.fireChannelRead(byteBuf);
-                    byteBuf = null;
-
-                    if (totalReadAmount >= Integer.MAX_VALUE - localReadAmount) {
-                        allocHandle.record(totalReadAmount);
-
-                        // Avoid overflow.
-                        totalReadAmount = localReadAmount;
-                    } else {
-                        totalReadAmount += localReadAmount;
-                    }
-
-                    if (localReadAmount < writable) {
-                        // Read less than what the buffer can hold,
-                        // which might mean we drained the recv buffer completely.
-                        break;
-                    }
-                    if (!edgeTriggered && !config.isAutoRead()) {
-                        // This is not using EPOLLET so we can stop reading
-                        // ASAP as we will get notified again later with
-                        // pending data
-                        break;
-                    }
-                } while (++ messages < maxMessagesPerRead);
-
+                allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
-                allocHandle.record(totalReadAmount);
 
                 if (close) {
                     closeOnRead(pipeline);
-                    close = false;
                 }
             } catch (Throwable t) {
                 boolean closed = handleReadException(pipeline, byteBuf, t, close);
                 if (!closed) {
                     // trigger a read again as there may be something left to read and because of epoll ET we
                     // will not get notified again until we read everything from the socket
-                    eventLoop().execute(new Runnable() {
+                    eventLoop().execute(new OneTimeTask() {
                         @Override
                         public void run() {
                             epollInReady();
@@ -919,8 +906,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
                 length -= localSplicedIn;
             }
 
-            // record the number of bytes we spliced before
-            handle.record(splicedIn);
             return splicedIn;
         }
     }

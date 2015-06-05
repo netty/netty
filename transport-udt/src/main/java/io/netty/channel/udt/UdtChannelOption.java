@@ -18,8 +18,6 @@ package io.netty.channel.udt;
 import com.barchart.udt.OptionUDT;
 import io.netty.channel.ChannelOption;
 
-import static io.netty.channel.ChannelOption.*;
-
 /**
  * Options for the UDT transport
  */
