@@ -317,10 +317,18 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                     // past.
                     AbstractEpollUnsafe unsafe = (AbstractEpollUnsafe) ch.unsafe();
 
+                    // Check if an error was the cause of the wakeup.
+                    boolean err = (ev & Native.EPOLLERR) != 0;
+
                     // First check for EPOLLOUT as we may need to fail the connect ChannelPromise before try
                     // to read from the file descriptor.
                     // See https://github.com/netty/netty/issues/3785
-                    if ((ev & Native.EPOLLOUT) != 0 && ch.isOpen()) {
+                    //
+                    // It is possible for an EPOLLOUT or EPOLLERR to be generated when a connection is refused.
+                    // In either case epollOutReady() will do the correct thing (finish connecting, or fail
+                    // the connection).
+                    // See https://github.com/netty/netty/issues/3848
+                    if (err || ((ev & Native.EPOLLOUT) != 0) && ch.isOpen()) {
                         // Force flush of data as the epoll is writable again
                         unsafe.epollOutReady();
                     }
@@ -331,7 +339,11 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                     if ((ev & Native.EPOLLRDHUP) != 0) {
                         unsafe.epollRdHupReady();
                     }
-                    if ((ev & Native.EPOLLIN) != 0 && ch.isOpen()) {
+
+                    // If EPOLLOUT or EPOLLING was received and the channel is still open call epollInReady().
+                    // This will try to read from the underlying filedescriptor and so notify the user about the
+                    // error.
+                    if ((err || (ev & Native.EPOLLIN) != 0) && ch.isOpen()) {
                         // The Channel is still open and there is something to read. Do it now.
                         unsafe.epollInReady();
                     }
