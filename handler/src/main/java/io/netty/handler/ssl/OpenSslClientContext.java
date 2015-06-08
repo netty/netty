@@ -184,8 +184,8 @@ public final class OpenSslClientContext extends OpenSslContext {
             }
             synchronized (OpenSslContext.class) {
                 if (trustCertChainFile != null) {
-                    /* Load the certificate chain. We must skip the first cert when server mode */
-                    if (!SSLContext.setCertificateChainFile(ctx, trustCertChainFile.getPath(), true)) {
+                    /* Load the certificate chain. We must NOT skip the first cert when client mode */
+                    if (!SSLContext.setCertificateChainFile(ctx, trustCertChainFile.getPath(), false)) {
                         long error = SSL.getLastErrorNumber();
                         if (OpenSsl.isError(error)) {
                             throw new SSLException(
