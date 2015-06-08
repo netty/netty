@@ -319,6 +319,9 @@ public class Http2ConnectionHandlerTest {
             }
         }).when(future).addListener(any(GenericFutureListener.class));
         handler.close(ctx, promise);
+        if (future.isDone()) {
+            when(connection.numActiveStreams()).thenReturn(0);
+        }
         handler.closeStream(stream, future);
         // Simulate another stream close call being made after the context should already be closed.
         handler.closeStream(stream, future);
