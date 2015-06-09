@@ -19,21 +19,35 @@ package io.netty.example.http2.helloworld.server;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
+import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodec;
+import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodecFactory;
+import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2ServerUpgradeCodec;
 import io.netty.handler.ssl.SslContext;
-
-import java.util.Collections;
 
 /**
  * Sets up the Netty pipeline for the example server. Depending on the endpoint config, sets up the
  * pipeline for NPN or cleartext HTTP upgrade to HTTP/2.
  */
 public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
+
+    private static final UpgradeCodecFactory upgradeCodecFactory = new UpgradeCodecFactory() {
+        @Override
+        public UpgradeCodec newUpgradeCodec(String protocol) {
+            if (Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME.equals(protocol)) {
+                return new Http2ServerUpgradeCodec(new HelloWorldHttp2Handler());
+            } else {
+                return null;
+            }
+        }
+    };
+
     private final SslContext sslCtx;
 
     public Http2ServerInitializer(SslContext sslCtx) {
@@ -60,25 +74,23 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
      * Configure the pipeline for a cleartext upgrade from HTTP to HTTP/2.
      */
     private static void configureClearText(SocketChannel ch) {
-        HttpServerCodec sourceCodec = new HttpServerCodec();
-        HttpServerUpgradeHandler.UpgradeCodec upgradeCodec =
-                new Http2ServerUpgradeCodec(new HelloWorldHttp2Handler());
-        HttpServerUpgradeHandler upgradeHandler =
-                new HttpServerUpgradeHandler(sourceCodec, Collections.singletonList(upgradeCodec), 65536);
+        final ChannelPipeline p = ch.pipeline();
+        final HttpServerCodec sourceCodec = new HttpServerCodec();
 
-        ch.pipeline().addLast(sourceCodec);
-        ch.pipeline().addLast(upgradeHandler);
-        ch.pipeline().addLast(new SimpleChannelInboundHandler<HttpMessage>() {
+        p.addLast(sourceCodec);
+        p.addLast(new HttpServerUpgradeHandler(sourceCodec, upgradeCodecFactory));
+        p.addLast(new SimpleChannelInboundHandler<HttpMessage>() {
             @Override
             protected void channelRead0(ChannelHandlerContext ctx, HttpMessage msg) throws Exception {
                 // If this handler is hit then no upgrade has been attempted and the client is just talking HTTP.
                 System.err.println("Directly talking: " + msg.protocolVersion() + " (no upgrade was attempted)");
                 ctx.pipeline().replace(this, "http-hello-world",
-                        new HelloWorldHttp1Handler("Direct. No Upgrade Attempted."));
+                                       new HelloWorldHttp1Handler("Direct. No Upgrade Attempted."));
                 ctx.fireChannelRead(msg);
             }
         });
-        ch.pipeline().addLast(new UserEventLogger());
+
+        p.addLast(new UserEventLogger());
     }
 
     /**
