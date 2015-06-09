@@ -54,11 +54,10 @@ public final class HttpServer {
         .childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
-                ChannelPipeline pipeline = ch.pipeline();
-                pipeline.addLast("httpRequestDecoder", new HttpRequestDecoder());
-                pipeline.addLast("httpResponseEncoder", new HttpResponseEncoder());
-                pipeline.addLast("httpChunkAggregator", new HttpObjectAggregator(MAX_CONTENT_LENGTH));
-                pipeline.addLast("httpRequestHandler", new Http1RequestHandler());
+                ch.pipeline().addLast(new HttpRequestDecoder(),
+                                      new HttpResponseEncoder(),
+                                      new HttpObjectAggregator(MAX_CONTENT_LENGTH),
+                                      new Http1RequestHandler());
             }
         });
 
