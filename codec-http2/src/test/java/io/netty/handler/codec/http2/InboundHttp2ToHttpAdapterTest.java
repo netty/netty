@@ -14,17 +14,6 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2Exception.isStreamError;
-import static io.netty.handler.codec.http2.Http2CodecUtil.getEmbeddedHttp2Exception;
-import static io.netty.handler.codec.http2.Http2TestUtil.as;
-import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -57,17 +46,28 @@ import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
-
-import java.net.InetSocketAddress;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+
+import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+
+import static io.netty.handler.codec.http2.Http2CodecUtil.getEmbeddedHttp2Exception;
+import static io.netty.handler.codec.http2.Http2Exception.isStreamError;
+import static io.netty.handler.codec.http2.Http2TestUtil.as;
+import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 /**
  * Testing the {@link InboundHttp2ToHttpPriorityAdapter} and base class {@link InboundHttp2ToHttpAdapter} for HTTP/2
@@ -124,15 +124,16 @@ public class InboundHttp2ToHttpAdapterTest {
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
                 Http2Connection connection = new DefaultHttp2Connection(true);
-                p.addLast(
-                        "reader",
-                        new HttpAdapterFrameAdapter(connection,
-                                new InboundHttp2ToHttpPriorityAdapter.Builder(connection)
-                                        .maxContentLength(maxContentLength)
-                                        .validateHttpHeaders(true)
-                                        .propagateSettings(true)
-                                        .build(),
-                                        new CountDownLatch(10)));
+
+                p.addLast(new HttpAdapterFrameAdapter(
+                        connection,
+                        new InboundHttp2ToHttpPriorityAdapter.Builder(connection)
+                                .maxContentLength(maxContentLength)
+                                .validateHttpHeaders(true)
+                                .propagateSettings(true)
+                                .build(),
+                        new CountDownLatch(10)));
+
                 serverDelegator = new HttpResponseDelegator(serverListener, serverLatch);
                 p.addLast(serverDelegator);
                 serverConnectedChannel = ch;
@@ -160,13 +161,14 @@ public class InboundHttp2ToHttpAdapterTest {
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
                 Http2Connection connection = new DefaultHttp2Connection(false);
-                p.addLast(
-                        "reader",
-                        new HttpAdapterFrameAdapter(connection,
-                                new InboundHttp2ToHttpPriorityAdapter.Builder(connection)
+
+                p.addLast(new HttpAdapterFrameAdapter(
+                        connection,
+                        new InboundHttp2ToHttpPriorityAdapter.Builder(connection)
                                 .maxContentLength(maxContentLength)
                                 .build(),
-                                new CountDownLatch(10)));
+                        new CountDownLatch(10)));
+
                 clientDelegator = new HttpResponseDelegator(clientListener, clientLatch);
                 p.addLast(clientDelegator);
             }

@@ -14,16 +14,6 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.base64.Base64Dialect.URL_SAFE;
-import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME;
-import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_SETTINGS_HEADER;
-import static io.netty.handler.codec.http2.Http2CodecUtil.SETTING_ENTRY_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.writeUnsignedInt;
-import static io.netty.handler.codec.http2.Http2CodecUtil.writeUnsignedShort;
-import static io.netty.util.CharsetUtil.UTF_8;
-import static io.netty.util.ReferenceCountUtil.release;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.base64.Base64;
@@ -35,6 +25,16 @@ import io.netty.util.collection.CharObjectHashMap;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+
+import static io.netty.handler.codec.base64.Base64Dialect.URL_SAFE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME;
+import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_SETTINGS_HEADER;
+import static io.netty.handler.codec.http2.Http2CodecUtil.SETTING_ENTRY_LENGTH;
+import static io.netty.handler.codec.http2.Http2CodecUtil.writeUnsignedInt;
+import static io.netty.handler.codec.http2.Http2CodecUtil.writeUnsignedShort;
+import static io.netty.util.CharsetUtil.UTF_8;
+import static io.netty.util.ReferenceCountUtil.release;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Client-side cleartext upgrade codec from HTTP to HTTP/2.
@@ -50,21 +50,21 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
      * Creates the codec using a default name for the connection handler when adding to the
      * pipeline.
      *
-     * @param connectionHandler the HTTP/2 connection handler.
+     * @param connectionHandler the HTTP/2 connection handler
      */
     public Http2ClientUpgradeCodec(Http2ConnectionHandler connectionHandler) {
-        this("http2ConnectionHandler", connectionHandler);
+        this(null, connectionHandler);
     }
 
     /**
      * Creates the codec providing an upgrade to the given handler for HTTP/2.
      *
-     * @param handlerName the name of the HTTP/2 connection handler to be used in the pipeline.
-     * @param connectionHandler the HTTP/2 connection handler.
+     * @param handlerName the name of the HTTP/2 connection handler to be used in the pipeline,
+     *                    or {@code null} to auto-generate the name
+     * @param connectionHandler the HTTP/2 connection handler
      */
-    public Http2ClientUpgradeCodec(String handlerName,
-            Http2ConnectionHandler connectionHandler) {
-        this.handlerName = checkNotNull(handlerName, "handlerName");
+    public Http2ClientUpgradeCodec(String handlerName, Http2ConnectionHandler connectionHandler) {
+        this.handlerName = handlerName;
         this.connectionHandler = checkNotNull(connectionHandler, "connectionHandler");
     }
 
