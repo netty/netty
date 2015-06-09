@@ -14,8 +14,6 @@
  */
 package io.netty.example.http2.helloworld.client;
 
-import static io.netty.handler.logging.LogLevel.INFO;
-
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
@@ -40,6 +38,8 @@ import io.netty.handler.codec.http2.Http2OutboundFrameLogger;
 import io.netty.handler.codec.http2.HttpToHttp2ConnectionHandler;
 import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapter;
 import io.netty.handler.ssl.SslContext;
+
+import static io.netty.handler.logging.LogLevel.INFO;
 
 /**
  * Configures the client pipeline to support HTTP/2 frames.
@@ -88,8 +88,7 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
     }
 
     protected void configureEndOfPipeline(ChannelPipeline pipeline) {
-        pipeline.addLast("Http2SettingsHandler", settingsHandler);
-        pipeline.addLast("HttpResponseHandler", responseHandler);
+        pipeline.addLast(settingsHandler, responseHandler);
     }
 
     /**
@@ -97,8 +96,8 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
      */
     private void configureSsl(SocketChannel ch) {
         ChannelPipeline pipeline = ch.pipeline();
-        pipeline.addLast("SslHandler", sslCtx.newHandler(ch.alloc()));
-        pipeline.addLast("Http2Handler", connectionHandler);
+        pipeline.addLast(sslCtx.newHandler(ch.alloc()),
+                         connectionHandler);
         configureEndOfPipeline(pipeline);
     }
 
@@ -110,10 +109,10 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
         Http2ClientUpgradeCodec upgradeCodec = new Http2ClientUpgradeCodec(connectionHandler);
         HttpClientUpgradeHandler upgradeHandler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec, 65536);
 
-        ch.pipeline().addLast("Http2SourceCodec", sourceCodec);
-        ch.pipeline().addLast("Http2UpgradeHandler", upgradeHandler);
-        ch.pipeline().addLast("Http2UpgradeRequestHandler", new UpgradeRequestHandler());
-        ch.pipeline().addLast("Logger", new UserEventLogger());
+        ch.pipeline().addLast(sourceCodec,
+                              upgradeHandler,
+                              new UpgradeRequestHandler(),
+                              new UserEventLogger());
     }
 
     /**
@@ -131,7 +130,7 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
             // Done with this handler, remove it from the pipeline.
             ctx.pipeline().remove(this);
 
-            Http2ClientInitializer.this.configureEndOfPipeline(ctx.pipeline());
+            configureEndOfPipeline(ctx.pipeline());
         }
     }
 
