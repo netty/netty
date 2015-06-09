@@ -31,7 +31,6 @@ import java.util.List;
 import static io.netty.handler.codec.base64.Base64Dialect.URL_SAFE;
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http2.Http2CodecUtil.FRAME_HEADER_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME;
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_SETTINGS_HEADER;
 import static io.netty.handler.codec.http2.Http2CodecUtil.writeFrameHeader;
 import static io.netty.handler.codec.http2.Http2FrameTypes.SETTINGS;
@@ -70,11 +69,6 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
         this.handlerName = handlerName;
         this.connectionHandler = checkNotNull(connectionHandler, "connectionHandler");
         frameReader = new DefaultHttp2FrameReader();
-    }
-
-    @Override
-    public String protocol() {
-        return HTTP_UPGRADE_PROTOCOL_NAME;
     }
 
     @Override
