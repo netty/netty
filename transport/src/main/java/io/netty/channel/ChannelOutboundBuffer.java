@@ -693,7 +693,7 @@ public final class ChannelOutboundBuffer {
      * Get how many bytes can be written until {@link #isWritable()} returns {@code false}.
      * This quantity will always be non-negative. If {@link #isWritable()} is {@code false} then 0.
      */
-    public long bytesBeforeUnWritable() {
+    public long bytesBeforeUnwritable() {
         long bytes = channel.config().getWriteBufferHighWaterMark() - totalPendingSize;
         // If bytes is negative we know we are not writable, but if bytes is non-negative we have to check writability.
         // Note that totalPendingSize and isWritable() use different volatile variables that are not synchronized
