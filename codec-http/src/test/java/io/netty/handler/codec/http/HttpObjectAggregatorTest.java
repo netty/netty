@@ -320,7 +320,7 @@ public class HttpObjectAggregatorTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void testInvalidConstructorUsage() {
-        new HttpObjectAggregator(0);
+        new HttpObjectAggregator(-1);
     }
 
     @Test(expected = IllegalArgumentException.class)
