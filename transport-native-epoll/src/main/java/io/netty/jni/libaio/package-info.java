@@ -16,11 +16,7 @@
 
 /**
  * This packages handles Linux libaio at a low level.
- * Buffers needs to be specially allocated as they need to be aligned to 512 or 4096
- *
- * Three main classes on this package:
- * {@link LibaioContext} which will handle the native methods and the queue
- * {@link LibaioFile} which represents the file itself
- * {@link ErrorInfo} to be placed on the callback results in case of errors.
+ * Buffers needs to be specially allocated by {@LibaioContext#newAlignedBuffer(int, int)}
+ * as they need to be aligned to 512 or 4096 when using Direct files.
  */
-package io.netty.channel.libaio;
+package io.netty.jni.libaio;

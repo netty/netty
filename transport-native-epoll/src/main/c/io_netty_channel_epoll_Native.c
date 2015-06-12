@@ -375,9 +375,9 @@ static int init_in_addr(JNIEnv* env, jbyteArray address, struct in_addr* addr) {
 }
 // util methods end
 
-// prototypes for the load hook from DirectFileDescriptorController.c
-jint directFile_JNI_OnLoad(JNIEnv* env);
-void directFile_JNI_OnUnLoad(JNIEnv* env);
+// prototypes for the load hook for LibaioContext.c
+jint libaio_JNI_OnLoad(JNIEnv* env);
+void libaio_JNI_OnUnLoad(JNIEnv* env);
 
 jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     JNIEnv* env;
@@ -610,7 +610,7 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
         }
 
         // load hook from DirectFileDescriptorController
-        return directFile_JNI_OnLoad(env);
+        return libaio_JNI_OnLoad(env);
     }
 }
 
@@ -641,7 +641,7 @@ void JNI_OnUnload(JavaVM* vm, void* reserved) {
         }
 
         // unload hook from DirectFileDescriptorController
-        directFile_JNI_OnUnLoad(env);
+        libaio_JNI_OnUnLoad(env);
     }
 }
 

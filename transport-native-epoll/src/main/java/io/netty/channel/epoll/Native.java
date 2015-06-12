@@ -51,8 +51,8 @@ public final class Native {
     }
 
     /**
-     * This is an empty method just so {@link io.netty.channel.libaio.LibaioFile} would
-     * force a the Native load
+     * This is an empty method just so {@link io.netty.jni.libaio.LibaioFile} would be able to
+     * force the static block doing the real load.
      */
     public static void loadLibrary() {
     }

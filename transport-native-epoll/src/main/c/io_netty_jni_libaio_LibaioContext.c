@@ -31,7 +31,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include "io_netty_channel_libaio_LibaioContext.h"
+#include "io_netty_jni_libaio_LibaioContext.h"
 #include "exception_helper.h"
 
 struct io_control {
@@ -59,8 +59,8 @@ jmethodID errorInfoConstr = NULL;
  * There is only one point of entrance of Loading the library,
  * this will be a hook so extra stuff that needs to be loaded here.
  */
-jint directFile_JNI_OnLoad(JNIEnv* env) {
-    errorInfoClass = (*env)->FindClass(env, "io/netty/channel/libaio/ErrorInfo");
+jint libaio_JNI_OnLoad(JNIEnv* env) {
+    errorInfoClass = (*env)->FindClass(env, "io/netty/jni/libaio/ErrorInfo");
     if (errorInfoClass == NULL) {
        return JNI_ERR;
     }
@@ -81,7 +81,7 @@ jint directFile_JNI_OnLoad(JNIEnv* env) {
     return JNI_VERSION_1_6;
 }
 
-void directFile_JNI_OnUnLoad(JNIEnv* env) {
+void libaio_JNI_OnUnLoad(JNIEnv* env) {
     // Deleting global refs so their classes can be GCed
     if (errorInfoConstr != NULL) {
         (*env)->DeleteGlobalRef(env, (jobject)errorInfoConstr);
@@ -147,7 +147,7 @@ static inline void * getBuffer(JNIEnv* env, jobject pointer) {
 /**
  * Everything that is allocated here will be freed at deleteContext when the class is unloaded.
  */
-JNIEXPORT jobject JNICALL Java_io_netty_channel_libaio_LibaioContext_newContext(JNIEnv* env, jclass clazz, jint queueSize) {
+JNIEXPORT jobject JNICALL Java_io_netty_jni_libaio_LibaioContext_newContext(JNIEnv* env, jclass clazz, jint queueSize) {
     io_context_t libaioContext;
     int i = 0;
 
@@ -205,7 +205,7 @@ JNIEXPORT jobject JNICALL Java_io_netty_channel_libaio_LibaioContext_newContext(
     return (*env)->NewDirectByteBuffer(env, theControl, sizeof(struct io_control));
 }
 
-JNIEXPORT void JNICALL Java_io_netty_channel_libaio_LibaioContext_deleteContext(JNIEnv* env, jclass clazz, jobject contextPointer) {
+JNIEXPORT void JNICALL Java_io_netty_jni_libaio_LibaioContext_deleteContext(JNIEnv* env, jclass clazz, jobject contextPointer) {
     int i;
     struct io_control * theControl = getIOControl(env, contextPointer);
     io_queue_release(theControl->ioContext);
@@ -220,13 +220,13 @@ JNIEXPORT void JNICALL Java_io_netty_channel_libaio_LibaioContext_deleteContext(
     free(theControl);
 }
 
-JNIEXPORT void JNICALL Java_io_netty_channel_libaio_LibaioContext_close(JNIEnv* env, jclass clazz, jint fd) {
+JNIEXPORT void JNICALL Java_io_netty_jni_libaio_LibaioContext_close(JNIEnv* env, jclass clazz, jint fd) {
    if (close(fd) < 0) {
        throwIOExceptionErrorNo(env, "Error closing file:", errno);
    }
 }
 
-JNIEXPORT int JNICALL Java_io_netty_channel_libaio_LibaioContext_open(JNIEnv* env, jclass clazz,
+JNIEXPORT int JNICALL Java_io_netty_jni_libaio_LibaioContext_open(JNIEnv* env, jclass clazz,
                         jstring path, jboolean direct) {
     const char* f_path = (*env)->GetStringUTFChars(env, path, 0);
 
@@ -265,7 +265,7 @@ static inline jboolean submit(JNIEnv * env, struct io_control * theControl, stru
     return JNI_TRUE;
 }
 
-JNIEXPORT jboolean JNICALL Java_io_netty_channel_libaio_LibaioContext_submitWrite
+JNIEXPORT jboolean JNICALL Java_io_netty_jni_libaio_LibaioContext_submitWrite
   (JNIEnv * env, jclass clazz, jint fileHandle, jobject contextPointer, jlong position, jint size, jobject bufferWrite, jobject callback) {
     struct io_control * theControl = getIOControl(env, contextPointer);
 
@@ -286,7 +286,7 @@ JNIEXPORT jboolean JNICALL Java_io_netty_channel_libaio_LibaioContext_submitWrit
     return submit(env, theControl, iocb);
 }
 
-JNIEXPORT jboolean JNICALL Java_io_netty_channel_libaio_LibaioContext_submitRead
+JNIEXPORT jboolean JNICALL Java_io_netty_jni_libaio_LibaioContext_submitRead
   (JNIEnv * env, jclass clazz, jint fileHandle, jobject contextPointer, jlong position, jint size, jobject bufferRead, jobject callback) {
     struct io_control * theControl = getIOControl(env, contextPointer);
 
@@ -307,7 +307,7 @@ JNIEXPORT jboolean JNICALL Java_io_netty_channel_libaio_LibaioContext_submitRead
     return submit(env, theControl, iocb);
 }
 
-JNIEXPORT jint JNICALL Java_io_netty_channel_libaio_LibaioContext_poll
+JNIEXPORT jint JNICALL Java_io_netty_jni_libaio_LibaioContext_poll
   (JNIEnv * env, jobject obj, jobject contextPointer, jobjectArray callbacks, jint min, jint max) {
     int i = 0;
     struct io_control * theControl = getIOControl(env, contextPointer);
@@ -361,7 +361,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_libaio_LibaioContext_poll
     return retVal;
 }
 
-JNIEXPORT jobject JNICALL Java_io_netty_channel_libaio_LibaioContext_newAlignedBuffer
+JNIEXPORT jobject JNICALL Java_io_netty_jni_libaio_LibaioContext_newAlignedBuffer
 (JNIEnv * env, jclass clazz, jint size, jint alignment) {
     if (size % alignment != 0) {
         throwRuntimeException(env, "Buffer size needs to be aligned to passed argument");
@@ -382,7 +382,7 @@ JNIEXPORT jobject JNICALL Java_io_netty_channel_libaio_LibaioContext_newAlignedB
     return (*env)->NewDirectByteBuffer(env, buffer, size);
 }
 
-JNIEXPORT void JNICALL Java_io_netty_channel_libaio_LibaioContext_freeBuffer
+JNIEXPORT void JNICALL Java_io_netty_jni_libaio_LibaioContext_freeBuffer
   (JNIEnv * env, jclass clazz, jobject jbuffer) {
   	void *  buffer = (*env)->GetDirectBufferAddress(env, jbuffer);
   	free(buffer);
