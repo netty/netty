@@ -1446,7 +1446,7 @@ public final class OpenSslEngine extends SSLEngine {
             if (peer == null || peer.length == 0) {
                 return null;
             }
-            return principal(peer);
+            return ((java.security.cert.X509Certificate) peer[0]).getSubjectX500Principal();
         }
 
         @Override
@@ -1455,11 +1455,7 @@ public final class OpenSslEngine extends SSLEngine {
             if (local == null || local.length == 0) {
                 return null;
             }
-            return principal(local);
-        }
-
-        private Principal principal(Certificate[] certs) {
-            return ((java.security.cert.X509Certificate) certs[0]).getIssuerX500Principal();
+            return ((java.security.cert.X509Certificate) local[0]).getIssuerX500Principal();
         }
 
         @Override
