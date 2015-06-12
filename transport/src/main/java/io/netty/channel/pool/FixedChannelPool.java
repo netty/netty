@@ -264,7 +264,7 @@ public final class FixedChannelPool extends SimpleChannelPool {
     }
 
     private void runTaskQueue() {
-        while (acquiredChannelCount <= maxConnections) {
+        while (acquiredChannelCount < maxConnections) {
             AcquireTask task = pendingAcquireQueue.poll();
             if (task == null) {
                 break;
