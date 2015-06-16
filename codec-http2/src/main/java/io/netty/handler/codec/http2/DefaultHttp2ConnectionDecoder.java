@@ -14,11 +14,13 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.buffer.ByteBufUtil.hexDump;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
+import static io.netty.handler.codec.http2.Http2FrameTypes.SETTINGS;
 import static io.netty.handler.codec.http2.Http2PromisedRequestVerifier.ALWAYS_VERIFY;
 import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
@@ -46,6 +48,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     private final Http2FrameReader frameReader;
     private final Http2FrameListener listener;
     private final Http2PromisedRequestVerifier requestVerifier;
+    private boolean firstFrame = true;
 
     public DefaultHttp2ConnectionDecoder(Http2Connection connection,
                                          Http2ConnectionEncoder encoder,
@@ -97,7 +100,34 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
     @Override
     public void decodeFrame(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Http2Exception {
+        // If it's the first frame we've decoded, make sure it's a SETTINGS frame.
+        if (firstFrame && verifyFrameIsSettings(in)) {
+            firstFrame = false;
+        }
+
         frameReader.readFrame(ctx, in, internalFrameListener);
+    }
+
+    /**
+     * Peeks at that the next frame in the buffer and verifies that it is a {@code SETTINGS} frame.
+     *
+     * @param in the inbound buffer.
+     * @return {@code} true if the next frame is a {@code SETTINGS} frame, {@code false} if more
+     * data is required before we can determine the next frame type.
+     * @throws Http2Exception thrown if the next frame is NOT a {@code SETTINGS} frame.
+     */
+    private boolean verifyFrameIsSettings(ByteBuf in) throws Http2Exception {
+        if (in.readableBytes() < 4) {
+            // Need more data before we can see the frame type for the first frame.
+            return false;
+        }
+
+        byte frameType = in.getByte(in.readerIndex() + 3);
+        if (frameType != SETTINGS) {
+            throw connectionError(PROTOCOL_ERROR, "First received frame was not SETTINGS. " +
+                    "Hex dump for first 4 bytes: %s", hexDump(in.slice(in.readerIndex(), 4)));
+        }
+        return true;
     }
 
     @Override

@@ -14,6 +14,7 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.buffer.ByteBufUtil.hexDump;
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static io.netty.handler.codec.http2.Http2CodecUtil.getEmbeddedHttp2Exception;
@@ -24,6 +25,7 @@ import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.isStreamError;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.lang.Math.min;
 import static java.lang.String.format;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
@@ -268,12 +270,15 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             }
 
             int prefaceRemaining = clientPrefaceString.readableBytes();
-            int bytesRead = Math.min(in.readableBytes(), prefaceRemaining);
+            int bytesRead = min(in.readableBytes(), prefaceRemaining);
 
             // If the input so far doesn't match the preface, break the connection.
             if (bytesRead == 0 || !ByteBufUtil.equals(in, in.readerIndex(),
                     clientPrefaceString, clientPrefaceString.readerIndex(), bytesRead)) {
-                throw connectionError(PROTOCOL_ERROR, "HTTP/2 client preface string missing or corrupt.");
+                String receivedBytes = hexDump(in.slice(in.readerIndex(),
+                        min(in.readableBytes(), clientPrefaceString.readableBytes())));
+                throw connectionError(PROTOCOL_ERROR, "HTTP/2 client preface string missing or corrupt. " +
+                        "Hex dump for received bytes: %s", receivedBytes);
             }
             in.skipBytes(bytesRead);
             clientPrefaceString.skipBytes(bytesRead);
