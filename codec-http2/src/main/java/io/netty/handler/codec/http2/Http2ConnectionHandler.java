@@ -14,6 +14,7 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.buffer.ByteBufUtil.hexDump;
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static io.netty.handler.codec.http2.Http2CodecUtil.getEmbeddedHttp2Exception;
@@ -22,8 +23,10 @@ import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.isStreamError;
+import static io.netty.handler.codec.http2.Http2FrameTypes.SETTINGS;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.lang.Math.min;
 import static java.lang.String.format;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
@@ -219,10 +222,10 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         @Override
         public void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
             try {
-                if (readClientPrefaceString(in)) {
+                if (readClientPrefaceString(in) && verifyFirstFrameIsSettings(in)) {
                     // After the preface is read, it is time to hand over control to the post initialized decoder.
-                    Http2ConnectionHandler.this.byteDecoder = new FrameDecoder();
-                    Http2ConnectionHandler.this.byteDecoder.decode(ctx, in, out);
+                    byteDecoder = new FrameDecoder();
+                    byteDecoder.decode(ctx, in, out);
                 }
             } catch (Throwable e) {
                 onException(ctx, e);
@@ -271,12 +274,15 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             }
 
             int prefaceRemaining = clientPrefaceString.readableBytes();
-            int bytesRead = Math.min(in.readableBytes(), prefaceRemaining);
+            int bytesRead = min(in.readableBytes(), prefaceRemaining);
 
             // If the input so far doesn't match the preface, break the connection.
             if (bytesRead == 0 || !ByteBufUtil.equals(in, in.readerIndex(),
                     clientPrefaceString, clientPrefaceString.readerIndex(), bytesRead)) {
-                throw connectionError(PROTOCOL_ERROR, "HTTP/2 client preface string missing or corrupt.");
+                String receivedBytes = hexDump(in, in.readerIndex(),
+                        min(in.readableBytes(), clientPrefaceString.readableBytes()));
+                throw connectionError(PROTOCOL_ERROR, "HTTP/2 client preface string missing or corrupt. " +
+                        "Hex dump for received bytes: %s", receivedBytes);
             }
             in.skipBytes(bytesRead);
             clientPrefaceString.skipBytes(bytesRead);
@@ -288,6 +294,28 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                 return true;
             }
             return false;
+        }
+
+        /**
+         * Peeks at that the next frame in the buffer and verifies that it is a {@code SETTINGS} frame.
+         *
+         * @param in the inbound buffer.
+         * @return {@code} true if the next frame is a {@code SETTINGS} frame, {@code false} if more
+         * data is required before we can determine the next frame type.
+         * @throws Http2Exception thrown if the next frame is NOT a {@code SETTINGS} frame.
+         */
+        private boolean verifyFirstFrameIsSettings(ByteBuf in) throws Http2Exception {
+            if (in.readableBytes() < 4) {
+                // Need more data before we can see the frame type for the first frame.
+                return false;
+            }
+
+            byte frameType = in.getByte(in.readerIndex() + 3);
+            if (frameType != SETTINGS) {
+                throw connectionError(PROTOCOL_ERROR, "First received frame was not SETTINGS. " +
+                        "Hex dump for first 4 bytes: %s", hexDump(in, in.readerIndex(), 4));
+            }
+            return true;
         }
 
         /**
