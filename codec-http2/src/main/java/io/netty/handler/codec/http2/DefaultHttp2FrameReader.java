@@ -14,20 +14,21 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_INITIAL_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.FRAME_HEADER_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.INT_FIELD_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.PRIORITY_ENTRY_LENGTH;
+import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_INITIAL_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_FRAME_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTING_ENTRY_LENGTH;
+import static io.netty.handler.codec.http2.Http2CodecUtil.isMaxFrameSizeValid;
+import static io.netty.handler.codec.http2.Http2CodecUtil.readUnsignedInt;
+import static io.netty.handler.codec.http2.Http2Error.ENHANCE_YOUR_CALM;
 import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.FRAME_SIZE_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
-import static io.netty.handler.codec.http2.Http2CodecUtil.isMaxFrameSizeValid;
-import static io.netty.handler.codec.http2.Http2CodecUtil.readUnsignedInt;
-import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.handler.codec.http2.Http2FrameTypes.CONTINUATION;
 import static io.netty.handler.codec.http2.Http2FrameTypes.DATA;
 import static io.netty.handler.codec.http2.Http2FrameTypes.GO_AWAY;
@@ -421,9 +422,8 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                     final HeadersBlockBuilder hdrBlockBuilder = headersBlockBuilder();
                     hdrBlockBuilder.addFragment(fragment, ctx.alloc(), endOfHeaders);
                     if (endOfHeaders) {
-                        listener.onHeadersRead(ctx, headersStreamId, hdrBlockBuilder.headers(),
-                                        streamDependency, weight, exclusive, padding, headersFlags.endOfStream());
-                        close();
+                        listener.onHeadersRead(ctx, headersStreamId, hdrBlockBuilder.headers(), streamDependency,
+                                weight, exclusive, padding, headersFlags.endOfStream());
                     }
                 }
             };
@@ -449,7 +449,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                 if (endOfHeaders) {
                     listener.onHeadersRead(ctx, headersStreamId, hdrBlockBuilder.headers(), padding,
                                     headersFlags.endOfStream());
-                    close();
                 }
             }
         };
@@ -519,10 +518,8 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                     Http2FrameListener listener) throws Http2Exception {
                 headersBlockBuilder().addFragment(fragment, ctx.alloc(), endOfHeaders);
                 if (endOfHeaders) {
-                    Http2Headers headers = headersBlockBuilder().headers();
-                    listener.onPushPromiseRead(ctx, pushPromiseStreamId, promisedStreamId, headers,
-                            padding);
-                    close();
+                    listener.onPushPromiseRead(ctx, pushPromiseStreamId, promisedStreamId,
+                            headersBlockBuilder().headers(), padding);
                 }
             }
         };
@@ -627,6 +624,16 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         private ByteBuf headerBlock;
 
         /**
+         * The local header size maximum has been exceeded while accumulating bytes.
+         * @throws Http2Exception A connection error indicating too much data has been received.
+         */
+        private void headerSizeExceeded() throws Http2Exception {
+            close();
+            throw connectionError(ENHANCE_YOUR_CALM, "Header size exceeded max allowed size (%d)",
+                    headersDecoder.configuration().maxHeaderSize());
+        }
+
+        /**
          * Adds a fragment to the block.
          *
          * @param fragment the fragment of the headers block to be added.
@@ -635,8 +642,11 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
          *            This is used for an optimization for when the first fragment is the full
          *            block. In that case, the buffer is used directly without copying.
          */
-        final void addFragment(ByteBuf fragment, ByteBufAllocator alloc, boolean endOfHeaders) {
+        final void addFragment(ByteBuf fragment, ByteBufAllocator alloc, boolean endOfHeaders) throws Http2Exception {
             if (headerBlock == null) {
+                if (fragment.readableBytes() > headersDecoder.configuration().maxHeaderSize()) {
+                    headerSizeExceeded();
+                }
                 if (endOfHeaders) {
                     // Optimization - don't bother copying, just use the buffer as-is. Need
                     // to retain since we release when the header block is built.
@@ -646,6 +656,10 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                     headerBlock.writeBytes(fragment);
                 }
                 return;
+            }
+            if (headersDecoder.configuration().maxHeaderSize() - fragment.readableBytes() <
+                    headerBlock.readableBytes()) {
+                headerSizeExceeded();
             }
             if (headerBlock.isWritable(fragment.readableBytes())) {
                 // The buffer can hold the requested bytes, just write it directly.

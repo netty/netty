@@ -70,7 +70,14 @@ final class Http2TestUtil {
      * Returns a byte array filled with random data.
      */
     public static byte[] randomBytes() {
-        byte[] data = new byte[100];
+        return randomBytes(100);
+    }
+
+    /**
+     * Returns a byte array filled with random data.
+     */
+    public static byte[] randomBytes(int size) {
+        byte[] data = new byte[size];
         new Random().nextBytes(data);
         return data;
     }
