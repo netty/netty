@@ -37,7 +37,6 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSessionBindingEvent;
 import javax.net.ssl.SSLSessionBindingListener;
 import javax.net.ssl.SSLSessionContext;
-import javax.security.cert.CertificateException;
 import javax.security.cert.X509Certificate;
 import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
@@ -158,13 +157,6 @@ public final class OpenSslEngine extends SSLEngine {
     @SuppressWarnings("UnusedDeclaration")
     private volatile int destroyed;
 
-    // Use an invalid cipherSuite until the handshake is completed
-    // See http://docs.oracle.com/javase/7/docs/api/javax/net/ssl/SSLEngine.html#getSession()
-    private volatile String cipher;
-    private volatile String applicationProtocol;
-
-    // We store this outside of the SslSession so we not need to create an instance during verifyCertificates(...)
-    private volatile Certificate[] peerCerts;
     private volatile ClientAuthMode clientAuth = ClientAuthMode.NONE;
 
     private volatile String endPointIdentificationAlgorithm;
@@ -178,11 +170,10 @@ public final class OpenSslEngine extends SSLEngine {
 
     private final boolean clientMode;
     private final ByteBufAllocator alloc;
-    private final OpenSslSessionContext sessionContext;
     private final OpenSslEngineMap engineMap;
     private final OpenSslApplicationProtocolNegotiator apn;
     private final boolean rejectRemoteInitiatedRenegation;
-    private final SSLSession session = new OpenSslSession();
+    private final OpenSslSession session;
 
     // This is package-private as we set it from OpenSslContext if an exception is thrown during
     // the verification step.
@@ -228,9 +219,9 @@ public final class OpenSslEngine extends SSLEngine {
         this.alloc = checkNotNull(alloc, "alloc");
         this.apn = checkNotNull(apn, "apn");
         ssl = SSL.newSSL(sslCtx, !clientMode);
+        session = new OpenSslSession(ssl, sessionContext);
         networkBIO = SSL.makeNetworkBIO(ssl);
         this.clientMode = clientMode;
-        this.sessionContext = sessionContext;
         this.engineMap = engineMap;
         this.rejectRemoteInitiatedRenegation = rejectRemoteInitiatedRenegation;
     }
@@ -458,7 +449,7 @@ public final class OpenSslEngine extends SSLEngine {
             final ByteBuffer[] srcs, final int offset, final int length, final ByteBuffer dst) throws SSLException {
 
         // Check to make sure the engine has not been closed
-        if (destroyed != 0) {
+        if (isDestroyed()) {
             return CLOSED_NOT_HANDSHAKING;
         }
 
@@ -585,7 +576,7 @@ public final class OpenSslEngine extends SSLEngine {
             final ByteBuffer[] dsts, final int dstsOffset, final int dstsLength) throws SSLException {
 
         // Check to make sure the engine has not been closed
-        if (destroyed != 0) {
+        if (isDestroyed()) {
             return CLOSED_NOT_HANDSHAKING;
         }
 
@@ -849,7 +840,7 @@ public final class OpenSslEngine extends SSLEngine {
         isOutboundDone = true;
         engineClosed = true;
 
-        if (handshakeState != HandshakeState.NOT_STARTED && destroyed == 0) {
+        if (handshakeState != HandshakeState.NOT_STARTED && !isDestroyed()) {
             int mode = SSL.getShutdown(ssl);
             if ((mode & SSL.SSL_SENT_SHUTDOWN) != SSL.SSL_SENT_SHUTDOWN) {
                 int err = SSL.shutdownSSL(ssl);
@@ -900,7 +891,7 @@ public final class OpenSslEngine extends SSLEngine {
     public String[] getEnabledCipherSuites() {
         final String[] enabled;
         synchronized (this) {
-            if (destroyed == 0) {
+            if (!isDestroyed()) {
                 enabled = SSL.getCiphers(ssl);
             } else {
                 return EmptyArrays.EMPTY_STRINGS;
@@ -950,7 +941,7 @@ public final class OpenSslEngine extends SSLEngine {
         final String cipherSuiteSpec = buf.toString();
 
         synchronized (this) {
-            if (destroyed == 0) {
+            if (!isDestroyed()) {
                 try {
                     SSL.setCipherSuites(ssl, cipherSuiteSpec);
                 } catch (Exception e) {
@@ -975,7 +966,7 @@ public final class OpenSslEngine extends SSLEngine {
 
         int opts;
         synchronized (this) {
-            if (destroyed == 0) {
+            if (!isDestroyed()) {
                 opts = SSL.getOptions(ssl);
             } else {
                 return enabled.toArray(new String[1]);
@@ -1027,7 +1018,7 @@ public final class OpenSslEngine extends SSLEngine {
             }
         }
         synchronized (this) {
-            if (destroyed == 0) {
+            if (!isDestroyed()) {
                 // Enable all and then disable what we not want
                 SSL.setOptions(ssl, SSL.SSL_OP_ALL);
 
@@ -1084,7 +1075,7 @@ public final class OpenSslEngine extends SSLEngine {
     }
 
     private void checkEngineClosed() throws SSLException {
-        if (engineClosed || destroyed != 0) {
+        if (engineClosed || isDestroyed()) {
             throw ENGINE_CLOSED;
         }
     }
@@ -1113,7 +1104,8 @@ public final class OpenSslEngine extends SSLEngine {
         }
 
         // if SSL_do_handshake returns > 0 or sslError == SSL.SSL_ERROR_NAME it means the handshake was finished.
-        handshakeFinished();
+        session.handshakeFinished();
+
         return FINISHED;
     }
 
@@ -1122,62 +1114,6 @@ public final class OpenSslEngine extends SSLEngine {
             return buf.memoryAddress();
         } else {
             return Buffer.address(buf.nioBuffer());
-        }
-    }
-
-    private void handshakeFinished() throws SSLException {
-        SelectedListenerFailureBehavior behavior = apn.selectedListenerFailureBehavior();
-        List<String> protocols = apn.protocols();
-        String applicationProtocol;
-        switch (apn.protocol()) {
-            case NONE:
-                break;
-            // We always need to check for applicationProtocol == null as the remote peer may not support
-            // the TLS extension or may have returned an empty selection.
-            case ALPN:
-                applicationProtocol = SSL.getAlpnSelected(ssl);
-                if (applicationProtocol != null) {
-                    this.applicationProtocol = selectApplicationProtocol(protocols, behavior, applicationProtocol);
-                }
-                break;
-            case NPN:
-                applicationProtocol = SSL.getNextProtoNegotiated(ssl);
-                if (applicationProtocol != null) {
-                    this.applicationProtocol = selectApplicationProtocol(protocols, behavior, applicationProtocol);
-                }
-                break;
-            case NPN_AND_ALPN:
-                applicationProtocol = SSL.getAlpnSelected(ssl);
-                if (applicationProtocol == null) {
-                    applicationProtocol = SSL.getNextProtoNegotiated(ssl);
-                }
-                if (applicationProtocol != null) {
-                    this.applicationProtocol = selectApplicationProtocol(protocols, behavior, applicationProtocol);
-                }
-                break;
-            default:
-                throw new Error();
-        }
-        handshakeState = HandshakeState.FINISHED;
-    }
-
-    private static String selectApplicationProtocol(List<String> protocols,
-                                             SelectedListenerFailureBehavior behavior,
-                                             String applicationProtocol) throws SSLException {
-        if (behavior == SelectedListenerFailureBehavior.ACCEPT) {
-            return applicationProtocol;
-        } else {
-            int size = protocols.size();
-            assert size > 0;
-            if (protocols.contains(applicationProtocol)) {
-                return applicationProtocol;
-            } else {
-                if (behavior == SelectedListenerFailureBehavior.CHOOSE_MY_LAST_PROTOCOL) {
-                    return protocols.get(size - 1);
-                } else {
-                    throw new SSLException("unknown protocol " + applicationProtocol);
-                }
-            }
         }
     }
 
@@ -1213,7 +1149,7 @@ public final class OpenSslEngine extends SSLEngine {
     }
 
     private boolean needPendingStatus() {
-        return handshakeState != HandshakeState.NOT_STARTED && destroyed == 0
+        return handshakeState != HandshakeState.NOT_STARTED && !isDestroyed()
                && (handshakeState != HandshakeState.FINISHED || engineClosed);
     }
 
@@ -1347,29 +1283,39 @@ public final class OpenSslEngine extends SSLEngine {
         shutdown();
     }
 
+    private boolean isDestroyed() {
+        return destroyed != 0;
+    }
+
     private final class OpenSslSession implements SSLSession, ApplicationProtocolAccessor {
-        // SSLSession implementation seems to not need to be thread-safe so no need for volatile etc.
+        private final OpenSslSessionContext sessionContext;
+        private final long creationTime;
+
+        // These are guarded by synchronized(OpenSslEngine.this) as handshakeFinished() may be triggered by any
+        // thread.
         private X509Certificate[] x509PeerCerts;
+        private String protocol;
+        private String applicationProtocol;
+        private Certificate[] peerCerts;
+        private String cipher;
+        private byte[] id;
 
         // lazy init for memory reasons
         private Map<String, Object> values;
 
+        OpenSslSession(long ssl, OpenSslSessionContext sessionContext) {
+            creationTime = SSL.getTime(ssl) * 1000L;
+            this.sessionContext = sessionContext;
+        }
+
         @Override
         public byte[] getId() {
-            final byte[] id;
             synchronized (OpenSslEngine.this) {
-                if (destroyed == 0) {
-                    id = SSL.getSessionId(ssl);
-                } else {
-                    id = EmptyArrays.EMPTY_BYTES;
+                if (id == null) {
+                    return EmptyArrays.EMPTY_BYTES;
                 }
+                return id.clone();
             }
-            // We don't cache that to keep memory usage to a minimum.
-            if (id == null) {
-                // The id should never be null, if it was null then the SESSION itself was not valid.
-                throw new IllegalStateException("SSL session ID not available");
-            }
-            return id;
         }
 
         @Override
@@ -1379,13 +1325,7 @@ public final class OpenSslEngine extends SSLEngine {
 
         @Override
         public long getCreationTime() {
-            synchronized (OpenSslEngine.this) {
-                if (destroyed == 0) {
-                    // We need ot multiple by 1000 as openssl uses seconds and we need milli-seconds.
-                    return SSL.getTime(ssl) * 1000L;
-                }
-                return 0;
-            }
+            return creationTime;
         }
 
         @Override
@@ -1463,23 +1403,146 @@ public final class OpenSslEngine extends SSLEngine {
             }
         }
 
-        @Override
-        public Certificate[] getPeerCertificates() throws SSLPeerUnverifiedException {
-            // these are lazy created to reduce memory overhead
-            Certificate[] c = peerCerts;
-            if (c == null) {
-                synchronized (OpenSslEngine.this) {
-                    if (destroyed == 0) {
-                        if (SSL.isInInit(ssl) != 0) {
-                            throw new SSLPeerUnverifiedException("peer not verified");
-                        }
-                        c = peerCerts = initPeerCertChain();
+        /**
+         * Finish the handshake and so init everything in the {@link OpenSslSession} that should be accessable by
+         * the user.
+         */
+        void handshakeFinished() throws SSLException {
+            synchronized (OpenSslEngine.this) {
+                if (!isDestroyed()) {
+                    id = SSL.getSessionId(ssl);
+                    cipher = toJavaCipherSuite(SSL.getCipherForSSL(ssl));
+                    protocol = SSL.getVersion(ssl);
+
+                    initPeerCerts();
+                    selectApplicationProtocol();
+
+                    handshakeState = HandshakeState.FINISHED;
+                } else {
+                    throw new SSLException("Already closed");
+                }
+            }
+        }
+
+        /**
+         * Init peer certificates that can be obtained via {@link #getPeerCertificateChain()}
+         * and {@link #getPeerCertificates()}.
+         */
+        private void initPeerCerts() {
+            // Return the full chain from the JNI layer.
+            byte[][] chain = SSL.getPeerCertChain(ssl);
+            final byte[] clientCert;
+            if (!clientMode) {
+                // if used on the server side SSL_get_peer_cert_chain(...) will not include the remote peer
+                // certificate. We use SSL_get_peer_certificate to get it in this case and add it to our
+                // array later.
+                //
+                // See https://www.openssl.org/docs/ssl/SSL_get_peer_cert_chain.html
+                clientCert = SSL.getPeerCertificate(ssl);
+            } else {
+                clientCert = null;
+            }
+
+            if (chain == null && clientCert == null) {
+                peerCerts = EMPTY_CERTIFICATES;
+                x509PeerCerts = EMPTY_X509_CERTIFICATES;
+            } else {
+                int len = chain != null ? chain.length : 0;
+
+                int i = 0;
+                Certificate[] peerCerts;
+                if (clientCert != null) {
+                    len++;
+                    peerCerts = new Certificate[len];
+                    peerCerts[i++] = new OpenSslX509Certificate(clientCert);
+                } else {
+                    peerCerts = new Certificate[len];
+                }
+                if (chain != null) {
+                    X509Certificate[] pCerts = new X509Certificate[chain.length];
+
+                    for (int a = 0; a < pCerts.length; ++i, ++a) {
+                        byte[] bytes = chain[a];
+                        pCerts[a] = new OpenSslJavaxX509Certificate(bytes);
+                        peerCerts[i] = new OpenSslX509Certificate(bytes);
+                    }
+                    x509PeerCerts = pCerts;
+                } else {
+                    x509PeerCerts = EMPTY_X509_CERTIFICATES;
+                }
+                this.peerCerts = peerCerts;
+            }
+        }
+
+        /**
+         * Select the application protocol used.
+         */
+        private void selectApplicationProtocol() throws SSLException {
+            SelectedListenerFailureBehavior behavior = apn.selectedListenerFailureBehavior();
+            List<String> protocols = apn.protocols();
+            String applicationProtocol;
+            switch (apn.protocol()) {
+            case NONE:
+                break;
+            // We always need to check for applicationProtocol == null as the remote peer may not support
+            // the TLS extension or may have returned an empty selection.
+            case ALPN:
+                applicationProtocol = SSL.getAlpnSelected(ssl);
+                if (applicationProtocol != null) {
+                    this.applicationProtocol = selectApplicationProtocol(
+                            protocols, behavior, applicationProtocol);
+                }
+                break;
+            case NPN:
+                applicationProtocol = SSL.getNextProtoNegotiated(ssl);
+                if (applicationProtocol != null) {
+                    this.applicationProtocol = selectApplicationProtocol(
+                            protocols, behavior, applicationProtocol);
+                }
+                break;
+            case NPN_AND_ALPN:
+                applicationProtocol = SSL.getAlpnSelected(ssl);
+                if (applicationProtocol == null) {
+                    applicationProtocol = SSL.getNextProtoNegotiated(ssl);
+                }
+                if (applicationProtocol != null) {
+                    this.applicationProtocol = selectApplicationProtocol(
+                            protocols, behavior, applicationProtocol);
+                }
+                break;
+            default:
+                throw new Error();
+            }
+        }
+
+        private String selectApplicationProtocol(List<String> protocols,
+                                                        SelectedListenerFailureBehavior behavior,
+                                                        String applicationProtocol) throws SSLException {
+            if (behavior == SelectedListenerFailureBehavior.ACCEPT) {
+                return applicationProtocol;
+            } else {
+                int size = protocols.size();
+                assert size > 0;
+                if (protocols.contains(applicationProtocol)) {
+                    return applicationProtocol;
+                } else {
+                    if (behavior == SelectedListenerFailureBehavior.CHOOSE_MY_LAST_PROTOCOL) {
+                        return protocols.get(size - 1);
                     } else {
-                        c = peerCerts = EMPTY_CERTIFICATES;
+                        throw new SSLException("unknown protocol " + applicationProtocol);
                     }
                 }
             }
-            return c;
+        }
+
+        @Override
+        public Certificate[] getPeerCertificates() throws SSLPeerUnverifiedException {
+            synchronized (OpenSslEngine.this) {
+                if (peerCerts == null) {
+                    throw new SSLPeerUnverifiedException("peer not verified");
+                }
+                return peerCerts;
+            }
         }
 
         @Override
@@ -1490,35 +1553,12 @@ public final class OpenSslEngine extends SSLEngine {
 
         @Override
         public X509Certificate[] getPeerCertificateChain() throws SSLPeerUnverifiedException {
-            // these are lazy created to reduce memory overhead
-            X509Certificate[] c = x509PeerCerts;
-            if (c == null) {
-                final byte[][] chain;
-                synchronized (OpenSslEngine.this) {
-                    if (destroyed == 0) {
-                        if (SSL.isInInit(ssl) != 0) {
-                            throw new SSLPeerUnverifiedException("peer not verified");
-                        }
-                        chain = SSL.getPeerCertChain(ssl);
-                    } else {
-                        c = x509PeerCerts = EMPTY_X509_CERTIFICATES;
-                        return c;
-                    }
-                }
-                if (chain == null) {
+            synchronized (OpenSslEngine.this) {
+                if (x509PeerCerts == null) {
                     throw new SSLPeerUnverifiedException("peer not verified");
                 }
-                X509Certificate[] peerCerts = new X509Certificate[chain.length];
-                for (int i = 0; i < peerCerts.length; i++) {
-                    try {
-                        peerCerts[i] = X509Certificate.getInstance(chain[i]);
-                    } catch (CertificateException e) {
-                        throw new IllegalStateException(e);
-                    }
-                }
-                c = x509PeerCerts = peerCerts;
+                return x509PeerCerts;
             }
-            return c;
         }
 
         @Override
@@ -1541,39 +1581,34 @@ public final class OpenSslEngine extends SSLEngine {
 
         @Override
         public String getCipherSuite() {
-            if (handshakeState != HandshakeState.FINISHED) {
-                return INVALID_CIPHER;
-            }
-            if (cipher == null) {
-                final String c;
-                synchronized (OpenSslEngine.this) {
-                    if (destroyed == 0) {
-                        c = toJavaCipherSuite(SSL.getCipherForSSL(ssl));
-                    } else {
-                        c = INVALID_CIPHER;
-                    }
+            synchronized (OpenSslEngine.this) {
+                if (cipher == null) {
+                    return INVALID_CIPHER;
                 }
-                if (c != null) {
-                    cipher = c;
-                }
+                return cipher;
             }
-            return cipher;
         }
 
         @Override
         public String getProtocol() {
-            synchronized (OpenSslEngine.this) {
-                if (destroyed == 0) {
-                    return SSL.getVersion(ssl);
-                } else {
-                    return StringUtil.EMPTY_STRING;
+            String protocol = this.protocol;
+            if (protocol == null) {
+                synchronized (OpenSslEngine.this) {
+                    if (!isDestroyed()) {
+                        protocol = SSL.getVersion(ssl);
+                    } else {
+                        protocol = StringUtil.EMPTY_STRING;
+                    }
                 }
             }
+            return protocol;
         }
 
         @Override
         public String getApplicationProtocol() {
-            return applicationProtocol;
+            synchronized (OpenSslEngine.this) {
+                return applicationProtocol;
+            }
         }
 
         @Override
@@ -1594,45 +1629,6 @@ public final class OpenSslEngine extends SSLEngine {
         @Override
         public int getApplicationBufferSize() {
             return MAX_PLAINTEXT_LENGTH;
-        }
-
-        private Certificate[] initPeerCertChain() throws SSLPeerUnverifiedException {
-            byte[][] chain = SSL.getPeerCertChain(ssl);
-            final byte[] clientCert;
-            if (!clientMode) {
-                // if used on the server side SSL_get_peer_cert_chain(...) will not include the remote peer certificate.
-                // We use SSL_get_peer_certificate to get it in this case and add it to our array later.
-                //
-                // See https://www.openssl.org/docs/ssl/SSL_get_peer_cert_chain.html
-                clientCert = SSL.getPeerCertificate(ssl);
-            } else {
-                clientCert = null;
-            }
-
-            if (chain == null && clientCert == null) {
-                throw new SSLPeerUnverifiedException("peer not verified");
-            }
-            int len = 0;
-            if (chain != null) {
-                len += chain.length;
-            }
-
-            int i = 0;
-            Certificate[] peerCerts;
-            if (clientCert != null) {
-                len++;
-                peerCerts = new Certificate[len];
-                peerCerts[i++] = new OpenSslX509Certificate(clientCert);
-            } else {
-                peerCerts = new Certificate[len];
-            }
-            if (chain != null) {
-                int a = 0;
-                for (; i < peerCerts.length; i++) {
-                    peerCerts[i] = new OpenSslX509Certificate(chain[a++]);
-                }
-            }
-            return peerCerts;
         }
     }
 }
