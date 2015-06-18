@@ -96,12 +96,7 @@ public final class FixedChannelPool extends SimpleChannelPool {
      */
     public FixedChannelPool(Bootstrap bootstrap,
                             ChannelPoolHandler handler, int maxConnections, int maxPendingAcquires) {
-        super(bootstrap, handler);
-        executor = bootstrap.group().next();
-        timeoutTask = null;
-        acquireTimeoutNanos = -1;
-        this.maxConnections = maxConnections;
-        this.maxPendingAcquires = maxPendingAcquires;
+        this(bootstrap, handler, ChannelHealthChecker.ACTIVE, null, -1, maxConnections, maxPendingAcquires);
     }
 
     /**
