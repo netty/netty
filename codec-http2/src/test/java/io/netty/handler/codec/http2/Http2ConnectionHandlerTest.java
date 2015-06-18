@@ -203,6 +203,21 @@ public class Http2ConnectionHandlerTest {
     }
 
     @Test
+    public void serverReceivingClientPrefaceStringFollowedByNonSettingsShouldHandleException()
+            throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        handler = newHandler();
+
+        // Create a connection preface followed by a bunch of zeros (i.e. not a settings frame).
+        ByteBuf buf = Unpooled.buffer().writeBytes(connectionPrefaceBuf()).writeZero(10);
+        handler.channelRead(ctx, buf);
+        ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
+        verify(frameWriter, atLeastOnce()).writeGoAway(eq(ctx), eq(0), eq(PROTOCOL_ERROR.code()),
+                captor.capture(), eq(promise));
+        assertEquals(0, captor.getValue().refCnt());
+    }
+
+    @Test
     public void serverReceivingValidClientPrefaceStringShouldContinueReadingFrames() throws Exception {
         when(connection.isServer()).thenReturn(true);
         handler = newHandler();

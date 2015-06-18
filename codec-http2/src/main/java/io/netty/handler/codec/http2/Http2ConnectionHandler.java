@@ -276,8 +276,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             // If the input so far doesn't match the preface, break the connection.
             if (bytesRead == 0 || !ByteBufUtil.equals(in, in.readerIndex(),
                     clientPrefaceString, clientPrefaceString.readerIndex(), bytesRead)) {
-                String receivedBytes = hexDump(in.slice(in.readerIndex(),
-                        min(in.readableBytes(), clientPrefaceString.readableBytes())));
+                String receivedBytes = hexDump(in, in.readerIndex(),
+                        min(in.readableBytes(), clientPrefaceString.readableBytes()));
                 throw connectionError(PROTOCOL_ERROR, "HTTP/2 client preface string missing or corrupt. " +
                         "Hex dump for received bytes: %s", receivedBytes);
             }
@@ -310,7 +310,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             byte frameType = in.getByte(in.readerIndex() + 3);
             if (frameType != SETTINGS) {
                 throw connectionError(PROTOCOL_ERROR, "First received frame was not SETTINGS. " +
-                        "Hex dump for first 4 bytes: %s", hexDump(in.slice(in.readerIndex(), 4)));
+                        "Hex dump for first 4 bytes: %s", hexDump(in, in.readerIndex(), 4));
             }
             return true;
         }
