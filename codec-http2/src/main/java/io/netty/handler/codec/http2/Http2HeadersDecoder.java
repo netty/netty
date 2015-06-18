@@ -29,6 +29,11 @@ public interface Http2HeadersDecoder {
          * Access the Http2HeaderTable for this {@link Http2HeadersDecoder}
          */
         Http2HeaderTable headerTable();
+
+        /**
+         * Get the maximum number of bytes that is allowed before truncation occurs.
+         */
+        int maxHeaderSize();
     }
 
     /**

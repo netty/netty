@@ -1189,6 +1189,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         final Http2RemoteFlowController.FlowControlled flowControlled = mockedFlowControlledThatThrowsOnWrite();
         final Http2Stream stream = stream(STREAM_A);
         doAnswer(new Answer<Void>() {
+            @Override
             public Void answer(InvocationOnMock invocationOnMock) {
                 stream.closeLocalSide();
                 return null;
@@ -1212,6 +1213,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         final Http2RemoteFlowController.FlowControlled flowControlled = mockedFlowControlledThatThrowsOnWrite();
         final Http2Stream stream = stream(STREAM_A);
         doAnswer(new Answer<Void>() {
+            @Override
             public Void answer(InvocationOnMock invocationOnMock) {
                 throw new RuntimeException("error failed");
             }
@@ -1257,6 +1259,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         final Http2Stream stream = stream(STREAM_A);
         doAnswer(new Answer<Void>() {
+            @Override
             public Void answer(InvocationOnMock invocationOnMock) {
                 throw new RuntimeException("writeComplete failed");
             }
@@ -1286,6 +1289,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         when(flowControlled.size()).thenReturn(100);
         doThrow(new RuntimeException("write failed")).when(flowControlled).write(anyInt());
         doAnswer(new Answer<Void>() {
+            @Override
             public Void answer(InvocationOnMock invocationOnMock) {
                 stream.close();
                 return null;
