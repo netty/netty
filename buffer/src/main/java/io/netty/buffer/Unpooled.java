@@ -392,13 +392,11 @@ public final class Unpooled {
             return EMPTY_BUFFER;
         }
         byte[] copy = new byte[length];
-        int position = buffer.position();
-        try {
-            buffer.get(copy);
-        } finally {
-            buffer.position(position);
-        }
-        return wrappedBuffer(copy).order(buffer.order());
+        // Duplicate the buffer so we not adjust the position during our get operation.
+        // See https://github.com/netty/netty/issues/3896
+        ByteBuffer duplicate = buffer.duplicate();
+        duplicate.get(copy);
+        return wrappedBuffer(copy).order(duplicate.order());
     }
 
     /**
@@ -561,11 +559,11 @@ public final class Unpooled {
 
         byte[] mergedArray = new byte[length];
         for (int i = 0, j = 0; i < buffers.length; i ++) {
-            ByteBuffer b = buffers[i];
+            // Duplicate the buffer so we not adjust the position during our get operation.
+            // See https://github.com/netty/netty/issues/3896
+            ByteBuffer b = buffers[i].duplicate();
             int bLen = b.remaining();
-            int oldPos = b.position();
             b.get(mergedArray, j, bLen);
-            b.position(oldPos);
             j += bLen;
         }
 
