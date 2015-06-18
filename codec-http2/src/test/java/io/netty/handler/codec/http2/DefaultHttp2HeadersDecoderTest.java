@@ -15,11 +15,13 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_HEADER_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.Http2TestUtil.as;
 import static io.netty.handler.codec.http2.Http2TestUtil.randomBytes;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
@@ -50,6 +52,17 @@ public class DefaultHttp2HeadersDecoderTest {
             assertEquals(3, headers.size());
             assertEquals("GET", headers.method().toString());
             assertEquals("avalue", headers.get(as("akey")).toString());
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test(expected = Http2Exception.class)
+    public void testExceedHeaderSize() throws Exception {
+        ByteBuf buf = encode(randomBytes(DEFAULT_MAX_HEADER_SIZE), randomBytes(1));
+        try {
+            decoder.decodeHeaders(buf);
+            fail();
         } finally {
             buf.release();
         }
