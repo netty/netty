@@ -56,29 +56,33 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelHandl
      * will be removed from the {@link ChannelPipeline} of the {@link Channel}.
      *
      * @param ch            the {@link Channel} which was registered.
-     * @throws Exception    is thrown if an error occurs. In that case the {@link Channel} will be closed.
+     * @throws Exception    is thrown if an error occurs. In that case it will be handled by
+     *                      {@link #exceptionCaught(ChannelHandlerContext, Throwable)} which will by default close
+     *                      the {@link Channel}.
      */
     protected abstract void initChannel(C ch) throws Exception;
 
     @Override
     @SuppressWarnings("unchecked")
     public final void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-        ChannelPipeline pipeline = ctx.pipeline();
-        boolean success = false;
+        initChannel((C) ctx.channel());
+        ctx.pipeline().remove(this);
+        ctx.fireChannelRegistered();
+    }
+
+    /**
+     * Handle the {@link Throwable} by logging and closing the {@link Channel}. Sub-classes may override this.
+     */
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        logger.warn("Failed to initialize a channel. Closing: " + ctx.channel(), cause);
         try {
-            initChannel((C) ctx.channel());
-            pipeline.remove(this);
-            ctx.fireChannelRegistered();
-            success = true;
-        } catch (Throwable t) {
-            logger.warn("Failed to initialize a channel. Closing: " + ctx.channel(), t);
-        } finally {
+            ChannelPipeline pipeline = ctx.pipeline();
             if (pipeline.context(this) != null) {
                 pipeline.remove(this);
             }
-            if (!success) {
-                ctx.close();
-            }
+        } finally {
+            ctx.close();
         }
     }
 }

@@ -21,6 +21,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
@@ -546,6 +547,29 @@ public class DefaultChannelPipelineTest {
     public void testLastHandlerEmptyPipeline() throws Exception {
         ChannelPipeline pipeline = new LocalChannel().pipeline();
         assertNull(pipeline.last());
+    }
+
+    @Test(timeout = 5000)
+    public void testChannelInitializerException() throws Exception {
+        final IllegalStateException exception = new IllegalStateException();
+        final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+        final CountDownLatch latch = new CountDownLatch(1);
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                throw exception;
+            }
+
+            @Override
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                super.exceptionCaught(ctx, cause);
+                error.set(cause);
+                latch.countDown();
+            }
+        });
+        latch.await();
+        assertFalse(channel.isActive());
+        assertSame(exception, error.get());
     }
 
     private static int next(AbstractChannelHandlerContext ctx) {
