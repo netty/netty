@@ -172,7 +172,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         // Trigger pending writes in the remote flow controller.
         connection().remote().flowController().writePendingBytes();
         try {
-            super.flush(ctx);
+            ctx.flush();
         } catch (Throwable t) {
             throw new Http2Exception(INTERNAL_ERROR, "Error flushing" , t);
         }
@@ -449,11 +449,6 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         ctx.write(msg, promise);
-    }
-
-    @Override
-    public void flush(ChannelHandlerContext ctx) throws Exception {
-        ctx.flush();
     }
 
     @Override
