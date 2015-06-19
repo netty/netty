@@ -88,7 +88,7 @@ import java.nio.charset.UnsupportedCharsetException;
  * <pre>
  * // Iterates the readable bytes of a buffer.
  * {@link ByteBuf} buffer = ...;
- * while (buffer.readable()) {
+ * while (buffer.isReadable()) {
  *     System.out.println(buffer.readByte());
  * }
  * </pre>
