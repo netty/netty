@@ -186,7 +186,7 @@
               <value>${linux.sendmmsg.support}${glibc.sendmmsg.support}</value>
               <!-- If glibc and linux kernel are both not sufficient...then define the CFLAGS -->
               <regex>.*IO_NETTY_SENDMSSG_NOT_FOUND.*</regex>
-              <replacement>CFLAGS="-DIO_NETTY_SENDMMSG_NOT_FOUND"</replacement>
+              <replacement>CFLAGS=-O3 -DIO_NETTY_SENDMMSG_NOT_FOUND</replacement>
               <failIfNoMatch>false</failIfNoMatch>
             </configuration>
           </execution>
@@ -202,7 +202,7 @@
               <value>${jni.compiler.args}</value>
               <!-- If glibc and linux kernel are both not sufficient...then define the CFLAGS -->
               <regex>^((?!CFLAGS=).)*$</regex>
-              <replacement>CFLAGS=""</replacement>
+              <replacement>CFLAGS=-O3</replacement>
               <failIfNoMatch>false</failIfNoMatch>
             </configuration>
           </execution>
