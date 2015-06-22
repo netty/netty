@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -27,26 +27,27 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  * catch all exceptions caused by bad client (closed connection, malformed request etc.)
  * and server processing.
  *
- * By default exceptions are logged to the internal logger. You may need to override
- * onUnknownMessage, onBadClient, and onBadServer to log to more suitable places.
+ * By default exceptions are logged to Netty internal logger. You may need to override
+ * {@link #onUnknownMessage(Object)}, {@link #onBadClient(Throwable)}, and
+ * {@link #onBadServer(Throwable)} to log to more suitable places.
  */
 @Sharable
 public class BadClientSilencer extends SimpleChannelInboundHandler<Object> {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(BadClientSilencer.class);
+    private static final InternalLogger log = InternalLoggerFactory.getInstance(BadClientSilencer.class);
 
-    /** Logs to stderr. Override this method to log to other places if you want. */
+    /** Logs to Netty internal logger. Override this method to log to other places if you want. */
     protected void onUnknownMessage(Object msg) {
-        logger.warn("Unknown msg: " + msg);
+        log.warn("Unknown msg: " + msg);
     }
 
-    /** Logs to stderr. Override this method to log to other places if you want. */
+    /** Logs to Netty internal logger. Override this method to log to other places if you want. */
     protected void onBadClient(Throwable e) {
-        logger.warn("Caught exception (maybe client is bad)", e);
+        log.warn("Caught exception (maybe client is bad)", e);
     }
 
-    /** Logs to stderr. Override this method to log to other places if you want. */
+    /** Logs to Netty internal logger. Override this method to log to other places if you want. */
     protected void onBadServer(Throwable e) {
-        logger.warn("Caught exception (maybe server is bad)", e);
+        log.warn("Caught exception (maybe server is bad)", e);
     }
 
     //----------------------------------------------------------------------------

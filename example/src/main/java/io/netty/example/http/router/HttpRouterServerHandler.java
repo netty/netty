@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,6 +16,8 @@
 package io.netty.example.http.router;
 
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -23,10 +25,12 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.router.RouteResult;
 import io.netty.handler.codec.http.router.Router;
+import io.netty.util.CharsetUtil;
 
 @ChannelHandler.Sharable
 public class HttpRouterServerHandler extends SimpleChannelInboundHandler<HttpRequest> {
@@ -43,7 +47,11 @@ public class HttpRouterServerHandler extends SimpleChannelInboundHandler<HttpReq
             return;
         }
 
-        // Route the request based on request HTTP method and URI
+        HttpResponse res = createResponse(req, router);
+        flushResponse(ctx, req, res);
+    }
+
+    private static HttpResponse createResponse(HttpRequest req, Router<String> router) {
         RouteResult<String> routeResult = router.route(req.getMethod(), req.getUri());
 
         // Display debug info.
@@ -51,23 +59,32 @@ public class HttpRouterServerHandler extends SimpleChannelInboundHandler<HttpReq
         // For simplicity of this example, route targets are just simple strings.
         // But you can make them classes, and here once you get a target class,
         // you can create an instance of it and dispatch the request to the instance etc.
-        String content =
-            "router: \n" + router + "\n" +
-            "req: " + req + "\n\n" +
-            "routeResult: \n" +
-            "target: " + routeResult.target() + "\n" +
-            "pathParams: " + routeResult.pathParams() + "\n" +
-            "queryParams: " + routeResult.queryParams() + "\n\n" +
-            "allowedMethods: " + router.allowedMethods(req.getUri());
+        StringBuilder content = new StringBuilder();
+        content.append("router: \n" + router + "\n");
+        content.append("req: " + req + "\n\n");
+        content.append("routeResult: \n");
+        content.append("target: " + routeResult.target() + "\n");
+        content.append("pathParams: " + routeResult.pathParams() + "\n");
+        content.append("queryParams: " + routeResult.queryParams() + "\n\n");
+        content.append("allowedMethods: " + router.allowedMethods(req.getUri()));
 
         FullHttpResponse res = new DefaultFullHttpResponse(
-            HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-            Unpooled.copiedBuffer(content.getBytes())
+                HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                Unpooled.copiedBuffer(content.toString(), CharsetUtil.UTF_8)
         );
 
         res.headers().set(HttpHeaders.Names.CONTENT_TYPE,   "text/plain");
         res.headers().set(HttpHeaders.Names.CONTENT_LENGTH, res.content().readableBytes());
 
-        KeepAlive.flushResponse(ctx, req, res);
+        return res;
+    }
+
+    private static ChannelFuture flushResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
+        if (!HttpHeaders.isKeepAlive(req)) {
+            return ctx.writeAndFlush(res).addListener(ChannelFutureListener.CLOSE);
+        } else {
+            res.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
+            return ctx.writeAndFlush(res);
+        }
     }
 }

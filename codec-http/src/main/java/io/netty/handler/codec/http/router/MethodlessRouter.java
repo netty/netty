@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http.router;
 
+import io.netty.util.internal.StringUtil;
+
 /**
  * Router that contains information about route matching orders, but doesn't
  * contain information about HTTP request methods.
@@ -22,25 +24,32 @@ package io.netty.handler.codec.http.router;
  * Routes are devided into 3 sections: "first", "last", and "other".
  * Routes in "first" are matched first, then in "other", then in "last".
  */
-class MethodlessRouter<T> {
+final class MethodlessRouter<T> {
     private final OrderlessRouter<T> first = new OrderlessRouter<T>();
     private final OrderlessRouter<T> other = new OrderlessRouter<T>();
     private final OrderlessRouter<T> last  = new OrderlessRouter<T>();
 
     //--------------------------------------------------------------------------
 
+    /** Returns the "first" router; routes in this router will be matched first. */
     public OrderlessRouter<T> first() {
         return first;
     }
 
+    /**
+     * Returns the "other" router; routes in this router will be matched after
+     * those in the "first" router, but before those in the "last" router.
+     */
     public OrderlessRouter<T> other() {
         return other;
     }
 
+    /** Returns the "last" router; routes in this router will be matched last. */
     public OrderlessRouter<T> last() {
         return last;
     }
 
+    /** Returns the number of routes in this router. */
     public int size() {
         return first.routes().size() + other.routes().size() + last.routes().size();
     }
@@ -100,7 +109,7 @@ class MethodlessRouter<T> {
 
     /** @return {@code null} if no match; note: {@code queryParams} is not set in {@link RouteResult} */
     public RouteResult<T> route(String path) {
-        return route(Path.removeSlashesAtBothEnds(path).split("/"));
+        return route(StringUtil.split(Path.removeSlashesAtBothEnds(path), '/'));
     }
 
     /** @return {@code null} if no match; note: {@code queryParams} is not set in {@link RouteResult} */

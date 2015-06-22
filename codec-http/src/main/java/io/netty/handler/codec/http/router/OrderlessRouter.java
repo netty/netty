@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,12 +16,17 @@
 package io.netty.handler.codec.http.router;
 
 import io.netty.handler.codec.http.QueryStringDecoder;
+import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -29,7 +34,9 @@ import java.util.Set;
  * Router that doesn't contain information about HTTP request methods and route
  * matching orders.
  */
-class OrderlessRouter<T> {
+final class OrderlessRouter<T> {
+    private static final InternalLogger log = InternalLoggerFactory.getInstance(OrderlessRouter.class);
+
     // A path can only point to one target
     private final Map<Path, T> routes = new HashMap<Path, T>();
 
@@ -38,8 +45,9 @@ class OrderlessRouter<T> {
 
     //--------------------------------------------------------------------------
 
+    /** Returns all routes in this router, an unmodifiable map of {@code Path -> Target}. */
     public Map<Path, T> routes() {
-        return routes;
+        return Collections.unmodifiableMap(routes);
     }
 
     /**
@@ -84,7 +92,7 @@ class OrderlessRouter<T> {
 
     /** Removes all routes leading to the target. */
     public void removeTarget(T target) {
-        Set<Path> paths = reverseRoutes.remove(target);
+        Set<Path> paths = reverseRoutes.remove(ObjectUtil.checkNotNull(target, "target"));
         if (paths == null) {
             return;
         }
@@ -101,7 +109,7 @@ class OrderlessRouter<T> {
 
     /** @return {@code null} if no match; note: {@code queryParams} is not set in {@link RouteResult} */
     public RouteResult<T> route(String path) {
-        return route(Path.removeSlashesAtBothEnds(path).split("/"));
+        return route(StringUtil.split(Path.removeSlashesAtBothEnds(path), '/'));
     }
 
     /** @return {@code null} if no match; note: {@code queryParams} is not set in {@link RouteResult} */
@@ -114,7 +122,7 @@ class OrderlessRouter<T> {
             Path path = entry.getKey();
             if (path.match(requestPathTokens, pathParams)) {
                 T target = entry.getValue();
-                return new RouteResult(target, pathParams, null);
+                return new RouteResult(target, pathParams, Collections.emptyMap());
             }
 
             // Reset for the next loop
@@ -150,7 +158,7 @@ class OrderlessRouter<T> {
      * or ordered values. If a param doesn't have a placeholder, it will be put
      * to the query part of the path.
      *
-     * @return {@code null} if there's no match
+     * @return {@code null} if there's no match, or the params can't be UTF-8 encoded
      */
     @SuppressWarnings("unchecked")
     public String path(T target, Object... params) {
@@ -175,7 +183,7 @@ class OrderlessRouter<T> {
         return pathMap(target, map);
     }
 
-    /** @return {@code null} if there's no match */
+    /** @return {@code null} if there's no match, or the params can't be UTF-8 encoded */
     private String pathMap(T target, Map<Object, Object> params) {
         Set<Path> paths = reverseRoutes.get(target);
         if (paths == null) {
@@ -194,7 +202,9 @@ class OrderlessRouter<T> {
                 matched = true;
                 usedKeys.clear();
 
-                StringBuilder b = new StringBuilder();
+                // "+ 16": Just in case the part befor that is 0
+                int           initialCapacity = path.path().length() + 20 * params.size() + 16;
+                StringBuilder b               = new StringBuilder(initialCapacity);
 
                 for (String token : path.tokens()) {
                     b.append('/');
@@ -251,6 +261,7 @@ class OrderlessRouter<T> {
 
             return bestCandidate;
         } catch (UnsupportedEncodingException e) {
+            log.warn("Params can't be UTF-8 encoded: " + params);
             return null;
         }
     }

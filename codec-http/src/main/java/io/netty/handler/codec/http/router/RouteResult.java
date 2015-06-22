@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,8 +16,12 @@
 package io.netty.handler.codec.http.router;
 
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -27,20 +31,23 @@ public class RouteResult<T> {
     private final Map<String, String>       pathParams;
     private final Map<String, List<String>> queryParams;
 
+    /** The maps will be wrapped in Collections.unmodifiableMap. */
     public RouteResult(T target, Map<String, String> pathParams, Map<String, List<String>> queryParams) {
-        this.target      = target;
-        this.pathParams  = pathParams;
-        this.queryParams = queryParams;
+        this.target      = ObjectUtil.checkNotNull(target,      "target");
+        this.pathParams  = Collections.unmodifiableMap(ObjectUtil.checkNotNull(pathParams,  "pathParams"));
+        this.queryParams = Collections.unmodifiableMap(ObjectUtil.checkNotNull(queryParams, "queryParams"));
     }
 
     public T target() {
         return target;
     }
 
+    /** Returns all params embedded in the request path. */
     public Map<String, String> pathParams() {
         return pathParams;
     }
 
+    /** Returns all params in the query part of the request URI. */
     public Map<String, List<String>> queryParams() {
         return queryParams;
     }
@@ -72,19 +79,23 @@ public class RouteResult<T> {
     /**
      * Extracts all params in {@code pathParams} and {@code queryParams} matching the name.
      *
-     * @return Empty list if there's no match
+     * @return Unmodifiable list; the list is empty if there's no match
      */
     public List<String> params(String name) {
         List<String> values = queryParams.get(name);
+        String       value  = pathParams.get(name);
+
         if (values == null) {
-            values = new ArrayList<String>();
+            return (value == null)? Collections.<String>emptyList() : Arrays.asList(value);
         }
 
-        String value = pathParams.get(name);
-        if (value != null) {
-            values.add(value);
+        if (value == null) {
+            return Collections.unmodifiableList(values);
+        } else {
+            List<String> aggregated = new ArrayList(values.size() + 1);
+            aggregated.addAll(values);
+            aggregated.add(value);
+            return Collections.unmodifiableList(aggregated);
         }
-
-        return values;
     }
 }

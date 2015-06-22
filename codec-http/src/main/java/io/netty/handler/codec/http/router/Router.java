@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.router;
 
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.QueryStringDecoder;
+import io.netty.util.internal.StringUtil;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -131,6 +132,31 @@ public class Router<T> {
     private T notFound;
 
     //--------------------------------------------------------------------------
+    // Design decision:
+    // We do not allow access to routers and anyMethodRouter, because we don't
+    // want to expose MethodlessRouter, OrderlessRouter, and Path.
+    // Exposing those will complicate the use of this package.
+
+    /**
+     * Returns the fallback target for use when there's no match at
+     * {@link #route(HttpMethod, String)}.
+     */
+    public T notFound() {
+        return notFound;
+    }
+
+    /** Returns the number of routes in this router. */
+    public int size() {
+        int ret = anyMethodRouter.size();
+
+        for (MethodlessRouter<T> router : routers.values()) {
+            ret += router.size();
+        }
+
+        return ret;
+    }
+
+    //--------------------------------------------------------------------------
 
     /**
      * Add route to the "first" section.
@@ -166,7 +192,7 @@ public class Router<T> {
     }
 
     /**
-     * Sets the default target for use when there's no match at
+     * Sets the fallback target for use when there's no match at
      * {@link #route(HttpMethod, String)}.
      */
     public Router notFound(T target) {
@@ -214,7 +240,7 @@ public class Router<T> {
      */
     public RouteResult<T> route(HttpMethod method, String uri) {
         QueryStringDecoder decoder = new QueryStringDecoder(uri);
-        String[]           tokens  = Path.removeSlashesAtBothEnds(decoder.path()).split("/");
+        String[]           tokens  = StringUtil.split(Path.removeSlashesAtBothEnds(decoder.path()), '/');
 
         MethodlessRouter<T> router = routers.get(method);
         if (router == null) {
@@ -252,7 +278,7 @@ public class Router<T> {
      */
     public Set<HttpMethod> allowedMethods(String uri) {
         QueryStringDecoder decoder = new QueryStringDecoder(uri);
-        String[]           tokens  = Path.removeSlashesAtBothEnds(decoder.path()).split("/");
+        String[]           tokens  = StringUtil.split(Path.removeSlashesAtBothEnds(decoder.path()), '/');
 
         if (anyMethodRouter.anyMatched(tokens)) {
             return allAllowedMethods();
@@ -273,7 +299,7 @@ public class Router<T> {
     /** Returns all methods that this router handles. For {@code OPTIONS *}. */
     public Set<HttpMethod> allAllowedMethods() {
         if (anyMethodRouter.size() > 0) {
-            Set<HttpMethod> ret = new HashSet<HttpMethod>(7);
+            Set<HttpMethod> ret = new HashSet<HttpMethod>(9);
             ret.add(HttpMethod.CONNECT);
             ret.add(HttpMethod.DELETE);
             ret.add(HttpMethod.GET);
@@ -300,7 +326,7 @@ public class Router<T> {
      * or ordered values. If a param doesn't have a placeholder, it will be put
      * to the query part of the path.
      *
-     * @return null if there's no match
+     * @return {@code null} if there's no match
      */
     public String path(HttpMethod method, T target, Object... params) {
         MethodlessRouter<T> router = (method == null)? anyMethodRouter : routers.get(method);
@@ -328,7 +354,7 @@ public class Router<T> {
      * or ordered values. If a param doesn't have a placeholder, it will be put
      * to the query part of the path.
      *
-     * @return null if there's no match
+     * @return {@code null} if there's no match
      */
     public String path(T target, Object... params) {
         Collection<MethodlessRouter<T>> rs = routers.values();
@@ -347,9 +373,10 @@ public class Router<T> {
     @Override
     public String toString() {
         // Step 1/2: Dump routers and anyMethodRouter in order
-        List<String> methods = new ArrayList<String>();
-        List<String> paths   = new ArrayList<String>();
-        List<String> targets = new ArrayList<String>();
+        int          numRoutes = size();
+        List<String> methods   = new ArrayList<String>(numRoutes);
+        List<String> paths     = new ArrayList<String>(numRoutes);
+        List<String> targets   = new ArrayList<String>(numRoutes);
 
         // For router
         for (Entry<HttpMethod, MethodlessRouter<T>> e : routers.entrySet()) {
@@ -357,7 +384,7 @@ public class Router<T> {
             MethodlessRouter<T> router = e.getValue();
             aggregateRoutes(method.toString(), router.first().routes(), methods, paths, targets);
             aggregateRoutes(method.toString(), router.other().routes(), methods, paths, targets);
-            aggregateRoutes(method.toString(), router.last().routes(), methods, paths, targets);
+            aggregateRoutes(method.toString(), router.last() .routes(), methods, paths, targets);
         }
 
         // For anyMethodRouter
@@ -373,10 +400,11 @@ public class Router<T> {
         }
 
         // Step 2/2: Format the List into aligned columns: <method> <path> <target>
-        int    maxLengthMethod = maxLength(methods);
-        int    maxLengthPath   = maxLength(paths);
-        String format          = "%-" + maxLengthMethod + "s  %-" + maxLengthPath + "s  %s\n";
-        StringBuilder b = new StringBuilder();
+        int           maxLengthMethod = maxLength(methods);
+        int           maxLengthPath   = maxLength(paths);
+        String        format          = "%-" + maxLengthMethod + "s  %-" + maxLengthPath + "s  %s\n";
+        int           initialCapacity = (maxLengthMethod + 1 + maxLengthPath + 1 + 20) * methods.size();
+        StringBuilder b               = new StringBuilder(initialCapacity);
         for (int i = 0; i < methods.size(); i++) {
             String method = methods.get(i);
             String path   = paths  .get(i);
@@ -387,7 +415,7 @@ public class Router<T> {
     }
 
     /** Helper for toString */
-    private void aggregateRoutes(
+    private static <T> void aggregateRoutes(
             String method, Map<Path, T> routes,
             List<String> accMethods, List<String> accPaths, List<String> accTargets) {
         for (Map.Entry<Path, T> entry : routes.entrySet()) {
@@ -398,7 +426,7 @@ public class Router<T> {
     }
 
     /** Helper for toString */
-    private int maxLength(List<String> coll) {
+    private static int maxLength(List<String> coll) {
         int max = 0;
         for (String e : coll) {
             int length = e.length();
@@ -414,7 +442,7 @@ public class Router<T> {
      * "io.netty.example.http.router.HttpRouterServerHandler" instead of
      * "class io.netty.example.http.router.HttpRouterServerHandler"
      */
-    private String targetToString(Object target) {
+    private static String targetToString(Object target) {
         if (target instanceof Class) {
             String className = ((Class<?>) target).getName();
             return className;

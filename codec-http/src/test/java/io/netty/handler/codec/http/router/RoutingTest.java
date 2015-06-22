@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -111,7 +111,7 @@ public class RoutingTest {
     }
 
     @Test
-    public void testAllowMethods() {
+    public void testAllowedMethods() {
         assertEquals(9, StringRouter.router.allAllowedMethods().size());
 
         Set<HttpMethod> methods = StringRouter.router.allowedMethods("/articles");
@@ -119,8 +119,6 @@ public class RoutingTest {
         assertTrue(methods.contains(HttpMethod.GET));
         assertTrue(methods.contains(HttpMethod.POST));
     }
-
-    //--------------------------------------------------------------------------
 
     @Test
     public void testHandleSubclasses() {
