@@ -15,6 +15,24 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
+import static io.netty.handler.codec.http2.Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS;
+import static io.netty.handler.codec.http2.Http2Error.CANCEL;
+import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
@@ -24,7 +42,10 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.http2.StreamBufferingEncoder.GoAwayException;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.ImmediateEventExecutor;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -33,22 +54,6 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.verification.VerificationMode;
-
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS;
-import static io.netty.handler.codec.http2.Http2Error.CANCEL;
-import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 /**
  * Tests for {@link StreamBufferingEncoder}.
@@ -83,6 +88,8 @@ public class StreamBufferingEncoderTest {
         when(writer.configuration()).thenReturn(configuration);
         when(configuration.frameSizePolicy()).thenReturn(frameSizePolicy);
         when(frameSizePolicy.maxFrameSize()).thenReturn(DEFAULT_MAX_FRAME_SIZE);
+        when(writer.writeData(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean(),
+                eq(promise))).thenAnswer(successAnswer());
         when(writer.writeRstStream(eq(ctx), anyInt(), anyLong(), eq(promise))).thenAnswer(
                 successAnswer());
         when(writer.writeGoAway(eq(ctx), anyInt(), anyLong(), any(ByteBuf.class),
@@ -102,8 +109,15 @@ public class StreamBufferingEncoderTest {
         // Set LifeCycleManager on encoder and decoder
         when(ctx.channel()).thenReturn(channel);
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
+        when(ctx.newPromise()).thenReturn(promise);
         when(channel.isActive()).thenReturn(false);
         handler.handlerAdded(ctx);
+    }
+
+    @After
+    public void teardown() {
+        // Close and release any buffered frames.
+        encoder.close();
     }
 
     @Test
@@ -163,9 +177,9 @@ public class StreamBufferingEncoderTest {
         assertEquals(1, connection.numActiveStreams());
         assertEquals(1, encoder.numBufferedStreams());
 
-        encoder.writeData(ctx, 3, Unpooled.buffer(0), 0, false, promise);
+        encoder.writeData(ctx, 3, EMPTY_BUFFER, 0, false, promise);
         writeVerifyWriteHeaders(times(1), 3, promise);
-        encoder.writeData(ctx, 5, Unpooled.buffer(0), 0, false, promise);
+        encoder.writeData(ctx, 5, EMPTY_BUFFER, 0, false, promise);
         verify(writer, never())
                 .writeData(eq(ctx), eq(5), any(ByteBuf.class), eq(0), eq(false), eq(promise));
     }
@@ -230,8 +244,7 @@ public class StreamBufferingEncoderTest {
         encoderWriteHeaders(3, promise);
         assertEquals(1, encoder.numBufferedStreams());
 
-        ByteBuf empty = Unpooled.buffer(0);
-        encoder.writeData(ctx, 3, empty, 0, true, promise);
+        encoder.writeData(ctx, 3, EMPTY_BUFFER, 0, true, promise);
 
         assertEquals(0, connection.numActiveStreams());
         assertEquals(1, encoder.numBufferedStreams());
@@ -428,10 +441,8 @@ public class StreamBufferingEncoderTest {
         return new Answer<ChannelFuture>() {
             @Override
             public ChannelFuture answer(InvocationOnMock invocation) throws Throwable {
-                for (Object a: invocation.getArguments()) {
-                    if (a instanceof ByteBuf) {
-                        ((ByteBuf) a).release();
-                    }
+                for (Object a : invocation.getArguments()) {
+                    ReferenceCountUtil.safeRelease(a);
                 }
 
                 ChannelPromise future =
