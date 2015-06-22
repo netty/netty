@@ -49,6 +49,6 @@ public class BinaryMemcacheResponseDecoder
 
     @Override
     protected BinaryMemcacheResponse buildInvalidMessage() {
-        return new DefaultBinaryMemcacheResponse("", Unpooled.EMPTY_BUFFER);
+        return new DefaultBinaryMemcacheResponse(Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER);
     }
 }

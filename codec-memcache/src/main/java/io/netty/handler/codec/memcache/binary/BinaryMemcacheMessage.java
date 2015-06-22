@@ -160,14 +160,14 @@ public interface BinaryMemcacheMessage extends MemcacheMessage {
      *
      * @return the key of the document.
      */
-    String key();
+    ByteBuf key();
 
     /**
      * Sets the key of the document.
      *
      * @param key the key of the message.
      */
-    BinaryMemcacheMessage setKey(String key);
+    BinaryMemcacheMessage setKey(ByteBuf key);
 
     /**
      * Returns a {@link ByteBuf} representation of the optional extras.
@@ -183,21 +183,4 @@ public interface BinaryMemcacheMessage extends MemcacheMessage {
      */
     BinaryMemcacheMessage setExtras(ByteBuf extras);
 
-    /**
-     * Increases the reference count by {@code 1}.
-     */
-    @Override
-    BinaryMemcacheMessage retain();
-
-    /**
-     * Increases the reference count by the specified {@code increment}.
-     */
-    @Override
-    BinaryMemcacheMessage retain(int increment);
-
-    @Override
-    BinaryMemcacheMessage touch();
-
-    @Override
-    BinaryMemcacheMessage touch(Object hint);
 }

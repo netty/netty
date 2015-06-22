@@ -15,9 +15,12 @@
  */
 package io.netty.handler.codec.memcache;
 
+import io.netty.buffer.ByteBufHolder;
 import io.netty.handler.codec.DecoderResultProvider;
 
 /**
  * Defines a common interface for all {@link MemcacheObject} implementations.
  */
-public interface MemcacheObject extends DecoderResultProvider { }
+public interface MemcacheObject extends DecoderResultProvider, ByteBufHolder {
+
+}

@@ -32,7 +32,7 @@ public class DefaultFullBinaryMemcacheRequest extends DefaultBinaryMemcacheReque
      * @param key    the key to use.
      * @param extras the extras to use.
      */
-    public DefaultFullBinaryMemcacheRequest(String key, ByteBuf extras) {
+    public DefaultFullBinaryMemcacheRequest(ByteBuf key, ByteBuf extras) {
         this(key, extras, Unpooled.buffer(0));
     }
 
@@ -43,7 +43,7 @@ public class DefaultFullBinaryMemcacheRequest extends DefaultBinaryMemcacheReque
      * @param extras  the extras to use.
      * @param content the content of the full request.
      */
-    public DefaultFullBinaryMemcacheRequest(String key, ByteBuf extras,
+    public DefaultFullBinaryMemcacheRequest(ByteBuf key, ByteBuf extras,
                                             ByteBuf content) {
         super(key, extras);
         if (content == null) {
@@ -59,26 +59,21 @@ public class DefaultFullBinaryMemcacheRequest extends DefaultBinaryMemcacheReque
     }
 
     @Override
-    public int refCnt() {
-        return content.refCnt();
-    }
-
-    @Override
-    public FullBinaryMemcacheRequest retain() {
+    public DefaultFullBinaryMemcacheRequest retain() {
         super.retain();
         content.retain();
         return this;
     }
 
     @Override
-    public FullBinaryMemcacheRequest retain(int increment) {
+    public DefaultFullBinaryMemcacheRequest retain(int increment) {
         super.retain(increment);
         content.retain(increment);
         return this;
     }
 
     @Override
-    public FullBinaryMemcacheRequest touch() {
+    public DefaultFullBinaryMemcacheRequest touch() {
         super.touch();
         content.touch();
         return this;

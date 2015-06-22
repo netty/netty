@@ -16,6 +16,8 @@
 package io.netty.handler.codec.memcache.binary;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.memcache.AbstractMemcacheObject;
 
 /**
@@ -28,7 +30,7 @@ public abstract class AbstractBinaryMemcacheMessage
     /**
      * Contains the optional key.
      */
-    private String key;
+    private ByteBuf key;
 
     /**
      * Contains the optional extras.
@@ -50,13 +52,13 @@ public abstract class AbstractBinaryMemcacheMessage
      * @param key    the message key.
      * @param extras the message extras.
      */
-    protected AbstractBinaryMemcacheMessage(String key, ByteBuf extras) {
+    protected AbstractBinaryMemcacheMessage(ByteBuf key, ByteBuf extras) {
         this.key = key;
         this.extras = extras;
     }
 
     @Override
-    public String key() {
+    public ByteBuf key() {
         return key;
     }
 
@@ -66,7 +68,7 @@ public abstract class AbstractBinaryMemcacheMessage
     }
 
     @Override
-    public BinaryMemcacheMessage setKey(String key) {
+    public BinaryMemcacheMessage setKey(ByteBuf key) {
         this.key = key;
         return this;
     }
@@ -166,25 +168,25 @@ public abstract class AbstractBinaryMemcacheMessage
     }
 
     @Override
-    public int refCnt() {
-        if (extras != null) {
-            return extras.refCnt();
-        }
-        return 1;
-    }
-
-    @Override
-    public BinaryMemcacheMessage retain() {
+    public AbstractBinaryMemcacheMessage retain() {
+        super.retain();
         if (extras != null) {
             extras.retain();
+        }
+        if (key != null) {
+            key.retain();
         }
         return this;
     }
 
     @Override
-    public BinaryMemcacheMessage retain(int increment) {
+    public AbstractBinaryMemcacheMessage retain(int increment) {
+        super.retain(increment);
         if (extras != null) {
             extras.retain(increment);
+        }
+        if (key != null) {
+            key.retain();
         }
         return this;
     }
@@ -192,22 +194,23 @@ public abstract class AbstractBinaryMemcacheMessage
     @Override
     public boolean release() {
         if (extras != null) {
-            return extras.release();
+            extras.release();
         }
-        return false;
+        if (key != null) {
+            key.release();
+        }
+        return super.release();
     }
 
     @Override
     public boolean release(int decrement) {
         if (extras != null) {
-            return extras.release(decrement);
+            extras.release(decrement);
         }
-        return false;
-    }
-
-    @Override
-    public BinaryMemcacheMessage touch() {
-        return touch(null);
+        if (key != null) {
+            key.release(decrement);
+        }
+        return super.release(decrement);
     }
 
     @Override
@@ -215,6 +218,29 @@ public abstract class AbstractBinaryMemcacheMessage
         if (extras != null) {
             extras.touch(hint);
         }
+        if (key != null) {
+            key.touch(hint);
+        }
         return this;
+    }
+
+    @Override
+    protected void deallocate() {
+
+    }
+
+    @Override
+    public ByteBuf content() {
+        return Unpooled.EMPTY_BUFFER;
+    }
+
+    @Override
+    public ByteBufHolder copy() {
+        throw new UnsupportedOperationException("This method cannot be called.");
+    }
+
+    @Override
+    public ByteBufHolder duplicate() {
+        throw new UnsupportedOperationException("This method cannot be called.");
     }
 }
