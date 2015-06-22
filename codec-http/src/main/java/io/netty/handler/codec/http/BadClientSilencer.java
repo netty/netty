@@ -13,19 +13,18 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.http.router;
+package io.netty.handler.codec.http;
 
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 /**
  * This utility handler should be put at the last position of the inbound pipeline to
  * catch all exceptions caused by bad client (closed connection, malformed request etc.)
- * and server processing.
+ * and server processing, then close the connection.
  *
  * By default exceptions are logged to Netty internal logger. You may need to override
  * {@link #onUnknownMessage(Object)}, {@link #onBadClient(Throwable)}, and

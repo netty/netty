@@ -18,6 +18,7 @@ package io.netty.example.http.router;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.BadClientSilencer;
 import io.netty.handler.codec.http.router.Router;
 
 public class HttpRouterServerInitializer extends ChannelInitializer<SocketChannel> {
