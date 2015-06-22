@@ -102,6 +102,7 @@ public class StreamBufferingEncoderTest {
         // Set LifeCycleManager on encoder and decoder
         when(ctx.channel()).thenReturn(channel);
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
+        when(ctx.newPromise()).thenReturn(promise);
         when(channel.isActive()).thenReturn(false);
         handler.handlerAdded(ctx);
     }
