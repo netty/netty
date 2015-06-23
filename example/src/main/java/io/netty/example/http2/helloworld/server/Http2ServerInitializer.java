@@ -23,6 +23,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpMessage;
+import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodec;
@@ -49,9 +50,18 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
     };
 
     private final SslContext sslCtx;
+    private final int maxHttpContentLength;
 
     public Http2ServerInitializer(SslContext sslCtx) {
+        this(sslCtx, 16 * 1024);
+    }
+
+    public Http2ServerInitializer(SslContext sslCtx, int maxHttpContentLength) {
+        if (maxHttpContentLength < 0) {
+            throw new IllegalArgumentException("maxHttpContentLength (expected >= 0): " + maxHttpContentLength);
+        }
         this.sslCtx = sslCtx;
+        this.maxHttpContentLength = maxHttpContentLength;
     }
 
     @Override
@@ -71,9 +81,9 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
     }
 
     /**
-     * Configure the pipeline for a cleartext upgrade from HTTP to HTTP/2.
+     * Configure the pipeline for a cleartext upgrade from HTTP to HTTP/2.0
      */
-    private static void configureClearText(SocketChannel ch) {
+    private void configureClearText(SocketChannel ch) {
         final ChannelPipeline p = ch.pipeline();
         final HttpServerCodec sourceCodec = new HttpServerCodec();
 
@@ -84,8 +94,10 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
             protected void channelRead0(ChannelHandlerContext ctx, HttpMessage msg) throws Exception {
                 // If this handler is hit then no upgrade has been attempted and the client is just talking HTTP.
                 System.err.println("Directly talking: " + msg.protocolVersion() + " (no upgrade was attempted)");
-                ctx.pipeline().replace(this, "http-hello-world",
-                                       new HelloWorldHttp1Handler("Direct. No Upgrade Attempted."));
+                ChannelPipeline pipeline = ctx.pipeline();
+                ChannelHandlerContext thisCtx = pipeline.context(this);
+                pipeline.addAfter(thisCtx.name(), null, new HelloWorldHttp1Handler("Direct. No Upgrade Attempted."));
+                pipeline.replace(this, null, new HttpObjectAggregator(maxHttpContentLength));
                 ctx.fireChannelRead(msg);
             }
         });
