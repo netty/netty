@@ -15,28 +15,29 @@
  */
 package io.netty.example.http2.helloworld.server;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaderUtil;
-import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpRequest;
-
 import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
 import static io.netty.handler.codec.http.HttpResponseStatus.CONTINUE;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaderUtil;
+import io.netty.handler.codec.http.HttpHeaderValues;
+
 /**
  * HTTP handler that responds with a "Hello World"
  */
-public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<HttpRequest> {
+public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<FullHttpRequest> {
     private final String establishApproach;
 
     public HelloWorldHttp1Handler(String establishApproach) {
@@ -44,7 +45,7 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<HttpRequ
     }
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, HttpRequest req) throws Exception {
+    public void channelRead0(ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
         if (HttpHeaderUtil.is100ContinueExpected(req)) {
             ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE));
         }
