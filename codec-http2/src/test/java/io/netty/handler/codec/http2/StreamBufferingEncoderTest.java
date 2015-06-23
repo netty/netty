@@ -123,6 +123,7 @@ public class StreamBufferingEncoderTest {
         verify(writer, times(1))
                 .writeData(eq(ctx), eq(3), bufCaptor.capture(), eq(0), eq(false), eq(promise));
         assertEquals(data().readableBytes() * 3, bufCaptor.getValue().readableBytes());
+        bufCaptor.getValue().release();
     }
 
     @Test
