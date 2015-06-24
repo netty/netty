@@ -27,7 +27,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -163,9 +162,6 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         }
 
         ChannelPipeline p = channel.pipeline();
-        if (handler() != null) {
-            p.addLast(handler());
-        }
 
         final EventLoopGroup currentChildGroup = childGroup;
         final ChannelHandler currentChildHandler = childHandler;
@@ -181,7 +177,12 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
             public void initChannel(Channel ch) throws Exception {
-                ch.pipeline().addLast(new ServerBootstrapAcceptor(
+                ChannelPipeline pipeline = ch.pipeline();
+                ChannelHandler handler = handler();
+                if (handler != null) {
+                    pipeline.addLast(handler);
+                }
+                pipeline.addLast(new ServerBootstrapAcceptor(
                         currentChildGroup, currentChildHandler, currentChildOptions, currentChildAttrs));
             }
         });
