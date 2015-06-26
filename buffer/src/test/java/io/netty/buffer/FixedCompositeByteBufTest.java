@@ -26,11 +26,14 @@ import java.nio.ReadOnlyBufferException;
 import java.nio.channels.ScatteringByteChannel;
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.nio.charset.Charset;
 
 import static io.netty.buffer.Unpooled.buffer;
 import static io.netty.buffer.Unpooled.compositeBuffer;
 import static io.netty.buffer.Unpooled.directBuffer;
-import static org.junit.Assert.assertArrayEquals;
+import static io.netty.buffer.Unpooled.unmodifiableBuffer;
+
+import static org.junit.Assert.*;
 
 public class FixedCompositeByteBufTest {
 
@@ -276,4 +279,64 @@ public class FixedCompositeByteBufTest {
         buf.release();
     }
 
+    @Test
+    public void testCopyingToOtherBuffer() {
+        ByteBuf buf1 = directBuffer(10);
+        ByteBuf buf2 = buffer(10);
+        ByteBuf buf3 = directBuffer(10);
+        buf1.writeBytes("a".getBytes(Charset.defaultCharset()));
+        buf2.writeBytes("b".getBytes(Charset.defaultCharset()));
+        buf3.writeBytes("c".getBytes(Charset.defaultCharset()));
+        ByteBuf composite = unmodifiableBuffer(buf1, buf2, buf3);
+        ByteBuf copy = directBuffer(3);
+        ByteBuf copy2 = buffer(3);
+        copy.setBytes(0, composite, 0, 3);
+        copy2.setBytes(0, composite, 0, 3);
+        copy.writerIndex(3);
+        copy2.writerIndex(3);
+        assertEquals(0, ByteBufUtil.compare(copy, composite));
+        assertEquals(0, ByteBufUtil.compare(copy2, composite));
+        assertEquals(0, ByteBufUtil.compare(copy, copy2));
+        copy.release();
+        copy2.release();
+        composite.release();
+    }
+
+    @Test
+    public void testCopyingToOutputStream() throws IOException {
+        ByteBuf buf1 = directBuffer(10);
+        ByteBuf buf2 = buffer(10);
+        ByteBuf buf3 = directBuffer(10);
+        buf1.writeBytes("a".getBytes(Charset.defaultCharset()));
+        buf2.writeBytes("b".getBytes(Charset.defaultCharset()));
+        buf3.writeBytes("c".getBytes(Charset.defaultCharset()));
+        ByteBuf composite = unmodifiableBuffer(buf1, buf2, buf3);
+        ByteBuf copy = directBuffer(3);
+        ByteBuf copy2 = buffer(3);
+        composite.getBytes(0, new ByteBufOutputStream(copy), 3);
+        composite.getBytes(0, new ByteBufOutputStream(copy2), 3);
+        assertEquals(0, ByteBufUtil.compare(copy, composite));
+        assertEquals(0, ByteBufUtil.compare(copy2, composite));
+        assertEquals(0, ByteBufUtil.compare(copy, copy2));
+        copy.release();
+        copy2.release();
+        composite.release();
+    }
+
+    @Test
+    public void testExtractNioBuffers() {
+        ByteBuf buf1 = directBuffer(10);
+        ByteBuf buf2 = buffer(10);
+        ByteBuf buf3 = directBuffer(10);
+        buf1.writeBytes("a".getBytes(Charset.defaultCharset()));
+        buf2.writeBytes("b".getBytes(Charset.defaultCharset()));
+        buf3.writeBytes("c".getBytes(Charset.defaultCharset()));
+        ByteBuf composite = unmodifiableBuffer(buf1, buf2, buf3);
+        ByteBuffer[] byteBuffers = composite.nioBuffers(0, 3);
+        assertEquals(3, byteBuffers.length);
+        assertEquals(1, byteBuffers[0].limit());
+        assertEquals(1, byteBuffers[1].limit());
+        assertEquals(1, byteBuffers[2].limit());
+        composite.release();
+    }
 }
