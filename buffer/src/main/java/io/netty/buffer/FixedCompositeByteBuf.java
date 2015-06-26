@@ -343,7 +343,7 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
             int adjustment = c.offset;
             ByteBuf s = c.buf;
             for (;;) {
-                int localLength = Math.min(length, s.capacity() - (index - adjustment));
+                int localLength = Math.min(length, s.readableBytes() - (index - adjustment));
                 dst.limit(dst.position() + localLength);
                 s.getBytes(index - adjustment, dst);
                 index += localLength;
@@ -372,7 +372,7 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
         int adjustment = c.offset;
         ByteBuf s = c.buf;
         for (;;) {
-            int localLength = Math.min(length, s.capacity() - (index - adjustment));
+            int localLength = Math.min(length, s.readableBytes() - (index - adjustment));
             s.getBytes(index - adjustment, dst, dstIndex, localLength);
             index += localLength;
             dstIndex += localLength;
@@ -414,7 +414,7 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
         int adjustment = c.offset;
         ByteBuf s = c.buf;
         for (;;) {
-            int localLength = Math.min(length, s.capacity() - (index - adjustment));
+            int localLength = Math.min(length, s.readableBytes() - (index - adjustment));
             s.getBytes(index - adjustment, out, localLength);
             index += localLength;
             length -= localLength;
@@ -491,7 +491,7 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
             int adjustment = c.offset;
             ByteBuf s = c.buf;
             for (;;) {
-                int localLength = Math.min(length, s.capacity() - (index - adjustment));
+                int localLength = Math.min(length, s.readableBytes() - (index - adjustment));
                 switch (s.nioBufferCount()) {
                     case 0:
                         throw new UnsupportedOperationException();
