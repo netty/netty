@@ -188,11 +188,11 @@ public class DefaultHttp2ConnectionEncoderTest {
                 }
                 writtenPadding.add((Integer) invocationOnMock.getArguments()[3]);
                 ByteBuf data = (ByteBuf) invocationOnMock.getArguments()[2];
+                // Let the promise succeed to trigger listeners.
+                receivedPromise.trySuccess();
                 writtenData.add(data.toString(UTF_8));
                 // Release the buffer just as DefaultHttp2FrameWriter does
                 data.release();
-                // Let the promise succeed to trigger listeners.
-                receivedPromise.trySuccess();
                 return future;
             }
         });
@@ -293,6 +293,29 @@ public class DefaultHttp2ConnectionEncoderTest {
         assertEquals("abc", writtenData.get(0));
         assertEquals("def", writtenData.get(1));
         assertEquals("gh", writtenData.get(2));
+        assertEquals(0, data.refCnt());
+    }
+
+    @Test
+    public void mergedDataLargerThanMaxFrameSizeShouldBeSplit() throws Exception {
+        when(frameSizePolicy.maxFrameSize()).thenReturn(3);
+        final ByteBuf data = dummyData();
+        encoder.writeData(ctx, STREAM_ID, data.slice().retain(), 0, true, promise);
+        encoder.writeData(ctx, STREAM_ID, data, 0, true, promise);
+        List<FlowControlled> capturedWrites = payloadCaptor.getAllValues();
+        FlowControlled mergedPayload = capturedWrites.get(0);
+        mergedPayload.merge(capturedWrites.get(1));
+
+        assertEquals(mergedPayload.size(), 16);
+        mergedPayload.write(16);
+        // writer was called 3 times
+        assertEquals(6, writtenData.size());
+        assertEquals("abc", writtenData.get(0));
+        assertEquals("def", writtenData.get(1));
+        assertEquals("gha", writtenData.get(2));
+        assertEquals("bcd", writtenData.get(3));
+        assertEquals("efg", writtenData.get(4));
+        assertEquals("h", writtenData.get(5));
         assertEquals(0, data.refCnt());
     }
 

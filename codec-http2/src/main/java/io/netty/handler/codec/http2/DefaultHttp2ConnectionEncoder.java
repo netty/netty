@@ -15,6 +15,7 @@
 package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
+import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -30,6 +31,7 @@ import io.netty.handler.codec.http2.Http2Exception.ClosedStreamCreationException
 import io.netty.util.ReferenceCountUtil;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 
 /**
  * Default implementation of {@link Http2ConnectionEncoder}.
@@ -317,85 +319,98 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
      * </p>
      */
     private final class FlowControlledData extends FlowControlledBase {
-        private ByteBuf data;
+        private final ArrayDeque<Object> bufsAndPromises = new ArrayDeque<Object>();
         private int size;
+        private int padding;
 
         private FlowControlledData(ChannelHandlerContext ctx, Http2Stream stream, ByteBuf buf, int padding,
                                     boolean endOfStream, ChannelPromise promise) {
             super(ctx, stream, padding, endOfStream, promise);
-            this.data = buf;
-            size = data.readableBytes() + padding;
+            if (!promise.isVoid()) {
+                bufsAndPromises.add(promise);
+            }
+            bufsAndPromises.add(buf);
+            this.padding = padding;
+            size = buf.readableBytes();
         }
 
         @Override
         public int size() {
-            return size;
+            return size + padding;
         }
 
         @Override
         public void error(Throwable cause) {
-            ReferenceCountUtil.safeRelease(data);
-            lifecycleManager.onException(ctx, cause);
-            data = null;
+            while (!bufsAndPromises.isEmpty()) {
+                Object bufOrPromise = bufsAndPromises.remove();
+                if (bufOrPromise instanceof ByteBuf) {
+                    ReferenceCountUtil.safeRelease(bufOrPromise);
+                } else {
+                    ((ChannelPromise) bufOrPromise).tryFailure(cause);
+                }
+            }
             size = 0;
-            promise.tryFailure(cause);
+            padding = 0;
+            lifecycleManager.onException(ctx, cause);
         }
 
         @Override
         public void write(int allowedBytes) {
             int bytesWritten = 0;
-            if (data == null || (allowedBytes == 0 && size != 0)) {
+            if (bufsAndPromises.isEmpty() || (allowedBytes == 0 && size != 0)) {
                 // No point writing an empty DATA frame, wait for a bigger allowance.
                 return;
             }
-            try {
-                int maxFrameSize = frameWriter().configuration().frameSizePolicy().maxFrameSize();
-                do {
-                    int allowedFrameSize = Math.min(maxFrameSize, allowedBytes - bytesWritten);
-                    ByteBuf toWrite;
-                    // Let data consume the frame before padding.
-                    int writeableData = data.readableBytes();
-                    if (writeableData > allowedFrameSize) {
-                        writeableData = allowedFrameSize;
-                        toWrite = data.readSlice(writeableData).retain();
+            int maxFrameSize = frameWriter().configuration().frameSizePolicy().maxFrameSize();
+            do {
+                int allowedFrameSize = Math.min(maxFrameSize, allowedBytes - bytesWritten);
+
+                // Always need a real promise for write as we have to listen to it for failure.
+                ChannelPromise promise = ctx.newPromise();
+                promise.addListener(this);
+                CompositeByteBuf toWrite = ctx.alloc().compositeBuffer(bufsAndPromises.size());
+                while (!bufsAndPromises.isEmpty()) {
+                    final Object entry = bufsAndPromises.peek();
+                    if (entry instanceof ByteBuf) {
+                        ByteBuf buf = (ByteBuf) entry;
+                        if (toWrite.readableBytes() + buf.readableBytes() > allowedFrameSize) {
+                            ByteBuf slice = buf.readSlice(allowedFrameSize - toWrite.readableBytes());
+                            toWrite.addComponent(slice);
+                            toWrite.writerIndex(toWrite.writerIndex() + slice.readableBytes());
+                            // The remaining buffer is kept as a retained slice of the original
+                            bufsAndPromises.remove();
+                            bufsAndPromises.addFirst(buf.slice().retain());
+                            break;
+                        } else {
+                            toWrite.addComponent(buf);
+                            toWrite.writerIndex(toWrite.writerIndex() + buf.readableBytes());
+                            bufsAndPromises.remove();
+                        }
                     } else {
-                        // We're going to write the full buffer which will cause it to be released, for subsequent
-                        // writes just use empty buffer to avoid over-releasing. Have to use an empty buffer
-                        // as we may continue to write padding in subsequent frames.
-                        toWrite = data;
-                        data = Unpooled.EMPTY_BUFFER;
+                        bufsAndPromises.remove();
+                        final ChannelPromise nested = (ChannelPromise) entry;
+                        if (!nested.isVoid()) {
+                            promise.addListener(new ChannelFutureListener() {
+                                @Override
+                                public void operationComplete(ChannelFuture future) throws Exception {
+                                    if (future.isSuccess()) {
+                                        nested.trySuccess();
+                                    } else {
+                                        nested.tryFailure(future.cause());
+                                    }
+                                }
+                            });
+                        }
                     }
-                    int writeablePadding = Math.min(allowedFrameSize - writeableData, padding);
-                    padding -= writeablePadding;
-                    bytesWritten += writeableData + writeablePadding;
-                    ChannelPromise writePromise;
-                    if (size == bytesWritten && !promise.isVoid()) {
-                        // Can use the original promise if it's the last write
-                        writePromise = promise;
-                    } else {
-                        // Create a new promise and listen to it for failure
-                        writePromise = ctx.newPromise();
-                        writePromise.addListener(this);
-                    }
-                    if (toWrite instanceof SlicedByteBuf && data instanceof CompositeByteBuf) {
-                        // If we're writing a subset of a composite buffer then we want to release
-                        // any underlying buffers that have been consumed. CompositeByteBuf only releases
-                        // underlying buffers on write if all of its data has been consumed and its refCnt becomes
-                        // 0.
-                        final CompositeByteBuf toFree = (CompositeByteBuf) data;
-                        writePromise.addListener(new ChannelFutureListener() {
-                            @Override
-                            public void operationComplete(ChannelFuture future) throws Exception {
-                                toFree.discardReadComponents();
-                            }
-                        });
-                    }
-                    frameWriter().writeData(ctx, stream.id(), toWrite, writeablePadding,
-                            size == bytesWritten && endOfStream, writePromise);
-                } while (size != bytesWritten && allowedBytes > bytesWritten);
-            } finally {
-                size -= bytesWritten;
-            }
+                }
+
+                int writeablePadding = Math.min(allowedFrameSize - toWrite.readableBytes(), padding);
+                size -= toWrite.readableBytes();
+                padding -= writeablePadding;
+                bytesWritten += toWrite.readableBytes() + writeablePadding;
+                frameWriter().writeData(ctx, stream.id(), toWrite, writeablePadding,
+                        size == 0 && padding == 0 && endOfStream, promise);
+            } while (size + padding > 0 && allowedBytes > bytesWritten);
         }
 
         @Override
@@ -407,35 +422,10 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             // Given that we're merging data into a frame it doesn't really make sense to accumulate padding.
             padding = Math.max(nextData.padding, padding);
             endOfStream = nextData.endOfStream;
-            final CompositeByteBuf compositeByteBuf;
-            if (data instanceof CompositeByteBuf) {
-                compositeByteBuf = (CompositeByteBuf) data;
-            } else {
-                compositeByteBuf = ctx.alloc().compositeBuffer(Integer.MAX_VALUE);
-                compositeByteBuf.addComponent(data);
-                compositeByteBuf.writerIndex(data.readableBytes());
-                data = compositeByteBuf;
-            }
-            compositeByteBuf.addComponent(nextData.data);
-            compositeByteBuf.writerIndex(compositeByteBuf.writerIndex() + nextData.data.readableBytes());
-            size = data.readableBytes() + padding;
-            if (!nextData.promise.isVoid()) {
-                // Replace current promise if void otherwise chain them.
-                if (promise.isVoid()) {
-                    promise = nextData.promise;
-                } else {
-                    promise.addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            if (future.isSuccess()) {
-                                nextData.promise.trySuccess();
-                            } else {
-                                nextData.promise.tryFailure(future.cause());
-                            }
-                        }
-                    });
-                }
-            }
+            bufsAndPromises.addAll(nextData.bufsAndPromises);
+            // Us the next promise for writeComplete
+            this.promise = nextData.promise;
+            size += nextData.size;
             return true;
         }
     }
@@ -460,6 +450,9 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             this.streamDependency = streamDependency;
             this.weight = weight;
             this.exclusive = exclusive;
+            if (!promise.isVoid()) {
+                promise.addListener(this);
+            }
         }
 
         @Override
@@ -510,9 +503,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             this.endOfStream = endOfStream;
             this.stream = stream;
             this.promise = promise;
-            if (!promise.isVoid()) {
-                promise.addListener(this);
-            }
         }
 
         @Override
