@@ -315,6 +315,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
      * </p>
      */
     private final class FlowControlledData extends FlowControlledBase {
+        // Promises always precede their associated buffer in the queue
         private final ArrayDeque<Object> bufsAndPromises = new ArrayDeque<Object>();
         private int size;
         private int padding;
@@ -359,48 +360,45 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             }
             int maxFrameSize = frameWriter().configuration().frameSizePolicy().maxFrameSize();
             do {
-                int allowedFrameSize = Math.min(maxFrameSize, allowedBytes - bytesWritten);
+                int frameAllowance = Math.min(maxFrameSize, allowedBytes - bytesWritten);
 
                 // Always need a real promise for write as we have to listen to it for failure.
                 ChannelPromise promise = ctx.newPromise();
                 promise.addListener(this);
                 CompositeByteBuf toWrite = ctx.alloc().compositeBuffer(bufsAndPromises.size());
                 while (!bufsAndPromises.isEmpty()) {
-                    final Object entry = bufsAndPromises.peek();
+                    final Object entry = bufsAndPromises.remove();
                     if (entry instanceof ByteBuf) {
                         ByteBuf buf = (ByteBuf) entry;
-                        if (toWrite.readableBytes() + buf.readableBytes() > allowedFrameSize) {
-                            ByteBuf slice = buf.readSlice(allowedFrameSize - toWrite.readableBytes());
+                        if (buf.readableBytes() > frameAllowance) {
+                            ByteBuf slice = buf.readSlice(frameAllowance);
                             toWrite.addComponent(slice);
                             toWrite.writerIndex(toWrite.writerIndex() + slice.readableBytes());
                             // The remaining buffer is kept as a retained slice of the original
-                            bufsAndPromises.remove();
                             bufsAndPromises.addFirst(buf.slice().retain());
+                            frameAllowance = 0;
                             break;
                         } else {
                             toWrite.addComponent(buf);
                             toWrite.writerIndex(toWrite.writerIndex() + buf.readableBytes());
-                            bufsAndPromises.remove();
+                            frameAllowance -= buf.readableBytes();
                         }
                     } else {
-                        bufsAndPromises.remove();
                         final ChannelPromise nested = (ChannelPromise) entry;
-                        if (!nested.isVoid()) {
-                            promise.addListener(new ChannelFutureListener() {
-                                @Override
-                                public void operationComplete(ChannelFuture future) throws Exception {
-                                    if (future.isSuccess()) {
-                                        nested.trySuccess();
-                                    } else {
-                                        nested.tryFailure(future.cause());
-                                    }
+                        promise.addListener(new ChannelFutureListener() {
+                            @Override
+                            public void operationComplete(ChannelFuture future) throws Exception {
+                                if (future.isSuccess()) {
+                                    nested.trySuccess();
+                                } else {
+                                    nested.tryFailure(future.cause());
                                 }
-                            });
-                        }
+                            }
+                        });
                     }
                 }
 
-                int writeablePadding = Math.min(allowedFrameSize - toWrite.readableBytes(), padding);
+                int writeablePadding = Math.min(frameAllowance, padding);
                 size -= toWrite.readableBytes();
                 padding -= writeablePadding;
                 bytesWritten += toWrite.readableBytes() + writeablePadding;
@@ -419,7 +417,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             padding = Math.max(nextData.padding, padding);
             endOfStream = nextData.endOfStream;
             bufsAndPromises.addAll(nextData.bufsAndPromises);
-            // Us the next promise for writeComplete
+            // Use the next promise for writeComplete
             this.promise = nextData.promise;
             size += nextData.size;
             return true;
