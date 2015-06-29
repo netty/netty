@@ -22,6 +22,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
@@ -73,22 +74,41 @@ public class EmbeddedChannel extends AbstractChannel {
      *
      * @param handlers the @link ChannelHandler}s which will be add in the {@link ChannelPipeline}
      */
-    public EmbeddedChannel(ChannelHandler... handlers) {
+    public EmbeddedChannel(final ChannelHandler... handlers) {
         super(null, EmbeddedChannelId.INSTANCE);
 
         if (handlers == null) {
             throw new NullPointerException("handlers");
         }
 
-        ChannelPipeline p = pipeline();
+        int nHandlers = 0;
         for (ChannelHandler h: handlers) {
             if (h == null) {
                 break;
             }
-            p.addLast(h);
+            nHandlers ++;
         }
 
-        loop.register(this);
+        if (nHandlers == 0) {
+            throw new IllegalArgumentException("handlers is empty.");
+        }
+
+        ChannelPipeline p = pipeline();
+        p.addLast(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ChannelPipeline pipeline = ch.pipeline();
+                for (ChannelHandler h: handlers) {
+                    if (h == null) {
+                        break;
+                    }
+                    pipeline.addLast(h);
+                }
+            }
+        });
+
+        ChannelFuture future = loop.register(this);
+        assert future.isDone();
         p.addLast(new LastInboundHandler());
     }
 
