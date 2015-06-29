@@ -17,6 +17,7 @@ package io.netty.channel.embedded;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
@@ -29,6 +30,7 @@ import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class EmbeddedChannelTest {
 
@@ -94,5 +96,30 @@ public class EmbeddedChannelTest {
         }, 1, TimeUnit.DAYS);
         ch.finish();
         Assert.assertTrue(future.isCancelled());
+    }
+
+    @Test(timeout = 3000)
+    public void testHandlerAddedExecutedInEventLoop() throws Throwable {
+        final CountDownLatch latch = new CountDownLatch(1);
+        final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+        final ChannelHandler handler = new ChannelHandlerAdapter() {
+            @Override
+            public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                try {
+                    Assert.assertTrue(ctx.executor().inEventLoop());
+                } catch (Throwable cause) {
+                    error.set(cause);
+                } finally {
+                    latch.countDown();
+                }
+            }
+        };
+        EmbeddedChannel channel = new EmbeddedChannel(handler);
+        Assert.assertFalse(channel.finish());
+        latch.await();
+        Throwable cause = error.get();
+        if (cause != null) {
+            throw cause;
+        }
     }
 }
