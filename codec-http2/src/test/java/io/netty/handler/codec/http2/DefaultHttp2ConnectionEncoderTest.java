@@ -45,6 +45,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
@@ -219,6 +220,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         when(ctx.newPromise()).thenReturn(promise);
         when(ctx.write(any())).thenReturn(future);
         when(ctx.flush()).thenThrow(new AssertionFailedError("forbidden"));
+        when(channel.alloc()).thenReturn(PooledByteBufAllocator.DEFAULT);
 
         encoder = new DefaultHttp2ConnectionEncoder(connection, writer);
         encoder.lifecycleManager(lifecycleManager);
