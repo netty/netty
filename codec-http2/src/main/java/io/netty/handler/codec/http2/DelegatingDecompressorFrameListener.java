@@ -24,7 +24,6 @@ import static io.netty.handler.codec.http.HttpHeaderValues.X_GZIP;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -296,6 +295,11 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         }
 
         @Override
+        public void channelHandlerContext(ChannelHandlerContext ctx) throws Http2Exception {
+            flowController.channelHandlerContext(ctx);
+        }
+
+        @Override
         public void initialWindowSize(int newWindowSize) throws Http2Exception {
             flowController.initialWindowSize(newWindowSize);
         }
@@ -316,20 +320,18 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         }
 
         @Override
-        public void incrementWindowSize(ChannelHandlerContext ctx, Http2Stream stream, int delta)
-                throws Http2Exception {
-            flowController.incrementWindowSize(ctx, stream, delta);
+        public void incrementWindowSize(Http2Stream stream, int delta) throws Http2Exception {
+            flowController.incrementWindowSize(stream, delta);
         }
 
         @Override
-        public void receiveFlowControlledFrame(ChannelHandlerContext ctx, Http2Stream stream,
-                ByteBuf data, int padding, boolean endOfStream) throws Http2Exception {
-            flowController.receiveFlowControlledFrame(ctx, stream, data, padding, endOfStream);
+        public void receiveFlowControlledFrame(Http2Stream stream, ByteBuf data, int padding,
+                boolean endOfStream) throws Http2Exception {
+            flowController.receiveFlowControlledFrame(stream, data, padding, endOfStream);
         }
 
         @Override
-        public boolean consumeBytes(ChannelHandlerContext ctx, Http2Stream stream, int numBytes)
-                throws Http2Exception {
+        public boolean consumeBytes(Http2Stream stream, int numBytes) throws Http2Exception {
             Http2Decompressor decompressor = decompressor(stream);
             Http2Decompressor copy = null;
             try {
@@ -339,7 +341,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
                     // Convert the uncompressed consumed bytes to compressed (on the wire) bytes.
                     numBytes = decompressor.consumeProcessedBytes(numBytes);
                 }
-                return flowController.consumeBytes(ctx, stream, numBytes);
+                return flowController.consumeBytes(stream, numBytes);
             } catch (Http2Exception e) {
                 if (copy != null) {
                     stream.setProperty(propertyKey, copy);
