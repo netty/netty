@@ -23,7 +23,6 @@ import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
-
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Stream.State;
 
@@ -35,6 +34,7 @@ import java.util.Deque;
  * Basic implementation of {@link Http2RemoteFlowController}.
  */
 public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowController {
+    private static final int MIN_WRITABLE_CHUNK = 32 * 1024;
     private final Http2StreamVisitor WRITE_ALLOCATED_BYTES = new Http2StreamVisitor() {
         @Override
         public boolean visit(Http2Stream stream) {
@@ -139,6 +139,29 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         });
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Any queued {@link FlowControlled} objects will be sent.
+     */
+    @Override
+    public void channelHandlerContext(ChannelHandlerContext ctx) throws Http2Exception {
+        this.ctx = ctx;
+
+        // Don't worry about cleaning up queued frames here if ctx is null. It is expected that all streams will be
+        // closed and the queue cleanup will occur when the stream state transitions occur.
+
+        // If any frames have been queued up, we should send them now that we have a channel context.
+        if (ctx != null && ctx.channel().isWritable()) {
+            writePendingBytes();
+        }
+    }
+
+    @Override
+    public ChannelHandlerContext channelHandlerContext() {
+        return ctx;
+    }
+
     @Override
     public void initialWindowSize(int newWindowSize) throws Http2Exception {
         if (newWindowSize < 0) {
@@ -178,8 +201,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     }
 
     @Override
-    public void incrementWindowSize(ChannelHandlerContext ctx, Http2Stream stream, int delta) throws Http2Exception {
-        // This call does not trigger any writes, all writes will occur when writePendingBytes is called.
+    public void incrementWindowSize(Http2Stream stream, int delta) throws Http2Exception {
         if (stream.id() == CONNECTION_STREAM_ID) {
             // Update the connection window
             connectionState().incrementStreamWindow(delta);
@@ -201,20 +223,15 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     }
 
     @Override
-    public void addFlowControlled(ChannelHandlerContext ctx, Http2Stream stream, FlowControlled frame) {
-        checkNotNull(ctx, "ctx");
+    public void addFlowControlled(Http2Stream stream, FlowControlled frame) {
         checkNotNull(frame, "frame");
-        if (this.ctx != null && this.ctx != ctx) {
-            throw new IllegalArgumentException("Writing data from multiple ChannelHandlerContexts is not supported");
-        }
-        // Save the context. We'll use this later when we write pending bytes.
-        this.ctx = ctx;
         final AbstractState state;
         try {
             state = state(stream);
             state.enqueueFrame(frame);
         } catch (Throwable t) {
-            frame.error(t);
+            frame.error(ctx, t);
+            return;
         }
     }
 
@@ -241,13 +258,40 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         return connectionState().windowSize();
     }
 
+    private int minUsableChannelBytes() {
+        // The current allocation algorithm values "fairness" and doesn't give any consideration to "goodput". It
+        // is possible that 1 byte will be allocated to many streams. In an effort to try to make "goodput"
+        // reasonable with the current allocation algorithm we have this "cheap" check up front to ensure there is
+        // an "adequate" amount of connection window before allocation is attempted. This is not foolproof as if the
+        // number of streams is >= this minimal number then we may still have the issue, but the idea is to narrow the
+        // circumstances in which this can happen without rewriting the allocation algorithm.
+        return Math.max(ctx.channel().config().getWriteBufferLowWaterMark(), MIN_WRITABLE_CHUNK);
+    }
+
+    private int maxUsableChannelBytes() {
+        if (ctx == null) {
+            return 0;
+        }
+
+        // If the channel isWritable, allow at least minUseableChannelBytes.
+        int channelWritableBytes = (int) Math.min(Integer.MAX_VALUE, ctx.channel().bytesBeforeUnwritable());
+        int useableBytes = channelWritableBytes > 0 ? max(channelWritableBytes, minUsableChannelBytes()) : 0;
+
+        // Clip the usable bytes by the connection window.
+        return min(connectionState().windowSize(), useableBytes);
+    }
+
+    private int writableBytes(int requestedBytes) {
+        return Math.min(requestedBytes, maxUsableChannelBytes());
+    }
+
     /**
      * Writes as many pending bytes as possible, according to stream priority.
      */
     @Override
     public void writePendingBytes() throws Http2Exception {
         Http2Stream connectionStream = connection.connectionStream();
-        int connectionWindowSize = state(connectionStream).windowSize();
+        int connectionWindowSize = writableBytes(state(connectionStream).windowSize());
 
         if (connectionWindowSize > 0) {
             // Allocate the bytes for the connection window to the streams, but do not write.
@@ -395,10 +439,10 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                 // Initial size is 1/4 the number of children. Clipping the minimum at 2, which will over allocate if
                 // maxSize == 1 but if this was true we shouldn't need to re-allocate because the 1 child should get
                 // all of the available connection window.
-                stillHungry = new Http2Stream[max(2, maxSize / 4)];
+                stillHungry = new Http2Stream[max(2, maxSize >>> 2)];
             } else if (index == stillHungry.length) {
                 // Grow the array by a factor of 2.
-                stillHungry = Arrays.copyOf(stillHungry, min(maxSize, stillHungry.length * 2));
+                stillHungry = Arrays.copyOf(stillHungry, min(maxSize, stillHungry.length << 1));
             }
         }
     }
@@ -536,7 +580,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         void enqueueFrame(FlowControlled frame) {
             incrementPendingBytes(frame.size());
             FlowControlled last = pendingWriteQueue.peekLast();
-            if (last == null || !last.merge(frame)) {
+            if (last == null || !last.merge(ctx, frame)) {
                 pendingWriteQueue.offer(frame);
             }
         }
@@ -580,19 +624,30 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
         @Override
         int writeBytes(int bytes) {
-            boolean wrote = false;
-            int bytesAttempted = 0;
-            int writableBytes = min(bytes, writableWindow());
-            while (hasFrame() && (writableBytes > 0 || peek().size() == 0)) {
-                wrote = true;
-                bytesAttempted += write(peek(), writableBytes);
-                writableBytes = min(bytes - bytesAttempted, writableWindow());
-            }
-            if (wrote) {
-                return bytesAttempted;
-            } else {
+            if (!hasFrame()) {
                 return -1;
             }
+            // Check if the first frame is a "writable" frame to get the "-1" return status out of the way
+            FlowControlled frame = peek();
+            int maxBytes = min(bytes, writableWindow());
+            if (maxBytes <= 0 && frame.size() != 0) {
+                // The frame had data and all of it was written.
+                return -1;
+            }
+            int originalBytes = bytes;
+            bytes -= write(frame, maxBytes);
+
+            // Write the remainder of frames that we are allowed to
+            while (hasFrame()) {
+                frame = peek();
+                maxBytes = min(bytes, writableWindow());
+                if (maxBytes <= 0 && frame.size() != 0) {
+                    // The frame had data and all of it was written.
+                    break;
+                }
+                bytes -= write(frame, maxBytes);
+            }
+            return originalBytes - bytes;
         }
 
         /**
@@ -609,7 +664,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
                 // Write the portion of the frame.
                 writing = true;
-                frame.write(max(0, allowedBytes));
+                frame.write(ctx, max(0, allowedBytes));
                 if (!cancelled && frame.size() == 0) {
                     // This frame has been fully written, remove this frame and notify it. Since we remove this frame
                     // first, we're guaranteed that its error method will not be called when we call cancel.
@@ -677,8 +732,9 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          * the unwritten bytes are removed from this branch of the priority tree.
          */
         private void writeError(FlowControlled frame, Http2Exception cause) {
+            assert ctx != null;
             decrementPendingBytes(frame.size());
-            frame.error(cause);
+            frame.error(ctx, cause);
         }
     }
 
