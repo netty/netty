@@ -356,9 +356,11 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        // Initialize the encoder and decoder.
+        // Initialize the encoder, decoder, flow controllers, and internal state.
         encoder.lifecycleManager(this);
         decoder.lifecycleManager(this);
+        encoder.flowController().channelHandlerContext(ctx);
+        decoder.flowController().channelHandlerContext(ctx);
         byteDecoder = new PrefaceDecoder(ctx);
     }
 
@@ -382,10 +384,22 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         if (byteDecoder != null) {
+            encoder.flowController().channelHandlerContext(null);
+            decoder.flowController().channelHandlerContext(null);
             byteDecoder.channelInactive(ctx);
             super.channelInactive(ctx);
             byteDecoder = null;
         }
+    }
+
+    @Override
+    public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+        // Writability is expected to change while we are writing. We cannot allow this event to trigger reentering
+        // the allocation and write loop. Reentering the event loop will lead to over or illegal allocation.
+        if (ctx.channel().isWritable()) {
+            encoder.flowController().writePendingBytes();
+        }
+        super.channelWritabilityChanged(ctx);
     }
 
     @Override

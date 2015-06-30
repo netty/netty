@@ -192,8 +192,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             if (stream == null || stream.isResetSent() || streamCreatedAfterGoAwaySent(streamId)) {
                 // Ignoring this frame. We still need to count the frame towards the connection flow control
                 // window, but we immediately mark all bytes as consumed.
-                flowController.receiveFlowControlledFrame(ctx, stream, data, padding, endOfStream);
-                flowController.consumeBytes(ctx, stream, bytesToReturn);
+                flowController.receiveFlowControlledFrame(stream, data, padding, endOfStream);
+                flowController.consumeBytes(stream, bytesToReturn);
 
                 // Verify that the stream may have existed after we apply flow control.
                 verifyStreamMayHaveExisted(streamId);
@@ -220,7 +220,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
             int unconsumedBytes = unconsumedBytes(stream);
             try {
-                flowController.receiveFlowControlledFrame(ctx, stream, data, padding, endOfStream);
+                flowController.receiveFlowControlledFrame(stream, data, padding, endOfStream);
                 // Update the unconsumed bytes after flow control is applied.
                 unconsumedBytes = unconsumedBytes(stream);
 
@@ -249,7 +249,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 throw e;
             } finally {
                 // If appropriate, return the processed bytes to the flow controller.
-                flowController.consumeBytes(ctx, stream, bytesToReturn);
+                flowController.consumeBytes(stream, bytesToReturn);
 
                 if (endOfStream) {
                     lifecycleManager.closeStreamRemote(stream, ctx.newSucceededFuture());
@@ -514,7 +514,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             }
 
             // Update the outbound flow control window.
-            encoder.flowController().incrementWindowSize(ctx, stream, windowSizeIncrement);
+            encoder.flowController().incrementWindowSize(stream, windowSizeIncrement);
 
             listener.onWindowUpdateRead(ctx, streamId, windowSizeIncrement);
         }

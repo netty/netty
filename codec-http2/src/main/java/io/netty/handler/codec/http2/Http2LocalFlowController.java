@@ -15,11 +15,9 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerContext;
 
 /**
- * A {@link Http2FlowController} for controlling the inbound flow of {@code DATA} frames from the remote
- * endpoint.
+ * A {@link Http2FlowController} for controlling the inbound flow of {@code DATA} frames from the remote endpoint.
  */
 public interface Http2LocalFlowController extends Http2FlowController {
 
@@ -40,7 +38,7 @@ public interface Http2LocalFlowController extends Http2FlowController {
      * @param endOfStream Indicates whether this is the last frame to be sent from the remote endpoint for this stream.
      * @throws Http2Exception if any flow control errors are encountered.
      */
-    void receiveFlowControlledFrame(ChannelHandlerContext ctx, Http2Stream stream, ByteBuf data, int padding,
+    void receiveFlowControlledFrame(Http2Stream stream, ByteBuf data, int padding,
                                     boolean endOfStream) throws Http2Exception;
 
     /**
@@ -52,7 +50,6 @@ public interface Http2LocalFlowController extends Http2FlowController {
      * If {@code stream} is {@code null} or closed (i.e. {@link Http2Stream#state()} method returns {@link
      * Http2Stream.State#CLOSED}), calling this method has no effect.
      *
-     * @param ctx the channel handler context to use when sending a {@code WINDOW_UPDATE} if appropriate
      * @param stream the stream for which window space should be freed. The connection stream object must not be used.
      * If {@code stream} is {@code null} or closed (i.e. {@link Http2Stream#state()} method returns {@link
      * Http2Stream.State#CLOSED}), calling this method has no effect.
@@ -61,7 +58,7 @@ public interface Http2LocalFlowController extends Http2FlowController {
      * @throws Http2Exception if the number of bytes returned exceeds the {@link #unconsumedBytes(Http2Stream)} for the
      * stream.
      */
-    boolean consumeBytes(ChannelHandlerContext ctx, Http2Stream stream, int numBytes) throws Http2Exception;
+    boolean consumeBytes(Http2Stream stream, int numBytes) throws Http2Exception;
 
     /**
      * The number of bytes for the given stream that have been received but not yet consumed by the
