@@ -47,22 +47,25 @@ public final class NoopHttp2LocalFlowController implements Http2LocalFlowControl
     }
 
     @Override
-    public void incrementWindowSize(ChannelHandlerContext ctx, Http2Stream stream, int delta)
+    public void incrementWindowSize(Http2Stream stream, int delta) throws Http2Exception {
+    }
+
+    @Override
+    public void receiveFlowControlledFrame(Http2Stream stream, ByteBuf data, int padding, boolean endOfStream)
             throws Http2Exception {
     }
 
     @Override
-    public void receiveFlowControlledFrame(ChannelHandlerContext ctx, Http2Stream stream, ByteBuf data,
-            int padding, boolean endOfStream) throws Http2Exception {
-    }
-
-    @Override
-    public boolean consumeBytes(ChannelHandlerContext ctx, Http2Stream stream, int numBytes) throws Http2Exception {
+    public boolean consumeBytes(Http2Stream stream, int numBytes) throws Http2Exception {
         return false;
     }
 
     @Override
     public int unconsumedBytes(Http2Stream stream) {
         return 0;
+    }
+
+    @Override
+    public void channelHandlerContext(ChannelHandlerContext ctx) throws Http2Exception {
     }
 }
