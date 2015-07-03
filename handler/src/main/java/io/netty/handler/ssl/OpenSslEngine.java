@@ -652,6 +652,12 @@ public final class OpenSslEngine extends SSLEngine {
             do {
                 ByteBuffer src = srcs[srcsOffset];
                 int remaining = src.remaining();
+                if (remaining == 0) {
+                    // We must skip empty buffers as BIO_write will return 0 if asked to write something
+                    // with length 0.
+                    srcsOffset ++;
+                    continue;
+                }
                 int written = writeEncryptedData(src);
                 if (written > 0) {
                     bytesConsumed += written;
