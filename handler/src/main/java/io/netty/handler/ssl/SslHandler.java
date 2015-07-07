@@ -1026,9 +1026,26 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 offset += consumed;
                 length -= consumed;
 
-                if (status == Status.CLOSED) {
+                switch (status) {
+                case BUFFER_OVERFLOW:
+                    int readableBytes = decodeOut.readableBytes();
+                    if (readableBytes > 0) {
+                        decoded = true;
+                        ctx.fireChannelRead(decodeOut);
+                    } else {
+                        decodeOut.release();
+                    }
+                    // Allocate a new buffer which can hold all the rest data and loop again.
+                    // TODO: We may want to reconsider how we calculate the length here as we may
+                    // have more then one ssl message to decode.
+                    decodeOut = allocate(ctx, engine.getSession().getApplicationBufferSize() - readableBytes);
+                    continue;
+                case CLOSED:
                     // notify about the CLOSED state of the SSLEngine. See #137
                     notifyClosure = true;
+                    break;
+                default:
+                    break;
                 }
 
                 switch (handshakeStatus) {
@@ -1092,6 +1109,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private SSLEngineResult unwrap(
             SSLEngine engine, ByteBuf in, int readerIndex, int len, ByteBuf out) throws SSLException {
         int nioBufferCount = in.nioBufferCount();
+        int writerIndex = out.writerIndex();
+        final SSLEngineResult result;
         if (engine instanceof OpenSslEngine && nioBufferCount > 1) {
             /**
              * If {@link OpenSslEngine} is in use,
@@ -1099,77 +1118,24 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
              * that accepts multiple {@link ByteBuffer}s without additional memory copies.
              */
             OpenSslEngine opensslEngine = (OpenSslEngine) engine;
-            int overflows = 0;
-            ByteBuffer[] in0 = in.nioBuffers(readerIndex, len);
             try {
-                for (;;) {
-                    int writerIndex = out.writerIndex();
-                    int writableBytes = out.writableBytes();
-                    ByteBuffer out0;
-                    if (out.nioBufferCount() == 1) {
-                        out0 = out.internalNioBuffer(writerIndex, writableBytes);
-                    } else {
-                        out0 = out.nioBuffer(writerIndex, writableBytes);
-                    }
-                    singleBuffer[0] = out0;
-                    SSLEngineResult result = opensslEngine.unwrap(in0, singleBuffer);
-                    out.writerIndex(out.writerIndex() + result.bytesProduced());
-                    switch (result.getStatus()) {
-                        case BUFFER_OVERFLOW:
-                            int max = engine.getSession().getApplicationBufferSize();
-                            switch (overflows ++) {
-                                case 0:
-                                    out.ensureWritable(Math.min(max, in.readableBytes()));
-                                    break;
-                                default:
-                                    out.ensureWritable(max);
-                            }
-                            break;
-                        default:
-                            return result;
-                    }
-                }
+                singleBuffer[0] = toByteBuffer(out, writerIndex, out.writableBytes());
+                result = opensslEngine.unwrap(in.nioBuffers(readerIndex, len), singleBuffer);
+                out.writerIndex(writerIndex + result.bytesProduced());
             } finally {
                 singleBuffer[0] = null;
             }
         } else {
-            int overflows = 0;
-            ByteBuffer in0;
-            if (nioBufferCount == 1) {
-                // Use internalNioBuffer to reduce object creation.
-                in0 = in.internalNioBuffer(readerIndex, len);
-            } else {
-                // This should never be true as this is only the case when OpenSslEngine is used, anyway lets
-                // guard against it.
-                in0 = in.nioBuffer(readerIndex, len);
-            }
-            for (;;) {
-                int writerIndex = out.writerIndex();
-                int writableBytes = out.writableBytes();
-                ByteBuffer out0;
-                if (out.nioBufferCount() == 1) {
-                    out0 = out.internalNioBuffer(writerIndex, writableBytes);
-                } else {
-                    out0 = out.nioBuffer(writerIndex, writableBytes);
-                }
-                SSLEngineResult result = engine.unwrap(in0, out0);
-                out.writerIndex(out.writerIndex() + result.bytesProduced());
-                switch (result.getStatus()) {
-                    case BUFFER_OVERFLOW:
-                        int max = engine.getSession().getApplicationBufferSize();
-                        switch (overflows ++) {
-                            case 0:
-                                out.ensureWritable(Math.min(max, in.readableBytes()));
-                                break;
-                            default:
-                                out.ensureWritable(max);
-                        }
-                        break;
-                    default:
-                        return result;
-                }
-            }
+            result = engine.unwrap(toByteBuffer(in, readerIndex, len),
+                                                   toByteBuffer(out, writerIndex, out.writableBytes()));
         }
+        out.writerIndex(writerIndex + result.bytesProduced());
+        return result;
+    }
+
+    private static ByteBuffer toByteBuffer(ByteBuf out, int index, int len) {
+        return out.nioBufferCount() == 1 ? out.internalNioBuffer(index, len) :
+                out.nioBuffer(index, len);
     }
 
     /**
