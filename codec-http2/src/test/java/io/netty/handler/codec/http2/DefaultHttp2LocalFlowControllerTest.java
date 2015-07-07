@@ -247,6 +247,16 @@ public class DefaultHttp2LocalFlowControllerTest {
         testRatio(ratio, DEFAULT_WINDOW_SIZE << 1, 3, true);
     }
 
+    @Test
+    public void consumeBytesForZeroNumBytesShouldIgnore() throws Http2Exception {
+        assertFalse(controller.consumeBytes(ctx, connection.stream(STREAM_ID), 0));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void consumeBytesForNegativeNumBytesShouldFail() throws Http2Exception {
+        assertFalse(controller.consumeBytes(ctx, connection.stream(STREAM_ID), -1));
+    }
+
     private void testRatio(float ratio, int newDefaultWindowSize, int newStreamId, boolean setStreamRatio)
             throws Http2Exception {
         int delta = newDefaultWindowSize - DEFAULT_WINDOW_SIZE;

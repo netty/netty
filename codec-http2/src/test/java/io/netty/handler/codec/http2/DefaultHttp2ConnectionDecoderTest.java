@@ -253,14 +253,13 @@ public class DefaultHttp2ConnectionDecoderTest {
     public void emptyDataFrameShouldApplyFlowControl() throws Exception {
         final ByteBuf data = EMPTY_BUFFER;
         int padding = 0;
-        int processedBytes = data.readableBytes() + padding;
-        mockFlowControl(processedBytes);
+        mockFlowControl(0);
         try {
             decode().onDataRead(ctx, STREAM_ID, data, padding, true);
             verify(localFlow).receiveFlowControlledFrame(eq(ctx), eq(stream), eq(data), eq(padding), eq(true));
 
-            // No bytes were consumed, so there's no window update needed.
-            verify(localFlow, never()).consumeBytes(eq(ctx), eq(stream), eq(processedBytes));
+            // Now we ignore the empty bytes inside consumeBytes method, so it will be called once.
+            verify(localFlow).consumeBytes(eq(ctx), eq(stream), eq(0));
 
             // Verify that the empty data event was propagated to the observer.
             verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(padding), eq(true));
