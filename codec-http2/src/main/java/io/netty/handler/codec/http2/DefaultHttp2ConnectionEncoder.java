@@ -77,8 +77,9 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         Http2HeaderTable outboundHeaderTable = config.headerTable();
         Http2FrameSizePolicy outboundFrameSizePolicy = config.frameSizePolicy();
         if (pushEnabled != null) {
-            if (!connection.isServer()) {
-                throw connectionError(PROTOCOL_ERROR, "Client received SETTINGS frame with ENABLE_PUSH specified");
+            if (!connection.isServer() && pushEnabled) {
+                throw connectionError(PROTOCOL_ERROR,
+                    "Client received a value of ENABLE_PUSH specified to other than 0");
             }
             connection.remote().allowPushTo(pushEnabled);
         }
