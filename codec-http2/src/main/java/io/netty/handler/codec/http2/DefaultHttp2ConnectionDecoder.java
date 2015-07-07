@@ -249,9 +249,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 throw e;
             } finally {
                 // If appropriate, return the processed bytes to the flow controller.
-                if (bytesToReturn > 0) {
-                    flowController.consumeBytes(ctx, stream, bytesToReturn);
-                }
+                flowController.consumeBytes(ctx, stream, bytesToReturn);
 
                 if (endOfStream) {
                     lifecycleManager.closeStreamRemote(stream, ctx.newSucceededFuture());
