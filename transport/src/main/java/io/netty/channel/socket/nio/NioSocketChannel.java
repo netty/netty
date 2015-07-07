@@ -284,7 +284,21 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     // Only one ByteBuf so use non-gathering write
                     ByteBuffer nioBuffer = nioBuffers[0];
                     for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
-                        final int localWrittenBytes = ch.write(nioBuffer);
+                        final int localWrittenBytes;
+                        try {
+                            localWrittenBytes = ch.write(nioBuffer);
+                        } catch (IllegalArgumentException e) {
+                            /**
+                             * There appears to be a JDK bug that when a write operation occurs on a direct buffer,
+                             * and the associated FD is closed, the write operation is done and the position of the
+                             * ByteBuffer is incremented using a "large" number from the write on an invalid FD which
+                             * exceeds the limit of the ByteBuffer and throws an IllegalArgumentException. The higher
+                             * levels of Netty expect an IOException so we must re-throw. See
+                             * <a href="http://grepcode.com/file/repository.grepcode.com/java/root/jdk/openjdk/8u40-b25/
+                             * sun/nio/ch/IOUtil.java#96">IOUtil.java</a>.
+                             */
+                            throw CLOSED_CHANNEL_EXCEPTION;
+                        }
                         if (localWrittenBytes == 0) {
                             setOpWrite = true;
                             break;
@@ -299,7 +313,21 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     break;
                 default:
                     for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
-                        final long localWrittenBytes = ch.write(nioBuffers, 0, nioBufferCnt);
+                        final long localWrittenBytes;
+                        try {
+                            localWrittenBytes = ch.write(nioBuffers, 0, nioBufferCnt);
+                        } catch (IllegalArgumentException e) {
+                            /**
+                             * There appears to be a JDK bug that when a write operation occurs on a direct buffer,
+                             * and the associated FD is closed, the write operation is done and the position of the
+                             * ByteBuffer is incremented using a "large" number from the write on an invalid FD which
+                             * exceeds the limit of the ByteBuffer and throws an IllegalArgumentException. The higher
+                             * levels of Netty expect an IOException so we must re-throw. See
+                             * <a href="http://grepcode.com/file/repository.grepcode.com/java/root/jdk/openjdk/8u40-b25/
+                             * sun/nio/ch/IOUtil.java#96">IOUtil.java</a>.
+                             */
+                            throw CLOSED_CHANNEL_EXCEPTION;
+                        }
                         if (localWrittenBytes == 0) {
                             setOpWrite = true;
                             break;
