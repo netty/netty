@@ -17,8 +17,8 @@ package io.netty.bootstrap;
 
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.local.LocalEventLoopGroup;
+import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalServerChannel;
 import org.junit.Test;
 
@@ -34,12 +34,12 @@ public class ServerBootstrapTest {
     public void testHandlerRegister() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
-        LocalEventLoopGroup group = new LocalEventLoopGroup(1);
+        EventLoopGroup group = new DefaultEventLoopGroup(1);
         try {
             ServerBootstrap sb = new ServerBootstrap();
             sb.channel(LocalServerChannel.class)
               .group(group)
-              .childHandler(new ChannelInboundHandlerAdapter())
+              .childHandler(new ChannelHandlerAdapter())
               .handler(new ChannelHandlerAdapter() {
                   @Override
                   public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
