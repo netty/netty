@@ -421,7 +421,11 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         // Trigger flush after read on the assumption that flush is cheap if there is nothing to write and that
         // for flow-control the read may release window that causes data to be written that can now be flushed.
-        flush(ctx);
+        try {
+            flush(ctx);
+        } finally {
+            super.channelReadComplete(ctx);
+        }
     }
 
     /**
