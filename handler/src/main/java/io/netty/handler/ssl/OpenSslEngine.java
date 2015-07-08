@@ -598,7 +598,7 @@ public final class OpenSslEngine extends SSLEngine {
                     "offset: " + dstsOffset + ", length: " + dstsLength +
                     " (expected: offset <= offset + length <= dsts.length (" + dsts.length + "))");
         }
-        int capacity = 0;
+        long capacity = 0;
         final int endOffset = dstsOffset + dstsLength;
         for (int i = dstsOffset; i < endOffset; i ++) {
             ByteBuffer dst = dsts[i];
@@ -628,7 +628,7 @@ public final class OpenSslEngine extends SSLEngine {
         }
 
         final int srcsEndOffset = srcsOffset + srcsLength;
-        int len = 0;
+        long len = 0;
         for (int i = srcsOffset; i < srcsEndOffset; i++) {
             ByteBuffer src = srcs[i];
             if (src == null) {
@@ -679,56 +679,14 @@ public final class OpenSslEngine extends SSLEngine {
                     break;
                 }
             } while (srcsOffset < srcsEndOffset);
-
-            int lastPrimingReadResult = SSL.readFromSSL(ssl, EMPTY_ADDR, 0); // priming read
-
-            // check if SSL_read returned <= 0. In this case we need to check the error and see if it was something
-            // fatal.
-            if (lastPrimingReadResult <= 0) {
-                int sslError = SSL.getError(ssl, lastPrimingReadResult);
-                switch (sslError) {
-                case SSL.SSL_ERROR_NONE:
-                case SSL.SSL_ERROR_WANT_ACCEPT:
-                case SSL.SSL_ERROR_WANT_CONNECT:
-                case SSL.SSL_ERROR_WANT_WRITE:
-                case SSL.SSL_ERROR_WANT_READ:
-                case SSL.SSL_ERROR_WANT_X509_LOOKUP:
-                case SSL.SSL_ERROR_ZERO_RETURN:
-                    // Nothing to do here
-                    break;
-                case SSL.SSL_ERROR_SSL:
-                case SSL.SSL_ERROR_SYSCALL:
-                    int err = SSL.getLastErrorNumber();
-                    if (OpenSsl.isError(err)) {
-                        shutdownWithError("SSL_read", SSL.getErrorString(err));
-                        break;
-                    }
-                    // fall-through
-                default:
-                    // Clear the error queue
-                    SSL.clearError();
-
-                    checkPendingHandshakeException();
-                    break;
-                }
-            }
-
-            rejectRemoteInitiatedRenegation();
         }
 
-        // There won't be any application data until we're done handshaking
-        //
-        // We first check handshakeFinished to eliminate the overhead of extra JNI call if possible.
-        int pendingApp = handshakeState == HandshakeState.FINISHED ? SSL.pendingReadableBytesInSSL(ssl) : 0;
+        rejectRemoteInitiatedRenegation();
+
+        // Number of produced bytes
         int bytesProduced = 0;
 
-        if (pendingApp > 0) {
-            // Do we have enough room in dsts to write decrypted data?
-            if (capacity < pendingApp) {
-                return new SSLEngineResult(
-                        BUFFER_OVERFLOW, mayFinishHandshake(getHandshakeStatus()), bytesConsumed, 0);
-            }
-
+        if (capacity > 0) {
             // Write decrypted data to dsts buffers
             int idx = dstsOffset;
             while (idx < endOffset) {
@@ -738,20 +696,20 @@ public final class OpenSslEngine extends SSLEngine {
                     continue;
                 }
 
-                if (pendingApp <= 0) {
-                    break;
-                }
-
                 int bytesRead = readPlaintextData(dst);
 
+                // TODO: We may want to consider if we move this check and only do it in a less often called place at
+                // the price to be not 100% accurate, like for example when calling SSL.getError(...).
                 rejectRemoteInitiatedRenegation();
 
                 if (bytesRead > 0) {
                     bytesProduced += bytesRead;
-                    pendingApp -= bytesRead;
 
                     if (!dst.hasRemaining()) {
                         idx ++;
+                    } else {
+                        // We read everything return now.
+                        return newResult(bytesConsumed, bytesProduced);
                     }
                 } else {
                     int sslError = SSL.getError(ssl, bytesRead);
@@ -772,14 +730,35 @@ public final class OpenSslEngine extends SSLEngine {
                     }
                 }
             }
+        } else {
+            // If the capacity of all destination buffers is 0 we need to trigger a SSL_read anyway to ensure
+            // everything is flushed in the BIO pair and so we can detect it in the pendingAppData() call.
+            if (SSL.readFromSSL(ssl, EMPTY_ADDR, 0) <= 0) {
+                // We not check SSL_get_error as we are not interested in any error that is not fatal.
+                int err = SSL.getLastErrorNumber();
+                if (OpenSsl.isError(err)) {
+                    shutdownWithError("SSL_read", SSL.getErrorString(err));
+                }
+            }
+        }
+        if (pendingAppData() > 0) {
+            // We filled all buffers but there is still some data pending in the BIO buffer, return BUFFER_OVERFLOW.
+            return new SSLEngineResult(
+                    BUFFER_OVERFLOW, mayFinishHandshake(getHandshakeStatus()), bytesConsumed, bytesProduced);
         }
 
-        // Check to see if we received a close_notify message from the peer
+        // Check to see if we received a close_notify message from the peer.
         if (!receivedShutdown && (SSL.getShutdown(ssl) & SSL.SSL_RECEIVED_SHUTDOWN) == SSL.SSL_RECEIVED_SHUTDOWN) {
             closeAll();
         }
 
         return newResult(bytesConsumed, bytesProduced);
+    }
+
+    private int pendingAppData() {
+        // There won't be any application data until we're done handshaking.
+        // We first check handshakeFinished to eliminate the overhead of extra JNI call if possible.
+        return handshakeState == HandshakeState.FINISHED ? SSL.pendingReadableBytesInSSL(ssl) : 0;
     }
 
     private SSLEngineResult newResult(int bytesConsumed, int bytesProduced) throws SSLException {
