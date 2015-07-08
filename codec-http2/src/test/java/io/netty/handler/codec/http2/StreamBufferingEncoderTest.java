@@ -41,8 +41,8 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
-import io.netty.handler.codec.http2.StreamBufferingEncoder.ChannelClosedException;
-import io.netty.handler.codec.http2.StreamBufferingEncoder.GoAwayException;
+import io.netty.handler.codec.http2.StreamBufferingEncoder.Http2ChannelClosedException;
+import io.netty.handler.codec.http2.StreamBufferingEncoder.Http2GoAwayException;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import org.junit.After;
@@ -233,7 +233,7 @@ public class StreamBufferingEncoderTest {
 
         assertEquals(1, connection.numActiveStreams());
         assertEquals(2, encoder.numBufferedStreams());
-        verify(promise, never()).setFailure(any(GoAwayException.class));
+        verify(promise, never()).setFailure(any(Http2GoAwayException.class));
     }
 
     @Test
@@ -420,7 +420,7 @@ public class StreamBufferingEncoderTest {
         encoderWriteHeaders(7, promise);
 
         encoder.close();
-        verify(promise, times(3)).setFailure(any(ChannelClosedException.class));
+        verify(promise, times(3)).setFailure(any(Http2ChannelClosedException.class));
     }
 
     @Test
@@ -429,7 +429,7 @@ public class StreamBufferingEncoderTest {
         encoder.close();
 
         encoderWriteHeaders(3, promise);
-        verify(promise).setFailure(any(ChannelClosedException.class));
+        verify(promise).setFailure(any(Http2ChannelClosedException.class));
     }
 
     private void setMaxConcurrentStreams(int newValue) {

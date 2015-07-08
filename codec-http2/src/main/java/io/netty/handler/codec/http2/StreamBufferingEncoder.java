@@ -45,7 +45,7 @@ import java.util.TreeMap;
  * <p>
  * If a {@code GOAWAY} frame is received from the remote endpoint, all buffered writes for streams
  * with an ID less than the specified {@code lastStreamId} will immediately fail with a
- * {@link StreamBufferingEncoder.GoAwayException}.
+ * {@link Http2GoAwayException}.
  * <p/>
  * <p>This implementation makes the buffering mostly transparent and is expected to be used as a
  * drop-in decorator of {@link DefaultHttp2ConnectionEncoder}.
@@ -56,8 +56,10 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     /**
      * Thrown if buffered streams are terminated due to this encoder being closed.
      */
-    public static final class ChannelClosedException extends Http2Exception {
-        public ChannelClosedException() {
+    public static final class Http2ChannelClosedException extends Http2Exception {
+        private static final long serialVersionUID = 4768543442094476971L;
+
+        public Http2ChannelClosedException() {
             super(Http2Error.REFUSED_STREAM, "Connection closed");
         }
     }
@@ -66,13 +68,13 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
      * Thrown by {@link StreamBufferingEncoder} if buffered streams are terminated due to
      * receipt of a {@code GOAWAY}.
      */
-    public static final class GoAwayException extends Http2Exception {
+    public static final class Http2GoAwayException extends Http2Exception {
         private static final long serialVersionUID = 1326785622777291198L;
         private final int lastStreamId;
         private final long errorCode;
         private final ByteString debugData;
 
-        public GoAwayException(int lastStreamId, long errorCode, ByteString debugData) {
+        public Http2GoAwayException(int lastStreamId, long errorCode, ByteString debugData) {
             super(Http2Error.STREAM_CLOSED);
             this.lastStreamId = lastStreamId;
             this.errorCode = errorCode;
@@ -140,8 +142,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
                                       int streamDependency, short weight, boolean exclusive,
                                       int padding, boolean endOfStream, ChannelPromise promise) {
         if (closed) {
-            promise.setFailure(new ChannelClosedException());
-            return promise;
+            return promise.setFailure(new Http2ChannelClosedException());
         }
         if (isExistingStream(streamId) || connection().goAwayReceived()) {
             return super.writeHeaders(ctx, streamId, headers, streamDependency, weight,
@@ -219,13 +220,13 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
                 closed = true;
 
                 // Fail all buffered streams.
-                ChannelClosedException e = new ChannelClosedException();
-                for(PendingStream pendingStream : pendingStreams.values()) {
-                    pendingStream.close(e);
+                Http2ChannelClosedException e = new Http2ChannelClosedException();
+                while (!pendingStreams.isEmpty()) {
+                    PendingStream stream = pendingStreams.pollFirstEntry().getValue();
+                    stream.close(e);
                 }
             }
         } finally {
-            pendingStreams.clear();
             super.close();
         }
     }
@@ -240,8 +241,8 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
 
     private void cancelGoAwayStreams(int lastStreamId, long errorCode, ByteBuf debugData) {
         Iterator<PendingStream> iter = pendingStreams.values().iterator();
-        ByteString goAwayData = new ByteString(ByteBufUtil.getBytes(debugData), false);
-        Exception e = new GoAwayException(lastStreamId, errorCode, goAwayData);
+        Exception e = new Http2GoAwayException(lastStreamId, errorCode,
+                new ByteString(ByteBufUtil.getBytes(debugData), false));
         while (iter.hasNext()) {
             PendingStream stream = iter.next();
             if (stream.streamId > lastStreamId) {
