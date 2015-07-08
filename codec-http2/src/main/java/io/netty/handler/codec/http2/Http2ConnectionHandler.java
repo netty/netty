@@ -184,25 +184,21 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         public void channelActive(ChannelHandlerContext ctx) throws Exception { }
 
         public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-            try {
-                final Http2Connection connection = connection();
-                // Check if there are streams to avoid the overhead of creating the ChannelFuture.
-                if (connection.numActiveStreams() > 0) {
-                    final ChannelFuture future = ctx.newSucceededFuture();
-                    connection.forEachActiveStream(new Http2StreamVisitor() {
-                        @Override
-                        public boolean visit(Http2Stream stream) throws Http2Exception {
-                            closeStream(stream, future);
-                            return true;
-                        }
-                    });
-                }
-            } finally {
-                try {
-                    encoder().close();
-                } finally {
-                    decoder().close();
-                }
+            // Connection has terminated, close the encoder and decoder.
+            encoder().close();
+            decoder().close();
+
+            final Http2Connection connection = connection();
+            // Check if there are streams to avoid the overhead of creating the ChannelFuture.
+            if (connection.numActiveStreams() > 0) {
+                final ChannelFuture future = ctx.newSucceededFuture();
+                connection.forEachActiveStream(new Http2StreamVisitor() {
+                    @Override
+                    public boolean visit(Http2Stream stream) throws Http2Exception {
+                        closeStream(stream, future);
+                        return true;
+                    }
+                });
             }
         }
 
