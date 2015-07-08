@@ -41,9 +41,9 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
+import io.netty.handler.codec.http2.StreamBufferingEncoder.ChannelClosedException;
 import io.netty.handler.codec.http2.StreamBufferingEncoder.GoAwayException;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import org.junit.After;
 import org.junit.Before;
@@ -208,7 +208,7 @@ public class StreamBufferingEncoderTest {
         }
         assertEquals(4, encoder.numBufferedStreams());
 
-        connection.goAwayReceived(11, 8, null);
+        connection.goAwayReceived(11, 8, EMPTY_BUFFER);
 
         assertEquals(5, connection.numActiveStreams());
         // The 4 buffered streams must have been failed.
@@ -408,6 +408,28 @@ public class StreamBufferingEncoderTest {
         verify(rstPromise).setSuccess();
         verify(promise, times(2)).setSuccess();
         verify(data).release();
+    }
+
+    @Test
+    public void closeShouldCancelAllBufferedStreams() {
+        encoder.writeSettingsAck(ctx, promise);
+        connection.local().maxActiveStreams(0);
+
+        encoderWriteHeaders(3, promise);
+        encoderWriteHeaders(5, promise);
+        encoderWriteHeaders(7, promise);
+
+        encoder.close();
+        verify(promise, times(3)).setFailure(any(ChannelClosedException.class));
+    }
+
+    @Test
+    public void headersAfterCloseShouldImmediatelyFail() {
+        encoder.writeSettingsAck(ctx, promise);
+        encoder.close();
+
+        encoderWriteHeaders(3, promise);
+        verify(promise).setFailure(any(ChannelClosedException.class));
     }
 
     private void setMaxConcurrentStreams(int newValue) {

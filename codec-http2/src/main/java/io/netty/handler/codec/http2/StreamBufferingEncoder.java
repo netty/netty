@@ -20,9 +20,11 @@ import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.ByteString;
 import io.netty.util.ReferenceCountUtil;
 
 import java.util.ArrayDeque;
@@ -52,6 +54,15 @@ import java.util.TreeMap;
 public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
 
     /**
+     * Thrown if buffered streams are terminated due to this encoder being closed.
+     */
+    public static final class ChannelClosedException extends Http2Exception {
+        public ChannelClosedException() {
+            super(Http2Error.REFUSED_STREAM, "Connection closed");
+        }
+    }
+
+    /**
      * Thrown by {@link StreamBufferingEncoder} if buffered streams are terminated due to
      * receipt of a {@code GOAWAY}.
      */
@@ -59,9 +70,9 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         private static final long serialVersionUID = 1326785622777291198L;
         private final int lastStreamId;
         private final long errorCode;
-        private final ByteBuf debugData;
+        private final ByteString debugData;
 
-        public GoAwayException(int lastStreamId, long errorCode, ByteBuf debugData) {
+        public GoAwayException(int lastStreamId, long errorCode, ByteString debugData) {
             super(Http2Error.STREAM_CLOSED);
             this.lastStreamId = lastStreamId;
             this.errorCode = errorCode;
@@ -76,7 +87,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
             return errorCode;
         }
 
-        public ByteBuf debugData() {
+        public ByteString debugData() {
             return debugData;
         }
     }
@@ -87,6 +98,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
      */
     private final TreeMap<Integer, PendingStream> pendingStreams = new TreeMap<Integer, PendingStream>();
     private int maxConcurrentStreams;
+    private boolean closed;
 
     public StreamBufferingEncoder(Http2ConnectionEncoder delegate) {
         this(delegate, SMALLEST_MAX_CONCURRENT_STREAMS);
@@ -127,6 +139,10 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
                                       int streamDependency, short weight, boolean exclusive,
                                       int padding, boolean endOfStream, ChannelPromise promise) {
+        if (closed) {
+            promise.setFailure(new ChannelClosedException());
+            return promise;
+        }
         if (isExistingStream(streamId) || connection().goAwayReceived()) {
             return super.writeHeaders(ctx, streamId, headers, streamDependency, weight,
                     exclusive, padding, endOfStream, promise);
@@ -198,8 +214,20 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
 
     @Override
     public void close() {
-        super.close();
-        cancelPendingStreams();
+        try {
+            if (!closed) {
+                closed = true;
+
+                // Fail all buffered streams.
+                ChannelClosedException e = new ChannelClosedException();
+                for(PendingStream pendingStream : pendingStreams.values()) {
+                    pendingStream.close(e);
+                }
+            }
+        } finally {
+            pendingStreams.clear();
+            super.close();
+        }
     }
 
     private void tryCreatePendingStreams() {
@@ -210,17 +238,10 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         }
     }
 
-    private void cancelPendingStreams() {
-        Exception e = new Exception("Connection closed.");
-        while (!pendingStreams.isEmpty()) {
-            PendingStream stream = pendingStreams.pollFirstEntry().getValue();
-            stream.close(e);
-        }
-    }
-
     private void cancelGoAwayStreams(int lastStreamId, long errorCode, ByteBuf debugData) {
         Iterator<PendingStream> iter = pendingStreams.values().iterator();
-        Exception e = new GoAwayException(lastStreamId, errorCode, debugData);
+        ByteString goAwayData = new ByteString(ByteBufUtil.getBytes(debugData), false);
+        Exception e = new GoAwayException(lastStreamId, errorCode, goAwayData);
         while (iter.hasNext()) {
             PendingStream stream = iter.next();
             if (stream.streamId > lastStreamId) {
