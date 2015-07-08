@@ -664,6 +664,11 @@ public final class OpenSslEngine extends SSLEngine {
 
                     if (written == remaining) {
                         srcsOffset ++;
+                    } else {
+                        // We was not able to write everything into the BIO so break the write loop as otherwise
+                        // we will produce an error on the next write attempt, which will trigger a SSL.clearError()
+                        // later.
+                        break;
                     }
                 } else {
                     // BIO_write returned a negative or zero number, this means we could not complete the write
