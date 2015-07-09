@@ -25,11 +25,11 @@ import java.nio.channels.GatheringByteChannel;
 /**
  * An object that contains a readable region. For simplicity, extends {@link ReferenceCounted}.
  */
-public interface Readable extends ReferenceCounted {
+public interface ReadableObject<T extends ReadableObject> extends ReferenceCounted {
     /**
      * Returns current read position in the object.
      */
-    long readerPosition();
+    long readPosition();
 
     /**
      * Returns {@code true} if and only if {@link #readableBytes()} > {@code 0}.
@@ -42,27 +42,27 @@ public interface Readable extends ReferenceCounted {
     long readableBytes();
 
     /**
-     * Increases the current {@code readerPosition} by the specified
+     * Increases the current {@code readPosition} by the specified
      * {@code length} in this buffer.
      *
      * @throws IndexOutOfBoundsException
      *         if {@code length} is greater than {@link #readableBytes()}
      */
-    Readable skipBytes(long length);
+    T skipBytes(long length);
 
     /**
      * Returns a slice of this object's readable region. This method is
-     * identical to {@code r.slice(r.readerPosition(), r.readableBytes())}.
-     * This method does not modify {@code readerPosition}.
+     * identical to {@code r.slice(r.readPosition(), r.readableBytes())}.
+     * This method does not modify {@code readPosition}.
      * <p>
      * Also be aware that this method will NOT call {@link #retain()} and so the
      * reference count will NOT be increased.
      */
-    Readable slice();
+    T slice();
 
     /**
      * Returns a slice of this object's sub-region. This method does not modify
-     * {@code readerPosition}.
+     * {@code readPosition}.
      * <p>
      * Also be aware that this method will NOT call {@link #retain()} and so the
      * reference count will NOT be increased.
@@ -74,11 +74,11 @@ public interface Readable extends ReferenceCounted {
      * @throws IndexOutOfBoundsException
      *         if any part of the requested region falls outside of the currently readable region.
      */
-    Readable slice(long position, long length);
+    T slice(long position, long length);
 
     /**
      * Returns a new slice of this object's sub-region starting at the current
-     * {@link #readerPosition()} and increases the {@code readerPosition} by the size
+     * {@link #readPosition()} and increases the {@code readPosition} by the size
      * of the new slice (= {@code length}).
      * <p>
      * Also be aware that this method will NOT call {@link #retain()} and so the
@@ -91,25 +91,27 @@ public interface Readable extends ReferenceCounted {
      * @throws IndexOutOfBoundsException
      *         if {@code length} is greater than {@link #readableBytes()}
      */
-    Readable readSlice(long length);
+    T readSlice(long length);
 
     /**
      * Transfers this object's data to the specified stream starting at the
-     * current {@code readerPosition} and increases the {@code readerPosition} by
-     * the {@code length}.
+     * current {@code readPosition} and increases the {@code readPosition} by
+     * the bytes written.
      *
      * @param length the number of bytes to transfer
+     *
+     * @return the actual number of bytes written out to the specified stream
      *
      * @throws IndexOutOfBoundsException
      *         if {@code length} is greater than {@link #readableBytes()}
      * @throws IOException
      *         if the specified stream threw an exception during I/O
      */
-    Readable readTo(OutputStream out, long length) throws IOException;
+    long readTo(OutputStream out, long length) throws IOException;
 
     /**
      * Transfers this object's data to the specified stream starting at the
-     * current {@code readerPosition} and increases the {@code readerPosition} by
+     * current {@code readPosition} and increases the {@code readPosition} by
      * the number of bytes written.
      *
      * @param length the maximum number of bytes to transfer
@@ -124,14 +126,14 @@ public interface Readable extends ReferenceCounted {
     long readTo(GatheringByteChannel channel, long length) throws IOException;
 
     @Override
-    Readable retain();
+    T retain();
 
     @Override
-    Readable retain(int increment);
+    T retain(int increment);
 
     @Override
-    Readable touch(Object hint);
+    T touch(Object hint);
 
     @Override
-    Readable touch();
+    T touch();
 }
