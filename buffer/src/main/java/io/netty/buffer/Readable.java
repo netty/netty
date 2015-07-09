@@ -122,4 +122,16 @@ public interface Readable extends ReferenceCounted {
      *         if the specified channel threw an exception during I/O
      */
     long readTo(GatheringByteChannel channel, long length) throws IOException;
+
+    @Override
+    Readable retain();
+
+    @Override
+    Readable retain(int increment);
+
+    @Override
+    Readable touch(Object hint);
+
+    @Override
+    Readable touch();
 }
