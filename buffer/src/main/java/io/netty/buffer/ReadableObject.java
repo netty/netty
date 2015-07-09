@@ -19,8 +19,7 @@ package io.netty.buffer;
 import io.netty.util.ReferenceCounted;
 
 import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.channels.GatheringByteChannel;
+import java.nio.channels.WritableByteChannel;
 
 /**
  * An object that contains a readable region. For simplicity, extends {@link ReferenceCounted}.
@@ -96,22 +95,6 @@ public interface ReadableObject<T extends ReadableObject> extends ReferenceCount
     /**
      * Transfers this object's data to the specified stream starting at the
      * current {@code readPosition} and increases the {@code readPosition} by
-     * the bytes written.
-     *
-     * @param length the number of bytes to transfer
-     *
-     * @return the actual number of bytes written out to the specified stream
-     *
-     * @throws IndexOutOfBoundsException
-     *         if {@code length} is greater than {@link #readableBytes()}
-     * @throws IOException
-     *         if the specified stream threw an exception during I/O
-     */
-    long readTo(OutputStream out, long length) throws IOException;
-
-    /**
-     * Transfers this object's data to the specified stream starting at the
-     * current {@code readPosition} and increases the {@code readPosition} by
      * the number of bytes written.
      *
      * @param length the maximum number of bytes to transfer
@@ -123,7 +106,7 @@ public interface ReadableObject<T extends ReadableObject> extends ReferenceCount
      * @throws IOException
      *         if the specified channel threw an exception during I/O
      */
-    long readTo(GatheringByteChannel channel, long length) throws IOException;
+    long readTo(WritableByteChannel channel, long length) throws IOException;
 
     @Override
     T retain();
