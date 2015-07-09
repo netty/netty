@@ -25,9 +25,11 @@ class DefaultHttp2HeaderTableListSize {
 
     public void maxHeaderListSize(int max) throws Http2Exception {
         if (max < 0) {
-            throw connectionError(PROTOCOL_ERROR, "Header List Size must be non-negative but was %d", max);
+            // Over 2^31 - 1 (minus in integer) size is set to the maximun value
+            maxHeaderListSize = Integer.MAX_VALUE;
+        } else {
+            maxHeaderListSize = max;
         }
-        maxHeaderListSize = max;
     }
 
     public int maxHeaderListSize() {
