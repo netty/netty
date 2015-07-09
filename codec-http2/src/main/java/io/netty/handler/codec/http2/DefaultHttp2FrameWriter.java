@@ -52,13 +52,14 @@ import static io.netty.handler.codec.http2.Http2FrameTypes.RST_STREAM;
 import static io.netty.handler.codec.http2.Http2FrameTypes.SETTINGS;
 import static io.netty.handler.codec.http2.Http2FrameTypes.WINDOW_UPDATE;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.FileRegion;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
 import io.netty.handler.codec.http2.Http2FrameWriter.Configuration;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.collection.CharObjectMap;
 
 /**
@@ -118,9 +119,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     @Override
     public void close() { }
 
-    @Override
-    public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
-            int padding, boolean endStream, ChannelPromise promise) {
+    private ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ReferenceCounted data,
+            int dataLength, int padding, boolean endStream, ChannelPromise promise) {
         boolean releaseData = true;
         SimpleChannelPromiseAggregator promiseAggregator =
                 new SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());
@@ -130,7 +130,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
 
             Http2Flags flags = new Http2Flags().paddingPresent(padding > 0).endOfStream(endStream);
 
-            int payloadLength = data.readableBytes() + padding + flags.getPaddingPresenceFieldLength();
+            int payloadLength = dataLength + padding + flags.getPaddingPresenceFieldLength();
             verifyPayloadLength(payloadLength);
 
             ByteBuf buf = ctx.alloc().buffer(DATA_FRAME_HEADER_LENGTH);
@@ -152,6 +152,24 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             }
             return promiseAggregator.setFailure(t);
         }
+    }
+
+    @Override
+    public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
+            int padding, boolean endStream, ChannelPromise promise) {
+        return writeData(ctx, streamId, data, data.readableBytes(), padding, endStream, promise);
+    }
+
+    @Override
+    public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, FileRegion data,
+            int padding, boolean endStream, ChannelPromise promise) {
+        if (data.count() > Integer.MAX_VALUE) {
+            // Check overflow first. The upper bound of maxFrameSize is much less than
+            // Integer.MAX_VALUE.
+            throw new IllegalArgumentException("Total payload length " + data.count()
+                    + " exceeds max frame length.");
+        }
+        return writeData(ctx, streamId, data, (int) data.count(), padding, endStream, promise);
     }
 
     @Override

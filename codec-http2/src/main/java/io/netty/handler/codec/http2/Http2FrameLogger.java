@@ -16,10 +16,10 @@
 package io.netty.handler.codec.http2;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.FileRegion;
 import io.netty.handler.logging.LogLevel;
 import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
@@ -62,6 +62,15 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
             log(direction,
                     "DATA: streamId=%d, padding=%d, endStream=%b, length=%d, bytes=%s",
                     streamId, padding, endStream, data.readableBytes(), toString(data));
+        }
+    }
+
+    public void logData(Direction direction, int streamId, FileRegion data, int padding,
+            boolean endStream) {
+        if (enabled()) {
+            log(direction,
+                    "DATA: streamId=%d, padding=%d, endStream=%b, length=%d, fileOffset=%d",
+                    streamId, padding, endStream, data.count(), data.position());
         }
     }
 

@@ -15,8 +15,8 @@
  */
 package io.netty.channel;
 
-import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -24,31 +24,45 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
-import java.nio.channels.WritableByteChannel;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
  * Default {@link FileRegion} implementation which transfer data from a {@link FileChannel} or {@link File}.
  *
- * Be aware that the {@link FileChannel} will be automatically closed once {@link #refCnt()} returns
- * {@code 0}.
+ * Be aware that the {@link FileChannel} will be automatically closed once {@link #refCnt()} returns {@code 0}.
  */
-public class DefaultFileRegion extends AbstractReferenceCounted implements FileRegion {
+public class DefaultFileRegion extends AbstractFileRegion {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultFileRegion.class);
+
+    private static final AtomicIntegerFieldUpdater<DefaultFileRegion> refCntUpdater;
+
+    static {
+        AtomicIntegerFieldUpdater<DefaultFileRegion> updater = PlatformDependent.newAtomicIntegerFieldUpdater(
+                DefaultFileRegion.class, "refCnt");
+        if (updater == null) {
+            updater = AtomicIntegerFieldUpdater.newUpdater(DefaultFileRegion.class, "refCnt");
+        }
+        refCntUpdater = updater;
+    }
+
+    private volatile int refCnt = 1;
+
     private final File f;
-    private final long position;
-    private final long count;
-    private long transfered;
     private FileChannel file;
 
     /**
      * Create a new instance
      *
-     * @param file      the {@link FileChannel} which should be transfered
-     * @param position  the position from which the transfer should start
-     * @param count     the number of bytes to transfer
+     * @param file
+     *            the {@link FileChannel} which should be transfered
+     * @param position
+     *            the position from which the transfer should start
+     * @param count
+     *            the number of bytes to transfer
      */
     public DefaultFileRegion(FileChannel file, long position, long count) {
+        super(position, count);
         if (file == null) {
             throw new NullPointerException("file");
         }
@@ -59,20 +73,22 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
             throw new IllegalArgumentException("count must be >= 0 but was " + count);
         }
         this.file = file;
-        this.position = position;
-        this.count = count;
         f = null;
     }
 
     /**
-     * Create a new instance using the given {@link File}. The {@link File} will be opened lazily or
-     * explicitly via {@link #open()}.
+     * Create a new instance using the given {@link File}. The {@link File} will be opened lazily or explicitly via
+     * {@link #open()}.
      *
-     * @param f         the {@link File} which should be transfered
-     * @param position  the position from which the transfer should start
-     * @param count     the number of bytes to transfer
+     * @param f
+     *            the {@link File} which should be transfered
+     * @param position
+     *            the position from which the transfer should start
+     * @param count
+     *            the number of bytes to transfer
      */
     public DefaultFileRegion(File f, long position, long count) {
+        super(position, count);
         if (f == null) {
             throw new NullPointerException("f");
         }
@@ -82,9 +98,117 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
         if (count < 0) {
             throw new IllegalArgumentException("count must be >= 0 but was " + count);
         }
-        this.position = position;
-        this.count = count;
         this.f = f;
+    }
+
+    @Override
+    public int refCnt() {
+        return refCnt;
+    }
+
+    @Override
+    public DefaultFileRegion retain() {
+        for (;;) {
+            int refCnt = this.refCnt;
+            if (refCnt == 0) {
+                throw new IllegalReferenceCountException(0, 1);
+            }
+            if (refCnt == Integer.MAX_VALUE) {
+                throw new IllegalReferenceCountException(Integer.MAX_VALUE, 1);
+            }
+            if (refCntUpdater.compareAndSet(this, refCnt, refCnt + 1)) {
+                break;
+            }
+        }
+        return this;
+    }
+
+    @Override
+    public DefaultFileRegion retain(int increment) {
+        if (increment <= 0) {
+            throw new IllegalArgumentException("increment: " + increment + " (expected: > 0)");
+        }
+
+        for (;;) {
+            int refCnt = this.refCnt;
+            if (refCnt == 0) {
+                throw new IllegalReferenceCountException(0, 1);
+            }
+            if (refCnt > Integer.MAX_VALUE - increment) {
+                throw new IllegalReferenceCountException(refCnt, increment);
+            }
+            if (refCntUpdater.compareAndSet(this, refCnt, refCnt + increment)) {
+                break;
+            }
+        }
+        return this;
+    }
+
+    @Override
+    public DefaultFileRegion touch() {
+        return this;
+    }
+
+    @Override
+    public DefaultFileRegion touch(Object hint) {
+        return this;
+    }
+
+    @Override
+    public boolean release() {
+        for (;;) {
+            int refCnt = this.refCnt;
+            if (refCnt == 0) {
+                throw new IllegalReferenceCountException(0, -1);
+            }
+
+            if (refCntUpdater.compareAndSet(this, refCnt, refCnt - 1)) {
+                if (refCnt == 1) {
+                    deallocate();
+                    return true;
+                }
+                return false;
+            }
+        }
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        if (decrement <= 0) {
+            throw new IllegalArgumentException("decrement: " + decrement + " (expected: > 0)");
+        }
+
+        for (;;) {
+            int refCnt = this.refCnt;
+            if (refCnt < decrement) {
+                throw new IllegalReferenceCountException(refCnt, -decrement);
+            }
+
+            if (refCntUpdater.compareAndSet(this, refCnt, refCnt - decrement)) {
+                if (refCnt == decrement) {
+                    deallocate();
+                    return true;
+                }
+                return false;
+            }
+        }
+    }
+
+    private void deallocate() {
+        FileChannel file = this.file;
+
+        if (file == null) {
+            return;
+        }
+        this.file = null;
+
+        try {
+            file.close();
+        } catch (IOException e) {
+            if (logger.isWarnEnabled()) {
+                logger.warn("Failed to close a file.", e);
+            }
+        }
     }
 
     /**
@@ -105,81 +229,14 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
     }
 
     @Override
-    public long position() {
-        return position;
-    }
-
-    @Override
-    public long count() {
-        return count;
-    }
-
-    @Override
-    public long transfered() {
-        return transfered;
-    }
-
-    @Override
-    public long transferTo(WritableByteChannel target, long position) throws IOException {
-        long count = this.count - position;
-        if (count < 0 || position < 0) {
-            throw new IllegalArgumentException(
-                    "position out of range: " + position +
-                    " (expected: 0 - " + (this.count - 1) + ')');
-        }
-        if (count == 0) {
-            return 0L;
-        }
-        if (refCnt() == 0) {
-            throw new IllegalReferenceCountException(0);
-        }
-        // Call open to make sure fc is initialized. This is a no-oop if we called it before.
+    public FileChannel channel() throws IOException {
+        // Call open to make sure fc is initialized. This is a no-op if we called it before.
         open();
-
-        long written = file.transferTo(this.position + position, count, target);
-        if (written > 0) {
-            transfered += written;
-        }
-        return written;
+        return file;
     }
 
     @Override
-    protected void deallocate() {
-        FileChannel file = this.file;
-
-        if (file == null) {
-            return;
-        }
-        this.file = null;
-
-        try {
-            file.close();
-        } catch (IOException e) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("Failed to close a file.", e);
-            }
-        }
-    }
-
-    @Override
-    public FileRegion retain() {
-        super.retain();
-        return this;
-    }
-
-    @Override
-    public FileRegion retain(int increment) {
-        super.retain(increment);
-        return this;
-    }
-
-    @Override
-    public FileRegion touch() {
-        return this;
-    }
-
-    @Override
-    public FileRegion touch(Object hint) {
-        return this;
+    public FileRegion unwrap() {
+        return null;
     }
 }

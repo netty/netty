@@ -1286,7 +1286,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         final Http2RemoteFlowController.FlowControlled flowControlled =
                 Mockito.mock(Http2RemoteFlowController.FlowControlled.class);
         final Http2Stream stream = stream(STREAM_A);
-        when(flowControlled.size()).thenReturn(100);
+        when(flowControlled.size()).thenReturn(100L);
         doThrow(new RuntimeException("write failed")).when(flowControlled).write(anyInt());
         doAnswer(new Answer<Void>() {
             @Override
@@ -1307,22 +1307,22 @@ public class DefaultHttp2RemoteFlowControllerTest {
     private static Http2RemoteFlowController.FlowControlled mockedFlowControlledThatThrowsOnWrite() throws Exception {
         final Http2RemoteFlowController.FlowControlled flowControlled =
                 Mockito.mock(Http2RemoteFlowController.FlowControlled.class);
-        when(flowControlled.size()).thenReturn(100);
+        when(flowControlled.size()).thenReturn(100L);
         doAnswer(new Answer<Void>() {
             private int invocationCount;
             @Override
             public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
                 switch(invocationCount) {
                 case 0:
-                    when(flowControlled.size()).thenReturn(50);
+                    when(flowControlled.size()).thenReturn(50L);
                     invocationCount = 1;
                     return null;
                 case 1:
-                    when(flowControlled.size()).thenReturn(20);
+                    when(flowControlled.size()).thenReturn(20L);
                     invocationCount = 2;
                     return null;
                 default:
-                    when(flowControlled.size()).thenReturn(10);
+                    when(flowControlled.size()).thenReturn(10L);
                     throw new RuntimeException("Write failed");
                 }
             }
@@ -1393,7 +1393,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         }
 
         @Override
-        public int size() {
+        public long size() {
             return currentSize;
         }
 

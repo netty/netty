@@ -26,8 +26,11 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.FileRegion;
 import io.netty.handler.codec.http2.Http2Exception.ClosedStreamCreationException;
+import io.netty.handler.codec.http2.Http2RemoteFlowController.FlowControlled;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 
 import java.util.ArrayDeque;
 
@@ -110,9 +113,9 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         }
     }
 
-    @Override
-    public ChannelFuture writeData(final ChannelHandlerContext ctx, final int streamId, ByteBuf data, int padding,
-            final boolean endOfStream, ChannelPromise promise) {
+    private <T extends ReferenceCounted> ChannelFuture writeData(final ChannelHandlerContext ctx,
+            final int streamId, T data, int padding, final boolean endOfStream,
+            ChannelPromise promise, FlowControlledDataFactory<T> factory) {
         final Http2Stream stream;
         try {
             stream = requireStream(streamId);
@@ -134,8 +137,20 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
         // Hand control of the frame to the flow controller.
         flowController().addFlowControlled(ctx, stream,
-                new FlowControlledData(ctx, stream, data, padding, endOfStream, promise));
+                factory.create(ctx, stream, data, padding, endOfStream, promise));
         return promise;
+    }
+
+    @Override
+    public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
+            int padding, boolean endOfStream, ChannelPromise promise) {
+        return writeData(ctx, streamId, data, padding, endOfStream, promise, byteBufFactory);
+    }
+
+    @Override
+    public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, FileRegion data,
+            int padding, boolean endOfStream, ChannelPromise promise) {
+        return writeData(ctx, streamId, data, padding, endOfStream, promise, fileRegionFactory);
     }
 
     @Override
@@ -308,103 +323,48 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         return stream;
     }
 
-    /**
-     * Wrap a DATA frame so it can be written subject to flow-control. Note that this implementation assumes it
-     * only writes padding once for the entire payload as opposed to writing it once per-frame. This makes the
-     * {@link #size} calculation deterministic thereby greatly simplifying the implementation.
-     * <p>
-     * If frame-splitting is required to fit within max-frame-size and flow-control constraints we ensure that
-     * the passed promise is not completed until last frame write.
-     * </p>
-     */
-    private final class FlowControlledData extends FlowControlledBase {
-        private ByteBuf data;
-        private int size;
+    private final class FlowControlledFileRegion extends FlowControlledData<FileRegion> {
 
-        private FlowControlledData(ChannelHandlerContext ctx, Http2Stream stream, ByteBuf buf, int padding,
-                                    boolean endOfStream, ChannelPromise promise) {
-            super(ctx, stream, padding, endOfStream, promise);
-            this.data = buf;
-            size = data.readableBytes() + padding;
+        private FlowControlledFileRegion(ChannelHandlerContext ctx, Http2Stream stream,
+                FileRegion data, int padding, boolean endOfStream, ChannelPromise promise) {
+            super(ctx, stream, data, data.count(), padding, endOfStream, promise);
         }
 
         @Override
-        public int size() {
-            return size;
+        public boolean merge(FlowControlled next) {
+            return false;
         }
 
         @Override
-        public void error(Throwable cause) {
-            ReferenceCountUtil.safeRelease(data);
-            lifecycleManager.onException(ctx, cause);
-            data = null;
-            size = 0;
-            promise.tryFailure(cause);
+        protected int writableData() {
+            return (int) Math.min(data.count() - data.transfered(), Integer.MAX_VALUE);
         }
 
         @Override
-        public void write(int allowedBytes) {
-            int bytesWritten = 0;
-            if (data == null || (allowedBytes == 0 && size != 0)) {
-                // No point writing an empty DATA frame, wait for a bigger allowance.
-                return;
-            }
-            try {
-                int maxFrameSize = frameWriter().configuration().frameSizePolicy().maxFrameSize();
-                do {
-                    int allowedFrameSize = Math.min(maxFrameSize, allowedBytes - bytesWritten);
-                    ByteBuf toWrite;
-                    // Let data consume the frame before padding.
-                    int writeableData = data.readableBytes();
-                    if (writeableData > allowedFrameSize) {
-                        writeableData = allowedFrameSize;
-                        toWrite = data.readSlice(writeableData).retain();
-                    } else {
-                        // We're going to write the full buffer which will cause it to be released, for subsequent
-                        // writes just use empty buffer to avoid over-releasing. Have to use an empty buffer
-                        // as we may continue to write padding in subsequent frames.
-                        toWrite = data;
-                        data = Unpooled.EMPTY_BUFFER;
-                    }
-                    int writeablePadding = Math.min(allowedFrameSize - writeableData, padding);
-                    padding -= writeablePadding;
-                    bytesWritten += writeableData + writeablePadding;
-                    ChannelPromise writePromise;
-                    if (size == bytesWritten && !promise.isVoid()) {
-                        // Can use the original promise if it's the last write
-                        writePromise = promise;
-                    } else {
-                        // Create a new promise and listen to it for failure
-                        writePromise = ctx.newPromise();
-                        writePromise.addListener(this);
-                    }
-                    if (toWrite instanceof SlicedByteBuf && data instanceof CompositeByteBuf) {
-                        // If we're writing a subset of a composite buffer then we want to release
-                        // any underlying buffers that have been consumed. CompositeByteBuf only releases
-                        // underlying buffers on write if all of its data has been consumed and its refCnt becomes
-                        // 0.
-                        final CompositeByteBuf toFree = (CompositeByteBuf) data;
-                        writePromise.addListener(new ChannelFutureListener() {
-                            @Override
-                            public void operationComplete(ChannelFuture future) throws Exception {
-                                toFree.discardReadComponents();
-                            }
-                        });
-                    }
-                    frameWriter().writeData(ctx, stream.id(), toWrite, writeablePadding,
-                            size == bytesWritten && endOfStream, writePromise);
-                } while (size != bytesWritten && allowedBytes > bytesWritten);
-            } finally {
-                size -= bytesWritten;
-            }
+        protected FileRegion sliceData(int length) {
+            return data.readSlice(length);
+        }
+
+        @Override
+        protected void writeData(FileRegion toWrite, int padding, boolean endStream,
+                ChannelPromise writePromise) {
+            frameWriter().writeData(ctx, stream.id(), toWrite, padding, endStream, writePromise);
+        }
+    }
+
+    private final class FlowControlledByteBuf extends FlowControlledData<ByteBuf> {
+
+        private FlowControlledByteBuf(ChannelHandlerContext ctx, Http2Stream stream, ByteBuf data,
+                int padding, boolean endOfStream, ChannelPromise promise) {
+            super(ctx, stream, data, data.readableBytes(), padding, endOfStream, promise);
         }
 
         @Override
         public boolean merge(Http2RemoteFlowController.FlowControlled next) {
-            if (FlowControlledData.class != next.getClass()) {
+            if (getClass() != next.getClass()) {
                 return false;
             }
-            final FlowControlledData nextData = (FlowControlledData) next;
+            final FlowControlledByteBuf nextData = (FlowControlledByteBuf) next;
             // Given that we're merging data into a frame it doesn't really make sense to accumulate padding.
             padding = Math.max(nextData.padding, padding);
             endOfStream = nextData.endOfStream;
@@ -439,7 +399,174 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             }
             return true;
         }
+
+        @Override
+        protected int writableData() {
+            return data.readableBytes();
+        }
+
+        @Override
+        protected ByteBuf sliceData(int length) {
+            return data.readSlice(length);
+        }
+
+        @Override
+        protected void writeData(ByteBuf toWrite, int padding, boolean endStream,
+                ChannelPromise writePromise) {
+            if (toWrite instanceof SlicedByteBuf && data instanceof CompositeByteBuf) {
+                // If we're writing a subset of a composite buffer then we want to release
+                // any underlying buffers that have been consumed. CompositeByteBuf only releases
+                // underlying buffers on write if all of its data has been consumed and its refCnt becomes
+                // 0.
+                final CompositeByteBuf toFree = (CompositeByteBuf) data;
+                writePromise.addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        toFree.discardReadComponents();
+                    }
+                });
+            }
+            frameWriter().writeData(ctx, stream.id(), toWrite, padding, endStream, writePromise);
+        }
     }
+
+    /**
+     * Wrap a DATA frame so it can be written subject to flow-control. Note that this implementation assumes it
+     * only writes padding once for the entire payload as opposed to writing it once per-frame. This makes the
+     * {@link #size()} calculation deterministic thereby greatly simplifying the implementation.
+     * <p>
+     * If frame-splitting is required to fit within max-frame-size and flow-control constraints we ensure that
+     * the passed promise is not completed until last frame write.
+     * </p>
+     */
+    private abstract class FlowControlledData<T extends ReferenceCounted> extends
+            FlowControlledBase {
+        protected T data;
+        protected long size;
+
+        private FlowControlledData(ChannelHandlerContext ctx, Http2Stream stream, T data,
+                long dataLength, int padding, boolean endOfStream, ChannelPromise promise) {
+            super(ctx, stream, padding, endOfStream, promise);
+            this.data = data;
+            size = dataLength + padding;
+        }
+
+        @Override
+        public long size() {
+            return size;
+        }
+
+        /**
+         * Return {@link Integer#MAX_VALUE} if the actual size is larger than
+         * {@link Integer#MAX_VALUE}.
+         */
+        protected abstract int writableData();
+
+        protected abstract T sliceData(int length);
+
+        protected abstract void writeData(T toWrite, int padding, boolean endStream,
+                ChannelPromise writePromise);
+
+        private ChannelPromise selectPromise(int bytesWritten) {
+            if (size == bytesWritten && !promise.isVoid()) {
+                // Can use the original promise if it's the last write
+                return promise;
+            } else {
+                // Create a new promise and listen to it for failure
+                ChannelPromise newPromise = ctx.newPromise();
+                newPromise.addListener(this);
+                return newPromise;
+            }
+        }
+
+        private int writePaddingOnly(int allowedFrameSize, int bytesWritten) {
+            int writablePadding = Math.min(allowedFrameSize, padding);
+            padding -= writablePadding;
+            bytesWritten += writablePadding;
+            ChannelPromise writePromise = selectPromise(bytesWritten);
+            frameWriter().writeData(ctx, stream.id(), Unpooled.EMPTY_BUFFER, writablePadding,
+                    size == bytesWritten && endOfStream, writePromise);
+            return bytesWritten;
+        }
+
+        @SuppressWarnings("unchecked")
+        private int writeFrame(int allowedFrameSize, int bytesWritten) {
+            T toWrite;
+            int writableData = writableData();
+            // Let data consume the frame before padding.
+            if (writableData > allowedFrameSize) {
+                writableData = allowedFrameSize;
+                toWrite = (T) sliceData(allowedFrameSize).retain();
+            } else {
+                // We're going to write the full buffer which will cause it to be released. Set data
+                // to null to indicate subsequent writes(if any) that we only need to write padding.
+                toWrite = data;
+                data = null;
+            }
+            int writablePadding = Math.min(allowedFrameSize - writableData, padding);
+            padding -= writablePadding;
+            bytesWritten += writableData + writablePadding;
+            ChannelPromise writePromise = selectPromise(bytesWritten);
+            writeData(toWrite, writablePadding, size == bytesWritten && endOfStream, writePromise);
+            return bytesWritten;
+        }
+
+        @Override
+        public void write(int allowedBytes) {
+            int bytesWritten = 0;
+            if (allowedBytes == 0 && size != 0) {
+                // No point writing an empty DATA frame, wait for a bigger allowance.
+                return;
+            }
+            try {
+                int maxFrameSize = frameWriter().configuration().frameSizePolicy().maxFrameSize();
+                do {
+                    int allowedFrameSize = Math.min(maxFrameSize, allowedBytes - bytesWritten);
+                    if (data == null) {
+                        bytesWritten = writePaddingOnly(allowedFrameSize, bytesWritten);
+                    } else {
+                        bytesWritten = writeFrame(allowedFrameSize, bytesWritten);
+                    }
+                } while (size != bytesWritten && allowedBytes > bytesWritten);
+            } finally {
+                size -= bytesWritten;
+            }
+        }
+
+        @Override
+        public void error(Throwable cause) {
+            ReferenceCountUtil.safeRelease(data);
+            lifecycleManager.onException(ctx, cause);
+            data = null;
+            size = 0L;
+            promise.tryFailure(cause);
+        }
+    }
+
+    private interface FlowControlledDataFactory<T extends ReferenceCounted> {
+
+        FlowControlledData<T> create(ChannelHandlerContext ctx, Http2Stream stream, T data,
+                int padding, boolean endOfStream, ChannelPromise promise);
+    }
+
+    private final FlowControlledDataFactory<ByteBuf> byteBufFactory = new FlowControlledDataFactory<ByteBuf>() {
+
+        @Override
+        public FlowControlledByteBuf create(ChannelHandlerContext ctx, Http2Stream stream,
+                ByteBuf data, int padding, boolean endOfStream, ChannelPromise promise) {
+            return new FlowControlledByteBuf(ctx, stream, data, padding, endOfStream, promise);
+        }
+    };
+
+    private final FlowControlledDataFactory<FileRegion> fileRegionFactory =
+            new FlowControlledDataFactory<FileRegion>() {
+
+        @Override
+        public FlowControlledFileRegion create(ChannelHandlerContext ctx, Http2Stream stream, FileRegion data,
+                int padding, boolean endOfStream, ChannelPromise promise) {
+            return new FlowControlledFileRegion(ctx, stream, data, padding, endOfStream, promise);
+        }
+    };
 
     /**
      * Wrap headers so they can be written subject to flow-control. While headers do not have cost against the
@@ -464,8 +591,8 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         }
 
         @Override
-        public int size() {
-            return 0;
+        public long size() {
+            return 0L;
         }
 
         @Override

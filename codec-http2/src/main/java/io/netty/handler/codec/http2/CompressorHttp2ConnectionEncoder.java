@@ -27,8 +27,10 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelPromiseAggregator;
+import io.netty.channel.FileRegion;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.util.ByteString;
@@ -141,6 +143,18 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
             if (endOfStream) {
                 cleanup(stream, channel);
             }
+        }
+    }
+
+    @Override
+    public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, FileRegion data,
+            int padding, boolean endStream, ChannelPromise promise) {
+        Http2Stream stream = connection().stream(streamId);
+        if (stream == null || stream.getProperty(propertyKey) == null) {
+            return super.writeData(ctx, streamId, data, padding, endStream, promise);
+        } else {
+            throw new UnsupportedMessageTypeException(
+                    "FileRegion is not supported when compressing");
         }
     }
 

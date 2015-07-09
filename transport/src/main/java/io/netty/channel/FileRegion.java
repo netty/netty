@@ -92,4 +92,28 @@ public interface FileRegion extends ReferenceCounted {
 
     @Override
     FileRegion touch(Object hint);
+
+    /**
+     * Cut a {@link FileRegion} with <tt>length</tt> bytes from the beginning of this {@link FileRegion} and increase
+     * <tt>transfered</tt> by <tt>length</tt>. The returned {@link FileRegion} will share the same {@link FileChannel}.
+     * <p>
+     * Also be aware that this method will NOT call {@link #retain()} and so the reference count will NOT be increased.
+     *
+     * @throws IllegalArgumentException
+     *             if <tt>length</tt> is less than <tt>0</tt> or greater than {@code count} - {@code transfered}
+     */
+    FileRegion readSlice(long length);
+
+    /**
+     * Return the underlying {@link FileRegion} instance if this {@link FileRegion} is a wrapper of another
+     * {@link FileRegion}.
+     *
+     * @return {@code null} if this {@link FileRegion} is not a wrapper
+     */
+    FileRegion unwrap();
+
+    /**
+     * Return the {@link FileChannel} associate with this {@link FileRegion}.
+     */
+    FileChannel channel() throws IOException;
 }

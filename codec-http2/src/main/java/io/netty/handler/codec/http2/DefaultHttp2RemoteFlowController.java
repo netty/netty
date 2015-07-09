@@ -438,7 +438,9 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     private final class DefaultState extends AbstractState {
         private final Deque<FlowControlled> pendingWriteQueue;
         private int window;
-        private int pendingBytes;
+        // Here we use long to allow queuing a big FileRegion as data frame. We will split it into
+        // multiple data frames when writing.
+        private long pendingBytes;
         private int allocated;
         // Set to true while a frame is being written, false otherwise.
         private boolean writing;
@@ -524,7 +526,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
         @Override
         int streamableBytes() {
-            return max(0, min(pendingBytes - allocated, window));
+            return max(0, (int) min(pendingBytes - allocated, window));
         }
 
         @Override
@@ -600,7 +602,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          * queue, the written bytes are removed from this branch of the priority tree.
          */
         private int write(FlowControlled frame, int allowedBytes) {
-            int before = frame.size();
+            long before = frame.size();
             int writtenBytes;
             // In case an exception is thrown we want to remember it and pass it to cancel(Throwable).
             Throwable cause = null;
@@ -624,7 +626,8 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                 writing = false;
                 // Make sure we always decrement the flow control windows
                 // by the bytes written.
-                writtenBytes = before - frame.size();
+                // The cast is safe because allowedBytes which is an int is the upper bound.
+                writtenBytes = (int) (before - frame.size());
                 decrementFlowControlWindow(writtenBytes);
                 decrementPendingBytes(writtenBytes);
                 // If a cancellation occurred while writing, call cancel again to
@@ -641,7 +644,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          * fit into the stream window, then {@link #incrementStreamableBytesForTree} is called to recursively update
          * this branch of the priority tree.
          */
-        private void incrementPendingBytes(int numBytes) {
+        private void incrementPendingBytes(long numBytes) {
             int previouslyStreamable = streamableBytes();
             pendingBytes += numBytes;
 
@@ -654,7 +657,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         /**
          * If this frame is in the pending queue, decrements the number of pending bytes for the stream.
          */
-        private void decrementPendingBytes(int bytes) {
+        private void decrementPendingBytes(long bytes) {
             incrementPendingBytes(-bytes);
         }
 

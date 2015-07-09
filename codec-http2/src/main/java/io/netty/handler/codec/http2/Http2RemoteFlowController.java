@@ -68,8 +68,10 @@ public interface Http2RemoteFlowController extends Http2FlowController {
          * return 0 for this value even though they produce a non-zero number of bytes on
          * the wire. Other frames like {@code DATA} frames have both their payload and padding count
          * against flow-control.
+         * <p>
+         * A long size allow us queuing a big {@link io.netty.channel.FileRegion} {@code DATA} frame.
          */
-        int size();
+        long size();
 
         /**
          * Called to indicate that an error occurred before this object could be completely written.
