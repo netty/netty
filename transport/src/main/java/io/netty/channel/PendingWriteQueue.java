@@ -87,7 +87,12 @@ public final class PendingWriteQueue {
             tail = write;
         }
         size ++;
-        buffer.incrementPendingOutboundBytes(write.size);
+        // We need to guard against null as channel.unsafe().outboundBuffer() may returned null
+        // if the channel was already closed when constructing the PendingWriteQueue.
+        // See https://github.com/netty/netty/issues/3967
+        if (buffer != null) {
+            buffer.incrementPendingOutboundBytes(write.size);
+        }
     }
 
     /**
@@ -245,7 +250,12 @@ public final class PendingWriteQueue {
         }
 
         write.recycle();
-        buffer.decrementPendingOutboundBytes(writeSize);
+        // We need to guard against null as channel.unsafe().outboundBuffer() may returned null
+        // if the channel was already closed when constructing the PendingWriteQueue.
+        // See https://github.com/netty/netty/issues/3967
+        if (buffer != null) {
+            buffer.decrementPendingOutboundBytes(writeSize);
+        }
     }
 
     private static void safeFail(ChannelPromise promise, Throwable cause) {
