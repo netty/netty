@@ -245,6 +245,21 @@ public class PendingWriteQueueTest {
         assertNull(channel.readInbound());
     }
 
+    // See https://github.com/netty/netty/issues/3967
+    @Test
+    public void testCloseChannelOnCreation() {
+        EmbeddedChannel channel = new EmbeddedChannel();
+        channel.close().syncUninterruptibly();
+
+        final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
+
+        IllegalStateException ex = new IllegalStateException();
+        ChannelPromise promise = channel.newPromise();
+        queue.add(1L, promise);
+        queue.removeAndFailAll(ex);
+        assertSame(ex, promise.cause());
+    }
+
     private static class TestHandler extends ChannelDuplexHandler {
         protected PendingWriteQueue queue;
         private int expectedSize;
