@@ -16,8 +16,8 @@
 package io.netty.channel.oio;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ReadableObject;
 import io.netty.channel.Channel;
-import io.netty.channel.FileRegion;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -117,7 +117,7 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
     }
 
     @Override
-    protected void doWriteFileRegion(FileRegion region) throws Exception {
+    protected void doWriteReadableObject(ReadableObject obj) throws Exception {
         OutputStream os = this.os;
         if (os == null) {
             throw new NotYetConnectedException();
@@ -126,25 +126,19 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
             outChannel = Channels.newChannel(os);
         }
 
-        long written = 0;
-        for (;;) {
-            long localWritten = region.transferTo(outChannel, written);
-            if (localWritten == -1) {
-                checkEOF(region);
+        long bytesToTransfer = obj.readableBytes();
+        long totalTransferred = 0;
+        while (obj.isReadable()) {
+            long transferred = obj.readTo(outChannel, obj.readableBytes());
+            if (transferred == -1) {
+                if (obj.isReadable()) {
+                    throw new EOFException(
+                            "Expected to be able to write " + bytesToTransfer + " bytes, " +
+                                    "but only wrote " + totalTransferred);
+                }
                 return;
             }
-            written += localWritten;
-
-            if (written >= region.count()) {
-                return;
-            }
-        }
-    }
-
-    private static void checkEOF(FileRegion region) throws IOException {
-        if (region.transfered() < region.count()) {
-            throw new EOFException("Expected to be able to write " + region.count() + " bytes, " +
-                                   "but only wrote " + region.transfered());
+            totalTransferred += transferred;
         }
     }
 

@@ -16,6 +16,7 @@
 package io.netty.channel.oio;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ReadableObject;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelMetadata;
@@ -201,11 +202,15 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                     readableBytes = newReadableBytes;
                 }
                 in.remove();
-            } else if (msg instanceof FileRegion) {
-                FileRegion region = (FileRegion) msg;
-                long transfered = region.transfered();
-                doWriteFileRegion(region);
-                in.progress(region.transfered() - transfered);
+            } else if (msg instanceof ReadableObject) {
+                ReadableObject obj = (ReadableObject) msg;
+                long readableBytes = obj.readableBytes();
+                while (readableBytes > 0) {
+                    doWriteReadableObject(obj);
+                    long newReadableBytes = obj.readableBytes();
+                    in.progress(readableBytes - newReadableBytes);
+                    readableBytes = newReadableBytes;
+                }
                 in.remove();
             } else {
                 in.remove(new UnsupportedOperationException(
@@ -248,10 +253,10 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
     protected abstract void doWriteBytes(ByteBuf buf) throws Exception;
 
     /**
-     * Write the data which is hold by the {@link FileRegion} to the underlying Socket.
+     * Write the data which is hold by the {@link ReadableObject} to the underlying Socket.
      *
-     * @param region        the {@link FileRegion} which holds the data to transfer
+     * @param obj        the {@link ReadableObject} which holds the data to transfer
      * @throws Exception    is thrown if an error occurred
      */
-    protected abstract void doWriteFileRegion(FileRegion region) throws Exception;
+    protected abstract void doWriteReadableObject(ReadableObject obj) throws Exception;
 }

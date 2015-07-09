@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.ReadableObject;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.Recycler;
@@ -203,8 +204,8 @@ public final class ChannelOutboundBuffer {
         if (msg instanceof ByteBuf) {
             return ((ByteBuf) msg).readableBytes();
         }
-        if (msg instanceof FileRegion) {
-            return ((FileRegion) msg).count();
+        if (msg instanceof ReadableObject) {
+            return ((ReadableObject) msg).readableBytes();
         }
         if (msg instanceof ByteBufHolder) {
             return ((ByteBufHolder) msg).content().readableBytes();

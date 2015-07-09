@@ -16,6 +16,7 @@
 package io.netty.handler.codec.memcache;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ReadableObject;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
@@ -87,8 +88,8 @@ public abstract class AbstractMemcacheObjectEncoder<M extends MemcacheMessage> e
         if (msg instanceof ByteBuf) {
             return ((ByteBuf) msg).readableBytes();
         }
-        if (msg instanceof FileRegion) {
-            return (int) ((FileRegion) msg).count();
+        if (msg instanceof ReadableObject) {
+            return (int) ((ReadableObject) msg).readableBytes();
         }
         throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
     }
@@ -106,8 +107,8 @@ public abstract class AbstractMemcacheObjectEncoder<M extends MemcacheMessage> e
         if (msg instanceof MemcacheContent) {
             return ((MemcacheContent) msg).content().retain();
         }
-        if (msg instanceof FileRegion) {
-            return ((FileRegion) msg).retain();
+        if (msg instanceof ReadableObject) {
+            return ((ReadableObject) msg).retain();
         }
         throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
     }

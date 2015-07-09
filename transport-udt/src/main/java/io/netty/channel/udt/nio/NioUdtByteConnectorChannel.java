@@ -15,13 +15,15 @@
  */
 package io.netty.channel.udt.nio;
 
+import static java.nio.channels.SelectionKey.OP_CONNECT;
+
 import com.barchart.udt.TypeUDT;
 import com.barchart.udt.nio.SocketChannelUDT;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ReadableObject;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
-import io.netty.channel.FileRegion;
 import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.udt.DefaultUdtChannelConfig;
 import io.netty.channel.udt.UdtChannel;
@@ -31,8 +33,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-
-import static java.nio.channels.SelectionKey.*;
 
 /**
  * Byte Channel Connector for UDT Streams.
@@ -146,7 +146,7 @@ public class NioUdtByteConnectorChannel extends AbstractNioByteChannel implement
     }
 
     @Override
-    protected long doWriteFileRegion(FileRegion region) throws Exception {
+    protected long doWriteReadableObject(ReadableObject obj) throws Exception {
         throw new UnsupportedOperationException();
     }
 

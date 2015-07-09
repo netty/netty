@@ -33,12 +33,11 @@ import java.nio.channels.WritableByteChannel;
  * {@code 0}.
  */
 public class DefaultFileRegion extends AbstractReferenceCounted implements FileRegion {
-
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultFileRegion.class);
+
     private final File f;
-    private final long position;
-    private final long count;
-    private long transfered;
+    private final long endPosition;
+    private long readPosition;
     private FileChannel file;
 
     /**
@@ -58,9 +57,13 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
         if (count < 0) {
             throw new IllegalArgumentException("count must be >= 0 but was " + count);
         }
+        if (Long.MAX_VALUE - count < position) {
+            throw new IllegalArgumentException("Overflow calculating end position");
+        }
+
         this.file = file;
-        this.position = position;
-        this.count = count;
+        readPosition = position;
+        endPosition = position + count;
         f = null;
     }
 
@@ -82,8 +85,11 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
         if (count < 0) {
             throw new IllegalArgumentException("count must be >= 0 but was " + count);
         }
-        this.position = position;
-        this.count = count;
+        if (Long.MAX_VALUE - count < position) {
+            throw new IllegalArgumentException("Overflow calculating end position");
+        }
+        readPosition = position;
+        endPosition = position + count;
         this.f = f;
     }
 
@@ -105,42 +111,66 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
     }
 
     @Override
-    public long position() {
-        return position;
+    public long readPosition() {
+        return readPosition;
     }
 
     @Override
-    public long count() {
-        return count;
+    public long readableBytes() {
+        return endPosition - readPosition;
     }
 
     @Override
-    public long transfered() {
-        return transfered;
-    }
-
-    @Override
-    public long transferTo(WritableByteChannel target, long position) throws IOException {
-        long count = this.count - position;
-        if (count < 0 || position < 0) {
-            throw new IllegalArgumentException(
-                    "position out of range: " + position +
-                    " (expected: 0 - " + (this.count - 1) + ')');
-        }
-        if (count == 0) {
+    public long readTo(WritableByteChannel target, long length) throws IOException {
+        verifyReadable(length);
+        if (length == 0) {
             return 0L;
         }
         if (refCnt() == 0) {
             throw new IllegalReferenceCountException(0);
         }
+
         // Call open to make sure fc is initialized. This is a no-oop if we called it before.
         open();
 
-        long written = file.transferTo(this.position + position, count, target);
+        long written = file.transferTo(this.readPosition, length, target);
         if (written > 0) {
-            transfered += written;
+            readPosition += written;
         }
         return written;
+    }
+
+    @Override
+    public boolean isReadable() {
+        return readableBytes() > 0;
+    }
+
+    @Override
+    public FileRegion skipBytes(long length) {
+        verifyReadable(length);
+        readPosition += length;
+        return this;
+    }
+
+    @Override
+    public FileRegion slice() {
+        return new DefaultFileRegion(file, readPosition, readableBytes());
+    }
+
+    @Override
+    public FileRegion slice(long position, long length) {
+        verifyReadable(length);
+        if (position < readPosition || endPosition - length < position) {
+            throw new IllegalArgumentException("Slice must be within readable region");
+        }
+        return new DefaultFileRegion(file, position, length);
+    }
+
+    @Override
+    public FileRegion readSlice(long length) {
+        FileRegion slice = slice(readPosition, length);
+        readPosition += length;
+        return slice;
     }
 
     @Override
@@ -181,5 +211,11 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
     @Override
     public FileRegion touch(Object hint) {
         return this;
+    }
+
+    private void verifyReadable(long length) {
+        if (length < 0 || length > readableBytes()) {
+            throw new IllegalArgumentException("length must be within readable region: " + length);
+        }
     }
 }

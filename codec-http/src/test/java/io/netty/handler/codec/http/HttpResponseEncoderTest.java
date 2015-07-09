@@ -67,22 +67,42 @@ public class HttpResponseEncoderTest {
     private static class DummyLongFileRegion implements FileRegion {
 
         @Override
-        public long position() {
+        public long readPosition() {
             return 0;
         }
 
         @Override
-        public long transfered() {
-            return 0;
-        }
-
-        @Override
-        public long count() {
+        public long readableBytes() {
             return INTEGER_OVERLFLOW;
         }
 
         @Override
-        public long transferTo(WritableByteChannel target, long position) throws IOException {
+        public long readTo(WritableByteChannel target, long length) throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean isReadable() {
+            return false;
+        }
+
+        @Override
+        public FileRegion skipBytes(long length) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public FileRegion slice() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public FileRegion slice(long position, long length) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public FileRegion readSlice(long length) {
             throw new UnsupportedOperationException();
         }
 

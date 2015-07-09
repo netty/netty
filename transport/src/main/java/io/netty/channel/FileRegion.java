@@ -15,9 +15,8 @@
  */
 package io.netty.channel;
 
-import io.netty.util.ReferenceCounted;
+import io.netty.buffer.ReadableObject;
 
-import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 
@@ -52,44 +51,5 @@ import java.nio.channels.WritableByteChannel;
  *
  * Currently, the NIO transport is the only transport that supports {@link FileRegion}.
  */
-public interface FileRegion extends ReferenceCounted {
-
-    /**
-     * Returns the offset in the file where the transfer began.
-     */
-    long position();
-
-    /**
-     * Return the bytes which was transfered already
-     */
-    long transfered();
-
-    /**
-     * Returns the number of bytes to transfer.
-     */
-    long count();
-
-    /**
-     * Transfers the content of this file region to the specified channel.
-     *
-     * @param target    the destination of the transfer
-     * @param position  the relative offset of the file where the transfer
-     *                  begins from.  For example, <tt>0</tt> will make the
-     *                  transfer start from {@link #position()}th byte and
-     *                  <tt>{@link #count()} - 1</tt> will make the last
-     *                  byte of the region transferred.
-     */
-    long transferTo(WritableByteChannel target, long position) throws IOException;
-
-    @Override
-    FileRegion retain();
-
-    @Override
-    FileRegion retain(int increment);
-
-    @Override
-    FileRegion touch();
-
-    @Override
-    FileRegion touch(Object hint);
+public interface FileRegion extends ReadableObject<FileRegion> {
 }

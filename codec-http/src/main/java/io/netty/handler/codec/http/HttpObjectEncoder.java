@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ReadableObject;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
 import io.netty.handler.codec.MessageToMessageEncoder;
@@ -190,8 +191,8 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         if (msg instanceof HttpContent) {
             return ((HttpContent) msg).content().retain();
         }
-        if (msg instanceof FileRegion) {
-            return ((FileRegion) msg).retain();
+        if (msg instanceof ReadableObject) {
+            return ((ReadableObject) msg).retain();
         }
         throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
     }
@@ -203,8 +204,8 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         if (msg instanceof ByteBuf) {
             return ((ByteBuf) msg).readableBytes();
         }
-        if (msg instanceof FileRegion) {
-            return ((FileRegion) msg).count();
+        if (msg instanceof ReadableObject) {
+            return ((ReadableObject) msg).readableBytes();
         }
         throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
     }

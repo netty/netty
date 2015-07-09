@@ -17,6 +17,7 @@ package io.netty.channel.nio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ReadableObject;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
@@ -218,33 +219,35 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     incompleteWrite(setOpWrite);
                     break;
                 }
-            } else if (msg instanceof FileRegion) {
-                FileRegion region = (FileRegion) msg;
-                boolean done = region.transfered() >= region.count();
-                boolean setOpWrite = false;
-
-                if (!done) {
-                    long flushedAmount = 0;
-                    if (writeSpinCount == -1) {
-                        writeSpinCount = config().getWriteSpinCount();
-                    }
-
-                    for (int i = writeSpinCount - 1; i >= 0; i--) {
-                        long localFlushedAmount = doWriteFileRegion(region);
-                        if (localFlushedAmount == 0) {
-                            setOpWrite = true;
-                            break;
-                        }
-
-                        flushedAmount += localFlushedAmount;
-                        if (region.transfered() >= region.count()) {
-                            done = true;
-                            break;
-                        }
-                    }
-
-                    in.progress(flushedAmount);
+            } else if (msg instanceof ReadableObject) {
+                ReadableObject obj = (ReadableObject) msg;
+                long readableBytes = obj.readableBytes();
+                if (readableBytes == 0) {
+                    in.remove();
+                    continue;
                 }
+
+                boolean setOpWrite = false;
+                boolean done = false;
+                long flushedAmount = 0;
+                if (writeSpinCount == -1) {
+                    writeSpinCount = config().getWriteSpinCount();
+                }
+                for (int i = writeSpinCount - 1; i >= 0; i--) {
+                    long localFlushedAmount = doWriteReadableObject(obj);
+                    if (localFlushedAmount == 0) {
+                        setOpWrite = true;
+                        break;
+                    }
+
+                    flushedAmount += localFlushedAmount;
+                    if (!obj.isReadable()) {
+                        done = true;
+                        break;
+                    }
+                }
+
+                in.progress(flushedAmount);
 
                 if (done) {
                     in.remove();
@@ -298,12 +301,12 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     }
 
     /**
-     * Write a {@link FileRegion}
+     * Write a {@link ReadableObject}
      *
-     * @param region        the {@link FileRegion} from which the bytes should be written
+     * @param obj        the {@link ReadableObject} from which the bytes should be written
      * @return amount       the amount of written bytes
      */
-    protected abstract long doWriteFileRegion(FileRegion region) throws Exception;
+    protected abstract long doWriteReadableObject(ReadableObject obj) throws Exception;
 
     /**
      * Read bytes into the given {@link ByteBuf} and return the amount.
