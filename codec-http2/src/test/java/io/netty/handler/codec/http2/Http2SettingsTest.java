@@ -78,7 +78,8 @@ public class Http2SettingsTest {
 
     @Test
     public void boundarySettingsShouldBeSet() {
-        settings.maxHeaderListSize(Integer.MAX_VALUE + 1);
+        final long overIntegerMaxValue = 1L << 31;
+        settings.maxHeaderListSize((int) overIntegerMaxValue);
         assertEquals(Integer.MAX_VALUE, (long) settings.maxHeaderListSize());
 
         final long settingsValueUpperBound = (1L << 32) - 1L;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License, version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
@@ -39,30 +39,18 @@ public class DefaultHttp2HeaderTableListSizeTest {
     }
 
     @Test
-    public void standardMaxHeaderListSizeShouldSucceed() {
-        try {
-            headerTable.maxHeaderListSize(123);
-            assertEquals(123L, (long) headerTable.maxHeaderListSize());
-        } catch (Http2Exception e) {
-            fail();
-        }
+    public void standardMaxHeaderListSizeShouldSucceed() throws Http2Exception {
+        headerTable.maxHeaderListSize(123);
+        assertEquals(123L, (long) headerTable.maxHeaderListSize());
     }
 
     @Test
-    public void boundaryMaxHeaderListSizeShouldSucceed() {
-        try {
-            headerTable.maxHeaderListSize(Integer.MAX_VALUE);
-            assertEquals(Integer.MAX_VALUE, (long) headerTable.maxHeaderListSize());
-        } catch (Http2Exception e) {
-            fail();
-        }
+    public void boundaryMaxHeaderListSizeShouldSucceed() throws Http2Exception {
+        headerTable.maxHeaderListSize(Integer.MAX_VALUE);
+        assertEquals(Integer.MAX_VALUE, (long) headerTable.maxHeaderListSize());
 
-        try {
-            final long settingsValueUpperBound = (1L << 32) - 1L;
-            headerTable.maxHeaderListSize((int) settingsValueUpperBound);
-            assertEquals(Integer.MAX_VALUE, (long) headerTable.maxHeaderListSize());
-        } catch (Http2Exception e) {
-            fail();
-        }
+        final long settingsValueUpperBound = (1L << 32) - 1L;
+        headerTable.maxHeaderListSize((int) settingsValueUpperBound);
+        assertEquals(Integer.MAX_VALUE, (long) headerTable.maxHeaderListSize());
     }
 }
