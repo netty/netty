@@ -93,6 +93,14 @@ public interface ReadableObject<T extends ReadableObject> extends ReferenceCount
     T readSlice(long length);
 
     /**
+     * Return the underlying {@link ReadableObject} instance if this is a wrapper around another
+     * object (e.g. a slice of another object)
+     *
+     * @return {@code null} if this is not a wrapper
+     */
+    T unwrap();
+
+    /**
      * Transfers this object's data to the specified stream starting at the
      * current {@code readPosition} and increases the {@code readPosition} by
      * the number of bytes written.
