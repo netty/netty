@@ -36,6 +36,7 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultFileRegion.class);
 
     private final File f;
+    private final DefaultFileRegion parent;
     private final long endPosition;
     private long readPosition;
     private FileChannel file;
@@ -61,6 +62,7 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
             throw new IllegalArgumentException("Overflow calculating end position");
         }
 
+        parent = null;
         this.file = file;
         readPosition = position;
         endPosition = position + count;
@@ -88,9 +90,38 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
         if (Long.MAX_VALUE - count < position) {
             throw new IllegalArgumentException("Overflow calculating end position");
         }
+        parent = null;
         readPosition = position;
         endPosition = position + count;
         this.f = f;
+    }
+
+    /**
+     * Create a new instance
+     *
+     * @param parent      the parent file region for a slice.
+     * @param position  the position from which the transfer should start
+     * @param count     the number of bytes to transfer
+     */
+    private DefaultFileRegion(DefaultFileRegion parent, long position, long count) {
+        if (parent == null) {
+            throw new NullPointerException("parent");
+        }
+        if (position < 0) {
+            throw new IllegalArgumentException("position must be >= 0 but was " + position);
+        }
+        if (count < 0) {
+            throw new IllegalArgumentException("count must be >= 0 but was " + count);
+        }
+        if (Long.MAX_VALUE - count < position) {
+            throw new IllegalArgumentException("Overflow calculating end position");
+        }
+
+        this.parent = parent;
+        this.file = parent.file;
+        readPosition = position;
+        endPosition = position + count;
+        f = null;
     }
 
     /**
@@ -154,7 +185,7 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
 
     @Override
     public FileRegion slice() {
-        return new DefaultFileRegion(file, readPosition, readableBytes());
+        return new DefaultFileRegion(this, readPosition, readableBytes());
     }
 
     @Override
@@ -163,7 +194,7 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
         if (position < readPosition || endPosition - length < position) {
             throw new IllegalArgumentException("Slice must be within readable region");
         }
-        return new DefaultFileRegion(file, position, length);
+        return new DefaultFileRegion(this, position, length);
     }
 
     @Override
@@ -171,6 +202,11 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
         FileRegion slice = slice(readPosition, length);
         readPosition += length;
         return slice;
+    }
+
+    @Override
+    public FileRegion unwrap() {
+        return parent;
     }
 
     @Override
