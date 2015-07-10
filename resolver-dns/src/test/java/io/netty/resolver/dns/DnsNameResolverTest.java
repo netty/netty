@@ -418,6 +418,16 @@ public class DnsNameResolverTest {
         }
     }
 
+    @Test
+    public void testResolveIp() {
+        InetSocketAddress unresolved =
+                InetSocketAddress.createUnresolved("10.0.0.1", ThreadLocalRandom.current().nextInt(65536));
+
+        InetSocketAddress address = resolver.resolve(unresolved).syncUninterruptibly().getNow();
+
+        assertEquals("10.0.0.1", address.getHostName());
+    }
+
     private static void resolve(
             Map<InetSocketAddress, Future<InetSocketAddress>> futures, String hostname) {
         InetSocketAddress unresolved =
