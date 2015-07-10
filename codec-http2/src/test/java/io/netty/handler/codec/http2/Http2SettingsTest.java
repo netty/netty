@@ -75,4 +75,14 @@ public class Http2SettingsTest {
         settings.put(key, 123L);
         assertEquals(123L, (long) settings.get(key));
     }
+
+    @Test
+    public void boundarySettingsShouldBeSet() {
+        settings.maxHeaderListSize(Integer.MAX_VALUE + 1);
+        assertEquals(Integer.MAX_VALUE, (long) settings.maxHeaderListSize());
+
+        final long settingsValueUpperBound = (1L << 32) - 1L;
+        settings.maxHeaderListSize((int) settingsValueUpperBound);
+        assertEquals(Integer.MAX_VALUE, (long) settings.maxHeaderListSize());
+    }
 }
