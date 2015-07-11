@@ -45,9 +45,14 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2TestUtil.FrameCountDown;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
@@ -84,6 +89,7 @@ public class HttpToHttp2ConnectionHandlerTest {
     private Channel clientChannel;
     private CountDownLatch requestLatch;
     private CountDownLatch serverSettingsAckLatch;
+    private CountDownLatch trailersLatch;
     private FrameCountDown serverFrameCountDown;
 
     @Before
@@ -104,7 +110,7 @@ public class HttpToHttp2ConnectionHandlerTest {
 
     @Test
     public void testJustHeadersRequest() throws Exception {
-        bootstrapEnv(2, 1);
+        bootstrapEnv(2, 1, 0);
         final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/example");
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
@@ -146,7 +152,7 @@ public class HttpToHttp2ConnectionHandlerTest {
             }
         }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3),
                 any(ByteBuf.class), eq(0), eq(true));
-        bootstrapEnv(3, 1);
+        bootstrapEnv(3, 1, 0);
         final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, "/example",
                 Unpooled.copiedBuffer(text, UTF_8));
         final HttpHeaders httpHeaders = request.headers();
@@ -175,9 +181,127 @@ public class HttpToHttp2ConnectionHandlerTest {
         assertEquals(text, receivedBuffers.get(0));
     }
 
-    private void bootstrapEnv(int requestCountDown, int serverSettingsAckCount) throws Exception {
+    @Test
+    public void testRequestWithBodyAndTrailingHeaders() throws Exception {
+        final String text = "foooooogoooo";
+        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<String>());
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock in) throws Throwable {
+                receivedBuffers.add(((ByteBuf) in.getArguments()[2]).toString(UTF_8));
+                return null;
+            }
+        }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3),
+                any(ByteBuf.class), eq(0), eq(false));
+        bootstrapEnv(4, 1, 1);
+        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, "/example",
+                Unpooled.copiedBuffer(text, UTF_8));
+        final HttpHeaders httpHeaders = request.headers();
+        httpHeaders.set(HttpHeaderNames.HOST, "http://your_user-name123@www.example.org:5555/example");
+        httpHeaders.add("foo", "goo");
+        httpHeaders.add("foo", "goo2");
+        httpHeaders.add("foo2", "goo2");
+        final Http2Headers http2Headers =
+                new DefaultHttp2Headers().method(as("POST")).path(as("/example"))
+                        .authority(as("www.example.org:5555")).scheme(as("http"))
+                        .add(as("foo"), as("goo")).add(as("foo"), as("goo2"))
+                        .add(as("foo2"), as("goo2"));
+
+        request.trailingHeaders().add("trailing", "bar");
+
+        final Http2Headers http2TrailingHeaders = new DefaultHttp2Headers().add(as("trailing"), as("bar"));
+
+        ChannelPromise writePromise = newPromise();
+        ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
+
+        assertTrue(writePromise.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writePromise.isSuccess());
+        assertTrue(writeFuture.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writeFuture.isSuccess());
+        awaitRequests();
+        verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(http2Headers), eq(0),
+                anyShort(), anyBoolean(), eq(0), eq(false));
+        verify(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3), any(ByteBuf.class), eq(0),
+                eq(false));
+        verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(http2TrailingHeaders), eq(0),
+                anyShort(), anyBoolean(), eq(0), eq(true));
+        assertEquals(1, receivedBuffers.size());
+        assertEquals(text, receivedBuffers.get(0));
+    }
+
+    @Test
+    public void testChunkedRequestWithBodyAndTrailingHeaders() throws Exception {
+        final String text = "foooooo";
+        final String text2 = "goooo";
+        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<String>());
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock in) throws Throwable {
+                receivedBuffers.add(((ByteBuf) in.getArguments()[2]).toString(UTF_8));
+                return null;
+            }
+        }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3),
+                any(ByteBuf.class), eq(0), eq(false));
+        bootstrapEnv(4, 1, 1);
+        final HttpRequest request = new DefaultHttpRequest(HTTP_1_1, POST, "/example");
+        final HttpHeaders httpHeaders = request.headers();
+        httpHeaders.set(HttpHeaderNames.HOST, "http://your_user-name123@www.example.org:5555/example");
+        httpHeaders.add(HttpHeaderNames.TRANSFER_ENCODING, "chunked");
+        httpHeaders.add("foo", "goo");
+        httpHeaders.add("foo", "goo2");
+        httpHeaders.add("foo2", "goo2");
+        final Http2Headers http2Headers =
+                new DefaultHttp2Headers().method(as("POST")).path(as("/example"))
+                        .authority(as("www.example.org:5555")).scheme(as("http"))
+                        .add(as("foo"), as("goo")).add(as("foo"), as("goo2"))
+                        .add(as("foo2"), as("goo2"));
+
+        final DefaultHttpContent httpContent = new DefaultHttpContent(Unpooled.copiedBuffer(text, UTF_8));
+        final LastHttpContent lastHttpContent = new DefaultLastHttpContent(Unpooled.copiedBuffer(text2, UTF_8));
+
+        lastHttpContent.trailingHeaders().add("trailing", "bar");
+
+        final Http2Headers http2TrailingHeaders = new DefaultHttp2Headers().add(as("trailing"), as("bar"));
+
+        ChannelPromise writePromise = newPromise();
+        ChannelFuture writeFuture = clientChannel.write(request, writePromise);
+        ChannelPromise contentPromise = newPromise();
+        ChannelFuture contentFuture = clientChannel.write(httpContent, contentPromise);
+        ChannelPromise lastContentPromise = newPromise();
+        ChannelFuture lastContentFuture = clientChannel.write(lastHttpContent, lastContentPromise);
+
+        clientChannel.flush();
+
+        assertTrue(writePromise.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writePromise.isSuccess());
+        assertTrue(writeFuture.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writeFuture.isSuccess());
+
+        assertTrue(contentPromise.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(contentPromise.isSuccess());
+        assertTrue(contentFuture.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(contentFuture.isSuccess());
+
+        assertTrue(lastContentPromise.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(lastContentPromise.isSuccess());
+        assertTrue(lastContentFuture.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(lastContentFuture.isSuccess());
+
+        awaitRequests();
+        verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(http2Headers), eq(0),
+                anyShort(), anyBoolean(), eq(0), eq(false));
+        verify(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3), any(ByteBuf.class), eq(0),
+                eq(false));
+        verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(http2TrailingHeaders), eq(0),
+                anyShort(), anyBoolean(), eq(0), eq(true));
+        assertEquals(1, receivedBuffers.size());
+        assertEquals(text + text2, receivedBuffers.get(0));
+    }
+
+    private void bootstrapEnv(int requestCountDown, int serverSettingsAckCount, int trailersCount) throws Exception {
         requestLatch = new CountDownLatch(requestCountDown);
         serverSettingsAckLatch = new CountDownLatch(serverSettingsAckCount);
+        trailersLatch = trailersCount == 0 ? null : new CountDownLatch(trailersCount);
 
         sb = new ServerBootstrap();
         cb = new Bootstrap();
@@ -188,7 +312,8 @@ public class HttpToHttp2ConnectionHandlerTest {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                serverFrameCountDown = new FrameCountDown(serverListener, serverSettingsAckLatch, requestLatch);
+                serverFrameCountDown =
+                        new FrameCountDown(serverListener, serverSettingsAckLatch, requestLatch, null, trailersLatch);
                 p.addLast(new HttpToHttp2ConnectionHandler(true, serverFrameCountDown));
             }
         });
@@ -213,6 +338,10 @@ public class HttpToHttp2ConnectionHandlerTest {
 
     private void awaitRequests() throws Exception {
         assertTrue(requestLatch.await(WAIT_TIME_SECONDS, SECONDS));
+        if (trailersLatch != null) {
+            assertTrue(trailersLatch.await(WAIT_TIME_SECONDS, SECONDS));
+        }
+        assertTrue(serverSettingsAckLatch.await(WAIT_TIME_SECONDS, SECONDS));
     }
 
     private ChannelHandlerContext ctx() {
