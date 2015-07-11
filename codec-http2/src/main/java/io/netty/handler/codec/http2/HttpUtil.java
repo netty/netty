@@ -29,6 +29,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderUtil;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
@@ -265,7 +266,7 @@ public final class HttpUtil {
     /**
      * Converts the given HTTP/1.x headers into HTTP/2 headers.
      */
-    public static Http2Headers toHttp2Headers(FullHttpMessage in) throws Exception {
+    public static Http2Headers toHttp2Headers(HttpMessage in) throws Exception {
         final Http2Headers out = new DefaultHttp2Headers();
         HttpHeaders inHeaders = in.headers();
         if (in instanceof HttpRequest) {
@@ -304,6 +305,16 @@ public final class HttpUtil {
         }
 
         // Add the HTTP headers which have not been consumed above
+        return out.add(toHttp2Headers(inHeaders));
+    }
+
+    public static Http2Headers toHttp2Headers(HttpHeaders inHeaders) throws Exception {
+        if (inHeaders.isEmpty()) {
+            return EmptyHttp2Headers.INSTANCE;
+        }
+
+        final Http2Headers out = new DefaultHttp2Headers();
+
         inHeaders.forEachEntry(new EntryVisitor() {
             @Override
             public boolean visit(Entry<CharSequence, CharSequence> entry) throws Exception {
