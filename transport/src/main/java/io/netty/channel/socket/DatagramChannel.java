@@ -24,7 +24,7 @@ import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 
 /**
- * A UDP/IP {@link Channel}}.
+ * A UDP/IP {@link Channel}.
  */
 public interface DatagramChannel extends Channel {
     @Override
