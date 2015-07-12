@@ -50,6 +50,13 @@ public final class Native {
         NativeLibraryLoader.load("netty-transport-native-epoll", PlatformDependent.getClassLoader(Native.class));
     }
 
+    /**
+     * This is an empty method just so {@link io.netty.jni.libaio.LibaioFile} would be able to
+     * force the static block doing the real load.
+     */
+    public static void loadLibrary() {
+    }
+
     // EventLoop operations and constants
     public static final int EPOLLIN = epollin();
     public static final int EPOLLOUT = epollout();
