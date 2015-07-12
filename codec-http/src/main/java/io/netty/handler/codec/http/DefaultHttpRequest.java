@@ -19,7 +19,7 @@ package io.netty.handler.codec.http;
  * The default {@link HttpRequest} implementation.
  */
 public class DefaultHttpRequest extends DefaultHttpMessage implements HttpRequest {
-    private static final int HASH_CODE_PRIME = 31;
+    private final int HASH_CODE_PRIME = 31;
     private HttpMethod method;
     private String uri;
 
