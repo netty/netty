@@ -105,7 +105,13 @@ public class DatagramDnsResponseDecoder extends MessageToMessageDecoder<Datagram
     private void decodeRecords(
             DnsResponse response, DnsSection section, ByteBuf buf, int count) throws Exception {
         for (int i = count; i > 0; i --) {
-            response.addRecord(section, recordDecoder.decodeRecord(buf));
+            final DnsRecord r = recordDecoder.decodeRecord(buf);
+            if (r == null) {
+                // Truncated response
+                break;
+            }
+
+            response.addRecord(section, r);
         }
     }
 }

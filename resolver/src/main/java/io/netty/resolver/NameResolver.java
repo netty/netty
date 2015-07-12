@@ -22,6 +22,7 @@ import io.netty.util.concurrent.Promise;
 import java.io.Closeable;
 import java.net.SocketAddress;
 import java.nio.channels.UnsupportedAddressTypeException;
+import java.util.List;
 
 /**
  * Resolves an arbitrary string that represents the name of an endpoint into a {@link SocketAddress}.
@@ -81,6 +82,48 @@ public interface NameResolver<T extends SocketAddress> extends Closeable {
      * @return the {@link SocketAddress} as the result of the resolution
      */
     Future<T> resolve(SocketAddress address, Promise<T> promise);
+
+    /**
+     * Resolves the specified host name and port into a list of {@link SocketAddress}es.
+     *
+     * @param inetHost the name to resolve
+     * @param inetPort the port number
+     *
+     * @return the list of the {@link SocketAddress}es as the result of the resolution
+     */
+    Future<List<T>> resolveAll(String inetHost, int inetPort);
+
+    /**
+     * Resolves the specified host name and port into a list of {@link SocketAddress}es.
+     *
+     * @param inetHost the name to resolve
+     * @param inetPort the port number
+     * @param promise the {@link Promise} which will be fulfilled when the name resolution is finished
+     *
+     * @return the list of the {@link SocketAddress}es as the result of the resolution
+     */
+    Future<List<T>> resolveAll(String inetHost, int inetPort, Promise<List<T>> promise);
+
+    /**
+     * Resolves the specified address. If the specified address is resolved already, this method does nothing
+     * but returning the original address.
+     *
+     * @param address the address to resolve
+     *
+     * @return the list of the {@link SocketAddress}es as the result of the resolution
+     */
+    Future<List<T>> resolveAll(SocketAddress address);
+
+    /**
+     * Resolves the specified address. If the specified address is resolved already, this method does nothing
+     * but returning the original address.
+     *
+     * @param address the address to resolve
+     * @param promise the {@link Promise} which will be fulfilled when the name resolution is finished
+     *
+     * @return the list of the {@link SocketAddress}es as the result of the resolution
+     */
+    Future<List<T>> resolveAll(SocketAddress address, Promise<List<T>> promise);
 
     /**
      * Closes all the resources allocated and used by this resolver.

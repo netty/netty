@@ -31,19 +31,17 @@ import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.handler.codec.dns.DatagramDnsQueryEncoder;
 import io.netty.handler.codec.dns.DatagramDnsResponse;
 import io.netty.handler.codec.dns.DatagramDnsResponseDecoder;
-import io.netty.handler.codec.dns.DnsSection;
 import io.netty.handler.codec.dns.DnsQuestion;
-import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsResponse;
-import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.resolver.NameResolver;
 import io.netty.resolver.SimpleNameResolver;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.ScheduledFuture;
+import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -56,12 +54,15 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceArray;
+
+import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * A DNS-based {@link NameResolver}.
@@ -102,9 +103,17 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
     final AtomicReferenceArray<DnsQueryContext> promises = new AtomicReferenceArray<DnsQueryContext>(65536);
 
     /**
-     * The cache for {@link #query(DnsQuestion)}
+     * Cache for {@link #doResolve(InetSocketAddress, Promise)} and {@link #doResolveAll(InetSocketAddress, Promise)}.
      */
-    final ConcurrentMap<DnsQuestion, DnsCacheEntry> queryCache = PlatformDependent.newConcurrentHashMap();
+    final ConcurrentMap<String, List<DnsCacheEntry>> resolveCache = PlatformDependent.newConcurrentHashMap();
+
+    private final FastThreadLocal<Iterator<InetSocketAddress>> nameServerAddrIterator =
+            new FastThreadLocal<Iterator<InetSocketAddress>>() {
+                @Override
+                protected Iterator<InetSocketAddress> initialValue() throws Exception {
+                    return nameServerAddresses.iterator();
+                }
+            };
 
     private final DnsResponseHandler responseHandler = new DnsResponseHandler();
 
@@ -114,11 +123,11 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
     private volatile int minTtl;
     private volatile int maxTtl = Integer.MAX_VALUE;
     private volatile int negativeTtl;
-    private volatile int maxTriesPerQuery = 2;
+    private volatile int maxQueriesPerResolve = 3;
+    private volatile boolean traceEnabled = true;
 
     private volatile InternetProtocolFamily[] resolveAddressTypes = DEFAULT_RESOLVE_ADDRESS_TYPES;
     private volatile boolean recursionDesired = true;
-    private volatile int maxQueriesPerResolve = 8;
 
     private volatile int maxPayloadSize;
 
@@ -238,17 +247,12 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
 
         super(eventLoop);
 
-        if (channelFactory == null) {
-            throw new NullPointerException("channelFactory");
-        }
-        if (nameServerAddresses == null) {
-            throw new NullPointerException("nameServerAddresses");
-        }
+        checkNotNull(channelFactory, "channelFactory");
+        checkNotNull(nameServerAddresses, "nameServerAddresses");
+        checkNotNull(localAddress, "localAddress");
+
         if (!nameServerAddresses.iterator().hasNext()) {
-            throw new NullPointerException("nameServerAddresses is empty");
-        }
-        if (localAddress == null) {
-            throw new NullPointerException("localAddress");
+            throw new IllegalArgumentException("nameServerAddresses is empty");
         }
 
         this.nameServerAddresses = nameServerAddresses;
@@ -387,32 +391,6 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
     }
 
     /**
-     * Returns the maximum number of tries for each query. The default value is 2 times.
-     *
-     * @see #setMaxTriesPerQuery(int)
-     */
-    public int maxTriesPerQuery() {
-        return maxTriesPerQuery;
-    }
-
-    /**
-     * Sets the maximum number of tries for each query.
-     *
-     * @return {@code this}
-     *
-     * @see #maxTriesPerQuery()
-     */
-    public DnsNameResolver setMaxTriesPerQuery(int maxTriesPerQuery) {
-        if (maxTriesPerQuery < 1) {
-            throw new IllegalArgumentException("maxTries: " + maxTriesPerQuery + " (expected: > 0)");
-        }
-
-        this.maxTriesPerQuery = maxTriesPerQuery;
-
-        return this;
-    }
-
-    /**
      * Returns the list of the protocol families of the address resolved by {@link #resolve(SocketAddress)}
      * in the order of preference.
      * The default value depends on the value of the system property {@code "java.net.preferIPv6Addresses"}.
@@ -438,9 +416,7 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
      * @see #resolveAddressTypes()
      */
     public DnsNameResolver setResolveAddressTypes(InternetProtocolFamily... resolveAddressTypes) {
-        if (resolveAddressTypes == null) {
-            throw new NullPointerException("resolveAddressTypes");
-        }
+        checkNotNull(resolveAddressTypes, "resolveAddressTypes");
 
         final List<InternetProtocolFamily> list =
                 new ArrayList<InternetProtocolFamily>(InternetProtocolFamily.values().length);
@@ -478,9 +454,7 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
      * @see #resolveAddressTypes()
      */
     public DnsNameResolver setResolveAddressTypes(Iterable<InternetProtocolFamily> resolveAddressTypes) {
-        if (resolveAddressTypes == null) {
-            throw new NullPointerException("resolveAddressTypes");
-        }
+        checkNotNull(resolveAddressTypes, "resolveAddressTypes");
 
         final List<InternetProtocolFamily> list =
                 new ArrayList<InternetProtocolFamily>(InternetProtocolFamily.values().length);
@@ -557,6 +531,23 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
     }
 
     /**
+     * Returns if this resolver should generate the detailed trace information in an exception message so that
+     * it is easier to understand the cause of resolution failure. The default value if {@code true}.
+     */
+    public boolean isTraceEnabled() {
+        return traceEnabled;
+    }
+
+    /**
+     * Sets if this resolver should generate the detailed trace information in an exception message so that
+     * it is easier to understand the cause of resolution failure.
+     */
+    public DnsNameResolver setTraceEnabled(boolean traceEnabled) {
+        this.traceEnabled = traceEnabled;
+        return this;
+    }
+
+    /**
      * Returns the capacity of the datagram packet buffer (in bytes).  The default value is {@code 4096} bytes.
      *
      * @see #setMaxPayloadSize(int)
@@ -589,32 +580,45 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
     }
 
     /**
-     * Clears all the DNS resource records cached by this resolver.
+     * Clears all the resolved addresses cached by this resolver.
      *
      * @return {@code this}
      *
-     * @see #clearCache(DnsQuestion)
+     * @see #clearCache(String)
      */
     public DnsNameResolver clearCache() {
-        for (Iterator<Entry<DnsQuestion, DnsCacheEntry>> i = queryCache.entrySet().iterator(); i.hasNext();) {
-            Entry<DnsQuestion, DnsCacheEntry> e = i.next();
+        for (Iterator<Entry<String, List<DnsCacheEntry>>> i = resolveCache.entrySet().iterator(); i.hasNext();) {
+            final Entry<String, List<DnsCacheEntry>> e = i.next();
             i.remove();
-            e.getValue().release();
+            cancelExpiration(e);
         }
-
         return this;
     }
 
     /**
-     * Clears the DNS resource record of the specified DNS question from the cache of this resolver.
+     * Clears the resolved addresses of the specified host name from the cache of this resolver.
+     *
+     * @return {@code true} if and only if there was an entry for the specified host name in the cache and
+     *         it has been removed by this method
      */
-    public boolean clearCache(DnsQuestion question) {
-        DnsCacheEntry e = queryCache.remove(question);
-        if (e != null) {
-            e.release();
-            return true;
-        } else {
-            return false;
+    public boolean clearCache(String hostname) {
+        boolean removed = false;
+        for (Iterator<Entry<String, List<DnsCacheEntry>>> i = resolveCache.entrySet().iterator(); i.hasNext();) {
+            final Entry<String, List<DnsCacheEntry>> e = i.next();
+            if (e.getKey().equals(hostname)) {
+                i.remove();
+                cancelExpiration(e);
+                removed = true;
+            }
+        }
+        return removed;
+    }
+
+    private static void cancelExpiration(Entry<String, List<DnsCacheEntry>> e) {
+        final List<DnsCacheEntry> entries = e.getValue();
+        final int numEntries = entries.size();
+        for (int i = 0; i < numEntries; i++) {
+            entries.get(i).cancelExpiration();
         }
     }
 
@@ -640,34 +644,273 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
 
     @Override
     protected void doResolve(InetSocketAddress unresolvedAddress, Promise<InetSocketAddress> promise) throws Exception {
-        byte[] bytes = NetUtil.createByteArrayFromIpAddressString(unresolvedAddress.getHostName());
-        if (bytes == null) {
-            final String hostname = IDN.toASCII(hostname(unresolvedAddress));
-            final int port = unresolvedAddress.getPort();
-
-            final DnsNameResolverContext ctx = new DnsNameResolverContext(this, hostname, port, promise);
-
-            ctx.resolve();
-        } else {
+        final byte[] bytes = NetUtil.createByteArrayFromIpAddressString(unresolvedAddress.getHostName());
+        if (bytes != null) {
             // The unresolvedAddress was created via a String that contains an ipaddress.
             promise.setSuccess(new InetSocketAddress(InetAddress.getByAddress(bytes), unresolvedAddress.getPort()));
+            return;
         }
+
+        final String hostname = hostname(unresolvedAddress);
+        final int port = unresolvedAddress.getPort();
+
+        if (!doResolveCached(hostname, port, promise)) {
+            doResolveUncached(hostname, port, promise);
+        }
+    }
+
+    private boolean doResolveCached(String hostname, int port, Promise<InetSocketAddress> promise) {
+        final List<DnsCacheEntry> cachedEntries = resolveCache.get(hostname);
+        if (cachedEntries == null) {
+            return false;
+        }
+
+        InetAddress address = null;
+        Throwable cause = null;
+        synchronized (cachedEntries) {
+            final int numEntries = cachedEntries.size();
+            assert numEntries > 0;
+
+            if (cachedEntries.get(0).cause() != null) {
+                cause = cachedEntries.get(0).cause();
+            } else {
+                // Find the first entry with the preferred address type.
+                for (InternetProtocolFamily f : resolveAddressTypes) {
+                    for (int i = 0; i < numEntries; i++) {
+                        final DnsCacheEntry e = cachedEntries.get(i);
+                        if (f.addressType().isInstance(e.address())) {
+                            address = e.address();
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (address != null) {
+            setSuccess(promise, new InetSocketAddress(address, port));
+        } else if (cause != null) {
+            if (!promise.tryFailure(cause)) {
+                logger.warn("Failed to notify failure to a promise: {}", promise, cause);
+            }
+        } else {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static void setSuccess(Promise<InetSocketAddress> promise, InetSocketAddress result) {
+        if (!promise.trySuccess(result)) {
+            logger.warn("Failed to notify success ({}) to a promise: {}", result, promise);
+        }
+    }
+
+    private void doResolveUncached(String hostname, final int port, Promise<InetSocketAddress> promise) {
+        final DnsNameResolverContext<InetSocketAddress> ctx =
+                new DnsNameResolverContext<InetSocketAddress>(this, hostname, promise) {
+                    @Override
+                    protected boolean finishResolve(
+                            Class<? extends InetAddress> addressType, List<DnsCacheEntry> resolvedEntries) {
+
+                        final int numEntries = resolvedEntries.size();
+                        for (int i = 0; i < numEntries; i++) {
+                            final InetAddress a = resolvedEntries.get(i).address();
+                            if (addressType.isInstance(a)) {
+                                setSuccess(promise(), new InetSocketAddress(a, port));
+                                return true;
+                            }
+                        }
+                        return false;
+                    }
+                };
+
+        ctx.resolve();
+    }
+
+    @Override
+    protected void doResolveAll(
+            InetSocketAddress unresolvedAddress, Promise<List<InetSocketAddress>> promise) throws Exception {
+
+        final byte[] bytes = NetUtil.createByteArrayFromIpAddressString(unresolvedAddress.getHostName());
+        if (bytes != null) {
+            // The unresolvedAddress was created via a String that contains an ipaddress.
+            promise.setSuccess(Collections.singletonList(
+                    new InetSocketAddress(InetAddress.getByAddress(bytes), unresolvedAddress.getPort())));
+            return;
+        }
+
+        final String hostname = hostname(unresolvedAddress);
+        final int port = unresolvedAddress.getPort();
+
+        if (!doResolveAllCached(hostname, port, promise)) {
+            doResolveAllUncached(hostname, port, promise);
+        }
+    }
+
+    private boolean doResolveAllCached(String hostname, int port, Promise<List<InetSocketAddress>> promise) {
+        final List<DnsCacheEntry> cachedEntries = resolveCache.get(hostname);
+        if (cachedEntries == null) {
+            return false;
+        }
+
+        List<InetSocketAddress> result = null;
+        Throwable cause = null;
+        synchronized (cachedEntries) {
+            final int numEntries = cachedEntries.size();
+            assert numEntries > 0;
+
+            if (cachedEntries.get(0).cause() != null) {
+                cause = cachedEntries.get(0).cause();
+            } else {
+                for (InternetProtocolFamily f : resolveAddressTypes) {
+                    for (int i = 0; i < numEntries; i++) {
+                        final DnsCacheEntry e = cachedEntries.get(i);
+                        if (f.addressType().isInstance(e.address())) {
+                            if (result == null) {
+                                result = new ArrayList<InetSocketAddress>(numEntries);
+                            }
+                            result.add(new InetSocketAddress(e.address(), port));
+                        }
+                    }
+                }
+            }
+        }
+
+        if (result != null) {
+            promise.trySuccess(result);
+        } else if (cause != null) {
+            promise.tryFailure(cause);
+        } else {
+            return false;
+        }
+
+        return true;
+    }
+
+    private void doResolveAllUncached(final String hostname, final int port,
+                                      final Promise<List<InetSocketAddress>> promise) {
+        final DnsNameResolverContext<List<InetSocketAddress>> ctx =
+                new DnsNameResolverContext<List<InetSocketAddress>>(this, hostname, promise) {
+                    @Override
+                    protected boolean finishResolve(
+                            Class<? extends InetAddress> addressType, List<DnsCacheEntry> resolvedEntries) {
+
+                        List<InetSocketAddress> result = null;
+                        final int numEntries = resolvedEntries.size();
+                        for (int i = 0; i < numEntries; i++) {
+                            final InetAddress a = resolvedEntries.get(i).address();
+                            if (addressType.isInstance(a)) {
+                                if (result == null) {
+                                    result = new ArrayList<InetSocketAddress>(numEntries);
+                                }
+                                result.add(new InetSocketAddress(a, port));
+                            }
+                        }
+
+                        if (result != null) {
+                            promise().trySuccess(result);
+                            return true;
+                        }
+                        return false;
+                    }
+                };
+
+        ctx.resolve();
     }
 
     private static String hostname(InetSocketAddress addr) {
         // InetSocketAddress.getHostString() is available since Java 7.
+        final String hostname;
         if (PlatformDependent.javaVersion() < 7) {
-            return addr.getHostName();
+            hostname = addr.getHostName();
         } else {
-            return addr.getHostString();
+            hostname = addr.getHostString();
         }
+
+        return IDN.toASCII(hostname);
+    }
+
+    void cache(String hostname, InetAddress address, long originalTtl) {
+        final int maxTtl = maxTtl();
+        if (maxTtl == 0) {
+            return;
+        }
+
+        final int ttl = Math.max(minTtl(), (int) Math.min(maxTtl, originalTtl));
+        final List<DnsCacheEntry> entries = cachedEntries(hostname);
+        final DnsCacheEntry e = new DnsCacheEntry(hostname, address);
+
+        synchronized (entries) {
+            if (!entries.isEmpty()) {
+                final DnsCacheEntry firstEntry = entries.get(0);
+                if (firstEntry.cause() != null) {
+                    assert entries.size() == 1;
+                    firstEntry.cancelExpiration();
+                    entries.clear();
+                }
+            }
+            entries.add(e);
+        }
+
+        scheduleCacheExpiration(entries, e, ttl);
+    }
+
+    void cache(String hostname, Throwable cause) {
+        final int negativeTtl = negativeTtl();
+        if (negativeTtl == 0) {
+            return;
+        }
+
+        final List<DnsCacheEntry> entries = cachedEntries(hostname);
+        final DnsCacheEntry e = new DnsCacheEntry(hostname, cause);
+
+        synchronized (entries) {
+            final int numEntries = entries.size();
+            for (int i = 0; i < numEntries; i ++) {
+                entries.get(i).cancelExpiration();
+            }
+            entries.clear();
+            entries.add(e);
+        }
+
+        scheduleCacheExpiration(entries, e, negativeTtl);
+    }
+
+    private List<DnsCacheEntry> cachedEntries(String hostname) {
+        List<DnsCacheEntry> oldEntries = resolveCache.get(hostname);
+        final List<DnsCacheEntry> entries;
+        if (oldEntries == null) {
+            List<DnsCacheEntry> newEntries = new ArrayList<DnsCacheEntry>();
+            oldEntries = resolveCache.putIfAbsent(hostname, newEntries);
+            entries = oldEntries != null? oldEntries : newEntries;
+        } else {
+            entries = oldEntries;
+        }
+        return entries;
+    }
+
+    private void scheduleCacheExpiration(final List<DnsCacheEntry> entries, final DnsCacheEntry e, int ttl) {
+        e.scheduleExpiration(
+                ch.eventLoop(),
+                new OneTimeTask() {
+                    @Override
+                    public void run() {
+                        synchronized (entries) {
+                            entries.remove(e);
+                            if (entries.isEmpty()) {
+                                resolveCache.remove(e.hostname());
+                            }
+                        }
+                    }
+                }, ttl, TimeUnit.SECONDS);
     }
 
     /**
      * Sends a DNS query with the specified question.
      */
     public Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query(DnsQuestion question) {
-        return query(nameServerAddresses, question);
+        return query(nextNameServerAddress(), question);
     }
 
     /**
@@ -675,130 +918,62 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
      */
     public Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query(
             DnsQuestion question, Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
-        return query(nameServerAddresses, question, promise);
+        return query(nextNameServerAddress(), question, promise);
+    }
+
+    private InetSocketAddress nextNameServerAddress() {
+        final InternalThreadLocalMap tlm = InternalThreadLocalMap.get();
+        Iterator<InetSocketAddress> i = nameServerAddrIterator.get(tlm);
+        if (i.hasNext()) {
+            return i.next();
+        }
+
+        // The iterator has reached at its end, create a new iterator.
+        // We should not reach here if a user created nameServerAddresses via DnsServerAddresses, but just in case ..
+        i = nameServerAddresses.iterator();
+        nameServerAddrIterator.set(tlm, i);
+        return i.next();
     }
 
     /**
      * Sends a DNS query with the specified question using the specified name server list.
      */
     public Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query(
-            Iterable<InetSocketAddress> nameServerAddresses, DnsQuestion question) {
-        if (nameServerAddresses == null) {
-            throw new NullPointerException("nameServerAddresses");
-        }
-        if (question == null) {
-            throw new NullPointerException("question");
-        }
+            InetSocketAddress nameServerAddr, DnsQuestion question) {
 
-        final EventLoop eventLoop = ch.eventLoop();
-        final DnsCacheEntry cachedResult = queryCache.get(question);
-        if (cachedResult != null) {
-            AddressedEnvelope<DnsResponse, InetSocketAddress> response = cachedResult.retainedResponse();
-            if (response != null) {
-                return eventLoop.newSucceededFuture(response);
-            } else {
-                Throwable cause = cachedResult.cause();
-                if (cause != null) {
-                    return eventLoop.newFailedFuture(cause);
-                }
-            }
-        }
-        return query0(
-                nameServerAddresses, question,
-                eventLoop.<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>>newPromise());
+        return query0(checkNotNull(nameServerAddr, "nameServerAddr"),
+                      checkNotNull(question, "question"),
+                      ch.eventLoop().<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>>newPromise());
     }
 
     /**
      * Sends a DNS query with the specified question using the specified name server list.
      */
     public Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query(
-            Iterable<InetSocketAddress> nameServerAddresses, DnsQuestion question,
+            InetSocketAddress nameServerAddr, DnsQuestion question,
             Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
 
-        if (nameServerAddresses == null) {
-            throw new NullPointerException("nameServerAddresses");
-        }
-        if (question == null) {
-            throw new NullPointerException("question");
-        }
-        if (promise == null) {
-            throw new NullPointerException("promise");
-        }
-
-        final DnsCacheEntry cachedResult = queryCache.get(question);
-        if (cachedResult != null) {
-            AddressedEnvelope<DnsResponse, InetSocketAddress> response = cachedResult.retainedResponse();
-            if (response != null) {
-                return cast(promise).setSuccess(response);
-            } else {
-                Throwable cause = cachedResult.cause();
-                if (cause != null) {
-                    return cast(promise).setFailure(cause);
-                }
-            }
-        }
-
-        return query0(nameServerAddresses, question, promise);
+        return query0(checkNotNull(nameServerAddr, "nameServerAddr"),
+                      checkNotNull(question, "question"),
+                      checkNotNull(promise, "promise"));
     }
 
     private Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query0(
-            Iterable<InetSocketAddress> nameServerAddresses, DnsQuestion question,
+            InetSocketAddress nameServerAddr, DnsQuestion question,
             Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
 
         final Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> castPromise = cast(promise);
         try {
-            new DnsQueryContext(this, nameServerAddresses, question, castPromise).query();
+            new DnsQueryContext(this, nameServerAddr, question, castPromise).query();
             return castPromise;
         } catch (Exception e) {
             return castPromise.setFailure(e);
         }
     }
 
-    void cacheSuccess(
-            DnsQuestion question, AddressedEnvelope<? extends DnsResponse, InetSocketAddress> res, long delaySeconds) {
-        cache(question, new DnsCacheEntry(res), delaySeconds);
-    }
-
-    void cacheFailure(DnsQuestion question, Throwable cause, long delaySeconds) {
-        cache(question, new DnsCacheEntry(cause), delaySeconds);
-    }
-
-    private void cache(final DnsQuestion question, DnsCacheEntry entry, long delaySeconds) {
-        DnsCacheEntry oldEntry = queryCache.put(question, entry);
-        if (oldEntry != null) {
-            oldEntry.release();
-        }
-
-        boolean scheduled = false;
-        try {
-            entry.scheduleExpiration(
-                    ch.eventLoop(),
-                    new OneTimeTask() {
-                        @Override
-                        public void run() {
-                            clearCache(question);
-                        }
-                    },
-                    delaySeconds, TimeUnit.SECONDS);
-            scheduled = true;
-        } finally {
-            if (!scheduled) {
-                // If failed to schedule the expiration task,
-                // remove the entry from the cache so that it does not leak.
-                clearCache(question);
-                entry.release();
-            }
-        }
-    }
-
     @SuppressWarnings("unchecked")
     private static Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> cast(Promise<?> promise) {
         return (Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>>) promise;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static AddressedEnvelope<DnsResponse, InetSocketAddress> cast(AddressedEnvelope<?, ?> envelope) {
-        return (AddressedEnvelope<DnsResponse, InetSocketAddress>) envelope;
     }
 
     private final class DnsResponseHandler extends ChannelHandlerAdapter {
@@ -813,78 +988,22 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
                 }
 
                 final DnsQueryContext qCtx = promises.get(queryId);
-
                 if (qCtx == null) {
                     if (logger.isWarnEnabled()) {
-                        logger.warn("Received a DNS response with an unknown ID: {}", queryId);
+                        logger.warn("{} Received a DNS response with an unknown ID: {}", ch, queryId);
                     }
                     return;
                 }
 
-                if (res.count(DnsSection.QUESTION) != 1) {
-                    logger.warn("Received a DNS response with invalid number of questions: {}", res);
-                    return;
-                }
-
-                final DnsQuestion q = qCtx.question();
-                if (!q.equals(res.recordAt(DnsSection.QUESTION))) {
-                    logger.warn("Received a mismatching DNS response: {}", res);
-                    return;
-                }
-
-                // Cancel the timeout task.
-                final ScheduledFuture<?> timeoutFuture = qCtx.timeoutFuture();
-                if (timeoutFuture != null) {
-                    timeoutFuture.cancel(false);
-                }
-
-                if (res.code() == DnsResponseCode.NOERROR) {
-                    cache(q, res);
-                    promises.set(queryId, null);
-
-                    Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> qPromise = qCtx.promise();
-                    if (qPromise.setUncancellable()) {
-                        qPromise.setSuccess(cast(res.retain()));
-                    }
-                } else {
-                    qCtx.retry(res.sender(),
-                               "response code: " + res.code() +
-                               " with " + res.count(DnsSection.ANSWER) + " answer(s) and " +
-                               res.count(DnsSection.AUTHORITY) + " authority resource(s)");
-                }
+                qCtx.finish(res);
             } finally {
                 ReferenceCountUtil.safeRelease(msg);
             }
         }
 
-        private void cache(DnsQuestion question, AddressedEnvelope<? extends DnsResponse, InetSocketAddress> res) {
-            final int maxTtl = maxTtl();
-            if (maxTtl == 0) {
-                return;
-            }
-
-            long ttl = Long.MAX_VALUE;
-            // Find the smallest TTL value returned by the server.
-            final DnsResponse resc = res.content();
-            final int answerCount = resc.count(DnsSection.ANSWER);
-            for (int i = 0; i < answerCount; i ++) {
-                final DnsRecord r = resc.recordAt(DnsSection.ANSWER, i);
-                final long rTtl = r.timeToLive();
-                if (ttl > rTtl) {
-                    ttl = rTtl;
-                }
-            }
-
-            // Ensure that the found TTL is between minTtl and maxTtl.
-            ttl = Math.max(minTtl(), Math.min(maxTtl, ttl));
-
-            DnsNameResolver.this.cacheSuccess(question, res, ttl);
-        }
-
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            logger.warn("Unexpected exception: ", cause);
+            logger.warn("{} Unexpected exception: ", ch, cause);
         }
     }
-
 }

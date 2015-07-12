@@ -16,53 +16,41 @@
 
 package io.netty.resolver.dns;
 
-import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.EventLoop;
-import io.netty.handler.codec.dns.DnsResponse;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ScheduledFuture;
-import io.netty.util.internal.OneTimeTask;
-import io.netty.util.internal.PlatformDependent;
 
-import java.net.InetSocketAddress;
+import java.net.InetAddress;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 final class DnsCacheEntry {
 
-    private enum State {
-        INIT,
-        SCHEDULED_EXPIRATION,
-        RELEASED
-    }
-
-    private final AddressedEnvelope<DnsResponse, InetSocketAddress> response;
+    private final String hostname;
+    private final InetAddress address;
     private final Throwable cause;
     private volatile ScheduledFuture<?> expirationFuture;
-    private boolean released;
 
-    @SuppressWarnings("unchecked")
-    DnsCacheEntry(AddressedEnvelope<? extends DnsResponse, InetSocketAddress> response) {
-        this.response = (AddressedEnvelope<DnsResponse, InetSocketAddress>) response.retain();
+    DnsCacheEntry(String hostname, InetAddress address) {
+        this.hostname = hostname;
+        this.address = address;
         cause = null;
     }
 
-    DnsCacheEntry(Throwable cause) {
+    DnsCacheEntry(String hostname, Throwable cause) {
+        this.hostname = hostname;
         this.cause = cause;
-        response = null;
+        address = null;
+    }
+
+    String hostname() {
+        return hostname;
+    }
+
+    InetAddress address() {
+        return address;
     }
 
     Throwable cause() {
         return cause;
-    }
-
-    synchronized AddressedEnvelope<DnsResponse, InetSocketAddress> retainedResponse() {
-        if (released) {
-            // Released by other thread via either the expiration task or clearCache()
-            return null;
-        }
-
-        return response.retain();
     }
 
     void scheduleExpiration(EventLoop loop, Runnable task, long delay, TimeUnit unit) {
@@ -70,19 +58,19 @@ final class DnsCacheEntry {
         expirationFuture = loop.schedule(task, delay, unit);
     }
 
-    void release() {
-        synchronized (this) {
-            if (released) {
-                return;
-            }
-
-            released = true;
-            ReferenceCountUtil.safeRelease(response);
-        }
-
+    void cancelExpiration() {
         ScheduledFuture<?> expirationFuture = this.expirationFuture;
         if (expirationFuture != null) {
             expirationFuture.cancel(false);
+        }
+    }
+
+    @Override
+    public String toString() {
+        if (cause != null) {
+            return hostname + '/' + cause;
+        } else {
+            return address.toString();
         }
     }
 }

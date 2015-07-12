@@ -22,6 +22,7 @@ import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
 import io.netty.handler.codec.dns.DefaultDnsRecordDecoder;
+import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.handler.codec.dns.DnsSection;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRawRecord;
@@ -50,7 +51,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-final class DnsNameResolverContext {
+abstract class DnsNameResolverContext<T> {
 
     private static final int INADDRSZ4 = 4;
     private static final int INADDRSZ6 = 16;
@@ -66,9 +67,10 @@ final class DnsNameResolverContext {
             };
 
     private final DnsNameResolver parent;
-    private final Promise<InetSocketAddress> promise;
+    private final Iterator<InetSocketAddress> nameServerAddrs;
+    private final Promise<T> promise;
     private final String hostname;
-    private final int port;
+    private final boolean traceEnabled;
     private final int maxAllowedQueries;
     private final InternetProtocolFamily[] resolveAddressTypes;
 
@@ -76,20 +78,25 @@ final class DnsNameResolverContext {
             Collections.newSetFromMap(
                     new IdentityHashMap<Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>, Boolean>());
 
-    private List<InetAddress> resolvedAddresses;
+    private List<DnsCacheEntry> resolvedEntries;
     private StringBuilder trace;
     private int allowedQueries;
     private boolean triedCNAME;
 
-    DnsNameResolverContext(DnsNameResolver parent, String hostname, int port, Promise<InetSocketAddress> promise) {
+    protected DnsNameResolverContext(DnsNameResolver parent, String hostname, Promise<T> promise) {
         this.parent = parent;
         this.promise = promise;
         this.hostname = hostname;
-        this.port = port;
 
+        nameServerAddrs = parent.nameServerAddresses.iterator();
         maxAllowedQueries = parent.maxQueriesPerResolve();
         resolveAddressTypes = parent.resolveAddressTypesUnsafe();
+        traceEnabled = parent.isTraceEnabled();
         allowedQueries = maxAllowedQueries;
+    }
+
+    protected Promise<T> promise() {
+        return promise;
     }
 
     void resolve() {
@@ -106,18 +113,18 @@ final class DnsNameResolverContext {
                 throw new Error();
             }
 
-            query(parent.nameServerAddresses, new DefaultDnsQuestion(hostname, type));
+            query(nameServerAddrs.next(), new DefaultDnsQuestion(hostname, type));
         }
     }
 
-    private void query(Iterable<InetSocketAddress> nameServerAddresses, final DnsQuestion question) {
+    private void query(InetSocketAddress nameServerAddr, final DnsQuestion question) {
         if (allowedQueries == 0 || promise.isCancelled()) {
             return;
         }
 
         allowedQueries --;
 
-        final Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f = parent.query(nameServerAddresses, question);
+        final Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f = parent.query(nameServerAddr, question);
         queriesInProgress.add(f);
 
         f.addListener(new FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>>() {
@@ -133,7 +140,11 @@ final class DnsNameResolverContext {
                     if (future.isSuccess()) {
                         onResponse(question, future.getNow());
                     } else {
-                        addTrace(future.cause());
+                        // Server did not respond or I/O error occurred; try again.
+                        if (traceEnabled) {
+                            addTrace(future.cause());
+                        }
+                        query(nameServerAddrs.next(), question);
                     }
                 } finally {
                     tryToFinishResolve();
@@ -142,16 +153,32 @@ final class DnsNameResolverContext {
         });
     }
 
-    void onResponse(final DnsQuestion question, AddressedEnvelope<DnsResponse, InetSocketAddress> response) {
-        final DnsRecordType type = question.type();
+    void onResponse(final DnsQuestion question, AddressedEnvelope<DnsResponse, InetSocketAddress> envelope) {
         try {
-            if (type == DnsRecordType.A || type == DnsRecordType.AAAA) {
-                onResponseAorAAAA(type, question, response);
-            } else if (type == DnsRecordType.CNAME) {
-                onResponseCNAME(question, response);
+            final DnsResponse res = envelope.content();
+            final DnsResponseCode code = res.code();
+            if (code == DnsResponseCode.NOERROR) {
+                final DnsRecordType type = question.type();
+                if (type == DnsRecordType.A || type == DnsRecordType.AAAA) {
+                    onResponseAorAAAA(type, question, envelope);
+                } else if (type == DnsRecordType.CNAME) {
+                    onResponseCNAME(question, envelope);
+                }
+                return;
+            }
+
+            if (traceEnabled) {
+                addTrace(envelope.sender(),
+                         "response code: " + code + " with " + res.count(DnsSection.ANSWER) + " answer(s) and " +
+                         res.count(DnsSection.AUTHORITY) + " authority resource(s)");
+            }
+
+            // Retry with the next server if the server did not tell us that the domain does not exist.
+            if (code != DnsResponseCode.NXDOMAIN) {
+                query(nameServerAddrs.next(), question);
             }
         } finally {
-            ReferenceCountUtil.safeRelease(response);
+            ReferenceCountUtil.safeRelease(envelope);
         }
     }
 
@@ -203,24 +230,33 @@ final class DnsNameResolverContext {
             final byte[] addrBytes = new byte[contentLen];
             content.getBytes(content.readerIndex(), addrBytes);
 
+            final InetAddress resolved;
             try {
-                InetAddress resolved = InetAddress.getByAddress(hostname, addrBytes);
-                if (resolvedAddresses == null) {
-                    resolvedAddresses = new ArrayList<InetAddress>();
-                }
-                resolvedAddresses.add(resolved);
-                found = true;
+                resolved = InetAddress.getByAddress(hostname, addrBytes);
             } catch (UnknownHostException e) {
                 // Should never reach here.
                 throw new Error(e);
             }
+
+            if (resolvedEntries == null) {
+                resolvedEntries = new ArrayList<DnsCacheEntry>(8);
+            }
+
+            final DnsCacheEntry e = new DnsCacheEntry(hostname, resolved);
+            parent.cache(hostname, resolved, r.timeToLive());
+            resolvedEntries.add(e);
+            found = true;
+
+            // Note that we do not break from the loop here, so we decode/cache all A/AAAA records.
         }
 
         if (found) {
             return;
         }
 
-        addTrace(envelope.sender(), "no matching " + qType + " record found");
+        if (traceEnabled) {
+            addTrace(envelope.sender(), "no matching " + qType + " record found");
+        }
 
         // We aked for A/AAAA but we got only CNAME.
         if (!cnames.isEmpty()) {
@@ -252,7 +288,7 @@ final class DnsNameResolverContext {
 
         if (found) {
             followCname(response.sender(), name, resolved);
-        } else if (trace) {
+        } else if (trace && traceEnabled) {
             addTrace(response.sender(), "no matching CNAME record found");
         }
     }
@@ -300,12 +336,12 @@ final class DnsNameResolverContext {
         }
 
         // There are no queries left to try.
-        if (resolvedAddresses == null) {
+        if (resolvedEntries == null) {
             // .. and we could not find any A/AAAA records.
             if (!triedCNAME) {
                 // As the last resort, try to query CNAME, just in case the name server has it.
                 triedCNAME = true;
-                query(parent.nameServerAddresses, new DefaultDnsQuestion(hostname, DnsRecordType.CNAME));
+                query(nameServerAddrs.next(), new DefaultDnsQuestion(hostname, DnsRecordType.CNAME));
                 return;
             }
         }
@@ -315,22 +351,22 @@ final class DnsNameResolverContext {
     }
 
     private boolean gotPreferredAddress() {
-        if (resolvedAddresses == null) {
+        if (resolvedEntries == null) {
             return false;
         }
 
-        final int size = resolvedAddresses.size();
+        final int size = resolvedEntries.size();
         switch (resolveAddressTypes[0]) {
         case IPv4:
             for (int i = 0; i < size; i ++) {
-                if (resolvedAddresses.get(i) instanceof Inet4Address) {
+                if (resolvedEntries.get(i).address() instanceof Inet4Address) {
                     return true;
                 }
             }
             break;
         case IPv6:
             for (int i = 0; i < size; i ++) {
-                if (resolvedAddresses.get(i) instanceof Inet6Address) {
+                if (resolvedEntries.get(i).address() instanceof Inet6Address) {
                     return true;
                 }
             }
@@ -354,67 +390,46 @@ final class DnsNameResolverContext {
             }
         }
 
-        if (resolvedAddresses != null) {
+        if (resolvedEntries != null) {
             // Found at least one resolved address.
             for (InternetProtocolFamily f: resolveAddressTypes) {
-                switch (f) {
-                case IPv4:
-                    if (finishResolveWithIPv4()) {
-                        return;
-                    }
-                    break;
-                case IPv6:
-                    if (finishResolveWithIPv6()) {
-                        return;
-                    }
-                    break;
+                if (finishResolve(f.addressType(), resolvedEntries)) {
+                    return;
                 }
             }
         }
 
         // No resolved address found.
-        int tries = maxAllowedQueries - allowedQueries;
-        UnknownHostException cause;
+        final int tries = maxAllowedQueries - allowedQueries;
+        final StringBuilder buf = new StringBuilder(64);
+
+        buf.append("failed to resolve ");
+        buf.append(hostname);
+
         if (tries > 1) {
-            cause = new UnknownHostException(
-                    "failed to resolve " + hostname + " after " + tries + " queries:" +
-                    trace);
+            buf.append(" after ");
+            buf.append(tries);
+            if (trace != null) {
+                buf.append(" queries:");
+                buf.append(trace);
+            } else {
+                buf.append(" queries");
+            }
         } else {
-            cause = new UnknownHostException("failed to resolve " + hostname + ':' + trace);
+            if (trace != null) {
+                buf.append(':');
+                buf.append(trace);
+            }
         }
 
+        final UnknownHostException cause = new UnknownHostException(buf.toString());
+
+        parent.cache(hostname, cause);
         promise.tryFailure(cause);
     }
 
-    private boolean finishResolveWithIPv4() {
-        final List<InetAddress> resolvedAddresses = this.resolvedAddresses;
-        final int size = resolvedAddresses.size();
-
-        for (int i = 0; i < size; i ++) {
-            InetAddress a = resolvedAddresses.get(i);
-            if (a instanceof Inet4Address) {
-                promise.trySuccess(new InetSocketAddress(a, port));
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private boolean finishResolveWithIPv6() {
-        final List<InetAddress> resolvedAddresses = this.resolvedAddresses;
-        final int size = resolvedAddresses.size();
-
-        for (int i = 0; i < size; i ++) {
-            InetAddress a = resolvedAddresses.get(i);
-            if (a instanceof Inet6Address) {
-                promise.trySuccess(new InetSocketAddress(a, port));
-                return true;
-            }
-        }
-
-        return false;
-    }
+    protected abstract boolean finishResolve(
+            Class<? extends InetAddress> addressType, List<DnsCacheEntry> resolvedEntries);
 
     /**
      * Adapted from {@link DefaultDnsRecordDecoder#decodeName(ByteBuf)}.
@@ -466,26 +481,30 @@ final class DnsNameResolverContext {
         }
     }
 
-    private void followCname(
-            InetSocketAddress nameServerAddr, String name, String cname) {
+    private void followCname(InetSocketAddress nameServerAddr, String name, String cname) {
 
-        if (trace == null) {
-            trace = new StringBuilder(128);
+        if (traceEnabled) {
+            if (trace == null) {
+                trace = new StringBuilder(128);
+            }
+
+            trace.append(StringUtil.NEWLINE);
+            trace.append("\tfrom ");
+            trace.append(nameServerAddr);
+            trace.append(": ");
+            trace.append(name);
+            trace.append(" CNAME ");
+            trace.append(cname);
         }
 
-        trace.append(StringUtil.NEWLINE);
-        trace.append("\tfrom ");
-        trace.append(nameServerAddr);
-        trace.append(": ");
-        trace.append(name);
-        trace.append(" CNAME ");
-        trace.append(cname);
-
-        query(parent.nameServerAddresses, new DefaultDnsQuestion(cname, DnsRecordType.A));
-        query(parent.nameServerAddresses, new DefaultDnsQuestion(cname, DnsRecordType.AAAA));
+        final InetSocketAddress nextAddr = nameServerAddrs.next();
+        query(nextAddr, new DefaultDnsQuestion(cname, DnsRecordType.A));
+        query(nextAddr, new DefaultDnsQuestion(cname, DnsRecordType.AAAA));
     }
 
     private void addTrace(InetSocketAddress nameServerAddr, String msg) {
+        assert traceEnabled;
+
         if (trace == null) {
             trace = new StringBuilder(128);
         }
@@ -498,6 +517,8 @@ final class DnsNameResolverContext {
     }
 
     private void addTrace(Throwable cause) {
+        assert traceEnabled;
+
         if (trace == null) {
             trace = new StringBuilder(128);
         }

@@ -15,10 +15,27 @@
  */
 package io.netty.channel.socket;
 
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+
 /**
  * Internet Protocol (IP) families used byte the {@link DatagramChannel}
  */
 public enum InternetProtocolFamily {
-    IPv4,
-    IPv6
+    IPv4(Inet4Address.class),
+    IPv6(Inet6Address.class);
+
+    private final Class<? extends InetAddress> addressType;
+
+    InternetProtocolFamily(Class<? extends InetAddress> addressType) {
+        this.addressType = addressType;
+    }
+
+    /**
+     * Returns the address type of this protocol family.
+     */
+    public Class<? extends InetAddress> addressType() {
+        return addressType;
+    }
 }

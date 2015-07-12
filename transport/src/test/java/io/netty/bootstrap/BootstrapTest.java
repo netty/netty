@@ -36,6 +36,7 @@ import io.netty.resolver.SimpleNameResolver;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.OneTimeTask;
 import org.junit.AfterClass;
 import org.junit.Test;
 
@@ -43,6 +44,7 @@ import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -300,13 +302,29 @@ public class BootstrapTest {
                 @Override
                 protected void doResolve(
                         final SocketAddress unresolvedAddress, final Promise<SocketAddress> promise) {
-                    executor().execute(new Runnable() {
+                    executor().execute(new OneTimeTask() {
                         @Override
                         public void run() {
                             if (success) {
                                 promise.setSuccess(unresolvedAddress);
                             } else {
-                                promise.setFailure(new UnknownHostException());
+                                promise.setFailure(new UnknownHostException(unresolvedAddress.toString()));
+                            }
+                        }
+                    });
+                }
+
+                @Override
+                protected void doResolveAll(
+                        final SocketAddress unresolvedAddress, final Promise<List<SocketAddress>> promise)
+                        throws Exception {
+                    executor().execute(new OneTimeTask() {
+                        @Override
+                        public void run() {
+                            if (success) {
+                                promise.setSuccess(Collections.singletonList(unresolvedAddress));
+                            } else {
+                                promise.setFailure(new UnknownHostException(unresolvedAddress.toString()));
                             }
                         }
                     });
