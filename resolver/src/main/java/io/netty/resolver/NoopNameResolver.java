@@ -20,6 +20,8 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Promise;
 
 import java.net.SocketAddress;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * A {@link NameResolver} that does not perform any resolution but always reports successful resolution.
@@ -39,5 +41,11 @@ public class NoopNameResolver extends SimpleNameResolver<SocketAddress> {
     @Override
     protected void doResolve(SocketAddress unresolvedAddress, Promise<SocketAddress> promise) throws Exception {
         promise.setSuccess(unresolvedAddress);
+    }
+
+    @Override
+    protected void doResolveAll(
+            SocketAddress unresolvedAddress, Promise<List<SocketAddress>> promise) throws Exception {
+        promise.setSuccess(Collections.singletonList(unresolvedAddress));
     }
 }

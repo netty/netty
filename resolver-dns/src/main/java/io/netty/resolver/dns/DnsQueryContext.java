@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.resolver.dns;
 
 import io.netty.buffer.Unpooled;
@@ -22,12 +21,12 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.dns.DatagramDnsQuery;
 import io.netty.handler.codec.dns.DefaultDnsRawRecord;
-import io.netty.handler.codec.dns.DnsSection;
 import io.netty.handler.codec.dns.DnsQuery;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsResponse;
+import io.netty.handler.codec.dns.DnsSection;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.OneTimeTask;
@@ -37,8 +36,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
-import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 
 final class DnsQueryContext {
@@ -50,30 +47,24 @@ final class DnsQueryContext {
     private final int id;
     private final DnsQuestion question;
     private final DnsRecord optResource;
-    private final Iterator<InetSocketAddress> nameServerAddresses;
+    private final InetSocketAddress nameServerAddr;
 
     private final boolean recursionDesired;
-    private final int maxTries;
-    private int remainingTries;
     private volatile ScheduledFuture<?> timeoutFuture;
-    private StringBuilder trace;
 
     DnsQueryContext(DnsNameResolver parent,
-                    Iterable<InetSocketAddress> nameServerAddresses,
+                    InetSocketAddress nameServerAddr,
                     DnsQuestion question, Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise) {
 
         this.parent = parent;
-        this.promise = promise;
+        this.nameServerAddr = nameServerAddr;
         this.question = question;
+        this.promise = promise;
 
         id = allocateId();
         recursionDesired = parent.isRecursionDesired();
-        maxTries = parent.maxTriesPerQuery();
-        remainingTries = maxTries;
         optResource = new DefaultDnsRawRecord(
                 StringUtil.EMPTY_STRING, DnsRecordType.OPT, parent.maxPayloadSize(), 0, Unpooled.EMPTY_BUFFER);
-
-        this.nameServerAddresses = nameServerAddresses.iterator();
     }
 
     private int allocateId() {
@@ -93,42 +84,8 @@ final class DnsQueryContext {
         }
     }
 
-    Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise() {
-        return promise;
-    }
-
-    DnsQuestion question() {
-        return question;
-    }
-
-    ScheduledFuture<?> timeoutFuture() {
-        return timeoutFuture;
-    }
-
     void query() {
         final DnsQuestion question = this.question;
-
-        if (remainingTries <= 0 || !nameServerAddresses.hasNext()) {
-            parent.promises.set(id, null);
-
-            int tries = maxTries - remainingTries;
-            UnknownHostException cause;
-            if (tries > 1) {
-                cause = new UnknownHostException(
-                        "failed to resolve " + question + " after " + tries + " attempts:" +
-                        trace);
-            } else {
-                cause = new UnknownHostException("failed to resolve " + question + ':' + trace);
-            }
-
-            cache(question, cause);
-            promise.tryFailure(cause);
-            return;
-        }
-
-        remainingTries --;
-
-        final InetSocketAddress nameServerAddr = nameServerAddresses.next();
         final DatagramDnsQuery query = new DatagramDnsQuery(null, nameServerAddr, id);
         query.setRecursionDesired(recursionDesired);
         query.setRecord(DnsSection.QUESTION, question);
@@ -138,43 +95,43 @@ final class DnsQueryContext {
             logger.debug("{} WRITE: [{}: {}], {}", parent.ch, id, nameServerAddr, question);
         }
 
-        sendQuery(query, nameServerAddr);
+        sendQuery(query);
     }
 
-    private void sendQuery(final DnsQuery query, final InetSocketAddress nameServerAddr) {
+    private void sendQuery(final DnsQuery query) {
         if (parent.bindFuture.isDone()) {
-            writeQuery(query, nameServerAddr);
+            writeQuery(query);
         } else {
             parent.bindFuture.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
                     if (future.isSuccess()) {
-                        writeQuery(query, nameServerAddr);
+                        writeQuery(query);
                     } else {
                         promise.tryFailure(future.cause());
                     }
-                 }
-            });
-        }
-    }
-
-    private void writeQuery(final DnsQuery query, final InetSocketAddress nameServerAddr) {
-        final ChannelFuture writeFuture = parent.ch.writeAndFlush(query);
-        if (writeFuture.isDone()) {
-            onQueryWriteCompletion(writeFuture, nameServerAddr);
-        } else {
-            writeFuture.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    onQueryWriteCompletion(writeFuture, nameServerAddr);
                 }
             });
         }
     }
 
-    private void onQueryWriteCompletion(ChannelFuture writeFuture, final InetSocketAddress nameServerAddr) {
+    private void writeQuery(final DnsQuery query) {
+        final ChannelFuture writeFuture = parent.ch.writeAndFlush(query);
+        if (writeFuture.isDone()) {
+            onQueryWriteCompletion(writeFuture);
+        } else {
+            writeFuture.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    onQueryWriteCompletion(writeFuture);
+                }
+            });
+        }
+    }
+
+    private void onQueryWriteCompletion(ChannelFuture writeFuture) {
         if (!writeFuture.isSuccess()) {
-            retry(nameServerAddr, "failed to send a query: " + writeFuture.cause());
+            setFailure("failed to send a query", writeFuture.cause());
             return;
         }
 
@@ -189,35 +146,62 @@ final class DnsQueryContext {
                         return;
                     }
 
-                    retry(nameServerAddr, "query timed out after " + queryTimeoutMillis + " milliseconds");
+                    setFailure("query timed out after " + queryTimeoutMillis + " milliseconds", null);
                 }
             }, queryTimeoutMillis, TimeUnit.MILLISECONDS);
         }
     }
 
-    void retry(InetSocketAddress nameServerAddr, String message) {
-        if (promise.isCancelled()) {
+    void finish(AddressedEnvelope<? extends DnsResponse, InetSocketAddress> envelope) {
+        DnsResponse res = envelope.content();
+        if (res.count(DnsSection.QUESTION) != 1) {
+            logger.warn("Received a DNS response with invalid number of questions: {}", envelope);
             return;
         }
 
-        if (trace == null) {
-            trace = new StringBuilder(128);
+        if (!question.equals(res.recordAt(DnsSection.QUESTION))) {
+            logger.warn("Received a mismatching DNS response: {}", envelope);
+            return;
         }
 
-        trace.append(StringUtil.NEWLINE);
-        trace.append("\tfrom ");
-        trace.append(nameServerAddr);
-        trace.append(": ");
-        trace.append(message);
-        query();
+        setSuccess(envelope);
     }
 
-    private void cache(final DnsQuestion question, Throwable cause) {
-        final int negativeTtl = parent.negativeTtl();
-        if (negativeTtl == 0) {
-            return;
+    private void setSuccess(AddressedEnvelope<? extends DnsResponse, InetSocketAddress> envelope) {
+        parent.promises.set(id, null);
+
+        // Cancel the timeout task.
+        final ScheduledFuture<?> timeoutFuture = this.timeoutFuture;
+        if (timeoutFuture != null) {
+            timeoutFuture.cancel(false);
         }
 
-        parent.cacheFailure(question, cause, negativeTtl);
+        Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise = this.promise;
+        if (promise.setUncancellable()) {
+            @SuppressWarnings("unchecked")
+            AddressedEnvelope<DnsResponse, InetSocketAddress> castResponse =
+                    (AddressedEnvelope<DnsResponse, InetSocketAddress>) envelope.retain();
+            promise.setSuccess(castResponse);
+        }
+    }
+
+    private void setFailure(String message, Throwable cause) {
+        parent.promises.set(id, null);
+
+        final StringBuilder buf = new StringBuilder(message.length() + 64);
+        buf.append('[')
+           .append(nameServerAddr)
+           .append("] ")
+           .append(message)
+           .append(" (no stack trace available)");
+
+        final DnsNameResolverException e;
+        if (cause != null) {
+            e = new DnsNameResolverException(nameServerAddr, question, buf.toString(), cause);
+        } else {
+            e = new DnsNameResolverException(nameServerAddr, question, buf.toString());
+        }
+
+        promise.tryFailure(e);
     }
 }
