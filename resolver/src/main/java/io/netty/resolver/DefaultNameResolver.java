@@ -22,6 +22,8 @@ import io.netty.util.concurrent.Promise;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A {@link NameResolver} that resolves an {@link InetSocketAddress} using JDK's built-in domain name lookup mechanism.
@@ -45,6 +47,24 @@ public class DefaultNameResolver extends SimpleNameResolver<InetSocketAddress> {
             // because an unresolved address always has a host name.
             promise.setSuccess(new InetSocketAddress(
                     InetAddress.getByName(unresolvedAddress.getHostName()), unresolvedAddress.getPort()));
+        } catch (UnknownHostException e) {
+            promise.setFailure(e);
+        }
+    }
+
+    @Override
+    protected void doResolveAll(
+            InetSocketAddress unresolvedAddress, Promise<List<InetSocketAddress>> promise) throws Exception {
+
+        try {
+            // Note that InetSocketAddress.getHostName() will never incur a reverse lookup here,
+            // because an unresolved address always has a host name.
+            final InetAddress[] resolved = InetAddress.getAllByName(unresolvedAddress.getHostName());
+            final List<InetSocketAddress> result = new ArrayList<InetSocketAddress>(resolved.length);
+            for (InetAddress a: resolved) {
+                result.add(new InetSocketAddress(a, unresolvedAddress.getPort()));
+            }
+            promise.setSuccess(result);
         } catch (UnknownHostException e) {
             promise.setFailure(e);
         }

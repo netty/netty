@@ -247,7 +247,7 @@ public class DnsNameResolverTest {
             group.next(), NioDatagramChannel.class, DnsServerAddresses.shuffled(SERVERS));
 
     static {
-        resolver.setMaxTriesPerQuery(SERVERS.size());
+        resolver.setMaxQueriesPerResolve(SERVERS.size());
     }
 
     @AfterClass
@@ -293,6 +293,10 @@ public class DnsNameResolverTest {
             for (Entry<String, InetAddress> e: resultA.entrySet()) {
                 InetAddress expected = e.getValue();
                 InetAddress actual = resultB.get(e.getKey());
+                if (!actual.equals(expected)) {
+                    // Print the content of the cache when test failure is expected.
+                    System.err.println("Cache for " + e.getKey() + ": " + resolver.resolveAll(e.getKey(), 0).getNow());
+                }
                 assertThat(actual, is(expected));
             }
         } finally {
@@ -342,17 +346,8 @@ public class DnsNameResolverTest {
                 boolean typeMatches = false;
                 for (InternetProtocolFamily f: famililies) {
                     Class<?> resolvedType = resolved.getAddress().getClass();
-                    switch (f) {
-                    case IPv4:
-                        if (Inet4Address.class.isAssignableFrom(resolvedType)) {
-                            typeMatches = true;
-                        }
-                        break;
-                    case IPv6:
-                        if (Inet6Address.class.isAssignableFrom(resolvedType)) {
-                            typeMatches = true;
-                        }
-                        break;
+                    if (f.addressType().isAssignableFrom(resolvedType)) {
+                        typeMatches = true;
                     }
                 }
 
@@ -383,9 +378,18 @@ public class DnsNameResolverTest {
 
         for (Entry<String, Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>> e: futures.entrySet()) {
             String hostname = e.getKey();
-            AddressedEnvelope<DnsResponse, InetSocketAddress> envelope = e.getValue().sync().getNow();
-            DnsResponse response = envelope.content();
+            Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f = e.getValue().awaitUninterruptibly();
+            if (!f.isSuccess()) {
+                // Try again a couple more times because the DNS servers might be throttling us down.
+                for (int i = 0; i < 2; i++) {
+                    f = queryMx(hostname).awaitUninterruptibly();
+                    if (f.isSuccess()) {
+                        break;
+                    }
+                }
+            }
 
+            DnsResponse response = f.getNow().content();
             assertThat(response.code(), is(DnsResponseCode.NOERROR));
 
             final int answerCount = response.count(DnsSection.ANSWER);
@@ -440,5 +444,9 @@ public class DnsNameResolverTest {
             Map<String, Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>> futures,
             String hostname) throws Exception {
         futures.put(hostname, resolver.query(new DefaultDnsQuestion(hostname, DnsRecordType.MX)));
+    }
+
+    private static Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> queryMx(String hostname) throws Exception {
+        return resolver.query(new DefaultDnsQuestion(hostname, DnsRecordType.MX));
     }
 }

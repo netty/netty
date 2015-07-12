@@ -37,6 +37,8 @@ public interface DnsRecordDecoder {
      * Decodes a DNS record into its object representation.
      *
      * @param in the input buffer which contains a DNS record at its reader index
+     *
+     * @return the decoded record, or {@code null} if there are not enough data in the input buffer
      */
     <T extends DnsRecord> T decodeRecord(ByteBuf in) throws Exception;
 }
