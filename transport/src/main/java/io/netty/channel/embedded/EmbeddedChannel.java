@@ -70,14 +70,6 @@ public class EmbeddedChannel extends AbstractChannel {
             throw new NullPointerException("handlers");
         }
 
-        int nHandlers = 0;
-        for (ChannelHandler h: handlers) {
-            if (h == null) {
-                break;
-            }
-            nHandlers ++;
-        }
-
         ChannelPipeline p = pipeline();
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
@@ -91,10 +83,6 @@ public class EmbeddedChannel extends AbstractChannel {
                 }
             }
         });
-
-        if (nHandlers == 0) {
-            throw new IllegalArgumentException("handlers is empty.");
-        }
 
         ChannelFuture future = loop.register(this);
         assert future.isDone();
