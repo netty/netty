@@ -213,7 +213,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             int payloadLength = SETTING_ENTRY_LENGTH * settings.size();
             ByteBuf buf = ctx.alloc().buffer(FRAME_HEADER_LENGTH + settings.size() * SETTING_ENTRY_LENGTH);
             writeFrameHeaderInternal(buf, payloadLength, SETTINGS, new Http2Flags(), 0);
-            for (CharObjectMap.Entry<Long> entry : settings.entries()) {
+            for (CharObjectMap.PrimitiveEntry<Long> entry : settings.entries()) {
                 writeUnsignedShort(entry.key(), buf);
                 writeUnsignedInt(entry.value(), buf);
             }

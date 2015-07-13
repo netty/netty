@@ -17,12 +17,14 @@ package io.netty.util.collection;
 
 import static io.netty.util.internal.MathUtil.findNextPositivePowerOfTwo;
 
-import java.lang.reflect.Array;
 import java.util.AbstractCollection;
+import java.util.AbstractSet;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 /**
  * A hash map implementation of {@link @K@ObjectMap} that uses open addressing for keys.
@@ -32,7 +34,7 @@ import java.util.NoSuchElementException;
  *
  * @param <V> The value type stored in the map.
  */
-public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectMap.Entry<V>> {
+public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
 
     /** Default initial capacity. Used if not specified in the constructor */
     public static final int DEFAULT_CAPACITY = 8;
@@ -56,6 +58,15 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
     private V[] values;
     private int size;
     private int mask;
+
+    private final Set<@O@> keySet = new KeySet();
+    private final Set<Entry<@O@, V>> entrySet = new EntrySet();
+    private final Iterable<PrimitiveEntry<V>> entries = new Iterable<PrimitiveEntry<V>>() {
+        @Override
+        public Iterator<PrimitiveEntry<V>> iterator() {
+            return new PrimitiveIterator();
+        }
+    };
 
     public @K@ObjectHashMap() {
         this(DEFAULT_CAPACITY, DEFAULT_LOAD_FACTOR);
@@ -139,9 +150,10 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
     }
 
     @Override
-    public void putAll(@K@ObjectMap<V> sourceMap) {
-        if (sourceMap instanceof IntObjectHashMap) {
+    public void putAll(Map<? extends @O@, ? extends V> sourceMap) {
+        if (sourceMap instanceof @K@ObjectHashMap) {
             // Optimization - iterate through the arrays.
+            @SuppressWarnings("unchecked")
             @K@ObjectHashMap<V> source = (@K@ObjectHashMap<V>) sourceMap;
             for (int i = 0; i < source.values.length; ++i) {
                 V sourceValue = source.values[i];
@@ -153,8 +165,8 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
         }
 
         // Otherwise, just add each entry.
-        for (Entry<V> entry : sourceMap.entries()) {
-            put(entry.key(), entry.value());
+        for (Entry<? extends @O@, ? extends V> entry : sourceMap.entrySet()) {
+            put(entry.getKey(), entry.getValue());
         }
     }
 
@@ -193,8 +205,9 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
     }
 
     @Override
-    public boolean containsValue(V value) {
-        V v1 = toInternal(value);
+    public boolean containsValue(Object value) {
+        @SuppressWarnings("unchecked")
+        V v1 = toInternal((V) value);
         for (V v2 : values) {
             // The map supports null values; this will be matched as NULL_VALUE.equals(NULL_VALUE).
             if (v2 != null && v2.equals(v1)) {
@@ -205,38 +218,8 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
     }
 
     @Override
-    public Iterable<Entry<V>> entries() {
-        return this;
-    }
-
-    @Override
-    public Iterator<Entry<V>> iterator() {
-        return new IteratorImpl();
-    }
-
-    @Override
-    public @k@[] keys() {
-        @k@[] outKeys = new @k@[size()];
-        int targetIx = 0;
-        for (int i = 0; i < values.length; ++i) {
-            if (values[i] != null) {
-                outKeys[targetIx++] = keys[i];
-            }
-        }
-        return outKeys;
-    }
-
-    @Override
-    public V[] values(Class<V> clazz) {
-        @SuppressWarnings("unchecked")
-        V[] outValues = (V[]) Array.newInstance(clazz, size());
-        int targetIx = 0;
-        for (V value : values) {
-            if (value != null) {
-                outValues[targetIx++] = value;
-            }
-        }
-        return outValues;
+    public Iterable<PrimitiveEntry<V>> entries() {
+        return entries;
     }
 
     @Override
@@ -245,7 +228,8 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
             @Override
             public Iterator<V> iterator() {
                 return new Iterator<V>() {
-                    final Iterator<Entry<V>> iter = @K@ObjectHashMap.this.iterator();
+                    final PrimitiveIterator iter = new PrimitiveIterator();
+
                     @Override
                     public boolean hasNext() {
                         return iter.hasNext();
@@ -317,6 +301,40 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
             }
         }
         return true;
+    }
+
+    @Override
+    public boolean containsKey(Object key) {
+        return containsKey(objectToKey(key));
+    }
+
+    @Override
+    public V get(Object key) {
+        return get(objectToKey(key));
+    }
+
+    @Override
+    public V put(@O@ key, V value) {
+        return put(objectToKey(key), value);
+    }
+
+    @Override
+    public V remove(Object key) {
+        return remove(objectToKey(key));
+    }
+
+    @Override
+    public Set<@O@> keySet() {
+        return keySet;
+    }
+
+    @Override
+    public Set<Entry<@O@, V>> entrySet() {
+        return entrySet;
+    }
+
+    private @k@ objectToKey(Object key) {
+        return (@k@) ((@O@) key).@KEY_NUMBER_METHOD@();
     }
 
     /**
@@ -447,7 +465,7 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
                 for (;;) {
                     if (values[index] == null) {
                         keys[index] = oldKey;
-                        values[index] = toInternal(oldVal);
+                        values[index] = oldVal;
                         break;
                     }
 
@@ -458,10 +476,115 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
         }
     }
 
+    @Override
+    public String toString() {
+        if (isEmpty()) {
+            return "{}";
+        }
+        StringBuilder sb = new StringBuilder(4 * size);
+        sb.append('{');
+        boolean first = true;
+        for (int i = 0; i < values.length; ++i) {
+            V value = values[i];
+            if (value != null) {
+                if (!first) {
+                    sb.append(", ");
+                }
+                sb.append(keyToString(keys[i])).append('=').append(value == this ? "(this Map)" :
+                    toExternal(value));
+                first = false;
+            }
+        }
+        return sb.append('}').toString();
+    }
+
     /**
-     * Iterator for traversing the entries in this map.
+     * Helper method called by {@link #toString()} in order to convert a single map key into a string.
+     * This is protected to allow subclasses to override the appearance of a given key.
      */
-    private final class IteratorImpl implements Iterator<Entry<V>>, Entry<V> {
+    protected String keyToString(@k@ key) {
+        return @O@.toString(key);
+    }
+
+    /**
+     * Set implementation for iterating over the entries of the map.
+     */
+    private final class EntrySet extends AbstractSet<Entry<@O@, V>> {
+        @Override
+        public Iterator<Entry<@O@, V>> iterator() {
+            return new MapIterator();
+        }
+
+        @Override
+        public int size() {
+            return @K@ObjectHashMap.this.size();
+        }
+    }
+
+    /**
+     * Set implementation for iterating over the keys.
+     */
+    private final class KeySet extends AbstractSet<@O@> {
+        @Override
+        public int size() {
+            return @K@ObjectHashMap.this.size();
+        }
+
+        @Override
+        public boolean contains(Object o) {
+            return @K@ObjectHashMap.this.containsKey(o);
+        }
+
+        @Override
+        public boolean remove(Object o) {
+            return @K@ObjectHashMap.this.remove(o) != null;
+        }
+
+        @Override
+        public boolean retainAll(Collection<?> retainedKeys) {
+            boolean changed = false;
+            for(Iterator<PrimitiveEntry<V>> iter = entries().iterator(); iter.hasNext(); ) {
+                PrimitiveEntry<V> entry = iter.next();
+                if (!retainedKeys.contains(entry.key())) {
+                    changed = true;
+                    iter.remove();
+                }
+            }
+            return changed;
+        }
+
+        @Override
+        public void clear() {
+            @K@ObjectHashMap.this.clear();
+        }
+
+        @Override
+        public Iterator<@O@> iterator() {
+            return new Iterator<@O@>() {
+                private final Iterator<Entry<@O@, V>> iter = entrySet.iterator();
+
+                @Override
+                public boolean hasNext() {
+                    return iter.hasNext();
+                }
+
+                @Override
+                public @O@ next() {
+                    return iter.next().getKey();
+                }
+
+                @Override
+                public void remove() {
+                    iter.remove();
+                }
+            };
+        }
+    }
+
+    /**
+     * Iterator over primitive entries. Entry key/values are overwritten by each call to {@link #next()}.
+     */
+    private final class PrimitiveIterator implements Iterator<PrimitiveEntry<V>>, PrimitiveEntry<V> {
         private int prevIndex = -1;
         private int nextIndex = -1;
         private int entryIndex = -1;
@@ -483,7 +606,7 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
         }
 
         @Override
-        public Entry<V> next() {
+        public PrimitiveEntry<V> next() {
             if (!hasNext()) {
                 throw new NoSuchElementException();
             }
@@ -524,26 +647,68 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V>, Iterable<@K@ObjectM
         }
     }
 
-    @Override
-    public String toString() {
-        if (size == 0) {
-            return "{}";
+    /**
+     * Iterator used by the {@link Map} interface.
+     */
+    private final class MapIterator implements Iterator<Entry<@O@, V>> {
+        private final PrimitiveIterator iter = new PrimitiveIterator();
+
+        @Override
+        public boolean hasNext() {
+            return iter.hasNext();
         }
-        StringBuilder sb = new StringBuilder(4 * size);
-        for (int i = 0; i < values.length; ++i) {
-            V value = values[i];
-            if (value != null) {
-                sb.append(sb.length() == 0 ? "{" : ", ");
-                sb.append(keyToString(keys[i])).append('=').append(value == this ? "(this Map)" : value);
+
+        @Override
+        public Entry<@O@, V> next() {
+            if (!hasNext()) {
+                throw new NoSuchElementException();
             }
+
+            iter.next();
+
+            return new MapEntry(iter.entryIndex);
         }
-        return sb.append('}').toString();
+
+        @Override
+        public void remove() {
+            iter.remove();
+        }
     }
 
     /**
-     * Helper method called by {@link #toString()} in order to convert a single map key into a string.
+     * A single entry in the map.
      */
-    protected String keyToString(@k@ key) {
-        return @O@.toString(key);
+    final class MapEntry implements Entry<@O@, V> {
+        private final int entryIndex;
+
+        MapEntry(int entryIndex) {
+            this.entryIndex = entryIndex;
+        }
+
+        @Override
+        public @O@ getKey() {
+            verifyExists();
+            return keys[entryIndex];
+        }
+
+        @Override
+        public V getValue() {
+            verifyExists();
+            return toExternal(values[entryIndex]);
+        }
+
+        @Override
+        public V setValue(V value) {
+            verifyExists();
+            V prevValue = toExternal(values[entryIndex]);
+            values[entryIndex] = toInternal(value);
+            return prevValue;
+        }
+
+        private void verifyExists() {
+            if (values[entryIndex] == null) {
+                throw new IllegalStateException("The map entry has been removed");
+            }
+        }
     }
 }
