@@ -22,47 +22,46 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 /**
- * Utility methods for primitive collections.
+ * Utilities for @k@-based primitive collections.
  */
-public final class PrimitiveCollections {
+public final class @K@Collections {
 
-    private static final IntObjectMap<Object> EMPTY_INT_OBJECT_MAP = new EmptyIntObjectMap();
+    private static final @K@ObjectMap<Object> EMPTY_MAP = new EmptyMap();
 
-    private PrimitiveCollections() {
+    private @K@Collections() {
     }
 
     /**
-     * Returns an unmodifiable empty {@link IntObjectMap}.
+     * Returns an unmodifiable empty {@link @K@ObjectMap}.
      */
     @SuppressWarnings("unchecked")
-    public static <V> IntObjectMap<V> emptyIntObjectMap() {
-        return (IntObjectMap<V>) EMPTY_INT_OBJECT_MAP;
+    public static <V> @K@ObjectMap<V> emptyMap() {
+        return (@K@ObjectMap<V>) EMPTY_MAP;
     }
 
     /**
      * Creates an unmodifiable wrapper around the given map.
      */
-    public static <V> IntObjectMap<V> unmodifiableIntObjectMap(final IntObjectMap<V> map) {
-        return new UnmodifiableIntObjectMap<V>(map);
+    public static <V> @K@ObjectMap<V> unmodifiableMap(final @K@ObjectMap<V> map) {
+        return new UnmodifiableMap<V>(map);
     }
 
     /**
      * An empty map. All operations that attempt to modify the map are unsupported.
      */
-    private static final class EmptyIntObjectMap implements IntObjectMap<Object> {
-
+    private static final class EmptyMap implements @K@ObjectMap<Object> {
         @Override
-        public Object get(int key) {
+        public Object get(@k@ key) {
             return null;
         }
 
         @Override
-        public Object put(int key, Object value) {
+        public Object put(@k@ key, Object value) {
             throw new UnsupportedOperationException("put");
         }
 
         @Override
-        public Object remove(int key) {
+        public Object remove(@k@ key) {
             return null;
         }
 
@@ -87,12 +86,12 @@ public final class PrimitiveCollections {
         }
 
         @Override
-        public Set<Integer> keySet() {
+        public Set<@O@> keySet() {
             return Collections.emptySet();
         }
 
         @Override
-        public boolean containsKey(int key) {
+        public boolean containsKey(@k@ key) {
             return false;
         }
 
@@ -112,7 +111,7 @@ public final class PrimitiveCollections {
         }
 
         @Override
-        public Object put(Integer key, Object value) {
+        public Object put(@O@ key, Object value) {
             throw new UnsupportedOperationException();
         }
 
@@ -122,7 +121,7 @@ public final class PrimitiveCollections {
         }
 
         @Override
-        public void putAll(Map<? extends Integer, ?> m) {
+        public void putAll(Map<? extends @O@, ?> m) {
             throw new UnsupportedOperationException();
         }
 
@@ -132,39 +131,39 @@ public final class PrimitiveCollections {
         }
 
         @Override
-        public Set<Entry<Integer, Object>> entrySet() {
+        public Set<Entry<@O@, Object>> entrySet() {
             return Collections.emptySet();
         }
     }
 
     /**
-     * An unmodifiable wrapper around a {@link IntObjectMap}.
+     * An unmodifiable wrapper around a {@link @K@ObjectMap}.
      *
      * @param <V> the value type stored in the map.
      */
-    private static final class UnmodifiableIntObjectMap<V> implements IntObjectMap<V> {
-        private final IntObjectMap<V> map;
-        private Set<Integer> keySet;
-        private Set<Entry<Integer, V>> entrySet;
+    private static final class UnmodifiableMap<V> implements @K@ObjectMap<V> {
+        private final @K@ObjectMap<V> map;
+        private Set<@O@> keySet;
+        private Set<Entry<@O@, V>> entrySet;
         private Collection<V> values;
         private Iterable<PrimitiveEntry<V>> entries;
 
-        UnmodifiableIntObjectMap(IntObjectMap<V> map) {
+        UnmodifiableMap(@K@ObjectMap<V> map) {
             this.map = map;
         }
 
         @Override
-        public V get(int key) {
+        public V get(@k@ key) {
             return map.get(key);
         }
 
         @Override
-        public V put(int key, V value) {
+        public V put(@k@ key, V value) {
             throw new UnsupportedOperationException("put");
         }
 
         @Override
-        public V remove(int key) {
+        public V remove(@k@ key) {
             throw new UnsupportedOperationException("remove");
         }
 
@@ -184,7 +183,7 @@ public final class PrimitiveCollections {
         }
 
         @Override
-        public boolean containsKey(int key) {
+        public boolean containsKey(@k@ key) {
             return map.containsKey(key);
         }
 
@@ -204,7 +203,7 @@ public final class PrimitiveCollections {
         }
 
         @Override
-        public V put(Integer key, V value) {
+        public V put(@O@ key, V value) {
             throw new UnsupportedOperationException("put");
         }
 
@@ -214,7 +213,7 @@ public final class PrimitiveCollections {
         }
 
         @Override
-        public void putAll(Map<? extends Integer, ? extends V> m) {
+        public void putAll(Map<? extends @O@, ? extends V> m) {
             throw new UnsupportedOperationException("putAll");
         }
 
@@ -233,7 +232,7 @@ public final class PrimitiveCollections {
         }
 
         @Override
-        public Set<Integer> keySet() {
+        public Set<@O@> keySet() {
             if (keySet == null) {
                 keySet = Collections.unmodifiableSet(map.keySet());
             }
@@ -241,7 +240,7 @@ public final class PrimitiveCollections {
         }
 
         @Override
-        public Set<Entry<Integer, V>> entrySet() {
+        public Set<Entry<@O@, V>> entrySet() {
             if (entrySet == null) {
                 entrySet = Collections.unmodifiableSet(map.entrySet());
             }
@@ -289,14 +288,14 @@ public final class PrimitiveCollections {
          * Unmodifiable wrapper for an entry.
          */
         private class EntryImpl implements PrimitiveEntry<V> {
-            final PrimitiveEntry<V> entry;
+            private final PrimitiveEntry<V> entry;
 
             EntryImpl(PrimitiveEntry<V> entry) {
                 this.entry = entry;
             }
 
             @Override
-            public int key() {
+            public @k@ key() {
                 return entry.key();
             }
 
