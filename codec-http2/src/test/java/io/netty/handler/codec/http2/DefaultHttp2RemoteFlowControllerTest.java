@@ -46,6 +46,7 @@ import io.netty.util.collection.IntObjectMap;
 import io.netty.util.concurrent.EventExecutor;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -896,10 +897,10 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         // Send a bunch of data on each stream.
         final IntObjectMap<Integer> streamSizes = new IntObjectHashMap<Integer>(4);
-        streamSizes.put(STREAM_A, 400);
-        streamSizes.put(STREAM_B, 500);
-        streamSizes.put(STREAM_C, 600);
-        streamSizes.put(STREAM_D, 700);
+        streamSizes.put(STREAM_A, (Integer) 400);
+        streamSizes.put(STREAM_B, (Integer) 500);
+        streamSizes.put(STREAM_C, (Integer) 600);
+        streamSizes.put(STREAM_D, (Integer) 700);
 
         FakeFlowControlled dataA = new FakeFlowControlled(streamSizes.get(STREAM_A));
         FakeFlowControlled dataB = new FakeFlowControlled(streamSizes.get(STREAM_B));
@@ -922,11 +923,11 @@ public class DefaultHttp2RemoteFlowControllerTest {
                         streamableBytesForTree(stream0));
         assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_A, STREAM_C, STREAM_D)),
                 streamableBytesForTree(streamA));
-        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B)),
+        assertEquals(calculateStreamSizeSum(streamSizes, Collections.singletonList(STREAM_B)),
                 streamableBytesForTree(streamB));
-        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_C)),
+        assertEquals(calculateStreamSizeSum(streamSizes, Collections.singletonList(STREAM_C)),
                 streamableBytesForTree(streamC));
-        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_D)),
+        assertEquals(calculateStreamSizeSum(streamSizes, Collections.singletonList(STREAM_D)),
                 streamableBytesForTree(streamD));
     }
 
@@ -966,10 +967,10 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         // Send a bunch of data on each stream.
         final IntObjectMap<Integer> streamSizes = new IntObjectHashMap<Integer>(4);
-        streamSizes.put(STREAM_A, 400);
-        streamSizes.put(STREAM_B, 500);
-        streamSizes.put(STREAM_C, 600);
-        streamSizes.put(STREAM_D, 700);
+        streamSizes.put(STREAM_A, (Integer) 400);
+        streamSizes.put(STREAM_B, (Integer) 500);
+        streamSizes.put(STREAM_C, (Integer) 600);
+        streamSizes.put(STREAM_D, (Integer) 700);
 
         FakeFlowControlled dataA = new FakeFlowControlled(streamSizes.get(STREAM_A));
         FakeFlowControlled dataB = new FakeFlowControlled(streamSizes.get(STREAM_B));
@@ -996,9 +997,9 @@ public class DefaultHttp2RemoteFlowControllerTest {
                         streamableBytesForTree(streamA));
         assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B, STREAM_C, STREAM_D)),
                      streamableBytesForTree(streamB));
-        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_C)),
+        assertEquals(calculateStreamSizeSum(streamSizes, Collections.singletonList(STREAM_C)),
                 streamableBytesForTree(streamC));
-        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_D)),
+        assertEquals(calculateStreamSizeSum(streamSizes, Collections.singletonList(STREAM_D)),
                 streamableBytesForTree(streamD));
     }
 
@@ -1041,11 +1042,11 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         // Send a bunch of data on each stream.
         final IntObjectMap<Integer> streamSizes = new IntObjectHashMap<Integer>(4);
-        streamSizes.put(STREAM_A, 400);
-        streamSizes.put(STREAM_B, 500);
-        streamSizes.put(STREAM_C, 600);
-        streamSizes.put(STREAM_D, 700);
-        streamSizes.put(STREAM_E, 900);
+        streamSizes.put(STREAM_A, (Integer) 400);
+        streamSizes.put(STREAM_B, (Integer) 500);
+        streamSizes.put(STREAM_C, (Integer) 600);
+        streamSizes.put(STREAM_D, (Integer) 700);
+        streamSizes.put(STREAM_E, (Integer) 900);
 
         FakeFlowControlled dataA = new FakeFlowControlled(streamSizes.get(STREAM_A));
         FakeFlowControlled dataB = new FakeFlowControlled(streamSizes.get(STREAM_B));
@@ -1072,11 +1073,11 @@ public class DefaultHttp2RemoteFlowControllerTest {
         assertEquals(calculateStreamSizeSum(streamSizes,
                         Arrays.asList(STREAM_A, STREAM_E, STREAM_C, STREAM_D)),
                 streamableBytesForTree(streamA));
-        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B)),
+        assertEquals(calculateStreamSizeSum(streamSizes, Collections.singletonList(STREAM_B)),
                 streamableBytesForTree(streamB));
-        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_C)),
+        assertEquals(calculateStreamSizeSum(streamSizes, Collections.singletonList(STREAM_C)),
                 streamableBytesForTree(streamC));
-        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_D)),
+        assertEquals(calculateStreamSizeSum(streamSizes, Collections.singletonList(STREAM_D)),
                 streamableBytesForTree(streamD));
         assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_E, STREAM_C, STREAM_D)),
                 streamableBytesForTree(streamE));
@@ -1106,10 +1107,10 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         // Send a bunch of data on each stream.
         final IntObjectMap<Integer> streamSizes = new IntObjectHashMap<Integer>(4);
-        streamSizes.put(STREAM_A, 400);
-        streamSizes.put(STREAM_B, 500);
-        streamSizes.put(STREAM_C, 600);
-        streamSizes.put(STREAM_D, 700);
+        streamSizes.put(STREAM_A, (Integer) 400);
+        streamSizes.put(STREAM_B, (Integer) 500);
+        streamSizes.put(STREAM_C, (Integer) 600);
+        streamSizes.put(STREAM_D, (Integer) 700);
 
         FakeFlowControlled dataA = new FakeFlowControlled(streamSizes.get(STREAM_A));
         FakeFlowControlled dataB = new FakeFlowControlled(streamSizes.get(STREAM_B));
@@ -1133,11 +1134,11 @@ public class DefaultHttp2RemoteFlowControllerTest {
                 streamableBytesForTree(stream0));
         assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_C, STREAM_D)),
                 streamableBytesForTree(streamA));
-        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B)),
+        assertEquals(calculateStreamSizeSum(streamSizes, Collections.singletonList(STREAM_B)),
                 streamableBytesForTree(streamB));
-        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_C)),
+        assertEquals(calculateStreamSizeSum(streamSizes, Collections.singletonList(STREAM_C)),
                 streamableBytesForTree(streamC));
-        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_D)),
+        assertEquals(calculateStreamSizeSum(streamSizes, Collections.singletonList(STREAM_D)),
                 streamableBytesForTree(streamD));
     }
 
@@ -1174,10 +1175,10 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         // Send a bunch of data on each stream.
         final IntObjectMap<Integer> streamSizes = new IntObjectHashMap<Integer>(4);
-        streamSizes.put(STREAM_A, 400);
-        streamSizes.put(STREAM_B, 500);
-        streamSizes.put(STREAM_C, 600);
-        streamSizes.put(STREAM_D, 700);
+        streamSizes.put(STREAM_A, (Integer) 400);
+        streamSizes.put(STREAM_B, (Integer) 500);
+        streamSizes.put(STREAM_C, (Integer) 600);
+        streamSizes.put(STREAM_D, (Integer) 700);
 
         FakeFlowControlled dataA = new FakeFlowControlled(streamSizes.get(STREAM_A));
         FakeFlowControlled dataB = new FakeFlowControlled(streamSizes.get(STREAM_B));
@@ -1201,10 +1202,10 @@ public class DefaultHttp2RemoteFlowControllerTest {
                 streamableBytesForTree(stream0));
         assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_A, STREAM_D)),
                 streamableBytesForTree(streamA));
-        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B)),
+        assertEquals(calculateStreamSizeSum(streamSizes, Collections.singletonList(STREAM_B)),
                 streamableBytesForTree(streamB));
         assertEquals(0, streamableBytesForTree(streamC));
-        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_D)),
+        assertEquals(calculateStreamSizeSum(streamSizes, Collections.singletonList(STREAM_D)),
                 streamableBytesForTree(streamD));
     }
 

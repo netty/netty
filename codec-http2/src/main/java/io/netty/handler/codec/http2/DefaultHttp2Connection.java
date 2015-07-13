@@ -387,8 +387,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public Http2Stream forEachChild(Http2StreamVisitor visitor) throws Http2Exception {
-            for (IntObjectHashMap.Entry<DefaultStream> entry : children.entries()) {
-                Http2Stream stream = entry.value();
+            for (DefaultStream stream : children.values()) {
                 if (!visitor.visit(stream)) {
                     return stream;
                 }
