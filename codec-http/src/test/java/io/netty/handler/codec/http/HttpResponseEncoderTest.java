@@ -23,6 +23,7 @@ import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 
 import static org.hamcrest.Matchers.*;
@@ -107,6 +108,11 @@ public class HttpResponseEncoderTest {
         }
 
         @Override
+        public FileRegion unwrap() {
+            return null;
+        }
+
+        @Override
         public FileRegion touch(Object hint) {
             return this;
         }
@@ -139,6 +145,11 @@ public class HttpResponseEncoderTest {
         @Override
         public boolean release(int decrement) {
             return false;
+        }
+
+        @Override
+        public FileChannel channel() throws IOException {
+            return null;
         }
     }
 

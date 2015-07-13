@@ -15,8 +15,10 @@
  */
 package io.netty.channel;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 import io.netty.util.AbstractReferenceCounted;
-import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -24,7 +26,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
-import java.nio.channels.WritableByteChannel;
 
 /**
  * Default {@link FileRegion} implementation which transfer data from a {@link FileChannel} or {@link File}.
@@ -32,40 +33,46 @@ import java.nio.channels.WritableByteChannel;
  * Be aware that the {@link FileChannel} will be automatically closed once {@link #refCnt()} returns
  * {@code 0}.
  */
-public class DefaultFileRegion extends AbstractReferenceCounted implements FileRegion {
+public class DefaultFileRegion extends AbstractFileRegion {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultFileRegion.class);
 
-    private final File f;
-    private final DefaultFileRegion parent;
-    private final long endPosition;
-    private long readPosition;
+    private File f;
     private FileChannel file;
+    private final AbstractReferenceCounted refCnt = new AbstractReferenceCounted() {
+        @Override
+        protected void deallocate() {
+            FileChannel file = DefaultFileRegion.this.file;
+
+            if (file == null) {
+                return;
+            }
+            DefaultFileRegion.this.file = null;
+
+            try {
+                file.close();
+            } catch (IOException e) {
+                if (logger.isWarnEnabled()) {
+                    logger.warn("Failed to close a file.", e);
+                }
+            }
+        }
+
+        @Override
+        public ReferenceCounted touch(Object hint) {
+            return this;
+        }
+    };
 
     /**
      * Create a new instance
      *
      * @param file      the {@link FileChannel} which should be transfered
      * @param position  the position from which the transfer should start
-     * @param count     the number of bytes to transfer
+     * @param length     the number of bytes to transfer
      */
-    public DefaultFileRegion(FileChannel file, long position, long count) {
-        if (file == null) {
-            throw new NullPointerException("file");
-        }
-        if (position < 0) {
-            throw new IllegalArgumentException("position must be >= 0 but was " + position);
-        }
-        if (count < 0) {
-            throw new IllegalArgumentException("count must be >= 0 but was " + count);
-        }
-        if (Long.MAX_VALUE - count < position) {
-            throw new IllegalArgumentException("Overflow calculating end position");
-        }
-
-        parent = null;
-        this.file = file;
-        readPosition = position;
-        endPosition = position + count;
+    public DefaultFileRegion(FileChannel file, long position, long length) {
+        super(position, length);
+        this.file = checkNotNull(file, "file");
         f = null;
     }
 
@@ -75,53 +82,11 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
      *
      * @param f         the {@link File} which should be transfered
      * @param position  the position from which the transfer should start
-     * @param count     the number of bytes to transfer
+     * @param length     the number of bytes to transfer
      */
-    public DefaultFileRegion(File f, long position, long count) {
-        if (f == null) {
-            throw new NullPointerException("f");
-        }
-        if (position < 0) {
-            throw new IllegalArgumentException("position must be >= 0 but was " + position);
-        }
-        if (count < 0) {
-            throw new IllegalArgumentException("count must be >= 0 but was " + count);
-        }
-        if (Long.MAX_VALUE - count < position) {
-            throw new IllegalArgumentException("Overflow calculating end position");
-        }
-        parent = null;
-        readPosition = position;
-        endPosition = position + count;
-        this.f = f;
-    }
-
-    /**
-     * Create a new instance
-     *
-     * @param parent      the parent file region for a slice.
-     * @param position  the position from which the transfer should start
-     * @param count     the number of bytes to transfer
-     */
-    private DefaultFileRegion(DefaultFileRegion parent, long position, long count) {
-        if (parent == null) {
-            throw new NullPointerException("parent");
-        }
-        if (position < 0) {
-            throw new IllegalArgumentException("position must be >= 0 but was " + position);
-        }
-        if (count < 0) {
-            throw new IllegalArgumentException("count must be >= 0 but was " + count);
-        }
-        if (Long.MAX_VALUE - count < position) {
-            throw new IllegalArgumentException("Overflow calculating end position");
-        }
-
-        this.parent = parent;
-        this.file = parent.file;
-        readPosition = position;
-        endPosition = position + count;
-        f = null;
+    public DefaultFileRegion(File f, long position, long length) {
+        super(position, length);
+        this.f = checkNotNull(f, "f");
     }
 
     /**
@@ -142,100 +107,26 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
     }
 
     @Override
-    public long readPosition() {
-        return readPosition;
-    }
-
-    @Override
-    public long readableBytes() {
-        return endPosition - readPosition;
-    }
-
-    @Override
-    public long readTo(WritableByteChannel target, long length) throws IOException {
-        verifyReadable(length);
-        if (length == 0) {
-            return 0L;
-        }
-        if (refCnt() == 0) {
-            throw new IllegalReferenceCountException(0);
-        }
-
-        // Call open to make sure fc is initialized. This is a no-oop if we called it before.
+    public FileChannel channel() throws IOException {
+        // Call open to make sure fc is initialized. This is a no-op if we called it before.
         open();
-
-        long written = file.transferTo(this.readPosition, length, target);
-        if (written > 0) {
-            readPosition += written;
-        }
-        return written;
-    }
-
-    @Override
-    public boolean isReadable() {
-        return readableBytes() > 0;
-    }
-
-    @Override
-    public FileRegion skipBytes(long length) {
-        verifyReadable(length);
-        readPosition += length;
-        return this;
-    }
-
-    @Override
-    public FileRegion slice() {
-        return new DefaultFileRegion(this, readPosition, readableBytes());
-    }
-
-    @Override
-    public FileRegion slice(long position, long length) {
-        verifyReadable(length);
-        if (position < readPosition || endPosition - length < position) {
-            throw new IllegalArgumentException("Slice must be within readable region");
-        }
-        return new DefaultFileRegion(this, position, length);
-    }
-
-    @Override
-    public FileRegion readSlice(long length) {
-        FileRegion slice = slice(readPosition, length);
-        readPosition += length;
-        return slice;
+        return file;
     }
 
     @Override
     public FileRegion unwrap() {
-        return parent;
-    }
-
-    @Override
-    protected void deallocate() {
-        FileChannel file = this.file;
-
-        if (file == null) {
-            return;
-        }
-        this.file = null;
-
-        try {
-            file.close();
-        } catch (IOException e) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("Failed to close a file.", e);
-            }
-        }
+        return null;
     }
 
     @Override
     public FileRegion retain() {
-        super.retain();
+        refCnt.retain();
         return this;
     }
 
     @Override
     public FileRegion retain(int increment) {
-        super.retain(increment);
+        refCnt.retain(increment);
         return this;
     }
 
@@ -249,9 +140,18 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
         return this;
     }
 
-    private void verifyReadable(long length) {
-        if (length < 0 || length > readableBytes()) {
-            throw new IllegalArgumentException("length must be within readable region: " + length);
-        }
+    @Override
+    public int refCnt() {
+        return refCnt.refCnt();
+    }
+
+    @Override
+    public boolean release() {
+        return refCnt.release();
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        return refCnt.release(decrement);
     }
 }

@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.buffer.ReadableObject;
 
+import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 
@@ -52,4 +53,8 @@ import java.nio.channels.WritableByteChannel;
  * Currently, the NIO transport is the only transport that supports {@link FileRegion}.
  */
 public interface FileRegion extends ReadableObject<FileRegion> {
+    /**
+     * Return the {@link FileChannel} associate with this {@link FileRegion}.
+     */
+    FileChannel channel() throws IOException;
 }
