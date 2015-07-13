@@ -14,21 +14,21 @@
  */
 package io.netty.util.collection;
 
-import java.util.Collection;
+import java.util.Map;
 
 /**
  * Interface for a primitive map that uses {@code @k@}s as keys.
  *
  * @param <V> the value type stored in the map.
  */
-public interface @K@ObjectMap<V> {
+public interface @K@ObjectMap<V> extends Map<@O@, V> {
 
     /**
-     * An Entry in the map.
+     * A primitive entry in the map, provided by the iterator from {@link #entries()}
      *
      * @param <V> the value type stored in the map.
      */
-    interface Entry<V> {
+    interface PrimitiveEntry<V> {
         /**
          * Gets the key for this entry.
          */
@@ -63,11 +63,6 @@ public interface @K@ObjectMap<V> {
     V put(@k@ key, V value);
 
     /**
-     * Puts all of the entries from the given map into this map.
-     */
-    void putAll(@K@ObjectMap<V> sourceMap);
-
-    /**
      * Removes the entry with the specified key.
      *
      * @param key the key for the entry to be removed from this map.
@@ -76,48 +71,14 @@ public interface @K@ObjectMap<V> {
     V remove(@k@ key);
 
     /**
-     * Returns the number of entries contained in this map.
+     * Gets an iterable to traverse over the primitive entries contained in this map. As an optimization,
+     * the {@link PrimitiveEntry}s returned by the {@link Iterator} may change as the {@link Iterator}
+     * progresses. The caller should not rely on {@link PrimitiveEntry} key/value stability.
      */
-    int size();
-
-    /**
-     * Indicates whether or not this map is empty (i.e {@link #size()} == {@code 0]).
-
-     */
-    boolean isEmpty();
-
-    /**
-     * Clears all entries from this map.
-     */
-    void clear();
+    Iterable<PrimitiveEntry<V>> entries();
 
     /**
      * Indicates whether or not this map contains a value for the specified key.
      */
     boolean containsKey(@k@ key);
-
-    /**
-     * Indicates whether or not the map contains the specified value.
-     */
-    boolean containsValue(V value);
-
-    /**
-     * Gets an iterable collection of the entries contained in this map.
-     */
-    Iterable<Entry<V>> entries();
-
-    /**
-     * Gets the keys contained in this map.
-     */
-    @k@[] keys();
-
-    /**
-     * Gets the values contained in this map.
-     */
-    V[] values(Class<V> clazz);
-
-    /**
-     * Gets the values contatins in this map as a {@link Collection}.
-     */
-    Collection<V> values();
 }

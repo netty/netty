@@ -14,12 +14,12 @@
  */
 package io.netty.util.collection;
 
-import io.netty.util.internal.EmptyArrays;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 /**
  * Utility methods for primitive collections.
@@ -62,11 +62,6 @@ public final class PrimitiveCollections {
         }
 
         @Override
-        public void putAll(IntObjectMap<Object> sourceMap) {
-            throw new UnsupportedOperationException("putAll");
-        }
-
-        @Override
         public Object remove(int key) {
             return null;
         }
@@ -82,8 +77,18 @@ public final class PrimitiveCollections {
         }
 
         @Override
+        public boolean containsKey(Object key) {
+            return false;
+        }
+
+        @Override
         public void clear() {
             // Do nothing.
+        }
+
+        @Override
+        public Set<Integer> keySet() {
+            return Collections.emptySet();
         }
 
         @Override
@@ -97,23 +102,38 @@ public final class PrimitiveCollections {
         }
 
         @Override
-        public Iterable<Entry<Object>> entries() {
+        public Iterable<PrimitiveEntry<Object>> entries() {
             return Collections.emptySet();
         }
 
         @Override
-        public int[] keys() {
-            return EmptyArrays.EMPTY_INTS;
+        public Object get(Object key) {
+            return null;
         }
 
         @Override
-        public Object[] values(Class<Object> clazz) {
-            return EmptyArrays.EMPTY_OBJECTS;
+        public Object put(Integer key, Object value) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Object remove(Object key) {
+            return null;
+        }
+
+        @Override
+        public void putAll(Map<? extends Integer, ?> m) {
+            throw new UnsupportedOperationException();
         }
 
         @Override
         public Collection<Object> values() {
             return Collections.emptyList();
+        }
+
+        @Override
+        public Set<Entry<Integer, Object>> entrySet() {
+            return Collections.emptySet();
         }
     }
 
@@ -122,9 +142,12 @@ public final class PrimitiveCollections {
      *
      * @param <V> the value type stored in the map.
      */
-    private static final class UnmodifiableIntObjectMap<V> implements IntObjectMap<V>,
-            Iterable<IntObjectMap.Entry<V>> {
-        final IntObjectMap<V> map;
+    private static final class UnmodifiableIntObjectMap<V> implements IntObjectMap<V> {
+        private final IntObjectMap<V> map;
+        private Set<Integer> keySet;
+        private Set<Entry<Integer, V>> entrySet;
+        private Collection<V> values;
+        private Iterable<PrimitiveEntry<V>> entries;
 
         UnmodifiableIntObjectMap(IntObjectMap<V> map) {
             this.map = map;
@@ -138,11 +161,6 @@ public final class PrimitiveCollections {
         @Override
         public V put(int key, V value) {
             throw new UnsupportedOperationException("put");
-        }
-
-        @Override
-        public void putAll(IntObjectMap<V> sourceMap) {
-            throw new UnsupportedOperationException("putAll");
         }
 
         @Override
@@ -171,42 +189,80 @@ public final class PrimitiveCollections {
         }
 
         @Override
-        public boolean containsValue(V value) {
+        public boolean containsValue(Object value) {
             return map.containsValue(value);
         }
 
         @Override
-        public Iterable<Entry<V>> entries() {
-            return this;
+        public boolean containsKey(Object key) {
+            return map.containsKey(key);
         }
 
         @Override
-        public Iterator<Entry<V>> iterator() {
-            return new IteratorImpl(map.entries().iterator());
+        public V get(Object key) {
+            return map.get(key);
         }
 
         @Override
-        public int[] keys() {
-            return map.keys();
+        public V put(Integer key, V value) {
+            throw new UnsupportedOperationException("put");
         }
 
         @Override
-        public V[] values(Class<V> clazz) {
-            return map.values(clazz);
+        public V remove(Object key) {
+            throw new UnsupportedOperationException("remove");
+        }
+
+        @Override
+        public void putAll(Map<? extends Integer, ? extends V> m) {
+            throw new UnsupportedOperationException("putAll");
+        }
+
+        @Override
+        public Iterable<PrimitiveEntry<V>> entries() {
+            if (entries == null) {
+                entries = new Iterable<PrimitiveEntry<V>>() {
+                    @Override
+                    public Iterator<PrimitiveEntry<V>> iterator() {
+                        return new IteratorImpl(map.entries().iterator());
+                    }
+                };
+            }
+
+            return entries;
+        }
+
+        @Override
+        public Set<Integer> keySet() {
+            if (keySet == null) {
+                keySet = Collections.unmodifiableSet(map.keySet());
+            }
+            return keySet;
+        }
+
+        @Override
+        public Set<Entry<Integer, V>> entrySet() {
+            if (entrySet == null) {
+                entrySet = Collections.unmodifiableSet(map.entrySet());
+            }
+            return entrySet;
         }
 
         @Override
         public Collection<V> values() {
-            return map.values();
+            if (values == null) {
+                values = Collections.unmodifiableCollection(map.values());
+            }
+            return values;
         }
 
         /**
          * Unmodifiable wrapper for an iterator.
          */
-        private class IteratorImpl implements Iterator<Entry<V>> {
-            final Iterator<Entry<V>> iter;
+        private class IteratorImpl implements Iterator<PrimitiveEntry<V>> {
+            final Iterator<PrimitiveEntry<V>> iter;
 
-            IteratorImpl(Iterator<Entry<V>> iter) {
+            IteratorImpl(Iterator<PrimitiveEntry<V>> iter) {
                 this.iter = iter;
             }
 
@@ -216,7 +272,7 @@ public final class PrimitiveCollections {
             }
 
             @Override
-            public Entry<V> next() {
+            public PrimitiveEntry<V> next() {
                 if (!hasNext()) {
                     throw new NoSuchElementException();
                 }
@@ -232,10 +288,10 @@ public final class PrimitiveCollections {
         /**
          * Unmodifiable wrapper for an entry.
          */
-        private class EntryImpl implements Entry<V> {
-            final Entry<V> entry;
+        private class EntryImpl implements PrimitiveEntry<V> {
+            final PrimitiveEntry<V> entry;
 
-            EntryImpl(Entry<V> entry) {
+            EntryImpl(PrimitiveEntry<V> entry) {
                 this.entry = entry;
             }
 
