@@ -122,4 +122,16 @@ public class EmbeddedChannelTest {
             throw cause;
         }
     }
+
+    @Test
+    public void testConstructWithOutHandler() {
+        EmbeddedChannel channel = new EmbeddedChannel();
+        Assert.assertTrue(channel.writeInbound(1));
+        Assert.assertTrue(channel.writeOutbound(2));
+        Assert.assertTrue(channel.finish());
+        Assert.assertSame(1, channel.readInbound());
+        Assert.assertNull(channel.readInbound());
+        Assert.assertSame(2, channel.readOutbound());
+        Assert.assertNull(channel.readOutbound());
+    }
 }
