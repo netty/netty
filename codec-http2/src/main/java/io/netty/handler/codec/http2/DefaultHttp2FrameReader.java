@@ -484,7 +484,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                 char id = (char) payload.readUnsignedShort();
                 long value = payload.readUnsignedInt();
                 try {
-                    settings.put(id, value);
+                    settings.put(id, Long.valueOf(value));
                 } catch (IllegalArgumentException e) {
                     switch(id) {
                     case SETTINGS_MAX_FRAME_SIZE:

@@ -65,14 +65,14 @@ public class Http2SettingsTest {
     @Test
     public void nonStandardSettingsShouldBeSet() {
         char key = 0;
-        settings.put(key, 123L);
+        settings.put(key, (Long) 123L);
         assertEquals(123L, (long) settings.get(key));
     }
 
     @Test
     public void settingsShouldSupportUnsignedShort() {
         char key = (char) (Short.MAX_VALUE + 1);
-        settings.put(key, 123L);
+        settings.put(key, (Long) 123L);
         assertEquals(123L, (long) settings.get(key));
     }
 

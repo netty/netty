@@ -9,17 +9,19 @@ templateDirs.eachWithIndex { templateDir, i ->
 
 void convertSources(String templateDir, String outputDir) {
     String[] keyPrimitives = ["byte", "char", "short", "int", "long"]
-    String[] keyObjects = ["Byte", "Character", "Short", "Integer", "Long"];
+    String[] keyObjects = ["Byte", "Character", "Short", "Integer", "Long"]
+    String[] keyNumberMethod = ["byteValue", "charValue", "shortValue", "intValue", "longValue"]
 
     keyPrimitives.eachWithIndex { keyPrimitive, i ->
-        convertTemplates templateDir, outputDir, keyPrimitive, keyObjects[i]
+        convertTemplates templateDir, outputDir, keyPrimitive, keyObjects[i], keyNumberMethod[i]
     }
 }
 
 void convertTemplates(String templateDir,
                       String outputDir,
                       String keyPrimitive,
-                      String keyObject) {
+                      String keyObject,
+                      String keyNumberMethod) {
     def keyName = keyPrimitive.capitalize()
     def replaceFrom = "(^.*)K([^.]+)\\.template\$"
     def replaceTo = "\\1" + keyName + "\\2.java"
@@ -32,6 +34,7 @@ void convertTemplates(String templateDir,
             filter(token: "K", value: keyName)
             filter(token: "k", value: keyPrimitive)
             filter(token: "O", value: keyObject)
+            filter(token: "KEY_NUMBER_METHOD", value: keyNumberMethod)
             filter(token: "HASH_CODE", value: hashCodeFn)
         }
         regexpmapper(from: replaceFrom, to: replaceTo)
