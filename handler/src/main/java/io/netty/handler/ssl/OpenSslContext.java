@@ -15,7 +15,11 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.base64.Base64;
+import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -31,6 +35,7 @@ import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
+import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,6 +48,10 @@ import static io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBeha
 import static io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 
 public abstract class OpenSslContext extends SslContext {
+    private static final byte[] BEGIN_CERT = "-----BEGIN CERTIFICATE-----\n".getBytes(CharsetUtil.US_ASCII);
+    private static final byte[] END_CERT = "\n-----END CERTIFICATE-----\n".getBytes(CharsetUtil.US_ASCII);
+    private static final byte[] BEGIN_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\n".getBytes(CharsetUtil.US_ASCII);
+    private static final byte[] END_PRIVATE_KEY = "\n-----END PRIVATE KEY-----\n".getBytes(CharsetUtil.US_ASCII);
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OpenSslContext.class);
     /**
@@ -62,7 +71,7 @@ public abstract class OpenSslContext extends SslContext {
 
     /** The OpenSSL SSL_CTX object */
     protected volatile long ctx;
-    private long aprPool;
+    long aprPool;
     @SuppressWarnings({ "unused", "FieldMayBeFinal" })
     private volatile int aprPoolDestroyed;
     private volatile boolean rejectRemoteInitiatedRenegotiation;
@@ -457,5 +466,55 @@ public abstract class OpenSslContext extends SslContext {
         public void add(OpenSslEngine engine) {
             engines.put(engine.sslPointer(), engine);
         }
+    }
+
+    /**
+     * Return the pointer to a <a href="https://www.openssl.org/docs/crypto/BIO_get_mem_ptr.html">in-memory BIO</a>
+     * or {@code 0} if the {@code key} is {@code null}. The BIO contains the content of the {@code key}.
+     */
+    static long toBIO(PrivateKey key) throws Exception {
+        if (key == null) {
+            return 0;
+        }
+        ByteBuf buffer = Unpooled.directBuffer();
+        try {
+            buffer.writeBytes(BEGIN_PRIVATE_KEY);
+            buffer.writeBytes(Base64.encode(Unpooled.wrappedBuffer(key.getEncoded()), true));
+            buffer.writeBytes(END_PRIVATE_KEY);
+            return newBIO(buffer);
+        } finally {
+            buffer.release();
+        }
+    }
+
+    /**
+     * Return the pointer to a <a href="https://www.openssl.org/docs/crypto/BIO_get_mem_ptr.html">in-memory BIO</a>
+     * or {@code 0} if the {@code certChain} is {@code null}. The BIO contains the content of the {@code certChain}.
+     */
+    static long toBIO(X509Certificate[] certChain) throws Exception {
+        if (certChain == null) {
+            return 0;
+        }
+        ByteBuf buffer = Unpooled.directBuffer();
+        try {
+            for (X509Certificate cert: certChain) {
+                buffer.writeBytes(BEGIN_CERT);
+                buffer.writeBytes(Base64.encode(Unpooled.wrappedBuffer(cert.getEncoded()), true));
+                buffer.writeBytes(END_CERT);
+            }
+            return newBIO(buffer);
+        }  finally {
+            buffer.release();
+        }
+    }
+
+    private static long newBIO(ByteBuf buffer) throws Exception {
+        long bio = SSL.newMemBIO();
+        int readable = buffer.readableBytes();
+        if (SSL.writeToBIO(bio, buffer.memoryAddress(), readable) != readable) {
+            SSL.freeBIO(bio);
+            throw new IllegalStateException("Could not write data to memory BIO");
+        }
+        return bio;
     }
 }
