@@ -23,6 +23,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -33,6 +34,7 @@ import java.security.PrivateKey;
 import java.security.SecureRandom;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 
@@ -63,6 +65,8 @@ public final class SelfSignedCertificate {
 
     private final File certificate;
     private final File privateKey;
+    private final X509Certificate cert;
+    private final PrivateKey key;
 
     /**
      * Creates a new instance.
@@ -120,6 +124,13 @@ public final class SelfSignedCertificate {
 
         certificate = new File(paths[0]);
         privateKey = new File(paths[1]);
+        key = keypair.getPrivate();
+        try {
+            cert = (X509Certificate) CertificateFactory.getInstance("X509").generateCertificate(
+                    new FileInputStream(certificate));
+        } catch (Exception e) {
+            throw new CertificateEncodingException(e);
+        }
     }
 
     /**
@@ -134,6 +145,20 @@ public final class SelfSignedCertificate {
      */
     public File privateKey() {
         return privateKey;
+    }
+
+    /**
+     *  Returns the generated X.509 certificate.
+     */
+    public X509Certificate cert() {
+        return cert;
+    }
+
+    /**
+     * Returns the generated RSA private key.
+     */
+    public PrivateKey key() {
+        return key;
     }
 
     /**
