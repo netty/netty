@@ -33,9 +33,11 @@ import java.security.KeyException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.security.Security;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -281,7 +283,9 @@ public abstract class JdkSslContext extends SslContext {
      *                    {@code null} if it's not password-protected.
      * @param kmf The existing {@link KeyManagerFactory} that will be used if not {@code null}
      * @return A {@link KeyManagerFactory} based upon a key file, key file password, and a certificate chain.
+     * @deprecated will be removed.
      */
+    @Deprecated
     protected static KeyManagerFactory buildKeyManagerFactory(File certChainFile, File keyFile, String keyPassword,
             KeyManagerFactory kmf)
                     throws UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException,
@@ -292,6 +296,17 @@ public abstract class JdkSslContext extends SslContext {
             algorithm = "SunX509";
         }
         return buildKeyManagerFactory(certChainFile, algorithm, keyFile, keyPassword, kmf);
+    }
+
+    static KeyManagerFactory buildKeyManagerFactory(X509Certificate[] certChain, PrivateKey key, String keyPassword,
+                                                              KeyManagerFactory kmf)
+            throws UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException,
+                   CertificateException, IOException {
+        String algorithm = Security.getProperty("ssl.KeyManagerFactory.algorithm");
+        if (algorithm == null) {
+            algorithm = "SunX509";
+        }
+        return buildKeyManagerFactory(certChain, algorithm, key, keyPassword, kmf);
     }
 
     /**
@@ -306,14 +321,25 @@ public abstract class JdkSslContext extends SslContext {
      * @param kmf The existing {@link KeyManagerFactory} that will be used if not {@code null}
      * @return A {@link KeyManagerFactory} based upon a key algorithm, key file, key file password,
      * and a certificate chain.
+     * @deprecated will be removed.
      */
+    @Deprecated
     protected static KeyManagerFactory buildKeyManagerFactory(File certChainFile,
             String keyAlgorithm, File keyFile, String keyPassword, KeyManagerFactory kmf)
                     throws KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException,
                     InvalidKeySpecException, InvalidAlgorithmParameterException, IOException,
                     CertificateException, KeyException, UnrecoverableKeyException {
+        return buildKeyManagerFactory(toX509Certificates(certChainFile), keyAlgorithm,
+                                      toPrivateKey(keyFile, keyPassword), keyPassword, kmf);
+    }
+
+    static KeyManagerFactory buildKeyManagerFactory(X509Certificate[] certChainFile,
+                                                              String keyAlgorithm, PrivateKey key,
+                                                              String keyPassword, KeyManagerFactory kmf)
+            throws KeyStoreException, NoSuchAlgorithmException, IOException,
+                   CertificateException, UnrecoverableKeyException {
         char[] keyPasswordChars = keyPassword == null ? EmptyArrays.EMPTY_CHARS : keyPassword.toCharArray();
-        KeyStore ks = buildKeyStore(certChainFile, keyFile, keyPasswordChars);
+        KeyStore ks = buildKeyStore(certChainFile, key, keyPasswordChars);
         // Set up key manager factory to use our key store
         if (kmf == null) {
             kmf = KeyManagerFactory.getInstance(keyAlgorithm);
