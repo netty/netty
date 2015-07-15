@@ -26,6 +26,7 @@ import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.io.File;
 import java.security.KeyStore;
+import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 
 /**
@@ -36,9 +37,11 @@ public final class OpenSslClientContext extends OpenSslContext {
 
     /**
      * Creates a new instance.
+     * @deprecated use {@link SslContextBuilder}
      */
+    @Deprecated
     public OpenSslClientContext() throws SSLException {
-        this(null, null, null, null, null, null, null, IdentityCipherSuiteFilter.INSTANCE, null, 0, 0);
+        this((File) null, null, null, null, null, null, null, IdentityCipherSuiteFilter.INSTANCE, null, 0, 0);
     }
 
     /**
@@ -46,7 +49,9 @@ public final class OpenSslClientContext extends OpenSslContext {
      *
      * @param certChainFile an X.509 certificate chain file in PEM format.
      *                      {@code null} to use the system default
+     * @deprecated use {@link SslContextBuilder}
      */
+    @Deprecated
     public OpenSslClientContext(File certChainFile) throws SSLException {
         this(certChainFile, null);
     }
@@ -57,7 +62,9 @@ public final class OpenSslClientContext extends OpenSslContext {
      * @param trustManagerFactory the {@link TrustManagerFactory} that provides the {@link TrustManager}s
      *                            that verifies the certificates sent from servers.
      *                            {@code null} to use the default.
+     * @deprecated use {@link SslContextBuilder}
      */
+    @Deprecated
     public OpenSslClientContext(TrustManagerFactory trustManagerFactory) throws SSLException {
         this(null, trustManagerFactory);
     }
@@ -70,16 +77,15 @@ public final class OpenSslClientContext extends OpenSslContext {
      * @param trustManagerFactory the {@link TrustManagerFactory} that provides the {@link TrustManager}s
      *                            that verifies the certificates sent from servers.
      *                            {@code null} to use the default.
+     * @deprecated use {@link SslContextBuilder}
      */
+    @Deprecated
     public OpenSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory) throws SSLException {
         this(certChainFile, trustManagerFactory, null, null, null, null, null,
              IdentityCipherSuiteFilter.INSTANCE, null, 0, 0);
     }
 
     /**
-     * @deprecated use {@link #OpenSslClientContext(File, TrustManagerFactory, Iterable,
-     *             CipherSuiteFilter, ApplicationProtocolConfig, long, long)}
-     *
      * Creates a new instance.
      *
      * @param certChainFile an X.509 certificate chain file in PEM format
@@ -93,6 +99,7 @@ public final class OpenSslClientContext extends OpenSslContext {
      *                         {@code 0} to use the default value.
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                       {@code 0} to use the default value.
+     * @deprecated use {@link SslContextBuilder}
      */
     @Deprecated
     public OpenSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory, Iterable<String> ciphers,
@@ -103,9 +110,6 @@ public final class OpenSslClientContext extends OpenSslContext {
     }
 
     /**
-     * @deprecated use {@link #OpenSslClientContext(File, TrustManagerFactory, File, File, String,
-     * KeyManagerFactory, Iterable, CipherSuiteFilter, ApplicationProtocolConfig,long, long)}
-     *
      * Creates a new instance.
      *
      * @param certChainFile an X.509 certificate chain file in PEM format
@@ -120,6 +124,7 @@ public final class OpenSslClientContext extends OpenSslContext {
      *                         {@code 0} to use the default value.
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                       {@code 0} to use the default value.
+     * @deprecated use {@link SslContextBuilder}
      */
     @Deprecated
     public OpenSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory, Iterable<String> ciphers,
@@ -157,7 +162,9 @@ public final class OpenSslClientContext extends OpenSslContext {
      *                         {@code 0} to use the default value.
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                       {@code 0} to use the default value.
+     * @deprecated use {@link SslContextBuilder}
      */
+    @Deprecated
     public OpenSslClientContext(File trustCertChainFile, TrustManagerFactory trustManagerFactory,
                                 File keyCertChainFile, File keyFile, String keyPassword,
                                 KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
@@ -218,6 +225,119 @@ public final class OpenSslClientContext extends OpenSslContext {
                 try {
                     if (trustCertChainFile != null) {
                         trustManagerFactory = buildTrustManagerFactory(trustCertChainFile, trustManagerFactory);
+                    } else if (trustManagerFactory == null) {
+                        trustManagerFactory = TrustManagerFactory.getInstance(
+                                TrustManagerFactory.getDefaultAlgorithm());
+                        trustManagerFactory.init((KeyStore) null);
+                    }
+                    final X509TrustManager manager = chooseTrustManager(trustManagerFactory.getTrustManagers());
+
+                    // Use this to prevent an error when running on java < 7
+                    if (useExtendedTrustManager(manager)) {
+                        final X509ExtendedTrustManager extendedManager = (X509ExtendedTrustManager) manager;
+                        SSLContext.setCertVerifyCallback(ctx, new AbstractCertificateVerifier() {
+                            @Override
+                            void verify(OpenSslEngine engine, X509Certificate[] peerCerts, String auth)
+                                    throws Exception {
+                                extendedManager.checkServerTrusted(peerCerts, auth, engine);
+                            }
+                        });
+                    } else {
+                        SSLContext.setCertVerifyCallback(ctx, new AbstractCertificateVerifier() {
+                            @Override
+                            void verify(OpenSslEngine engine, X509Certificate[] peerCerts, String auth)
+                                    throws Exception {
+                                manager.checkServerTrusted(peerCerts, auth);
+                            }
+                        });
+                    }
+                } catch (Exception e) {
+                    throw new SSLException("unable to setup trustmanager", e);
+                }
+            }
+            sessionContext = new OpenSslClientSessionContext(ctx);
+            success = true;
+        } finally {
+            if (!success) {
+                destroy();
+            }
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    OpenSslClientContext(X509Certificate[] trustCertChain, TrustManagerFactory trustManagerFactory,
+                         X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
+                                KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
+                                CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
+                                long sessionCacheSize, long sessionTimeout)
+            throws SSLException {
+        super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_CLIENT);
+        boolean success = false;
+        try {
+            if (key == null && keyCertChain != null || key != null && keyCertChain == null) {
+                throw new IllegalArgumentException(
+                        "Either both keyCertChain and key needs to be null or none of them");
+            }
+            synchronized (OpenSslContext.class) {
+                if (trustCertChain != null) {
+                    long trustCertChainBio = 0;
+
+                    try {
+                        trustCertChainBio = toBIO(trustCertChain);
+                        /* Load the certificate chain. We must NOT skip the first cert when client mode */
+                        if (!SSLContext.setCertificateChainBio(ctx, trustCertChainBio, false)) {
+                            long error = SSL.getLastErrorNumber();
+                            if (OpenSsl.isError(error)) {
+                                throw new SSLException(
+                                        "failed to set certificate chain: " + SSL.getErrorString(error));
+                            }
+                        }
+                    } catch (Exception e) {
+                        throw new SSLException(
+                                "failed to set certificate chain", e);
+                    } finally {
+                        if (trustCertChainBio != 0) {
+                            SSL.freeBIO(trustCertChainBio);
+                        }
+                    }
+                }
+                if (keyCertChain != null && key != null) {
+                    /* Load the certificate file and private key. */
+                    long keyBio = 0;
+                    long keyCertChainBio = 0;
+
+                    try {
+                        keyCertChainBio = toBIO(keyCertChain);
+
+                        keyBio = toBIO(key);
+
+                        if (!SSLContext.setCertificateBio(
+                                ctx, keyCertChainBio, keyBio, keyPassword, SSL.SSL_AIDX_RSA)) {
+                            long error = SSL.getLastErrorNumber();
+                            if (OpenSsl.isError(error)) {
+                                throw new SSLException("failed to set certificate and key: "
+                                                       + SSL.getErrorString(error));
+                            }
+                        }
+                    } catch (SSLException e) {
+                        throw e;
+                    } catch (Exception e) {
+                        throw new SSLException("failed to set certificate and key", e);
+                    } finally {
+                        if (keyBio != 0) {
+                            SSL.freeBIO(keyBio);
+                        }
+                        if (keyCertChainBio != 0) {
+                            SSL.freeBIO(keyCertChainBio);
+                        }
+                    }
+                }
+
+                SSLContext.setVerify(ctx, SSL.SSL_VERIFY_NONE, VERIFY_DEPTH);
+
+                try {
+                    if (trustCertChain != null) {
+                        trustManagerFactory = buildTrustManagerFactory(trustCertChain, trustManagerFactory);
                     } else if (trustManagerFactory == null) {
                         trustManagerFactory = TrustManagerFactory.getInstance(
                                 TrustManagerFactory.getDefaultAlgorithm());

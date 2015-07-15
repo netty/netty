@@ -24,6 +24,8 @@ import javax.net.ssl.SSLSessionContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.File;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 
 /**
  * A client-side {@link SslContext} which uses JDK's SSL/TLS implementation.
@@ -34,7 +36,10 @@ public final class JdkSslClientContext extends JdkSslContext {
 
     /**
      * Creates a new instance.
+     *
+     * @deprecated use {@link SslContextBuilder}
      */
+    @Deprecated
     public JdkSslClientContext() throws SSLException {
         this(null, null);
     }
@@ -44,7 +49,9 @@ public final class JdkSslClientContext extends JdkSslContext {
      *
      * @param certChainFile an X.509 certificate chain file in PEM format.
      *                      {@code null} to use the system default
+     * @deprecated use {@link SslContextBuilder}
      */
+    @Deprecated
     public JdkSslClientContext(File certChainFile) throws SSLException {
         this(certChainFile, null);
     }
@@ -55,7 +62,9 @@ public final class JdkSslClientContext extends JdkSslContext {
      * @param trustManagerFactory the {@link TrustManagerFactory} that provides the {@link TrustManager}s
      *                            that verifies the certificates sent from servers.
      *                            {@code null} to use the default.
+     * @deprecated use {@link SslContextBuilder}
      */
+    @Deprecated
     public JdkSslClientContext(TrustManagerFactory trustManagerFactory) throws SSLException {
         this(null, trustManagerFactory);
     }
@@ -68,7 +77,9 @@ public final class JdkSslClientContext extends JdkSslContext {
      * @param trustManagerFactory the {@link TrustManagerFactory} that provides the {@link TrustManager}s
      *                            that verifies the certificates sent from servers.
      *                            {@code null} to use the default.
+     * @deprecated use {@link SslContextBuilder}
      */
+    @Deprecated
     public JdkSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory) throws SSLException {
         this(certChainFile, trustManagerFactory, null, IdentityCipherSuiteFilter.INSTANCE,
                 JdkDefaultApplicationProtocolNegotiator.INSTANCE, 0, 0);
@@ -93,6 +104,7 @@ public final class JdkSslClientContext extends JdkSslContext {
      *                         {@code 0} to use the default value.
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                       {@code 0} to use the default value.
+     * @deprecated use {@link SslContextBuilder}
      */
     @Deprecated
     public JdkSslClientContext(
@@ -119,7 +131,9 @@ public final class JdkSslClientContext extends JdkSslContext {
      *                         {@code 0} to use the default value.
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                       {@code 0} to use the default value.
+     * @deprecated use {@link SslContextBuilder}
      */
+    @Deprecated
     public JdkSslClientContext(
             File certChainFile, TrustManagerFactory trustManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
@@ -144,7 +158,9 @@ public final class JdkSslClientContext extends JdkSslContext {
      *                         {@code 0} to use the default value.
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                       {@code 0} to use the default value.
+     * @deprecated use {@link SslContextBuilder}
      */
+    @Deprecated
     public JdkSslClientContext(
             File certChainFile, TrustManagerFactory trustManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, JdkApplicationProtocolNegotiator apn,
@@ -181,7 +197,9 @@ public final class JdkSslClientContext extends JdkSslContext {
      *                         {@code 0} to use the default value.
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                       {@code 0} to use the default value.
+     * @deprecated use {@link SslContextBuilder}
      */
+    @Deprecated
     public JdkSslClientContext(File trustCertChainFile, TrustManagerFactory trustManagerFactory,
             File keyCertChainFile, File keyFile, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
@@ -218,21 +236,47 @@ public final class JdkSslClientContext extends JdkSslContext {
      *                         {@code 0} to use the default value.
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                       {@code 0} to use the default value.
+     * @deprecated use {@link SslContextBuilder}
      */
+    @Deprecated
     public JdkSslClientContext(File trustCertChainFile, TrustManagerFactory trustManagerFactory,
             File keyCertChainFile, File keyFile, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, JdkApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
         super(ciphers, cipherFilter, apn);
-
         try {
-            if (trustCertChainFile != null) {
-                trustManagerFactory = buildTrustManagerFactory(trustCertChainFile, trustManagerFactory);
+            ctx = newSSLContext(toX509Certificates(trustCertChainFile), trustManagerFactory,
+                                toX509Certificates(keyCertChainFile), toPrivateKey(keyFile, keyPassword),
+                                keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout);
+        } catch (Exception e) {
+            if (e instanceof SSLException) {
+                throw (SSLException) e;
             }
-            if (keyFile != null) {
-                keyManagerFactory = buildKeyManagerFactory(keyCertChainFile, keyFile, keyPassword, keyManagerFactory);
+            throw new SSLException("failed to initialize the client-side SSL context", e);
+        }
+    }
+
+    JdkSslClientContext(X509Certificate[] trustCertChain, TrustManagerFactory trustManagerFactory,
+                        X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
+                        KeyManagerFactory keyManagerFactory, Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
+                        ApplicationProtocolConfig apn, long sessionCacheSize, long sessionTimeout) throws SSLException {
+        super(ciphers, cipherFilter, toNegotiator(apn, false));
+        ctx = newSSLContext(trustCertChain, trustManagerFactory, keyCertChain, key, keyPassword,
+                            keyManagerFactory, sessionCacheSize, sessionTimeout);
+    }
+
+    private static SSLContext newSSLContext(X509Certificate[] trustCertChain, TrustManagerFactory trustManagerFactory,
+                                            X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
+                                            KeyManagerFactory keyManagerFactory, long sessionCacheSize,
+                                            long sessionTimeout) throws SSLException {
+        try {
+            if (trustCertChain != null) {
+                trustManagerFactory = buildTrustManagerFactory(trustCertChain, trustManagerFactory);
             }
-            ctx = SSLContext.getInstance(PROTOCOL);
+            if (keyCertChain != null) {
+                keyManagerFactory = buildKeyManagerFactory(keyCertChain, key, keyPassword, keyManagerFactory);
+            }
+            SSLContext ctx = SSLContext.getInstance(PROTOCOL);
             ctx.init(keyManagerFactory == null ? null : keyManagerFactory.getKeyManagers(),
                      trustManagerFactory == null ? null : trustManagerFactory.getTrustManagers(),
                      null);
@@ -244,7 +288,11 @@ public final class JdkSslClientContext extends JdkSslContext {
             if (sessionTimeout > 0) {
                 sessCtx.setSessionTimeout((int) Math.min(sessionTimeout, Integer.MAX_VALUE));
             }
+            return ctx;
         } catch (Exception e) {
+            if (e instanceof SSLException) {
+                throw (SSLException) e;
+            }
             throw new SSLException("failed to initialize the client-side SSL context", e);
         }
     }
