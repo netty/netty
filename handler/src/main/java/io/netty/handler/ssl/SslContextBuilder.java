@@ -22,11 +22,14 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.File;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 
 /**
  * Builder for configuring a new SslContext for creation.
  */
 public final class SslContextBuilder {
+
     /**
      * Creates a builder for new client-side {@link SslContext}.
      */
@@ -48,6 +51,17 @@ public final class SslContextBuilder {
     /**
      * Creates a builder for new server-side {@link SslContext}.
      *
+     * @param key a PKCS#8 private key
+     * @param keyCertChain the X.509 certificate chain
+     * @see #keyManager(PrivateKey, X509Certificate[])
+     */
+    public static SslContextBuilder forServer(PrivateKey key, X509Certificate... keyCertChain) {
+        return new SslContextBuilder(true).keyManager(key, keyCertChain);
+    }
+
+    /**
+     * Creates a builder for new server-side {@link SslContext}.
+     *
      * @param keyCertChainFile an X.509 certificate chain file in PEM format
      * @param keyFile a PKCS#8 private key file in PEM format
      * @param keyPassword the password of the {@code keyFile}, or {@code null} if it's not
@@ -62,6 +76,20 @@ public final class SslContextBuilder {
     /**
      * Creates a builder for new server-side {@link SslContext}.
      *
+     * @param key a PKCS#8 private key
+     * @param keyCertChain the X.509 certificate chain
+     * @param keyPassword the password of the {@code keyFile}, or {@code null} if it's not
+     *     password-protected
+     * @see #keyManager(File, File, String)
+     */
+    public static SslContextBuilder forServer(
+            PrivateKey key, String keyPassword, X509Certificate... keyCertChain) {
+        return new SslContextBuilder(true).keyManager(key, keyPassword, keyCertChain);
+    }
+
+    /**
+     * Creates a builder for new server-side {@link SslContext}.
+     *
      * @param keyManagerFactory non-{@code null} factory for server's private key
      * @see #keyManager(KeyManagerFactory)
      */
@@ -71,10 +99,10 @@ public final class SslContextBuilder {
 
     private final boolean forServer;
     private SslProvider provider;
-    private File trustCertChainFile;
+    private X509Certificate[] trustCertChain;
     private TrustManagerFactory trustManagerFactory;
-    private File keyCertChainFile;
-    private File keyFile;
+    private X509Certificate[] keyCertChain;
+    private PrivateKey key;
     private String keyPassword;
     private KeyManagerFactory keyManagerFactory;
     private Iterable<String> ciphers;
@@ -100,8 +128,19 @@ public final class SslContextBuilder {
      * contain an X.509 certificate chain in PEM format. {@code null} uses the system default.
      */
     public SslContextBuilder trustManager(File trustCertChainFile) {
-        this.trustCertChainFile = trustCertChainFile;
-        this.trustManagerFactory = null;
+        try {
+            return trustManager(SslContext.toX509Certificates(trustCertChainFile));
+        } catch (Exception e) {
+            throw new IllegalArgumentException("File does not contain valid certificates: " + trustCertChainFile, e);
+        }
+    }
+
+    /**
+     * Trusted certificates for verifying the remote endpoint's certificate, {@code null} uses the system default.
+     */
+    public SslContextBuilder trustManager(X509Certificate... trustCertChain) {
+        this.trustCertChain = trustCertChain != null ? trustCertChain.clone() : null;
+        trustManagerFactory = null;
         return this;
     }
 
@@ -111,7 +150,7 @@ public final class SslContextBuilder {
      * you must use {@link #trustManager(File)}. {@code null} uses the system default.
      */
     public SslContextBuilder trustManager(TrustManagerFactory trustManagerFactory) {
-        this.trustCertChainFile = null;
+        trustCertChain = null;
         this.trustManagerFactory = trustManagerFactory;
         return this;
     }
@@ -128,6 +167,17 @@ public final class SslContextBuilder {
     }
 
     /**
+     * Identifying certificate for this host. {@code keyCertChain} and {@code key} may
+     * be {@code null} for client contexts, which disables mutual authentication.
+     *
+     * @param key a PKCS#8 private key
+     * @param keyCertChain an X.509 certificate chain
+     */
+    public SslContextBuilder keyManager(PrivateKey key, X509Certificate... keyCertChain) {
+        return keyManager(key, null, keyCertChain);
+    }
+
+    /**
      * Identifying certificate for this host. {@code keyCertChainFile} and {@code keyFile} may
      * be {@code null} for client contexts, which disables mutual authentication.
      *
@@ -137,14 +187,51 @@ public final class SslContextBuilder {
      *     password-protected
      */
     public SslContextBuilder keyManager(File keyCertChainFile, File keyFile, String keyPassword) {
-        if (forServer) {
-            checkNotNull(keyCertChainFile, "keyCertChainFile required for servers");
-            checkNotNull(keyFile, "keyFile required for servers");
+        X509Certificate[] keyCertChain;
+        PrivateKey key;
+        try {
+            keyCertChain = SslContext.toX509Certificates(keyCertChainFile);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("File does not contain valid certificates: " + keyCertChainFile, e);
         }
-        this.keyCertChainFile = keyCertChainFile;
-        this.keyFile = keyFile;
+        try {
+            key = SslContext.toPrivateKey(keyFile, keyPassword);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("File does not contain valid private key: " + keyFile, e);
+        }
+        return keyManager(key, keyPassword, keyCertChain);
+    }
+
+    /**
+     * Identifying certificate for this host. {@code keyCertChain} and {@code key} may
+     * be {@code null} for client contexts, which disables mutual authentication.
+     *
+     * @param key a PKCS#8 private key file
+     * @param keyPassword the password of the {@code key}, or {@code null} if it's not
+     *     password-protected
+     * @param keyCertChain an X.509 certificate chain
+     */
+    public SslContextBuilder keyManager(PrivateKey key, String keyPassword, X509Certificate... keyCertChain) {
+        if (forServer) {
+            checkNotNull(keyCertChain, "keyCertChain required for servers");
+            if (keyCertChain.length == 0) {
+                throw new IllegalArgumentException("keyCertChain must be non-empty");
+            }
+            checkNotNull(key, "key required for servers");
+        }
+        if (keyCertChain == null || keyCertChain.length == 0) {
+            this.keyCertChain = null;
+        } else {
+            for (X509Certificate cert: keyCertChain) {
+                if (cert == null) {
+                    throw new IllegalArgumentException("keyCertChain contains null entry");
+                }
+            }
+            this.keyCertChain = keyCertChain.clone();
+        }
+        this.key = key;
         this.keyPassword = keyPassword;
-        this.keyManagerFactory = null;
+        keyManagerFactory = null;
         return this;
     }
 
@@ -158,9 +245,9 @@ public final class SslContextBuilder {
         if (forServer) {
             checkNotNull(keyManagerFactory, "keyManagerFactory required for servers");
         }
-        this.keyCertChainFile = null;
-        this.keyFile = null;
-        this.keyPassword = null;
+        keyCertChain = null;
+        key = null;
+        keyPassword = null;
         this.keyManagerFactory = keyManagerFactory;
         return this;
     }
@@ -216,12 +303,12 @@ public final class SslContextBuilder {
      */
     public SslContext build() throws SSLException {
         if (forServer) {
-            return SslContext.newServerContextInternal(provider, trustCertChainFile,
-                trustManagerFactory, keyCertChainFile, keyFile, keyPassword, keyManagerFactory,
+            return SslContext.newServerContextInternal(provider, trustCertChain,
+                trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
                 ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
         } else {
-            return SslContext.newClientContextInternal(provider, trustCertChainFile,
-                trustManagerFactory, keyCertChainFile, keyFile, keyPassword, keyManagerFactory,
+            return SslContext.newClientContextInternal(provider, trustCertChain,
+                trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
                 ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
         }
     }
