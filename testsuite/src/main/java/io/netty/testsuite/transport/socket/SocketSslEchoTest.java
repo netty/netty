@@ -152,7 +152,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                     if (rt == RenegotiationType.NONE) {
                         r = Renegotiation.NONE;
                     } else {
-                        r = new Renegotiation(rt, "SSL_RSA_WITH_RC4_128_SHA");
+                        r = new Renegotiation(rt, "SSL_RSA_WITH_3DES_EDE_CBC_SHA");
                     }
 
                     for (int i = 0; i < 32; i++) {
