@@ -249,7 +249,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     @Override
     protected long doWriteReadableObject(ReadableObject obj) throws Exception {
-        return obj.readTo(javaChannel(), obj.readableBytes());
+        return obj.readTo(javaChannel(), obj.readerPosition(), obj.readableBytes());
     }
 
     @Override

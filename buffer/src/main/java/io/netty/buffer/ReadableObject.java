@@ -24,11 +24,27 @@ import java.nio.channels.WritableByteChannel;
 /**
  * An object that contains a readable region. For simplicity, extends {@link ReferenceCounted}.
  */
-public interface ReadableObject<T extends ReadableObject> extends ReferenceCounted {
+public interface ReadableObject extends ReferenceCounted {
     /**
      * Returns current read position in the object.
      */
-    long readPosition();
+    long readerPosition();
+
+    /**
+     * Sets the {@code readerPosition} of this object.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code readerPosition} is
+     *            less than {@code 0} or
+     *            greater than {@link #readerLimit()}.
+     */
+    ReadableObject readerPosition(long readerPosition);
+
+    /**
+     * Gets the read position limit (exclusive). The value of {@code readerPosition} must always
+     * be less than or equal to this limit.
+     */
+    long readerLimit();
 
     /**
      * Returns {@code true} if and only if {@link #readableBytes()} > {@code 0}.
@@ -36,32 +52,37 @@ public interface ReadableObject<T extends ReadableObject> extends ReferenceCount
     boolean isReadable();
 
     /**
+     * Returns {@code true} if and only if this buffer contains equal to or more than the specified number of elements.
+     */
+    boolean isReadable(int size);
+
+    /**
      * Returns the number of readable bytes in this object.
      */
     long readableBytes();
 
     /**
-     * Increases the current {@code readPosition} by the specified
+     * Increases the current {@code readerPosition} by the specified
      * {@code length} in this buffer.
      *
      * @throws IndexOutOfBoundsException
      *         if {@code length} is greater than {@link #readableBytes()}
      */
-    T skipBytes(long length);
+    ReadableObject skipBytes(long length);
 
     /**
      * Returns a slice of this object's readable region. This method is
-     * identical to {@code r.slice(r.readPosition(), r.readableBytes())}.
-     * This method does not modify {@code readPosition}.
+     * identical to {@code r.slice(r.readerPosition(), r.readableBytes())}.
+     * This method does not modify {@code readerPosition}.
      * <p>
      * Also be aware that this method will NOT call {@link #retain()} and so the
      * reference count will NOT be increased.
      */
-    T slice();
+    ReadableObject slice();
 
     /**
      * Returns a slice of this object's sub-region. This method does not modify
-     * {@code readPosition}.
+     * {@code readerPosition}.
      * <p>
      * Also be aware that this method will NOT call {@link #retain()} and so the
      * reference count will NOT be increased.
@@ -73,11 +94,11 @@ public interface ReadableObject<T extends ReadableObject> extends ReferenceCount
      * @throws IndexOutOfBoundsException
      *         if any part of the requested region falls outside of the currently readable region.
      */
-    T slice(long position, long length);
+    ReadableObject slice(long position, long length);
 
     /**
      * Returns a new slice of this object's sub-region starting at the current
-     * {@link #readPosition()} and increases the {@code readPosition} by the size
+     * {@link #readerPosition()} and increases the {@code readerPosition} by the size
      * of the new slice (= {@code length}).
      * <p>
      * Also be aware that this method will NOT call {@link #retain()} and so the
@@ -90,7 +111,7 @@ public interface ReadableObject<T extends ReadableObject> extends ReferenceCount
      * @throws IndexOutOfBoundsException
      *         if {@code length} is greater than {@link #readableBytes()}
      */
-    T readSlice(long length);
+    ReadableObject readSlice(long length);
 
     /**
      * Return the underlying {@link ReadableObject} instance if this is a wrapper around another
@@ -98,13 +119,28 @@ public interface ReadableObject<T extends ReadableObject> extends ReferenceCount
      *
      * @return {@code null} if this is not a wrapper
      */
-    T unwrap();
+    ReadableObject unwrap();
+
+    /**
+     * Discards the bytes between position 0 and {@code readerPosition}.
+     * <p>
+     * Please refer to the class documentation for more detailed explanation.
+     */
+    ReadableObject discardReadBytes();
+
+    /**
+     * Similar to {@link #discardReadBytes()} except that this method might discard
+     * some, all, or none of read bytes depending on its internal implementation to reduce
+     * overall memory bandwidth consumption at the cost of potentially additional memory
+     * consumption.
+     */
+    ReadableObject discardSomeReadBytes();
 
     /**
      * Transfers this object's data to the specified stream starting at the
-     * current {@code readPosition} and increases the {@code readPosition} by
-     * the number of bytes written.
+     * given {@code readerPosition}. Does not change the {@code readerPosition}.
      *
+     * @param pos the starting position for the transfer. This must be < {@link #readerLimit()}.
      * @param length the maximum number of bytes to transfer
      *
      * @return the actual number of bytes written out to the specified channel
@@ -114,17 +150,17 @@ public interface ReadableObject<T extends ReadableObject> extends ReferenceCount
      * @throws IOException
      *         if the specified channel threw an exception during I/O
      */
-    long readTo(WritableByteChannel channel, long length) throws IOException;
+    long readTo(WritableByteChannel channel, long pos, long length) throws IOException;
 
     @Override
-    T retain();
+    ReadableObject retain();
 
     @Override
-    T retain(int increment);
+    ReadableObject retain(int increment);
 
     @Override
-    T touch(Object hint);
+    ReadableObject touch(Object hint);
 
     @Override
-    T touch();
+    ReadableObject touch();
 }

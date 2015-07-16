@@ -17,6 +17,9 @@ package io.netty.channel;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
+import io.netty.buffer.AbstractReadableObject;
+import io.netty.buffer.ReadableObject;
+import io.netty.buffer.SlicedReadableObject;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.logging.InternalLogger;
@@ -26,6 +29,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
+import java.nio.channels.WritableByteChannel;
 
 /**
  * Default {@link FileRegion} implementation which transfer data from a {@link FileChannel} or {@link File}.
@@ -33,23 +37,25 @@ import java.nio.channels.FileChannel;
  * Be aware that the {@link FileChannel} will be automatically closed once {@link #refCnt()} returns
  * {@code 0}.
  */
-public class DefaultFileRegion extends AbstractFileRegion {
+public class DefaultFileRegion extends AbstractReadableObject implements FileRegion {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultFileRegion.class);
 
-    private File f;
-    private FileChannel file;
+    private File file;
+    private FileChannel fileChannel;
+    private long offset;
+    private long readerLimit;
     private final AbstractReferenceCounted refCnt = new AbstractReferenceCounted() {
         @Override
         protected void deallocate() {
-            FileChannel file = DefaultFileRegion.this.file;
+            FileChannel fileChannel = DefaultFileRegion.this.fileChannel;
 
-            if (file == null) {
+            if (fileChannel == null) {
                 return;
             }
-            DefaultFileRegion.this.file = null;
+            DefaultFileRegion.this.fileChannel = null;
 
             try {
-                file.close();
+                fileChannel.close();
             } catch (IOException e) {
                 if (logger.isWarnEnabled()) {
                     logger.warn("Failed to close a file.", e);
@@ -66,34 +72,61 @@ public class DefaultFileRegion extends AbstractFileRegion {
     /**
      * Create a new instance
      *
-     * @param file      the {@link FileChannel} which should be transfered
+     * @param fileChannel      the {@link FileChannel} which should be transfered
      * @param position  the position from which the transfer should start
      * @param length     the number of bytes to transfer
      */
-    public DefaultFileRegion(FileChannel file, long position, long length) {
-        super(position, length);
-        this.file = checkNotNull(file, "file");
-        f = null;
+    public DefaultFileRegion(FileChannel fileChannel, long position, long length) {
+        super(position);
+        if (length < 0) {
+            throw new IllegalArgumentException("length must be >= 0 but was " + length);
+        }
+        if (Long.MAX_VALUE - length < readerPosition()) {
+            throw new IllegalArgumentException("Overflow calculating end position");
+        }
+
+        this.fileChannel = checkNotNull(fileChannel, "fileChannel");
+        file = null;
+        readerLimit = position + length;
     }
 
     /**
      * Create a new instance using the given {@link File}. The {@link File} will be opened lazily or
      * explicitly via {@link #open()}.
      *
-     * @param f         the {@link File} which should be transfered
+     * @param file         the {@link File} which should be transfered
      * @param position  the position from which the transfer should start
      * @param length     the number of bytes to transfer
      */
-    public DefaultFileRegion(File f, long position, long length) {
-        super(position, length);
-        this.f = checkNotNull(f, "f");
+    public DefaultFileRegion(File file, long position, long length) {
+        super(position);
+        if (length < 0) {
+            throw new IllegalArgumentException("length must be >= 0 but was " + length);
+        }
+        if (Long.MAX_VALUE - length < readerPosition()) {
+            throw new IllegalArgumentException("Overflow calculating end position");
+        }
+
+        this.file = checkNotNull(file, "file");
+        readerLimit = position + length;
+    }
+
+    @Override
+    public FileRegion readerPosition(long readerPosition) {
+        super.readerPosition(readerPosition);
+        return this;
+    }
+
+    @Override
+    public long readerLimit() {
+        return readerLimit;
     }
 
     /**
      * Returns {@code true} if the {@link FileRegion} has a open file-descriptor
      */
     public boolean isOpen() {
-        return file != null;
+        return fileChannel != null;
     }
 
     /**
@@ -102,7 +135,7 @@ public class DefaultFileRegion extends AbstractFileRegion {
     public void open() throws IOException {
         if (!isOpen() && refCnt() > 0) {
             // Only open if this DefaultFileRegion was not released yet.
-            file = new RandomAccessFile(f, "r").getChannel();
+            fileChannel = new RandomAccessFile(file, "r").getChannel();
         }
     }
 
@@ -110,7 +143,47 @@ public class DefaultFileRegion extends AbstractFileRegion {
     public FileChannel channel() throws IOException {
         // Call open to make sure fc is initialized. This is a no-op if we called it before.
         open();
-        return file;
+        return fileChannel;
+    }
+
+    @Override
+    public FileRegion skipBytes(long length) {
+        super.skipBytes(length);
+        return this;
+    }
+
+    @Override
+    public ReadableObject slice(long position, long length) {
+        ensureReadable(length);
+        if (position < readerPosition() || readerLimit - length < position) {
+            throw new IllegalArgumentException("Slice must be within readable region");
+        }
+        return new SlicedReadableObject(this, position, length);
+    }
+
+    @Override
+    protected long readTo0(WritableByteChannel target, long pos, long length) throws IOException {
+        long written = channel().transferTo(pos + offset, length, target);
+        if (written > 0) {
+            readerPosition(readerPosition() + written);
+        }
+        return written;
+    }
+
+    @Override
+    public FileRegion discardReadBytes() {
+        offset += readerPosition();
+        readerPosition(0);
+        readerLimit -= offset;
+        return this;
+    }
+
+    /**
+     * Does nothing.
+     */
+    @Override
+    public FileRegion discardSomeReadBytes() {
+        return this;
     }
 
     @Override
@@ -120,7 +193,7 @@ public class DefaultFileRegion extends AbstractFileRegion {
 
     @Override
     public FileRegion retain() {
-        refCnt.retain();
+        super.retain();
         return this;
     }
 
@@ -132,11 +205,13 @@ public class DefaultFileRegion extends AbstractFileRegion {
 
     @Override
     public FileRegion touch() {
+        super.touch();
         return this;
     }
 
     @Override
     public FileRegion touch(Object hint) {
+        super.touch(hint);
         return this;
     }
 
@@ -146,12 +221,7 @@ public class DefaultFileRegion extends AbstractFileRegion {
     }
 
     @Override
-    public boolean release() {
-        return refCnt.release();
-    }
-
-    @Override
-    public boolean release(int decrement) {
+    protected boolean release0(int decrement) {
         return refCnt.release(decrement);
     }
 }

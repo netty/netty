@@ -52,9 +52,33 @@ import java.nio.channels.WritableByteChannel;
  *
  * Currently, the NIO transport is the only transport that supports {@link FileRegion}.
  */
-public interface FileRegion extends ReadableObject<FileRegion> {
+public interface FileRegion extends ReadableObject {
     /**
      * Return the {@link FileChannel} associate with this {@link FileRegion}.
      */
     FileChannel channel() throws IOException;
+
+    @Override
+    FileRegion readerPosition(long readerPosition);
+
+    @Override
+    FileRegion skipBytes(long length);
+
+    @Override
+    FileRegion discardReadBytes();
+
+    @Override
+    FileRegion discardSomeReadBytes();
+
+    @Override
+    FileRegion retain();
+
+    @Override
+    FileRegion retain(int increment);
+
+    @Override
+    FileRegion touch(Object hint);
+
+    @Override
+    FileRegion touch();
 }

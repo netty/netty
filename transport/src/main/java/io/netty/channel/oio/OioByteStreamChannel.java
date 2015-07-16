@@ -129,7 +129,7 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
         long bytesToTransfer = obj.readableBytes();
         long totalTransferred = 0;
         while (obj.isReadable()) {
-            long transferred = obj.readTo(outChannel, obj.readableBytes());
+            long transferred = obj.readTo(outChannel, obj.readerPosition(), obj.readableBytes());
             if (transferred == -1) {
                 if (obj.isReadable()) {
                     throw new EOFException(
