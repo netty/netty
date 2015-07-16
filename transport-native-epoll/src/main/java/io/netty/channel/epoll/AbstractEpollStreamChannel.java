@@ -92,6 +92,9 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
 
     protected AbstractEpollStreamChannel(FileDescriptor fd) {
         super(null, fd, Native.EPOLLIN, Native.getSoError(fd.intValue()) == 0);
+
+        // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
+        flags |= Native.EPOLLRDHUP;
     }
 
     @Override
