@@ -147,17 +147,43 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
             boolean endStream, ChannelPromise promise) {
-        initCompressor(streamId, headers, endStream);
-        return super.writeHeaders(ctx, streamId, headers, padding, endStream, promise);
+        try {
+            // Determine if compression is required and sanitize the headers.
+            EmbeddedChannel compressor = newCompressor(headers, endStream);
+
+            // Write the headers and create the stream object.
+            ChannelFuture future = super.writeHeaders(ctx, streamId, headers, padding, endStream, promise);
+
+            // After the stream object has been created, then attach the compressor as a property for data compression.
+            bindCompressorToStream(compressor, streamId);
+
+            return future;
+        } catch (Throwable e) {
+            promise.tryFailure(e);
+        }
+        return promise;
     }
 
     @Override
     public ChannelFuture writeHeaders(final ChannelHandlerContext ctx, final int streamId, final Http2Headers headers,
             final int streamDependency, final short weight, final boolean exclusive, final int padding,
             final boolean endOfStream, final ChannelPromise promise) {
-        initCompressor(streamId, headers, endOfStream);
-        return super.writeHeaders(ctx, streamId, headers, streamDependency, weight, exclusive, padding, endOfStream,
-                promise);
+        try {
+            // Determine if compression is required and sanitize the headers.
+            EmbeddedChannel compressor = newCompressor(headers, endOfStream);
+
+            // Write the headers and create the stream object.
+            ChannelFuture future = super.writeHeaders(ctx, streamId, headers, streamDependency, weight, exclusive,
+                                                      padding, endOfStream, promise);
+
+            // After the stream object has been created, then attach the compressor as a property for data compression.
+            bindCompressorToStream(compressor, streamId);
+
+            return future;
+        } catch (Throwable e) {
+            promise.tryFailure(e);
+        }
+        return promise;
     }
 
     /**
@@ -205,47 +231,49 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
      * Checks if a new compressor object is needed for the stream identified by {@code streamId}. This method will
      * modify the {@code content-encoding} header contained in {@code headers}.
      *
-     * @param streamId The identifier for the headers inside {@code headers}
      * @param headers Object representing headers which are to be written
      * @param endOfStream Indicates if the stream has ended
+     * @return The channel used to compress data.
+     * @throws Http2Exception if any problems occur during initialization.
      */
-    private void initCompressor(int streamId, Http2Headers headers, boolean endOfStream) {
-        final Http2Stream stream = connection().stream(streamId);
-        if (stream == null) {
-            return;
+    private EmbeddedChannel newCompressor(Http2Headers headers, boolean endOfStream) throws Http2Exception {
+        if (endOfStream) {
+            return null;
         }
 
-        EmbeddedChannel compressor = stream.getProperty(propertyKey);
-        if (compressor == null) {
-            if (!endOfStream) {
-                ByteString encoding = headers.get(CONTENT_ENCODING);
-                if (encoding == null) {
-                    encoding = IDENTITY;
-                }
-                try {
-                    compressor = newContentCompressor(encoding);
-                    if (compressor != null) {
-                        stream.setProperty(propertyKey, compressor);
-                        ByteString targetContentEncoding = getTargetContentEncoding(encoding);
-                        if (IDENTITY.equals(targetContentEncoding)) {
-                            headers.remove(CONTENT_ENCODING);
-                        } else {
-                            headers.set(CONTENT_ENCODING, targetContentEncoding);
-                        }
-                    }
-                } catch (Throwable ignored) {
-                    // Ignore
-                }
-            }
-        } else if (endOfStream) {
-            cleanup(stream, compressor);
+        ByteString encoding = headers.get(CONTENT_ENCODING);
+        if (encoding == null) {
+            encoding = IDENTITY;
         }
-
+        final EmbeddedChannel compressor = newContentCompressor(encoding);
         if (compressor != null) {
+            ByteString targetContentEncoding = getTargetContentEncoding(encoding);
+            if (IDENTITY.equals(targetContentEncoding)) {
+                headers.remove(CONTENT_ENCODING);
+            } else {
+                headers.set(CONTENT_ENCODING, targetContentEncoding);
+            }
+
             // The content length will be for the decompressed data. Since we will compress the data
             // this content-length will not be correct. Instead of queuing messages or delaying sending
             // header frames...just remove the content-length header
             headers.remove(CONTENT_LENGTH);
+        }
+
+        return compressor;
+    }
+
+    /**
+     * Called after the super class has written the headers and created any associated stream objects.
+     * @param compressor The compressor associated with the stream identified by {@code streamId}.
+     * @param streamId The stream id for which the headers were written.
+     */
+    private void bindCompressorToStream(EmbeddedChannel compressor, int streamId) {
+        if (compressor != null) {
+            Http2Stream stream = connection().stream(streamId);
+            if (stream != null) {
+                stream.setProperty(propertyKey, compressor);
+            }
         }
     }
 
