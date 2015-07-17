@@ -114,7 +114,7 @@ final class Http2TestUtil {
             this.latch = latch;
         }
 
-        public Http2Stream getOrCreateStream(int streamId, boolean halfClosed) throws Http2Exception {
+        private Http2Stream getOrCreateStream(int streamId, boolean halfClosed) throws Http2Exception {
             return getOrCreateStream(connection, streamId, halfClosed);
         }
 
