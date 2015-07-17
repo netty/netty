@@ -342,26 +342,27 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
      */
     private boolean writeFileRegion(
             ChannelOutboundBuffer in, DefaultFileRegion region, int writeSpinCount) throws Exception {
-        final long regionCount = region.count();
-        if (region.transfered() >= regionCount) {
+        if (!region.isReadable()) {
             in.remove();
             return true;
         }
 
-        final long baseOffset = region.position();
+        final long baseOffset = region.readerPosition();
         boolean done = false;
         long flushedAmount = 0;
 
         for (int i = writeSpinCount - 1; i >= 0; i--) {
-            final long offset = region.transfered();
+            final long offset = region.readerPosition() - baseOffset;
             final long localFlushedAmount =
-                    Native.sendfile(fd().intValue(), region, baseOffset, offset, regionCount - offset);
+                    Native.sendfile(fd().intValue(), region, baseOffset, offset, region.readableBytes());
             if (localFlushedAmount == 0) {
                 break;
             }
 
+            // Reposition the region past the amount flushed.
+            region.readerPosition(region.readerPosition() + localFlushedAmount);
             flushedAmount += localFlushedAmount;
-            if (region.transfered() >= regionCount) {
+            if (!region.isReadable()) {
                 done = true;
                 break;
             }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -48,8 +48,12 @@ public abstract class AbstractCompositeReadableObject extends AbstractReadableOb
     public ReadableObject discardReadBytes() {
         // Discard all fully read components and save the offset of the reader position.
         long offset = readerPosition();
-        while (!components.isEmpty()) {
+        for (;;) {
             Component c = components.peek();
+            if (c == null) {
+                break;
+            }
+
             if (readerPosition() < c.endPos()) {
                 // Found the new first component.
                 if (offset > 0) {

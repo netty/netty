@@ -33,28 +33,26 @@ public interface ReadableObject extends ReferenceCounted {
     /**
      * Sets the {@code readerPosition} of this object.
      *
-     * @throws IndexOutOfBoundsException
-     *         if the specified {@code readerPosition} is
-     *            less than {@code 0} or
-     *            greater than {@link #readerLimit()}.
+     * @throws IndexOutOfBoundsException if the specified position is less than
+     *         {@code 0} or greater than {@link #readerLimit()}.
      */
     ReadableObject readerPosition(long readerPosition);
 
     /**
-     * Gets the read position limit (exclusive). The value of {@code readerPosition} must always
+     * Gets the read position limit (exclusive). The value of {@link #readerPosition()} must always
      * be less than or equal to this limit.
      */
     long readerLimit();
 
     /**
-     * Returns {@code true} if and only if {@link #readableBytes()} > {@code 0}.
+     * Returns {@code true} if and only if {@link #readableBytes()} {@code >} {@code 0}.
      */
     boolean isReadable();
 
     /**
      * Returns {@code true} if and only if this buffer contains equal to or more than the specified number of elements.
      */
-    boolean isReadable(int size);
+    boolean isReadable(long size);
 
     /**
      * Returns the number of readable bytes in this object.
@@ -62,18 +60,16 @@ public interface ReadableObject extends ReferenceCounted {
     long readableBytes();
 
     /**
-     * Increases the current {@code readerPosition} by the specified
-     * {@code length} in this buffer.
+     * Increases the current {@link #readerPosition()} by the specified {@code length} in this buffer.
      *
-     * @throws IndexOutOfBoundsException
-     *         if {@code length} is greater than {@link #readableBytes()}
+     * @throws IndexOutOfBoundsException if {@code length} is greater than {@link #readableBytes()}
      */
     ReadableObject skipBytes(long length);
 
     /**
      * Returns a slice of this object's readable region. This method is
      * identical to {@code r.slice(r.readerPosition(), r.readableBytes())}.
-     * This method does not modify {@code readerPosition}.
+     * This method does not modify {@link #readerPosition()}.
      * <p>
      * Also be aware that this method will NOT call {@link #retain()} and so the
      * reference count will NOT be increased.
@@ -82,14 +78,14 @@ public interface ReadableObject extends ReferenceCounted {
 
     /**
      * Returns a slice of this object's sub-region. This method does not modify
-     * {@code readerPosition}.
+     * {@link #readerPosition()}.
      * <p>
      * Also be aware that this method will NOT call {@link #retain()} and so the
      * reference count will NOT be increased.
      *
      * @param position the starting position for the slice.
      *
-     * @param length the size of the new slice relative to {@code position}.
+     * @param length the size of the new slice relative to {@link #readerPosition()}.
      *
      * @throws IndexOutOfBoundsException
      *         if any part of the requested region falls outside of the currently readable region.
@@ -98,7 +94,7 @@ public interface ReadableObject extends ReferenceCounted {
 
     /**
      * Returns a new slice of this object's sub-region starting at the current
-     * {@link #readerPosition()} and increases the {@code readerPosition} by the size
+     * {@link #readerPosition()} and increases the {@link #readerPosition()} by the size
      * of the new slice (= {@code length}).
      * <p>
      * Also be aware that this method will NOT call {@link #retain()} and so the
@@ -108,21 +104,18 @@ public interface ReadableObject extends ReferenceCounted {
      *
      * @return the newly created slice
      *
-     * @throws IndexOutOfBoundsException
-     *         if {@code length} is greater than {@link #readableBytes()}
+     * @throws IndexOutOfBoundsException if {@code length} is greater than {@link #readableBytes()}
      */
     ReadableObject readSlice(long length);
 
     /**
      * Return the underlying {@link ReadableObject} instance if this is a wrapper around another
-     * object (e.g. a slice of another object).
-     *
-     * @return {@code null} if this is not a wrapper
+     * object (e.g. a slice of another object) or {@code null} if this is not a wrapper.
      */
     ReadableObject unwrap();
 
     /**
-     * Discards the bytes between position 0 and {@code readerPosition}.
+     * Discards the bytes between position 0 and {@link #readerPosition()}.
      * <p>
      * Please refer to the class documentation for more detailed explanation.
      */
@@ -138,17 +131,15 @@ public interface ReadableObject extends ReferenceCounted {
 
     /**
      * Transfers this object's data to the specified stream starting at the
-     * given {@code readerPosition}. Does not change the {@code readerPosition}.
+     * given {@link #readerPosition()}. Does not change the {@link #readerPosition()}.
      *
-     * @param pos the starting position for the transfer. This must be < {@link #readerLimit()}.
+     * @param pos the starting position for the transfer. This must be {@code <} {@link #readerLimit()}.
      * @param length the maximum number of bytes to transfer
      *
      * @return the actual number of bytes written out to the specified channel
      *
-     * @throws IndexOutOfBoundsException
-     *         if {@code length} is greater than {@code this.readableBytes}
-     * @throws IOException
-     *         if the specified channel threw an exception during I/O
+     * @throws IndexOutOfBoundsException if {@code pos < 0} or {@code pos + length >} {@link #readerLimit()}
+     * @throws IOException if the specified channel threw an exception during I/O
      */
     long readTo(WritableByteChannel channel, long pos, long length) throws IOException;
 

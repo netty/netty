@@ -92,7 +92,7 @@ public class HttpResponseEncoderTest {
         }
 
         @Override
-        public boolean isReadable(int size) {
+        public boolean isReadable(long size) {
             return false;
         }
 

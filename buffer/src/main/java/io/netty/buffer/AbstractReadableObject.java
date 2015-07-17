@@ -61,7 +61,7 @@ public abstract class AbstractReadableObject implements ReadableObject {
     }
 
     @Override
-    public final boolean isReadable(int size) {
+    public final boolean isReadable(long size) {
         return readableBytes() >= size;
     }
 
@@ -94,8 +94,7 @@ public abstract class AbstractReadableObject implements ReadableObject {
 
     @Override
     public ReadableObject slice(long position, long length) {
-        ensureReadable(length);
-        if (position < readerPosition || readerLimit() - length < position) {
+        if (length < 0 || position < readerPosition || readerLimit() - length < position) {
             throw new IllegalArgumentException("Slice must be within readable region");
         }
         return new SlicedReadableObject(this, position, length);

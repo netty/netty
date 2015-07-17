@@ -290,10 +290,6 @@ public final class Native {
 
     public static long sendfile(
             int dest, DefaultFileRegion src, long baseOffset, long offset, long length) throws IOException {
-        // Open the file-region as it may be created via the lazy constructor. This is needed as we directly access
-        // the FileChannel field directly via JNI
-        src.open();
-
         long res = sendfile0(dest, src, baseOffset, offset, length);
         if (res >= 0) {
             return res;

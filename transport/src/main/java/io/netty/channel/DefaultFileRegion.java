@@ -154,8 +154,7 @@ public class DefaultFileRegion extends AbstractReadableObject implements FileReg
 
     @Override
     public ReadableObject slice(long position, long length) {
-        ensureReadable(length);
-        if (position < readerPosition() || readerLimit - length < position) {
+        if (length < 0 || position < readerPosition() || readerLimit - length < position) {
             throw new IllegalArgumentException("Slice must be within readable region");
         }
         return new SlicedReadableObject(this, position, length);
