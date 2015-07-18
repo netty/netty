@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
@@ -714,18 +713,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private void startThread() {
         if (STATE_UPDATER.get(this) == ST_NOT_STARTED) {
             if (STATE_UPDATER.compareAndSet(this, ST_NOT_STARTED, ST_STARTED)) {
-                schedule(new ScheduledFutureTask<Void>(
-                        this, Executors.<Void>callable(new PurgeTask(), null),
-                        ScheduledFutureTask.deadlineNanos(SCHEDULE_PURGE_INTERVAL), -SCHEDULE_PURGE_INTERVAL));
                 thread.start();
             }
-        }
-    }
-
-    private final class PurgeTask implements Runnable {
-        @Override
-        public void run() {
-            purgeCancelledScheduledTasks();
         }
     }
 }
