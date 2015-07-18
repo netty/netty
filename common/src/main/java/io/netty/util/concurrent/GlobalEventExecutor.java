@@ -36,14 +36,18 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(GlobalEventExecutor.class);
 
-    private static final long SCHEDULE_PURGE_INTERVAL = TimeUnit.SECONDS.toNanos(1);
+    private static final long SCHEDULE_QUIET_PERIOD_INTERVAL = TimeUnit.SECONDS.toNanos(1);
 
     public static final GlobalEventExecutor INSTANCE = new GlobalEventExecutor();
 
     final BlockingQueue<Runnable> taskQueue = new LinkedBlockingQueue<Runnable>();
-    final ScheduledFutureTask<Void> purgeTask = new ScheduledFutureTask<Void>(
-            this, Executors.<Void>callable(new PurgeTask(), null),
-            ScheduledFutureTask.deadlineNanos(SCHEDULE_PURGE_INTERVAL), -SCHEDULE_PURGE_INTERVAL);
+    final ScheduledFutureTask<Void> quietPeriodTask = new ScheduledFutureTask<Void>(
+            this, Executors.<Void>callable(new Runnable() {
+        @Override
+        public void run() {
+            // NOOP
+        }
+    }, null), ScheduledFutureTask.deadlineNanos(SCHEDULE_QUIET_PERIOD_INTERVAL), -SCHEDULE_QUIET_PERIOD_INTERVAL);
 
     private final ThreadFactory threadFactory = new DefaultThreadFactory(getClass());
     private final TaskRunner taskRunner = new TaskRunner();
@@ -53,7 +57,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor {
     private final Future<?> terminationFuture = new FailedFuture<Object>(this, new UnsupportedOperationException());
 
     private GlobalEventExecutor() {
-        scheduledTaskQueue().add(purgeTask);
+        scheduledTaskQueue().add(quietPeriodTask);
     }
 
     /**
@@ -227,13 +231,13 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor {
                         logger.warn("Unexpected exception from the global event executor: ", t);
                     }
 
-                    if (task != purgeTask) {
+                    if (task != quietPeriodTask) {
                         continue;
                     }
                 }
 
                 Queue<ScheduledFutureTask<?>> scheduledTaskQueue = GlobalEventExecutor.this.scheduledTaskQueue;
-                // Terminate if there is no task in the queue (except the purge task).
+                // Terminate if there is no task in the queue (except the noop task).
                 if (taskQueue.isEmpty() && (scheduledTaskQueue == null || scheduledTaskQueue.size() == 1)) {
                     // Mark the current thread as stopped.
                     // The following CAS must always success and must be uncontended,
@@ -262,13 +266,6 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor {
                     // -> keep this thread alive to handle the newly added entries.
                 }
             }
-        }
-    }
-
-    private final class PurgeTask implements Runnable {
-        @Override
-        public void run() {
-            purgeCancelledScheduledTasks();
         }
     }
 }
