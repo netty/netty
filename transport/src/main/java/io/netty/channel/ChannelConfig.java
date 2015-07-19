@@ -227,7 +227,7 @@ public interface ChannelConfig {
     MessageSizeEstimator getMessageSizeEstimator();
 
     /**
-     * Set the {@link ByteBufAllocator} which is used for the channel
+     * Set the {@link MessageSizeEstimator} which is used for the channel
      * to detect the size of a message.
      */
     ChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
