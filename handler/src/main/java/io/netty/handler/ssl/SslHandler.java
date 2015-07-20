@@ -33,6 +33,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.channel.PendingWriteQueue;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
@@ -466,6 +467,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     @Override
     public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        if (!(msg instanceof ByteBuf)) {
+            promise.setFailure(new UnsupportedMessageTypeException(msg, ByteBuf.class));
+            return;
+        }
         pendingUnencryptedWrites.add(msg, promise);
     }
 
@@ -502,11 +507,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 Object msg = pendingUnencryptedWrites.current();
                 if (msg == null) {
                     break;
-                }
-
-                if (!(msg instanceof ByteBuf)) {
-                    pendingUnencryptedWrites.removeAndWrite();
-                    continue;
                 }
 
                 ByteBuf buf = (ByteBuf) msg;
