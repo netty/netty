@@ -204,7 +204,7 @@ public class StreamBufferingEncoderTest {
     public void bufferingNewStreamFailsAfterGoAwayReceived() {
         encoder.writeSettingsAck(ctx, promise);
         setMaxConcurrentStreams(0);
-        connection.goAwayReceived(1, 8, null);
+        connection.goAwayReceived(1, 8, EMPTY_BUFFER);
 
         promise = mock(ChannelPromise.class);
         encoderWriteHeaders(3, promise);
