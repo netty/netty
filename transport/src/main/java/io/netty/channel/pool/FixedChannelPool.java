@@ -271,6 +271,8 @@ public final class FixedChannelPool extends SimpleChannelPool {
                 timeoutFuture.cancel(false);
             }
 
+            task.acquired();
+
             --pendingAcquireCount;
             ++acquiredChannelCount;
 
@@ -289,7 +291,7 @@ public final class FixedChannelPool extends SimpleChannelPool {
         ScheduledFuture<?> timeoutFuture;
 
         public AcquireTask(Promise<Channel> promise) {
-            super(promise);
+            super(promise, false);
             // We need to create a new promise as we need to ensure the AcquireListener runs in the correct
             // EventLoop.
             this.promise = executor.<Channel>newPromise().addListener(this);
@@ -322,9 +324,15 @@ public final class FixedChannelPool extends SimpleChannelPool {
 
     private class AcquireListener implements FutureListener<Channel> {
         private final Promise<Channel> originalPromise;
+        protected boolean acquired;
 
         AcquireListener(Promise<Channel> originalPromise) {
+            this(originalPromise, true);
+        }
+
+        protected AcquireListener(Promise<Channel> originalPromise, boolean acquired) {
             this.originalPromise = originalPromise;
+            this.acquired = acquired;
         }
 
         @Override
@@ -334,10 +342,18 @@ public final class FixedChannelPool extends SimpleChannelPool {
             if (future.isSuccess()) {
                 originalPromise.setSuccess(future.getNow());
             } else {
-                // Something went wrong try to run pending acquire tasks.
-                decrementAndRunTaskQueue();
+                if (acquired) {
+                    decrementAndRunTaskQueue();
+                } else {
+                    runTaskQueue();
+                }
+
                 originalPromise.setFailure(future.cause());
             }
+        }
+
+        public void acquired() {
+            acquired = true;
         }
     }
 
