@@ -19,6 +19,7 @@ package io.netty.handler.ssl;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderException;
+import io.netty.handler.codec.UnsupportedMessageTypeException;
 import org.junit.Test;
 
 import javax.net.ssl.SSLContext;
@@ -53,21 +54,13 @@ public class SslHandlerTest {
         }
     }
 
-    @Test
-    public void testNonByteBufPassthrough() throws Exception {
+    @Test(expected = UnsupportedMessageTypeException.class)
+    public void testNonByteBufNotPassThrough() throws Exception {
         SSLEngine engine = SSLContext.getDefault().createSSLEngine();
         engine.setUseClientMode(false);
 
         EmbeddedChannel ch = new EmbeddedChannel(new SslHandler(engine));
 
-        Object msg1 = new Object();
-        ch.writeOutbound(msg1);
-        assertThat(ch.readOutbound(), is(sameInstance(msg1)));
-
-        Object msg2 = new Object();
-        ch.writeInbound(msg2);
-        assertThat(ch.readInbound(), is(sameInstance(msg2)));
-
-        ch.finish();
+        ch.writeOutbound(new Object());
     }
 }
