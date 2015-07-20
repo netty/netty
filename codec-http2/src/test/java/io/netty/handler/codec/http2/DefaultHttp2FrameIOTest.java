@@ -240,7 +240,7 @@ public class DefaultHttp2FrameIOTest {
 
     @Test
     public void binaryHeadersWithoutPriorityShouldRoundtrip() throws Exception {
-        Http2Headers headers = dummyBinaryHeaders();
+        Http2Headers headers = dummyHeaders();
         writer.writeHeaders(ctx, 1, headers, 0, true, promise);
         reader.readFrame(ctx, buffer, listener);
         verify(listener).onHeadersRead(eq(ctx), eq(1), eq(headers), eq(0), eq(true));
@@ -354,14 +354,6 @@ public class DefaultHttp2FrameIOTest {
 
     private ByteBuf dummyData() {
         return alloc.buffer().writeBytes("abcdefgh".getBytes(CharsetUtil.UTF_8));
-    }
-
-    private static Http2Headers dummyBinaryHeaders() {
-        DefaultHttp2Headers headers = new DefaultHttp2Headers();
-        for (int ix = 0; ix < 10; ++ix) {
-            headers.add(randomString(), randomString());
-        }
-        return headers;
     }
 
     private static Http2Headers dummyHeaders() {

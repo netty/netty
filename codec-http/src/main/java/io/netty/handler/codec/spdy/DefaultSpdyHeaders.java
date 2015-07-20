@@ -16,44 +16,17 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.handler.codec.DefaultTextHeaders;
-import io.netty.handler.codec.Headers;
 import io.netty.handler.codec.TextHeaders;
-import io.netty.util.AsciiString;
 
-import java.util.Locale;
+import java.util.LinkedHashMap;
 
 public class DefaultSpdyHeaders extends DefaultTextHeaders implements SpdyHeaders {
-    private static final Headers.ValueConverter<CharSequence> SPDY_VALUE_CONVERTER =
-            new DefaultTextValueTypeConverter() {
-        @Override
-        public CharSequence convertObject(Object value) {
-            CharSequence seq;
-            if (value instanceof CharSequence) {
-                seq = (CharSequence) value;
-            } else {
-                seq = value.toString();
-            }
-
-            SpdyCodecUtil.validateHeaderValue(seq);
-            return seq;
-        }
-    };
-
-    private static final NameConverter<CharSequence> SPDY_NAME_CONVERTER = new NameConverter<CharSequence>() {
-        @Override
-        public CharSequence convertName(CharSequence name) {
-            if (name instanceof AsciiString) {
-                name = ((AsciiString) name).toLowerCase();
-            } else {
-                name = name.toString().toLowerCase(Locale.US);
-            }
-            SpdyCodecUtil.validateHeaderName(name);
-            return name;
-        }
-    };
 
     public DefaultSpdyHeaders() {
-        super(true, SPDY_VALUE_CONVERTER, SPDY_NAME_CONVERTER);
+        super(new LinkedHashMap<CharSequence, Object>(),
+              HeaderNameValidator.INSTANCE,
+              HeaderValueConverterAndValidator.INSTANCE,
+              false);
     }
 
     @Override
@@ -258,5 +231,33 @@ public class DefaultSpdyHeaders extends DefaultTextHeaders implements SpdyHeader
     public SpdyHeaders clear() {
         super.clear();
         return this;
+    }
+
+    private static class HeaderNameValidator implements NameValidator<CharSequence> {
+
+        private static final HeaderNameValidator INSTANCE = new HeaderNameValidator();
+
+        @Override
+        public void validate(CharSequence name) {
+            SpdyCodecUtil.validateHeaderName(name);
+        }
+    }
+
+    private static class HeaderValueConverterAndValidator extends CharSequenceConverter {
+
+        private static final HeaderValueConverterAndValidator INSTANCE = new HeaderValueConverterAndValidator();
+
+        @Override
+        public CharSequence convertObject(Object value) {
+            CharSequence seq;
+            if (value instanceof CharSequence) {
+                seq = (CharSequence) value;
+            } else {
+                seq = value.toString();
+            }
+
+            SpdyCodecUtil.validateHeaderValue(seq);
+            return seq;
+        }
     }
 }

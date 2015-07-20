@@ -18,8 +18,8 @@ package io.netty.handler.codec.stomp;
 public final class StompTestConstants {
     public static final String CONNECT_FRAME =
         "CONNECT\n" +
-            "host:stomp.github.org\n" +
             "accept-version:1.1,1.2\n" +
+            "host:stomp.github.org\n" +
             '\n' +
             '\0';
     public static final String CONNECTED_FRAME =

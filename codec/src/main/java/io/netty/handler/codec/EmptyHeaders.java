@@ -88,7 +88,7 @@ public class EmptyHeaders<T> implements Headers<T> {
     }
 
     @Override
-    public short getInt(T name, short defaultValue) {
+    public short getShort(T name, short defaultValue) {
         return defaultValue;
     }
 
@@ -233,11 +233,6 @@ public class EmptyHeaders<T> implements Headers<T> {
     }
 
     @Override
-    public List<Entry<T, T>> entries() {
-        return Collections.emptyList();
-    }
-
-    @Override
     public boolean contains(T name) {
         return false;
     }
@@ -298,24 +293,7 @@ public class EmptyHeaders<T> implements Headers<T> {
     }
 
     @Override
-    public boolean contains(T name, T value, Comparator<? super T> comparator) {
-        return false;
-    }
-
-    @Override
-    public boolean contains(T name, T value,
-            Comparator<? super T> keyComparator, Comparator<? super T> valueComparator) {
-        return false;
-    }
-
-    @Override
-    public boolean containsObject(T name, Object value, Comparator<? super T> comparator) {
-        return false;
-    }
-
-    @Override
-    public boolean containsObject(T name, Object value, Comparator<? super T> keyComparator,
-            Comparator<? super T> valueComparator) {
+    public boolean contains(T name, T value, Comparator<? super T> valueComparator) {
         return false;
     }
 
@@ -332,11 +310,6 @@ public class EmptyHeaders<T> implements Headers<T> {
     @Override
     public Set<T> names() {
         return Collections.emptySet();
-    }
-
-    @Override
-    public List<T> namesList() {
-        return Collections.emptyList();
     }
 
     @Override
@@ -415,7 +388,7 @@ public class EmptyHeaders<T> implements Headers<T> {
     }
 
     @Override
-    public Headers<T> add(Headers<T> headers) {
+    public Headers<T> add(Headers<? extends T> headers) {
         throw new UnsupportedOperationException("read only");
     }
 
@@ -495,12 +468,12 @@ public class EmptyHeaders<T> implements Headers<T> {
     }
 
     @Override
-    public Headers<T> set(Headers<T> headers) {
+    public Headers<T> set(Headers<? extends T> headers) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> setAll(Headers<T> headers) {
+    public Headers<T> setAll(Headers<? extends T> headers) {
         throw new UnsupportedOperationException("read only");
     }
 
@@ -516,17 +489,8 @@ public class EmptyHeaders<T> implements Headers<T> {
 
     @Override
     public Iterator<Entry<T, T>> iterator() {
-        return entries().iterator();
-    }
-
-    @Override
-    public Entry<T, T> forEachEntry(Headers.EntryVisitor<T> visitor) throws Exception {
-        return null;
-    }
-
-    @Override
-    public T forEachName(Headers.NameVisitor<T> visitor) throws Exception {
-        return null;
+        List<Entry<T, T>> empty = Collections.emptyList();
+        return empty.iterator();
     }
 
     @Override

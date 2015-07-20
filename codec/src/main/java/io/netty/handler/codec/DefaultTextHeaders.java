@@ -24,184 +24,37 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.text.ParseException;
-import java.util.Comparator;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.TreeMap;
 
 public class DefaultTextHeaders extends DefaultConvertibleHeaders<CharSequence, String> implements TextHeaders {
-    private static final HashCodeGenerator<CharSequence> CHARSEQUECE_CASE_INSENSITIVE_HASH_CODE_GENERATOR =
-            new HashCodeGenerator<CharSequence>() {
-        @Override
-        public int generateHashCode(CharSequence name) {
-            return AsciiString.caseInsensitiveHashCode(name);
-        }
-    };
 
-    private static final HashCodeGenerator<CharSequence> CHARSEQUECE_CASE_SENSITIVE_HASH_CODE_GENERATOR =
-            new JavaHashCodeGenerator<CharSequence>();
-
-    public static class DefaultTextValueTypeConverter implements ValueConverter<CharSequence> {
-        @Override
-        public CharSequence convertObject(Object value) {
-            if (value instanceof CharSequence) {
-                return (CharSequence) value;
-            }
-            return value.toString();
-        }
-
-        @Override
-        public CharSequence convertInt(int value) {
-            return String.valueOf(value);
-        }
-
-        @Override
-        public CharSequence convertLong(long value) {
-            return String.valueOf(value);
-        }
-
-        @Override
-        public CharSequence convertDouble(double value) {
-            return String.valueOf(value);
-        }
-
-        @Override
-        public CharSequence convertChar(char value) {
-            return String.valueOf(value);
-        }
-
-        @Override
-        public CharSequence convertBoolean(boolean value) {
-            return String.valueOf(value);
-        }
-
-        @Override
-        public CharSequence convertFloat(float value) {
-            return String.valueOf(value);
-        }
-
-        @Override
-        public boolean convertToBoolean(CharSequence value) {
-            return Boolean.parseBoolean(value.toString());
-        }
-
-        @Override
-        public CharSequence convertByte(byte value) {
-            return String.valueOf(value);
-        }
-
-        @Override
-        public byte convertToByte(CharSequence value) {
-            return Byte.valueOf(value.toString());
-        }
-
-        @Override
-        public char convertToChar(CharSequence value) {
-            return value.charAt(0);
-        }
-
-        @Override
-        public CharSequence convertShort(short value) {
-            return String.valueOf(value);
-        }
-
-        @Override
-        public short convertToShort(CharSequence value) {
-            return Short.valueOf(value.toString());
-        }
-
-        @Override
-        public int convertToInt(CharSequence value) {
-            return Integer.parseInt(value.toString());
-        }
-
-        @Override
-        public long convertToLong(CharSequence value) {
-            return Long.parseLong(value.toString());
-        }
-
-        @Override
-        public AsciiString convertTimeMillis(long value) {
-            return new AsciiString(String.valueOf(value));
-        }
-
-        @Override
-        public long convertToTimeMillis(CharSequence value) {
-            try {
-                return HeaderDateFormat.get().parse(value.toString());
-            } catch (ParseException e) {
-                PlatformDependent.throwException(e);
-            }
-            return 0;
-        }
-
-        @Override
-        public float convertToFloat(CharSequence value) {
-            return Float.valueOf(value.toString());
-        }
-
-        @Override
-        public double convertToDouble(CharSequence value) {
-            return Double.valueOf(value.toString());
-        }
-    }
-
-    private static final ValueConverter<CharSequence> CHARSEQUENCE_FROM_OBJECT_CONVERTER =
-            new DefaultTextValueTypeConverter();
-    private static final TypeConverter<CharSequence, String> CHARSEQUENCE_TO_STRING_CONVERTER =
-            new TypeConverter<CharSequence, String>() {
-        @Override
-        public String toConvertedType(CharSequence value) {
-            return value.toString();
-        }
-
-        @Override
-        public CharSequence toUnconvertedType(String value) {
-            return value;
-        }
-    };
-
-    private static final NameConverter<CharSequence> CHARSEQUENCE_IDENTITY_CONVERTER =
-            new IdentityNameConverter<CharSequence>();
-    /**
-     * An estimate of the size of a header value.
-     */
-    private static final int DEFAULT_VALUE_SIZE = 10;
+    public static final NameValidator<CharSequence> NO_NAME_VALIDATOR = NoNameValidator.instance();
 
     private final ValuesComposer valuesComposer;
 
     public DefaultTextHeaders() {
-        this(true);
+        this(false);
     }
 
-    public DefaultTextHeaders(boolean ignoreCase) {
-        this(ignoreCase, CHARSEQUENCE_FROM_OBJECT_CONVERTER, CHARSEQUENCE_IDENTITY_CONVERTER, false);
+    public DefaultTextHeaders(boolean singleHeaderFields) {
+        this(new TreeMap<CharSequence, Object>(CHARSEQUENCE_CASE_INSENSITIVE_ORDER), NO_NAME_VALIDATOR,
+             CharSequenceConverter.INSTANCE, singleHeaderFields);
     }
 
-    public DefaultTextHeaders(boolean ignoreCase, boolean singleHeaderFields) {
-        this(ignoreCase, CHARSEQUENCE_FROM_OBJECT_CONVERTER, CHARSEQUENCE_IDENTITY_CONVERTER, singleHeaderFields);
-    }
-
-    protected DefaultTextHeaders(boolean ignoreCase, Headers.ValueConverter<CharSequence> valueConverter,
-            NameConverter<CharSequence> nameConverter) {
-        this(ignoreCase, valueConverter, nameConverter, false);
-    }
-
-    public DefaultTextHeaders(boolean ignoreCase, ValueConverter<CharSequence> valueConverter,
-                              NameConverter<CharSequence> nameConverter, boolean singleHeaderFields) {
-        super(comparator(ignoreCase), comparator(ignoreCase),
-                ignoreCase ? CHARSEQUECE_CASE_INSENSITIVE_HASH_CODE_GENERATOR
-                        : CHARSEQUECE_CASE_SENSITIVE_HASH_CODE_GENERATOR, valueConverter,
-                CHARSEQUENCE_TO_STRING_CONVERTER, nameConverter);
+    public DefaultTextHeaders(Map<CharSequence, Object> map,
+                              NameValidator<CharSequence> nameValidator,
+                              ValueConverter<CharSequence> valueConverter,
+                              boolean singleHeaderFields) {
+        super(map, nameValidator, valueConverter, CharSequenceToStringConverter.INSTANCE);
         valuesComposer = singleHeaderFields ? new SingleHeaderValuesComposer() : new MultipleFieldsValueComposer();
     }
 
     @Override
     public boolean contains(CharSequence name, CharSequence value, boolean ignoreCase) {
-        return contains(name, value, comparator(ignoreCase));
-    }
-
-    @Override
-    public boolean containsObject(CharSequence name, Object value, boolean ignoreCase) {
-        return containsObject(name, value, comparator(ignoreCase));
+        return contains(name, value,
+                ignoreCase ? CHARSEQUENCE_CASE_INSENSITIVE_ORDER : CHARSEQUENCE_CASE_SENSITIVE_ORDER);
     }
 
     @Override
@@ -398,10 +251,6 @@ public class DefaultTextHeaders extends DefaultConvertibleHeaders<CharSequence, 
         return this;
     }
 
-    private static Comparator<CharSequence> comparator(boolean ignoreCase) {
-        return ignoreCase ? CHARSEQUENCE_CASE_INSENSITIVE_ORDER : CHARSEQUENCE_CASE_SENSITIVE_ORDER;
-    }
-
     /*
      * This interface enables different implementations for adding/setting header values.
      * Concrete implementations can control how values are added, for example to add all
@@ -413,6 +262,7 @@ public class DefaultTextHeaders extends DefaultConvertibleHeaders<CharSequence, 
         TextHeaders add(CharSequence name, CharSequence... values);
         TextHeaders add(CharSequence name, Iterable<? extends CharSequence> values);
 
+        TextHeaders addObject(CharSequence name, Object value);
         TextHeaders addObject(CharSequence name, Iterable<?> values);
         TextHeaders addObject(CharSequence name, Object... values);
 
@@ -443,6 +293,12 @@ public class DefaultTextHeaders extends DefaultConvertibleHeaders<CharSequence, 
         @Override
         public TextHeaders add(CharSequence name, Iterable<? extends CharSequence> values) {
             DefaultTextHeaders.super.add(name, values);
+            return DefaultTextHeaders.this;
+        }
+
+        @Override
+        public TextHeaders addObject(CharSequence name, Object value) {
+            DefaultTextHeaders.super.addObject(name, value);
             return DefaultTextHeaders.this;
         }
 
@@ -535,6 +391,11 @@ public class DefaultTextHeaders extends DefaultConvertibleHeaders<CharSequence, 
         }
 
         @Override
+        public TextHeaders addObject(CharSequence name, Object value) {
+            return addEscapedValue(name, objectEscaper().escape(value));
+        }
+
+        @Override
         public TextHeaders addObject(CharSequence name, Iterable<?> values) {
             return addEscapedValue(name, commaSeparate(objectEscaper(), values));
         }
@@ -579,7 +440,8 @@ public class DefaultTextHeaders extends DefaultConvertibleHeaders<CharSequence, 
         }
 
         private <T> CharSequence commaSeparate(CsvValueEscaper<T> escaper, T... values) {
-            StringBuilder sb = new StringBuilder(values.length * DEFAULT_VALUE_SIZE);
+            final int lengthEstimate = 10;
+            StringBuilder sb = new StringBuilder(values.length * lengthEstimate);
             if (values.length > 0) {
                 int end = values.length - 1;
                 for (int i = 0; i < end; i++) {
@@ -624,5 +486,131 @@ public class DefaultTextHeaders extends DefaultConvertibleHeaders<CharSequence, 
          * @param value the value to be appended, escaped if necessary
          */
         CharSequence escape(T value);
+    }
+
+    private static final class CharSequenceToStringConverter implements TypeConverter<CharSequence, String> {
+
+        private static final CharSequenceToStringConverter INSTANCE = new CharSequenceToStringConverter();
+
+        @Override
+        public String toConvertedType(CharSequence value) {
+            return value.toString();
+        }
+
+        @Override
+        public CharSequence toUnconvertedType(String value) {
+            return value;
+        }
+    }
+
+    protected static class CharSequenceConverter implements ValueConverter<CharSequence> {
+
+        public static final CharSequenceConverter INSTANCE = new CharSequenceConverter();
+
+        @Override
+        public CharSequence convertObject(Object value) {
+            if (value instanceof CharSequence) {
+                return (CharSequence) value;
+            }
+            return value.toString();
+        }
+
+        @Override
+        public CharSequence convertInt(int value) {
+            return String.valueOf(value);
+        }
+
+        @Override
+        public CharSequence convertLong(long value) {
+            return String.valueOf(value);
+        }
+
+        @Override
+        public CharSequence convertDouble(double value) {
+            return String.valueOf(value);
+        }
+
+        @Override
+        public CharSequence convertChar(char value) {
+            return String.valueOf(value);
+        }
+
+        @Override
+        public CharSequence convertBoolean(boolean value) {
+            return String.valueOf(value);
+        }
+
+        @Override
+        public CharSequence convertFloat(float value) {
+            return String.valueOf(value);
+        }
+
+        @Override
+        public boolean convertToBoolean(CharSequence value) {
+            return Boolean.parseBoolean(value.toString());
+        }
+
+        @Override
+        public CharSequence convertByte(byte value) {
+            return String.valueOf(value);
+        }
+
+        @Override
+        public byte convertToByte(CharSequence value) {
+            return Byte.valueOf(value.toString());
+        }
+
+        @Override
+        public char convertToChar(CharSequence value) {
+            if (value.length() == 0) {
+                throw new IllegalArgumentException("'value' is empty.");
+            }
+            return value.charAt(0);
+        }
+
+        @Override
+        public CharSequence convertShort(short value) {
+            return String.valueOf(value);
+        }
+
+        @Override
+        public short convertToShort(CharSequence value) {
+            return Short.valueOf(value.toString());
+        }
+
+        @Override
+        public int convertToInt(CharSequence value) {
+            return Integer.parseInt(value.toString());
+        }
+
+        @Override
+        public long convertToLong(CharSequence value) {
+            return Long.parseLong(value.toString());
+        }
+
+        @Override
+        public CharSequence convertTimeMillis(long value) {
+            return String.valueOf(value);
+        }
+
+        @Override
+        public long convertToTimeMillis(CharSequence value) {
+            try {
+                return HeaderDateFormat.get().parse(value.toString());
+            } catch (ParseException e) {
+                PlatformDependent.throwException(e);
+            }
+            return 0;
+        }
+
+        @Override
+        public float convertToFloat(CharSequence value) {
+            return Float.valueOf(value.toString());
+        }
+
+        @Override
+        public double convertToDouble(CharSequence value) {
+            return Double.valueOf(value.toString());
+        }
     }
 }

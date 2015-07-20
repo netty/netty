@@ -23,8 +23,8 @@ import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
-import io.netty.handler.codec.BinaryHeaders.EntryVisitor;
 import io.netty.util.ByteString;
+
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -65,26 +65,9 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
                 tableSizeChangeOutput.reset();
             }
 
-            // Write pseudo headers first as required by the HTTP/2 spec.
-            for (Http2Headers.PseudoHeaderName pseudoHeader : Http2Headers.PseudoHeaderName.values()) {
-                ByteString name = pseudoHeader.value();
-                ByteString value = headers.get(name);
-                if (value != null) {
-                    encodeHeader(name, value, stream);
-                }
+            for (Entry<ByteString, ByteString> header : headers) {
+                encodeHeader(header.getKey(), header.getValue(), stream);
             }
-
-            headers.forEachEntry(new EntryVisitor() {
-                @Override
-                public boolean visit(Entry<ByteString, ByteString> entry) throws Exception {
-                    final ByteString name = entry.getKey();
-                    final ByteString value = entry.getValue();
-                    if (!Http2Headers.PseudoHeaderName.isPseudoHeader(name)) {
-                        encodeHeader(name, value, stream);
-                    }
-                    return true;
-                }
-            });
         } catch (Http2Exception e) {
             throw e;
         } catch (Throwable t) {
