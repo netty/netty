@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufProcessor;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.TooLongFrameException;
@@ -239,6 +240,13 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                         out.add(message);
                         return;
                     default:
+                        /**
+                         * <a href="https://tools.ietf.org/html/rfc7230#section-3.3.3">RFC 7230, 3.3.3</a> states that
+                         * if a request does not have either a transfer-encoding or a content-length header then the
+                         * message body length is 0. However for a response the body length is the number of octets
+                         * received prior to the server closing the connection. So we treat this as variable length
+                         * chunked encoding.
+                         */
                         long contentLength = contentLength();
                         if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
                             out.add(message);
@@ -416,6 +424,17 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 out.add(LastHttpContent.EMPTY_LAST_CONTENT);
             }
         }
+    }
+
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        if (evt instanceof ChannelInputShutdownEvent) {
+            // The decodeLast method is invoked when a channelInactive event is encountered.
+            // This method is responsible for ending requests in some situations and must be called
+            // when the input has been shutdown.
+            super.channelInactive(ctx);
+        }
+        super.userEventTriggered(ctx, evt);
     }
 
     protected boolean isContentAlwaysEmpty(HttpMessage msg) {
