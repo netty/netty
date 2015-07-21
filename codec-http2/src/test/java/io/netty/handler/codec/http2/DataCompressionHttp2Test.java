@@ -14,19 +14,6 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2TestUtil.as;
-import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.verify;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -42,19 +29,11 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.Random;
-import java.util.concurrent.CountDownLatch;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -62,6 +41,27 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.Random;
+import java.util.concurrent.CountDownLatch;
+
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
+import static io.netty.handler.codec.http2.Http2TestUtil.as;
+import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyShort;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.verify;
 
 /**
  * Test for data decompression in the HTTP/2 codec.
@@ -81,15 +81,35 @@ public class DataCompressionHttp2Test {
     private Bootstrap cb;
     private Channel serverChannel;
     private Channel clientChannel;
-    private CountDownLatch serverCloseLatch;
+    private CountDownLatch serverLatch;
     private Http2Connection serverConnection;
     private Http2Connection clientConnection;
     private Http2ConnectionHandler clientHandler;
     private ByteArrayOutputStream serverOut;
 
     @Before
-    public void setup() throws InterruptedException {
+    public void setup() throws InterruptedException, Http2Exception {
         MockitoAnnotations.initMocks(this);
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocation) throws Throwable {
+                if (invocation.getArgumentAt(4, Boolean.class)) {
+                    serverConnection.stream(invocation.getArgumentAt(1, Integer.class)).close();
+                }
+                return null;
+            }
+        }).when(serverListener).onHeadersRead(any(ChannelHandlerContext.class), anyInt(), any(Http2Headers.class),
+                anyInt(), anyBoolean());
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocation) throws Throwable {
+                if (invocation.getArgumentAt(7, Boolean.class)) {
+                    serverConnection.stream(invocation.getArgumentAt(1, Integer.class)).close();
+                }
+                return null;
+            }
+        }).when(serverListener).onHeadersRead(any(ChannelHandlerContext.class), anyInt(), any(Http2Headers.class),
+                anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean());
     }
 
     @After
@@ -231,7 +251,7 @@ public class DataCompressionHttp2Test {
 
     private void bootstrapEnv(int serverOutSize) throws Exception {
         serverOut = new ByteArrayOutputStream(serverOutSize);
-        serverCloseLatch = new CountDownLatch(1);
+        serverLatch = new CountDownLatch(1);
         sb = new ServerBootstrap();
         cb = new Bootstrap();
 
@@ -241,14 +261,8 @@ public class DataCompressionHttp2Test {
 
         serverConnection.addListener(new Http2ConnectionAdapter() {
             @Override
-            public void onStreamActive(Http2Stream stream) {
-                if (stream.state() == State.HALF_CLOSED_LOCAL || stream.state() == State.HALF_CLOSED_REMOTE) {
-                    serverCloseLatch.countDown();
-                }
-            }
-            @Override
-            public void onStreamHalfClosed(Http2Stream stream) {
-                serverCloseLatch.countDown();
+            public void onStreamClosed(Http2Stream stream) {
+                serverLatch.countDown();
             }
         });
 
@@ -260,6 +274,10 @@ public class DataCompressionHttp2Test {
                 int processedBytes = buf.readableBytes() + padding;
 
                 buf.readBytes(serverOut, buf.readableBytes());
+
+                if (in.getArgumentAt(4, Boolean.class)) {
+                    serverConnection.stream(in.getArgumentAt(1, Integer.class)).close();
+                }
                 return processedBytes;
             }
         }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), anyInt(),
@@ -312,7 +330,7 @@ public class DataCompressionHttp2Test {
     }
 
     private void awaitServer() throws Exception {
-        assertTrue(serverCloseLatch.await(5, SECONDS));
+        assertTrue(serverLatch.await(5, SECONDS));
         serverOut.flush();
     }
 
