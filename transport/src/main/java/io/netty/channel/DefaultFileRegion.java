@@ -192,7 +192,7 @@ public class DefaultFileRegion extends AbstractReadableObject implements FileReg
 
     @Override
     public FileRegion retain() {
-        super.retain();
+        refCnt.retain();
         return this;
     }
 
@@ -204,13 +204,13 @@ public class DefaultFileRegion extends AbstractReadableObject implements FileReg
 
     @Override
     public FileRegion touch() {
-        super.touch();
+        refCnt.touch();
         return this;
     }
 
     @Override
     public FileRegion touch(Object hint) {
-        super.touch(hint);
+        refCnt.touch(hint);
         return this;
     }
 
@@ -220,7 +220,12 @@ public class DefaultFileRegion extends AbstractReadableObject implements FileReg
     }
 
     @Override
-    protected boolean release0(int decrement) {
+    public boolean release() {
+        return refCnt.release();
+    }
+
+    @Override
+    public boolean release(int decrement) {
         return refCnt.release(decrement);
     }
 }

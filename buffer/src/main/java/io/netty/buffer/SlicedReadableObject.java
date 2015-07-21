@@ -87,13 +87,24 @@ public class SlicedReadableObject extends AbstractReadableObject {
     }
 
     @Override
-    protected ReadableObject touch0(Object hint) {
+    public ReadableObject touch() {
+        parent.touch();
+        return this;
+    }
+
+    @Override
+    public ReadableObject touch(Object hint) {
         parent.touch(hint);
         return this;
     }
 
     @Override
-    protected boolean release0(int decrement) {
+    public boolean release() {
+        return parent.release();
+    }
+
+    @Override
+    public boolean release(int decrement) {
         return parent.release(decrement);
     }
 

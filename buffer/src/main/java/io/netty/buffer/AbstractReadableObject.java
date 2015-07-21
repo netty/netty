@@ -15,8 +15,6 @@
 package io.netty.buffer;
 
 import io.netty.util.IllegalReferenceCountException;
-import io.netty.util.ResourceLeak;
-import io.netty.util.ResourceLeakDetector;
 
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
@@ -25,15 +23,10 @@ import java.nio.channels.WritableByteChannel;
  * A skeletal implementation of a {@link ReadableObject}.
  */
 public abstract class AbstractReadableObject implements ReadableObject {
-    private static final ResourceLeakDetector<ReadableObject> leakDetector =
-            new ResourceLeakDetector<ReadableObject>(ReadableObject.class);
-
-    private final ResourceLeak leak;
     private long readerPosition;
 
     public AbstractReadableObject(long readerPosition) {
         this.readerPosition = readerPosition;
-        leak = leakDetector.open(this);
     }
 
     @Override
@@ -115,53 +108,7 @@ public abstract class AbstractReadableObject implements ReadableObject {
         return null;
     }
 
-    @Override
-    public ReadableObject retain() {
-        return retain(1);
-    }
-
-    @Override
-    public ReadableObject touch() {
-        return touch(null);
-    }
-
-    @Override
-    public ReadableObject touch(Object hint) {
-        touch0(hint);
-        if (leak != null) {
-            leak.record(hint);
-        }
-        return this;
-    }
-
-    @Override
-    public final boolean release() {
-        if (release0(1)) {
-            if (leak != null) {
-                leak.close();
-            }
-            return true;
-        }
-        return false;
-    }
-
-    @Override
-    public final boolean release(int decrement) {
-        if (release0(decrement)) {
-            if (leak != null) {
-                leak.close();
-            }
-            return true;
-        }
-        return false;
-    }
-
     protected abstract long readTo0(WritableByteChannel target, long pos, long length) throws IOException;
-    protected abstract boolean release0(int decrement);
-
-    protected ReadableObject touch0(Object hint) {
-        return this;
-    }
 
     /**
      * Should be called by every method that tries to access the content to check

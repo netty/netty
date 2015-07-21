@@ -134,19 +134,19 @@ public class CompositeReadableObject extends AbstractCompositeReadableObject {
 
     @Override
     public CompositeReadableObject retain() {
-        super.retain();
+        refCnt.retain();
         return this;
     }
 
     @Override
     public CompositeReadableObject touch() {
-        super.touch();
+        refCnt.touch();
         return this;
     }
 
     @Override
     public CompositeReadableObject touch(Object hint) {
-        super.touch(hint);
+        refCnt.touch(hint);
         return this;
     }
 
@@ -156,7 +156,12 @@ public class CompositeReadableObject extends AbstractCompositeReadableObject {
     }
 
     @Override
-    protected boolean release0(int decrement) {
+    public boolean release() {
+        return refCnt.release();
+    }
+
+    @Override
+    public boolean release(int decrement) {
         return refCnt.release(decrement);
     }
 
@@ -208,6 +213,11 @@ public class CompositeReadableObject extends AbstractCompositeReadableObject {
             return CompositeReadableObject.this.refCnt();
         }
 
+        @Override
+        public CompositeSlice retain() {
+            return retain(1);
+        }
+
         /**
          * Retains the parent and each component.
          */
@@ -222,11 +232,16 @@ public class CompositeReadableObject extends AbstractCompositeReadableObject {
             return this;
         }
 
+        @Override
+        public boolean release() {
+            return release(1);
+        }
+
         /**
          * Releases the parent and each component.
          */
         @Override
-        protected boolean release0(int decrement) {
+        public boolean release(int decrement) {
             if (CompositeReadableObject.this.release(decrement)) {
                 // Also retain each of the components.
                 for (Component c : components) {
@@ -240,7 +255,13 @@ public class CompositeReadableObject extends AbstractCompositeReadableObject {
         }
 
         @Override
-        protected CompositeSlice touch0(Object hint) {
+        public CompositeSlice touch() {
+            CompositeReadableObject.this.touch();
+            return this;
+        }
+
+        @Override
+        public CompositeSlice touch(Object hint) {
             CompositeReadableObject.this.touch(hint);
             return this;
         }
