@@ -71,7 +71,7 @@ public interface @K@ObjectMap<V> extends Map<@O@, V> {
     V remove(@k@ key);
 
     /**
-     * Gets an iterable collection of primitive entries contained in this map. As an optimization,
+     * Gets an iterable to traverse over the primitive entries contained in this map. As an optimization,
      * the {@link PEntry}s returned by the {@link Iterator} may change as the {@link Iterator}
      * progresses. The caller should not rely on {@link PEntry} key/value stability.
      */

@@ -17,7 +17,6 @@ package io.netty.util.collection;
 
 import static io.netty.util.internal.MathUtil.findNextPositivePowerOfTwo;
 
-import java.lang.reflect.Array;
 import java.util.AbstractCollection;
 import java.util.AbstractSet;
 import java.util.Arrays;
@@ -489,7 +488,8 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
                 if (!first) {
                     sb.append(", ");
                 }
-                sb.append(keyToString(keys[i])).append('=').append(value == this ? "(this Map)" : value);
+                sb.append(keyToString(keys[i])).append('=').append(value == this ? "(this Map)" :
+                    toExternal(value));
                 first = false;
             }
         }
@@ -499,14 +499,14 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
     /**
      * Helper method called by {@link #toString()} in order to convert a single map key into a string.
      */
-    protected String keyToString(@k@ key) {
+    private String keyToString(@k@ key) {
         return @O@.toString(key);
     }
 
     /**
      * Set implementation for iterating over the entries of the map.
      */
-    final class EntrySet extends AbstractSet<Entry<@O@, V>> {
+    private final class EntrySet extends AbstractSet<Entry<@O@, V>> {
         @Override
         public Iterator<Entry<@O@, V>> iterator() {
             return new MapIterator();
@@ -521,7 +521,7 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
     /**
      * Set implementation for iterating over the keys.
      */
-    final class KeySet extends AbstractSet<@O@> {
+    private final class KeySet extends AbstractSet<@O@> {
         @Override
         public int size() {
             return @K@ObjectHashMap.this.size();
@@ -648,7 +648,7 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
      * Iterator used by the {@link Map} interface.
      */
     private final class MapIterator implements Iterator<Entry<@O@, V>> {
-        private PrimitiveIterator iter = new PrimitiveIterator();
+        private final PrimitiveIterator iter = new PrimitiveIterator();
 
         @Override
         public boolean hasNext() {
