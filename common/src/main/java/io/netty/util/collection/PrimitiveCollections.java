@@ -143,11 +143,11 @@ public final class PrimitiveCollections {
      * @param <V> the value type stored in the map.
      */
     private static final class UnmodifiableIntObjectMap<V> implements IntObjectMap<V> {
-        final IntObjectMap<V> map;
-        Set<Integer> keySet;
-        Set<Entry<Integer, V>> entrySet;
-        Collection<V> values;
-        Iterable<PrimitiveEntry<V>> entries;
+        private final IntObjectMap<V> map;
+        private Set<Integer> keySet;
+        private Set<Entry<Integer, V>> entrySet;
+        private Collection<V> values;
+        private Iterable<PrimitiveEntry<V>> entries;
 
         UnmodifiableIntObjectMap(IntObjectMap<V> map) {
             this.map = map;
