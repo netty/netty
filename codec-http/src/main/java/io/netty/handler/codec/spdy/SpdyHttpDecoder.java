@@ -350,9 +350,9 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
             throws Exception {
         // Create the first line of the request from the name/value pairs
         SpdyHeaders headers     = requestFrame.headers();
-        HttpMethod  method      = HttpMethod.valueOf(headers.getAndConvert(METHOD));
-        String      url         = headers.getAndConvert(PATH);
-        HttpVersion httpVersion = HttpVersion.valueOf(headers.getAndConvert(VERSION));
+        HttpMethod  method      = HttpMethod.valueOf(headers.getAsString(METHOD));
+        String      url         = headers.getAsString(PATH);
+        HttpVersion httpVersion = HttpVersion.valueOf(headers.getAsString(VERSION));
         headers.remove(METHOD);
         headers.remove(PATH);
         headers.remove(VERSION);
@@ -386,7 +386,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
         // Create the first line of the response from the name/value pairs
         SpdyHeaders headers = responseFrame.headers();
         HttpResponseStatus status = HttpResponseStatus.parseLine(headers.get(STATUS));
-        HttpVersion version = HttpVersion.valueOf(headers.getAndConvert(VERSION));
+        HttpVersion version = HttpVersion.valueOf(headers.getAsString(VERSION));
         headers.remove(STATUS);
         headers.remove(VERSION);
 

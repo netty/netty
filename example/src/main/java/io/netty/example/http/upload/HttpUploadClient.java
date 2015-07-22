@@ -195,7 +195,7 @@ public final class HttpUploadClient {
 
         // convert headers to list
         List<Entry<String, String>> entries = new ArrayList<Entry<String, String>>(headers.size());
-        Iterator<Entry<String, String>> iterConverted = headers.iteratorConverted();
+        Iterator<Entry<String, String>> iterConverted = headers.iteratorAsString();
         while (iterConverted.hasNext()) {
             entries.add(iterConverted.next());
         }
@@ -270,7 +270,7 @@ public final class HttpUploadClient {
      */
     private static void formpostmultipart(
             Bootstrap bootstrap, String host, int port, URI uriFile, HttpDataFactory factory,
-            List<Entry<String, String>> headers, List<InterfaceHttpData> bodylist) throws Exception {
+            Iterable<Entry<String, String>> headers, List<InterfaceHttpData> bodylist) throws Exception {
         // XXX /formpostmultipart
         // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));

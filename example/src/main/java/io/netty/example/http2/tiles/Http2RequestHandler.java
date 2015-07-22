@@ -107,7 +107,7 @@ public class Http2RequestHandler extends SimpleChannelInboundHandler<FullHttpReq
     }
 
     private String streamId(FullHttpRequest request) {
-        return request.headers().getAndConvert(HttpUtil.ExtensionHeaderNames.STREAM_ID.text());
+        return request.headers().getAsString(HttpUtil.ExtensionHeaderNames.STREAM_ID.text());
     }
 
     private void streamId(FullHttpResponse response, String streamId) {

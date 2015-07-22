@@ -14,11 +14,6 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
-import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-
-import java.util.Map.Entry;
-
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.FullHttpMessage;
@@ -26,7 +21,11 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.util.AsciiString;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
-import io.netty.util.internal.PlatformDependent;
+
+import java.util.Map.Entry;
+
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 
 /**
  * Translate header/data/priority HTTP/2 frame events into HTTP events.  Just as {@link InboundHttp2ToHttpAdapter}
@@ -135,12 +134,8 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
      * @param http2Headers The target HTTP/2 headers
      */
     private static void addHttpHeadersToHttp2Headers(HttpHeaders httpHeaders, final Http2Headers http2Headers) {
-        try {
-            for (Entry<CharSequence, CharSequence> entry : httpHeaders) {
-                http2Headers.add(AsciiString.of(entry.getKey()), AsciiString.of(entry.getValue()));
-            }
-        } catch (Exception ex) {
-            PlatformDependent.throwException(ex);
+        for (Entry<CharSequence, CharSequence> entry : httpHeaders) {
+            http2Headers.add(AsciiString.of(entry.getKey()), AsciiString.of(entry.getValue()));
         }
     }
 

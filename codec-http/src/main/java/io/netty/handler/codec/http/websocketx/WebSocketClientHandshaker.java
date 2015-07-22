@@ -215,7 +215,7 @@ public abstract class WebSocketClientHandshaker {
 
         // Verify the subprotocol that we received from the server.
         // This must be one of our expected subprotocols - or null/empty if we didn't want to speak a subprotocol
-        String receivedProtocol = response.headers().getAndConvert(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
+        String receivedProtocol = response.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
         receivedProtocol = receivedProtocol != null ? receivedProtocol.trim() : null;
         String expectedProtocol = expectedSubprotocol != null ? expectedSubprotocol : "";
         boolean protocolValid = false;

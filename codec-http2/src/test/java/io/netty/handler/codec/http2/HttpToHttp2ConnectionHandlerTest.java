@@ -14,23 +14,6 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http.HttpMethod.GET;
-import static io.netty.handler.codec.http.HttpMethod.POST;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static io.netty.handler.codec.http2.Http2TestUtil.as;
-import static io.netty.util.CharsetUtil.UTF_8;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyShort;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -54,15 +37,9 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2TestUtil.FrameCountDown;
+import io.netty.util.AsciiString;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
-
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -70,6 +47,29 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+
+import static io.netty.handler.codec.http.HttpMethod.GET;
+import static io.netty.handler.codec.http.HttpMethod.POST;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+import static io.netty.util.CharsetUtil.UTF_8;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyShort;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 /**
  * Testing the {@link HttpToHttp2ConnectionHandler} for {@link FullHttpRequest} objects into HTTP/2 frames
@@ -122,10 +122,11 @@ public class HttpToHttp2ConnectionHandlerTest {
         httpHeaders.add("foo", "goo2");
         httpHeaders.add("foo2", "goo2");
         final Http2Headers http2Headers =
-                new DefaultHttp2Headers().method(as("GET")).path(as("/example"))
-                .authority(as("www.example.org:5555")).scheme(as("http"))
-                .add(as("foo"), as("goo")).add(as("foo"), as("goo2"))
-                .add(as("foo2"), as("goo2"));
+                new DefaultHttp2Headers().method(new AsciiString("GET")).path(new AsciiString("/example"))
+                .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("http"))
+                .add(new AsciiString("foo"), new AsciiString("goo"))
+                .add(new AsciiString("foo"), new AsciiString("goo2"))
+                .add(new AsciiString("foo2"), new AsciiString("goo2"));
         ChannelPromise writePromise = newPromise();
         ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
 
@@ -161,10 +162,11 @@ public class HttpToHttp2ConnectionHandlerTest {
         httpHeaders.add("foo", "goo2");
         httpHeaders.add("foo2", "goo2");
         final Http2Headers http2Headers =
-                new DefaultHttp2Headers().method(as("POST")).path(as("/example"))
-                .authority(as("www.example.org:5555")).scheme(as("http"))
-                .add(as("foo"), as("goo")).add(as("foo"), as("goo2"))
-                .add(as("foo2"), as("goo2"));
+                new DefaultHttp2Headers().method(new AsciiString("POST")).path(new AsciiString("/example"))
+                .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("http"))
+                .add(new AsciiString("foo"), new AsciiString("goo"))
+                .add(new AsciiString("foo"), new AsciiString("goo2"))
+                .add(new AsciiString("foo2"), new AsciiString("goo2"));
         ChannelPromise writePromise = newPromise();
         ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
 
@@ -202,14 +204,16 @@ public class HttpToHttp2ConnectionHandlerTest {
         httpHeaders.add("foo", "goo2");
         httpHeaders.add("foo2", "goo2");
         final Http2Headers http2Headers =
-                new DefaultHttp2Headers().method(as("POST")).path(as("/example"))
-                        .authority(as("www.example.org:5555")).scheme(as("http"))
-                        .add(as("foo"), as("goo")).add(as("foo"), as("goo2"))
-                        .add(as("foo2"), as("goo2"));
+                new DefaultHttp2Headers().method(new AsciiString("POST")).path(new AsciiString("/example"))
+                        .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("http"))
+                        .add(new AsciiString("foo"), new AsciiString("goo"))
+                        .add(new AsciiString("foo"), new AsciiString("goo2"))
+                        .add(new AsciiString("foo2"), new AsciiString("goo2"));
 
         request.trailingHeaders().add("trailing", "bar");
 
-        final Http2Headers http2TrailingHeaders = new DefaultHttp2Headers().add(as("trailing"), as("bar"));
+        final Http2Headers http2TrailingHeaders = new DefaultHttp2Headers()
+                .add(new AsciiString("trailing"), new AsciiString("bar"));
 
         ChannelPromise writePromise = newPromise();
         ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
@@ -251,17 +255,19 @@ public class HttpToHttp2ConnectionHandlerTest {
         httpHeaders.add("foo", "goo2");
         httpHeaders.add("foo2", "goo2");
         final Http2Headers http2Headers =
-                new DefaultHttp2Headers().method(as("POST")).path(as("/example"))
-                        .authority(as("www.example.org:5555")).scheme(as("http"))
-                        .add(as("foo"), as("goo")).add(as("foo"), as("goo2"))
-                        .add(as("foo2"), as("goo2"));
+                new DefaultHttp2Headers().method(new AsciiString("POST")).path(new AsciiString("/example"))
+                        .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("http"))
+                        .add(new AsciiString("foo"), new AsciiString("goo"))
+                        .add(new AsciiString("foo"), new AsciiString("goo2"))
+                        .add(new AsciiString("foo2"), new AsciiString("goo2"));
 
         final DefaultHttpContent httpContent = new DefaultHttpContent(Unpooled.copiedBuffer(text, UTF_8));
         final LastHttpContent lastHttpContent = new DefaultLastHttpContent(Unpooled.copiedBuffer(text2, UTF_8));
 
         lastHttpContent.trailingHeaders().add("trailing", "bar");
 
-        final Http2Headers http2TrailingHeaders = new DefaultHttp2Headers().add(as("trailing"), as("bar"));
+        final Http2Headers http2TrailingHeaders = new DefaultHttp2Headers()
+                .add(new AsciiString("trailing"), new AsciiString("bar"));
 
         ChannelPromise writePromise = newPromise();
         ChannelFuture writeFuture = clientChannel.write(request, writePromise);

@@ -303,8 +303,8 @@ public class HttpContentCompressorTest {
 
         HttpResponse res = (HttpResponse) o;
         assertThat(res, is(not(instanceOf(HttpContent.class))));
-        assertThat(res.headers().getAndConvert(HttpHeaderNames.TRANSFER_ENCODING), is("chunked"));
+        assertThat(res.headers().getAsString(HttpHeaderNames.TRANSFER_ENCODING), is("chunked"));
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH), is(nullValue()));
-        assertThat(res.headers().getAndConvert(HttpHeaderNames.CONTENT_ENCODING), is("gzip"));
+        assertThat(res.headers().getAsString(HttpHeaderNames.CONTENT_ENCODING), is("gzip"));
     }
 }

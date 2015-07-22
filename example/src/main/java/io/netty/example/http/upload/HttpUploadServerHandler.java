@@ -123,7 +123,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
 
             // new getMethod
             Set<Cookie> cookies;
-            String value = request.headers().getAndConvert(HttpHeaderNames.COOKIE);
+            String value = request.headers().getAsString(HttpHeaderNames.COOKIE);
             if (value == null) {
                 cookies = Collections.emptySet();
             } else {
@@ -335,7 +335,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
         }
 
         Set<Cookie> cookies;
-        String value = request.headers().getAndConvert(HttpHeaderNames.COOKIE);
+        String value = request.headers().getAsString(HttpHeaderNames.COOKIE);
         if (value == null) {
             cookies = Collections.emptySet();
         } else {

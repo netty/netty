@@ -274,7 +274,7 @@ public final class HttpUtil {
             out.path(new AsciiString(request.uri()));
             out.method(new AsciiString(request.method().toString()));
 
-            String value = inHeaders.getAndConvert(HttpHeaderNames.HOST);
+            String value = inHeaders.getAsString(HttpHeaderNames.HOST);
             if (value != null) {
                 URI hostUri = URI.create(value);
                 // The authority MUST NOT include the deprecated "userinfo" subcomponent
@@ -321,8 +321,8 @@ public final class HttpUtil {
                 AsciiString aValue = AsciiString.of(entry.getValue());
                 // https://tools.ietf.org/html/draft-ietf-httpbis-http2-16#section-8.1.2.2
                 // makes a special exception for TE
-                if (!aName.equalsIgnoreCase(HttpHeaderNames.TE) ||
-                    aValue.equalsIgnoreCase(HttpHeaderValues.TRAILERS)) {
+                if (!aName.contentEqualsIgnoreCase(HttpHeaderNames.TE) ||
+                    aValue.contentEqualsIgnoreCase(HttpHeaderValues.TRAILERS)) {
                     out.add(aName, aValue);
                 }
             }
@@ -331,7 +331,7 @@ public final class HttpUtil {
     }
 
     /**
-     * A visitor which translates HTTP/2 headers to HTTP/1 headers
+     * Utility which translates HTTP/2 headers to HTTP/1 headers.
      */
     private static final class Http2ToHttpHeaderTranslator {
         /**

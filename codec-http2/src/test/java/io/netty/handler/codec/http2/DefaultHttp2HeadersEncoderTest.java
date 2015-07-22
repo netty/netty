@@ -15,13 +15,13 @@
 
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2TestUtil.as;
-import static org.junit.Assert.assertTrue;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-
+import io.netty.util.AsciiString;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for {@link DefaultHttp2HeadersEncoder}.
@@ -55,7 +55,7 @@ public class DefaultHttp2HeadersEncoderTest {
     }
 
     private static Http2Headers headers() {
-        return new DefaultHttp2Headers().method(as("GET")).add(as("a"), as("1"))
-                .add(as("a"), as("2"));
+        return new DefaultHttp2Headers().method(new AsciiString("GET")).add(new AsciiString("a"), new AsciiString("1"))
+                .add(new AsciiString("a"), new AsciiString("2"));
     }
 }

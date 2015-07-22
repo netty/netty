@@ -91,7 +91,7 @@ public class HttpServerCodecTest {
 
         // Ensure the aggregator generates a full request.
         FullHttpRequest req = ch.readInbound();
-        assertThat(req.headers().getAndConvert(HttpHeaderNames.CONTENT_LENGTH), is("1"));
+        assertThat(req.headers().getAsString(HttpHeaderNames.CONTENT_LENGTH), is("1"));
         assertThat(req.content().readableBytes(), is(1));
         assertThat(req.content().readByte(), is((byte) 42));
         req.release();
