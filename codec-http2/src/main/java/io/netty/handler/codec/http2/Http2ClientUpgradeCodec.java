@@ -105,7 +105,7 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
             // Serialize the payload of the SETTINGS frame.
             int payloadLength = SETTING_ENTRY_LENGTH * settings.size();
             buf = ctx.alloc().buffer(payloadLength);
-            for (CharObjectMap.PEntry<Long> entry : settings.entries()) {
+            for (CharObjectMap.PrimitiveEntry<Long> entry : settings.entries()) {
                 writeUnsignedShort(entry.key(), buf);
                 writeUnsignedInt(entry.value(), buf);
             }

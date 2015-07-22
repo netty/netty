@@ -28,7 +28,7 @@ public interface @K@ObjectMap<V> extends Map<@O@, V> {
      *
      * @param <V> the value type stored in the map.
      */
-    interface PEntry<V> {
+    interface PrimitiveEntry<V> {
         /**
          * Gets the key for this entry.
          */
@@ -72,10 +72,10 @@ public interface @K@ObjectMap<V> extends Map<@O@, V> {
 
     /**
      * Gets an iterable to traverse over the primitive entries contained in this map. As an optimization,
-     * the {@link PEntry}s returned by the {@link Iterator} may change as the {@link Iterator}
-     * progresses. The caller should not rely on {@link PEntry} key/value stability.
+     * the {@link PrimitiveEntry}s returned by the {@link Iterator} may change as the {@link Iterator}
+     * progresses. The caller should not rely on {@link PrimitiveEntry} key/value stability.
      */
-    Iterable<PEntry<V>> entries();
+    Iterable<PrimitiveEntry<V>> entries();
 
     /**
      * Indicates whether or not this map contains a value for the specified key.

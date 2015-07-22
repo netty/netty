@@ -102,7 +102,7 @@ public final class PrimitiveCollections {
         }
 
         @Override
-        public Iterable<PEntry<Object>> entries() {
+        public Iterable<PrimitiveEntry<Object>> entries() {
             return Collections.emptySet();
         }
 
@@ -147,7 +147,7 @@ public final class PrimitiveCollections {
         Set<Integer> keySet;
         Set<Entry<Integer, V>> entrySet;
         Collection<V> values;
-        Iterable<PEntry<V>> entries;
+        Iterable<PrimitiveEntry<V>> entries;
 
         UnmodifiableIntObjectMap(IntObjectMap<V> map) {
             this.map = map;
@@ -219,11 +219,11 @@ public final class PrimitiveCollections {
         }
 
         @Override
-        public Iterable<PEntry<V>> entries() {
+        public Iterable<PrimitiveEntry<V>> entries() {
             if (entries == null) {
-                entries = new Iterable<PEntry<V>>() {
+                entries = new Iterable<PrimitiveEntry<V>>() {
                     @Override
-                    public Iterator<PEntry<V>> iterator() {
+                    public Iterator<PrimitiveEntry<V>> iterator() {
                         return new IteratorImpl(map.entries().iterator());
                     }
                 };
@@ -259,10 +259,10 @@ public final class PrimitiveCollections {
         /**
          * Unmodifiable wrapper for an iterator.
          */
-        private class IteratorImpl implements Iterator<PEntry<V>> {
-            final Iterator<PEntry<V>> iter;
+        private class IteratorImpl implements Iterator<PrimitiveEntry<V>> {
+            final Iterator<PrimitiveEntry<V>> iter;
 
-            IteratorImpl(Iterator<PEntry<V>> iter) {
+            IteratorImpl(Iterator<PrimitiveEntry<V>> iter) {
                 this.iter = iter;
             }
 
@@ -272,7 +272,7 @@ public final class PrimitiveCollections {
             }
 
             @Override
-            public PEntry<V> next() {
+            public PrimitiveEntry<V> next() {
                 if (!hasNext()) {
                     throw new NoSuchElementException();
                 }
@@ -288,10 +288,10 @@ public final class PrimitiveCollections {
         /**
          * Unmodifiable wrapper for an entry.
          */
-        private class EntryImpl implements PEntry<V> {
-            final PEntry<V> entry;
+        private class EntryImpl implements PrimitiveEntry<V> {
+            final PrimitiveEntry<V> entry;
 
-            EntryImpl(PEntry<V> entry) {
+            EntryImpl(PrimitiveEntry<V> entry) {
                 this.entry = entry;
             }
 
