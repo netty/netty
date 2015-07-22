@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.util.AsciiString;
 
 import java.util.HashMap;
@@ -85,8 +86,7 @@ public class HttpMethod implements Comparable<HttpMethod> {
      */
     public static final HttpMethod CONNECT = new HttpMethod("CONNECT");
 
-    private static final Map<String, HttpMethod> methodMap =
-            new HashMap<String, HttpMethod>();
+    private static final Map<String, HttpMethod> methodMap = new HashMap<String, HttpMethod>();
 
     static {
         methodMap.put(OPTIONS.toString(), OPTIONS);
@@ -106,21 +106,8 @@ public class HttpMethod implements Comparable<HttpMethod> {
      * will be returned.  Otherwise, a new instance will be returned.
      */
     public static HttpMethod valueOf(String name) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
-
-        name = name.trim();
-        if (name.isEmpty()) {
-            throw new IllegalArgumentException("empty name");
-        }
-
         HttpMethod result = methodMap.get(name);
-        if (result != null) {
-            return result;
-        } else {
-            return new HttpMethod(name);
-        }
+        return result != null ? result : new HttpMethod(name);
     }
 
     private final AsciiString name;
@@ -134,11 +121,7 @@ public class HttpMethod implements Comparable<HttpMethod> {
      * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>
      */
     public HttpMethod(String name) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
-
-        name = name.trim();
+        name = checkNotNull(name, "name").trim();
         if (name.isEmpty()) {
             throw new IllegalArgumentException("empty name");
         }

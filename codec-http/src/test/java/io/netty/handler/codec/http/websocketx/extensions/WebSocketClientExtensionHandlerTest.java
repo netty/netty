@@ -67,14 +67,14 @@ public class WebSocketClientExtensionHandlerTest {
 
         HttpRequest req2 = ch.readOutbound();
         List<WebSocketExtensionData> reqExts = WebSocketExtensionUtil.extractExtensions(
-                req2.headers().getAndConvert(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
+                req2.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
 
         HttpResponse res = newUpgradeResponse("main");
         ch.writeInbound(res);
 
         HttpResponse res2 = ch.readInbound();
         List<WebSocketExtensionData> resExts = WebSocketExtensionUtil.extractExtensions(
-                res2.headers().getAndConvert(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
+                res2.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
 
         // test
         assertEquals(2, reqExts.size());
@@ -117,14 +117,14 @@ public class WebSocketClientExtensionHandlerTest {
 
         HttpRequest req2 = ch.readOutbound();
         List<WebSocketExtensionData> reqExts = WebSocketExtensionUtil.extractExtensions(
-                req2.headers().getAndConvert(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
+                req2.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
 
         HttpResponse res = newUpgradeResponse("fallback");
         ch.writeInbound(res);
 
         HttpResponse res2 = ch.readInbound();
         List<WebSocketExtensionData> resExts = WebSocketExtensionUtil.extractExtensions(
-                res2.headers().getAndConvert(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
+                res2.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
 
         // test
         assertEquals(2, reqExts.size());
@@ -180,14 +180,14 @@ public class WebSocketClientExtensionHandlerTest {
 
         HttpRequest req2 = ch.readOutbound();
         List<WebSocketExtensionData> reqExts = WebSocketExtensionUtil.extractExtensions(
-                req2.headers().getAndConvert(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
+                req2.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
 
         HttpResponse res = newUpgradeResponse("main, fallback");
         ch.writeInbound(res);
 
         HttpResponse res2 = ch.readInbound();
         List<WebSocketExtensionData> resExts = WebSocketExtensionUtil.extractExtensions(
-                res2.headers().getAndConvert(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
+                res2.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
 
         // test
         assertEquals(2, reqExts.size());
@@ -237,7 +237,7 @@ public class WebSocketClientExtensionHandlerTest {
 
         HttpRequest req2 = ch.readOutbound();
         List<WebSocketExtensionData> reqExts = WebSocketExtensionUtil.extractExtensions(
-                req2.headers().getAndConvert(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
+                req2.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
 
         HttpResponse res = newUpgradeResponse("main, fallback");
         ch.writeInbound(res);

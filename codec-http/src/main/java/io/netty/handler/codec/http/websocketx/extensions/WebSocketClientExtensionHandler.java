@@ -63,7 +63,7 @@ public class WebSocketClientExtensionHandler extends ChannelHandlerAdapter {
     public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         if (msg instanceof HttpRequest && WebSocketExtensionUtil.isWebsocketUpgrade((HttpRequest) msg)) {
             HttpRequest request = (HttpRequest) msg;
-            String headerValue = request.headers().getAndConvert(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
+            String headerValue = request.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
 
             for (WebSocketClientExtensionHandshaker extentionHandshaker : extensionHandshakers) {
                 WebSocketExtensionData extensionData = extentionHandshaker.newRequestData();
@@ -84,7 +84,7 @@ public class WebSocketClientExtensionHandler extends ChannelHandlerAdapter {
             HttpResponse response = (HttpResponse) msg;
 
             if (WebSocketExtensionUtil.isWebsocketUpgrade(response)) {
-                String extensionsHeader = response.headers().getAndConvert(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
+                String extensionsHeader = response.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
 
                 if (extensionsHeader != null) {
                     List<WebSocketExtensionData> extensions =

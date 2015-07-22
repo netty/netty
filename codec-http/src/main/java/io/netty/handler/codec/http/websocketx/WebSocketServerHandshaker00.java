@@ -109,8 +109,8 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
     protected FullHttpResponse newHandshakeResponse(FullHttpRequest req, HttpHeaders headers) {
 
         // Serve the WebSocket handshake request.
-        if (!HttpHeaderValues.UPGRADE.equalsIgnoreCase(req.headers().get(HttpHeaderNames.CONNECTION))
-                || !WEBSOCKET.equalsIgnoreCase(req.headers().get(HttpHeaderNames.UPGRADE))) {
+        if (!HttpHeaderValues.UPGRADE.contentEqualsIgnoreCase(req.headers().get(HttpHeaderNames.CONNECTION))
+                || !WEBSOCKET.contentEqualsIgnoreCase(req.headers().get(HttpHeaderNames.UPGRADE))) {
             throw new WebSocketHandshakeException("not a WebSocket handshake request: missing upgrade");
         }
 
@@ -133,7 +133,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             // New handshake getMethod with a challenge:
             res.headers().add(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN, req.headers().get(HttpHeaderNames.ORIGIN));
             res.headers().add(HttpHeaderNames.SEC_WEBSOCKET_LOCATION, uri());
-            String subprotocols = req.headers().getAndConvert(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
+            String subprotocols = req.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
             if (subprotocols != null) {
                 String selectedSubprotocol = selectSubprotocol(subprotocols);
                 if (selectedSubprotocol == null) {
@@ -146,8 +146,8 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             }
 
             // Calculate the answer of the challenge.
-            String key1 = req.headers().getAndConvert(HttpHeaderNames.SEC_WEBSOCKET_KEY1);
-            String key2 = req.headers().getAndConvert(HttpHeaderNames.SEC_WEBSOCKET_KEY2);
+            String key1 = req.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_KEY1);
+            String key2 = req.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_KEY2);
             int a = (int) (Long.parseLong(BEGINNING_DIGIT.matcher(key1).replaceAll("")) /
                            BEGINNING_SPACE.matcher(key1).replaceAll("").length());
             int b = (int) (Long.parseLong(BEGINNING_DIGIT.matcher(key2).replaceAll("")) /
@@ -162,7 +162,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             // Old Hixie 75 handshake getMethod with no challenge:
             res.headers().add(HttpHeaderNames.WEBSOCKET_ORIGIN, req.headers().get(HttpHeaderNames.ORIGIN));
             res.headers().add(HttpHeaderNames.WEBSOCKET_LOCATION, uri());
-            String protocol = req.headers().getAndConvert(HttpHeaderNames.WEBSOCKET_PROTOCOL);
+            String protocol = req.headers().getAsString(HttpHeaderNames.WEBSOCKET_PROTOCOL);
             if (protocol != null) {
                 res.headers().add(HttpHeaderNames.WEBSOCKET_PROTOCOL, selectSubprotocol(protocol));
             }

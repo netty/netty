@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 /**
  * The default {@link HttpMessage} implementation.
  */
@@ -33,12 +35,10 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
     /**
      * Creates a new instance.
      */
-    protected DefaultHttpMessage(final HttpVersion version, boolean validateHeaders, boolean singleHeaderFields) {
-        if (version == null) {
-            throw new NullPointerException("version");
-        }
-        this.version = version;
-        headers = new DefaultHttpHeaders(validateHeaders, singleHeaderFields);
+    protected DefaultHttpMessage(final HttpVersion version, boolean validateHeaders, boolean singleFieldHeaders) {
+        this.version = checkNotNull(version, "version");
+        headers = singleFieldHeaders ? new CombinedHttpHeaders(validateHeaders)
+                                     : new DefaultHttpHeaders(validateHeaders);
     }
 
     @Override

@@ -15,14 +15,23 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.handler.codec.http.HttpHeadersTestUtils.HeaderValue;
+import io.netty.util.AsciiString;
 import org.junit.Test;
 
+import java.util.Iterator;
 import java.util.List;
 
+import static io.netty.util.AsciiString.contentEquals;
 import static java.util.Arrays.asList;
+import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 public class DefaultHttpHeadersTest {
+    private static final String HEADER_NAME = "testHeader";
 
     @Test
     public void keysShouldBeCaseInsensitive() {
@@ -55,5 +64,114 @@ public class DefaultHttpHeadersTest {
         assertEquals(headers1, headers2);
         assertEquals(headers2, headers1);
         assertEquals(headers1.hashCode(), headers2.hashCode());
+    }
+
+    @Test
+    public void testRemoveTransferEncodingIgnoreCase() {
+        HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        message.headers().set(HttpHeaderNames.TRANSFER_ENCODING, "Chunked");
+        assertFalse(message.headers().isEmpty());
+        HttpHeaderUtil.setTransferEncodingChunked(message, false);
+        assertTrue(message.headers().isEmpty());
+    }
+
+    // Test for https://github.com/netty/netty/issues/1690
+    @Test
+    public void testGetOperations() {
+        HttpHeaders headers = new DefaultHttpHeaders();
+        headers.add("Foo", "1");
+        headers.add("Foo", "2");
+
+        assertEquals("1", headers.get("Foo"));
+
+        List<CharSequence> values = headers.getAll("Foo");
+        assertEquals(2, values.size());
+        assertEquals("1", values.get(0));
+        assertEquals("2", values.get(1));
+    }
+
+    @Test
+    public void testEquansIgnoreCase() {
+        assertThat(AsciiString.contentEqualsIgnoreCase(null, null), is(true));
+        assertThat(AsciiString.contentEqualsIgnoreCase(null, "foo"), is(false));
+        assertThat(AsciiString.contentEqualsIgnoreCase("bar", null), is(false));
+        assertThat(AsciiString.contentEqualsIgnoreCase("FoO", "fOo"), is(true));
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void testSetNullHeaderValueValidate() {
+        HttpHeaders headers = new DefaultHttpHeaders(true);
+        headers.set("test", (CharSequence) null);
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void testSetNullHeaderValueNotValidate() {
+        HttpHeaders headers = new DefaultHttpHeaders(false);
+        headers.set("test", (CharSequence) null);
+    }
+
+    @Test
+    public void addCharSequences() {
+        final DefaultHttpHeaders headers = newDefaultDefaultHttpHeaders();
+        headers.add(HEADER_NAME, HeaderValue.THREE.asArray());
+        assertDefaultValues(headers, HeaderValue.THREE);
+    }
+
+    @Test
+    public void addIterable() {
+        final DefaultHttpHeaders headers = newDefaultDefaultHttpHeaders();
+        headers.add(HEADER_NAME, HeaderValue.THREE.asList());
+        assertDefaultValues(headers, HeaderValue.THREE);
+    }
+
+    @Test
+    public void addObjects() {
+        final DefaultHttpHeaders headers = newDefaultDefaultHttpHeaders();
+        headers.addObject(HEADER_NAME, HeaderValue.THREE.asArray());
+        assertDefaultValues(headers, HeaderValue.THREE);
+    }
+
+    @Test
+    public void setCharSequences() {
+        final DefaultHttpHeaders headers = newDefaultDefaultHttpHeaders();
+        headers.set(HEADER_NAME, HeaderValue.THREE.asArray());
+        assertDefaultValues(headers, HeaderValue.THREE);
+    }
+
+    @Test
+    public void setIterable() {
+        final DefaultHttpHeaders headers = newDefaultDefaultHttpHeaders();
+        headers.set(HEADER_NAME, HeaderValue.THREE.asList());
+        assertDefaultValues(headers, HeaderValue.THREE);
+    }
+
+    @Test
+    public void setObjectObjects() {
+        final DefaultHttpHeaders headers = newDefaultDefaultHttpHeaders();
+        headers.setObject(HEADER_NAME, HeaderValue.THREE.asArray());
+        assertDefaultValues(headers, HeaderValue.THREE);
+    }
+
+    @Test
+    public void setObjectIterable() {
+        final DefaultHttpHeaders headers = newDefaultDefaultHttpHeaders();
+        headers.setObject(HEADER_NAME, HeaderValue.THREE.asList());
+        assertDefaultValues(headers, HeaderValue.THREE);
+    }
+
+    private static void assertDefaultValues(final DefaultHttpHeaders headers, final HeaderValue headerValue) {
+        assertTrue(contentEquals(headerValue.asArray()[0], headers.get(HEADER_NAME)));
+        List<CharSequence> expected = headerValue.asList();
+        List<CharSequence> actual = headers.getAll(HEADER_NAME);
+        assertEquals(expected.size(), actual.size());
+        Iterator<CharSequence> eItr = expected.iterator();
+        Iterator<CharSequence> aItr = actual.iterator();
+        while (eItr.hasNext()) {
+            assertTrue(contentEquals(eItr.next(), aItr.next()));
+        }
+    }
+
+    private static DefaultHttpHeaders newDefaultDefaultHttpHeaders() {
+        return new DefaultHttpHeaders(true);
     }
 }

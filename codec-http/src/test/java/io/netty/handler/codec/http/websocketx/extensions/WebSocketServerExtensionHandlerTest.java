@@ -76,7 +76,7 @@ public class WebSocketServerExtensionHandlerTest {
 
         HttpResponse res2 = ch.readOutbound();
         List<WebSocketExtensionData> resExts = WebSocketExtensionUtil.extractExtensions(
-                res2.headers().getAndConvert(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
+                res2.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
 
         // test
         assertEquals(1, resExts.size());
@@ -127,7 +127,7 @@ public class WebSocketServerExtensionHandlerTest {
 
         HttpResponse res2 = ch.readOutbound();
         List<WebSocketExtensionData> resExts = WebSocketExtensionUtil.extractExtensions(
-                res2.headers().getAndConvert(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
+                res2.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
 
         // test
         assertEquals(2, resExts.size());

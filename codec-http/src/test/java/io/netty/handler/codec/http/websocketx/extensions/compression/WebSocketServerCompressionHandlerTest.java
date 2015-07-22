@@ -45,7 +45,7 @@ public class WebSocketServerCompressionHandlerTest {
 
         HttpResponse res2 = ch.readOutbound();
         List<WebSocketExtensionData> exts = WebSocketExtensionUtil.extractExtensions(
-                res2.headers().getAndConvert(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
+                res2.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
 
         assertEquals(PERMESSAGE_DEFLATE_EXTENSION, exts.get(0).name());
         assertTrue(exts.get(0).parameters().isEmpty());
@@ -66,7 +66,7 @@ public class WebSocketServerCompressionHandlerTest {
 
         HttpResponse res2 = ch.readOutbound();
         List<WebSocketExtensionData> exts = WebSocketExtensionUtil.extractExtensions(
-                res2.headers().getAndConvert(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
+                res2.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
 
         assertEquals(PERMESSAGE_DEFLATE_EXTENSION, exts.get(0).name());
         assertEquals("10", exts.get(0).parameters().get(CLIENT_MAX_WINDOW));
@@ -87,7 +87,7 @@ public class WebSocketServerCompressionHandlerTest {
 
         HttpResponse res2 = ch.readOutbound();
         List<WebSocketExtensionData> exts = WebSocketExtensionUtil.extractExtensions(
-                res2.headers().getAndConvert(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
+                res2.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
 
         assertEquals(PERMESSAGE_DEFLATE_EXTENSION, exts.get(0).name());
         assertTrue(exts.get(0).parameters().isEmpty());
@@ -108,7 +108,7 @@ public class WebSocketServerCompressionHandlerTest {
 
         HttpResponse res2 = ch.readOutbound();
         List<WebSocketExtensionData> exts = WebSocketExtensionUtil.extractExtensions(
-                res2.headers().getAndConvert(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
+                res2.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
 
         assertEquals(PERMESSAGE_DEFLATE_EXTENSION, exts.get(0).name());
         assertEquals("10", exts.get(0).parameters().get(SERVER_MAX_WINDOW));
@@ -163,7 +163,7 @@ public class WebSocketServerCompressionHandlerTest {
 
         HttpResponse res2 = ch.readOutbound();
         List<WebSocketExtensionData> exts = WebSocketExtensionUtil.extractExtensions(
-                res2.headers().getAndConvert(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
+                res2.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
 
         assertEquals(PERMESSAGE_DEFLATE_EXTENSION, exts.get(0).name());
         assertTrue(exts.get(0).parameters().isEmpty());
@@ -185,7 +185,7 @@ public class WebSocketServerCompressionHandlerTest {
 
         HttpResponse res2 = ch.readOutbound();
         List<WebSocketExtensionData> exts = WebSocketExtensionUtil.extractExtensions(
-                res2.headers().getAndConvert(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
+                res2.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
 
         assertEquals(PERMESSAGE_DEFLATE_EXTENSION, exts.get(0).name());
         assertTrue(exts.get(0).parameters().isEmpty());

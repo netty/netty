@@ -49,12 +49,15 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
      * @param version           the HTTP version of this response
      * @param status            the getStatus of this response
      * @param validateHeaders   validate the header names and values when adding them to the {@link HttpHeaders}
-     * @param singleHeaderFields  determines if HTTP headers with multiple values should be added as a single
-     *                            field or as multiple header fields.
+     * @param singleFieldHeaders {@code true} to check and enforce that headers with the same name are appended
+     * to the same entry and comma separated.
+     * See <a href="https://tools.ietf.org/html/rfc7230#section-3.2.2">RFC 7230, 3.2.2</a>.
+     * {@code false} to allow multiple header entries with the same name to
+     * coexist.
      */
     public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status, boolean validateHeaders,
-                               boolean singleHeaderFields) {
-        super(version, validateHeaders, singleHeaderFields);
+                               boolean singleFieldHeaders) {
+        super(version, validateHeaders, singleFieldHeaders);
         if (status == null) {
             throw new NullPointerException("status");
         }

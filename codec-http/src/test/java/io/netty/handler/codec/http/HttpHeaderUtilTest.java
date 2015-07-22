@@ -52,9 +52,9 @@ public class HttpHeaderUtilTest {
 
     @Test
     public void testEquansIgnoreCase() {
-        assertThat(AsciiString.equalsIgnoreCase(null, null), is(true));
-        assertThat(AsciiString.equalsIgnoreCase(null, "foo"), is(false));
-        assertThat(AsciiString.equalsIgnoreCase("bar", null), is(false));
-        assertThat(AsciiString.equalsIgnoreCase("FoO", "fOo"), is(true));
+        assertThat(AsciiString.contentEqualsIgnoreCase(null, null), is(true));
+        assertThat(AsciiString.contentEqualsIgnoreCase(null, "foo"), is(false));
+        assertThat(AsciiString.contentEqualsIgnoreCase("bar", null), is(false));
+        assertThat(AsciiString.contentEqualsIgnoreCase("FoO", "fOo"), is(true));
     }
 }

@@ -15,15 +15,15 @@
 
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2TestUtil.as;
-import static io.netty.handler.codec.http2.Http2TestUtil.randomString;
-import static org.junit.Assert.assertEquals;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-
+import io.netty.util.AsciiString;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import static io.netty.handler.codec.http2.Http2TestUtil.randomString;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Tests for encoding/decoding HTTP2 header blocks.
@@ -55,23 +55,23 @@ public class Http2HeaderBlockIOTest {
     @Test
     public void successiveCallsShouldSucceed() throws Http2Exception {
         Http2Headers in =
-                new DefaultHttp2Headers().method(as("GET")).scheme(as("https"))
-                        .authority(as("example.org")).path(as("/some/path"))
-                        .add(as("accept"), as("*/*"));
+                new DefaultHttp2Headers().method(new AsciiString("GET")).scheme(new AsciiString("https"))
+                        .authority(new AsciiString("example.org")).path(new AsciiString("/some/path"))
+                        .add(new AsciiString("accept"), new AsciiString("*/*"));
         assertRoundtripSuccessful(in);
 
         in =
-                new DefaultHttp2Headers().method(as("GET")).scheme(as("https"))
-                        .authority(as("example.org")).path(as("/some/path/resource1"))
-                        .add(as("accept"), as("image/jpeg"))
-                        .add(as("cache-control"), as("no-cache"));
+                new DefaultHttp2Headers().method(new AsciiString("GET")).scheme(new AsciiString("https"))
+                        .authority(new AsciiString("example.org")).path(new AsciiString("/some/path/resource1"))
+                        .add(new AsciiString("accept"), new AsciiString("image/jpeg"))
+                        .add(new AsciiString("cache-control"), new AsciiString("no-cache"));
         assertRoundtripSuccessful(in);
 
         in =
-                new DefaultHttp2Headers().method(as("GET")).scheme(as("https"))
-                        .authority(as("example.org")).path(as("/some/path/resource2"))
-                        .add(as("accept"), as("image/png"))
-                        .add(as("cache-control"), as("no-cache"));
+                new DefaultHttp2Headers().method(new AsciiString("GET")).scheme(new AsciiString("https"))
+                        .authority(new AsciiString("example.org")).path(new AsciiString("/some/path/resource2"))
+                        .add(new AsciiString("accept"), new AsciiString("image/png"))
+                        .add(new AsciiString("cache-control"), new AsciiString("no-cache"));
         assertRoundtripSuccessful(in);
     }
 
@@ -91,11 +91,14 @@ public class Http2HeaderBlockIOTest {
     }
 
     private static Http2Headers headers() {
-        return new DefaultHttp2Headers().method(as("GET")).scheme(as("https"))
-        .authority(as("example.org")).path(as("/some/path/resource2"))
-                .add(as("accept"), as("image/png")).add(as("cache-control"), as("no-cache"))
-                .add(as("custom"), as("value1")).add(as("custom"), as("value2"))
-                .add(as("custom"), as("value3")).add(as("custom"), as("custom4"))
+        return new DefaultHttp2Headers().method(new AsciiString("GET")).scheme(new AsciiString("https"))
+        .authority(new AsciiString("example.org")).path(new AsciiString("/some/path/resource2"))
+                .add(new AsciiString("accept"), new AsciiString("image/png"))
+                .add(new AsciiString("cache-control"), new AsciiString("no-cache"))
+                .add(new AsciiString("custom"), new AsciiString("value1"))
+                .add(new AsciiString("custom"), new AsciiString("value2"))
+                .add(new AsciiString("custom"), new AsciiString("value3"))
+                .add(new AsciiString("custom"), new AsciiString("custom4"))
                 .add(randomString(), randomString());
     }
 }

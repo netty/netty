@@ -163,7 +163,7 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
         }
 
         // Encode the cookie.
-        String cookieString = request.headers().getAndConvert(COOKIE);
+        String cookieString = request.headers().getAsString(COOKIE);
         if (cookieString != null) {
             Set<Cookie> cookies = ServerCookieDecoder.STRICT.decode(cookieString);
             if (!cookies.isEmpty()) {

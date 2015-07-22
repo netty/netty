@@ -15,9 +15,9 @@
  */
 package io.netty.handler.codec.http;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-
 
 /**
  * Default implementation of a {@link FullHttpResponse}.
@@ -33,7 +33,7 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
     }
 
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status, ByteBuf content) {
-        this(version, status, content, false);
+        this(version, status, content, true);
     }
 
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status, boolean validateHeaders) {
@@ -46,18 +46,16 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
     }
 
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status,
-                                   ByteBuf content, boolean singleFieldHeaders) {
-        this(version, status, content, true, singleFieldHeaders);
+                                   ByteBuf content, boolean validateHeaders) {
+        this(version, status, content, validateHeaders, false);
     }
 
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status,
                                    ByteBuf content, boolean validateHeaders, boolean singleFieldHeaders) {
         super(version, status, validateHeaders, singleFieldHeaders);
-        if (content == null) {
-            throw new NullPointerException("content");
-        }
-        this.content = content;
-        trailingHeaders = new DefaultHttpHeaders(validateHeaders, singleFieldHeaders);
+        this.content = checkNotNull(content, "content");
+        this.trailingHeaders = singleFieldHeaders ? new CombinedHttpHeaders(validateHeaders)
+                                                  : new DefaultHttpHeaders(validateHeaders);
         this.validateHeaders = validateHeaders;
     }
 
