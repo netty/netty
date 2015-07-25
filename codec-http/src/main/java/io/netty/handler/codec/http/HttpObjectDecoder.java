@@ -666,9 +666,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         cEnd = findEndOfString(sb);
 
         return new String[] {
-                sb.substring(aStart, aEnd),
-                sb.substring(bStart, bEnd),
-                cStart < cEnd? sb.substring(cStart, cEnd) : "" };
+                sb.subStringUnsafe(aStart, aEnd),
+                sb.subStringUnsafe(bStart, bEnd),
+                cStart < cEnd? sb.subStringUnsafe(cStart, cEnd) : "" };
     }
 
     private void splitHeader(AppendableCharSequence sb) {
@@ -694,44 +694,41 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             }
         }
 
-        name = sb.substring(nameStart, nameEnd);
+        name = sb.subStringUnsafe(nameStart, nameEnd);
         valueStart = findNonWhitespace(sb, colonEnd);
         if (valueStart == length) {
             value = EMPTY_VALUE;
         } else {
             valueEnd = findEndOfString(sb);
-            value = sb.substring(valueStart, valueEnd);
+            value = sb.subStringUnsafe(valueStart, valueEnd);
         }
     }
 
-    private static int findNonWhitespace(CharSequence sb, int offset) {
-        int result;
-        for (result = offset; result < sb.length(); result ++) {
-            if (!Character.isWhitespace(sb.charAt(result))) {
-                break;
+    private static int findNonWhitespace(AppendableCharSequence sb, int offset) {
+        for (int result = offset; result < sb.length(); ++result) {
+            if (!Character.isWhitespace(sb.charAtUnsafe(result))) {
+                return result;
             }
         }
-        return result;
+        return sb.length();
     }
 
-    private static int findWhitespace(CharSequence sb, int offset) {
-        int result;
-        for (result = offset; result < sb.length(); result ++) {
-            if (Character.isWhitespace(sb.charAt(result))) {
-                break;
+    private static int findWhitespace(AppendableCharSequence sb, int offset) {
+        for (int result = offset; result < sb.length(); ++result) {
+            if (Character.isWhitespace(sb.charAtUnsafe(result))) {
+                return result;
             }
         }
-        return result;
+        return sb.length();
     }
 
-    private static int findEndOfString(CharSequence sb) {
-        int result;
-        for (result = sb.length(); result > 0; result --) {
-            if (!Character.isWhitespace(sb.charAt(result - 1))) {
-                break;
+    private static int findEndOfString(AppendableCharSequence sb) {
+        for (int result = sb.length() - 1; result > 0; --result) {
+            if (!Character.isWhitespace(sb.charAtUnsafe(result))) {
+                return result + 1;
             }
         }
-        return result;
+        return 0;
     }
 
     private static class HeaderParser implements ByteProcessor {
