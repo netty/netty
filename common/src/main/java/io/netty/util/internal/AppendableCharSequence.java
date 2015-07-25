@@ -30,6 +30,9 @@ public final class AppendableCharSequence implements CharSequence, Appendable {
     }
 
     private AppendableCharSequence(char[] chars) {
+        if (chars.length < 1) {
+            throw new IllegalArgumentException("length: " + chars.length + " (length: >= 1)");
+        }
         this.chars = chars;
         pos = chars.length;
     }
@@ -47,6 +50,17 @@ public final class AppendableCharSequence implements CharSequence, Appendable {
         return chars[index];
     }
 
+    /**
+     * Access a value in this {@link CharSequence}.
+     * This method is considered unsafe as index values are assumed to be legitimate.
+     * Only underlying array bounds checking is done.
+     * @param index The index to access the underlying array at.
+     * @return The value at {@code index}.
+     */
+    public char charAtUnsafe(int index) {
+        return chars[index];
+    }
+
     @Override
     public AppendableCharSequence subSequence(int start, int end) {
         return new AppendableCharSequence(Arrays.copyOfRange(chars, start, end));
@@ -54,17 +68,12 @@ public final class AppendableCharSequence implements CharSequence, Appendable {
 
     @Override
     public AppendableCharSequence append(char c) {
-        if (pos == chars.length) {
-            char[] old = chars;
-            // double it
-            int len = old.length << 1;
-            if (len < 0) {
-                throw new IllegalStateException();
-            }
-            chars = new char[len];
-            System.arraycopy(old, 0, chars, 0, old.length);
+        try {
+            chars[pos++] = c;
+        } catch (IndexOutOfBoundsException e) {
+            expand();
+            chars[pos - 1] = c;
         }
-        chars[pos++] = c;
         return this;
     }
 
@@ -119,6 +128,26 @@ public final class AppendableCharSequence implements CharSequence, Appendable {
             throw new IndexOutOfBoundsException();
         }
         return new String(chars, start, length);
+    }
+
+    /**
+     * Create a new {@link String} from the given start to end.
+     * This method is considered unsafe as index values are assumed to be legitimate.
+     * Only underlying array bounds checking is done.
+     */
+    public String subStringUnsafe(int start, int end) {
+        return new String(chars, start, end - start);
+    }
+
+    private void expand() {
+        char[] old = chars;
+        // double it
+        int len = old.length << 1;
+        if (len < 0) {
+            throw new IllegalStateException();
+        }
+        chars = new char[len];
+        System.arraycopy(old, 0, chars, 0, old.length);
     }
 
     private static char[] expand(char[] array, int neededSpace, int size) {
