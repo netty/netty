@@ -347,4 +347,33 @@ public class HttpPostRequestDecoderTest {
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
         decoder.destroy();
     }
+
+    @Test
+    public void testFilenameContainingSemicolon2() throws Exception {
+        final String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
+        final DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
+                                                                      "http://localhost");
+        req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+        // Force to use memory-based data.
+        final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
+        final String data = "asdf";
+        final String filename = "tmp;0.txt";
+        final String body =
+                "--" + boundary + "\r\n" +
+                "Content-Disposition: form-data; name=\"file\"; filename=\"" + filename + "\"\r\n" +
+                "Content-Type: image/gif\r\n" +
+                "\r\n" +
+                data + "\r\n" +
+                "--" + boundary + "--\r\n";
+
+        req.content().writeBytes(body.getBytes(CharsetUtil.UTF_8.name()));
+        // Create decoder instance to test.
+        final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
+        assertFalse(decoder.getBodyHttpDatas().isEmpty());
+        InterfaceHttpData part1 = decoder.getBodyHttpDatas().get(0);
+        assertTrue(part1 instanceof FileUpload);
+        FileUpload fileUpload = (FileUpload) part1;
+        assertEquals("tmp 0.txt", fileUpload.getFilename());
+        decoder.destroy();
+    }
 }

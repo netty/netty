@@ -71,6 +71,11 @@ public final class HttpConstants {
      */
     public static final Charset DEFAULT_CHARSET = CharsetUtil.UTF_8;
 
+    /**
+     * Horizontal space
+     */
+    public static final char SP_CHAR = (char) SP;
+
     private HttpConstants() {
         // Unused
     }
