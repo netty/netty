@@ -1248,6 +1248,10 @@ JNIEXPORT void Java_io_netty_channel_epoll_Native_setTcpKeepCnt(JNIEnv* env, jcl
     setOption(env, fd, IPPROTO_TCP, TCP_KEEPCNT, &optval, sizeof(optval));
 }
 
+JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setIpFreeBind(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    setOption(env, fd, IPPROTO_IP, IP_FREEBIND, &optval, sizeof(optval));
+}
+
 JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_isReuseAddresss(JNIEnv* env, jclass clazz, jint fd) {
     int optval;
     if (getOption(env, fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
@@ -1359,6 +1363,14 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_getTcpKeepIntvl(JNIEnv
 JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_getTcpKeepCnt(JNIEnv* env, jclass clazz, jint fd) {
      int optval;
      if (getOption(env, fd, IPPROTO_TCP, TCP_KEEPCNT, &optval, sizeof(optval)) == -1) {
+         return -1;
+     }
+     return optval;
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_isIpFreeBind(JNIEnv* env, jclass clazz, jint fd) {
+     int optval;
+     if (getOption(env, fd, IPPROTO_TCP, IP_FREEBIND, &optval, sizeof(optval)) == -1) {
          return -1;
      }
      return optval;

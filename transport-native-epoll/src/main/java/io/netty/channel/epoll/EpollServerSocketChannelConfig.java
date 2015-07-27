@@ -37,7 +37,7 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), EpollChannelOption.SO_REUSEPORT);
+        return getOptions(super.getOptions(), EpollChannelOption.SO_REUSEPORT, EpollChannelOption.IP_FREEBIND);
     }
 
     @SuppressWarnings("unchecked")
@@ -45,6 +45,9 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
     public <T> T getOption(ChannelOption<T> option) {
         if (option == EpollChannelOption.SO_REUSEPORT) {
             return (T) Boolean.valueOf(isReusePort());
+        }
+        if (option == EpollChannelOption.IP_FREEBIND) {
+            return (T) Boolean.valueOf(isFreeBind());
         }
         return super.getOption(option);
     }
@@ -55,6 +58,8 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
 
         if (option == EpollChannelOption.SO_REUSEPORT) {
             setReusePort((Boolean) value);
+        } else if (option == EpollChannelOption.IP_FREEBIND) {
+            setFreeBind((Boolean) value);
         } else {
             return super.setOption(option, value);
         }
@@ -155,6 +160,23 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
      */
     public EpollServerSocketChannelConfig setReusePort(boolean reusePort) {
         Native.setReusePort(channel.fd().intValue(), reusePort ? 1 : 0);
+        return this;
+    }
+
+    /**
+     * Returns {@code true} if <a href="http://man7.org/linux/man-pages/man7/ip.7.html">IP_FREEBIND</a> is enabled,
+     * {@code false} otherwise.
+     */
+    public boolean isFreeBind() {
+        return Native.isIpFreeBind(channel.fd().intValue()) != 0;
+    }
+
+    /**
+     * If {@code true} is used <a href="http://man7.org/linux/man-pages/man7/ip.7.html">IP_FREEBIND</a> is enabled,
+     * {@code false} for disable it. Default is disabled.
+     */
+    public EpollServerSocketChannelConfig setFreeBind(boolean freeBind) {
+        Native.setIpFreeBind(channel.fd().intValue(), freeBind ? 1: 0);
         return this;
     }
 }
