@@ -245,6 +245,15 @@ public final class FixedChannelPool extends SimpleChannelPool {
         return p;
     }
 
+    /**
+     * Called after channel failed to be acquired so we know to decrease the {@link #acquiredChannelCount}
+     * and pull the next pending task from {@link #pendingAcquireQueue}.
+     */
+    @Override
+    protected void channelClosedCauseUnhealthy() {
+        decrementAndRunTaskQueue();
+    }
+
     private void decrementAndRunTaskQueue() {
         --acquiredChannelCount;
 
