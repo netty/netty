@@ -48,6 +48,7 @@ import static io.netty.buffer.Unpooled.*;
  *
  */
 public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequestDecoder {
+
     /**
      * Factory used to create InterfaceHttpData
      */
@@ -1732,15 +1733,15 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         for (int i = 0; i < field.length(); i++) {
             char nextChar = field.charAt(i);
             if (nextChar == HttpConstants.COLON) {
-                sb.append(HttpConstants.SP);
+                sb.append(HttpConstants.SP_CHAR);
             } else if (nextChar == HttpConstants.COMMA) {
-                sb.append(HttpConstants.SP);
+                sb.append(HttpConstants.SP_CHAR);
             } else if (nextChar == HttpConstants.EQUALS) {
-                sb.append(HttpConstants.SP);
+                sb.append(HttpConstants.SP_CHAR);
             } else if (nextChar == HttpConstants.SEMICOLON) {
-                sb.append(HttpConstants.SP);
+                sb.append(HttpConstants.SP_CHAR);
             } else if (nextChar == HttpConstants.HT) {
-                sb.append(HttpConstants.SP);
+                sb.append(HttpConstants.SP_CHAR);
             } else if (nextChar == HttpConstants.DOUBLE_QUOTE) {
                 // nothing added, just removes it
             } else {
