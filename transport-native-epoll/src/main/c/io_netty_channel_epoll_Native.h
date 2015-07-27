@@ -87,6 +87,7 @@ void Java_io_netty_channel_epoll_Native_setBroadcast(JNIEnv* env, jclass clazz, 
 void Java_io_netty_channel_epoll_Native_setTcpKeepIdle(JNIEnv* env, jclass clazz, jint fd, jint optval);
 void Java_io_netty_channel_epoll_Native_setTcpKeepIntvl(JNIEnv* env, jclass clazz, jint fd, jint optval);
 void Java_io_netty_channel_epoll_Native_setTcpKeepCnt(JNIEnv* env, jclass clazz, jint fd, jint optval);
+void Java_io_netty_channel_epoll_Native_setIpFreeBind(JNIEnv* env, jclass clazz, jint fd, jint optval);
 
 jint Java_io_netty_channel_epoll_Native_isReuseAddresss(JNIEnv* env, jclass clazz, jint fd);
 jint Java_io_netty_channel_epoll_Native_isReusePort(JNIEnv* env, jclass clazz, jint fd);
@@ -102,6 +103,7 @@ jint Java_io_netty_channel_epoll_Native_getTcpKeepIdle(JNIEnv* env, jclass clazz
 jint Java_io_netty_channel_epoll_Native_getTcpKeepIntvl(JNIEnv* env, jclass clazz, jint fd);
 jint Java_io_netty_channel_epoll_Native_getTcpKeepCnt(JNIEnv* env, jclass clazz, jint fd);
 jint Java_io_netty_channel_epoll_Native_getSoError(JNIEnv* env, jclass clazz, jint fd);
+jint Java_io_netty_channel_epoll_Native_isIpFreeBind(JNIEnv* env, jclass clazz, jint fd);
 
 jstring Java_io_netty_channel_epoll_Native_kernelVersion(JNIEnv* env, jclass clazz);
 jint Java_io_netty_channel_epoll_Native_iovMax(JNIEnv* env, jclass clazz);
