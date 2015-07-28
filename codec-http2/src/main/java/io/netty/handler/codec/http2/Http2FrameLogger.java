@@ -68,7 +68,7 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
     public void logHeaders(Direction direction, int streamId, Http2Headers headers, int padding,
             boolean endStream) {
         if (enabled()) {
-            log(direction, "HEADERS: streamId:%d, headers=%s, padding=%d, endStream=%b",
+            log(direction, "HEADERS: streamId=%d, headers=%s, padding=%d, endStream=%b",
                     streamId, headers, padding, endStream);
         }
     }
@@ -77,7 +77,7 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
             int streamDependency, short weight, boolean exclusive, int padding, boolean endStream) {
         if (enabled()) {
             log(direction,
-                    "HEADERS: streamId:%d, headers=%s, streamDependency=%d, weight=%d, exclusive=%b, "
+                    "HEADERS: streamId=%d, headers=%s, streamDependency=%d, weight=%d, exclusive=%b, "
                             + "padding=%d, endStream=%b", streamId, headers,
                     streamDependency, weight, exclusive, padding, endStream);
         }
