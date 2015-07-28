@@ -21,23 +21,31 @@ import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.List;
 
-final class DnsNameResolverContext extends AbstractDnsNameResolverContext<InetSocketAddress> {
-    DnsNameResolverContext(DnsNameResolver parent, String hostname, int port, Promise<InetSocketAddress> promise) {
+final class DnsNamesResolverContext extends AbstractDnsNameResolverContext<List<InetSocketAddress>> {
+    public DnsNamesResolverContext(DnsNameResolver parent, String hostname, int port,
+                                   Promise<List<InetSocketAddress>> promise) {
         super(parent, hostname, port, promise);
     }
 
     @Override
     protected boolean finishResolveWithIPv4(List<InetAddress> resolvedAddresses, int port) {
+        List<InetSocketAddress> addresses = null;
         final int size = resolvedAddresses.size();
-
         for (int i = 0; i < size; i ++) {
             InetAddress a = resolvedAddresses.get(i);
             if (a instanceof Inet4Address) {
-                promise.trySuccess(new InetSocketAddress(a, port));
-                return true;
+                if (addresses == null) {
+                    addresses = new ArrayList<InetSocketAddress>();
+                }
+                addresses.add(new InetSocketAddress(a, port));
             }
+        }
+        if (addresses != null) {
+            promise.trySuccess(addresses);
+            return true;
         }
 
         return false;
@@ -45,14 +53,21 @@ final class DnsNameResolverContext extends AbstractDnsNameResolverContext<InetSo
 
     @Override
     protected boolean finishResolveWithIPv6(List<InetAddress> resolvedAddresses, int port) {
+        List<InetSocketAddress> addresses = null;
         final int size = resolvedAddresses.size();
 
         for (int i = 0; i < size; i ++) {
             InetAddress a = resolvedAddresses.get(i);
             if (a instanceof Inet6Address) {
-                promise.trySuccess(new InetSocketAddress(a, port));
-                return true;
+                if (addresses == null) {
+                    addresses = new ArrayList<InetSocketAddress>();
+                }
+                addresses.add(new InetSocketAddress(a, port));
             }
+        }
+        if (addresses != null) {
+            promise.trySuccess(addresses);
+            return true;
         }
 
         return false;
