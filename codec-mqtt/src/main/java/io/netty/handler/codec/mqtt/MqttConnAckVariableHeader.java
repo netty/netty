@@ -25,19 +25,25 @@ public class MqttConnAckVariableHeader {
 
     private final MqttConnectReturnCode connectReturnCode;
 
-    public MqttConnAckVariableHeader(MqttConnectReturnCode connectReturnCode) {
+    private final boolean sessionPresent;
+
+    public MqttConnAckVariableHeader(MqttConnectReturnCode connectReturnCode, boolean sessionPresent) {
         this.connectReturnCode = connectReturnCode;
+        this.sessionPresent = sessionPresent;
     }
 
     public MqttConnectReturnCode connectReturnCode() {
         return connectReturnCode;
     }
 
+    public boolean isSessionPresent() { return sessionPresent; }
+
     @Override
     public String toString() {
         return new StringBuilder(StringUtil.simpleClassName(this))
             .append('[')
             .append("connectReturnCode=").append(connectReturnCode)
+            .append(", sessionPresent=").append(sessionPresent)
             .append(']')
             .toString();
     }
