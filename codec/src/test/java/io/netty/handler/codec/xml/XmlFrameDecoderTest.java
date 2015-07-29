@@ -102,6 +102,12 @@ public class XmlFrameDecoderTest {
     }
 
     @Test
+    public void testDecodeInvalidXml() {
+        testDecodeWithXml("<a></", new Object[0]);
+        testDecodeWithXml("<a></a", new Object[0]);
+    }
+
+    @Test
     public void testDecodeWithCDATABlock() {
         final String xml = "<book>" +
                 "<![CDATA[K&R, a.k.a. Kernighan & Ritchie]]>" +
@@ -119,18 +125,21 @@ public class XmlFrameDecoderTest {
     }
 
     @Test
-    public void testDecodeWithTwoMessages() {
+    public void testDecodeWithMultipleMessages() {
         final String input = "<root xmlns=\"http://www.acme.com/acme\" status=\"loginok\" " +
                 "timestamp=\"1362410583776\"/>\n\n" +
                 "<root xmlns=\"http://www.acme.com/acme\" status=\"start\" time=\"0\" " +
                 "timestamp=\"1362410584794\">\n<child active=\"1\" status=\"started\" id=\"935449\" " +
-                "msgnr=\"2\"/>\n</root>";
+                "msgnr=\"2\"/>\n</root>" +
+                "<root xmlns=\"http://www.acme.com/acme\" status=\"logout\" timestamp=\"1362410584795\"/>";
         final String frame1 = "<root xmlns=\"http://www.acme.com/acme\" status=\"loginok\" " +
                 "timestamp=\"1362410583776\"/>";
         final String frame2 = "<root xmlns=\"http://www.acme.com/acme\" status=\"start\" time=\"0\" " +
                 "timestamp=\"1362410584794\">\n<child active=\"1\" status=\"started\" id=\"935449\" " +
                 "msgnr=\"2\"/>\n</root>";
-        testDecodeWithXml(input, frame1, frame2);
+        final String frame3 = "<root xmlns=\"http://www.acme.com/acme\" status=\"logout\" " +
+                "timestamp=\"1362410584795\"/>";
+        testDecodeWithXml(input, frame1, frame2, frame3);
     }
 
     @Test
