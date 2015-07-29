@@ -75,7 +75,7 @@ public final class ThreadLocalRandom extends Random {
     static {
         if (initialSeedUniquifier == 0) {
             // Try to generate a real random number from /dev/random.
-            // Get from a different thread to avoid blocking indefinitely on a machine without much entrophy.
+            // Get from a different thread to avoid blocking indefinitely on a machine without much entropy.
             seedGeneratorThread = new Thread("initialSeedUniquifierGenerator") {
                 @Override
                 public void run() {
@@ -156,7 +156,7 @@ public final class ThreadLocalRandom extends Random {
                     seedGeneratorThread.interrupt();
                     logger.warn(
                             "Failed to generate a seed from SecureRandom within {} seconds. " +
-                            "Not enough entrophy?", timeoutSeconds
+                            "Not enough entropy?", timeoutSeconds
                     );
                     break;
                 }
