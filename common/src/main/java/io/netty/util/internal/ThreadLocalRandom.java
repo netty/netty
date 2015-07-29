@@ -82,7 +82,7 @@ public final class ThreadLocalRandom extends Random {
         // Otherwise, generate one.
         if (initialSeedUniquifier == 0) {
             // Try to generate a real random number from /dev/random.
-            // Get from a different thread to avoid blocking indefinitely on a machine without much entrophy.
+            // Get from a different thread to avoid blocking indefinitely on a machine without much entropy.
             final BlockingQueue<byte[]> queue = new LinkedBlockingQueue<byte[]>();
             Thread generatorThread = new Thread("initialSeedUniquifierGenerator") {
                 @Override
