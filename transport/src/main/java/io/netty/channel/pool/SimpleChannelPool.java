@@ -51,13 +51,13 @@ public class SimpleChannelPool implements ChannelPool {
     private final ChannelPoolHandler handler;
     private final ChannelHealthChecker healthCheck;
     private final Bootstrap bootstrap;
-    private GenericFutureListener<Future<? super Void>> channelWasNotAcuired =
-            new GenericFutureListener<Future<? super Void>>() {
-                @Override
-                public void operationComplete(Future<? super Void> future) throws Exception {
-                    channelClosedCauseUnhealthy();
-                }
-            };
+    private final FutureListener<Void> channelWasNotAcquired = new FutureListener<Void>() {
+        @Override
+        public void operationComplete(Future<Void> future) throws Exception {
+            channelClosedCauseUnhealthy();
+        }
+    };
+
 
     /**
      * Creates a new instance using the {@link ChannelHealthChecker#ACTIVE}.
@@ -170,18 +170,18 @@ public class SimpleChannelPool implements ChannelPool {
                     promise.setSuccess(ch);
                 } catch (Throwable cause) {
                     Promise<Void> channelClosePromise = ch.eventLoop().newPromise();
-                    channelClosePromise.addListener(channelWasNotAcuired);
+                    channelClosePromise.addListener(channelWasNotAcquired);
                     closeAndFail(ch, cause, promise, channelClosePromise);
                 }
             } else {
                 Promise<Void> channelClosePromise = ch.eventLoop().newPromise();
-                channelClosePromise.addListener(channelWasNotAcuired);
+                channelClosePromise.addListener(channelWasNotAcquired);
                 closeChannel(ch, channelClosePromise);
                 acquire(promise);
             }
         } else {
             Promise<Void> channelClosePromise = ch.eventLoop().newPromise();
-            channelClosePromise.addListener(channelWasNotAcuired);
+            channelClosePromise.addListener(channelWasNotAcquired);
             closeChannel(ch, channelClosePromise);
             acquire(promise);
         }
@@ -254,15 +254,18 @@ public class SimpleChannelPool implements ChannelPool {
         }
     }
 
-    private static void closeChannel(final Channel channel, final Promise channelClosePromise) {
+    private static void closeChannel(final Channel channel, final Promise<Void> channelClosePromise) {
         channel.attr(POOL_KEY).getAndSet(null);
         ChannelFuture future = channel.close();
         if (channelClosePromise != null) {
-            future.addListener(new GenericFutureListener<Future<? super Void>>() {
+            future.addListener(new FutureListener<Void>(){
+
                 @Override
-                public void operationComplete(Future<? super Void> future) throws Exception {
+                public void operationComplete(Future<Void> future) throws Exception {
                     if (future.isSuccess()) {
-                        channelClosePromise.setSuccess(true);
+                        channelClosePromise.setSuccess(null);
+                    } else{
+                        channelClosePromise.setFailure(new IllegalStateException("Failed to close unhealthy channel."));
                     }
                 }
             });

@@ -246,12 +246,21 @@ public final class FixedChannelPool extends SimpleChannelPool {
     }
 
     /**
-     * Called after channel failed to be acquired so we know to decrease the {@link #acquiredChannelCount}
-     * and pull the next pending task from {@link #pendingAcquireQueue}.
+     * Called after channel failed to be acquired so we know to decrease the {@link #acquiredChannelCount} and pull the
+     * next pending task from {@link #pendingAcquireQueue}.
      */
     @Override
     protected void channelClosedCauseUnhealthy() {
-        decrementAndRunTaskQueue();
+        if (executor.inEventLoop()) {
+            decrementAndRunTaskQueue();
+        } else {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    decrementAndRunTaskQueue();
+                }
+            });
+        }
     }
 
     private void decrementAndRunTaskQueue() {
