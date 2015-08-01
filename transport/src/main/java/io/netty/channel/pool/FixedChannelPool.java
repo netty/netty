@@ -360,9 +360,7 @@ public final class FixedChannelPool extends SimpleChannelPool {
             if (future.isSuccess()) {
                 originalPromise.setSuccess(future.getNow());
             } else {
-                if (acquired) {
-                    decrementAndRunTaskQueue();
-                } else {
+                if (!acquired) {
                     runTaskQueue();
                 }
 
