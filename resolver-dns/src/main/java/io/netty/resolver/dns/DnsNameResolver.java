@@ -54,8 +54,10 @@ import java.net.IDN;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.channels.UnsupportedAddressTypeException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -645,7 +647,8 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
             final String hostname = IDN.toASCII(hostname(unresolvedAddress));
             final int port = unresolvedAddress.getPort();
 
-            final DnsNameResolverContext ctx = new DnsNameResolverContext(this, hostname, port, promise);
+            final AbstractDnsNameResolverContext<InetSocketAddress> ctx =
+                    new DnsNameResolverContext(this, hostname, port, promise);
 
             ctx.resolve();
         } else {
@@ -663,6 +666,95 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
         }
     }
 
+    /**
+     * Resolves the specified name into a {@link List} of {@link SocketAddress}.
+     *
+     * @param inetHost the name to resolve
+     * @param inetPort the port number
+     *
+     * @return the {@link SocketAddress} as the result of the resolution
+     */
+    public Future<List<InetSocketAddress>> resolveAll(String inetHost, int inetPort) {
+        if (inetHost == null) {
+            throw new NullPointerException("inetHost");
+        }
+
+        return resolveAll(InetSocketAddress.createUnresolved(inetHost, inetPort));
+    }
+
+    /**
+     * Resolves the specified name into a {@link List} of {@link SocketAddress}.
+     *
+     * @param inetHost the name to resolve
+     * @param inetPort the port number
+     * @param promise the {@link Promise} which will be fulfilled when the name resolution is finished
+     *
+     * @return the {@link SocketAddress} as the result of the resolution
+     */
+    public Future<List<InetSocketAddress>> resolveAll(String inetHost, int inetPort,
+                                                      Promise<List<InetSocketAddress>> promise) {
+        if (inetHost == null) {
+            throw new NullPointerException("inetHost");
+        }
+
+        return resolveAll(InetSocketAddress.createUnresolved(inetHost, inetPort), promise);
+    }
+
+    /**
+     * Resolves the specified address. If the specified address is resolved already, this method does nothing
+     * but returning the original address.
+     *
+     * @param address the address to resolve
+     *
+     * @return the {@link Future} that is notified once the operation either succeed or failed.
+     */
+    public Future<List<InetSocketAddress>> resolveAll(InetSocketAddress address) {
+        return resolveAll(address, executor().<List<InetSocketAddress>>newPromise());
+    }
+
+    /**
+     * Resolves the specified address. If the specified address is resolved already, this method does nothing
+     * but returning the original address.
+     *
+     * @param address the address to resolve
+     * @param promise the {@link Promise} to notify once the operation completes.
+     *
+     * @return the {@link Future} that is notified once the operation either succeed or failed.
+     */
+    public Future<List<InetSocketAddress>> resolveAll(
+            InetSocketAddress address, Promise<List<InetSocketAddress>> promise) {
+        if (address == null) {
+            throw new NullPointerException("address");
+        }
+        if (promise == null) {
+            throw new NullPointerException("promise");
+        }
+
+        if (isResolved(address)) {
+            // Resolved already; no need to perform a lookup
+            return promise.setSuccess(Collections.singletonList(address));
+        }
+
+        try {
+            byte[] bytes = NetUtil.createByteArrayFromIpAddressString(address.getHostName());
+            if (bytes == null) {
+                final String hostname = IDN.toASCII(hostname(address));
+                final int port = address.getPort();
+
+                final AbstractDnsNameResolverContext<List<InetSocketAddress>> ctx =
+                        new DnsNamesResolverContext(this, hostname, port, promise);
+
+                ctx.resolve();
+            } else {
+                // The unresolvedAddress was created via a String that contains an ipaddress.
+                promise.setSuccess(Collections.singletonList(new InetSocketAddress(InetAddress.getByAddress(bytes),
+                                                                                   address.getPort())));
+            }
+            return promise;
+        } catch (Exception e) {
+            return promise.setFailure(e);
+        }
+    }
     /**
      * Sends a DNS query with the specified question.
      */

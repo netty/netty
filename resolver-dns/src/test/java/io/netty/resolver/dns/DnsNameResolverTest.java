@@ -410,7 +410,7 @@ public class DnsNameResolverTest {
                 buf.append(' ');
                 buf.append(recordContent.readUnsignedShort());
                 buf.append(' ');
-                buf.append(DnsNameResolverContext.decodeDomainName(recordContent));
+                buf.append(AbstractDnsNameResolverContext.decodeDomainName(recordContent));
             }
 
             logger.info("{} has the following MX records:{}", hostname, buf);
