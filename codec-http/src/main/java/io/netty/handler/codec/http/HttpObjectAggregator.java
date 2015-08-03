@@ -18,7 +18,6 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -28,10 +27,13 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
+import io.netty.handler.codec.http.HttpHeaders.Names;
 
 import java.util.List;
 
-import static io.netty.handler.codec.http.HttpHeaders.*;
+import static io.netty.handler.codec.http.HttpHeaders.is100ContinueExpected;
+import static io.netty.handler.codec.http.HttpHeaders.isContentLengthSet;
+import static io.netty.handler.codec.http.HttpHeaders.removeTransferEncodingChunked;
 
 /**
  * A {@link ChannelHandler} that aggregates an {@link HttpMessage}
@@ -56,10 +58,17 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
     public static final int DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS = 1024;
     private static final FullHttpResponse CONTINUE =
             new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE, Unpooled.EMPTY_BUFFER);
+    private static final FullHttpResponse EXPECTATION_FAILED = new DefaultFullHttpResponse(
+            HttpVersion.HTTP_1_1, HttpResponseStatus.EXPECTATION_FAILED, Unpooled.EMPTY_BUFFER);
+
+    static {
+        HttpHeaders.setContentLength(EXPECTATION_FAILED, 0);
+    }
 
     private final int maxContentLength;
     private AggregatedFullHttpMessage currentMessage;
     private boolean tooLongFrameFound;
+    private final boolean closeOnExpectationFailed;
 
     private int maxCumulationBufferComponents = DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS;
     private ChannelHandlerContext ctx;
@@ -73,14 +82,26 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
      *        a {@link TooLongFrameException} will be raised.
      */
     public HttpObjectAggregator(int maxContentLength) {
-        if (maxContentLength <= 0) {
-            throw new IllegalArgumentException(
-                    "maxContentLength must be a positive integer: " +
-                    maxContentLength);
-        }
-        this.maxContentLength = maxContentLength;
+        this(maxContentLength, false);
     }
 
+    /**
+     * Creates a new instance.
+     * @param maxContentLength
+     *        the maximum length of the aggregated content in bytes.
+     *        If the length of the aggregated content exceeds this value,
+     *        a {@link TooLongFrameException} will be raised.
+     * @param closeOnExpectationFailed If a 100-continue response is detected but the content length is too large
+     * then {@code true} means close the connection. otherwise the connection will remain open and data will be
+     * consumed and discarded until the next request is received.
+     */
+    public HttpObjectAggregator(int maxContentLength, boolean closeOnExpectationFailed) {
+        if (maxContentLength <= 0) {
+            throw new IllegalArgumentException("maxContentLength must be a positive integer: " + maxContentLength);
+        }
+        this.maxContentLength = maxContentLength;
+        this.closeOnExpectationFailed = closeOnExpectationFailed;
+    }
     /**
      * Returns the maximum number of components in the cumulation buffer.  If the number of
      * the components in the cumulation buffer exceeds this value, the components of the
@@ -124,12 +145,25 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             HttpMessage m = (HttpMessage) msg;
 
             // Handle the 'Expect: 100-continue' header if necessary.
-            // TODO: Respond with 413 Request Entity Too Large
-            //   and discard the traffic or close the connection.
-            //       No need to notify the upstream handlers - just log.
-            //       If decoding a response, just throw an exception.
             if (is100ContinueExpected(m)) {
-                ctx.writeAndFlush(CONTINUE).addListener(new ChannelFutureListener() {
+                if (HttpHeaders.getContentLength(m, 0) > maxContentLength) {
+                    tooLongFrameFound = true;
+                    final ChannelFuture future = ctx.writeAndFlush(EXPECTATION_FAILED.duplicate().retain());
+                    future.addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            if (!future.isSuccess()) {
+                                ctx.fireExceptionCaught(future.cause());
+                            }
+                        }
+                    });
+                    if (closeOnExpectationFailed) {
+                        future.addListener(ChannelFutureListener.CLOSE);
+                    }
+                    ctx.pipeline().fireUserEventTriggered(HttpExpectationFailedEvent.INSTANCE);
+                    return;
+                }
+                ctx.writeAndFlush(CONTINUE.duplicate().retain()).addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {
                         if (!future.isSuccess()) {
