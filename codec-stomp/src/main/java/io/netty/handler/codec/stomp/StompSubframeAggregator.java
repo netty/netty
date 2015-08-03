@@ -63,18 +63,25 @@ public class StompSubframeAggregator
     }
 
     @Override
-    protected boolean hasContentLength(StompHeadersSubframe start) throws Exception {
-        return start.headers().contains(StompHeaders.CONTENT_LENGTH);
+    protected boolean isContentLengthInvalid(StompHeadersSubframe start, int maxContentLength) throws Exception {
+        return (int) Math.min(Integer.MAX_VALUE, start.headers().getLong(StompHeaders.CONTENT_LENGTH, -1)) >
+                     maxContentLength;
     }
 
     @Override
-    protected long contentLength(StompHeadersSubframe start) throws Exception {
-        return start.headers().getLong(StompHeaders.CONTENT_LENGTH, 0);
-    }
-
-    @Override
-    protected Object newContinueResponse(StompHeadersSubframe start) throws Exception {
+    protected Object newContinueResponse(StompHeadersSubframe start, int maxContentLength, ChannelPipeline pipeline)
+            throws Exception {
         return null;
+    }
+
+    @Override
+    protected boolean closeAfterContinueResponse(Object msg) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected boolean ignoreContentAfterContinueResponse(Object msg) throws Exception {
+        throw new UnsupportedOperationException();
     }
 
     @Override
