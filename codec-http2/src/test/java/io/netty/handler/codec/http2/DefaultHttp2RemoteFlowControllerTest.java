@@ -36,17 +36,22 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2FrameWriter.Configuration;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+import io.netty.util.concurrent.EventExecutor;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import junit.framework.AssertionFailedError;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -80,6 +85,15 @@ public class DefaultHttp2RemoteFlowControllerTest {
     private ChannelHandlerContext ctx;
 
     @Mock
+    private Channel channel;
+
+    @Mock
+    private ChannelConfig config;
+
+    @Mock
+    private EventExecutor executor;
+
+    @Mock
     private ChannelPromise promise;
 
     @Mock
@@ -93,7 +107,18 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         when(ctx.newPromise()).thenReturn(promise);
         when(ctx.flush()).thenThrow(new AssertionFailedError("forbidden"));
+        setChannelWritability(true);
+        when(channel.config()).thenReturn(config);
+        when(executor.inEventLoop()).thenReturn(true);
 
+        initConnectionAndController();
+
+        resetCtx();
+        // This is intentionally left out of initConnectionAndController so it can be tested below.
+        controller.channelHandlerContext(ctx);
+    }
+
+    private void initConnectionAndController() throws Http2Exception {
         connection = new DefaultHttp2Connection(false);
         controller = new DefaultHttp2RemoteFlowController(connection);
         controller.listener(listener);
@@ -245,7 +270,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         data.assertPartiallyWritten(10);
         moreData.assertNotWritten();
         verify(listener, times(1)).streamWritten(stream(STREAM_A), 10);
-        reset(ctx);
+        resetCtx();
 
         // Update the window and verify that the rest of data and some of moreData are written
         incrementWindowSize(STREAM_A, 15);
@@ -872,10 +897,10 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         // Send a bunch of data on each stream.
         final IntObjectMap<Integer> streamSizes = new IntObjectHashMap<Integer>(4);
-        streamSizes.put(STREAM_A, 400);
-        streamSizes.put(STREAM_B, 500);
-        streamSizes.put(STREAM_C, 600);
-        streamSizes.put(STREAM_D, 700);
+        streamSizes.put(STREAM_A, (Integer) 400);
+        streamSizes.put(STREAM_B, (Integer) 500);
+        streamSizes.put(STREAM_C, (Integer) 600);
+        streamSizes.put(STREAM_D, (Integer) 700);
 
         FakeFlowControlled dataA = new FakeFlowControlled(streamSizes.get(STREAM_A));
         FakeFlowControlled dataB = new FakeFlowControlled(streamSizes.get(STREAM_B));
@@ -898,11 +923,11 @@ public class DefaultHttp2RemoteFlowControllerTest {
                         streamableBytesForTree(stream0));
         assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_A, STREAM_C, STREAM_D)),
                 streamableBytesForTree(streamA));
-        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B)),
+        assertEquals(calculateStreamSizeSum(streamSizes, Collections.singletonList(STREAM_B)),
                 streamableBytesForTree(streamB));
-        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_C)),
+        assertEquals(calculateStreamSizeSum(streamSizes, Collections.singletonList(STREAM_C)),
                 streamableBytesForTree(streamC));
-        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_D)),
+        assertEquals(calculateStreamSizeSum(streamSizes, Collections.singletonList(STREAM_D)),
                 streamableBytesForTree(streamD));
     }
 
@@ -942,10 +967,10 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         // Send a bunch of data on each stream.
         final IntObjectMap<Integer> streamSizes = new IntObjectHashMap<Integer>(4);
-        streamSizes.put(STREAM_A, 400);
-        streamSizes.put(STREAM_B, 500);
-        streamSizes.put(STREAM_C, 600);
-        streamSizes.put(STREAM_D, 700);
+        streamSizes.put(STREAM_A, (Integer) 400);
+        streamSizes.put(STREAM_B, (Integer) 500);
+        streamSizes.put(STREAM_C, (Integer) 600);
+        streamSizes.put(STREAM_D, (Integer) 700);
 
         FakeFlowControlled dataA = new FakeFlowControlled(streamSizes.get(STREAM_A));
         FakeFlowControlled dataB = new FakeFlowControlled(streamSizes.get(STREAM_B));
@@ -972,9 +997,9 @@ public class DefaultHttp2RemoteFlowControllerTest {
                         streamableBytesForTree(streamA));
         assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B, STREAM_C, STREAM_D)),
                      streamableBytesForTree(streamB));
-        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_C)),
+        assertEquals(calculateStreamSizeSum(streamSizes, Collections.singletonList(STREAM_C)),
                 streamableBytesForTree(streamC));
-        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_D)),
+        assertEquals(calculateStreamSizeSum(streamSizes, Collections.singletonList(STREAM_D)),
                 streamableBytesForTree(streamD));
     }
 
@@ -1017,11 +1042,11 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         // Send a bunch of data on each stream.
         final IntObjectMap<Integer> streamSizes = new IntObjectHashMap<Integer>(4);
-        streamSizes.put(STREAM_A, 400);
-        streamSizes.put(STREAM_B, 500);
-        streamSizes.put(STREAM_C, 600);
-        streamSizes.put(STREAM_D, 700);
-        streamSizes.put(STREAM_E, 900);
+        streamSizes.put(STREAM_A, (Integer) 400);
+        streamSizes.put(STREAM_B, (Integer) 500);
+        streamSizes.put(STREAM_C, (Integer) 600);
+        streamSizes.put(STREAM_D, (Integer) 700);
+        streamSizes.put(STREAM_E, (Integer) 900);
 
         FakeFlowControlled dataA = new FakeFlowControlled(streamSizes.get(STREAM_A));
         FakeFlowControlled dataB = new FakeFlowControlled(streamSizes.get(STREAM_B));
@@ -1048,11 +1073,11 @@ public class DefaultHttp2RemoteFlowControllerTest {
         assertEquals(calculateStreamSizeSum(streamSizes,
                         Arrays.asList(STREAM_A, STREAM_E, STREAM_C, STREAM_D)),
                 streamableBytesForTree(streamA));
-        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B)),
+        assertEquals(calculateStreamSizeSum(streamSizes, Collections.singletonList(STREAM_B)),
                 streamableBytesForTree(streamB));
-        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_C)),
+        assertEquals(calculateStreamSizeSum(streamSizes, Collections.singletonList(STREAM_C)),
                 streamableBytesForTree(streamC));
-        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_D)),
+        assertEquals(calculateStreamSizeSum(streamSizes, Collections.singletonList(STREAM_D)),
                 streamableBytesForTree(streamD));
         assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_E, STREAM_C, STREAM_D)),
                 streamableBytesForTree(streamE));
@@ -1082,10 +1107,10 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         // Send a bunch of data on each stream.
         final IntObjectMap<Integer> streamSizes = new IntObjectHashMap<Integer>(4);
-        streamSizes.put(STREAM_A, 400);
-        streamSizes.put(STREAM_B, 500);
-        streamSizes.put(STREAM_C, 600);
-        streamSizes.put(STREAM_D, 700);
+        streamSizes.put(STREAM_A, (Integer) 400);
+        streamSizes.put(STREAM_B, (Integer) 500);
+        streamSizes.put(STREAM_C, (Integer) 600);
+        streamSizes.put(STREAM_D, (Integer) 700);
 
         FakeFlowControlled dataA = new FakeFlowControlled(streamSizes.get(STREAM_A));
         FakeFlowControlled dataB = new FakeFlowControlled(streamSizes.get(STREAM_B));
@@ -1109,11 +1134,11 @@ public class DefaultHttp2RemoteFlowControllerTest {
                 streamableBytesForTree(stream0));
         assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_C, STREAM_D)),
                 streamableBytesForTree(streamA));
-        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B)),
+        assertEquals(calculateStreamSizeSum(streamSizes, Collections.singletonList(STREAM_B)),
                 streamableBytesForTree(streamB));
-        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_C)),
+        assertEquals(calculateStreamSizeSum(streamSizes, Collections.singletonList(STREAM_C)),
                 streamableBytesForTree(streamC));
-        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_D)),
+        assertEquals(calculateStreamSizeSum(streamSizes, Collections.singletonList(STREAM_D)),
                 streamableBytesForTree(streamD));
     }
 
@@ -1150,10 +1175,10 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
         // Send a bunch of data on each stream.
         final IntObjectMap<Integer> streamSizes = new IntObjectHashMap<Integer>(4);
-        streamSizes.put(STREAM_A, 400);
-        streamSizes.put(STREAM_B, 500);
-        streamSizes.put(STREAM_C, 600);
-        streamSizes.put(STREAM_D, 700);
+        streamSizes.put(STREAM_A, (Integer) 400);
+        streamSizes.put(STREAM_B, (Integer) 500);
+        streamSizes.put(STREAM_C, (Integer) 600);
+        streamSizes.put(STREAM_D, (Integer) 700);
 
         FakeFlowControlled dataA = new FakeFlowControlled(streamSizes.get(STREAM_A));
         FakeFlowControlled dataB = new FakeFlowControlled(streamSizes.get(STREAM_B));
@@ -1177,10 +1202,10 @@ public class DefaultHttp2RemoteFlowControllerTest {
                 streamableBytesForTree(stream0));
         assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_A, STREAM_D)),
                 streamableBytesForTree(streamA));
-        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_B)),
+        assertEquals(calculateStreamSizeSum(streamSizes, Collections.singletonList(STREAM_B)),
                 streamableBytesForTree(streamB));
         assertEquals(0, streamableBytesForTree(streamC));
-        assertEquals(calculateStreamSizeSum(streamSizes, Arrays.asList(STREAM_D)),
+        assertEquals(calculateStreamSizeSum(streamSizes, Collections.singletonList(STREAM_D)),
                 streamableBytesForTree(streamD));
     }
 
@@ -1194,15 +1219,15 @@ public class DefaultHttp2RemoteFlowControllerTest {
                 stream.closeLocalSide();
                 return null;
             }
-        }).when(flowControlled).error(any(Throwable.class));
+        }).when(flowControlled).error(any(ChannelHandlerContext.class), any(Throwable.class));
 
         int windowBefore = window(STREAM_A);
 
-        controller.addFlowControlled(ctx, stream, flowControlled);
+        controller.addFlowControlled(stream, flowControlled);
         controller.writePendingBytes();
 
-        verify(flowControlled, times(3)).write(anyInt());
-        verify(flowControlled).error(any(Throwable.class));
+        verify(flowControlled, times(3)).write(any(ChannelHandlerContext.class), anyInt());
+        verify(flowControlled).error(any(ChannelHandlerContext.class), any(Throwable.class));
         verify(flowControlled, never()).writeComplete();
 
         assertEquals(90, windowBefore - window(STREAM_A));
@@ -1217,13 +1242,13 @@ public class DefaultHttp2RemoteFlowControllerTest {
             public Void answer(InvocationOnMock invocationOnMock) {
                 throw new RuntimeException("error failed");
             }
-        }).when(flowControlled).error(any(Throwable.class));
+        }).when(flowControlled).error(any(ChannelHandlerContext.class), any(Throwable.class));
 
         int windowBefore = window(STREAM_A);
 
         boolean exceptionThrown = false;
         try {
-            controller.addFlowControlled(ctx, stream, flowControlled);
+            controller.addFlowControlled(stream, flowControlled);
             controller.writePendingBytes();
         } catch (RuntimeException e) {
             exceptionThrown = true;
@@ -1231,8 +1256,8 @@ public class DefaultHttp2RemoteFlowControllerTest {
             assertTrue(exceptionThrown);
         }
 
-        verify(flowControlled, times(3)).write(anyInt());
-        verify(flowControlled).error(any(Throwable.class));
+        verify(flowControlled, times(3)).write(any(ChannelHandlerContext.class), anyInt());
+        verify(flowControlled).error(any(ChannelHandlerContext.class), any(Throwable.class));
         verify(flowControlled, never()).writeComplete();
 
         assertEquals(90, windowBefore - window(STREAM_A));
@@ -1255,7 +1280,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
                 size.addAndGet(-50);
                 return null;
             }
-        }).when(flowControlled).write(anyInt());
+        }).when(flowControlled).write(any(ChannelHandlerContext.class), anyInt());
 
         final Http2Stream stream = stream(STREAM_A);
         doAnswer(new Answer<Void>() {
@@ -1268,14 +1293,14 @@ public class DefaultHttp2RemoteFlowControllerTest {
         int windowBefore = window(STREAM_A);
 
         try {
-            controller.addFlowControlled(ctx, stream, flowControlled);
+            controller.addFlowControlled(stream, flowControlled);
             controller.writePendingBytes();
         } catch (Exception e) {
             fail();
         }
 
-        verify(flowControlled, times(3)).write(anyInt());
-        verify(flowControlled, never()).error(any(Throwable.class));
+        verify(flowControlled, times(3)).write(any(ChannelHandlerContext.class), anyInt());
+        verify(flowControlled, never()).error(any(ChannelHandlerContext.class), any(Throwable.class));
         verify(flowControlled).writeComplete();
 
         assertEquals(150, windowBefore - window(STREAM_A));
@@ -1287,21 +1312,73 @@ public class DefaultHttp2RemoteFlowControllerTest {
                 Mockito.mock(Http2RemoteFlowController.FlowControlled.class);
         final Http2Stream stream = stream(STREAM_A);
         when(flowControlled.size()).thenReturn(100);
-        doThrow(new RuntimeException("write failed")).when(flowControlled).write(anyInt());
+        doThrow(new RuntimeException("write failed"))
+            .when(flowControlled).write(any(ChannelHandlerContext.class), anyInt());
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock invocationOnMock) {
                 stream.close();
                 return null;
             }
-        }).when(flowControlled).error(any(Throwable.class));
+        }).when(flowControlled).error(any(ChannelHandlerContext.class), any(Throwable.class));
 
-        controller.addFlowControlled(ctx, stream, flowControlled);
+        controller.addFlowControlled(stream, flowControlled);
         controller.writePendingBytes();
 
-        verify(flowControlled).write(anyInt());
-        verify(flowControlled).error(any(Throwable.class));
+        verify(flowControlled).write(any(ChannelHandlerContext.class), anyInt());
+        verify(flowControlled).error(any(ChannelHandlerContext.class), any(Throwable.class));
         verify(flowControlled, never()).writeComplete();
+    }
+
+    @Test
+    public void nonWritableChannelDoesNotAttemptToWrite() throws Exception {
+        // Start the channel as not writable and exercise the public methods of the flow controller
+        // making sure no frames are written.
+        setChannelWritability(false);
+        FakeFlowControlled dataA = new FakeFlowControlled(1);
+        FakeFlowControlled dataB = new FakeFlowControlled(1);
+        final Http2Stream stream = stream(STREAM_A);
+
+        controller.addFlowControlled(stream, dataA);
+        controller.writePendingBytes();
+        dataA.assertNotWritten();
+
+        controller.incrementWindowSize(stream, 100);
+        controller.writePendingBytes();
+        dataA.assertNotWritten();
+
+        controller.addFlowControlled(stream, dataB);
+        controller.writePendingBytes();
+        dataA.assertNotWritten();
+        dataB.assertNotWritten();
+
+        // Now change the channel to writable and make sure frames are written.
+        setChannelWritability(true);
+        controller.writePendingBytes();
+        dataA.assertFullyWritten();
+        dataB.assertFullyWritten();
+    }
+
+    @Test
+    public void contextShouldSendQueuedFramesWhenSet() throws Exception {
+        // Re-initialize the controller so we can ensure the context hasn't been set yet.
+        initConnectionAndController();
+
+        FakeFlowControlled dataA = new FakeFlowControlled(1);
+        final Http2Stream stream = stream(STREAM_A);
+
+        // Queue some frames
+        controller.addFlowControlled(stream, dataA);
+        controller.writePendingBytes();
+        dataA.assertNotWritten();
+
+        controller.incrementWindowSize(stream, 100);
+        controller.writePendingBytes();
+        dataA.assertNotWritten();
+
+        // Set the controller
+        controller.channelHandlerContext(ctx);
+        dataA.assertFullyWritten();
     }
 
     private static Http2RemoteFlowController.FlowControlled mockedFlowControlledThatThrowsOnWrite() throws Exception {
@@ -1326,7 +1403,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
                     throw new RuntimeException("Write failed");
                 }
             }
-        }).when(flowControlled).write(anyInt());
+        }).when(flowControlled).write(any(ChannelHandlerContext.class), anyInt());
         return flowControlled;
     }
 
@@ -1343,7 +1420,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
     private void sendData(int streamId, FakeFlowControlled data) throws Http2Exception {
         Http2Stream stream = stream(streamId);
-        controller.addFlowControlled(ctx, stream, data);
+        controller.addFlowControlled(stream, data);
     }
 
     private void setPriority(int stream, int parent, int weight, boolean exclusive) throws Http2Exception {
@@ -1359,7 +1436,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
     }
 
     private void incrementWindowSize(int streamId, int delta) throws Http2Exception {
-        controller.incrementWindowSize(ctx, stream(streamId), delta);
+        controller.incrementWindowSize(stream(streamId), delta);
     }
 
     private int streamableBytesForTree(Http2Stream stream) {
@@ -1368,6 +1445,17 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
     private Http2Stream stream(int streamId) {
         return connection.stream(streamId);
+    }
+
+    private void resetCtx() {
+        reset(ctx);
+        when(ctx.channel()).thenReturn(channel);
+        when(ctx.executor()).thenReturn(executor);
+    }
+
+    private void setChannelWritability(boolean isWritable) {
+        when(channel.bytesBeforeUnwritable()).thenReturn(isWritable ? Long.MAX_VALUE : 0);
+        when(channel.isWritable()).thenReturn(isWritable);
     }
 
     private static final class FakeFlowControlled implements Http2RemoteFlowController.FlowControlled {
@@ -1398,7 +1486,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         }
 
         @Override
-        public void error(Throwable t) {
+        public void error(ChannelHandlerContext ctx, Throwable t) {
             this.t = t;
         }
 
@@ -1407,7 +1495,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         }
 
         @Override
-        public void write(int allowedBytes) {
+        public void write(ChannelHandlerContext ctx, int allowedBytes) {
             if (allowedBytes <= 0 && currentSize != 0) {
                 // Write has been called but no data can be written
                 return;
@@ -1418,7 +1506,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         }
 
         @Override
-        public boolean merge(Http2RemoteFlowController.FlowControlled next) {
+        public boolean merge(ChannelHandlerContext ctx, Http2RemoteFlowController.FlowControlled next) {
             if (mergeable && next instanceof FakeFlowControlled) {
                 this.originalSize += ((FakeFlowControlled) next).originalSize;
                 this.currentSize += ((FakeFlowControlled) next).originalSize;

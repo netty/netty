@@ -14,20 +14,25 @@
  */
 package io.netty.handler.codec;
 
+import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import io.netty.util.AsciiString;
+import static org.junit.Assert.fail;
+
 import io.netty.util.ByteString;
 
-import java.util.HashSet;
+import java.text.ParsePosition;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NoSuchElementException;
-import java.util.Random;
-import java.util.Set;
 
+import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
 /**
@@ -36,107 +41,186 @@ import org.junit.Test;
 public class DefaultBinaryHeadersTest {
 
     @Test
-    public void binaryHeadersWithSameValuesShouldBeEquivalent() {
-        byte[] key1 = randomBytes();
-        byte[] value1 = randomBytes();
-        byte[] key2 = randomBytes();
-        byte[] value2 = randomBytes();
+    public void addShouldIncreaseAndRemoveShouldDecreaseTheSize() {
+        DefaultBinaryHeaders headers = new DefaultBinaryHeaders();
+        assertEquals(0, headers.size());
+        headers.add(bs("name1"), bs("value1"), bs("value2"));
+        assertEquals(2, headers.size());
+        headers.add(bs("name2"), bs("value3"), bs("value4"));
+        assertEquals(4, headers.size());
+        headers.add(bs("name3"), bs("value5"));
+        assertEquals(5, headers.size());
 
-        DefaultBinaryHeaders h1 = new DefaultBinaryHeaders();
-        h1.set(as(key1), as(value1));
-        h1.set(as(key2), as(value2));
-
-        DefaultBinaryHeaders h2 = new DefaultBinaryHeaders();
-        h2.set(as(key1), as(value1));
-        h2.set(as(key2), as(value2));
-
-        assertTrue(h1.equals(h2));
-        assertTrue(h2.equals(h1));
-        assertTrue(h2.equals(h2));
-        assertTrue(h1.equals(h1));
+        headers.remove(bs("name3"));
+        assertEquals(4, headers.size());
+        headers.remove(bs("name1"));
+        assertEquals(2, headers.size());
+        headers.remove(bs("name2"));
+        assertEquals(0, headers.size());
+        assertTrue(headers.isEmpty());
     }
 
     @Test
-    public void binaryHeadersWithSameDuplicateValuesShouldBeEquivalent() {
-        byte[] k1 = randomBytes();
-        byte[] k2 = randomBytes();
-        byte[] v1 = randomBytes();
-        byte[] v2 = randomBytes();
-        byte[] v3 = randomBytes();
-        byte[] v4 = randomBytes();
-
-        DefaultBinaryHeaders h1 = new DefaultBinaryHeaders();
-        h1.set(as(k1), as(v1));
-        h1.set(as(k2), as(v2));
-        h1.add(as(k2), as(v3));
-        h1.add(as(k1), as(v4));
-
-        DefaultBinaryHeaders h2 = new DefaultBinaryHeaders();
-        h2.set(as(k1), as(v1));
-        h2.set(as(k2), as(v2));
-        h2.add(as(k1), as(v4));
-        h2.add(as(k2), as(v3));
-
-        assertTrue(h1.equals(h2));
-        assertTrue(h2.equals(h1));
-        assertTrue(h2.equals(h2));
-        assertTrue(h1.equals(h1));
+    public void afterClearHeadersShouldBeEmpty() {
+        DefaultBinaryHeaders headers = new DefaultBinaryHeaders();
+        headers.add(bs("name1"), bs("value1"));
+        headers.add(bs("name2"), bs("value2"));
+        assertEquals(2, headers.size());
+        headers.clear();
+        assertEquals(0, headers.size());
+        assertTrue(headers.isEmpty());
+        assertFalse(headers.contains(bs("name1")));
+        assertFalse(headers.contains(bs("name2")));
     }
 
     @Test
-    public void binaryHeadersWithDifferentValuesShouldNotBeEquivalent() {
-        byte[] k1 = randomBytes();
-        byte[] k2 = randomBytes();
-        byte[] v1 = randomBytes();
-        byte[] v2 = randomBytes();
-        byte[] v3 = randomBytes();
-        byte[] v4 = randomBytes();
-
-        DefaultBinaryHeaders h1 = new DefaultBinaryHeaders();
-        h1.set(as(k1), as(v1));
-        h1.set(as(k2), as(v2));
-        h1.add(as(k2), as(v3));
-        h1.add(as(k1), as(v4));
-
-        DefaultBinaryHeaders h2 = new DefaultBinaryHeaders();
-        h2.set(as(k1), as(v1));
-        h2.set(as(k2), as(v2));
-        h2.add(as(k1), as(v4));
-
-        assertFalse(h1.equals(h2));
-        assertFalse(h2.equals(h1));
-        assertTrue(h2.equals(h2));
-        assertTrue(h1.equals(h1));
+    public void removingANameForASecondTimeShouldReturnFalse() {
+        DefaultBinaryHeaders headers = new DefaultBinaryHeaders();
+        headers.add(bs("name1"), bs("value1"));
+        headers.add(bs("name2"), bs("value2"));
+        assertTrue(headers.remove(bs("name2")));
+        assertFalse(headers.remove(bs("name2")));
     }
 
     @Test
-    public void binarySetAllShouldMergeHeaders() {
-        byte[] k1 = randomBytes();
-        byte[] k2 = randomBytes();
-        byte[] v1 = randomBytes();
-        byte[] v2 = randomBytes();
-        byte[] v3 = randomBytes();
-        byte[] v4 = randomBytes();
+    public void multipleValuesPerNameShouldBeAllowed() {
+        DefaultBinaryHeaders headers = new DefaultBinaryHeaders();
+        headers.add(bs("name"), bs("value1"));
+        headers.add(bs("name"), bs("value2"));
+        headers.add(bs("name"), bs("value3"));
+        assertEquals(3, headers.size());
 
+        List<ByteString> values = headers.getAll(bs("name"));
+        assertEquals(3, values.size());
+        assertTrue(values.containsAll(asList(bs("value1"), bs("value2"), bs("value3"))));
+    }
+
+    @Test
+    public void testContains() {
+        DefaultBinaryHeaders headers = new DefaultBinaryHeaders();
+        headers.addBoolean(bs("boolean"), true);
+        assertTrue(headers.containsBoolean(bs("boolean"), true));
+        assertFalse(headers.containsBoolean(bs("boolean"), false));
+
+        headers.addLong(bs("long"), Long.MAX_VALUE);
+        assertTrue(headers.containsLong(bs("long"), Long.MAX_VALUE));
+        assertFalse(headers.containsLong(bs("long"), Long.MIN_VALUE));
+
+        headers.addInt(bs("int"), Integer.MIN_VALUE);
+        assertTrue(headers.containsInt(bs("int"), Integer.MIN_VALUE));
+        assertFalse(headers.containsInt(bs("int"), Integer.MAX_VALUE));
+
+        headers.addShort(bs("short"), Short.MAX_VALUE);
+        assertTrue(headers.containsShort(bs("short"), Short.MAX_VALUE));
+        assertFalse(headers.containsShort(bs("short"), Short.MIN_VALUE));
+
+        headers.addChar(bs("char"), Character.MAX_VALUE);
+        assertTrue(headers.containsChar(bs("char"), Character.MAX_VALUE));
+        assertFalse(headers.containsChar(bs("char"), Character.MIN_VALUE));
+
+        headers.addByte(bs("byte"), Byte.MAX_VALUE);
+        assertTrue(headers.containsByte(bs("byte"), Byte.MAX_VALUE));
+        assertFalse(headers.containsLong(bs("byte"), Byte.MIN_VALUE));
+
+        headers.addDouble(bs("double"), Double.MAX_VALUE);
+        assertTrue(headers.containsDouble(bs("double"), Double.MAX_VALUE));
+        assertFalse(headers.containsDouble(bs("double"), Double.MIN_VALUE));
+
+        headers.addFloat(bs("float"), Float.MAX_VALUE);
+        assertTrue(headers.containsFloat(bs("float"), Float.MAX_VALUE));
+        assertFalse(headers.containsFloat(bs("float"), Float.MIN_VALUE));
+
+        long millis = System.currentTimeMillis();
+        headers.addTimeMillis(bs("millis"), millis);
+        assertTrue(headers.containsTimeMillis(bs("millis"), millis));
+        // This test doesn't work on midnight, January 1, 1970 UTC
+        assertFalse(headers.containsTimeMillis(bs("millis"), 0));
+
+        headers.addObject(bs("object"), "Hello World");
+        assertTrue(headers.containsObject(bs("object"), "Hello World"));
+        assertFalse(headers.containsObject(bs("object"), ""));
+
+        headers.add(bs("name"), bs("value"));
+        assertTrue(headers.contains(bs("name"), bs("value")));
+        assertFalse(headers.contains(bs("name"), bs("value1")));
+    }
+
+    @Test
+    public void canMixConvertedAndNormalValues() {
+        DefaultBinaryHeaders headers = new DefaultBinaryHeaders();
+        headers.add(bs("name"), bs("value"));
+        headers.addInt(bs("name"), 100);
+        headers.addBoolean(bs("name"), false);
+
+        assertEquals(3, headers.size());
+        assertTrue(headers.contains(bs("name")));
+        assertTrue(headers.contains(bs("name"), bs("value")));
+        assertTrue(headers.containsInt(bs("name"), 100));
+        assertTrue(headers.containsBoolean(bs("name"), false));
+    }
+
+    @Test
+    public void testGetAndRemove() {
+        DefaultBinaryHeaders headers = new DefaultBinaryHeaders();
+        headers.add(bs("name1"), bs("value1"));
+        headers.add(bs("name2"), bs("value2"), bs("value3"));
+        headers.add(bs("name3"), bs("value4"), bs("value5"), bs("value6"));
+
+        assertEquals(bs("value1"), headers.getAndRemove(bs("name1"), bs("defaultvalue")));
+        assertEquals(bs("value2"), headers.getAndRemove(bs("name2")));
+        assertNull(headers.getAndRemove(bs("name2")));
+        assertEquals(asList(bs("value4"), bs("value5"), bs("value6")), headers.getAllAndRemove(bs("name3")));
+        assertEquals(0, headers.size());
+        assertNull(headers.getAndRemove(bs("noname")));
+        assertEquals(bs("defaultvalue"), headers.getAndRemove(bs("noname"), bs("defaultvalue")));
+    }
+
+    @Test
+    public void whenNameContainsMultipleValuesGetShouldReturnTheFirst() {
+        DefaultBinaryHeaders headers = new DefaultBinaryHeaders();
+        headers.add(bs("name1"), bs("value1"), bs("value2"));
+        assertEquals(bs("value1"), headers.get(bs("name1")));
+    }
+
+    @Test
+    public void getWithDefaultValueWorks() {
+        DefaultBinaryHeaders headers = new DefaultBinaryHeaders();
+        headers.add(bs("name1"), bs("value1"));
+
+        assertEquals(bs("value1"), headers.get(bs("name1"), bs("defaultvalue")));
+        assertEquals(bs("defaultvalue"), headers.get(bs("noname"), bs("defaultvalue")));
+    }
+
+    @Test
+    public void setShouldOverWritePreviousValue() {
+        DefaultBinaryHeaders headers = new DefaultBinaryHeaders();
+        headers.set(bs("name"), bs("value1"));
+        headers.set(bs("name"), bs("value2"));
+        assertEquals(1, headers.size());
+        assertEquals(1, headers.getAll(bs("name")).size());
+        assertEquals(bs("value2"), headers.getAll(bs("name")).get(0));
+        assertEquals(bs("value2"), headers.get(bs("name")));
+    }
+
+    @Test
+    public void setAllShouldOverwriteSomeAndLeaveOthersUntouched() {
         DefaultBinaryHeaders h1 = new DefaultBinaryHeaders();
-        h1.set(as(k1), as(v1));
-        h1.set(as(k2), as(v2));
-        h1.add(as(k2), as(v3));
-        h1.add(as(k1), as(v4));
+
+        h1.add(bs("name1"), bs("value1"));
+        h1.add(bs("name2"), bs("value2"));
+        h1.add(bs("name2"), bs("value3"));
+        h1.add(bs("name3"), bs("value4"));
 
         DefaultBinaryHeaders h2 = new DefaultBinaryHeaders();
-        h2.set(as(k1), as(v1));
-        h2.set(as(k2), as(v2));
-        h2.add(as(k1), as(v4));
+        h2.add(bs("name1"), bs("value5"));
+        h2.add(bs("name2"), bs("value6"));
+        h2.add(bs("name1"), bs("value7"));
 
         DefaultBinaryHeaders expected = new DefaultBinaryHeaders();
-        expected.set(as(k1), as(v1));
-        expected.set(as(k2), as(v2));
-        expected.add(as(k2), as(v3));
-        expected.add(as(k1), as(v4));
-        expected.set(as(k1), as(v1));
-        expected.set(as(k2), as(v2));
-        expected.set(as(k1), as(v4));
+        expected.add(bs("name1"), bs("value5"));
+        expected.add(bs("name2"), bs("value6"));
+        expected.add(bs("name1"), bs("value7"));
+        expected.add(bs("name3"), bs("value4"));
 
         h1.setAll(h2);
 
@@ -144,118 +228,64 @@ public class DefaultBinaryHeadersTest {
     }
 
     @Test
-    public void binarySetShouldReplacePreviousValues() {
-        byte[] k1 = randomBytes();
-        byte[] v1 = randomBytes();
-        byte[] v2 = randomBytes();
-        byte[] v3 = randomBytes();
+    public void headersWithSameNamesAndValuesShouldBeEquivalent() {
+        DefaultBinaryHeaders headers1 = new DefaultBinaryHeaders();
+        headers1.add(bs("name1"), bs("value1"));
+        headers1.add(bs("name2"), bs("value2"));
+        headers1.add(bs("name2"), bs("value3"));
 
-        DefaultBinaryHeaders h1 = new DefaultBinaryHeaders();
-        h1.add(as(k1), as(v1));
-        h1.add(as(k1), as(v2));
-        assertEquals(2, h1.size());
+        DefaultBinaryHeaders headers2 = new DefaultBinaryHeaders();
+        headers2.add(bs("name1"), bs("value1"));
+        headers2.add(bs("name2"), bs("value2"));
+        headers2.add(bs("name2"), bs("value3"));
 
-        h1.set(as(k1), as(v3));
-        assertEquals(1, h1.size());
-        List<ByteString> list = h1.getAll(as(k1));
-        assertEquals(1, list.size());
-        assertEquals(as(v3), list.get(0));
+        assertEquals(headers1, headers2);
+        assertEquals(headers2, headers1);
+        assertEquals(headers1, headers1);
+        assertEquals(headers2, headers2);
+        assertEquals(headers1.hashCode(), headers2.hashCode());
+        assertEquals(headers1.hashCode(), headers1.hashCode());
+        assertEquals(headers2.hashCode(), headers2.hashCode());
     }
 
     @Test
-    public void headersWithSameValuesShouldBeEquivalent() {
-        DefaultBinaryHeaders h1 = new DefaultBinaryHeaders();
-        h1.set(as("foo"), as("goo"));
-        h1.set(as("foo2"), as("goo2"));
+    public void emptyHeadersShouldBeEqual() {
+        DefaultBinaryHeaders headers1 = new DefaultBinaryHeaders();
+        DefaultBinaryHeaders headers2 = new DefaultBinaryHeaders();
+        assertNotSame(headers1, headers2);
+        assertEquals(headers1, headers2);
+        assertEquals(headers1.hashCode(), headers2.hashCode());
+    }
 
+    @Test
+    public void headersWithSameNamesButDifferentValuesShouldNotBeEquivalent() {
+        DefaultBinaryHeaders headers1 = new DefaultBinaryHeaders();
+        headers1.add(bs("name1"), bs("value1"));
+        DefaultBinaryHeaders headers2 = new DefaultBinaryHeaders();
+        headers1.add(bs("name1"), bs("value2"));
+        assertNotEquals(headers1, headers2);
+    }
+
+    @Test
+    public void subsetOfHeadersShouldNotBeEquivalent() {
+        DefaultBinaryHeaders headers1 = new DefaultBinaryHeaders();
+        headers1.add(bs("name1"), bs("value1"));
+        headers1.add(bs("name2"), bs("value2"));
+        DefaultBinaryHeaders headers2 = new DefaultBinaryHeaders();
+        headers1.add(bs("name1"), bs("value1"));
+        assertNotEquals(headers1, headers2);
+    }
+
+    @Test
+    public void headersWithDifferentNamesAndValuesShouldNotBeEquivalent() {
+        DefaultBinaryHeaders h1 = new DefaultBinaryHeaders();
+        h1.set(bs("name1"), bs("value1"));
         DefaultBinaryHeaders h2 = new DefaultBinaryHeaders();
-        h2.set(as("foo"), as("goo"));
-        h2.set(as("foo2"), as("goo2"));
-
-        assertTrue(h1.equals(h2));
-        assertTrue(h2.equals(h1));
-        assertTrue(h2.equals(h2));
-        assertTrue(h1.equals(h1));
-    }
-
-    @Test
-    public void headersWithSameDuplicateValuesShouldBeEquivalent() {
-        DefaultBinaryHeaders h1 = new DefaultBinaryHeaders();
-        h1.set(as("foo"), as("goo"));
-        h1.set(as("foo2"), as("goo2"));
-        h1.add(as("foo2"), as("goo3"));
-        h1.add(as("foo"), as("goo4"));
-
-        DefaultBinaryHeaders h2 = new DefaultBinaryHeaders();
-        h2.set(as("foo"), as("goo"));
-        h2.set(as("foo2"), as("goo2"));
-        h2.add(as("foo"), as("goo4"));
-        h2.add(as("foo2"), as("goo3"));
-
-        assertTrue(h1.equals(h2));
-        assertTrue(h2.equals(h1));
-        assertTrue(h2.equals(h2));
-        assertTrue(h1.equals(h1));
-    }
-
-    @Test
-    public void headersWithDifferentValuesShouldNotBeEquivalent() {
-        DefaultBinaryHeaders h1 = new DefaultBinaryHeaders();
-        h1.set(as("foo"), as("goo"));
-        h1.set(as("foo2"), as("goo2"));
-        h1.add(as("foo2"), as("goo3"));
-        h1.add(as("foo"), as("goo4"));
-
-        DefaultBinaryHeaders h2 = new DefaultBinaryHeaders();
-        h2.set(as("foo"), as("goo"));
-        h2.set(as("foo2"), as("goo2"));
-        h2.add(as("foo"), as("goo4"));
-
-        assertFalse(h1.equals(h2));
-        assertFalse(h2.equals(h1));
-        assertTrue(h2.equals(h2));
-        assertTrue(h1.equals(h1));
-    }
-
-    @Test
-    public void setAllShouldMergeHeaders() {
-        DefaultBinaryHeaders h1 = new DefaultBinaryHeaders();
-        h1.set(as("foo"), as("goo"));
-        h1.set(as("foo2"), as("goo2"));
-        h1.add(as("foo2"), as("goo3"));
-        h1.add(as("foo"), as("goo4"));
-
-        DefaultBinaryHeaders h2 = new DefaultBinaryHeaders();
-        h2.set(as("foo"), as("goo"));
-        h2.set(as("foo2"), as("goo2"));
-        h2.add(as("foo"), as("goo4"));
-
-        DefaultBinaryHeaders expected = new DefaultBinaryHeaders();
-        expected.set(as("foo"), as("goo"));
-        expected.set(as("foo2"), as("goo2"));
-        expected.add(as("foo2"), as("goo3"));
-        expected.add(as("foo"), as("goo4"));
-        expected.set(as("foo"), as("goo"));
-        expected.set(as("foo2"), as("goo2"));
-        expected.set(as("foo"), as("goo4"));
-
-        h1.setAll(h2);
-
-        assertEquals(expected, h1);
-    }
-
-    @Test
-    public void setShouldReplacePreviousValues() {
-        DefaultBinaryHeaders h1 = new DefaultBinaryHeaders();
-        h1.add(as("foo"), as("goo"));
-        h1.add(as("foo"), as("goo2"));
-        assertEquals(2, h1.size());
-
-        h1.set(as("foo"), as("goo3"));
-        assertEquals(1, h1.size());
-        List<ByteString> list = h1.getAll(as("foo"));
-        assertEquals(1, list.size());
-        assertEquals(as("goo3"), list.get(0));
+        h2.set(bs("name2"), bs("value2"));
+        assertNotEquals(h1, h2);
+        assertNotEquals(h2, h1);
+        assertEquals(h1, h1);
+        assertEquals(h2, h2);
     }
 
     @Test(expected = NoSuchElementException.class)
@@ -266,53 +296,138 @@ public class DefaultBinaryHeadersTest {
     }
 
     @Test
-    public void iterateHeadersShouldReturnAllValues() {
-        Set<String> headers = new HashSet<String>();
-        headers.add("a:1");
-        headers.add("a:2");
-        headers.add("a:3");
-        headers.add("b:1");
-        headers.add("b:2");
-        headers.add("c:1");
+    public void iteratorShouldReturnAllNameValuePairs() {
+        DefaultBinaryHeaders headers1 = new DefaultBinaryHeaders();
+        headers1.add(bs("name1"), bs("value1"), bs("value2"));
+        headers1.add(bs("name2"), bs("value3"));
+        headers1.add(bs("name3"), bs("value4"), bs("value5"), bs("value6"));
+        headers1.add(bs("name1"), bs("value7"), bs("value8"));
+        assertEquals(8, headers1.size());
 
-        // Build the headers from the input set.
-        DefaultBinaryHeaders h1 = new DefaultBinaryHeaders();
-        for (String header : headers) {
-            String[] parts = header.split(":");
-            h1.add(as(parts[0]), as(parts[1]));
+        DefaultBinaryHeaders headers2 = new DefaultBinaryHeaders();
+        for (Entry<ByteString, ByteString> entry : headers1) {
+            Object v = entry.getValue();
+            headers2.add(entry.getKey(), entry.getValue());
         }
 
-        // Now iterate through the headers, removing them from the original set.
-        for (Map.Entry<ByteString, ByteString> entry : h1) {
-            assertTrue(headers.remove(entry.getKey().toString() + ':' + entry.getValue().toString()));
-        }
-
-        // Make sure we removed them all.
-        assertTrue(headers.isEmpty());
+        assertEquals(headers1, headers2);
     }
 
     @Test
-    public void getAndRemoveShouldReturnFirstEntry() {
-        DefaultBinaryHeaders h1 = new DefaultBinaryHeaders();
-        h1.add(as("foo"), as("goo"));
-        h1.add(as("foo"), as("goo2"));
-        assertEquals(as("goo"), h1.getAndRemove(as("foo")));
-        assertEquals(0, h1.size());
-        List<ByteString> values = h1.getAll(as("foo"));
-        assertEquals(0, values.size());
+    public void iteratorSetValueShouldChangeHeaderValue() {
+        DefaultBinaryHeaders headers = new DefaultBinaryHeaders();
+        headers.add(bs("name1"), bs("value1"), bs("value2"), bs("value3"));
+        headers.add(bs("name2"), bs("value4"));
+        assertEquals(4, headers.size());
+
+        Iterator<Entry<ByteString, ByteString>> iter = headers.iterator();
+        while (iter.hasNext()) {
+            Entry<ByteString, ByteString> header = iter.next();
+            if (bs("name1").equals(header.getKey()) && bs("value2").equals(header.getValue())) {
+                header.setValue(bs("updatedvalue2"));
+                assertEquals(bs("updatedvalue2"), header.getValue());
+            }
+            if (bs("name1").equals(header.getKey()) && bs("value3").equals(header.getValue())) {
+                header.setValue(bs("updatedvalue3"));
+                assertEquals(bs("updatedvalue3"), header.getValue());
+            }
+        }
+
+        assertEquals(4, headers.size());
+        assertTrue(headers.contains(bs("name1"), bs("updatedvalue2")));
+        assertFalse(headers.contains(bs("name1"), bs("value2")));
+        assertTrue(headers.contains(bs("name1"), bs("updatedvalue3")));
+        assertFalse(headers.contains(bs("name1"), bs("value3")));
     }
 
-    private static byte[] randomBytes() {
-        byte[] data = new byte[100];
-        new Random().nextBytes(data);
-        return data;
+    @Test
+    public void getAllReturnsEmptyListForUnknownName() {
+        DefaultBinaryHeaders headers = new DefaultBinaryHeaders();
+        assertEquals(0, headers.getAll(bs("noname")).size());
     }
 
-    private AsciiString as(byte[] bytes) {
-        return new AsciiString(bytes);
+    @Test
+    public void canNotModifyTheListReturnedByGetAll() {
+        DefaultBinaryHeaders headers = new DefaultBinaryHeaders();
+        headers.add(bs("name1"), bs("value1"));
+        headers.add(bs("name2"), bs("value2"), bs("value3"));
+
+        // Test for single value names.
+        try {
+            headers.getAll(bs("name1")).add(bs("value"));
+            fail();
+        } catch (UnsupportedOperationException e) {
+            // for checkstyle
+        }
+        try {
+            headers.getAll(bs("name1")).remove(0);
+            fail();
+        } catch (UnsupportedOperationException e) {
+            // for checkstyle
+        }
+
+        // Test for multi value names.
+        try {
+            headers.getAll(bs("name2")).add(bs("value"));
+            fail();
+        } catch (UnsupportedOperationException e) {
+            // for checkstyle
+        }
+        try {
+            headers.getAll(bs("name2")).remove(0);
+            fail();
+        } catch (UnsupportedOperationException e) {
+            // for checkstyle
+        }
+
+        // Test for names that don't exist.
+        try {
+            headers.getAll(bs("name3")).add(bs("value"));
+            fail();
+        } catch (UnsupportedOperationException e) {
+            // for checkstyle
+        }
+        try {
+            headers.getAll(bs("name3")).remove(0);
+            fail();
+        } catch (UnsupportedOperationException e) {
+            // for checkstyle
+        }
     }
 
-    private AsciiString as(String value) {
-        return new AsciiString(value);
+    @Test
+    public void setHeadersShouldClearAndOverwrite() {
+        DefaultBinaryHeaders headers1 = new DefaultBinaryHeaders();
+        headers1.add(bs("name"), bs("value"));
+
+        DefaultBinaryHeaders headers2 = new DefaultBinaryHeaders();
+        headers2.add(bs("name"), bs("newvalue"));
+        headers2.add(bs("name1"), bs("value1"));
+
+        headers1.set(headers2);
+        assertEquals(headers1, headers2);
+    }
+
+    @Test
+    public void setAllHeadersShouldOnlyOverwriteHeaders() {
+        DefaultBinaryHeaders headers1 = new DefaultBinaryHeaders();
+        headers1.add(bs("name"), bs("value"));
+        headers1.add(bs("name1"), bs("value1"));
+
+        DefaultBinaryHeaders headers2 = new DefaultBinaryHeaders();
+        headers2.add(bs("name"), bs("newvalue"));
+        headers2.add(bs("name2"), bs("value2"));
+
+        DefaultBinaryHeaders expected = new DefaultBinaryHeaders();
+        expected.add(bs("name"), bs("newvalue"));
+        expected.add(bs("name1"), bs("value1"));
+        expected.add(bs("name2"), bs("value2"));
+
+        headers1.setAll(headers2);
+        assertEquals(headers1, expected);
+    }
+
+    private ByteString bs(String value) {
+        return new ByteString(value, CharsetUtil.US_ASCII);
     }
 }

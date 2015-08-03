@@ -107,15 +107,18 @@ public abstract class JdkSslContext extends SslContext {
                 "TLS_RSA_WITH_AES_128_CBC_SHA",
                 // AES256 requires JCE unlimited strength jurisdiction policy files.
                 "TLS_RSA_WITH_AES_256_CBC_SHA",
-                "SSL_RSA_WITH_3DES_EDE_CBC_SHA",
-                "SSL_RSA_WITH_RC4_128_SHA");
+                "SSL_RSA_WITH_3DES_EDE_CBC_SHA");
 
-        if (!ciphers.isEmpty()) {
-            DEFAULT_CIPHERS = Collections.unmodifiableList(ciphers);
-        } else {
+        if (ciphers.isEmpty()) {
             // Use the default from JDK as fallback.
-            DEFAULT_CIPHERS = Collections.unmodifiableList(Arrays.asList(engine.getEnabledCipherSuites()));
+            for (String cipher : engine.getEnabledCipherSuites()) {
+                if (cipher.contains("_RC4_")) {
+                    continue;
+                }
+                ciphers.add(cipher);
+            }
         }
+        DEFAULT_CIPHERS = Collections.unmodifiableList(ciphers);
 
         if (logger.isDebugEnabled()) {
             logger.debug("Default protocols (JDK): {} ", Arrays.asList(PROTOCOLS));

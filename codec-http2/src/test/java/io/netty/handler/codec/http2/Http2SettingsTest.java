@@ -65,14 +65,25 @@ public class Http2SettingsTest {
     @Test
     public void nonStandardSettingsShouldBeSet() {
         char key = 0;
-        settings.put(key, 123L);
+        settings.put(key, (Long) 123L);
         assertEquals(123L, (long) settings.get(key));
     }
 
     @Test
     public void settingsShouldSupportUnsignedShort() {
         char key = (char) (Short.MAX_VALUE + 1);
-        settings.put(key, 123L);
+        settings.put(key, (Long) 123L);
         assertEquals(123L, (long) settings.get(key));
+    }
+
+    @Test
+    public void boundarySettingsShouldBeSet() {
+        final long overIntegerMaxValue = 1L << 31;
+        settings.maxHeaderListSize((int) overIntegerMaxValue);
+        assertEquals(Integer.MAX_VALUE, (long) settings.maxHeaderListSize());
+
+        final long settingsValueUpperBound = (1L << 32) - 1L;
+        settings.maxHeaderListSize((int) settingsValueUpperBound);
+        assertEquals(Integer.MAX_VALUE, (long) settings.maxHeaderListSize());
     }
 }

@@ -192,7 +192,7 @@ public class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         ByteBuf buf = byteBufAllocator.buffer(4);
         buf.writeByte(getFixedHeaderByte1(message.fixedHeader()));
         buf.writeByte(2);
-        buf.writeByte(0);
+        buf.writeByte(message.variableHeader().isSessionPresent() ? 0x01 : 0x00);
         buf.writeByte(message.variableHeader().connectReturnCode().byteValue());
 
         return buf;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,8 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 /**
- * Utility classes for commonly used collections.
+ * Benchmarks for HTTP and HTTP/2 Headers.
  */
-package io.netty.util.collection;
+package io.netty.microbench.headers;

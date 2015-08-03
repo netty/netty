@@ -18,9 +18,10 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -88,9 +89,36 @@ public class @K@ObjectHashMapTest {
     }
 
     @Test
+    public void putNewMappingShouldSucceed_mapApi() {
+        Value v = new Value("v");
+        @O@ key = (@O@)(@k@) 1;
+        assertNull(map.put(key, v));
+        assertEquals(1, map.size());
+        assertTrue(map.containsKey(key));
+        assertTrue(map.containsValue(v));
+        assertEquals(v, map.get(key));
+    }
+
+    @Test
     public void putShouldReplaceValue() {
         Value v1 = new Value("v1");
         @k@ key = 1;
+        assertNull(map.put(key, v1));
+
+        // Replace the value.
+        Value v2 = new Value("v2");
+        assertSame(v1, map.put(key, v2));
+
+        assertEquals(1, map.size());
+        assertTrue(map.containsKey(key));
+        assertTrue(map.containsValue(v2));
+        assertEquals(v2, map.get(key));
+    }
+
+    @Test
+    public void putShouldReplaceValue_mapApi() {
+        Value v1 = new Value("v1");
+        @O@ key = (@O@)(@k@) 1;
         assertNull(map.put(key, v1));
 
         // Replace the value.
@@ -116,11 +144,32 @@ public class @K@ObjectHashMapTest {
     }
 
     @Test
+    public void putShouldGrowMap_mapApi() {
+        for (@k@ key = 0; key < (@k@) 255; ++key) {
+            @O@ okey = (@O@) key;
+            Value v = new Value(@O@.toString(key));
+            assertNull(map.put(okey, v));
+            assertEquals(key + 1, map.size());
+            assertTrue(map.containsKey(okey));
+            assertTrue(map.containsValue(v));
+            assertEquals(v, map.get(okey));
+        }
+    }
+
+    @Test
     public void negativeKeyShouldSucceed() {
         Value v = new Value("v");
         map.put((@k@) -3, v);
         assertEquals(1, map.size());
         assertEquals(v, map.get((@k@) -3));
+    }
+
+    @Test
+    public void negativeKeyShouldSucceed_mapApi() {
+        Value v = new Value("v");
+        map.put((@O@)(@k@) -3, v);
+        assertEquals(1, map.size());
+        assertEquals(v, map.get((@O@)(@k@) -3));
     }
 
     @Test
@@ -130,9 +179,23 @@ public class @K@ObjectHashMapTest {
     }
 
     @Test
+    public void removeMissingValueShouldReturnNull_mapApi() {
+        assertNull(map.remove((@O@)(@k@) 1));
+        assertEquals(0, map.size());
+    }
+
+    @Test
     public void removeShouldReturnPreviousValue() {
         Value v = new Value("v");
         @k@ key = 1;
+        map.put(key, v);
+        assertSame(v, map.remove(key));
+    }
+
+    @Test
+    public void removeShouldReturnPreviousValue_mapApi() {
+        Value v = new Value("v");
+        @O@ key = (@O@)(@k@) 1;
         map.put(key, v);
         assertSame(v, map.remove(key));
     }
@@ -161,23 +224,83 @@ public class @K@ObjectHashMapTest {
     }
 
     @Test
+    public void noFreeSlotsShouldRehash_mapApi() {
+        for (@k@ i = 0; i < 10; ++i) {
+            map.put(i, new Value(@O@.toString(i)));
+            // Now mark it as REMOVED so that size won't cause the rehash.
+            map.remove((@O@) i);
+            assertEquals(0, map.size());
+        }
+
+        // Now add an entry to force the rehash since no FREE slots are available in the map.
+        Value v = new Value("v");
+        @O@ key = (@O@)(@k@) 1;
+        map.put(key, v);
+        assertEquals(1, map.size());
+        assertSame(v, map.get(key));
+    }
+
+    @Test
     public void putAllShouldSucceed() {
+        @K@ObjectHashMap<Value> other = new @K@ObjectHashMap<Value>();
+
         @k@ k1 = 1;
         @k@ k2 = 2;
         @k@ k3 = 3;
         Value v1 = new Value("v1");
         Value v2 = new Value("v2");
         Value v3 = new Value("v3");
-        map.put(k1, v1);
-        map.put(k2, v2);
-        map.put(k3, v3);
+        other.put(k1, v1);
+        other.put(k2, v2);
+        other.put(k3, v3);
 
-        @K@ObjectHashMap<Value> map2 = new @K@ObjectHashMap<Value>();
-        map2.putAll(map);
-        assertEquals(3, map2.size());
-        assertSame(v1, map2.get(k1));
-        assertSame(v2, map2.get(k2));
-        assertSame(v3, map2.get(k3));
+        map.putAll(other);
+        assertEquals(3, map.size());
+        assertSame(v1, map.get(k1));
+        assertSame(v2, map.get(k2));
+        assertSame(v3, map.get(k3));
+    }
+
+    @Test
+    public void putAllShouldSucceed_mapApi() {
+        @K@ObjectHashMap<Value> other = new @K@ObjectHashMap<Value>();
+
+        @O@ k1 = (@O@)(@k@) 1;
+        @O@ k2 = (@O@)(@k@) 2;
+        @O@ k3 = (@O@)(@k@) 3;
+        Value v1 = new Value("v1");
+        Value v2 = new Value("v2");
+        Value v3 = new Value("v3");
+        other.put(k1, v1);
+        other.put(k2, v2);
+        other.put(k3, v3);
+
+        map.putAll(other);
+        assertEquals(3, map.size());
+        assertSame(v1, map.get(k1));
+        assertSame(v2, map.get(k2));
+        assertSame(v3, map.get(k3));
+    }
+
+    @Test
+    public void putAllWithJavaMapShouldSucceed_mapApi() {
+        Map<@O@, Value> other = new HashMap<@O@, Value>();
+
+        @O@ k1 = (@O@)(@k@) 1;
+        @O@ k2 = (@O@)(@k@) 2;
+        @O@ k3 = (@O@)(@k@) 3;
+        Value v1 = new Value("v1");
+        Value v2 = new Value("v2");
+        Value v3 = new Value("v3");
+        other.put(k1, v1);
+        other.put(k2, v2);
+        other.put(k3, v3);
+
+        map.putAll(other);
+        assertEquals(3, map.size());
+        assertSame(v1, map.get(k1));
+        assertSame(v2, map.get(k2));
+        assertSame(v3, map.get(k3));
     }
 
     @Test
@@ -202,11 +325,28 @@ public class @K@ObjectHashMapTest {
     }
 
     @Test
+    public void containsValueShouldFindNull_mapApi() {
+        map.put((@O@)(@k@) 1, new Value("v1"));
+        map.put((@O@)(@k@) 2, null);
+        map.put((@O@)(@k@) 3, new Value("v2"));
+        assertTrue(map.containsValue(null));
+    }
+
+    @Test
     public void containsValueShouldFindInstance() {
         Value v = new Value("v1");
         map.put((@k@) 1, new Value("v2"));
         map.put((@k@) 2, new Value("v3"));
         map.put((@k@) 3, v);
+        assertTrue(map.containsValue(v));
+    }
+
+    @Test
+    public void containsValueShouldFindInstance_mapApi() {
+        Value v = new Value("v1");
+        map.put((@O@)(@k@) 1, new Value("v2"));
+        map.put((@O@)(@k@) 2, new Value("v3"));
+        map.put((@O@)(@k@) 3, v);
         assertTrue(map.containsValue(v));
     }
 
@@ -219,10 +359,26 @@ public class @K@ObjectHashMapTest {
     }
 
     @Test
+    public void containsValueShouldFindEquivalentValue_mapApi() {
+        map.put((@O@)(@k@) 1, new Value("v1"));
+        map.put((@O@)(@k@) 2, new Value("v2"));
+        map.put((@O@)(@k@) 3, new Value("v3"));
+        assertTrue(map.containsValue(new Value("v2")));
+    }
+
+    @Test
     public void containsValueNotFindMissingValue() {
         map.put((@k@) 1, new Value("v1"));
         map.put((@k@) 2, new Value("v2"));
         map.put((@k@) 3, new Value("v3"));
+        assertFalse(map.containsValue(new Value("v4")));
+    }
+
+    @Test
+    public void containsValueNotFindMissingValue_mapApi() {
+        map.put((@O@)(@k@) 1, new Value("v1"));
+        map.put((@O@)(@k@) 2, new Value("v2"));
+        map.put((@O@)(@k@) 3, new Value("v3"));
         assertFalse(map.containsValue(new Value("v4")));
     }
 
@@ -241,8 +397,8 @@ public class @K@ObjectHashMapTest {
         map.remove(k4);
 
         Set<@O@> found = new HashSet<@O@>();
-        for (@K@ObjectMap.Entry<Value> entry : map.entries()) {
-            assertTrue(found.add(entry.key()));
+        for (@K@ObjectMap.Entry<@O@, Value> entry : map.entrySet()) {
+            assertTrue(found.add(entry.getKey()));
         }
         assertEquals(3, found.size());
         assertTrue(found.contains(k1));
@@ -264,8 +420,8 @@ public class @K@ObjectHashMapTest {
         map.put(k4, new Value("v4"));
         map.remove(k4);
 
-        @k@[] keys = map.keys();
-        assertEquals(3, keys.length);
+        Set<@O@> keys = map.keySet();
+        assertEquals(3, keys.size());
 
         Set<@O@> expected = new HashSet<@O@>();
         expected.add(k1);
@@ -298,25 +454,11 @@ public class @K@ObjectHashMapTest {
 
         // Ensure values() return all values.
         Set<Value> expected = new HashSet<Value>();
-        Set<Value> actual = new HashSet<Value>();
-
         expected.add(v1);
         expected.add(v2);
         expected.add(v3);
 
-        Value[] valueArray = map.values(Value.class);
-        assertEquals(3, valueArray.length);
-        for (Value value : valueArray) {
-            assertTrue(actual.add(value));
-        }
-        assertEquals(expected, actual);
-        actual.clear();
-
-        Collection<Value> valueCollection = map.values();
-        assertEquals(3, valueCollection.size());
-        for (Value value : valueCollection) {
-            assertTrue(actual.add(value));
-        }
+        Set<Value> actual = new HashSet<Value>(map.values());
         assertEquals(expected, actual);
     }
 
@@ -327,6 +469,18 @@ public class @K@ObjectHashMapTest {
                 @K@ObjectHashMap<String> map = new @K@ObjectHashMap<String>(sz);
                 for (int i = 0; i < 100; ++i) {
                     map.put((@k@)(i * mod), "");
+                }
+            }
+        }
+    }
+
+    @Test
+    public void mapShouldSupportHashingConflicts_mapApi() {
+        for (int mod = 0; mod < 10; ++mod) {
+            for (int sz = 1; sz <= 101; sz += 2) {
+                @K@ObjectHashMap<String> map = new @K@ObjectHashMap<String>(sz);
+                for (int i = 0; i < 100; ++i) {
+                    map.put((@O@)(@k@)(i * mod), "");
                 }
             }
         }
@@ -345,23 +499,27 @@ public class @K@ObjectHashMapTest {
         assertEquals(map1.hashCode(), map2.hashCode());
         assertEquals(map1, map2);
         // Remove one "middle" element, maps should now be non-equals.
-        @k@[] keys = map1.keys();
-        map2.remove(keys[50]);
+        Set<@O@> keys = map1.keySet();
+        @O@ removed = null;
+        Iterator<@O@> iter = keys.iterator();
+        for (int ix = 0; iter.hasNext() && ix < 50; ++ix) {
+            removed = iter.next();
+        }
+        map2.remove(removed);
         assertFalse(map1.equals(map2));
         // Put it back; will likely be in a different position, but maps will be equal again.
-        map2.put(keys[50], @O@.valueOf(map1.keys()[50]));
+        map2.put(removed, removed);
         assertEquals(map1, map2);
         assertEquals(map1.hashCode(), map2.hashCode());
         // Make map2 have one extra element, will be non-equal.
-        map2.put((@k@) 100, (@k@) 100);
+        map2.put((@k@) 100, (@O@)(@k@) 100);
         assertFalse(map1.equals(map2));
         // Rebuild map2 with elements in a different order, again the maps should be equal.
         // (These tests with same elements in different order also show that the hashCode
         // function does not depend on the internal ordering of entries.)
         map2.clear();
-        Arrays.sort(keys);
-        for (@k@ key : keys) {
-            map2.put(key, @O@.valueOf(key));
+        for (@O@ key : map1.keySet()) {
+            map2.put(key, key);
         }
         assertEquals(map1.hashCode(), map2.hashCode());
         assertEquals(map1, map2);
@@ -424,14 +582,14 @@ public class @K@ObjectHashMapTest {
         assertEquals(goodMap.size(), map.size());
         @O@[] goodKeys = goodMap.keySet().toArray(new @O@[goodMap.size()]);
         Arrays.sort(goodKeys);
-        @k@ [] keys = map.keys();
+        @O@[] keys = map.keySet().toArray(new @O@[map.size()]);
         Arrays.sort(keys);
         for (int i = 0; i < goodKeys.length; ++i) {
-            assertEquals((@k@) goodKeys[i], keys[i]);
+            assertEquals(goodKeys[i], keys[i]);
         }
 
         // Finally drain the map.
-        for (@k@ key : map.keys()) {
+        for (@k@ key : keys) {
             assertEquals(goodMap.remove(key), map.remove(key));
         }
         assertTrue(map.isEmpty());

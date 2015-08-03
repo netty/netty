@@ -32,11 +32,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -44,7 +44,9 @@ import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.http2.StreamBufferingEncoder.Http2ChannelClosedException;
 import io.netty.handler.codec.http2.StreamBufferingEncoder.Http2GoAwayException;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -72,6 +74,12 @@ public class StreamBufferingEncoderTest {
 
     @Mock
     private Channel channel;
+
+    @Mock
+    private ChannelConfig config;
+
+    @Mock
+    private EventExecutor executor;
 
     @Mock
     private ChannelPromise promise;
@@ -110,8 +118,15 @@ public class StreamBufferingEncoderTest {
         when(ctx.channel()).thenReturn(channel);
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(channel.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
+        when(executor.inEventLoop()).thenReturn(true);
         when(ctx.newPromise()).thenReturn(promise);
+        when(ctx.executor()).thenReturn(executor);
+        when(promise.channel()).thenReturn(channel);
         when(channel.isActive()).thenReturn(false);
+        when(channel.config()).thenReturn(config);
+        when(channel.isWritable()).thenReturn(true);
+        when(channel.bytesBeforeUnwritable()).thenReturn(Long.MAX_VALUE);
+        when(config.getWriteBufferHighWaterMark()).thenReturn(Integer.MAX_VALUE);
         handler.handlerAdded(ctx);
     }
 
@@ -189,7 +204,7 @@ public class StreamBufferingEncoderTest {
     public void bufferingNewStreamFailsAfterGoAwayReceived() {
         encoder.writeSettingsAck(ctx, promise);
         setMaxConcurrentStreams(0);
-        connection.goAwayReceived(1, 8, null);
+        connection.goAwayReceived(1, 8, EMPTY_BUFFER);
 
         promise = mock(ChannelPromise.class);
         encoderWriteHeaders(3, promise);

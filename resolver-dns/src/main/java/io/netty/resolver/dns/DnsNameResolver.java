@@ -38,6 +38,7 @@ import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.resolver.NameResolver;
 import io.netty.resolver.SimpleNameResolver;
+import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.concurrent.Future;
@@ -50,6 +51,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.IDN;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.ArrayList;
@@ -638,12 +640,18 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
 
     @Override
     protected void doResolve(InetSocketAddress unresolvedAddress, Promise<InetSocketAddress> promise) throws Exception {
-        final String hostname = IDN.toASCII(hostname(unresolvedAddress));
-        final int port = unresolvedAddress.getPort();
+        byte[] bytes = NetUtil.createByteArrayFromIpAddressString(unresolvedAddress.getHostName());
+        if (bytes == null) {
+            final String hostname = IDN.toASCII(hostname(unresolvedAddress));
+            final int port = unresolvedAddress.getPort();
 
-        final DnsNameResolverContext ctx = new DnsNameResolverContext(this, hostname, port, promise);
+            final DnsNameResolverContext ctx = new DnsNameResolverContext(this, hostname, port, promise);
 
-        ctx.resolve();
+            ctx.resolve();
+        } else {
+            // The unresolvedAddress was created via a String that contains an ipaddress.
+            promise.setSuccess(new InetSocketAddress(InetAddress.getByAddress(bytes), unresolvedAddress.getPort()));
+        }
     }
 
     private static String hostname(InetSocketAddress addr) {

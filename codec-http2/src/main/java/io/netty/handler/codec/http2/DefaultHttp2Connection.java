@@ -34,9 +34,9 @@ import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http2.Http2Stream.State;
+import io.netty.util.collection.IntCollections;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
-import io.netty.util.collection.PrimitiveCollections;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -292,7 +292,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         private State state;
         private short weight = DEFAULT_PRIORITY_WEIGHT;
         private DefaultStream parent;
-        private IntObjectMap<DefaultStream> children = PrimitiveCollections.emptyIntObjectMap();
+        private IntObjectMap<DefaultStream> children = IntCollections.emptyMap();
         private int totalChildWeights;
         private int prioritizableForTree = 1;
         private boolean resetSent;
@@ -387,8 +387,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public Http2Stream forEachChild(Http2StreamVisitor visitor) throws Http2Exception {
-            for (IntObjectHashMap.Entry<DefaultStream> entry : children.entries()) {
-                Http2Stream stream = entry.value();
+            for (DefaultStream stream : children.values()) {
                 if (!visitor.visit(stream)) {
                     return stream;
                 }
@@ -540,7 +539,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         private void initChildrenIfEmpty() {
-            if (children == PrimitiveCollections.<DefaultStream>emptyIntObjectMap()) {
+            if (children == IntCollections.<DefaultStream>emptyMap()) {
                 initChildren();
             }
         }

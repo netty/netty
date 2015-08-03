@@ -107,8 +107,7 @@ public abstract class OpenSslContext extends SslContext {
                 "AES128-GCM-SHA256",
                 "AES128-SHA",
                 "AES256-SHA",
-                "DES-CBC3-SHA",
-                "RC4-SHA");
+                "DES-CBC3-SHA");
         DEFAULT_CIPHERS = Collections.unmodifiableList(ciphers);
 
         if (logger.isDebugEnabled()) {

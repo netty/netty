@@ -117,7 +117,7 @@ public final class FixedChannelPool extends SimpleChannelPool {
      *                              be failed.
      */
     public FixedChannelPool(Bootstrap bootstrap,
-                            ChannelPoolHandler  handler,
+                            ChannelPoolHandler handler,
                             ChannelHealthChecker healthCheck, AcquireTimeoutAction action,
                             final long acquireTimeoutMillis,
                             int maxConnections, int maxPendingAcquires) {
@@ -153,7 +153,7 @@ public final class FixedChannelPool extends SimpleChannelPool {
                     public void onTimeout(AcquireTask task) {
                         // Increment the acquire count and delegate to super to actually acquire a Channel which will
                         // create a new connetion.
-                        ++acquiredChannelCount;
+                        task.acquired();
 
                         FixedChannelPool.super.acquire(task.promise);
                     }
@@ -191,14 +191,14 @@ public final class FixedChannelPool extends SimpleChannelPool {
         assert executor.inEventLoop();
 
         if (acquiredChannelCount < maxConnections) {
-            ++acquiredChannelCount;
-
-            assert acquiredChannelCount > 0;
+            assert acquiredChannelCount >= 0;
 
             // We need to create a new promise as we need to ensure the AcquireListener runs in the correct
             // EventLoop
             Promise<Channel> p = executor.newPromise();
-            p.addListener(new AcquireListener(promise));
+            AcquireListener l = new AcquireListener(promise);
+            l.acquired();
+            p.addListener(l);
             super.acquire(p);
         } else {
             if (pendingAcquireCount >= maxPendingAcquires) {
@@ -272,7 +272,7 @@ public final class FixedChannelPool extends SimpleChannelPool {
             }
 
             --pendingAcquireCount;
-            ++acquiredChannelCount;
+            task.acquired();
 
             super.acquire(task.promise);
         }
@@ -322,6 +322,7 @@ public final class FixedChannelPool extends SimpleChannelPool {
 
     private class AcquireListener implements FutureListener<Channel> {
         private final Promise<Channel> originalPromise;
+        protected boolean acquired;
 
         AcquireListener(Promise<Channel> originalPromise) {
             this.originalPromise = originalPromise;
@@ -334,10 +335,22 @@ public final class FixedChannelPool extends SimpleChannelPool {
             if (future.isSuccess()) {
                 originalPromise.setSuccess(future.getNow());
             } else {
-                // Something went wrong try to run pending acquire tasks.
-                decrementAndRunTaskQueue();
+                if (acquired) {
+                    decrementAndRunTaskQueue();
+                } else {
+                    runTaskQueue();
+                }
+
                 originalPromise.setFailure(future.cause());
             }
+        }
+
+        public void acquired() {
+            if (acquired) {
+                return;
+            }
+            acquiredChannelCount++;
+            acquired = true;
         }
     }
 

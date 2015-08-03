@@ -25,17 +25,6 @@ package io.netty.handler.codec;
  * .
  */
 public interface TextHeaders extends ConvertibleHeaders<CharSequence, String> {
-    /**
-     * A visitor that helps reduce GC pressure while iterating over a collection of {@link Headers}.
-     */
-    interface EntryVisitor extends Headers.EntryVisitor<CharSequence> {
-    }
-
-    /**
-     * A visitor that helps reduce GC pressure while iterating over a collection of {@link Headers}.
-     */
-    interface NameVisitor extends Headers.NameVisitor<CharSequence> {
-    }
 
     /**
      * Returns {@code true} if a header with the name and value exists.
@@ -44,14 +33,6 @@ public interface TextHeaders extends ConvertibleHeaders<CharSequence, String> {
      * @return {@code true} if it contains it {@code false} otherwise
      */
     boolean contains(CharSequence name, CharSequence value, boolean ignoreCase);
-
-    /**
-     * Returns {@code true} if a header with the name and value exists.
-     * @param name the header name
-     * @param value the header value
-     * @return {@code true} if it contains it {@code false} otherwise
-     */
-    boolean containsObject(CharSequence name, Object value, boolean ignoreCase);
 
     @Override
     TextHeaders add(CharSequence name, CharSequence value);

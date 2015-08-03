@@ -26,7 +26,6 @@ import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
@@ -35,6 +34,9 @@ import io.netty.util.internal.PlatformDependent;
 
 /**
  * Basic implementation of {@link Http2LocalFlowController}.
+ * <p>
+ * This class is <strong>NOT</strong> thread safe. The assumption is all methods must be invoked from a single thread.
+ * Typically this thread is the event loop thread for the {@link ChannelHandlerContext} managed by this class.
  */
 public class DefaultHttp2LocalFlowController implements Http2LocalFlowController {
     /**
@@ -47,8 +49,8 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     private final Http2FrameWriter frameWriter;
     private final Http2Connection.PropertyKey stateKey;
     private ChannelHandlerContext ctx;
-    private volatile float windowUpdateRatio;
-    private volatile int initialWindowSize = DEFAULT_WINDOW_SIZE;
+    private float windowUpdateRatio;
+    private int initialWindowSize = DEFAULT_WINDOW_SIZE;
 
     public DefaultHttp2LocalFlowController(Http2Connection connection, Http2FrameWriter frameWriter) {
         this(connection, frameWriter, DEFAULT_WINDOW_UPDATE_RATIO);
@@ -89,8 +91,8 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
                     FlowState state = state(stream);
                     int unconsumedBytes = state.unconsumedBytes();
                     if (ctx != null && unconsumedBytes > 0) {
-                        connectionState().consumeBytes(ctx, unconsumedBytes);
-                        state.consumeBytes(ctx, unconsumedBytes);
+                        connectionState().consumeBytes(unconsumedBytes);
+                        state.consumeBytes(unconsumedBytes);
                     }
                 } catch (Http2Exception e) {
                     PlatformDependent.throwException(e);
@@ -105,7 +107,13 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     }
 
     @Override
+    public void channelHandlerContext(ChannelHandlerContext ctx) {
+        this.ctx = ctx;
+    }
+
+    @Override
     public void initialWindowSize(int newWindowSize) throws Http2Exception {
+        assert ctx == null || ctx.executor().inEventLoop();
         int delta = newWindowSize - initialWindowSize;
         initialWindowSize = newWindowSize;
 
@@ -130,32 +138,34 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     }
 
     @Override
-    public void incrementWindowSize(ChannelHandlerContext ctx, Http2Stream stream, int delta) throws Http2Exception {
-        checkNotNull(ctx, "ctx");
+    public void incrementWindowSize(Http2Stream stream, int delta) throws Http2Exception {
+        assert ctx != null && ctx.executor().inEventLoop();
         FlowState state = state(stream);
         // Just add the delta to the stream-specific initial window size so that the next time the window
         // expands it will grow to the new initial size.
         state.incrementInitialStreamWindow(delta);
-        state.writeWindowUpdateIfNeeded(ctx);
+        state.writeWindowUpdateIfNeeded();
     }
 
     @Override
-    public boolean consumeBytes(ChannelHandlerContext ctx, Http2Stream stream, int numBytes)
-            throws Http2Exception {
+    public boolean consumeBytes(Http2Stream stream, int numBytes) throws Http2Exception {
+        assert ctx != null && ctx.executor().inEventLoop();
         if (numBytes < 0) {
             throw new IllegalArgumentException("numBytes must not be negative");
         }
         if (numBytes == 0) {
             return false;
         }
+
         // Streams automatically consume all remaining bytes when they are closed, so just ignore
         // if already closed.
         if (stream != null && !isClosed(stream)) {
             if (stream.id() == CONNECTION_STREAM_ID) {
                 throw new UnsupportedOperationException("Returning bytes for the connection window is not supported");
             }
-            boolean windowUpdateSent = connectionState().consumeBytes(ctx, numBytes);
-            windowUpdateSent |= state(stream).consumeBytes(ctx, numBytes);
+
+            boolean windowUpdateSent = connectionState().consumeBytes(numBytes);
+            windowUpdateSent |= state(stream).consumeBytes(numBytes);
             return windowUpdateSent;
         }
         return false;
@@ -180,6 +190,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
      * @throws IllegalArgumentException If the ratio is out of bounds (0, 1).
      */
     public void windowUpdateRatio(float ratio) {
+        assert ctx == null || ctx.executor().inEventLoop();
         checkValidRatio(ratio);
         windowUpdateRatio = ratio;
     }
@@ -202,16 +213,16 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
      * initial {@code SETTINGS} frame is sent before this is called. It would
      * be considered a {@link Http2Error#PROTOCOL_ERROR} if a {@code WINDOW_UPDATE}
      * was generated by this method before the initial {@code SETTINGS} frame is sent.
-     * @param ctx the context to use if a {@code WINDOW_UPDATE} is determined necessary.
      * @param stream the stream for which {@code ratio} applies to.
      * @param ratio the ratio to use when checking if a {@code WINDOW_UPDATE} is determined necessary.
      * @throws Http2Exception If a protocol-error occurs while generating {@code WINDOW_UPDATE} frames
      */
-    public void windowUpdateRatio(ChannelHandlerContext ctx, Http2Stream stream, float ratio) throws Http2Exception {
+    public void windowUpdateRatio(Http2Stream stream, float ratio) throws Http2Exception {
+        assert ctx != null && ctx.executor().inEventLoop();
         checkValidRatio(ratio);
         FlowState state = state(stream);
         state.windowUpdateRatio(ratio);
-        state.writeWindowUpdateIfNeeded(ctx);
+        state.writeWindowUpdateIfNeeded();
     }
 
     /**
@@ -225,9 +236,9 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     }
 
     @Override
-    public void receiveFlowControlledFrame(ChannelHandlerContext ctx, Http2Stream stream, ByteBuf data,
-            int padding, boolean endOfStream) throws Http2Exception {
-        this.ctx = checkNotNull(ctx, "ctx");
+    public void receiveFlowControlledFrame(Http2Stream stream, ByteBuf data, int padding,
+            boolean endOfStream) throws Http2Exception {
+        assert ctx != null && ctx.executor().inEventLoop();
         int dataLength = data.readableBytes() + padding;
 
         // Apply the connection-level flow control
@@ -241,7 +252,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
             state.receiveFlowControlledFrame(dataLength);
         } else if (dataLength > 0) {
             // Immediately consume the bytes for the connection window.
-            connectionState.consumeBytes(ctx, dataLength);
+            connectionState.consumeBytes(dataLength);
         }
     }
 
@@ -281,14 +292,14 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
          * This is what is used to determine how many bytes need to be returned relative to {@link #processedWindow}.
          * Each stream has their own initial window size.
          */
-        private volatile int initialStreamWindowSize;
+        private int initialStreamWindowSize;
 
         /**
          * This is used to determine when {@link #processedWindow} is sufficiently far away from
          * {@link #initialStreamWindowSize} such that a {@code WINDOW_UPDATE} should be sent.
          * Each stream has their own window update ratio.
          */
-        private volatile float streamWindowUpdateRatio;
+        private float streamWindowUpdateRatio;
 
         private int lowerBound;
         private boolean endOfStream;
@@ -301,6 +312,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
 
         @Override
         public void window(int initialWindowSize) {
+            assert ctx == null || ctx.executor().inEventLoop();
             window = processedWindow = initialStreamWindowSize = initialWindowSize;
         }
 
@@ -326,6 +338,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
 
         @Override
         public void windowUpdateRatio(float ratio) {
+            assert ctx == null || ctx.executor().inEventLoop();
             streamWindowUpdateRatio = ratio;
         }
 
@@ -378,10 +391,10 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         }
 
         @Override
-        public boolean consumeBytes(ChannelHandlerContext ctx, int numBytes) throws Http2Exception {
+        public boolean consumeBytes(int numBytes) throws Http2Exception {
             // Return the bytes processed and update the window.
             returnProcessedBytes(numBytes);
-            return writeWindowUpdateIfNeeded(ctx);
+            return writeWindowUpdateIfNeeded();
         }
 
         @Override
@@ -390,14 +403,14 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         }
 
         @Override
-        public boolean writeWindowUpdateIfNeeded(ChannelHandlerContext ctx) throws Http2Exception {
+        public boolean writeWindowUpdateIfNeeded() throws Http2Exception {
             if (endOfStream || initialStreamWindowSize <= 0) {
                 return false;
             }
 
             int threshold = (int) (initialStreamWindowSize * streamWindowUpdateRatio);
             if (processedWindow <= threshold) {
-                writeWindowUpdate(ctx);
+                writeWindowUpdate();
                 return true;
             }
             return false;
@@ -407,7 +420,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
          * Called to perform a window update for this stream (or connection). Updates the window size back
          * to the size of the initial window and sends a window update frame to the remote endpoint.
          */
-        private void writeWindowUpdate(ChannelHandlerContext ctx) throws Http2Exception {
+        private void writeWindowUpdate() throws Http2Exception {
             // Expand the window for this stream back to the size of the initial window.
             int deltaWindowSize = initialStreamWindowSize - processedWindow;
             try {
@@ -450,12 +463,12 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         }
 
         @Override
-        public boolean writeWindowUpdateIfNeeded(ChannelHandlerContext ctx) throws Http2Exception {
+        public boolean writeWindowUpdateIfNeeded() throws Http2Exception {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public boolean consumeBytes(ChannelHandlerContext ctx, int numBytes) throws Http2Exception {
+        public boolean consumeBytes(int numBytes) throws Http2Exception {
             return false;
         }
 
@@ -513,18 +526,17 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
          *
          * @return true if {@code WINDOW_UPDATE} was written, false otherwise.
          */
-        boolean writeWindowUpdateIfNeeded(ChannelHandlerContext ctx) throws Http2Exception;
+        boolean writeWindowUpdateIfNeeded() throws Http2Exception;
 
         /**
          * Indicates that the application has consumed {@code numBytes} from the connection or stream and is
          * ready to receive more data.
          *
-         * @param ctx the channel handler context to use when sending a {@code WINDOW_UPDATE} if appropriate
          * @param numBytes the number of bytes to be returned to the flow control window.
          * @return true if {@code WINDOW_UPDATE} was written, false otherwise.
          * @throws Http2Exception
          */
-        boolean consumeBytes(ChannelHandlerContext ctx, int numBytes) throws Http2Exception;
+        boolean consumeBytes(int numBytes) throws Http2Exception;
 
         int unconsumedBytes();
 

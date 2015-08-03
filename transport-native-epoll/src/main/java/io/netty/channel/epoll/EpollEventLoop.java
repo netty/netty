@@ -28,6 +28,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -291,8 +292,8 @@ final class EpollEventLoop extends SingleThreadEventLoop {
         }
         Collection<AbstractEpollChannel> array = new ArrayList<AbstractEpollChannel>(channels.size());
 
-        for (IntObjectMap.Entry<AbstractEpollChannel> entry: channels.entries()) {
-            array.add(entry.value());
+        for (AbstractEpollChannel channel: channels.values()) {
+            array.add(channel);
         }
 
         for (AbstractEpollChannel ch: array) {

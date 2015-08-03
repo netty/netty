@@ -31,8 +31,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-
+import io.netty.util.concurrent.EventExecutor;
 import junit.framework.AssertionFailedError;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -56,6 +57,9 @@ public class DefaultHttp2LocalFlowControllerTest {
     private ChannelHandlerContext ctx;
 
     @Mock
+    private EventExecutor executor;
+
+    @Mock
     private ChannelPromise promise;
 
     private DefaultHttp2Connection connection;
@@ -74,6 +78,9 @@ public class DefaultHttp2LocalFlowControllerTest {
         connection.local().flowController(controller);
 
         connection.local().createStream(STREAM_ID, false);
+        controller.channelHandlerContext(ctx);
+        when(ctx.executor()).thenReturn(executor);
+        when(executor.inEventLoop()).thenReturn(true);
     }
 
     @Test
@@ -230,7 +237,7 @@ public class DefaultHttp2LocalFlowControllerTest {
 
     @Test
     public void consumeBytesForNullStreamShouldIgnore() throws Http2Exception {
-        controller.consumeBytes(ctx, null, 10);
+        controller.consumeBytes(null, 10);
         assertEquals(0, controller.unconsumedBytes(connection.connectionStream()));
     }
 
@@ -249,23 +256,23 @@ public class DefaultHttp2LocalFlowControllerTest {
 
     @Test
     public void consumeBytesForZeroNumBytesShouldIgnore() throws Http2Exception {
-        assertFalse(controller.consumeBytes(ctx, connection.stream(STREAM_ID), 0));
+        assertFalse(controller.consumeBytes(connection.stream(STREAM_ID), 0));
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void consumeBytesForNegativeNumBytesShouldFail() throws Http2Exception {
-        assertFalse(controller.consumeBytes(ctx, connection.stream(STREAM_ID), -1));
+        assertFalse(controller.consumeBytes(connection.stream(STREAM_ID), -1));
     }
 
     private void testRatio(float ratio, int newDefaultWindowSize, int newStreamId, boolean setStreamRatio)
             throws Http2Exception {
         int delta = newDefaultWindowSize - DEFAULT_WINDOW_SIZE;
-        controller.incrementWindowSize(ctx, stream(0), delta);
+        controller.incrementWindowSize(stream(0), delta);
         Http2Stream stream = connection.local().createStream(newStreamId, false);
         if (setStreamRatio) {
-            controller.windowUpdateRatio(ctx, stream, ratio);
+            controller.windowUpdateRatio(stream, ratio);
         }
-        controller.incrementWindowSize(ctx, stream, delta);
+        controller.incrementWindowSize(stream, delta);
         reset(frameWriter);
         try {
             int data1 = (int) (newDefaultWindowSize * ratio) + 1;
@@ -305,7 +312,7 @@ public class DefaultHttp2LocalFlowControllerTest {
                                             boolean endOfStream) throws Http2Exception {
         final ByteBuf buf = dummyData(dataSize);
         try {
-            controller.receiveFlowControlledFrame(ctx, stream, buf, padding, endOfStream);
+            controller.receiveFlowControlledFrame(stream, buf, padding, endOfStream);
         } finally {
             buf.release();
         }
@@ -318,7 +325,7 @@ public class DefaultHttp2LocalFlowControllerTest {
     }
 
     private boolean consumeBytes(int streamId, int numBytes) throws Http2Exception {
-        return controller.consumeBytes(ctx, stream(streamId), numBytes);
+        return controller.consumeBytes(stream(streamId), numBytes);
     }
 
     private void verifyWindowUpdateSent(int streamId, int windowSizeIncrement) {

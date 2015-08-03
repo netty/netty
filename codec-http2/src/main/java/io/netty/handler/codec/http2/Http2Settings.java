@@ -46,6 +46,8 @@ public final class Http2Settings extends CharObjectHashMap<Long> {
      * the standard settings will not cause the map capacity to change.
      */
     private static final int DEFAULT_CAPACITY = (int) (NUM_STANDARD_SETTINGS / DEFAULT_LOAD_FACTOR) + 1;
+    private static final Long FALSE = 0L;
+    private static final Long TRUE = 1L;
 
     public Http2Settings() {
         this(DEFAULT_CAPACITY);
@@ -84,7 +86,7 @@ public final class Http2Settings extends CharObjectHashMap<Long> {
      * @throws IllegalArgumentException if verification of the setting fails.
      */
     public Http2Settings headerTableSize(int value) {
-        put(SETTINGS_HEADER_TABLE_SIZE, (long) value);
+        put(SETTINGS_HEADER_TABLE_SIZE, Long.valueOf(value));
         return this;
     }
 
@@ -96,14 +98,14 @@ public final class Http2Settings extends CharObjectHashMap<Long> {
         if (value == null) {
             return null;
         }
-        return value != 0L;
+        return TRUE.equals(value);
     }
 
     /**
      * Sets the {@code SETTINGS_ENABLE_PUSH} value.
      */
     public Http2Settings pushEnabled(boolean enabled) {
-        put(SETTINGS_ENABLE_PUSH, enabled ? 1L : 0L);
+        put(SETTINGS_ENABLE_PUSH, enabled ? TRUE : FALSE);
         return this;
     }
 
@@ -120,7 +122,7 @@ public final class Http2Settings extends CharObjectHashMap<Long> {
      * @throws IllegalArgumentException if verification of the setting fails.
      */
     public Http2Settings maxConcurrentStreams(long value) {
-        put(SETTINGS_MAX_CONCURRENT_STREAMS, value);
+        put(SETTINGS_MAX_CONCURRENT_STREAMS, Long.valueOf(value));
         return this;
     }
 
@@ -137,7 +139,7 @@ public final class Http2Settings extends CharObjectHashMap<Long> {
      * @throws IllegalArgumentException if verification of the setting fails.
      */
     public Http2Settings initialWindowSize(int value) {
-        put(SETTINGS_INITIAL_WINDOW_SIZE, (long) value);
+        put(SETTINGS_INITIAL_WINDOW_SIZE, Long.valueOf(value));
         return this;
     }
 
@@ -154,7 +156,7 @@ public final class Http2Settings extends CharObjectHashMap<Long> {
      * @throws IllegalArgumentException if verification of the setting fails.
      */
     public Http2Settings maxFrameSize(int value) {
-        put(SETTINGS_MAX_FRAME_SIZE, (long) value);
+        put(SETTINGS_MAX_FRAME_SIZE, Long.valueOf(value));
         return this;
     }
 
@@ -162,7 +164,14 @@ public final class Http2Settings extends CharObjectHashMap<Long> {
      * Gets the {@code SETTINGS_MAX_HEADER_LIST_SIZE} value. If unavailable, returns {@code null}.
      */
     public Integer maxHeaderListSize() {
-        return getIntValue(SETTINGS_MAX_HEADER_LIST_SIZE);
+        Integer value = getIntValue(SETTINGS_MAX_HEADER_LIST_SIZE);
+
+        // Over 2^31 - 1 (minus in integer) size is set to the maximun value
+        if (value != null && value < 0) {
+            value = Integer.MAX_VALUE;
+        }
+
+        return value;
     }
 
     /**
@@ -171,7 +180,12 @@ public final class Http2Settings extends CharObjectHashMap<Long> {
      * @throws IllegalArgumentException if verification of the setting fails.
      */
     public Http2Settings maxHeaderListSize(int value) {
-        put(SETTINGS_MAX_HEADER_LIST_SIZE, (long) value);
+        // Over 2^31 - 1 (minus in integer) size is set to the maximun value
+        if (value < 0) {
+            value = Integer.MAX_VALUE;
+        }
+
+        put(SETTINGS_MAX_HEADER_LIST_SIZE, Long.valueOf(value));
         return this;
     }
 

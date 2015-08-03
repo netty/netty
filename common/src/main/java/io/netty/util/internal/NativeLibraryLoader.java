@@ -53,10 +53,10 @@ public final class NativeLibraryLoader {
             }
 
             WORKDIR = f;
-            logger.debug("-Dio.netty.netty.workdir: " + WORKDIR);
+            logger.debug("-Dio.netty.native.workdir: " + WORKDIR);
         } else {
             WORKDIR = tmpdir();
-            logger.debug("-Dio.netty.netty.workdir: " + WORKDIR + " (io.netty.tmpdir)");
+            logger.debug("-Dio.netty.native.workdir: " + WORKDIR + " (io.netty.tmpdir)");
         }
     }
 
