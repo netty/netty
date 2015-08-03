@@ -170,7 +170,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     @Override
     public void flush(ChannelHandlerContext ctx) throws Http2Exception {
         // Trigger pending writes in the remote flow controller.
-        connection().remote().flowController().writePendingBytes();
+        encoder.flowController().writePendingBytes();
         try {
             ctx.flush();
         } catch (Throwable t) {
@@ -399,10 +399,13 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
         // Writability is expected to change while we are writing. We cannot allow this event to trigger reentering
         // the allocation and write loop. Reentering the event loop will lead to over or illegal allocation.
-        if (ctx.channel().isWritable()) {
-            encoder.flowController().writePendingBytes();
+        try {
+            if (ctx.channel().isWritable()) {
+                flush(ctx);
+            }
+        } finally {
+            super.channelWritabilityChanged(ctx);
         }
-        super.channelWritabilityChanged(ctx);
     }
 
     @Override
