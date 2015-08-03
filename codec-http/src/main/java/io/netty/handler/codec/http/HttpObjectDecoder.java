@@ -431,6 +431,16 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             // This method is responsible for ending requests in some situations and must be called
             // when the input has been shutdown.
             super.channelInactive(ctx);
+        } else if (evt instanceof HttpExpectationFailedEvent) {
+            switch (currentState) {
+            case READ_FIXED_LENGTH_CONTENT:
+            case READ_VARIABLE_LENGTH_CONTENT:
+            case READ_CHUNK_SIZE:
+                reset();
+                break;
+            default:
+                break;
+            }
         }
         super.userEventTriggered(ctx, evt);
     }

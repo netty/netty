@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.MessageAggregator;
 import io.netty.handler.codec.TooLongFrameException;
 
@@ -63,18 +64,23 @@ public class WebSocketFrameAggregator
     }
 
     @Override
-    protected boolean hasContentLength(WebSocketFrame start) throws Exception {
+    protected boolean isContentLengthInvalid(WebSocketFrame start, int maxContentLength) {
         return false;
     }
 
     @Override
-    protected long contentLength(WebSocketFrame start) throws Exception {
+    protected Object newContinueResponse(WebSocketFrame start, int maxContentLength, ChannelPipeline pipeline) {
+        return null;
+    }
+
+    @Override
+    protected boolean closeAfterContinueResponse(Object msg) throws Exception {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected Object newContinueResponse(WebSocketFrame start) throws Exception {
-        return null;
+    protected boolean ignoreContentAfterContinueResponse(Object msg) throws Exception {
+        throw new UnsupportedOperationException();
     }
 
     @Override
