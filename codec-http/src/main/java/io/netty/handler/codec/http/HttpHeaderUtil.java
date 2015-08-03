@@ -136,6 +136,16 @@ public final class HttpHeaderUtil {
     }
 
     /**
+     * Get an {@code int} representation of {@link #getContentLength(HttpMessage, long)}.
+     * @return the content length or {@code defaultValue} if this message does
+     *         not have the {@code "Content-Length"} header or its value is not
+     *         a number. Not to exceed the boundaries of integer.
+     */
+    public static int getContentLength(HttpMessage message, int defaultValue) {
+        return (int) Math.min(Integer.MAX_VALUE, HttpHeaderUtil.getContentLength(message, (long) defaultValue));
+    }
+
+    /**
      * Returns the content length of the specified web socket message.  If the
      * specified message is not a web socket message, {@code -1} is returned.
      */
