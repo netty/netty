@@ -23,6 +23,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
 import io.netty.util.ReferenceCountUtil;
 
 import java.util.List;
@@ -197,17 +198,9 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
             @SuppressWarnings("unchecked")
             S m = (S) msg;
 
-            // if content length is set, preemptively close if it's too large
-            if (hasContentLength(m)) {
-                if (contentLength(m) > maxContentLength) {
-                    // handle oversized message
-                    invokeHandleOversizedMessage(ctx, m);
-                    return;
-                }
-            }
-
             // Send the continue response if necessary (e.g. 'Expect: 100-continue' header)
-            Object continueResponse = newContinueResponse(m);
+            // Check before content length. Failing an expectation may result in a different response being sent.
+            Object continueResponse = newContinueResponse(m, maxContentLength, ctx.pipeline());
             if (continueResponse != null) {
                 // Cache the write listener for reuse.
                 ChannelFutureListener listener = continueResponseWriteListener;
@@ -221,7 +214,24 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
                         }
                     };
                 }
-                ctx.writeAndFlush(continueResponse).addListener(listener);
+
+                // Make sure to call this before writing, otherwise reference counts may be invalid.
+                boolean closeAfterWrite = closeAfterContinueResponse(continueResponse);
+                handlingOversizedMessage = ignoreContentAfterContinueResponse(continueResponse);
+
+                final ChannelFuture future = ctx.writeAndFlush(continueResponse).addListener(listener);
+
+                if (closeAfterWrite) {
+                    future.addListener(ChannelFutureListener.CLOSE);
+                    return;
+                }
+                if (handlingOversizedMessage) {
+                    return;
+                }
+            } else if (isContentLengthInvalid(m, maxContentLength)) {
+                // if content length is set, preemptively close if it's too large
+                invokeHandleOversizedMessage(ctx, m);
+                return;
             }
 
             if (m instanceof DecoderResultProvider && !((DecoderResultProvider) m).decoderResult().isSuccess()) {
@@ -316,16 +326,14 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     }
 
     /**
-     * Returns {@code true} if and only if the specified start message already contains the information about the
-     * length of the whole content.
+     * Determine if the message {@code start}'s content length is known, and if it greater than
+     * {@code maxContentLength}.
+     * @param start The message which may indicate the content length.
+     * @param maxContentLength The maximum allowed content length.
+     * @return {@code true} if the message {@code start}'s content length is known, and if it greater than
+     * {@code maxContentLength}. {@code false} otherwise.
      */
-    protected abstract boolean hasContentLength(S start) throws Exception;
-
-    /**
-     * Retrieves the length of the whole content from the specified start message. This method is invoked only when
-     * {@link #hasContentLength(Object)} returned {@code true}.
-     */
-    protected abstract long contentLength(S start) throws Exception;
+    protected abstract boolean isContentLengthInvalid(S start, int maxContentLength) throws Exception;
 
     /**
      * Returns the 'continue response' for the specified start message if necessary. For example, this method is
@@ -333,7 +341,26 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
      *
      * @return the 'continue response', or {@code null} if there's no message to send
      */
-    protected abstract Object newContinueResponse(S start) throws Exception;
+    protected abstract Object newContinueResponse(S start, int maxContentLength, ChannelPipeline pipeline)
+            throws Exception;
+
+    /**
+     * Determine if the channel should be closed after the result of {@link #newContinueResponse(Object)} is written.
+     * @param The return value from {@link #newContinueResponse(Object)}.
+     * @return {@code true} if the channel should be closed after the result of {@link #newContinueResponse(Object)}
+     * is written. {@code false} otherwise.
+     */
+    protected abstract boolean closeAfterContinueResponse(Object msg) throws Exception;
+
+    /**
+     * Determine if all objects for the current request/response should be ignored or not.
+     * Messages will stop being ignored the next time {@link #isContentMessage(Object)} returns {@code true}.
+     *
+     * @param The return value from {@link #newContinueResponse(Object)}.
+     * @return {@code true} if all objects for the current request/response should be ignored or not.
+     * {@code false} otherwise.
+     */
+    protected abstract boolean ignoreContentAfterContinueResponse(Object msg) throws Exception;
 
     /**
      * Creates a new aggregated message from the specified start message and the specified content.  If the start
