@@ -22,7 +22,9 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
+import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
@@ -40,6 +42,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     protected int flags = Native.EPOLLET;
 
     protected volatile boolean active;
+    private volatile boolean inputShutdown;
 
     AbstractEpollChannel(int fd, int flag) {
         this(null, fd, flag, false);
@@ -175,6 +178,10 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         loop.add(this);
     }
 
+    protected final boolean isInputShutdown0() {
+        return inputShutdown;
+    }
+
     @Override
     protected abstract AbstractEpollUnsafe newUnsafe();
 
@@ -304,8 +311,47 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         /**
          * Called once EPOLLRDHUP event is ready to be processed
          */
-        void epollRdHupReady() {
-            // NOOP
+        final void epollRdHupReady() {
+            if (isActive()) {
+                // If it is still active, we need to call epollInReady as otherwise we may miss to
+                // read pending data from the underlying file descriptor.
+                // See https://github.com/netty/netty/issues/3709
+                epollInReady();
+
+                // Clear the EPOLLRDHUP flag to prevent continuously getting woken up on this event.
+                clearEpollRdHup();
+            }
+            // epollInReady may call this, but we should ensure that it gets called.
+            shutdownInput();
+        }
+
+        /**
+         * Clear the {@link Native#EPOLLRDHUP} flag from EPOLL, and close on failure.
+         */
+        private void clearEpollRdHup() {
+            try {
+                clearFlag(Native.EPOLLRDHUP);
+            } catch (IOException e) {
+                pipeline().fireExceptionCaught(e);
+                close(voidPromise());
+            }
+        }
+
+        /**
+         * Shutdown the input side of the channel.
+         */
+        void shutdownInput() {
+            if (!inputShutdown) { // Best effort check on volatile variable to prevent multiple shutdowns
+                inputShutdown = true;
+                if (isOpen()) {
+                    if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
+                        clearEpollIn0();
+                        pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+                    } else {
+                        close(voidPromise());
+                    }
+                }
+            }
         }
 
         @Override
