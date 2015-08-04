@@ -23,7 +23,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -31,7 +30,6 @@ import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.MpscLinkedQueueNode;
@@ -70,7 +68,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
     private SocketAddress requestedRemoteAddress;
     private final Queue<SpliceInTask> spliceQueue = PlatformDependent.newMpscQueue();
 
-    private volatile boolean inputShutdown;
     private volatile boolean outputShutdown;
 
     // Lazy init these if we need to splice(...)
@@ -506,10 +503,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
                 "unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPES);
     }
 
-    protected boolean isInputShutdown0() {
-        return inputShutdown;
-    }
-
     protected boolean isOutputShutdown0() {
         return outputShutdown || !isActive();
     }
@@ -594,18 +587,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
     }
 
     class EpollStreamUnsafe extends AbstractEpollUnsafe {
-        private void closeOnRead(ChannelPipeline pipeline) {
-            inputShutdown = true;
-            if (isOpen()) {
-                if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
-                    clearEpollIn0();
-                    pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
-                } else {
-                    close(voidPromise());
-                }
-            }
-        }
-
         private boolean handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close) {
             if (byteBuf != null) {
                 if (byteBuf.isReadable()) {
@@ -619,7 +600,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
             pipeline.fireChannelReadComplete();
             pipeline.fireExceptionCaught(cause);
             if (close || cause instanceof IOException) {
-                closeOnRead(pipeline);
+                shutdownInput();
                 return true;
             }
             return false;
@@ -764,18 +745,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
         }
 
         @Override
-        void epollRdHupReady() {
-            if (isActive()) {
-                // If it is still active, we need to call epollInReady as otherwise we may miss to
-                // read pending data from the underlying file descriptor.
-                // See https://github.com/netty/netty/issues/3709
-                epollInReady();
-            } else {
-                closeOnRead(pipeline());
-            }
-        }
-
-        @Override
         protected EpollRecvByteAllocatorHandle newEpollHandle(RecvByteBufAllocator.Handle handle) {
             return new EpollRecvByteAllocatorStreamingHandle(handle, isFlagSet(Native.EPOLLET));
         }
@@ -848,7 +817,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
                 pipeline.fireChannelReadComplete();
 
                 if (close) {
-                    closeOnRead(pipeline);
+                    shutdownInput();
+                    close = false;
                 }
             } catch (Throwable t) {
                 boolean closed = handleReadException(pipeline, byteBuf, t, close);
