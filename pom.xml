@@ -460,7 +460,7 @@
         </property>
       </activation>
       <properties>
-        <jetty.npn.version>1.1.10.v20150130</jetty.npn.version>
+        <jetty.npn.version>1.1.11.v20150415</jetty.npn.version>
         <jetty.alpn.version>7.1.3.v20150130</jetty.alpn.version>
       </properties>
     </profile>
@@ -549,6 +549,18 @@
       </properties>
     </profile>
     <profile>
+      <id>alpn-8u51</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.8.0_51</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.alpn.version>8.1.4.v20150727</jetty.alpn.version>
+      </properties>
+    </profile>
+    <profile>
       <!--
       This profile exists because either ALPN or NPN can exits on the class path at once, but not both.
       The JDK version is typically used to distinguish which should be used but there is some overlap
@@ -571,9 +583,9 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <jboss.marshalling.version>1.3.18.GA</jboss.marshalling.version>
-    <jetty.npn.version.latest>1.1.10.v20150130</jetty.npn.version.latest>
+    <jetty.npn.version.latest>1.1.11.v20150415</jetty.npn.version.latest>
     <jetty.alpn.version.latest7>7.1.3.v20150130</jetty.alpn.version.latest7>
-    <jetty.alpn.version.latest8>8.1.3.v20150130</jetty.alpn.version.latest8>
+    <jetty.alpn.version.latest8>8.1.4.v20150727</jetty.alpn.version.latest8>
     <jetty.npn.version>${jetty.npn.version.latest}</jetty.npn.version>
     <jetty.npn.path>${settings.localRepository}/org/mortbay/jetty/npn/npn-boot/${jetty.npn.version}/npn-boot-${jetty.npn.version}.jar</jetty.npn.path>
     <jetty.alpn.version>${jetty.alpn.version.latest7}</jetty.alpn.version>
