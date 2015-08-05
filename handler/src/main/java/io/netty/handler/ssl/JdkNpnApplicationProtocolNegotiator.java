@@ -25,7 +25,7 @@ public final class JdkNpnApplicationProtocolNegotiator extends JdkBaseApplicatio
         {
             if (!JdkNpnSslEngine.isAvailable()) {
                 throw new RuntimeException("NPN unsupported. Is your classpatch configured correctly?"
-                        + " See http://www.eclipse.org/jetty/documentation/current/npn-chapter.html#npn-starting");
+                        + " See https://wiki.eclipse.org/Jetty/Feature/NPN");
             }
         }
 
