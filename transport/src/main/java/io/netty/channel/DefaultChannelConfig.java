@@ -25,7 +25,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.channel.ChannelOption.ALLOCATOR;
-import static io.netty.channel.ChannelOption.AUTO_CLOSE;
 import static io.netty.channel.ChannelOption.AUTO_READ;
 import static io.netty.channel.ChannelOption.CONNECT_TIMEOUT_MILLIS;
 import static io.netty.channel.ChannelOption.MAX_MESSAGES_PER_READ;
