@@ -386,7 +386,14 @@ final class PoolThreadCache {
          */
         @SuppressWarnings("unchecked")
         public final boolean add(PoolChunk<T> chunk, long handle) {
-            return queue.offer(newEntry(chunk, handle));
+            Entry<T> entry = newEntry(chunk, handle);
+            boolean queued = queue.offer(entry);
+            if (!queued) {
+                // If it was not possible to cache the chunk, immediately recycle the entry
+                entry.recycle();
+            }
+
+            return queued;
         }
 
         /**
@@ -398,6 +405,7 @@ final class PoolThreadCache {
                 return false;
             }
             initBuf(entry.chunk, entry.handle, buf, reqCapacity);
+            entry.recycle();
 
             // allocations is not thread-safe which is fine as this is only called from the same thread all time.
             ++ allocations;
