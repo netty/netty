@@ -24,6 +24,7 @@ import io.netty.channel.EventLoop;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.OneTimeTask;
@@ -50,6 +51,13 @@ public class SimpleChannelPool implements ChannelPool {
     private final ChannelPoolHandler handler;
     private final ChannelHealthChecker healthCheck;
     private final Bootstrap bootstrap;
+    private final FutureListener<Void> channelWasNotAcquired = new FutureListener<Void>() {
+        @Override
+        public void operationComplete(Future<Void> future) throws Exception {
+            channelClosedCauseUnhealthy();
+        }
+    };
+
 
     /**
      * Creates a new instance using the {@link ChannelHealthChecker#ACTIVE}.
@@ -161,16 +169,29 @@ public class SimpleChannelPool implements ChannelPool {
                     handler.channelAcquired(ch);
                     promise.setSuccess(ch);
                 } catch (Throwable cause) {
-                    closeAndFail(ch, cause, promise);
+                    Promise<Void> channelClosePromise = ch.eventLoop().newPromise();
+                    channelClosePromise.addListener(channelWasNotAcquired);
+                    closeAndFail(ch, cause, promise, channelClosePromise);
                 }
             } else {
-                closeChannel(ch);
+                Promise<Void> channelClosePromise = ch.eventLoop().newPromise();
+                channelClosePromise.addListener(channelWasNotAcquired);
+                closeChannel(ch, channelClosePromise);
                 acquire(promise);
             }
         } else {
-            closeChannel(ch);
+            Promise<Void> channelClosePromise = ch.eventLoop().newPromise();
+            channelClosePromise.addListener(channelWasNotAcquired);
+            closeChannel(ch, channelClosePromise);
             acquire(promise);
         }
+    }
+
+    /**
+     * Called once channel failed to be acquired.
+     * This is useful for the cases when we need to perform cleanup operations after channel failed to be acquired.
+     */
+    protected void channelClosedCauseUnhealthy() {
     }
 
     /**
@@ -205,7 +226,7 @@ public class SimpleChannelPool implements ChannelPool {
                 });
             }
         } catch (Throwable cause) {
-            closeAndFail(channel, cause, promise);
+            closeAndFail(channel, cause, promise, null);
         }
         return promise;
     }
@@ -218,28 +239,42 @@ public class SimpleChannelPool implements ChannelPool {
                          // Better include a stracktrace here as this is an user error.
                          new IllegalArgumentException(
                                  "Channel " + channel + " was not acquired from this ChannelPool"),
-                         promise);
+                         promise, null);
         } else {
             try {
                 if (offerChannel(channel)) {
                     handler.channelReleased(channel);
                     promise.setSuccess(null);
                 } else {
-                    closeAndFail(channel, FULL_EXCEPTION, promise);
+                    closeAndFail(channel, FULL_EXCEPTION, promise, null);
                 }
             } catch (Throwable cause) {
-                closeAndFail(channel, cause, promise);
+                closeAndFail(channel, cause, promise, null);
             }
         }
     }
 
-    private static void closeChannel(Channel channel) {
+    private static void closeChannel(final Channel channel, final Promise<Void> channelClosePromise) {
         channel.attr(POOL_KEY).getAndSet(null);
-        channel.close();
+        ChannelFuture future = channel.close();
+        if (channelClosePromise != null) {
+            future.addListener(new FutureListener<Void>(){
+
+                @Override
+                public void operationComplete(Future<Void> future) throws Exception {
+                    if (future.isSuccess()) {
+                        channelClosePromise.setSuccess(null);
+                    } else{
+                        channelClosePromise.setFailure(new IllegalStateException("Failed to close unhealthy channel."));
+                    }
+                }
+            });
+        }
     }
 
-    private static void closeAndFail(Channel channel, Throwable cause, Promise<?> promise) {
-        closeChannel(channel);
+    private static void closeAndFail(Channel channel, Throwable cause, Promise<?> promise,
+                                     Promise<Void> channelClosePromise) {
+        closeChannel(channel, channelClosePromise);
         promise.setFailure(cause);
     }
 

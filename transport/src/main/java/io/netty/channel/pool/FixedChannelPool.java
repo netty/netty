@@ -245,6 +245,24 @@ public final class FixedChannelPool extends SimpleChannelPool {
         return p;
     }
 
+    /**
+     * Called after channel failed to be acquired so we know to decrease the {@link #acquiredChannelCount} and pull the
+     * next pending task from {@link #pendingAcquireQueue}.
+     */
+    @Override
+    protected void channelClosedCauseUnhealthy() {
+        if (executor.inEventLoop()) {
+            decrementAndRunTaskQueue();
+        } else {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    decrementAndRunTaskQueue();
+                }
+            });
+        }
+    }
+
     private void decrementAndRunTaskQueue() {
         --acquiredChannelCount;
 
@@ -335,9 +353,7 @@ public final class FixedChannelPool extends SimpleChannelPool {
             if (future.isSuccess()) {
                 originalPromise.setSuccess(future.getNow());
             } else {
-                if (acquired) {
-                    decrementAndRunTaskQueue();
-                } else {
+                if (!acquired) {
                     runTaskQueue();
                 }
 
