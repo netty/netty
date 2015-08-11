@@ -89,27 +89,29 @@ public class CorsHandler extends ChannelHandlerAdapter {
     }
 
     private boolean setOrigin(final HttpResponse response) {
-        final CharSequence origin = request.headers().get(HttpHeaderNames.ORIGIN);
-        if (origin != null) {
-            if ("null".equals(origin) && config.isNullOriginAllowed()) {
-                setAnyOrigin(response);
-                return true;
-            }
-            if (config.isAnyOriginSupported()) {
-                if (config.isCredentialsAllowed()) {
-                    echoRequestOrigin(response);
-                    setVaryHeader(response);
-                } else {
+        if (request != null) {
+            final CharSequence origin = request.headers().get(HttpHeaderNames.ORIGIN);
+            if (origin != null) {
+                if ("null".equals(origin) && config.isNullOriginAllowed()) {
                     setAnyOrigin(response);
+                    return true;
                 }
-                return true;
+                if (config.isAnyOriginSupported()) {
+                    if (config.isCredentialsAllowed()) {
+                        echoRequestOrigin(response);
+                        setVaryHeader(response);
+                    } else {
+                        setAnyOrigin(response);
+                    }
+                    return true;
+                }
+                if (config.origins().contains(origin)) {
+                    setOrigin(response, origin);
+                    setVaryHeader(response);
+                    return true;
+                }
+                logger.debug("Request origin [" + origin + "] was not among the configured origins " + config.origins());
             }
-            if (config.origins().contains(origin)) {
-                setOrigin(response, origin);
-                setVaryHeader(response);
-                return true;
-            }
-            logger.debug("Request origin [" + origin + "] was not among the configured origins " + config.origins());
         }
         return false;
     }
