@@ -151,6 +151,45 @@ public class FixedChannelPoolTest {
         group.shutdownGracefully();
     }
 
+    /**
+     * Tests that the acquiredChannelCount is not added up several times for the same channel acquire request.
+     * @throws Exception
+     */
+    @Test
+    public void testAcquireNewConnectionWhen() throws Exception {
+        EventLoopGroup group = new DefaultEventLoopGroup();
+        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        Bootstrap cb = new Bootstrap();
+        cb.remoteAddress(addr);
+        cb.group(group)
+          .channel(LocalChannel.class);
+
+        ServerBootstrap sb = new ServerBootstrap();
+        sb.group(group)
+          .channel(LocalServerChannel.class)
+          .childHandler(new ChannelInitializer<LocalChannel>() {
+              @Override
+              public void initChannel(LocalChannel ch) throws Exception {
+                  ch.pipeline().addLast(new ChannelHandlerAdapter());
+              }
+          });
+
+        // Start server
+        Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+        ChannelPoolHandler handler = new TestChannelPoolHandler();
+        ChannelPool pool = new FixedChannelPool(cb, handler, 1);
+        Channel channel1 = pool.acquire().syncUninterruptibly().getNow();
+        channel1.close().syncUninterruptibly();
+        pool.release(channel1);
+
+        Channel channel2 = pool.acquire().syncUninterruptibly().getNow();
+
+        assertNotSame(channel1, channel2);
+        sc.close().syncUninterruptibly();
+        channel2.close().syncUninterruptibly();
+        group.shutdownGracefully();
+    }
+
     @Test(expected = IllegalStateException.class)
     public void testAcquireBoundQueue() throws Exception {
         EventLoopGroup group = new DefaultEventLoopGroup();
