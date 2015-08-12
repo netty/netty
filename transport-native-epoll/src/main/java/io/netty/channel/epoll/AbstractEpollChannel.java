@@ -178,7 +178,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         loop.add(this);
     }
 
-    protected boolean isInputShutdown0() {
+    protected final boolean isInputShutdown0() {
         return inputShutdown;
     }
 
