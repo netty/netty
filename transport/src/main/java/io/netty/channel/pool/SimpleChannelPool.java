@@ -31,7 +31,7 @@ import io.netty.util.internal.PlatformDependent;
 
 import java.util.Deque;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * Simple {@link ChannelPool} implementation which will create new {@link Channel}s if someone tries to acquire
@@ -99,7 +99,7 @@ public class SimpleChannelPool implements ChannelPool {
      * @param promise the promise to provide acquire result.
      * @return future for acquiring a channel.
      */
-    private Future<Channel> acquireHealthyFromPoolOrNew(final Promise<Channel> promise){
+    private Future<Channel> acquireHealthyFromPoolOrNew(final Promise<Channel> promise) {
         try {
             final Channel ch = pollChannel();
             if (ch == null) {
