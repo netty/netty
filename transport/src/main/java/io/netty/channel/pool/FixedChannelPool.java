@@ -121,7 +121,34 @@ public final class FixedChannelPool extends SimpleChannelPool {
                             ChannelHealthChecker healthCheck, AcquireTimeoutAction action,
                             final long acquireTimeoutMillis,
                             int maxConnections, int maxPendingAcquires) {
-        super(bootstrap, handler, healthCheck);
+        this(bootstrap, handler, healthCheck, action, acquireTimeoutMillis, maxConnections, maxPendingAcquires, true);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param bootstrap             the {@link Bootstrap} that is used for connections
+     * @param handler               the {@link ChannelPoolHandler} that will be notified for the different pool actions
+     * @param healthCheck           the {@link ChannelHealthChecker} that will be used to check if a {@link Channel} is
+     *                              still healty when obtain from the {@link ChannelPool}
+     * @param action                the {@link AcquireTimeoutAction} to use or {@code null} if non should be used.
+     *                              In this case {@param acquireTimeoutMillis} must be {@code -1}.
+     * @param acquireTimeoutMillis  the time (in milliseconds) after which an pending acquire must complete or
+     *                              the {@link AcquireTimeoutAction} takes place.
+     * @param maxConnections        the numnber of maximal active connections, once this is reached new tries to
+     *                              acquire a {@link Channel} will be delayed until a connection is returned to the
+     *                              pool again.
+     * @param maxPendingAcquires    the maximum number of pending acquires. Once this is exceed acquire tries will
+     *                              be failed.
+     * @param releaseHealthCheck    will check channel health before offering back if this parameter set to
+     *                              {@code true}.
+     */
+    public FixedChannelPool(Bootstrap bootstrap,
+                            ChannelPoolHandler handler,
+                            ChannelHealthChecker healthCheck, AcquireTimeoutAction action,
+                            final long acquireTimeoutMillis,
+                            int maxConnections, int maxPendingAcquires, final boolean releaseHealthCheck) {
+        super(bootstrap, handler, healthCheck, releaseHealthCheck);
         if (maxConnections < 1) {
             throw new IllegalArgumentException("maxConnections: " + maxConnections + " (expected: >= 1)");
         }
