@@ -25,7 +25,11 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
+import io.netty.util.concurrent.Future;
+import org.hamcrest.CoreMatchers;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -34,6 +38,9 @@ import static org.junit.Assert.*;
 
 public class SimpleChannelPoolTest {
     private static final String LOCAL_ADDR_ID = "test.id";
+
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
 
     @Test
     public void testAcquire() throws Exception {
@@ -140,6 +147,96 @@ public class SimpleChannelPoolTest {
         sc.close().sync();
         channel.close().sync();
         channel2.close().sync();
+        group.shutdownGracefully();
+    }
+
+    /**
+     * Tests that if channel was unhealthy it is not offered back to the pool.
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testUnhealthyChannelIsNotOffered() throws Exception {
+        EventLoopGroup group = new DefaultEventLoopGroup();
+        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        Bootstrap cb = new Bootstrap();
+        cb.remoteAddress(addr);
+        cb.group(group)
+          .channel(LocalChannel.class);
+
+        ServerBootstrap sb = new ServerBootstrap();
+        sb.group(group)
+          .channel(LocalServerChannel.class)
+          .childHandler(new ChannelInitializer<LocalChannel>() {
+              @Override
+              public void initChannel(LocalChannel ch) throws Exception {
+                  ch.pipeline().addLast(new ChannelHandlerAdapter());
+              }
+          });
+
+        // Start server
+        Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+        ChannelPoolHandler handler = new CountingChannelPoolHandler();
+        ChannelPool pool = new SimpleChannelPool(cb, handler);
+        Channel channel1 = pool.acquire().syncUninterruptibly().getNow();
+        pool.release(channel1).syncUninterruptibly();
+        Channel channel2 = pool.acquire().syncUninterruptibly().getNow();
+        //first check that when returned healthy then it actually offered back to the pool.
+        assertSame(channel1, channel2);
+
+        expectedException.expect(IllegalStateException.class);
+        channel1.close().syncUninterruptibly();
+        try {
+            pool.release(channel1).syncUninterruptibly();
+        } catch (Exception e) {
+            throw e;
+        } finally {
+            sc.close().syncUninterruptibly();
+            channel2.close().syncUninterruptibly();
+            group.shutdownGracefully();
+        }
+    }
+
+    /**
+     * Tests that if channel was unhealthy it is was offered back to the pool because
+     * it was requested not to validate channel health on release.
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testUnhealthyChannelIsOfferedWhenNoHealthCheckRequested() throws Exception {
+        EventLoopGroup group = new DefaultEventLoopGroup();
+        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        Bootstrap cb = new Bootstrap();
+        cb.remoteAddress(addr);
+        cb.group(group)
+          .channel(LocalChannel.class);
+
+        ServerBootstrap sb = new ServerBootstrap();
+        sb.group(group)
+          .channel(LocalServerChannel.class)
+          .childHandler(new ChannelInitializer<LocalChannel>() {
+              @Override
+              public void initChannel(LocalChannel ch) throws Exception {
+                  ch.pipeline().addLast(new ChannelHandlerAdapter());
+              }
+          });
+
+        // Start server
+        Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+        ChannelPoolHandler handler = new CountingChannelPoolHandler();
+        ChannelPool pool = new SimpleChannelPool(cb, handler, ChannelHealthChecker.ACTIVE, false);
+        Channel channel1 = pool.acquire().syncUninterruptibly().getNow();
+        channel1.close().syncUninterruptibly();
+        Future<Void> releaseFuture =
+                pool.release(channel1, channel1.eventLoop().<Void>newPromise()).syncUninterruptibly();
+        assertThat(releaseFuture.isSuccess(), CoreMatchers.is(true));
+
+        Channel channel2 = pool.acquire().syncUninterruptibly().getNow();
+        //verifying that in fact the channel2 is different that means is not pulled from the pool
+        assertNotSame(channel1, channel2);
+        sc.close().syncUninterruptibly();
+        channel2.close().syncUninterruptibly();
         group.shutdownGracefully();
     }
 }
