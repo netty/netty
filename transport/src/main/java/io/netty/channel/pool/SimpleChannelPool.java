@@ -31,7 +31,7 @@ import io.netty.util.internal.PlatformDependent;
 
 import java.util.Deque;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * Simple {@link ChannelPool} implementation which will create new {@link Channel}s if someone tries to acquire
@@ -91,6 +91,15 @@ public class SimpleChannelPool implements ChannelPool {
     @Override
     public Future<Channel> acquire(final Promise<Channel> promise) {
         checkNotNull(promise, "promise");
+        return acquireHealthyFromPoolOrNew(promise);
+    }
+
+    /**
+     * Tries to retrieve healthy channel from the pool if any or creates a new channel otherwise.
+     * @param promise the promise to provide acquire result.
+     * @return future for acquiring a channel.
+     */
+    private Future<Channel> acquireHealthyFromPoolOrNew(final Promise<Channel> promise) {
         try {
             final Channel ch = pollChannel();
             if (ch == null) {
@@ -165,11 +174,11 @@ public class SimpleChannelPool implements ChannelPool {
                 }
             } else {
                 closeChannel(ch);
-                acquire(promise);
+                acquireHealthyFromPoolOrNew(promise);
             }
         } else {
             closeChannel(ch);
-            acquire(promise);
+            acquireHealthyFromPoolOrNew(promise);
         }
     }
 
