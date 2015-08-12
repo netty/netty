@@ -43,13 +43,17 @@ import static io.netty.util.internal.ObjectUtil.*;
 public class SimpleChannelPool implements ChannelPool {
     private static final AttributeKey<SimpleChannelPool> POOL_KEY = AttributeKey.newInstance("channelPool");
     private static final IllegalStateException FULL_EXCEPTION = new IllegalStateException("ChannelPool full");
+    private static final IllegalStateException UNHEALTHY_NON_OFFERED_TO_POOL =
+            new IllegalStateException("Channel is unhealthy not offering it back to pool");
     static {
         FULL_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+        UNHEALTHY_NON_OFFERED_TO_POOL.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
     }
     private final Deque<Channel> deque = PlatformDependent.newConcurrentDeque();
     private final ChannelPoolHandler handler;
     private final ChannelHealthChecker healthCheck;
     private final Bootstrap bootstrap;
+    private final boolean releaseHealthCheck;
 
     /**
      * Creates a new instance using the {@link ChannelHealthChecker#ACTIVE}.
@@ -67,11 +71,27 @@ public class SimpleChannelPool implements ChannelPool {
      * @param bootstrap         the {@link Bootstrap} that is used for connections
      * @param handler           the {@link ChannelPoolHandler} that will be notified for the different pool actions
      * @param healthCheck       the {@link ChannelHealthChecker} that will be used to check if a {@link Channel} is
-     *                          still healty when obtain from the {@link ChannelPool}
+     *                          still healthy when obtain from the {@link ChannelPool}
      */
     public SimpleChannelPool(Bootstrap bootstrap, final ChannelPoolHandler handler, ChannelHealthChecker healthCheck) {
+        this(bootstrap, handler, healthCheck, true);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param bootstrap          the {@link Bootstrap} that is used for connections
+     * @param handler            the {@link ChannelPoolHandler} that will be notified for the different pool actions
+     * @param healthCheck        the {@link ChannelHealthChecker} that will be used to check if a {@link Channel} is
+     *                           still healthy when obtain from the {@link ChannelPool}
+     * @param releaseHealthCheck will offercheck channel health before offering back if this parameter set to
+     *                           {@code true}.
+     */
+    public SimpleChannelPool(Bootstrap bootstrap, final ChannelPoolHandler handler, ChannelHealthChecker healthCheck,
+                             boolean releaseHealthCheck) {
         this.handler = checkNotNull(handler, "handler");
         this.healthCheck = checkNotNull(healthCheck, "healthCheck");
+        this.releaseHealthCheck = releaseHealthCheck;
         // Clone the original Bootstrap as we want to set our own handler
         this.bootstrap = checkNotNull(bootstrap, "bootstrap").clone();
         this.bootstrap.handler(new ChannelInitializer<Channel>() {
@@ -183,9 +203,9 @@ public class SimpleChannelPool implements ChannelPool {
     }
 
     /**
-     * Bootstrap a new {@link Channel}. The default implementation uses {@link Bootstrap#connect()},
-     * sub-classes may override this.
-     *
+     * Bootstrap a new {@link Channel}. The default implementation uses {@link Bootstrap#connect()}, sub-classes may
+     * override this.
+     * <p>
      * The {@link Bootstrap} that is passed in here is cloned via {@link Bootstrap#clone()}, so it is safe to modify.
      */
     protected ChannelFuture connectChannel(Bootstrap bs) {
@@ -230,15 +250,54 @@ public class SimpleChannelPool implements ChannelPool {
                          promise);
         } else {
             try {
-                if (offerChannel(channel)) {
-                    handler.channelReleased(channel);
-                    promise.setSuccess(null);
+                if (releaseHealthCheck) {
+                    doHealthCheckOnRelease(channel, promise);
                 } else {
-                    closeAndFail(channel, FULL_EXCEPTION, promise);
+                    releaseAndOffer(channel, promise);
                 }
             } catch (Throwable cause) {
                 closeAndFail(channel, cause, promise);
             }
+        }
+    }
+
+    private void doHealthCheckOnRelease(final Channel channel, final Promise<Void> promise) throws Exception {
+        final Future<Boolean> f = healthCheck.isHealthy(channel);
+        if (f.isDone()) {
+            releaseAndOfferIfHealthy(channel, promise, f);
+        } else {
+            f.addListener(new FutureListener<Boolean>() {
+                @Override
+                public void operationComplete(Future<Boolean> future) throws Exception {
+                    releaseAndOfferIfHealthy(channel, promise, f);
+                }
+            });
+        }
+    }
+
+    /**
+     * Adds the channel back to the pool only if the channel is healty.
+     * @param channel the channel to put back to the pool
+     * @param promise offer operation promise.
+     * @param future the future that contains information fif channel is healthy or not.
+     * @throws Exception in case when failed to notify handler about release operation.
+     */
+    private void releaseAndOfferIfHealthy(Channel channel, Promise<Void> promise, Future<Boolean> future)
+            throws Exception {
+        if (future.getNow()) { //channel turns out to be healthy, offering and releasing it.
+            releaseAndOffer(channel, promise);
+        } else { //channel ont healthy, just releasing it.
+            handler.channelReleased(channel);
+            closeAndFail(channel, UNHEALTHY_NON_OFFERED_TO_POOL, promise);
+        }
+    }
+
+    private void releaseAndOffer(Channel channel, Promise<Void> promise) throws Exception {
+        if (offerChannel(channel)) {
+            handler.channelReleased(channel);
+            promise.setSuccess(null);
+        } else {
+            closeAndFail(channel, FULL_EXCEPTION, promise);
         }
     }
 
