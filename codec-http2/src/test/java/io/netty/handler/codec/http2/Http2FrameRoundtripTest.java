@@ -29,6 +29,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
+import io.netty.util.AsciiString;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
 import org.junit.After;
@@ -46,7 +47,6 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static io.netty.handler.codec.http2.Http2TestUtil.as;
 import static io.netty.handler.codec.http2.Http2TestUtil.randomString;
 import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
 import static io.netty.util.CharsetUtil.UTF_8;
@@ -393,7 +393,8 @@ public class Http2FrameRoundtripTest {
     }
 
     private static Http2Headers headers() {
-        return new DefaultHttp2Headers().method(as("GET")).scheme(as("https"))
-                .authority(as("example.org")).path(as("/some/path/resource2")).add(randomString(), randomString());
+        return new DefaultHttp2Headers().method(new AsciiString("GET")).scheme(new AsciiString("https"))
+                .authority(new AsciiString("example.org")).path(new AsciiString("/some/path/resource2"))
+                .add(randomString(), randomString());
     }
 }

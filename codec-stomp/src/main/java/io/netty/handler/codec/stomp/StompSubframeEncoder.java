@@ -15,6 +15,9 @@
  */
 package io.netty.handler.codec.stomp;
 
+import java.util.List;
+import java.util.Map.Entry;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.AsciiHeadersEncoder;
@@ -22,10 +25,6 @@ import io.netty.handler.codec.AsciiHeadersEncoder.NewlineType;
 import io.netty.handler.codec.AsciiHeadersEncoder.SeparatorType;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.PlatformDependent;
-
-import java.util.List;
-import java.util.Map.Entry;
 
 /**
  * Encodes a {@link StompFrame} or a {@link StompSubframe} into a {@link ByteBuf}.

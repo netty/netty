@@ -30,7 +30,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 
 import java.util.regex.Pattern;
 
-import static io.netty.handler.codec.http.HttpVersion.*;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 /**
  * <p>
@@ -107,8 +107,8 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
     protected FullHttpResponse newHandshakeResponse(FullHttpRequest req, HttpHeaders headers) {
 
         // Serve the WebSocket handshake request.
-        if (!HttpHeaderValues.UPGRADE.equalsIgnoreCase(req.headers().get(HttpHeaderNames.CONNECTION))
-                || !HttpHeaderValues.WEBSOCKET.equalsIgnoreCase(req.headers().get(HttpHeaderNames.UPGRADE))) {
+        if (!HttpHeaderValues.UPGRADE.contentEqualsIgnoreCase(req.headers().get(HttpHeaderNames.CONNECTION))
+                || !HttpHeaderValues.WEBSOCKET.contentEqualsIgnoreCase(req.headers().get(HttpHeaderNames.UPGRADE))) {
             throw new WebSocketHandshakeException("not a WebSocket handshake request: missing upgrade");
         }
 
@@ -131,6 +131,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             // New handshake getMethod with a challenge:
             res.headers().add(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN, req.headers().get(HttpHeaderNames.ORIGIN));
             res.headers().add(HttpHeaderNames.SEC_WEBSOCKET_LOCATION, uri());
+
             String subprotocols = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
             if (subprotocols != null) {
                 String selectedSubprotocol = selectSubprotocol(subprotocols);
@@ -160,6 +161,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             // Old Hixie 75 handshake getMethod with no challenge:
             res.headers().add(HttpHeaderNames.WEBSOCKET_ORIGIN, req.headers().get(HttpHeaderNames.ORIGIN));
             res.headers().add(HttpHeaderNames.WEBSOCKET_LOCATION, uri());
+
             String protocol = req.headers().get(HttpHeaderNames.WEBSOCKET_PROTOCOL);
             if (protocol != null) {
                 res.headers().add(HttpHeaderNames.WEBSOCKET_PROTOCOL, selectSubprotocol(protocol));

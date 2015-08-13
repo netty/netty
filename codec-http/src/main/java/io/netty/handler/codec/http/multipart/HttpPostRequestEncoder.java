@@ -753,7 +753,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
             if (transferEncoding != null) {
                 headers.remove(HttpHeaderNames.TRANSFER_ENCODING);
                 for (CharSequence v : transferEncoding) {
-                    if (HttpHeaderValues.CHUNKED.equalsIgnoreCase(v)) {
+                    if (HttpHeaderValues.CHUNKED.contentEqualsIgnoreCase(v)) {
                         // ignore
                     } else {
                         headers.add(HttpHeaderNames.TRANSFER_ENCODING, v);

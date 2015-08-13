@@ -21,6 +21,8 @@ import io.netty.util.CharsetUtil;
 import java.util.HashMap;
 import java.util.Map;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 /**
  * The request getMethod of HTTP or its derived protocols, such as
  * <a href="http://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
@@ -86,8 +88,7 @@ public class HttpMethod implements Comparable<HttpMethod> {
      */
     public static final HttpMethod CONNECT = new HttpMethod("CONNECT", true);
 
-    private static final Map<String, HttpMethod> methodMap =
-            new HashMap<String, HttpMethod>();
+    private static final Map<String, HttpMethod> methodMap = new HashMap<String, HttpMethod>();
 
     static {
         methodMap.put(OPTIONS.toString(), OPTIONS);
@@ -107,21 +108,8 @@ public class HttpMethod implements Comparable<HttpMethod> {
      * will be returned.  Otherwise, a new instance will be returned.
      */
     public static HttpMethod valueOf(String name) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
-
-        name = name.trim();
-        if (name.isEmpty()) {
-            throw new IllegalArgumentException("empty name");
-        }
-
         HttpMethod result = methodMap.get(name);
-        if (result != null) {
-            return result;
-        } else {
-            return new HttpMethod(name);
-        }
+        return result != null ? result : new HttpMethod(name);
     }
 
     private final String name;
@@ -143,7 +131,7 @@ public class HttpMethod implements Comparable<HttpMethod> {
             throw new NullPointerException("name");
         }
 
-        name = name.trim();
+        name = checkNotNull(name, "name").trim();
         if (name.isEmpty()) {
             throw new IllegalArgumentException("empty name");
         }

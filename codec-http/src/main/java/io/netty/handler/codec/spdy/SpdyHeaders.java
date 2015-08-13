@@ -15,14 +15,18 @@
  */
 package io.netty.handler.codec.spdy;
 
-import io.netty.handler.codec.TextHeaders;
+import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;
+
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map.Entry;
 
 /**
  * Provides the constants for the standard SPDY HTTP header names and commonly
  * used utility methods that access a {@link SpdyHeadersFrame}.
  */
-public interface SpdyHeaders extends TextHeaders {
+public interface SpdyHeaders extends Headers<CharSequence> {
 
     /**
      * SPDY HTTP header names
@@ -102,7 +106,7 @@ public interface SpdyHeaders extends TextHeaders {
     SpdyHeaders addTimeMillis(CharSequence name, long value);
 
     @Override
-    SpdyHeaders add(TextHeaders headers);
+    SpdyHeaders add(Headers<? extends CharSequence> headers);
 
     @Override
     SpdyHeaders set(CharSequence name, CharSequence value);
@@ -150,11 +154,41 @@ public interface SpdyHeaders extends TextHeaders {
     SpdyHeaders setObject(CharSequence name, Object... values);
 
     @Override
-    SpdyHeaders set(TextHeaders headers);
+    SpdyHeaders set(Headers<? extends CharSequence> headers);
 
     @Override
-    SpdyHeaders setAll(TextHeaders headers);
+    SpdyHeaders setAll(Headers<? extends CharSequence> headers);
 
     @Override
     SpdyHeaders clear();
+
+    /**
+     * {@link Headers#get(Object)} and convert the result to a {@link String}.
+     * @param name the name of the header to retrieve
+     * @return the first header value if the header is found. {@code null} if there's no such header.
+     */
+    String getAsString(CharSequence name);
+
+    /**
+     * {@link Headers#getAll(Object)} and convert each element of {@link List} to a {@link String}.
+     * @param name the name of the header to retrieve
+     * @return a {@link List} of header values or an empty {@link List} if no values are found.
+     */
+    List<String> getAllAsString(CharSequence name);
+
+    /**
+     * {@link #iterator()} that converts each {@link Entry}'s key and value to a {@link String}.
+     */
+    Iterator<Entry<String, String>> iteratorAsString();
+
+    /**
+     * Returns {@code true} if a header with the {@code name} and {@code value} exists, {@code false} otherwise.
+     * <p>
+     * If {@code ignoreCase} is {@code true} then a case insensitive compare is done on the value.
+     * @param name the name of the header to find
+     * @param value the value of the header to find
+     * @param ignoreCase {@code true} then a case insensitive compare is run to compare values.
+     * otherwise a case sensitive compare is run to compare values.
+     */
+    boolean contains(CharSequence name, CharSequence value, boolean ignoreCase);
 }

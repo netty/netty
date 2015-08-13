@@ -220,7 +220,7 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
                 throw new IllegalStateException(
                         "Switching Protocols response missing UPGRADE header");
             }
-            if (!AsciiString.equalsIgnoreCase(upgradeCodec.protocol(), upgradeHeader)) {
+            if (!AsciiString.contentEqualsIgnoreCase(upgradeCodec.protocol(), upgradeHeader)) {
                 throw new IllegalStateException(
                         "Switching Protocols response with unexpected UPGRADE protocol: "
                                 + upgradeHeader);

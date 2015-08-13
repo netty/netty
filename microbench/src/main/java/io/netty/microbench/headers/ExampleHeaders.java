@@ -80,7 +80,7 @@ public final class ExampleHeaders {
         header.put("accept-encoding", "gzip, deflate, sdch");
         header.put("accept-language", "en-US,en;q=0.8");
         header.put("cache-control", "max-age=0");
-        header.put("cookie:", "noneofyourbusiness");
+        header.put("cookie", "noneofyourbusiness");
         header.put("user-agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko)");
         EXAMPLES.put(HeaderExample.ELEVEN, header);
 

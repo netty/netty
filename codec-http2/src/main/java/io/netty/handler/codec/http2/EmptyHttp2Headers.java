@@ -15,11 +15,11 @@
 
 package io.netty.handler.codec.http2;
 
-import io.netty.handler.codec.BinaryHeaders;
-import io.netty.handler.codec.EmptyBinaryHeaders;
+import io.netty.handler.codec.EmptyHeaders;
+import io.netty.handler.codec.Headers;
 import io.netty.util.ByteString;
 
-public final class EmptyHttp2Headers extends EmptyBinaryHeaders implements Http2Headers {
+public final class EmptyHttp2Headers extends EmptyHeaders<ByteString> implements Http2Headers {
     public static final EmptyHttp2Headers INSTANCE = new EmptyHttp2Headers();
 
     private EmptyHttp2Headers() {
@@ -116,7 +116,7 @@ public final class EmptyHttp2Headers extends EmptyBinaryHeaders implements Http2
     }
 
     @Override
-    public Http2Headers add(BinaryHeaders headers) {
+    public Http2Headers add(Headers<? extends ByteString> headers) {
         super.add(headers);
         return this;
     }
@@ -212,13 +212,13 @@ public final class EmptyHttp2Headers extends EmptyBinaryHeaders implements Http2
     }
 
     @Override
-    public Http2Headers set(BinaryHeaders headers) {
+    public Http2Headers set(Headers<? extends ByteString> headers) {
         super.set(headers);
         return this;
     }
 
     @Override
-    public Http2Headers setAll(BinaryHeaders headers) {
+    public Http2Headers setAll(Headers<? extends ByteString> headers) {
         super.setAll(headers);
         return this;
     }

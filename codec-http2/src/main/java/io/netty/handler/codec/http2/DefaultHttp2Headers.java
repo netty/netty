@@ -14,19 +14,16 @@
  */
 package io.netty.handler.codec.http2;
 
-import io.netty.handler.codec.BinaryHeaders;
-import io.netty.handler.codec.DefaultBinaryHeaders;
+import io.netty.handler.codec.ByteStringValueConverter;
 import io.netty.handler.codec.DefaultHeaders;
+import io.netty.handler.codec.Headers;
 import io.netty.util.ByteString;
-import java.io.Serializable;
-import java.util.Comparator;
-import java.util.List;
-import java.util.TreeMap;
 
-public class DefaultHttp2Headers extends DefaultBinaryHeaders implements Http2Headers {
+public class DefaultHttp2Headers extends DefaultHeaders<ByteString> implements Http2Headers {
+    private HeaderEntry<ByteString> firstNonPseudo = head;
 
     public DefaultHttp2Headers() {
-        super(new TreeMap<ByteString, Object>(Http2HeaderNameComparator.INSTANCE));
+        super(ByteStringValueConverter.INSTANCE);
     }
 
     @Override
@@ -120,7 +117,7 @@ public class DefaultHttp2Headers extends DefaultBinaryHeaders implements Http2He
     }
 
     @Override
-    public Http2Headers add(BinaryHeaders headers) {
+    public Http2Headers add(Headers<? extends ByteString> headers) {
         super.add(headers);
         return this;
     }
@@ -216,13 +213,13 @@ public class DefaultHttp2Headers extends DefaultBinaryHeaders implements Http2He
     }
 
     @Override
-    public Http2Headers set(BinaryHeaders headers) {
+    public Http2Headers set(Headers<? extends ByteString> headers) {
         super.set(headers);
         return this;
     }
 
     @Override
-    public Http2Headers setAll(BinaryHeaders headers) {
+    public Http2Headers setAll(Headers<? extends ByteString> headers) {
         super.setAll(headers);
         return this;
     }
@@ -289,43 +286,37 @@ public class DefaultHttp2Headers extends DefaultBinaryHeaders implements Http2He
     }
 
     @Override
-    public int hashCode() {
-        return size();
+    protected final HeaderEntry<ByteString> newHeaderEntry(int h, ByteString name, ByteString value,
+                                                           HeaderEntry<ByteString> next) {
+        return new Http2HeaderEntry(h, name, value, next);
     }
 
-    @Override
-    public boolean equals(Object other) {
-        if (!(other instanceof Http2Headers)) {
-            return false;
-        }
-        Http2Headers headers = (Http2Headers) other;
-        return DefaultHeaders.comparatorEquals(this, headers, ByteString.DEFAULT_COMPARATOR);
-    }
+    private final class Http2HeaderEntry extends HeaderEntry<ByteString> {
+        protected Http2HeaderEntry(int hash, ByteString key, ByteString value, HeaderEntry<ByteString> next) {
+            super(hash, key);
+            this.value = value;
+            this.next = next;
 
-    private static class Http2HeaderNameComparator implements Comparator<ByteString>, Serializable {
-
-        public static final Http2HeaderNameComparator INSTANCE = new Http2HeaderNameComparator();
-        private static final long serialVersionUID = 1109871697664666478L;
-
-        @Override
-        public int compare(ByteString one, ByteString two) {
-            // Reserved header names come first.
-            final boolean isPseudoHeader1 = !one.isEmpty() && one.byteAt(0) == ':';
-            final boolean isPseudoHeader2 = !two.isEmpty() && two.byteAt(0) == ':';
-            if (isPseudoHeader1 != isPseudoHeader2) {
-                return isPseudoHeader1 ? -1 : 1;
-            }
-            final int delta = one.hashCode() - two.hashCode();
-            if (delta == 0) {
-                // If the hash code matches it's very likely for the two strings to be equal
-                // and thus we optimistically compare them with the much faster equals method.
-                if (one.equals(two)) {
-                    return 0;
-                } else {
-                    return ByteString.DEFAULT_COMPARATOR.compare(one, two);
+            // Make sure the pseudo headers fields are first in iteration order
+            if (!key.isEmpty() && key.byteAt(0) == ':') {
+                after = firstNonPseudo;
+                before = firstNonPseudo.before();
+            } else {
+                after = head;
+                before = head.before();
+                if (firstNonPseudo == head) {
+                    firstNonPseudo = this;
                 }
             }
-            return delta;
+            pointNeighborsToThis();
+        }
+
+        @Override
+        protected void remove() {
+            if (this == firstNonPseudo) {
+                firstNonPseudo = firstNonPseudo.after();
+            }
+            super.remove();
         }
     }
 }

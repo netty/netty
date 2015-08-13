@@ -16,15 +16,14 @@ package io.netty.util;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
-import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.StringUtil;
-
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.util.Arrays;
-import java.util.Comparator;
+
+import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 
 /**
  * The primary use case for this class is to function as an immutable array of bytes. For performance reasons this
@@ -33,31 +32,6 @@ import java.util.Comparator;
  * this object is immutable.
  */
 public class ByteString {
-    /**
-     * A byte wise comparator between two {@link ByteString} objects.
-     */
-    public static final Comparator<ByteString> DEFAULT_COMPARATOR = new Comparator<ByteString>() {
-        @Override
-        public int compare(ByteString o1, ByteString o2) {
-            if (o1 == o2) {
-                return 0;
-            }
-
-            int result;
-            int length1 = o1.length();
-            int length2 = o2.length();
-            int minLength = Math.min(length1, length2);
-            for (int i = o1.offset, j = o2.offset; i < minLength; i++, j++) {
-                result = o1.value[i] - o2.value[j];
-                if (result != 0) {
-                    return result;
-                }
-            }
-
-            return length1 - length2;
-        }
-    };
-
     /**
      * Allows sub classes to take advantage of {@link ByteString} operations which need to generate new
      * ByteString objects.
@@ -77,7 +51,7 @@ public class ByteString {
     };
 
     public static final ByteString EMPTY_STRING = new ByteString(0);
-    protected static final int HASH_CODE_PRIME = 31;;
+    protected static final int HASH_CODE_PRIME = 31;
 
     /**
      * If this value is modified outside the constructor then call {@link #arrayChanged()}.
@@ -127,16 +101,15 @@ public class ByteString {
      * will be shared.
      */
     public ByteString(byte[] value, int start, int length, boolean copy) {
-        if (start < 0 || start > checkNotNull(value, "value").length - length) {
-            throw new IndexOutOfBoundsException("expected: " + "0 <= start(" + start + ") <= start + length(" + length
-                            + ") <= " + "value.length(" + value.length + ')');
-        }
-
         if (copy) {
             this.value = Arrays.copyOfRange(value, start, start + length);
-            offset = 0;
+            this.offset = 0;
             this.length = length;
         } else {
+            if (start < 0 || start > value.length - length) {
+                throw new IndexOutOfBoundsException("expected: " + "0 <= start(" + start + ") <= start + length(" +
+                        length + ") <= " + "value.length(" + value.length + ')');
+            }
             this.value = value;
             this.offset = start;
             this.length = length;
@@ -269,13 +242,21 @@ public class ByteString {
     }
 
     /**
+     * Create a new {@link ByteString} assuming ASCII encoding of {@code value}.
+     * @param value value to translate assuming ASCII encoding.
+     */
+    public static final ByteString fromAscii(CharSequence value) {
+        return new ByteString(value, CharsetUtil.US_ASCII);
+    }
+
+    /**
      * Iterates over the readable bytes of this buffer with the specified {@code processor} in ascending order.
      *
      * @return {@code -1} if the processor iterated to or beyond the end of the readable bytes.
      *         The last-visited index If the {@link ByteProcessor#process(byte)} returned {@code false}.
      */
     public final int forEachByte(ByteProcessor visitor) throws Exception {
-        return forEachByte(0, length(), visitor);
+        return forEachByte0(0, length(), visitor);
     }
 
     /**
@@ -291,6 +272,10 @@ public class ByteString {
                     + ") <= " + "length(" + length() + ')');
         }
 
+        return forEachByte0(index, length, visitor);
+    }
+
+    private int forEachByte0(int index, int length, ByteProcessor visitor) throws Exception {
         final int len = offset + length;
         for (int i = offset + index; i < len; ++i) {
             if (!visitor.process(value[i])) {
@@ -307,7 +292,7 @@ public class ByteString {
      *         The last-visited index If the {@link ByteProcessor#process(byte)} returned {@code false}.
      */
     public final int forEachByteDesc(ByteProcessor visitor) throws Exception {
-        return forEachByteDesc(0, length(), visitor);
+        return forEachByteDesc0(0, length(), visitor);
     }
 
     /**
@@ -323,6 +308,10 @@ public class ByteString {
                     + ") <= " + "length(" + length() + ')');
         }
 
+        return forEachByteDesc0(index, length, visitor);
+    }
+
+    private int forEachByteDesc0(int index, int length, ByteProcessor visitor) throws Exception {
         final int end = offset + index;
         for (int i = offset + index + length - 1; i >= end; --i) {
             if (!visitor.process(value[i])) {
@@ -423,7 +412,7 @@ public class ByteString {
         if (h == 0) {
             final int end = offset + length;
             for (int i = offset; i < end; ++i) {
-                h = h * HASH_CODE_PRIME ^ value[i] & HASH_CODE_PRIME;
+                h = h * HASH_CODE_PRIME + value[i];
             }
 
             hash = h;
