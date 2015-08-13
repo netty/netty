@@ -108,6 +108,34 @@ public abstract class ByteToMessageCodec<I> extends ChannelHandlerAdapter {
         encoder.write(ctx, msg, promise);
     }
 
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        decoder.channelReadComplete(ctx);
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        decoder.channelInactive(ctx);
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        try {
+            decoder.handlerAdded(ctx);
+        } finally {
+            encoder.handlerAdded(ctx);
+        }
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        try {
+            decoder.handlerRemoved(ctx);
+        } finally {
+            encoder.handlerRemoved(ctx);
+        }
+    }
+
     /**
      * @see MessageToByteEncoder#encode(ChannelHandlerContext, Object, ByteBuf)
      */
