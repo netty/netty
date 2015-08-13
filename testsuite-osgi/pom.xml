@@ -30,7 +30,22 @@
 
   <properties>
     <exam.version>4.4.0</exam.version>
+    <skipOsgiTestsuite>false</skipOsgiTestsuite>
   </properties>
+
+  <profiles>
+    <profile>
+      <id>skipTests</id>
+      <activation>
+        <property>
+          <name>skipTests</name>
+        </property>
+      </activation>
+      <properties>
+        <skipOsgiTestsuite>true</skipOsgiTestsuite>
+      </properties>
+    </profile>
+  </profiles>
 
   <dependencies>
     <!-- All release modules -->
@@ -214,8 +229,13 @@
            </execution>
         </executions>
       </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <skip>${skipOsgiTestsuite}</skip>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
-
 </project>
 
