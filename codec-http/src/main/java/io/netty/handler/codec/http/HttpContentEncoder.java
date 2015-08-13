@@ -58,6 +58,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
 
     private static final CharSequence ZERO_LENGTH_HEAD = "HEAD";
     private static final CharSequence ZERO_LENGTH_CONNECT = "CONNECT";
+    private static final int CONTINUE_CODE = HttpResponseStatus.CONTINUE.code();
 
     private final Queue<CharSequence> acceptEncodingQueue = new ArrayDeque<CharSequence>();
     private CharSequence acceptEncoding;
@@ -97,11 +98,17 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                 assert encoder == null;
 
                 final HttpResponse res = (HttpResponse) msg;
-
-                // Get the list of encodings accepted by the peer.
-                acceptEncoding = acceptEncodingQueue.poll();
-                if (acceptEncoding == null) {
-                    throw new IllegalStateException("cannot send more responses than requests");
+                final int code = res.status().code();
+                if (code == CONTINUE_CODE) {
+                    // We need to not poll the encoding when response with CONTINUE as another response will follow
+                    // for the issued request. See https://github.com/netty/netty/issues/4079
+                    acceptEncoding = null;
+                } else {
+                    // Get the list of encodings accepted by the peer.
+                    acceptEncoding = acceptEncodingQueue.poll();
+                    if (acceptEncoding == null) {
+                        throw new IllegalStateException("cannot send more responses than requests");
+                    }
                 }
 
                 /*
@@ -115,7 +122,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                  *
                  * This code is now inline with HttpClientDecoder.Decoder
                  */
-                if (isPassthru(res, acceptEncoding)) {
+                if (isPassthru(code, acceptEncoding)) {
                     if (isFull) {
                         out.add(ReferenceCountUtil.retain(res));
                     } else {
@@ -196,10 +203,9 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         }
     }
 
-    private static boolean isPassthru(HttpResponse res, CharSequence httpMethod) {
-        final int code = res.status().code();
-        boolean expectEmptyBody = httpMethod == ZERO_LENGTH_HEAD || (httpMethod == ZERO_LENGTH_CONNECT && code == 200);
-        return code < 200 || code == 204 || code == 304 || expectEmptyBody;
+    private static boolean isPassthru(int code, CharSequence httpMethod) {
+        return code < 200 || code == 204 || code == 304 ||
+               (httpMethod == ZERO_LENGTH_HEAD || (httpMethod == ZERO_LENGTH_CONNECT && code == 200));
     }
 
     private static void ensureHeaders(HttpObject msg) {
