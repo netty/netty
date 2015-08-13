@@ -113,6 +113,15 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
         }
     }
 
+    /**
+     * Returns the {@link FullHttpResponse} for a {@code Expect: 100-continue} {@link HttpRequest}.
+     * The default implementation will always create a {@link HttpRequest} with {@link HttpResponseStatus#CONTINUE}.
+     */
+    protected FullHttpResponse response100ContinueExpected(
+            @SuppressWarnings("unused") ChannelHandlerContext ctx, @SuppressWarnings("unused") HttpRequest request) {
+        return CONTINUE;
+    }
+
     @Override
     protected void decode(final ChannelHandlerContext ctx, HttpObject msg, List<Object> out) throws Exception {
         AggregatedFullHttpMessage currentMessage = this.currentMessage;
@@ -129,7 +138,8 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             //       No need to notify the upstream handlers - just log.
             //       If decoding a response, just throw an exception.
             if (is100ContinueExpected(m)) {
-                ctx.writeAndFlush(CONTINUE).addListener(new ChannelFutureListener() {
+                ctx.writeAndFlush(response100ContinueExpected(ctx, (HttpRequest) m))
+                        .addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {
                         if (!future.isSuccess()) {
