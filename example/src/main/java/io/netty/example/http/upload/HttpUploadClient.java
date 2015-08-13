@@ -264,7 +264,7 @@ public final class HttpUploadClient {
      */
     private static void formpostmultipart(
             Bootstrap bootstrap, String host, int port, URI uriFile, HttpDataFactory factory,
-            List<Entry<String, String>> headers, List<InterfaceHttpData> bodylist) throws Exception {
+            Iterable<Entry<String, String>> headers, List<InterfaceHttpData> bodylist) throws Exception {
         // XXX /formpostmultipart
         // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));

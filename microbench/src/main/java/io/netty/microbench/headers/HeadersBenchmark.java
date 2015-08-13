@@ -85,6 +85,14 @@ public class HeadersBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     @BenchmarkMode(Mode.AverageTime)
+    public void httpRemove(Blackhole bh) {
+        for (AsciiString name : httpNames) {
+            bh.consume(httpHeaders.remove(name));
+        }
+    }
+
+    @Benchmark
+    @BenchmarkMode(Mode.AverageTime)
     public void httpGet(Blackhole bh) {
         for (AsciiString name : httpNames) {
             bh.consume(httpHeaders.get(name));
@@ -107,6 +115,14 @@ public class HeadersBenchmark extends AbstractMicrobenchmark {
         Iterator<Entry<CharSequence, CharSequence>> itr = httpHeaders.iteratorCharSequence();
         while (itr.hasNext()) {
             bh.consume(itr.next());
+        }
+    }
+
+    @Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    public void http2Remove(Blackhole bh) {
+        for (ByteString name : http2Names) {
+            bh.consume(http2Headers.remove(name));
         }
     }
 

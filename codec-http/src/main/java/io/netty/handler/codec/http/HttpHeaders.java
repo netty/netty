@@ -17,11 +17,11 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;
 
 import java.text.ParseException;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -36,135 +36,11 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * commonly used utility methods that accesses an {@link HttpMessage}.
  */
 public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>> {
-    static final Iterator<Entry<CharSequence, CharSequence>> EMPTY_CHARS_ITERATOR =
-            Collections.<Entry<CharSequence, CharSequence>>emptyList().iterator();
-
-    public static final HttpHeaders EMPTY_HEADERS = new HttpHeaders() {
-        @Override
-        public String get(String name) {
-            return null;
-        }
-
-        @Override
-        public Integer getInt(CharSequence name) {
-            return null;
-        }
-
-        @Override
-        public int getInt(CharSequence name, int defaultValue) {
-            return defaultValue;
-        }
-
-        @Override
-        public Short getShort(CharSequence name) {
-            return null;
-        }
-
-        @Override
-        public short getShort(CharSequence name, short defaultValue) {
-            return defaultValue;
-        }
-
-        @Override
-        public Long getTimeMillis(CharSequence name) {
-            return null;
-        }
-
-        @Override
-        public long getTimeMillis(CharSequence name, long defaultValue) {
-            return defaultValue;
-        }
-
-        @Override
-        public List<String> getAll(String name) {
-            return Collections.emptyList();
-        }
-
-        @Override
-        public List<Entry<String, String>> entries() {
-            return Collections.emptyList();
-        }
-
-        @Override
-        public boolean contains(String name) {
-            return false;
-        }
-
-        @Override
-        public boolean isEmpty() {
-            return true;
-        }
-
-        @Override
-        public int size() {
-            return 0;
-        }
-
-        @Override
-        public Set<String> names() {
-            return Collections.emptySet();
-        }
-
-        @Override
-        public HttpHeaders add(String name, Object value) {
-            throw new UnsupportedOperationException("read only");
-        }
-
-        @Override
-        public HttpHeaders add(String name, Iterable<?> values) {
-            throw new UnsupportedOperationException("read only");
-        }
-
-        @Override
-        public HttpHeaders addInt(CharSequence name, int value) {
-            throw new UnsupportedOperationException("read only");
-        }
-
-        @Override
-        public HttpHeaders addShort(CharSequence name, short value) {
-            throw new UnsupportedOperationException("read only");
-        }
-
-        @Override
-        public HttpHeaders set(String name, Object value) {
-            throw new UnsupportedOperationException("read only");
-        }
-
-        @Override
-        public HttpHeaders set(String name, Iterable<?> values) {
-            throw new UnsupportedOperationException("read only");
-        }
-
-        @Override
-        public HttpHeaders setInt(CharSequence name, int value) {
-            throw new UnsupportedOperationException("read only");
-        }
-
-        @Override
-        public HttpHeaders setShort(CharSequence name, short value) {
-            throw new UnsupportedOperationException("read only");
-        }
-
-        @Override
-        public HttpHeaders remove(String name) {
-            throw new UnsupportedOperationException("read only");
-        }
-
-        @Override
-        public HttpHeaders clear() {
-            throw new UnsupportedOperationException("read only");
-        }
-
-        @Override
-        public Iterator<Entry<String, String>> iterator() {
-            return entries().iterator();
-        }
-
-        @Override
-        public Iterator<Entry<CharSequence, CharSequence>> iteratorCharSequence() {
-            return EMPTY_CHARS_ITERATOR;
-        }
-    };
+    /**
+     * @deprecated Use {@link EmptyHttpHeaders#INSTANCE}.
+     */
+    @Deprecated
+    public static final HttpHeaders EMPTY_HEADERS = EmptyHttpHeaders.INSTANCE;
 
     /**
      * @deprecated Use {@link HttpHeaderNames} instead.
@@ -1261,7 +1137,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      */
     @Deprecated
     public static boolean equalsIgnoreCase(CharSequence name1, CharSequence name2) {
-        return AsciiString.equalsIgnoreCase(name1, name2);
+        return AsciiString.contentEqualsIgnoreCase(name1, name2);
     }
 
     static void encode(HttpHeaders headers, ByteBuf buf) throws Exception {
@@ -1305,28 +1181,36 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     protected HttpHeaders() { }
 
     /**
+     * @deprecated Use {@link #get(CharSequence)}
      * @see {@link #get(CharSequence)}
      */
+    @Deprecated
     public abstract String get(String name);
 
     /**
+     * @deprecated Use {@link #getAsString(CharSequence)}
+     * <p>
      * Returns the value of a header with the specified name.  If there are
      * more than one values for the specified name, the first value is returned.
      *
      * @param name The name of the header to search
      * @return The first header value or {@code null} if there is no such header
      */
+    @Deprecated
     public String get(CharSequence name) {
         return get(name.toString());
     }
 
     /**
+     * @deprecated Future releases will use {@link CharSequence} instead of {@link String}.
+     * <p>
      * Returns the value of a header with the specified name.  If there are
      * more than one values for the specified name, the first value is returned.
      *
      * @param name The name of the header to search
      * @return The first header value or {@code defaultValue} if there is no such header
      */
+    @Deprecated
     public String get(CharSequence name, String defaultValue) {
         String value = get(name);
         if (value == null) {
@@ -1401,39 +1285,55 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     /**
      * @see {@link #getAll(CharSequence)}
      */
+    @Deprecated
     public abstract List<String> getAll(String name);
 
     /**
+     * @deprecated Use {@link #getAllAsString(CharSequence)}
+     * <p>
      * Returns the values of headers with the specified name
      *
      * @param name The name of the headers to search
      * @return A {@link List} of header values which will be empty if no values
      *         are found
      */
+    @Deprecated
     public List<String> getAll(CharSequence name) {
         return getAll(name.toString());
     }
 
     /**
+     * @deprecated Use {@link #iteratorCharSequence()}
+     * <p>
      * Returns a new {@link List} that contains all headers in this object.  Note that modifying the
      * returned {@link List} will not affect the state of this object.  If you intend to enumerate over the header
      * entries only, use {@link #iterator()} instead, which has much less overhead.
      */
+    @Deprecated
     public abstract List<Map.Entry<String, String>> entries();
 
     /**
+     * @deprecated Use {@link #contains(CharSequence)}
+     * <p>
      * @see {@link #contains(CharSequence)}
      */
+    @Deprecated
     public abstract boolean contains(String name);
 
     /**
-     * @deprecated Use {@link #iteratorCharSequence()}.
+     * @deprecated It is preferred to use {@link #iteratorCharSequence()} unless you need {@link String}.
+     * If {@link String} is required then use {@link #iteratorAsString()}.
+     * <p>
      * {@inheritDoc}
      */
     @Override
     @Deprecated
     public abstract Iterator<Entry<String, String>> iterator();
 
+    /**
+     * @deprecated In future releases this method will be renamed to {@code iterator()}.
+     * @return Iterator over the name/value header pairs.
+     */
     @Deprecated
     public abstract Iterator<Entry<CharSequence, CharSequence>> iteratorCharSequence();
 
@@ -1458,18 +1358,24 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     public abstract int size();
 
     /**
+     * @deprecated Future releases will return a {@link Set} of type {@link CharSequence}.
+     * <p>
      * Returns a new {@link Set} that contains the names of all headers in this object.  Note that modifying the
      * returned {@link Set} will not affect the state of this object.  If you intend to enumerate over the header
      * entries only, use {@link #iterator()} instead, which has much less overhead.
      */
+    @Deprecated
     public abstract Set<String> names();
 
     /**
-     * @see {@link #add(CharSequence, Object)}
+     * @deprecated Use {@link #add(CharSequence, Object)}
      */
+    @Deprecated
     public abstract HttpHeaders add(String name, Object value);
 
     /**
+     * @deprecated Future releases will have a {@code addObject} method.
+     * <p>
      * Adds a new header with the specified name and value.
      *
      * If the specified value is not a {@link String}, it is converted
@@ -1482,16 +1388,20 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      *
      * @return {@code this}
      */
+    @Deprecated
     public HttpHeaders add(CharSequence name, Object value) {
         return add(name.toString(), value);
     }
 
     /**
-     * @see {@link #add(CharSequence, Iterable)}
+     * @deprecated Use {@link #add(CharSequence, Iterable)}
      */
+    @Deprecated
     public abstract HttpHeaders add(String name, Iterable<?> values);
 
     /**
+     * @deprecated Future release will have an {@code addObject(...)}.
+     * <p>
      * Adds a new header with the specified name and values.
      *
      * This getMethod can be represented approximately as the following code:
@@ -1508,6 +1418,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * @param values The values of the headers being set
      * @return {@code this}
      */
+    @Deprecated
     public HttpHeaders add(CharSequence name, Iterable<?> values) {
         return add(name.toString(), values);
     }
@@ -1544,11 +1455,14 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     public abstract HttpHeaders addShort(CharSequence name, short value);
 
     /**
-     * @see {@link #set(CharSequence, Object)}
+     * @deprecated Use {@link #set(CharSequence, Object)}
      */
+    @Deprecated
     public abstract HttpHeaders set(String name, Object value);
 
     /**
+     * @deprecated Future release will have a {@code setObject(...)}.
+     * <p>
      * Sets a header with the specified name and value.
      *
      * If there is an existing header with the same name, it is removed.
@@ -1561,16 +1475,20 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * @param value The value of the header being set
      * @return {@code this}
      */
+    @Deprecated
     public HttpHeaders set(CharSequence name, Object value) {
         return set(name.toString(), value);
     }
 
     /**
-     * @see {@link #set(CharSequence, Iterable)}
+     * @deprecated {@link #set(CharSequence, Iterable)}
      */
+    @Deprecated
     public abstract HttpHeaders set(String name, Iterable<?> values);
 
     /**
+     * @deprecated Future release will have a {@code setObject(...)}.
+     * <p>
      * Sets a header with the specified name and values.
      *
      * If there is an existing header with the same name, it is removed.
@@ -1589,6 +1507,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * @param values The values of the headers being set
      * @return {@code this}
      */
+    @Deprecated
     public HttpHeaders set(CharSequence name, Iterable<?> values) {
         return set(name.toString(), values);
     }
@@ -1649,16 +1568,20 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     public abstract HttpHeaders setShort(CharSequence name, short value);
 
     /**
-     * @see {@link #remove(CharSequence)}
+     * @deprecated {@link #remove(CharSequence)}
      */
+    @Deprecated
     public abstract HttpHeaders remove(String name);
 
     /**
+     * @deprecated Future releases the signature will change.
+     * <p>
      * Removes the header with the specified name.
      *
      * @param name The name of the header to remove
      * @return {@code this}
      */
+    @Deprecated
     public HttpHeaders remove(CharSequence name) {
         return remove(name.toString());
     }
@@ -1694,12 +1617,38 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-     * Returns {@code true} if a header with the name and value exists.
-     *
-     * @param name         the headername
-     * @param value        the value
-     * @param ignoreCase   {@code true} if case should be ignored
-     * @return contains    {@code true} if it contains it {@code false} otherwise
+     * {@link Headers#get(Object)} and convert the result to a {@link String}.
+     * @param name the name of the header to retrieve
+     * @return the first header value if the header is found. {@code null} if there's no such header.
+     */
+    public final String getAsString(CharSequence name) {
+        return get(name);
+    }
+
+    /**
+     * {@link Headers#getAll(Object)} and convert each element of {@link List} to a {@link String}.
+     * @param name the name of the header to retrieve
+     * @return a {@link List} of header values or an empty {@link List} if no values are found.
+     */
+    public final List<String> getAllAsString(CharSequence name) {
+        return getAll(name);
+    }
+
+    /**
+     * {@link Iterator} that converts each {@link Entry}'s key and value to a {@link String}.
+     */
+    public final Iterator<Entry<String, String>> iteratorAsString() {
+        return iterator();
+    }
+
+    /**
+     * Returns {@code true} if a header with the {@code name} and {@code value} exists, {@code false} otherwise.
+     * <p>
+     * If {@code ignoreCase} is {@code true} then a case insensitive compare is done on the value.
+     * @param name the name of the header to find
+     * @param value the value of the header to find
+     * @param ignoreCase {@code true} then a case insensitive compare is run to compare values.
+     * otherwise a case sensitive compare is run to compare values.
      */
     public boolean contains(CharSequence name, CharSequence value, boolean ignoreCase) {
         return contains(name.toString(), value.toString(), ignoreCase);

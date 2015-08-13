@@ -49,7 +49,6 @@ import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2TestUtil.as;
 import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -67,9 +66,9 @@ import static org.mockito.Mockito.verify;
  * Test for data decompression in the HTTP/2 codec.
  */
 public class DataCompressionHttp2Test {
-    private static final AsciiString GET = as("GET");
-    private static final AsciiString POST = as("POST");
-    private static final AsciiString PATH = as("/some/path");
+    private static final AsciiString GET = new AsciiString("GET");
+    private static final AsciiString POST = new AsciiString("POST");
+    private static final AsciiString PATH = new AsciiString("/some/path");
 
     @Mock
     private Http2FrameListener serverListener;

@@ -32,14 +32,14 @@ public final class HttpHeaderUtil {
      */
     public static boolean isKeepAlive(HttpMessage message) {
         CharSequence connection = message.headers().get(HttpHeaderNames.CONNECTION);
-        if (connection != null && HttpHeaderValues.CLOSE.equalsIgnoreCase(connection)) {
+        if (connection != null && HttpHeaderValues.CLOSE.contentEqualsIgnoreCase(connection)) {
             return false;
         }
 
         if (message.protocolVersion().isKeepAliveDefault()) {
-            return !HttpHeaderValues.CLOSE.equalsIgnoreCase(connection);
+            return !HttpHeaderValues.CLOSE.contentEqualsIgnoreCase(connection);
         } else {
-            return HttpHeaderValues.KEEP_ALIVE.equalsIgnoreCase(connection);
+            return HttpHeaderValues.KEEP_ALIVE.contentEqualsIgnoreCase(connection);
         }
     }
 
@@ -193,7 +193,7 @@ public final class HttpHeaderUtil {
         if (value == null) {
             return false;
         }
-        if (HttpHeaderValues.CONTINUE.equalsIgnoreCase(value)) {
+        if (HttpHeaderValues.CONTINUE.contentEqualsIgnoreCase(value)) {
             return true;
         }
 
@@ -231,7 +231,6 @@ public final class HttpHeaderUtil {
             m.headers().add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
             m.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
         } else {
-            // Make a copy to be able to modify values while iterating
             List<String> encodings = m.headers().getAll(HttpHeaderNames.TRANSFER_ENCODING);
             if (encodings.isEmpty()) {
                 return;
@@ -240,7 +239,7 @@ public final class HttpHeaderUtil {
             Iterator<CharSequence> valuesIt = values.iterator();
             while (valuesIt.hasNext()) {
                 CharSequence value = valuesIt.next();
-                if (HttpHeaderValues.CHUNKED.equalsIgnoreCase(value)) {
+                if (HttpHeaderValues.CHUNKED.contentEqualsIgnoreCase(value)) {
                     valuesIt.remove();
                 }
             }

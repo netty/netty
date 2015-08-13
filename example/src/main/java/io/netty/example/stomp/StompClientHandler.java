@@ -62,7 +62,7 @@ public class StompClientHandler extends SimpleChannelInboundHandler<StompFrame> 
                 ctx.writeAndFlush(subscribeFrame);
                 break;
             case RECEIPT:
-                String receiptHeader = frame.headers().getAndConvert(StompHeaders.RECEIPT_ID);
+                String receiptHeader = frame.headers().getAsString(StompHeaders.RECEIPT_ID);
                 if (state == ClientState.AUTHENTICATED && receiptHeader.equals(subscrReceiptId)) {
                     StompFrame msgFrame = new DefaultStompFrame(StompCommand.SEND);
                     msgFrame.headers().set(StompHeaders.DESTINATION, StompClient.TOPIC);

@@ -15,9 +15,29 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
+import io.netty.util.AsciiString;
+import io.netty.util.ByteString;
+import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.EventExecutor;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_HEADER_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_UNSIGNED_INT;
-import static io.netty.handler.codec.http2.Http2TestUtil.as;
 import static io.netty.handler.codec.http2.Http2TestUtil.randomString;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
@@ -29,26 +49,6 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
-import io.netty.buffer.UnpooledByteBufAllocator;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.util.ByteString;
-import io.netty.util.CharsetUtil;
-import io.netty.util.concurrent.EventExecutor;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 /**
  * Integration tests for {@link DefaultHttp2FrameReader} and {@link DefaultHttp2FrameWriter}.
@@ -365,8 +365,9 @@ public class DefaultHttp2FrameIOTest {
     }
 
     private static Http2Headers dummyHeaders() {
-        return new DefaultHttp2Headers().method(as("GET")).scheme(as("https")).authority(as("example.org"))
-                .path(as("/some/path")).add(as("accept"), as("*/*"));
+        return new DefaultHttp2Headers().method(new AsciiString("GET")).scheme(new AsciiString("https"))
+                .authority(new AsciiString("example.org")).path(new AsciiString("/some/path"))
+                .add(new AsciiString("accept"), new AsciiString("*/*"));
     }
 
     private static Http2Headers largeHeaders() {
@@ -374,7 +375,7 @@ public class DefaultHttp2FrameIOTest {
         for (int i = 0; i < 100; ++i) {
             String key = "this-is-a-test-header-key-" + i;
             String value = "this-is-a-test-header-value-" + i;
-            headers.add(as(key), as(value));
+            headers.add(new AsciiString(key), new AsciiString(value));
         }
         return headers;
     }

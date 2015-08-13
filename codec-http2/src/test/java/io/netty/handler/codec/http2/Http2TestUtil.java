@@ -53,20 +53,6 @@ final class Http2TestUtil {
     }
 
     /**
-     * Converts a {@link String} into an {@link AsciiString}.
-     */
-    public static AsciiString as(String value) {
-        return new AsciiString(value);
-    }
-
-    /**
-     * Converts a byte array into a {@link ByteString}.
-     */
-    public static ByteString bs(byte[] value) {
-        return new ByteString(value);
-    }
-
-    /**
      * Returns a byte array filled with random data.
      */
     public static byte[] randomBytes() {
@@ -86,7 +72,7 @@ final class Http2TestUtil {
      * Returns an {@link AsciiString} that wraps a randomly-filled byte array.
      */
     public static ByteString randomString() {
-        return bs(randomBytes());
+        return new ByteString(randomBytes());
     }
 
     private Http2TestUtil() {

@@ -217,12 +217,12 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         }
 
         CharSequence upgrade = headers.get(HttpHeaderNames.UPGRADE);
-        if (!HttpHeaderValues.WEBSOCKET.equalsIgnoreCase(upgrade)) {
+        if (!HttpHeaderValues.WEBSOCKET.contentEqualsIgnoreCase(upgrade)) {
             throw new WebSocketHandshakeException("Invalid handshake response upgrade: " + upgrade);
         }
 
         CharSequence connection = headers.get(HttpHeaderNames.CONNECTION);
-        if (!HttpHeaderValues.UPGRADE.equalsIgnoreCase(connection)) {
+        if (!HttpHeaderValues.UPGRADE.contentEqualsIgnoreCase(connection)) {
             throw new WebSocketHandshakeException("Invalid handshake response connection: " + connection);
         }
 

@@ -96,7 +96,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
     protected Result beginEncode(HttpResponse headers, String acceptEncoding) throws Exception {
         String contentEncoding = headers.headers().get(HttpHeaderNames.CONTENT_ENCODING);
         if (contentEncoding != null &&
-            !HttpHeaderValues.IDENTITY.equalsIgnoreCase(contentEncoding)) {
+            !HttpHeaderValues.IDENTITY.contentEqualsIgnoreCase(contentEncoding)) {
             return null;
         }
 
