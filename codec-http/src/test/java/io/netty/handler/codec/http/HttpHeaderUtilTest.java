@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -24,7 +24,7 @@ import java.util.List;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
-public class HttpHeadersTest {
+public class HttpHeaderUtilTest {
 
     @Test
     public void testRemoveTransferEncodingIgnoreCase() {
@@ -56,17 +56,5 @@ public class HttpHeadersTest {
         assertThat(AsciiString.contentEqualsIgnoreCase(null, "foo"), is(false));
         assertThat(AsciiString.contentEqualsIgnoreCase("bar", null), is(false));
         assertThat(AsciiString.contentEqualsIgnoreCase("FoO", "fOo"), is(true));
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void testSetNullHeaderValueValidate() {
-        HttpHeaders headers = new DefaultHttpHeaders(true);
-        headers.set("test", (CharSequence) null);
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void testSetNullHeaderValueNotValidate() {
-        HttpHeaders headers = new DefaultHttpHeaders(false);
-        headers.set("test", (CharSequence) null);
     }
 }

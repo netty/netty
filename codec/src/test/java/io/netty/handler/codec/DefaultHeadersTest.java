@@ -21,28 +21,30 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
-import io.netty.util.ByteString;
-
-import java.text.ParsePosition;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 
-import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
+import io.netty.util.ByteString;
+import io.netty.util.CharsetUtil;
+
 /**
- * Tests for {@link DefaultBinaryHeaders}.
+ * Tests for {@link DefaultHeaders}.
  */
-public class DefaultBinaryHeadersTest {
+public class DefaultHeadersTest {
+
+    private Headers<ByteString> newInstance() {
+        return new DefaultHeaders<ByteString>(ByteStringValueConverter.INSTANCE);
+    }
 
     @Test
     public void addShouldIncreaseAndRemoveShouldDecreaseTheSize() {
-        DefaultBinaryHeaders headers = new DefaultBinaryHeaders();
+        Headers<ByteString> headers = newInstance();
         assertEquals(0, headers.size());
         headers.add(bs("name1"), bs("value1"), bs("value2"));
         assertEquals(2, headers.size());
@@ -62,7 +64,7 @@ public class DefaultBinaryHeadersTest {
 
     @Test
     public void afterClearHeadersShouldBeEmpty() {
-        DefaultBinaryHeaders headers = new DefaultBinaryHeaders();
+        Headers<ByteString> headers = newInstance();
         headers.add(bs("name1"), bs("value1"));
         headers.add(bs("name2"), bs("value2"));
         assertEquals(2, headers.size());
@@ -75,7 +77,7 @@ public class DefaultBinaryHeadersTest {
 
     @Test
     public void removingANameForASecondTimeShouldReturnFalse() {
-        DefaultBinaryHeaders headers = new DefaultBinaryHeaders();
+        Headers<ByteString> headers = newInstance();
         headers.add(bs("name1"), bs("value1"));
         headers.add(bs("name2"), bs("value2"));
         assertTrue(headers.remove(bs("name2")));
@@ -84,7 +86,7 @@ public class DefaultBinaryHeadersTest {
 
     @Test
     public void multipleValuesPerNameShouldBeAllowed() {
-        DefaultBinaryHeaders headers = new DefaultBinaryHeaders();
+        Headers<ByteString> headers = newInstance();
         headers.add(bs("name"), bs("value1"));
         headers.add(bs("name"), bs("value2"));
         headers.add(bs("name"), bs("value3"));
@@ -97,7 +99,7 @@ public class DefaultBinaryHeadersTest {
 
     @Test
     public void testContains() {
-        DefaultBinaryHeaders headers = new DefaultBinaryHeaders();
+        Headers<ByteString> headers = newInstance();
         headers.addBoolean(bs("boolean"), true);
         assertTrue(headers.containsBoolean(bs("boolean"), true));
         assertFalse(headers.containsBoolean(bs("boolean"), false));
@@ -147,7 +149,7 @@ public class DefaultBinaryHeadersTest {
 
     @Test
     public void canMixConvertedAndNormalValues() {
-        DefaultBinaryHeaders headers = new DefaultBinaryHeaders();
+        Headers<ByteString> headers = newInstance();
         headers.add(bs("name"), bs("value"));
         headers.addInt(bs("name"), 100);
         headers.addBoolean(bs("name"), false);
@@ -161,7 +163,7 @@ public class DefaultBinaryHeadersTest {
 
     @Test
     public void testGetAndRemove() {
-        DefaultBinaryHeaders headers = new DefaultBinaryHeaders();
+        Headers<ByteString> headers = newInstance();
         headers.add(bs("name1"), bs("value1"));
         headers.add(bs("name2"), bs("value2"), bs("value3"));
         headers.add(bs("name3"), bs("value4"), bs("value5"), bs("value6"));
@@ -177,14 +179,14 @@ public class DefaultBinaryHeadersTest {
 
     @Test
     public void whenNameContainsMultipleValuesGetShouldReturnTheFirst() {
-        DefaultBinaryHeaders headers = new DefaultBinaryHeaders();
+        Headers<ByteString> headers = newInstance();
         headers.add(bs("name1"), bs("value1"), bs("value2"));
         assertEquals(bs("value1"), headers.get(bs("name1")));
     }
 
     @Test
     public void getWithDefaultValueWorks() {
-        DefaultBinaryHeaders headers = new DefaultBinaryHeaders();
+        Headers<ByteString> headers = newInstance();
         headers.add(bs("name1"), bs("value1"));
 
         assertEquals(bs("value1"), headers.get(bs("name1"), bs("defaultvalue")));
@@ -193,7 +195,7 @@ public class DefaultBinaryHeadersTest {
 
     @Test
     public void setShouldOverWritePreviousValue() {
-        DefaultBinaryHeaders headers = new DefaultBinaryHeaders();
+        Headers<ByteString> headers = newInstance();
         headers.set(bs("name"), bs("value1"));
         headers.set(bs("name"), bs("value2"));
         assertEquals(1, headers.size());
@@ -204,19 +206,19 @@ public class DefaultBinaryHeadersTest {
 
     @Test
     public void setAllShouldOverwriteSomeAndLeaveOthersUntouched() {
-        DefaultBinaryHeaders h1 = new DefaultBinaryHeaders();
+        Headers<ByteString> h1 = newInstance();
 
         h1.add(bs("name1"), bs("value1"));
         h1.add(bs("name2"), bs("value2"));
         h1.add(bs("name2"), bs("value3"));
         h1.add(bs("name3"), bs("value4"));
 
-        DefaultBinaryHeaders h2 = new DefaultBinaryHeaders();
+        Headers<ByteString> h2 = newInstance();
         h2.add(bs("name1"), bs("value5"));
         h2.add(bs("name2"), bs("value6"));
         h2.add(bs("name1"), bs("value7"));
 
-        DefaultBinaryHeaders expected = new DefaultBinaryHeaders();
+        Headers<ByteString> expected = newInstance();
         expected.add(bs("name1"), bs("value5"));
         expected.add(bs("name2"), bs("value6"));
         expected.add(bs("name1"), bs("value7"));
@@ -229,12 +231,12 @@ public class DefaultBinaryHeadersTest {
 
     @Test
     public void headersWithSameNamesAndValuesShouldBeEquivalent() {
-        DefaultBinaryHeaders headers1 = new DefaultBinaryHeaders();
+        Headers<ByteString> headers1 = newInstance();
         headers1.add(bs("name1"), bs("value1"));
         headers1.add(bs("name2"), bs("value2"));
         headers1.add(bs("name2"), bs("value3"));
 
-        DefaultBinaryHeaders headers2 = new DefaultBinaryHeaders();
+        Headers<ByteString> headers2 = newInstance();
         headers2.add(bs("name1"), bs("value1"));
         headers2.add(bs("name2"), bs("value2"));
         headers2.add(bs("name2"), bs("value3"));
@@ -250,8 +252,8 @@ public class DefaultBinaryHeadersTest {
 
     @Test
     public void emptyHeadersShouldBeEqual() {
-        DefaultBinaryHeaders headers1 = new DefaultBinaryHeaders();
-        DefaultBinaryHeaders headers2 = new DefaultBinaryHeaders();
+        Headers<ByteString> headers1 = newInstance();
+        Headers<ByteString> headers2 = newInstance();
         assertNotSame(headers1, headers2);
         assertEquals(headers1, headers2);
         assertEquals(headers1.hashCode(), headers2.hashCode());
@@ -259,28 +261,28 @@ public class DefaultBinaryHeadersTest {
 
     @Test
     public void headersWithSameNamesButDifferentValuesShouldNotBeEquivalent() {
-        DefaultBinaryHeaders headers1 = new DefaultBinaryHeaders();
+        Headers<ByteString> headers1 = newInstance();
         headers1.add(bs("name1"), bs("value1"));
-        DefaultBinaryHeaders headers2 = new DefaultBinaryHeaders();
+        Headers<ByteString> headers2 = newInstance();
         headers1.add(bs("name1"), bs("value2"));
         assertNotEquals(headers1, headers2);
     }
 
     @Test
     public void subsetOfHeadersShouldNotBeEquivalent() {
-        DefaultBinaryHeaders headers1 = new DefaultBinaryHeaders();
+        Headers<ByteString> headers1 = newInstance();
         headers1.add(bs("name1"), bs("value1"));
         headers1.add(bs("name2"), bs("value2"));
-        DefaultBinaryHeaders headers2 = new DefaultBinaryHeaders();
+        Headers<ByteString> headers2 = newInstance();
         headers1.add(bs("name1"), bs("value1"));
         assertNotEquals(headers1, headers2);
     }
 
     @Test
     public void headersWithDifferentNamesAndValuesShouldNotBeEquivalent() {
-        DefaultBinaryHeaders h1 = new DefaultBinaryHeaders();
+        Headers<ByteString> h1 = newInstance();
         h1.set(bs("name1"), bs("value1"));
-        DefaultBinaryHeaders h2 = new DefaultBinaryHeaders();
+        Headers<ByteString> h2 = newInstance();
         h2.set(bs("name2"), bs("value2"));
         assertNotEquals(h1, h2);
         assertNotEquals(h2, h1);
@@ -290,23 +292,22 @@ public class DefaultBinaryHeadersTest {
 
     @Test(expected = NoSuchElementException.class)
     public void iterateEmptyHeadersShouldThrow() {
-        Iterator<Map.Entry<ByteString, ByteString>> iterator = new DefaultBinaryHeaders().iterator();
+        Iterator<Map.Entry<ByteString, ByteString>> iterator = newInstance().iterator();
         assertFalse(iterator.hasNext());
         iterator.next();
     }
 
     @Test
     public void iteratorShouldReturnAllNameValuePairs() {
-        DefaultBinaryHeaders headers1 = new DefaultBinaryHeaders();
+        Headers<ByteString> headers1 = newInstance();
         headers1.add(bs("name1"), bs("value1"), bs("value2"));
         headers1.add(bs("name2"), bs("value3"));
         headers1.add(bs("name3"), bs("value4"), bs("value5"), bs("value6"));
         headers1.add(bs("name1"), bs("value7"), bs("value8"));
         assertEquals(8, headers1.size());
 
-        DefaultBinaryHeaders headers2 = new DefaultBinaryHeaders();
+        Headers<ByteString> headers2 = newInstance();
         for (Entry<ByteString, ByteString> entry : headers1) {
-            Object v = entry.getValue();
             headers2.add(entry.getKey(), entry.getValue());
         }
 
@@ -315,7 +316,7 @@ public class DefaultBinaryHeadersTest {
 
     @Test
     public void iteratorSetValueShouldChangeHeaderValue() {
-        DefaultBinaryHeaders headers = new DefaultBinaryHeaders();
+        Headers<ByteString> headers = newInstance();
         headers.add(bs("name1"), bs("value1"), bs("value2"), bs("value3"));
         headers.add(bs("name2"), bs("value4"));
         assertEquals(4, headers.size());
@@ -342,65 +343,16 @@ public class DefaultBinaryHeadersTest {
 
     @Test
     public void getAllReturnsEmptyListForUnknownName() {
-        DefaultBinaryHeaders headers = new DefaultBinaryHeaders();
+        Headers<ByteString> headers = newInstance();
         assertEquals(0, headers.getAll(bs("noname")).size());
     }
 
     @Test
-    public void canNotModifyTheListReturnedByGetAll() {
-        DefaultBinaryHeaders headers = new DefaultBinaryHeaders();
-        headers.add(bs("name1"), bs("value1"));
-        headers.add(bs("name2"), bs("value2"), bs("value3"));
-
-        // Test for single value names.
-        try {
-            headers.getAll(bs("name1")).add(bs("value"));
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // for checkstyle
-        }
-        try {
-            headers.getAll(bs("name1")).remove(0);
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // for checkstyle
-        }
-
-        // Test for multi value names.
-        try {
-            headers.getAll(bs("name2")).add(bs("value"));
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // for checkstyle
-        }
-        try {
-            headers.getAll(bs("name2")).remove(0);
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // for checkstyle
-        }
-
-        // Test for names that don't exist.
-        try {
-            headers.getAll(bs("name3")).add(bs("value"));
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // for checkstyle
-        }
-        try {
-            headers.getAll(bs("name3")).remove(0);
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // for checkstyle
-        }
-    }
-
-    @Test
     public void setHeadersShouldClearAndOverwrite() {
-        DefaultBinaryHeaders headers1 = new DefaultBinaryHeaders();
+        Headers<ByteString> headers1 = newInstance();
         headers1.add(bs("name"), bs("value"));
 
-        DefaultBinaryHeaders headers2 = new DefaultBinaryHeaders();
+        Headers<ByteString> headers2 = newInstance();
         headers2.add(bs("name"), bs("newvalue"));
         headers2.add(bs("name1"), bs("value1"));
 
@@ -410,15 +362,15 @@ public class DefaultBinaryHeadersTest {
 
     @Test
     public void setAllHeadersShouldOnlyOverwriteHeaders() {
-        DefaultBinaryHeaders headers1 = new DefaultBinaryHeaders();
+        Headers<ByteString> headers1 = newInstance();
         headers1.add(bs("name"), bs("value"));
         headers1.add(bs("name1"), bs("value1"));
 
-        DefaultBinaryHeaders headers2 = new DefaultBinaryHeaders();
+        Headers<ByteString> headers2 = newInstance();
         headers2.add(bs("name"), bs("newvalue"));
         headers2.add(bs("name2"), bs("value2"));
 
-        DefaultBinaryHeaders expected = new DefaultBinaryHeaders();
+        Headers<ByteString> expected = newInstance();
         expected.add(bs("name"), bs("newvalue"));
         expected.add(bs("name1"), bs("value1"));
         expected.add(bs("name2"), bs("value2"));

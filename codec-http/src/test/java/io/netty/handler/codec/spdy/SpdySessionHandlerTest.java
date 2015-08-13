@@ -84,7 +84,7 @@ public class SpdySessionHandlerTest {
         assertEquals(last, spdyHeadersFrame.isLast());
         for (CharSequence name: headers.names()) {
             List<CharSequence> expectedValues = headers.getAll(name);
-            List<CharSequence> receivedValues = new ArrayList<CharSequence>(spdyHeadersFrame.headers().getAll(name));
+            List<CharSequence> receivedValues = spdyHeadersFrame.headers().getAll(name);
             assertTrue(receivedValues.containsAll(expectedValues));
             receivedValues.removeAll(expectedValues);
             assertTrue(receivedValues.isEmpty());

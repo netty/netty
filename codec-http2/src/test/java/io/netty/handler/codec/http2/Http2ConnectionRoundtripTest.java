@@ -15,28 +15,6 @@
 
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
-import static io.netty.handler.codec.http2.Http2TestUtil.as;
-import static io.netty.handler.codec.http2.Http2TestUtil.randomString;
-import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
-import static io.netty.handler.codec.http2.Http2TestUtil.FrameCountDown;
-import static io.netty.util.CharsetUtil.UTF_8;
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -53,15 +31,11 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.http2.Http2TestUtil.FrameCountDown;
 import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
+import io.netty.util.AsciiString;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
-
-import java.io.ByteArrayOutputStream;
-import java.net.InetSocketAddress;
-import java.util.Random;
-import java.util.concurrent.CountDownLatch;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -69,6 +43,32 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
+import java.io.ByteArrayOutputStream;
+import java.net.InetSocketAddress;
+import java.util.Random;
+import java.util.concurrent.CountDownLatch;
+
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2TestUtil.randomString;
+import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
+import static io.netty.util.CharsetUtil.UTF_8;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 /**
  * Tests the full HTTP/2 framing stack including the connection and preface handlers.
@@ -495,8 +495,9 @@ public class Http2ConnectionRoundtripTest {
     }
 
     private static Http2Headers dummyHeaders() {
-        return new DefaultHttp2Headers().method(as("GET")).scheme(as("https"))
-        .authority(as("example.org")).path(as("/some/path/resource2")).add(randomString(), randomString());
+        return new DefaultHttp2Headers().method(new AsciiString("GET")).scheme(new AsciiString("https"))
+        .authority(new AsciiString("example.org")).path(new AsciiString("/some/path/resource2"))
+        .add(randomString(), randomString());
     }
 
     private void mockFlowControl(Http2FrameListener listener) throws Http2Exception {

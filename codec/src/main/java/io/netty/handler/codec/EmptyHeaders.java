@@ -15,7 +15,6 @@
 package io.netty.handler.codec;
 
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -289,11 +288,6 @@ public class EmptyHeaders<T> implements Headers<T> {
 
     @Override
     public boolean containsTimeMillis(T name, long value) {
-        return false;
-    }
-
-    @Override
-    public boolean contains(T name, T value, Comparator<? super T> valueComparator) {
         return false;
     }
 

@@ -17,7 +17,6 @@ package io.netty.util;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
 
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
@@ -36,8 +35,6 @@ public class ByteStringTest {
     private int length = 100;
     private ByteString aByteString;
     private ByteString bByteString;
-    private ByteString greaterThanAByteString;
-    private ByteString lessThanAByteString;
     private Random r = new Random();
 
     @Before
@@ -52,66 +49,6 @@ public class ByteStringTest {
         System.arraycopy(a, aOffset, b, bOffset, length);
         aByteString = new ByteString(a, aOffset, length, false);
         bByteString = new ByteString(b, bOffset, length, false);
-
-        int i;
-        final int end = aOffset + length;
-        // Find an element that can be decremented
-        for (i = aOffset + 1; i < end; ++i) {
-            if (a[i] > Byte.MIN_VALUE) {
-                --a[i];
-                break;
-            }
-        }
-        if (i == end) {
-            throw new IllegalStateException("Couldn't find an index to decrement, all random numbers Byte.MIN_VALUE");
-        }
-        lessThanAByteString = new ByteString(a, aOffset, length, true);
-        ++a[i]; // Restore the a array to the original value
-
-        // Find an element that can be incremented
-        for (i = aOffset + 1; i < end; ++i) {
-            if (a[i] < Byte.MAX_VALUE) {
-                ++a[i];
-                break;
-            }
-        }
-        if (i == end) {
-            throw new IllegalStateException("Couldn't find an index to increment, all random numbers Byte.MAX_VALUE");
-        }
-        greaterThanAByteString = new ByteString(a, aOffset, length, true);
-        --a[i]; // Restore the a array to the original value
-    }
-
-    @Test
-    public void testEqualsComparareSelf() {
-        assertTrue(ByteString.DEFAULT_COMPARATOR.compare(aByteString, aByteString) == 0);
-        assertEquals(bByteString, bByteString);
-    }
-
-    @Test
-    public void testEqualsComparatorAgainstAnother1() {
-        assertTrue(ByteString.DEFAULT_COMPARATOR.compare(bByteString, aByteString) == 0);
-        assertEquals(bByteString, aByteString);
-        assertEquals(bByteString.hashCode(), aByteString.hashCode());
-    }
-
-    @Test
-    public void testEqualsComparatorAgainstAnother2() {
-        assertTrue(ByteString.DEFAULT_COMPARATOR.compare(aByteString, bByteString) == 0);
-        assertEquals(aByteString, bByteString);
-        assertEquals(aByteString.hashCode(), bByteString.hashCode());
-    }
-
-    @Test
-    public void testLessThan() {
-        assertTrue(ByteString.DEFAULT_COMPARATOR.compare(lessThanAByteString, aByteString) < 0);
-        assertTrue(ByteString.DEFAULT_COMPARATOR.compare(aByteString, lessThanAByteString) > 0);
-    }
-
-    @Test
-    public void testGreaterThan() {
-        assertTrue(ByteString.DEFAULT_COMPARATOR.compare(greaterThanAByteString, aByteString) > 0);
-        assertTrue(ByteString.DEFAULT_COMPARATOR.compare(aByteString, greaterThanAByteString) < 0);
     }
 
     @Test

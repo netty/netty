@@ -15,19 +15,19 @@
 
 package io.netty.handler.codec.http2;
 
-import io.netty.handler.codec.BinaryHeaders;
-import io.netty.util.ByteString;
-import io.netty.util.CharsetUtil;
-
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import io.netty.handler.codec.Headers;
+import io.netty.util.ByteString;
+import io.netty.util.CharsetUtil;
+
 /**
  * A collection of headers sent or received via HTTP/2.
  */
-public interface Http2Headers extends BinaryHeaders {
+public interface Http2Headers extends Headers<ByteString> {
 
     /**
      * HTTP/2 pseudo-headers names.
@@ -129,7 +129,7 @@ public interface Http2Headers extends BinaryHeaders {
     Http2Headers addTimeMillis(ByteString name, long value);
 
     @Override
-    Http2Headers add(BinaryHeaders headers);
+    Http2Headers add(Headers<? extends ByteString> headers);
 
     @Override
     Http2Headers set(ByteString name, ByteString value);
@@ -177,10 +177,10 @@ public interface Http2Headers extends BinaryHeaders {
     Http2Headers setTimeMillis(ByteString name, long value);
 
     @Override
-    Http2Headers set(BinaryHeaders headers);
+    Http2Headers set(Headers<? extends ByteString> headers);
 
     @Override
-    Http2Headers setAll(BinaryHeaders headers);
+    Http2Headers setAll(Headers<? extends ByteString> headers);
 
     @Override
     Http2Headers clear();

@@ -139,6 +139,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
         res.headers().add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET);
         res.headers().add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
         res.headers().add(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT, accept);
+
         String subprotocols = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
         if (subprotocols != null) {
             String selectedSubprotocol = selectSubprotocol(subprotocols);

@@ -15,22 +15,21 @@
 
 package io.netty.handler.codec.http2;
 
+import com.twitter.hpack.Encoder;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.util.AsciiString;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.io.ByteArrayOutputStream;
+
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_HEADER_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
-import static io.netty.handler.codec.http2.Http2TestUtil.as;
 import static io.netty.handler.codec.http2.Http2TestUtil.randomBytes;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-
-import java.io.ByteArrayOutputStream;
-
-import org.junit.Before;
-import org.junit.Test;
-
-import com.twitter.hpack.Encoder;
 
 /**
  * Tests for {@link DefaultHttp2HeadersDecoder}.
@@ -51,7 +50,7 @@ public class DefaultHttp2HeadersDecoderTest {
             Http2Headers headers = decoder.decodeHeaders(buf);
             assertEquals(3, headers.size());
             assertEquals("GET", headers.method().toString());
-            assertEquals("avalue", headers.get(as("akey")).toString());
+            assertEquals("avalue", headers.get(new AsciiString("akey")).toString());
         } finally {
             buf.release();
         }

@@ -14,57 +14,12 @@
  */
 package io.netty.handler.codec;
 
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 
 public interface Headers<T> extends Iterable<Entry<T, T>> {
-
-    /**
-     * Converts to/from a generic object to the type of the headers.
-     */
-    interface ValueConverter<T> {
-        T convertObject(Object value);
-
-        T convertBoolean(boolean value);
-
-        boolean convertToBoolean(T value);
-
-        T convertByte(byte value);
-
-        byte convertToByte(T value);
-
-        T convertChar(char value);
-
-        char convertToChar(T value);
-
-        T convertShort(short value);
-
-        short convertToShort(T value);
-
-        T convertInt(int value);
-
-        int convertToInt(T value);
-
-        T convertLong(long value);
-
-        long convertToLong(T value);
-
-        T convertTimeMillis(long value);
-
-        long convertToTimeMillis(T value);
-
-        T convertFloat(float value);
-
-        float convertToFloat(T value);
-
-        T convertDouble(double value);
-
-        double convertToDouble(T value);
-    }
-
     /**
      * Returns the value of a header with the specified name. If there is more than one value for the specified name,
      * the first value in insertion order is returned.
@@ -313,7 +268,9 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * Returns the {@code boolean} value of a header with the specified {@code name} and removes the header from this
      * object. If there is more than one value for the specified name, the first value in insertion order is returned.
      * In any case all values for {@code name} are removed.
-     *
+     * <p>
+     * If an exception occurs during the translation from type {@code T} all entries with {@code name} may still
+     * be removed.
      * @param name the name of the header to retrieve
      * @return the {@code boolean} value of the first value in insertion order or {@code null} if there is no
      *         such value or it can't be converted to {@code boolean}.
@@ -324,7 +281,9 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * Returns the {@code boolean} value of a header with the specified {@code name} and removes the header from this
      * object. If there is more than one value for the specified name, the first value in insertion order is returned.
      * In any case all values for {@code name} are removed.
-     *
+     * <p>
+     * If an exception occurs during the translation from type {@code T} all entries with {@code name} may still
+     * be removed.
      * @param name the name of the header to search
      * @param defaultValue the default value
      * @return the {@code boolean} value of the first value in insertion order or {@code defaultValue} if there is no
@@ -336,7 +295,9 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * Returns the {@code byte} value of a header with the specified {@code name} and removes the header from this
      * object. If there is more than one value for the specified name, the first value in insertion order is returned.
      * In any case all values for {@code name} are removed.
-     *
+     * <p>
+     * If an exception occurs during the translation from type {@code T} all entries with {@code name} may still
+     * be removed.
      * @param name the name of the header to search
      * @return the {@code byte} value of the first value in insertion order or {@code null} if there is no
      *         such value or it can't be converted to {@code byte}.
@@ -347,7 +308,9 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * Returns the {@code byte} value of a header with the specified {@code name} and removes the header from this
      * object. If there is more than one value for the specified name, the first value in insertion order is returned.
      * In any case all values for {@code name} are removed.
-     *
+     * <p>
+     * If an exception occurs during the translation from type {@code T} all entries with {@code name} may still
+     * be removed.
      * @param name the name of the header to search
      * @param defaultValue the default value
      * @return the {@code byte} value of the first value in insertion order or {@code defaultValue} if there is no
@@ -359,7 +322,9 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * Returns the {@code char} value of a header with the specified {@code name} and removes the header from this
      * object. If there is more than one value for the specified name, the first value in insertion order is returned.
      * In any case all values for {@code name} are removed.
-     *
+     * <p>
+     * If an exception occurs during the translation from type {@code T} all entries with {@code name} may still
+     * be removed.
      * @param name the name of the header to search
      * @return the {@code char} value of the first value in insertion order or {@code null} if there is no
      *         such value or it can't be converted to {@code char}.
@@ -370,7 +335,9 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * Returns the {@code char} value of a header with the specified {@code name} and removes the header from this
      * object. If there is more than one value for the specified name, the first value in insertion order is returned.
      * In any case all values for {@code name} are removed.
-     *
+     * <p>
+     * If an exception occurs during the translation from type {@code T} all entries with {@code name} may still
+     * be removed.
      * @param name the name of the header to search
      * @param defaultValue the default value
      * @return the {@code char} value of the first value in insertion order or {@code defaultValue} if there is no
@@ -382,7 +349,9 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * Returns the {@code short} value of a header with the specified {@code name} and removes the header from this
      * object. If there is more than one value for the specified name, the first value in insertion order is returned.
      * In any case all values for {@code name} are removed.
-     *
+     * <p>
+     * If an exception occurs during the translation from type {@code T} all entries with {@code name} may still
+     * be removed.
      * @param name the name of the header to search
      * @return the {@code short} value of the first value in insertion order or {@code null} if there is no
      *         such value or it can't be converted to {@code short}.
@@ -393,7 +362,9 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * Returns the {@code short} value of a header with the specified {@code name} and removes the header from this
      * object. If there is more than one value for the specified name, the first value in insertion order is returned.
      * In any case all values for {@code name} are removed.
-     *
+     * <p>
+     * If an exception occurs during the translation from type {@code T} all entries with {@code name} may still
+     * be removed.
      * @param name the name of the header to search
      * @param defaultValue the default value
      * @return the {@code short} value of the first value in insertion order or {@code defaultValue} if there is no
@@ -405,7 +376,9 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * Returns the {@code int} value of a header with the specified {@code name} and removes the header from this
      * object. If there is more than one value for the specified name, the first value in insertion order is returned.
      * In any case all values for {@code name} are removed.
-     *
+     * <p>
+     * If an exception occurs during the translation from type {@code T} all entries with {@code name} may still
+     * be removed.
      * @param name the name of the header to search
      * @return the {@code int} value of the first value in insertion order or {@code null} if there is no
      *         such value or it can't be converted to {@code int}.
@@ -416,7 +389,9 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * Returns the {@code int} value of a header with the specified {@code name} and removes the header from this
      * object. If there is more than one value for the specified name, the first value in insertion order is returned.
      * In any case all values for {@code name} are removed.
-     *
+     * <p>
+     * If an exception occurs during the translation from type {@code T} all entries with {@code name} may still
+     * be removed.
      * @param name the name of the header to search
      * @param defaultValue the default value
      * @return the {@code int} value of the first value in insertion order or {@code defaultValue} if there is no
@@ -428,7 +403,9 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * Returns the {@code long} value of a header with the specified {@code name} and removes the header from this
      * object. If there is more than one value for the specified name, the first value in insertion order is returned.
      * In any case all values for {@code name} are removed.
-     *
+     * <p>
+     * If an exception occurs during the translation from type {@code T} all entries with {@code name} may still
+     * be removed.
      * @param name the name of the header to search
      * @return the {@code long} value of the first value in insertion order or {@code null} if there is no
      *         such value or it can't be converted to {@code long}.
@@ -439,7 +416,9 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * Returns the {@code long} value of a header with the specified {@code name} and removes the header from this
      * object. If there is more than one value for the specified name, the first value in insertion order is returned.
      * In any case all values for {@code name} are removed.
-     *
+     * <p>
+     * If an exception occurs during the translation from type {@code T} all entries with {@code name} may still
+     * be removed.
      * @param name the name of the header to search
      * @param defaultValue the default value
      * @return the {@code long} value of the first value in insertion order or {@code defaultValue} if there is no
@@ -451,7 +430,9 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * Returns the {@code float} value of a header with the specified {@code name} and removes the header from this
      * object. If there is more than one value for the specified name, the first value in insertion order is returned.
      * In any case all values for {@code name} are removed.
-     *
+     * <p>
+     * If an exception occurs during the translation from type {@code T} all entries with {@code name} may still
+     * be removed.
      * @param name the name of the header to search
      * @return the {@code float} value of the first value in insertion order or {@code null} if there is no
      *         such value or it can't be converted to {@code float}.
@@ -462,7 +443,9 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * Returns the {@code float} value of a header with the specified {@code name} and removes the header from this
      * object. If there is more than one value for the specified name, the first value in insertion order is returned.
      * In any case all values for {@code name} are removed.
-     *
+     * <p>
+     * If an exception occurs during the translation from type {@code T} all entries with {@code name} may still
+     * be removed.
      * @param name the name of the header to search
      * @param defaultValue the default value
      * @return the {@code float} value of the first value in insertion order or {@code defaultValue} if there is no
@@ -474,7 +457,9 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * Returns the {@code double} value of a header with the specified {@code name} and removes the header from this
      * object. If there is more than one value for the specified name, the first value in insertion order is returned.
      * In any case all values for {@code name} are removed.
-     *
+     * <p>
+     * If an exception occurs during the translation from type {@code T} all entries with {@code name} may still
+     * be removed.
      * @param name the name of the header to search
      * @return the {@code double} value of the first value in insertion order or {@code null} if there is no
      *         such value or it can't be converted to {@code double}.
@@ -485,7 +470,9 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * Returns the {@code double} value of a header with the specified {@code name} and removes the header from this
      * object. If there is more than one value for the specified name, the first value in insertion order is returned.
      * In any case all values for {@code name} are removed.
-     *
+     * <p>
+     * If an exception occurs during the translation from type {@code T} all entries with {@code name} may still
+     * be removed.
      * @param name the name of the header to search
      * @param defaultValue the default value
      * @return the {@code double} value of the first value in insertion order or {@code defaultValue} if there is no
@@ -497,7 +484,9 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * Returns the value of a header with the specified {@code name} in milliseconds and removes the header from this
      * object. If there is more than one value for the specified {@code name}, the first value in insertion order is
      * returned. In any case all values for {@code name} are removed.
-     *
+     * <p>
+     * If an exception occurs during the translation from type {@code T} all entries with {@code name} may still
+     * be removed.
      * @param name the name of the header to retrieve
      * @return the milliseconds value of the first value in insertion order or {@code null} if there is no such
      *         value or it can't be converted to milliseconds.
@@ -508,7 +497,9 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * Returns the value of a header with the specified {@code name} in milliseconds and removes the header from this
      * object. If there is more than one value for the specified {@code name}, the first value in insertion order is
      * returned. In any case all values for {@code name} are removed.
-     *
+     * <p>
+     * If an exception occurs during the translation from type {@code T} all entries with {@code name} may still
+     * be removed.
      * @param name the name of the header to retrieve
      * @param defaultValue the default value
      * @return the milliseconds value of the first value in insertion order or {@code defaultValue} if there is no such
@@ -529,6 +520,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * The {@link Object#equals(Object)} method is used to test for equality of {@code value}.
      * </p>
      * @param name the header name
+     * @param value the header value of the header to find
      */
     boolean contains(T name, T value);
 
@@ -623,16 +615,6 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
     boolean containsTimeMillis(T name, long value);
 
     /**
-     * Returns {@code true} if a header with the {@code name} and {@code value} exists.
-     *
-     * @param name the header name
-     * @param value the header value
-     * @param valueComparator The comparator to use when comparing {@code value} to entries in this map
-     * @return {@code true} if it contains it {@code false} otherwise
-     */
-    boolean contains(T name, T value, Comparator<? super T> valueComparator);
-
-    /**
      * Returns the number of headers in this object.
      */
     int size();
@@ -687,8 +669,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
     Headers<T> add(T name, T... values);
 
     /**
-     * Adds a new header. Before the {@code value} is add, it's converted to type {@code T} by a call to
-     * {@link ValueConverter#convertObject(java.lang.Object)}.
+     * Adds a new header. Before the {@code value} is added, it's converted to type {@code T}.
      *
      * @param name the header name
      * @param value the value of the header
@@ -858,7 +839,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
 
     /**
      * Sets a new header. Any existing headers with this name are removed. Before the {@code value} is add, it's
-     * converted to type {@code T} by a call to {@link ValueConverter#convertObject(java.lang.Object)}.
+     * converted to type {@code T}.
      *
      * @param name the header name
      * @param value the value of the header
