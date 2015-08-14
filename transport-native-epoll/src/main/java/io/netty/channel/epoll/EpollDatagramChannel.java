@@ -535,9 +535,9 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
             Throwable exception = null;
             try {
-                do {
-                    ByteBuf data = null;
-                    try {
+                ByteBuf data = null;
+                try {
+                    do {
                         data = allocHandle.allocate(allocator);
                         allocHandle.attemptedBytesRead(data.writableBytes());
                         final DatagramSocketAddress remoteAddress;
@@ -564,21 +564,14 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
                         readBuf.add(new DatagramPacket(data, (InetSocketAddress) localAddress(), remoteAddress));
                         data = null;
-                    } catch (Throwable t) {
-                        if (data != null) {
-                            data.release();
-                            data = null;
-                        }
-                        if (edgeTriggered) {
-                            // We do not break from the loop here and remember the last exception,
-                            // because we need to consume everything from the socket used with epoll ET.
-                            pipeline.fireExceptionCaught(t);
-                        } else {
-                            exception = t;
-                            break;
-                        }
+                    } while (allocHandle.continueReading());
+                } catch (Throwable t) {
+                    if (data != null) {
+                        data.release();
+                        data = null;
                     }
-                } while (allocHandle.continueReading());
+                    exception = t;
+                }
 
                 int size = readBuf.size();
                 for (int i = 0; i < size; i ++) {
@@ -590,6 +583,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
                 if (exception != null) {
                     pipeline.fireExceptionCaught(exception);
+                    checkResetEpollIn(edgeTriggered);
                 }
             } finally {
                 // Check if there is a readPending which was not processed yet.
