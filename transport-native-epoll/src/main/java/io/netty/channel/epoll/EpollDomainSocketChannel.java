@@ -157,16 +157,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
 
                     readPending = false;
                     allocHandle.incMessagesRead(1);
-                    try {
-                        pipeline.fireChannelRead(new FileDescriptor(socketFd));
-                    } catch (Throwable t) {
-                        // If ET is enabled we need to consume everything from the socket
-                        if (edgeTriggered) {
-                            pipeline.fireExceptionCaught(t);
-                        } else {
-                            throw t;
-                        }
-                    }
+                    pipeline.fireChannelRead(new FileDescriptor(socketFd));
                 } while (allocHandle.continueReading());
 
                 allocHandle.readComplete();
@@ -175,14 +166,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
                 pipeline.fireExceptionCaught(t);
-                // trigger a read again as there may be something left to read and because of epoll ET we
-                // will not get notified again until we read everything from the socket
-                eventLoop().execute(new OneTimeTask() {
-                    @Override
-                    public void run() {
-                        epollInReady();
-                    }
-                });
+                checkResetEpollIn(edgeTriggered);
             } finally {
                 // Check if there is a readPending which was not processed yet.
                 // This could be for two reasons:

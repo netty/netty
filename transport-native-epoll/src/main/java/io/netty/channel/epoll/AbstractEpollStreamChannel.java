@@ -587,7 +587,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
     }
 
     class EpollStreamUnsafe extends AbstractEpollUnsafe {
-        private boolean handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close) {
+        private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close) {
             if (byteBuf != null) {
                 if (byteBuf.isReadable()) {
                     readPending = false;
@@ -601,9 +601,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
             pipeline.fireExceptionCaught(cause);
             if (close || cause instanceof IOException) {
                 shutdownInput();
-                return true;
             }
-            return false;
         }
 
         @Override
@@ -769,48 +767,35 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
             boolean close = false;
             try {
                 do {
-                    try {
-                        SpliceInTask spliceTask = spliceQueue.peek();
-                        if (spliceTask != null) {
-                            if (spliceTask.spliceIn(allocHandle)) {
-                                // We need to check if it is still active as if not we removed all SpliceTasks in
-                                // doClose(...)
-                                if (isActive()) {
-                                    spliceQueue.remove();
-                                }
-                                continue;
-                            } else {
-                                break;
+                    SpliceInTask spliceTask = spliceQueue.peek();
+                    if (spliceTask != null) {
+                        if (spliceTask.spliceIn(allocHandle)) {
+                            // We need to check if it is still active as if not we removed all SpliceTasks in
+                            // doClose(...)
+                            if (isActive()) {
+                                spliceQueue.remove();
                             }
-                        }
-
-                        // we use a direct buffer here as the native implementations only be able
-                        // to handle direct buffers.
-                        byteBuf = allocHandle.allocate(allocator);
-                        allocHandle.lastBytesRead(doReadBytes(byteBuf));
-                        if (allocHandle.lastBytesRead() <= 0) {
-                            // nothing was read, release the buffer.
-                            byteBuf.release();
-                            byteBuf = null;
-                            close = allocHandle.lastBytesRead() < 0;
+                            continue;
+                        } else {
                             break;
                         }
-                        readPending = false;
-                        allocHandle.incMessagesRead(1);
-                        pipeline.fireChannelRead(byteBuf);
-                        byteBuf = null;
-                    } catch (Throwable t) {
-                        if (edgeTriggered) { // We must keep reading if ET is enabled
-                            if (byteBuf != null) {
-                                byteBuf.release();
-                                byteBuf = null;
-                            }
-                            pipeline.fireExceptionCaught(t);
-                        } else {
-                            // byteBuf is release in outer exception handling if necessary.
-                            throw t;
-                        }
                     }
+
+                    // we use a direct buffer here as the native implementations only be able
+                    // to handle direct buffers.
+                    byteBuf = allocHandle.allocate(allocator);
+                    allocHandle.lastBytesRead(doReadBytes(byteBuf));
+                    if (allocHandle.lastBytesRead() <= 0) {
+                        // nothing was read, release the buffer.
+                        byteBuf.release();
+                        byteBuf = null;
+                        close = allocHandle.lastBytesRead() < 0;
+                        break;
+                    }
+                    readPending = false;
+                    allocHandle.incMessagesRead(1);
+                    pipeline.fireChannelRead(byteBuf);
+                    byteBuf = null;
                 } while (allocHandle.continueReading());
 
                 allocHandle.readComplete();
@@ -821,17 +806,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
                     close = false;
                 }
             } catch (Throwable t) {
-                boolean closed = handleReadException(pipeline, byteBuf, t, close);
-                if (!closed) {
-                    // trigger a read again as there may be something left to read and because of epoll ET we
-                    // will not get notified again until we read everything from the socket
-                    eventLoop().execute(new OneTimeTask() {
-                        @Override
-                        public void run() {
-                            epollInReady();
-                        }
-                    });
-                }
+                handleReadException(pipeline, byteBuf, t, close);
+                checkResetEpollIn(edgeTriggered);
             } finally {
                 // Check if there is a readPending which was not processed yet.
                 // This could be for two reasons:

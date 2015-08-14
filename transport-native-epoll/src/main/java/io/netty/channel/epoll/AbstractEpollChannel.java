@@ -312,6 +312,23 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         abstract void epollInReady();
 
         /**
+         * Will schedule a {@link #epollInReady()} call on the event loop if necessary.
+         * @param edgeTriggered {@code true} if the channel is using ET mode. {@code false} otherwise.
+         */
+        final void checkResetEpollIn(boolean edgeTriggered) {
+            if (edgeTriggered && !isInputShutdown0()) {
+                // trigger a read again as there may be something left to read and because of epoll ET we
+                // will not get notified again until we read everything from the socket
+                eventLoop().execute(new OneTimeTask() {
+                    @Override
+                    public void run() {
+                        epollInReady();
+                    }
+                });
+            }
+        }
+
+        /**
          * Called once EPOLLRDHUP event is ready to be processed
          */
         final void epollRdHupReady() {
