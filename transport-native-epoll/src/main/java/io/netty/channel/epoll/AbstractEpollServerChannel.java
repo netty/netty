@@ -73,7 +73,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
     abstract Channel newChildChannel(int fd, byte[] remote, int offset, int len) throws Exception;
 
     final class EpollServerSocketUnsafe extends AbstractEpollUnsafe {
-        // Will hold the remote address after accept(...) was sucesssful.
+        // Will hold the remote address after accept(...) was successful.
         // We need 24 bytes for the address as maximum + 1 byte for storing the length.
         // So use 26 bytes as it's a power of two.
         private final byte[] acceptedAddress = new byte[26];
@@ -117,16 +117,8 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
                         readPending = false;
                         allocHandle.incMessagesRead(1);
 
-                        try {
-                            int len = acceptedAddress[0];
-                            pipeline.fireChannelRead(newChildChannel(socketFd, acceptedAddress, 1, len));
-                        } catch (Throwable t) {
-                            if (edgeTriggered) { // We must keep reading if ET is enabled
-                                pipeline.fireExceptionCaught(t);
-                            } else {
-                                throw t;
-                            }
-                        }
+                        int len = acceptedAddress[0];
+                        pipeline.fireChannelRead(newChildChannel(socketFd, acceptedAddress, 1, len));
                     } while (allocHandle.continueReading());
                 } catch (Throwable t) {
                     exception = t;
@@ -136,6 +128,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
 
                 if (exception != null) {
                     pipeline.fireExceptionCaught(exception);
+                    checkResetEpollIn(edgeTriggered);
                 }
             } finally {
                 // Check if there is a readPending which was not processed yet.
