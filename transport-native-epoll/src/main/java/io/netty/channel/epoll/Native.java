@@ -19,6 +19,7 @@ package io.netty.channel.epoll;
 import io.netty.channel.ChannelException;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.unix.DomainSocketAddress;
+import io.netty.util.CharsetUtil;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
@@ -435,7 +436,7 @@ public final class Native {
             }
         } else if (socketAddress instanceof DomainSocketAddress) {
             DomainSocketAddress addr = (DomainSocketAddress) socketAddress;
-            int res = bindDomainSocket(fd, addr.path());
+            int res = bindDomainSocket(fd, addr.path().getBytes(CharsetUtil.UTF_8));
             if (res < 0) {
                 throw newIOException("bind", res);
             }
@@ -445,7 +446,7 @@ public final class Native {
     }
 
     private static native int bind(int fd, byte[] address, int scopeId, int port);
-    private static native int bindDomainSocket(int fd, String path);
+    private static native int bindDomainSocket(int fd, byte[] path);
 
     public static void listen(int fd, int backlog) throws IOException {
         int res = listen0(fd, backlog);
@@ -464,7 +465,7 @@ public final class Native {
             res = connect(fd, address.address, address.scopeId, inetSocketAddress.getPort());
         } else if (socketAddress instanceof DomainSocketAddress) {
             DomainSocketAddress unixDomainSocketAddress = (DomainSocketAddress) socketAddress;
-            res = connectDomainSocket(fd, unixDomainSocketAddress.path());
+            res = connectDomainSocket(fd, unixDomainSocketAddress.path().getBytes(CharsetUtil.UTF_8));
         } else {
             throw new Error("Unexpected SocketAddress implementation " + socketAddress);
         }
@@ -479,7 +480,7 @@ public final class Native {
     }
 
     private static native int connect(int fd, byte[] address, int scopeId, int port);
-    private static native int connectDomainSocket(int fd, String path);
+    private static native int connectDomainSocket(int fd, byte[] path);
 
     public static boolean finishConnect(int fd) throws IOException {
         int res = finishConnect0(fd);
