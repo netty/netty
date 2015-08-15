@@ -1482,21 +1482,29 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_socketDomain(JNIEnv* e
     return fd;
 }
 
-JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_bindDomainSocket(JNIEnv* env, jclass clazz, jint fd, jstring socketPath) {
+// macro to calculate the length of a sockaddr_un struct for a given path length.
+// see sys/un.h#SUN_LEN, this is modified to allow nul bytes
+#define _UNIX_ADDR_LENGTH(path_len) (((struct sockaddr_un *) 0)->sun_path) + path_len
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_bindDomainSocket(JNIEnv* env, jclass clazz, jint fd, jbyteArray socketPath) {
     struct sockaddr_un addr;
 
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
 
-    const char* socket_path = (*env)->GetStringUTFChars(env, socketPath, 0);
-    memcpy(addr.sun_path, socket_path, strlen(socket_path));
+    const jbyte* socket_path = (*env)->GetByteArrayElements(env, socketPath, 0);
+    jint socket_path_len = (*env)->GetArrayLength(env, socketPath);
+    if (socket_path_len > sizeof(addr.sun_path)) {
+        socket_path_len = sizeof(addr.sun_path);
+    }
+    memcpy(addr.sun_path, socket_path, socket_path_len);
 
     if (unlink(socket_path) == -1 && errno != ENOENT) {
         return -errno;
     }
 
-    int res = bind(fd, (struct sockaddr*) &addr, sizeof(addr));
-    (*env)->ReleaseStringUTFChars(env, socketPath, socket_path);
+    int res = bind(fd, (struct sockaddr*) &addr, _UNIX_ADDR_LENGTH(socket_path_len));
+    (*env)->ReleaseByteArrayElements(env, socketPath, socket_path, 0);
 
     if (res == -1) {
         return -errno;
@@ -1504,22 +1512,27 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_bindDomainSocket(JNIEn
     return res;
 }
 
-JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_connectDomainSocket(JNIEnv* env, jclass clazz, jint fd, jstring socketPath) {
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_connectDomainSocket(JNIEnv* env, jclass clazz, jint fd, jbyteArray socketPath) {
     struct sockaddr_un addr;
+    jint socket_path_len;
 
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
 
-    const char* socket_path = (*env)->GetStringUTFChars(env, socketPath, 0);
-    strncpy(addr.sun_path, socket_path, sizeof(addr.sun_path) - 1);
+    const jbyte* socket_path = (*env)->GetByteArrayElements(env, socketPath, 0);
+    socket_path_len = (*env)->GetArrayLength(env, socketPath);
+    if (socket_path_len > sizeof(addr.sun_path)) {
+        socket_path_len = sizeof(addr.sun_path);
+    }
+    memcpy(addr.sun_path, socket_path, socket_path_len);
 
     int res;
     int err;
     do {
-        res = connect(fd, (struct sockaddr*) &addr, sizeof(addr));
+        res = connect(fd, (struct sockaddr*) &addr, _UNIX_ADDR_LENGTH(socket_path_len));
     } while (res == -1 && ((err = errno) == EINTR));
 
-    (*env)->ReleaseStringUTFChars(env, socketPath, socket_path);
+    (*env)->ReleaseByteArrayElements(env, socketPath, socket_path, 0);
 
     if (res < 0) {
         return -err;
