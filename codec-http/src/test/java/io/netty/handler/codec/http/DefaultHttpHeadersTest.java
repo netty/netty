@@ -25,10 +25,7 @@ import java.util.List;
 import static io.netty.util.AsciiString.contentEquals;
 import static java.util.Arrays.asList;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class DefaultHttpHeadersTest {
     private static final String HEADER_NAME = "testHeader";
@@ -67,6 +64,42 @@ public class DefaultHttpHeadersTest {
     }
 
     @Test
+    public void testStringKeyRetrievedAsAsciiString() {
+        final HttpHeaders headers = new DefaultHttpHeaders(false);
+
+        // Test adding String key and retrieving it using a AsciiString key
+        final String connection = "keep-alive";
+        headers.add("Connection", connection);
+
+        // Passes
+        final String value = headers.getAsString(HttpHeaderNames.CONNECTION.toString());
+        assertNotNull(value);
+        assertEquals(connection, value);
+
+        // Passes
+        final String value2 = headers.getAsString(HttpHeaderNames.CONNECTION);
+        assertNotNull(value2);
+        assertEquals(connection, value2);
+    }
+
+    @Test
+    public void testAsciiStringKeyRetrievedAsString() {
+        final HttpHeaders headers = new DefaultHttpHeaders(false);
+
+        // Test adding AsciiString key and retrieving it using a String key
+        final String cacheControl = "no-cache";
+        headers.add(HttpHeaderNames.CACHE_CONTROL, cacheControl);
+
+        final String value = headers.getAsString(HttpHeaderNames.CACHE_CONTROL);
+        assertNotNull(value);
+        assertEquals(cacheControl, value);
+
+        final String value2 = headers.getAsString(HttpHeaderNames.CACHE_CONTROL.toString());
+        assertNotNull(value2);
+        assertEquals(cacheControl, value2);
+    }
+
+    @Test
     public void testRemoveTransferEncodingIgnoreCase() {
         HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         message.headers().set(HttpHeaderNames.TRANSFER_ENCODING, "Chunked");
@@ -91,7 +124,7 @@ public class DefaultHttpHeadersTest {
     }
 
     @Test
-    public void testEquansIgnoreCase() {
+    public void testEqualsIgnoreCase() {
         assertThat(AsciiString.contentEqualsIgnoreCase(null, null), is(true));
         assertThat(AsciiString.contentEqualsIgnoreCase(null, "foo"), is(false));
         assertThat(AsciiString.contentEqualsIgnoreCase("bar", null), is(false));
