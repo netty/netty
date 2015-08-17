@@ -18,6 +18,8 @@ package io.netty.handler.codec.memcache;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.MessageAggregator;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.memcache.binary.BinaryMemcacheRequestDecoder;
 import io.netty.handler.codec.memcache.binary.BinaryMemcacheResponseEncoder;
 
