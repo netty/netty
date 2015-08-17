@@ -459,7 +459,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             //     - https://github.com/netty/netty/issues/222
             if (code >= 100 && code < 200) {
                 // One exception: Hixie 76 websocket handshake response
-                return !(code == 101 && !res.headers().contains(HttpHeaders.Names.SEC_WEBSOCKET_ACCEPT));
+                return !(code == 101 && !res.headers().contains(HttpHeaders.Names.SEC_WEBSOCKET_ACCEPT)
+                         && res.headers().contains(HttpHeaders.Names.UPGRADE, HttpHeaders.Values.WEBSOCKET, true));
             }
 
             switch (code) {
