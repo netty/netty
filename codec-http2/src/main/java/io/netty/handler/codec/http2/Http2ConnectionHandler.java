@@ -14,6 +14,23 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
+import io.netty.handler.codec.http2.Http2Exception.StreamException;
+import io.netty.util.concurrent.ScheduledFuture;
+import io.netty.util.internal.OneTimeTask;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
 import static io.netty.buffer.ByteBufUtil.hexDump;
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
@@ -28,19 +45,8 @@ import static io.netty.util.CharsetUtil.UTF_8;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.min;
 import static java.lang.String.format;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
-import io.netty.handler.codec.http2.Http2Exception.StreamException;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
-
-import java.util.List;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Provides the default implementation for processing inbound frame events and delegates to a
@@ -53,11 +59,14 @@ import java.util.List;
  */
 public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http2LifecycleManager {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Http2ConnectionHandler.class);
+    private static final long DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS = MILLISECONDS.convert(30, SECONDS);
+
     private final Http2ConnectionDecoder decoder;
     private final Http2ConnectionEncoder encoder;
     private final Http2Settings initialSettings;
     private ChannelFutureListener closeListener;
     private BaseDecoder byteDecoder;
+    private long gracefulShutdownTimeoutMillis = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
 
     public Http2ConnectionHandler(boolean server, Http2FrameListener listener) {
         this(new DefaultHttp2Connection(server), listener);
@@ -111,6 +120,28 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         if (encoder.connection() != decoder.connection()) {
             throw new IllegalArgumentException("Encoder and Decoder do not share the same connection object");
         }
+    }
+
+    /**
+     * Get the amount of time (in milliseconds) this endpoint will wait for all streams to be closed before closing
+     * the connection during the graceful shutdown process.
+     */
+    public long gracefulShutdownTimeoutMillis() {
+        return gracefulShutdownTimeoutMillis;
+    }
+
+    /**
+     * Set the amount of time (in milliseconds) this endpoint will wait for all streams to be closed before closing
+     * the connection during the graceful shutdown process.
+     * @param gracefulShutdownTimeoutMillis the amount of time (in milliseconds) this endpoint will wait for all
+     * streams to be closed before closing the connection during the graceful shutdown process.
+     */
+    public void gracefulShutdownTimeoutMillis(long gracefulShutdownTimeoutMillis) {
+        if (gracefulShutdownTimeoutMillis < 0) {
+            throw new IllegalArgumentException("gracefulShutdownTimeoutMillis: " + gracefulShutdownTimeoutMillis +
+                    " (expected: >= 0)");
+        }
+        this.gracefulShutdownTimeoutMillis = gracefulShutdownTimeoutMillis;
     }
 
     public Http2Connection connection() {
@@ -420,13 +451,17 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
         ChannelFuture future = goAway(ctx, null);
         ctx.flush();
+        doGracefulShutdown(ctx, future, promise);
+    }
 
+    private void doGracefulShutdown(ChannelHandlerContext ctx, ChannelFuture future, ChannelPromise promise) {
         // If there are no active streams, close immediately after the send is complete.
         // Otherwise wait until all streams are inactive.
         if (isGracefulShutdownComplete()) {
             future.addListener(new ClosingChannelFutureListener(ctx, promise));
         } else {
-            closeListener = new ClosingChannelFutureListener(ctx, promise);
+            closeListener = new ClosingChannelFutureListener(ctx, promise,
+                                        gracefulShutdownTimeoutMillis, MILLISECONDS);
         }
     }
 
@@ -551,7 +586,17 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         if (http2Ex == null) {
             http2Ex = new Http2Exception(INTERNAL_ERROR, cause.getMessage(), cause);
         }
-        goAway(ctx, http2Ex).addListener(new ClosingChannelFutureListener(ctx, ctx.newPromise()));
+
+        ChannelPromise promise = ctx.newPromise();
+        ChannelFuture future = goAway(ctx, http2Ex);
+        switch (http2Ex.shutdownHint()) {
+        case GRACEFUL_SHUTDOWN:
+            doGracefulShutdown(ctx, future, promise);
+            break;
+        default:
+            future.addListener(new ClosingChannelFutureListener(ctx, promise));
+            break;
+        }
     }
 
     /**
@@ -716,14 +761,31 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     private static final class ClosingChannelFutureListener implements ChannelFutureListener {
         private final ChannelHandlerContext ctx;
         private final ChannelPromise promise;
+        private final ScheduledFuture<?> timeoutTask;
 
         ClosingChannelFutureListener(ChannelHandlerContext ctx, ChannelPromise promise) {
             this.ctx = ctx;
             this.promise = promise;
+            timeoutTask = null;
+        }
+
+        ClosingChannelFutureListener(final ChannelHandlerContext ctx, final ChannelPromise promise,
+                                     long timeout, TimeUnit unit) {
+            this.ctx = ctx;
+            this.promise = promise;
+            timeoutTask = ctx.executor().schedule(new OneTimeTask() {
+                @Override
+                public void run() {
+                    ctx.close(promise);
+                }
+            }, timeout, unit);
         }
 
         @Override
         public void operationComplete(ChannelFuture sentGoAwayFuture) throws Exception {
+            if (timeoutTask != null) {
+                timeoutTask.cancel(false);
+            }
             ctx.close(promise);
         }
     }
