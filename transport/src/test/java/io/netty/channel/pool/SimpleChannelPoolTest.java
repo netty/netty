@@ -34,7 +34,12 @@ import org.junit.rules.ExpectedException;
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 public class SimpleChannelPoolTest {
     private static final String LOCAL_ADDR_ID = "test.id";
@@ -157,7 +162,7 @@ public class SimpleChannelPoolTest {
      */
     @Test
     public void testUnhealthyChannelIsNotOffered() throws Exception {
-        EventLoopGroup group = new DefaultEventLoopGroup();
+        EventLoopGroup group = new LocalEventLoopGroup();
         LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
         Bootstrap cb = new Bootstrap();
         cb.remoteAddress(addr);
@@ -170,7 +175,7 @@ public class SimpleChannelPoolTest {
           .childHandler(new ChannelInitializer<LocalChannel>() {
               @Override
               public void initChannel(LocalChannel ch) throws Exception {
-                  ch.pipeline().addLast(new ChannelHandlerAdapter());
+                  ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
               }
           });
 
@@ -188,8 +193,6 @@ public class SimpleChannelPoolTest {
         channel1.close().syncUninterruptibly();
         try {
             pool.release(channel1).syncUninterruptibly();
-        } catch (Exception e) {
-            throw e;
         } finally {
             sc.close().syncUninterruptibly();
             channel2.close().syncUninterruptibly();
@@ -205,7 +208,7 @@ public class SimpleChannelPoolTest {
      */
     @Test
     public void testUnhealthyChannelIsOfferedWhenNoHealthCheckRequested() throws Exception {
-        EventLoopGroup group = new DefaultEventLoopGroup();
+        EventLoopGroup group = new LocalEventLoopGroup();
         LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
         Bootstrap cb = new Bootstrap();
         cb.remoteAddress(addr);
@@ -218,7 +221,7 @@ public class SimpleChannelPoolTest {
           .childHandler(new ChannelInitializer<LocalChannel>() {
               @Override
               public void initChannel(LocalChannel ch) throws Exception {
-                  ch.pipeline().addLast(new ChannelHandlerAdapter());
+                  ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
               }
           });
 
