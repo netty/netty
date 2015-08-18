@@ -39,6 +39,7 @@ import org.junit.Test;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -51,9 +52,12 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 public class DnsNameResolverTest {
 
@@ -419,6 +423,38 @@ public class DnsNameResolverTest {
 
             logger.info("{} has the following MX records:{}", hostname, buf);
             response.release();
+        }
+    }
+
+    @Test(timeout = 5000)
+    public void testNegativeTtl() throws Exception {
+        final int oldNegativeTtl = resolver.negativeTtl();
+        resolver.setNegativeTtl(10);
+        try {
+            resolveNonExistentDomain();
+
+            // If negative cache works, this loop should be done really quickly.
+            final List<UnknownHostException> exceptions = new ArrayList<UnknownHostException>();
+            final int size = 10000;
+
+            for (int i = 0; i < size; i++) {
+                exceptions.add(resolveNonExistentDomain());
+            }
+
+            assertThat(exceptions, hasSize(size));
+        } finally {
+            resolver.setNegativeTtl(oldNegativeTtl);
+        }
+    }
+
+    private static UnknownHostException resolveNonExistentDomain() {
+        try {
+            resolver.resolve("non-existent.netty.io", 0).sync();
+            fail();
+            return null;
+        } catch (Exception e) {
+            assertThat(e, is(instanceOf(UnknownHostException.class)));
+            return (UnknownHostException) e;
         }
     }
 
