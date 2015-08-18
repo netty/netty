@@ -25,10 +25,11 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.channel.local.LocalAddress;
+import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpMessage;
@@ -44,7 +45,6 @@ import io.netty.handler.codec.http2.Http2TestUtil.FrameAdapter;
 import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
-import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
 import org.junit.After;
 import org.junit.Before;
@@ -53,7 +53,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
@@ -116,8 +115,8 @@ public class InboundHttp2ToHttpAdapterTest {
         sb = new ServerBootstrap();
         cb = new Bootstrap();
 
-        sb.group(new NioEventLoopGroup(), new NioEventLoopGroup());
-        sb.channel(NioServerSocketChannel.class);
+        sb.group(new DefaultEventLoopGroup());
+        sb.channel(LocalServerChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
@@ -153,8 +152,8 @@ public class InboundHttp2ToHttpAdapterTest {
             }
         });
 
-        cb.group(new NioEventLoopGroup());
-        cb.channel(NioSocketChannel.class);
+        cb.group(new DefaultEventLoopGroup());
+        cb.channel(LocalChannel.class);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
@@ -173,10 +172,9 @@ public class InboundHttp2ToHttpAdapterTest {
             }
         });
 
-        serverChannel = sb.bind(new InetSocketAddress(0)).sync().channel();
-        int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
+        serverChannel = sb.bind(new LocalAddress("InboundHttp2ToHttpAdapterTest")).sync().channel();
 
-        ChannelFuture ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
+        ChannelFuture ccf = cb.connect(serverChannel.localAddress());
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
         clientChannel = ccf.channel();
     }
@@ -185,7 +183,14 @@ public class InboundHttp2ToHttpAdapterTest {
     public void teardown() throws Exception {
         cleanupCapturedRequests();
         cleanupCapturedResponses();
-        serverChannel.close().sync();
+        if (clientChannel != null) {
+            clientChannel.close().sync();
+            clientChannel = null;
+        }
+        if (serverChannel != null) {
+            serverChannel.close().sync();
+            serverChannel = null;
+        }
         Future<?> serverGroup = sb.group().shutdownGracefully(0, 0, MILLISECONDS);
         Future<?> serverChildGroup = sb.childGroup().shutdownGracefully(0, 0, MILLISECONDS);
         Future<?> clientGroup = cb.group().shutdownGracefully(0, 0, MILLISECONDS);
@@ -194,8 +199,6 @@ public class InboundHttp2ToHttpAdapterTest {
         clientGroup.sync();
         clientDelegator = null;
         serverDelegator = null;
-        clientChannel = null;
-        serverChannel = null;
         serverConnectedChannel = null;
     }
 
@@ -265,7 +268,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 @Override
                 public void run() {
                     frameWriter.writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
-                    frameWriter.writeData(ctxClient(), 3, content.retain(), 0, true, newPromiseClient());
+                    frameWriter.writeData(ctxClient(), 3, content.duplicate().retain(), 0, true, newPromiseClient());
                     ctxClient().flush();
                 }
             });
@@ -410,7 +413,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 @Override
                 public void run() {
                     frameWriter.writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
-                    frameWriter.writeData(ctxClient(), 3, content.retain(), 0, false, newPromiseClient());
+                    frameWriter.writeData(ctxClient(), 3, content.duplicate().retain(), 0, false, newPromiseClient());
                     frameWriter.writeHeaders(ctxClient(), 3, http2Headers2, 0, true, newPromiseClient());
                     ctxClient().flush();
                 }
@@ -455,8 +458,8 @@ public class InboundHttp2ToHttpAdapterTest {
                     frameWriter.writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
                     frameWriter.writeHeaders(ctxClient(), 5, http2Headers2, 0, false, newPromiseClient());
                     frameWriter.writePriority(ctxClient(), 5, 3, (short) 123, true, newPromiseClient());
-                    frameWriter.writeData(ctxClient(), 3, content.retain(), 0, true, newPromiseClient());
-                    frameWriter.writeData(ctxClient(), 5, content2.retain(), 0, true, newPromiseClient());
+                    frameWriter.writeData(ctxClient(), 3, content.duplicate().retain(), 0, true, newPromiseClient());
+                    frameWriter.writeData(ctxClient(), 5, content2.duplicate().retain(), 0, true, newPromiseClient());
                     ctxClient().flush();
                 }
             });
@@ -506,8 +509,8 @@ public class InboundHttp2ToHttpAdapterTest {
                 public void run() {
                     frameWriter.writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
                     frameWriter.writeHeaders(ctxClient(), 5, http2Headers2, 0, false, newPromiseClient());
-                    frameWriter.writeData(ctxClient(), 3, content.retain(), 0, true, newPromiseClient());
-                    frameWriter.writeData(ctxClient(), 5, content2.retain(), 0, true, newPromiseClient());
+                    frameWriter.writeData(ctxClient(), 3, content.duplicate().retain(), 0, true, newPromiseClient());
+                    frameWriter.writeData(ctxClient(), 5, content2.duplicate().retain(), 0, true, newPromiseClient());
                     frameWriter.writePriority(ctxClient(), 5, 3, (short) 222, false, newPromiseClient());
                     ctxClient().flush();
                 }
@@ -577,8 +580,8 @@ public class InboundHttp2ToHttpAdapterTest {
                 public void run() {
                     frameWriter.writeHeaders(ctxServer(), 3, http2Headers, 0, false, newPromiseServer());
                     frameWriter.writePushPromise(ctxServer(), 3, 5, http2Headers2, 0, newPromiseServer());
-                    frameWriter.writeData(ctxServer(), 3, content.retain(), 0, true, newPromiseServer());
-                    frameWriter.writeData(ctxServer(), 5, content2.retain(), 0, true, newPromiseServer());
+                    frameWriter.writeData(ctxServer(), 3, content.duplicate().retain(), 0, true, newPromiseServer());
+                    frameWriter.writeData(ctxServer(), 5, content2.duplicate().retain(), 0, true, newPromiseServer());
                     ctxServer().flush();
                 }
             });
@@ -655,7 +658,7 @@ public class InboundHttp2ToHttpAdapterTest {
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() {
-                    frameWriter.writeData(ctxClient(), 3, payload.retain(), 0, true, newPromiseClient());
+                    frameWriter.writeData(ctxClient(), 3, payload.duplicate().retain(), 0, true, newPromiseClient());
                     ctxClient().flush();
                 }
             });
