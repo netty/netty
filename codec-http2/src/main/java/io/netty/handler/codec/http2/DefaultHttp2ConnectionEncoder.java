@@ -315,10 +315,9 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
      * </p>
      */
     private final class FlowControlledData extends FlowControlledBase {
-
         private final CoalescingBufferQueue queue;
 
-        private FlowControlledData(Http2Stream stream, ByteBuf buf, int padding, boolean endOfStream,
+        public FlowControlledData(Http2Stream stream, ByteBuf buf, int padding, boolean endOfStream,
                                    ChannelPromise promise) {
             super(stream, padding, endOfStream, promise);
             queue = new CoalescingBufferQueue(promise.channel());
@@ -384,7 +383,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         private final short weight;
         private final boolean exclusive;
 
-        private FlowControlledHeaders(Http2Stream stream, Http2Headers headers, int streamDependency, short weight,
+        public FlowControlledHeaders(Http2Stream stream, Http2Headers headers, int streamDependency, short weight,
                 boolean exclusive, int padding, boolean endOfStream, ChannelPromise promise) {
             super(stream, padding, endOfStream, promise);
             this.headers = headers;
