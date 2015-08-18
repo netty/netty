@@ -455,7 +455,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
                 int code = Integer.parseInt(status.substring(0, space));
                 String reasonPhrase = status.substring(space + 1);
                 HttpResponseStatus responseStatus = valueOf(code);
-                if (responseStatus.reasonPhrase().toString().equals(reasonPhrase)) {
+                if (responseStatus.reasonPhrase().contentEquals(reasonPhrase)) {
                     return responseStatus;
                 } else {
                     return new HttpResponseStatus(code, reasonPhrase);
@@ -507,7 +507,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
             status = valueOf(code);
             if (codeEnd < string.length()) {
                 String actualReason = string.toString(codeEnd + 1, string.length());
-                if (!status.reasonPhrase().equals(actualReason)) {
+                if (!status.reasonPhrase().contentEquals(actualReason)) {
                     status = new HttpResponseStatus(code, actualReason);
                 }
             }
