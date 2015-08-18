@@ -23,11 +23,11 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
-import io.netty.handler.codec.dns.DnsSection;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.DnsResponseCode;
+import io.netty.handler.codec.dns.DnsSection;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.ThreadLocalRandom;
@@ -37,8 +37,6 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Test;
 
-import java.net.Inet4Address;
-import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -52,8 +50,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 
 public class DnsNameResolverTest {
 
@@ -380,10 +380,10 @@ public class DnsNameResolverTest {
             String hostname = e.getKey();
             Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f = e.getValue().awaitUninterruptibly();
             if (!f.isSuccess()) {
-                // Try again a couple more times because the DNS servers might be throttling us down.
-                for (int i = 0; i < 2; i++) {
+                // Try again because the DNS servers might be throttling us down.
+                for (int i = 0; i < SERVERS.size(); i++) {
                     f = queryMx(hostname).awaitUninterruptibly();
-                    if (f.isSuccess()) {
+                    if (f.isSuccess() && !DnsResponseCode.SERVFAIL.equals(f.getNow().content().code())) {
                         break;
                     }
                 }
