@@ -15,6 +15,30 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelPromise;
+import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.GenericFutureListener;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Matchers;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
+import java.util.List;
+
 import static io.netty.buffer.Unpooled.copiedBuffer;
 import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
@@ -37,29 +61,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.buffer.UnpooledByteBufAllocator;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultChannelPromise;
-import io.netty.util.CharsetUtil;
-import io.netty.util.concurrent.GenericFutureListener;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Matchers;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-
-import java.util.List;
 
 /**
  * Tests for {@link Http2ConnectionHandler}
@@ -94,6 +95,9 @@ public class Http2ConnectionHandlerTest {
 
     @Mock
     private ChannelHandlerContext ctx;
+
+    @Mock
+    private EventExecutor executor;
 
     @Mock
     private Channel channel;
@@ -172,6 +176,7 @@ public class Http2ConnectionHandlerTest {
         when(ctx.newSucceededFuture()).thenReturn(future);
         when(ctx.newPromise()).thenReturn(promise);
         when(ctx.write(any())).thenReturn(future);
+        when(ctx.executor()).thenReturn(executor);
     }
 
     private Http2ConnectionHandler newHandler() throws Exception {

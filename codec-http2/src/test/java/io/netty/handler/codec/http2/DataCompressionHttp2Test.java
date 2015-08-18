@@ -118,7 +118,14 @@ public class DataCompressionHttp2Test {
 
     @After
     public void teardown() throws InterruptedException {
-        serverChannel.close().sync();
+        if (clientChannel != null) {
+            clientChannel.close().sync();
+            clientChannel = null;
+        }
+        if (serverChannel != null) {
+            serverChannel.close().sync();
+            serverChannel = null;
+        }
         Future<?> serverGroup = sb.group().shutdownGracefully(0, 0, MILLISECONDS);
         Future<?> serverChildGroup = sb.childGroup().shutdownGracefully(0, 0, MILLISECONDS);
         Future<?> clientGroup = cb.group().shutdownGracefully(0, 0, MILLISECONDS);
@@ -315,6 +322,9 @@ public class DataCompressionHttp2Test {
                                 new DelegatingDecompressorFrameListener(clientConnection,
                                         clientListener));
                 clientHandler = new Http2ConnectionHandler(decoder, clientEncoder);
+
+                // By default tests don't wait for server to gracefully shutdown streams
+                clientHandler.gracefulShutdownTimeoutMillis(0);
                 p.addLast(clientHandler);
             }
         });
