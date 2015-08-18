@@ -15,35 +15,59 @@
 
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
-
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+
+import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Exception thrown when an HTTP/2 error was encountered.
  */
 public class Http2Exception extends Exception {
-    private static final long serialVersionUID = -6943456574080986447L;
+    private static final long serialVersionUID = -6941186345430164209L;
     private final Http2Error error;
+    private final ShutdownHint shutdownHint;
 
     public Http2Exception(Http2Error error) {
-        this.error = error;
+        this(error, ShutdownHint.HARD_SHUTDOWN);
+    }
+
+    public Http2Exception(Http2Error error, ShutdownHint shutdownHint) {
+        this.error = checkNotNull(error, "error");
+        this.shutdownHint = checkNotNull(shutdownHint, "shutdownHint");
     }
 
     public Http2Exception(Http2Error error, String message) {
+        this(error, message, ShutdownHint.HARD_SHUTDOWN);
+    }
+
+    public Http2Exception(Http2Error error, String message, ShutdownHint shutdownHint) {
         super(message);
-        this.error = error;
+        this.error = checkNotNull(error, "error");
+        this.shutdownHint = checkNotNull(shutdownHint, "shutdownHint");
     }
 
     public Http2Exception(Http2Error error, String message, Throwable cause) {
+        this(error, message, cause, ShutdownHint.HARD_SHUTDOWN);
+    }
+
+    public Http2Exception(Http2Error error, String message, Throwable cause, ShutdownHint shutdownHint) {
         super(message, cause);
-        this.error = error;
+        this.error = checkNotNull(error, "error");
+        this.shutdownHint = checkNotNull(shutdownHint, "shutdownHint");
     }
 
     public Http2Error error() {
         return error;
+    }
+
+    /**
+     * Provide a hint as to what type of shutdown should be executed. Note this hint may be ignored.
+     */
+    public ShutdownHint shutdownHint() {
+        return shutdownHint;
     }
 
     /**
@@ -143,10 +167,29 @@ public class Http2Exception extends Exception {
     }
 
     /**
+     * Provides a hint as to if shutdown is justified, what type of shutdown should be executed.
+     */
+    public static enum ShutdownHint {
+        /**
+         * Do not shutdown the underlying channel.
+         */
+        NO_SHUTDOWN,
+        /**
+         * Attempt to execute a "graceful" shutdown. The definition of "graceful" is left to the implementation.
+         * An example of "graceful" would be wait for some amount of time until all active streams are closed.
+         */
+        GRACEFUL_SHUTDOWN,
+        /**
+         * Close the channel immediately after a {@code GOAWAY} is sent.
+         */
+        HARD_SHUTDOWN;
+    }
+
+    /**
      * Used when a stream creation attempt fails but may be because the stream was previously closed.
      */
     public static final class ClosedStreamCreationException extends Http2Exception {
-        private static final long serialVersionUID = -1911637707391622439L;
+        private static final long serialVersionUID = -6746542974372246206L;
 
         public ClosedStreamCreationException(Http2Error error) {
             super(error);
@@ -165,16 +208,16 @@ public class Http2Exception extends Exception {
      * Represents an exception that can be isolated to a single stream (as opposed to the entire connection).
      */
     public static final class StreamException extends Http2Exception {
-        private static final long serialVersionUID = 462766352505067095L;
+        private static final long serialVersionUID = 602472544416984384L;
         private final int streamId;
 
         StreamException(int streamId, Http2Error error, String message) {
-            super(error, message);
+            super(error, message, ShutdownHint.NO_SHUTDOWN);
             this.streamId = streamId;
         }
 
         StreamException(int streamId, Http2Error error, String message, Throwable cause) {
-            super(error, message, cause);
+            super(error, message, cause, ShutdownHint.NO_SHUTDOWN);
             this.streamId = streamId;
         }
 
@@ -187,11 +230,11 @@ public class Http2Exception extends Exception {
      * Provides the ability to handle multiple stream exceptions with one throw statement.
      */
     public static final class CompositeStreamException extends Http2Exception implements Iterable<StreamException> {
-        private static final long serialVersionUID = -434398146294199889L;
+        private static final long serialVersionUID = 7091134858213711015L;
         private final List<StreamException> exceptions;
 
         public CompositeStreamException(Http2Error error, int initialCapacity) {
-            super(error);
+            super(error, ShutdownHint.NO_SHUTDOWN);
             exceptions = new ArrayList<StreamException>(initialCapacity);
         }
 
