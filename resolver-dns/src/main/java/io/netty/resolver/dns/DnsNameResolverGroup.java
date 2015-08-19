@@ -36,53 +36,27 @@ public final class DnsNameResolverGroup extends NameResolverGroup<InetSocketAddr
 
     private final ChannelFactory<? extends DatagramChannel> channelFactory;
     private final InetSocketAddress localAddress;
-    private final Iterable<InetSocketAddress> nameServerAddresses;
+    private final DnsServerAddresses nameServerAddresses;
 
     public DnsNameResolverGroup(
-            Class<? extends DatagramChannel> channelType,
-            InetSocketAddress nameServerAddress) {
-        this(channelType, ANY_LOCAL_ADDR, nameServerAddress);
-    }
-
-    public DnsNameResolverGroup(
-            Class<? extends DatagramChannel> channelType,
-            InetSocketAddress localAddress, InetSocketAddress nameServerAddress) {
-        this(new ReflectiveChannelFactory<DatagramChannel>(channelType), localAddress, nameServerAddress);
-    }
-
-    public DnsNameResolverGroup(
-            ChannelFactory<? extends DatagramChannel> channelFactory,
-            InetSocketAddress nameServerAddress) {
-        this(channelFactory, ANY_LOCAL_ADDR, nameServerAddress);
-    }
-
-    public DnsNameResolverGroup(
-            ChannelFactory<? extends DatagramChannel> channelFactory,
-            InetSocketAddress localAddress, InetSocketAddress nameServerAddress) {
-        this(channelFactory, localAddress, DnsServerAddresses.singleton(nameServerAddress));
-    }
-
-    public DnsNameResolverGroup(
-            Class<? extends DatagramChannel> channelType,
-            Iterable<InetSocketAddress> nameServerAddresses) {
+            Class<? extends DatagramChannel> channelType, DnsServerAddresses nameServerAddresses) {
         this(channelType, ANY_LOCAL_ADDR, nameServerAddresses);
     }
 
     public DnsNameResolverGroup(
             Class<? extends DatagramChannel> channelType,
-            InetSocketAddress localAddress, Iterable<InetSocketAddress> nameServerAddresses) {
+            InetSocketAddress localAddress, DnsServerAddresses nameServerAddresses) {
         this(new ReflectiveChannelFactory<DatagramChannel>(channelType), localAddress, nameServerAddresses);
     }
 
     public DnsNameResolverGroup(
-            ChannelFactory<? extends DatagramChannel> channelFactory,
-            Iterable<InetSocketAddress> nameServerAddresses) {
+            ChannelFactory<? extends DatagramChannel> channelFactory, DnsServerAddresses nameServerAddresses) {
         this(channelFactory, ANY_LOCAL_ADDR, nameServerAddresses);
     }
 
     public DnsNameResolverGroup(
             ChannelFactory<? extends DatagramChannel> channelFactory,
-            InetSocketAddress localAddress, Iterable<InetSocketAddress> nameServerAddresses) {
+            InetSocketAddress localAddress, DnsServerAddresses nameServerAddresses) {
         this.channelFactory = channelFactory;
         this.localAddress = localAddress;
         this.nameServerAddresses = nameServerAddresses;
