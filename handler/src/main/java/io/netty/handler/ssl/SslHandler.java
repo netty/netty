@@ -581,6 +581,12 @@ public class SslHandler extends ByteToMessageDecoder {
                 if (result.bytesProduced() == 0) {
                     break;
                 }
+
+                // It should not consume empty buffers when it is not handshaking
+                // Fix for Android, where it was encrypting empty buffers even when not handshaking
+                if (result.bytesConsumed() == 0 && result.getHandshakeStatus() == HandshakeStatus.NOT_HANDSHAKING) {
+                    break;
+                }
             }
         } catch (SSLException e) {
             setHandshakeFailure(ctx, e);
