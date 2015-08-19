@@ -41,7 +41,6 @@ import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -91,7 +90,7 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
     private static final DatagramDnsResponseDecoder DECODER = new DatagramDnsResponseDecoder();
     private static final DatagramDnsQueryEncoder ENCODER = new DatagramDnsQueryEncoder();
 
-    final Iterable<InetSocketAddress> nameServerAddresses;
+    final DnsServerAddresses nameServerAddresses;
     final ChannelFuture bindFuture;
     final DatagramChannel ch;
 
@@ -107,11 +106,11 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
      */
     final ConcurrentMap<String, List<DnsCacheEntry>> resolveCache = PlatformDependent.newConcurrentHashMap();
 
-    private final FastThreadLocal<Iterator<InetSocketAddress>> nameServerAddrIterator =
-            new FastThreadLocal<Iterator<InetSocketAddress>>() {
+    private final FastThreadLocal<DnsServerAddressStream> nameServerAddrStream =
+            new FastThreadLocal<DnsServerAddressStream>() {
                 @Override
-                protected Iterator<InetSocketAddress> initialValue() throws Exception {
-                    return nameServerAddresses.iterator();
+                protected DnsServerAddressStream initialValue() throws Exception {
+                    return nameServerAddresses.stream();
                 }
             };
 
@@ -132,71 +131,17 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
     private volatile int maxPayloadSize;
 
     /**
-     * Creates a new DNS-based name resolver that communicates with a single DNS server.
-     *
-     * @param eventLoop the {@link EventLoop} which will perform the communication with the DNS servers
-     * @param channelType the type of the {@link DatagramChannel} to create
-     * @param nameServerAddress the address of the DNS server
-     */
-    public DnsNameResolver(
-            EventLoop eventLoop, Class<? extends DatagramChannel> channelType,
-            InetSocketAddress nameServerAddress) {
-        this(eventLoop, channelType, ANY_LOCAL_ADDR, nameServerAddress);
-    }
-
-    /**
-     * Creates a new DNS-based name resolver that communicates with a single DNS server.
-     *
-     * @param eventLoop the {@link EventLoop} which will perform the communication with the DNS servers
-     * @param channelType the type of the {@link DatagramChannel} to create
-     * @param localAddress the local address of the {@link DatagramChannel}
-     * @param nameServerAddress the address of the DNS server
-     */
-    public DnsNameResolver(
-            EventLoop eventLoop, Class<? extends DatagramChannel> channelType,
-            InetSocketAddress localAddress, InetSocketAddress nameServerAddress) {
-        this(eventLoop, new ReflectiveChannelFactory<DatagramChannel>(channelType), localAddress, nameServerAddress);
-    }
-
-    /**
-     * Creates a new DNS-based name resolver that communicates with a single DNS server.
-     *
-     * @param eventLoop the {@link EventLoop} which will perform the communication with the DNS servers
-     * @param channelFactory the {@link ChannelFactory} that will create a {@link DatagramChannel}
-     * @param nameServerAddress the address of the DNS server
-     */
-    public DnsNameResolver(
-            EventLoop eventLoop, ChannelFactory<? extends DatagramChannel> channelFactory,
-            InetSocketAddress nameServerAddress) {
-        this(eventLoop, channelFactory, ANY_LOCAL_ADDR, nameServerAddress);
-    }
-
-    /**
-     * Creates a new DNS-based name resolver that communicates with a single DNS server.
-     *
-     * @param eventLoop the {@link EventLoop} which will perform the communication with the DNS servers
-     * @param channelFactory the {@link ChannelFactory} that will create a {@link DatagramChannel}
-     * @param localAddress the local address of the {@link DatagramChannel}
-     * @param nameServerAddress the address of the DNS server
-     */
-    public DnsNameResolver(
-            EventLoop eventLoop, ChannelFactory<? extends DatagramChannel> channelFactory,
-            InetSocketAddress localAddress, InetSocketAddress nameServerAddress) {
-        this(eventLoop, channelFactory, localAddress, DnsServerAddresses.singleton(nameServerAddress));
-    }
-
-    /**
      * Creates a new DNS-based name resolver that communicates with the specified list of DNS servers.
      *
      * @param eventLoop the {@link EventLoop} which will perform the communication with the DNS servers
      * @param channelType the type of the {@link DatagramChannel} to create
-     * @param nameServerAddresses the addresses of the DNS server. For each DNS query, a new {@link Iterator} is
-     *                            created from this {@link Iterable} to determine which DNS server should be contacted
-     *                            for the next retry in case of failure.
+     * @param nameServerAddresses the addresses of the DNS server. For each DNS query, a new stream is created from
+     *                            this to determine which DNS server should be contacted for the next retry in case
+     *                            of failure.
      */
     public DnsNameResolver(
             EventLoop eventLoop, Class<? extends DatagramChannel> channelType,
-            Iterable<InetSocketAddress> nameServerAddresses) {
+            DnsServerAddresses nameServerAddresses) {
         this(eventLoop, channelType, ANY_LOCAL_ADDR, nameServerAddresses);
     }
 
@@ -206,13 +151,13 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
      * @param eventLoop the {@link EventLoop} which will perform the communication with the DNS servers
      * @param channelType the type of the {@link DatagramChannel} to create
      * @param localAddress the local address of the {@link DatagramChannel}
-     * @param nameServerAddresses the addresses of the DNS server. For each DNS query, a new {@link Iterator} is
-     *                            created from this {@link Iterable} to determine which DNS server should be contacted
-     *                            for the next retry in case of failure.
+     * @param nameServerAddresses the addresses of the DNS server. For each DNS query, a new stream is created from
+     *                            this to determine which DNS server should be contacted for the next retry in case
+     *                            of failure.
      */
     public DnsNameResolver(
             EventLoop eventLoop, Class<? extends DatagramChannel> channelType,
-            InetSocketAddress localAddress, Iterable<InetSocketAddress> nameServerAddresses) {
+            InetSocketAddress localAddress, DnsServerAddresses nameServerAddresses) {
         this(eventLoop, new ReflectiveChannelFactory<DatagramChannel>(channelType), localAddress, nameServerAddresses);
     }
 
@@ -221,13 +166,13 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
      *
      * @param eventLoop the {@link EventLoop} which will perform the communication with the DNS servers
      * @param channelFactory the {@link ChannelFactory} that will create a {@link DatagramChannel}
-     * @param nameServerAddresses the addresses of the DNS server. For each DNS query, a new {@link Iterator} is
-     *                            created from this {@link Iterable} to determine which DNS server should be contacted
-     *                            for the next retry in case of failure.
+     * @param nameServerAddresses the addresses of the DNS server. For each DNS query, a new stream is created from
+     *                            this to determine which DNS server should be contacted for the next retry in case
+     *                            of failure.
      */
     public DnsNameResolver(
             EventLoop eventLoop, ChannelFactory<? extends DatagramChannel> channelFactory,
-            Iterable<InetSocketAddress> nameServerAddresses) {
+            DnsServerAddresses nameServerAddresses) {
         this(eventLoop, channelFactory, ANY_LOCAL_ADDR, nameServerAddresses);
     }
 
@@ -237,23 +182,19 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
      * @param eventLoop the {@link EventLoop} which will perform the communication with the DNS servers
      * @param channelFactory the {@link ChannelFactory} that will create a {@link DatagramChannel}
      * @param localAddress the local address of the {@link DatagramChannel}
-     * @param nameServerAddresses the addresses of the DNS server. For each DNS query, a new {@link Iterator} is
-     *                            created from this {@link Iterable} to determine which DNS server should be contacted
-     *                            for the next retry in case of failure.
+     * @param nameServerAddresses the addresses of the DNS server. For each DNS query, a new stream is created from
+     *                            this to determine which DNS server should be contacted for the next retry in case
+     *                            of failure.
      */
     public DnsNameResolver(
             EventLoop eventLoop, ChannelFactory<? extends DatagramChannel> channelFactory,
-            InetSocketAddress localAddress, Iterable<InetSocketAddress> nameServerAddresses) {
+            InetSocketAddress localAddress, DnsServerAddresses nameServerAddresses) {
 
         super(eventLoop);
 
         checkNotNull(channelFactory, "channelFactory");
         checkNotNull(nameServerAddresses, "nameServerAddresses");
         checkNotNull(localAddress, "localAddress");
-
-        if (!nameServerAddresses.iterator().hasNext()) {
-            throw new IllegalArgumentException("nameServerAddresses is empty");
-        }
 
         this.nameServerAddresses = nameServerAddresses;
         bindFuture = newChannel(channelFactory, localAddress);
@@ -922,17 +863,7 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
     }
 
     private InetSocketAddress nextNameServerAddress() {
-        final InternalThreadLocalMap tlm = InternalThreadLocalMap.get();
-        Iterator<InetSocketAddress> i = nameServerAddrIterator.get(tlm);
-        if (i.hasNext()) {
-            return i.next();
-        }
-
-        // The iterator has reached at its end, create a new iterator.
-        // We should not reach here if a user created nameServerAddresses via DnsServerAddresses, but just in case ..
-        i = nameServerAddresses.iterator();
-        nameServerAddrIterator.set(tlm, i);
-        return i.next();
+        return nameServerAddrStream.get().next();
     }
 
     /**

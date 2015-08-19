@@ -22,7 +22,6 @@ import org.junit.Test;
 import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.IdentityHashMap;
-import java.util.Iterator;
 import java.util.Set;
 
 import static org.hamcrest.Matchers.*;
@@ -36,16 +35,16 @@ public class DnsServerAddressesTest {
 
     @Test
     public void testDefaultAddresses() {
-        assertThat(DnsServerAddresses.defaultAddresses().size(), is(greaterThan(0)));
+        assertThat(DnsServerAddresses.defaultAddressList().size(), is(greaterThan(0)));
     }
 
     @Test
     public void testSequential() {
-        Iterable<InetSocketAddress> seq = DnsServerAddresses.sequential(ADDR1, ADDR2, ADDR3);
-        assertThat(seq.iterator(), is(not(sameInstance(seq.iterator()))));
+        DnsServerAddresses seq = DnsServerAddresses.sequential(ADDR1, ADDR2, ADDR3);
+        assertThat(seq.stream(), is(not(sameInstance(seq.stream()))));
 
         for (int j = 0; j < 2; j ++) {
-            Iterator<InetSocketAddress> i = seq.iterator();
+            DnsServerAddressStream i = seq.stream();
             assertNext(i, ADDR1);
             assertNext(i, ADDR2);
             assertNext(i, ADDR3);
@@ -57,9 +56,9 @@ public class DnsServerAddressesTest {
 
     @Test
     public void testRotational() {
-        Iterable<InetSocketAddress> seq = DnsServerAddresses.rotational(ADDR1, ADDR2, ADDR3);
+        DnsServerAddresses seq = DnsServerAddresses.rotational(ADDR1, ADDR2, ADDR3);
 
-        Iterator<InetSocketAddress> i = seq.iterator();
+        DnsServerAddressStream i = seq.stream();
         assertNext(i, ADDR1);
         assertNext(i, ADDR2);
         assertNext(i, ADDR3);
@@ -67,7 +66,7 @@ public class DnsServerAddressesTest {
         assertNext(i, ADDR2);
         assertNext(i, ADDR3);
 
-        i = seq.iterator();
+        i = seq.stream();
         assertNext(i, ADDR2);
         assertNext(i, ADDR3);
         assertNext(i, ADDR1);
@@ -75,7 +74,7 @@ public class DnsServerAddressesTest {
         assertNext(i, ADDR3);
         assertNext(i, ADDR1);
 
-        i = seq.iterator();
+        i = seq.stream();
         assertNext(i, ADDR3);
         assertNext(i, ADDR1);
         assertNext(i, ADDR2);
@@ -83,7 +82,7 @@ public class DnsServerAddressesTest {
         assertNext(i, ADDR1);
         assertNext(i, ADDR2);
 
-        i = seq.iterator();
+        i = seq.stream();
         assertNext(i, ADDR1);
         assertNext(i, ADDR2);
         assertNext(i, ADDR3);
@@ -94,36 +93,34 @@ public class DnsServerAddressesTest {
 
     @Test
     public void testShuffled() {
-        Iterable<InetSocketAddress> seq = DnsServerAddresses.shuffled(ADDR1, ADDR2, ADDR3);
+        DnsServerAddresses seq = DnsServerAddresses.shuffled(ADDR1, ADDR2, ADDR3);
 
         // Ensure that all three addresses are returned by the iterator.
         // In theory, this test can fail at extremely low chance, but we don't really care.
         Set<InetSocketAddress> set = Collections.newSetFromMap(new IdentityHashMap<InetSocketAddress, Boolean>());
-        Iterator<InetSocketAddress> i = seq.iterator();
+        DnsServerAddressStream i = seq.stream();
         for (int j = 0; j < 1048576; j ++) {
-            assertThat(i.hasNext(), is(true));
             set.add(i.next());
         }
 
         assertThat(set.size(), is(3));
-        assertThat(seq.iterator(), is(not(sameInstance(seq.iterator()))));
+        assertThat(seq.stream(), is(not(sameInstance(seq.stream()))));
     }
 
     @Test
     public void testSingleton() {
-        Iterable<InetSocketAddress> seq = DnsServerAddresses.singleton(ADDR1);
+        DnsServerAddresses seq = DnsServerAddresses.singleton(ADDR1);
 
         // Should return the same iterator instance for least possible footprint.
-        assertThat(seq.iterator(), is(sameInstance(seq.iterator())));
+        assertThat(seq.stream(), is(sameInstance(seq.stream())));
 
-        Iterator<InetSocketAddress> i = seq.iterator();
+        DnsServerAddressStream i = seq.stream();
         assertNext(i, ADDR1);
         assertNext(i, ADDR1);
         assertNext(i, ADDR1);
     }
 
-    private static void assertNext(Iterator<InetSocketAddress> i, InetSocketAddress addr) {
-        assertThat(i.hasNext(), is(true));
+    private static void assertNext(DnsServerAddressStream i, InetSocketAddress addr) {
         assertThat(i.next(), is(sameInstance(addr)));
     }
 }
