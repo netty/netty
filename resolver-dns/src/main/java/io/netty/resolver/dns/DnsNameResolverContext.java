@@ -67,7 +67,7 @@ abstract class DnsNameResolverContext<T> {
             };
 
     private final DnsNameResolver parent;
-    private final Iterator<InetSocketAddress> nameServerAddrs;
+    private final DnsServerAddressStream nameServerAddrs;
     private final Promise<T> promise;
     private final String hostname;
     private final boolean traceEnabled;
@@ -88,7 +88,7 @@ abstract class DnsNameResolverContext<T> {
         this.promise = promise;
         this.hostname = hostname;
 
-        nameServerAddrs = parent.nameServerAddresses.iterator();
+        nameServerAddrs = parent.nameServerAddresses.stream();
         maxAllowedQueries = parent.maxQueriesPerResolve();
         resolveAddressTypes = parent.resolveAddressTypesUnsafe();
         traceEnabled = parent.isTraceEnabled();
