@@ -53,6 +53,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
+import static io.netty.handler.codec.http.HttpMethod.CONNECT;
+import static io.netty.handler.codec.http.HttpMethod.OPTIONS;
 import static io.netty.handler.codec.http.HttpMethod.GET;
 import static io.netty.handler.codec.http.HttpMethod.POST;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
@@ -60,6 +62,7 @@ import static io.netty.util.CharsetUtil.UTF_8;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
@@ -145,6 +148,247 @@ public class HttpToHttp2ConnectionHandlerTest {
                 eq(http2Headers), eq(0), anyShort(), anyBoolean(), eq(0), eq(true));
         verify(serverListener, never()).onDataRead(any(ChannelHandlerContext.class), anyInt(),
                 any(ByteBuf.class), anyInt(), anyBoolean());
+    }
+
+    @Test
+    public void testOriginFormRequestTargetHandled() throws Exception {
+        bootstrapEnv(2, 1, 0);
+        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/where?q=now&f=then#section1");
+        final HttpHeaders httpHeaders = request.headers();
+        httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        final Http2Headers http2Headers =
+                new DefaultHttp2Headers().method(new AsciiString("GET"))
+                .path(new AsciiString("/where?q=now&f=then#section1"))
+                .scheme(new AsciiString("http"));
+        ChannelPromise writePromise = newPromise();
+        ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
+
+        assertTrue(writePromise.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writePromise.isSuccess());
+        assertTrue(writeFuture.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writeFuture.isSuccess());
+        awaitRequests();
+        verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(5),
+                eq(http2Headers), eq(0), anyShort(), anyBoolean(), eq(0), eq(true));
+        verify(serverListener, never()).onDataRead(any(ChannelHandlerContext.class), anyInt(),
+                any(ByteBuf.class), anyInt(), anyBoolean());
+    }
+
+    @Test
+    public void testAbsoluteFormRequestTargetHandledFromHeaders() throws Exception {
+        bootstrapEnv(2, 1, 0);
+        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/pub/WWW/TheProject.html");
+        final HttpHeaders httpHeaders = request.headers();
+        httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        httpHeaders.set(HttpHeaderNames.HOST,
+                "https://foouser@www.example.org:5555/ignored_host");
+        httpHeaders.set(HttpUtil.ExtensionHeaderNames.PATH.text(), "ignored_path");
+        httpHeaders.set(HttpUtil.ExtensionHeaderNames.AUTHORITY.text(), "ignored_authority");
+        httpHeaders.set(HttpUtil.ExtensionHeaderNames.SCHEME.text(), "ignored_scheme");
+        final Http2Headers http2Headers =
+                new DefaultHttp2Headers().method(new AsciiString("GET"))
+                .path(new AsciiString("/pub/WWW/TheProject.html"))
+                .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("https"));
+        ChannelPromise writePromise = newPromise();
+        ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
+
+        assertTrue(writePromise.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writePromise.isSuccess());
+        assertTrue(writeFuture.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writeFuture.isSuccess());
+        awaitRequests();
+        verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(5),
+                eq(http2Headers), eq(0), anyShort(), anyBoolean(), eq(0), eq(true));
+        verify(serverListener, never()).onDataRead(any(ChannelHandlerContext.class), anyInt(),
+                any(ByteBuf.class), anyInt(), anyBoolean());
+    }
+
+    @Test
+    public void testAbsoluteFormRequestTargetHandledFromHeadersNoHost() throws Exception {
+        bootstrapEnv(2, 1, 0);
+        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/pub/WWW/TheProject.html");
+        final HttpHeaders httpHeaders = request.headers();
+        httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        httpHeaders.set(HttpUtil.ExtensionHeaderNames.PATH.text(), "ignored_path");
+        httpHeaders.set(HttpUtil.ExtensionHeaderNames.AUTHORITY.text(), "www.example.org:5555");
+        httpHeaders.set(HttpUtil.ExtensionHeaderNames.SCHEME.text(), "https");
+        final Http2Headers http2Headers =
+                new DefaultHttp2Headers().method(new AsciiString("GET"))
+                .path(new AsciiString("/pub/WWW/TheProject.html"))
+                .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("https"));
+        ChannelPromise writePromise = newPromise();
+        ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
+
+        assertTrue(writePromise.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writePromise.isSuccess());
+        assertTrue(writeFuture.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writeFuture.isSuccess());
+        awaitRequests();
+        verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(5),
+                eq(http2Headers), eq(0), anyShort(), anyBoolean(), eq(0), eq(true));
+        verify(serverListener, never()).onDataRead(any(ChannelHandlerContext.class), anyInt(),
+                any(ByteBuf.class), anyInt(), anyBoolean());
+    }
+
+    @Test
+    public void testAbsoluteFormRequestTargetHandledFromRequestTargetUri() throws Exception {
+        bootstrapEnv(2, 1, 0);
+        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET,
+                "http://foouser@www.example.org:5555/pub/WWW/TheProject.html");
+        final HttpHeaders httpHeaders = request.headers();
+        httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        final Http2Headers http2Headers =
+                new DefaultHttp2Headers().method(new AsciiString("GET"))
+                .path(new AsciiString("/pub/WWW/TheProject.html"))
+                .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("http"));
+        ChannelPromise writePromise = newPromise();
+        ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
+
+        assertTrue(writePromise.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writePromise.isSuccess());
+        assertTrue(writeFuture.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writeFuture.isSuccess());
+        awaitRequests();
+        verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(5),
+                eq(http2Headers), eq(0), anyShort(), anyBoolean(), eq(0), eq(true));
+        verify(serverListener, never()).onDataRead(any(ChannelHandlerContext.class), anyInt(),
+                any(ByteBuf.class), anyInt(), anyBoolean());
+    }
+
+    @Test
+    public void testAuthorityFormRequestTargetHandled() throws Exception {
+        bootstrapEnv(2, 1, 0);
+        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, CONNECT, "http://www.example.com:80");
+        final HttpHeaders httpHeaders = request.headers();
+        httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        final Http2Headers http2Headers =
+                new DefaultHttp2Headers().method(new AsciiString("CONNECT")).path(new AsciiString("/"))
+                .scheme(new AsciiString("http")).authority(new AsciiString("www.example.com:80"));
+        ChannelPromise writePromise = newPromise();
+        ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
+
+        assertTrue(writePromise.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writePromise.isSuccess());
+        assertTrue(writeFuture.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writeFuture.isSuccess());
+        awaitRequests();
+        verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(5),
+                eq(http2Headers), eq(0), anyShort(), anyBoolean(), eq(0), eq(true));
+        verify(serverListener, never()).onDataRead(any(ChannelHandlerContext.class), anyInt(),
+                any(ByteBuf.class), anyInt(), anyBoolean());
+    }
+
+    @Test
+    public void testAsterikFormRequestTargetHandled() throws Exception {
+        bootstrapEnv(2, 1, 0);
+        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, OPTIONS, "*");
+        final HttpHeaders httpHeaders = request.headers();
+        httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        httpHeaders.set(HttpHeaderNames.HOST, "http://www.example.com:80");
+        final Http2Headers http2Headers =
+                new DefaultHttp2Headers().method(new AsciiString("OPTIONS")).path(new AsciiString("*"))
+                .scheme(new AsciiString("http")).authority(new AsciiString("www.example.com:80"));
+        ChannelPromise writePromise = newPromise();
+        ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
+
+        assertTrue(writePromise.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writePromise.isSuccess());
+        assertTrue(writeFuture.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writeFuture.isSuccess());
+        awaitRequests();
+        verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(5),
+                eq(http2Headers), eq(0), anyShort(), anyBoolean(), eq(0), eq(true));
+        verify(serverListener, never()).onDataRead(any(ChannelHandlerContext.class), anyInt(),
+                any(ByteBuf.class), anyInt(), anyBoolean());
+    }
+
+    @Test
+    public void testHostIPv6FormRequestTargetHandled() throws Exception {
+        // Valid according to
+        // https://tools.ietf.org/html/rfc7230#section-2.7.1 -> https://tools.ietf.org/html/rfc3986#section-3.2.2
+        bootstrapEnv(2, 1, 0);
+        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/");
+        final HttpHeaders httpHeaders = request.headers();
+        httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        httpHeaders.set(HttpHeaderNames.HOST, "http://[::1]:80");
+        final Http2Headers http2Headers =
+                new DefaultHttp2Headers().method(new AsciiString("GET")).path(new AsciiString("/"))
+                .scheme(new AsciiString("http")).authority(new AsciiString("[::1]:80"));
+        ChannelPromise writePromise = newPromise();
+        ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
+
+        assertTrue(writePromise.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writePromise.isSuccess());
+        assertTrue(writeFuture.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writeFuture.isSuccess());
+        awaitRequests();
+        verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(5),
+                eq(http2Headers), eq(0), anyShort(), anyBoolean(), eq(0), eq(true));
+        verify(serverListener, never()).onDataRead(any(ChannelHandlerContext.class), anyInt(),
+                any(ByteBuf.class), anyInt(), anyBoolean());
+    }
+
+    @Test
+    public void testHostNoSchemeFormRequestTargetHandled() throws Exception {
+        bootstrapEnv(2, 1, 0);
+        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/");
+        final HttpHeaders httpHeaders = request.headers();
+        httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        // This is an "irregular" host in that the scheme is "localhost"
+        httpHeaders.set(HttpHeaderNames.HOST, "localhost:80");
+        final Http2Headers http2Headers =
+                new DefaultHttp2Headers().method(new AsciiString("GET")).path(new AsciiString("/"))
+                .scheme(new AsciiString("localhost"));
+        ChannelPromise writePromise = newPromise();
+        ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
+
+        assertTrue(writePromise.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writePromise.isSuccess());
+        assertTrue(writeFuture.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writeFuture.isSuccess());
+        awaitRequests();
+        verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(5),
+                eq(http2Headers), eq(0), anyShort(), anyBoolean(), eq(0), eq(true));
+        verify(serverListener, never()).onDataRead(any(ChannelHandlerContext.class), anyInt(),
+                any(ByteBuf.class), anyInt(), anyBoolean());
+    }
+
+    @Test
+    public void testBadHostIPv4FormRequestTargetHandled() throws Exception {
+        // Invalid according to
+        // https://tools.ietf.org/html/rfc7230#section-2.7.1 -> https://tools.ietf.org/html/rfc3986#section-3
+        bootstrapEnv(2, 1, 0);
+        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/");
+        final HttpHeaders httpHeaders = request.headers();
+        httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        httpHeaders.set(HttpHeaderNames.HOST, "1.2.3.4:80");
+        ChannelPromise writePromise = newPromise();
+        ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
+
+        assertTrue(writePromise.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writePromise.isDone());
+        assertFalse(writePromise.isSuccess());
+        assertTrue(writeFuture.isDone());
+        assertFalse(writeFuture.isSuccess());
+    }
+
+    @Test
+    public void testBadHostIPv6FormRequestTargetHandled() throws Exception {
+        // Invalid according to
+        // https://tools.ietf.org/html/rfc7230#section-2.7.1 -> https://tools.ietf.org/html/rfc3986#section-3
+        bootstrapEnv(2, 1, 0);
+        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/");
+        final HttpHeaders httpHeaders = request.headers();
+        httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        httpHeaders.set(HttpHeaderNames.HOST, "[::1]:80");
+        ChannelPromise writePromise = newPromise();
+        ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
+
+        assertTrue(writePromise.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writePromise.isDone());
+        assertFalse(writePromise.isSuccess());
+        assertTrue(writeFuture.isDone());
+        assertFalse(writeFuture.isSuccess());
     }
 
     @Test
