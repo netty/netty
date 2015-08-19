@@ -20,6 +20,8 @@ import java.util.ArrayList;
 import java.util.Formatter;
 import java.util.List;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 /**
  * String utility class.
  */
@@ -33,17 +35,26 @@ public final class StringUtil {
     public static final String EMPTY_STRING = "";
     private static final String[] BYTE2HEX_PAD = new String[256];
     private static final String[] BYTE2HEX_NOPAD = new String[256];
+
+    /**
+     * 2 - Quote character at beginning and end.
+     * 5 - Extra allowance for anticipated escape characters that may be added.
+     */
+    private static final int CSV_NUMBER_ESCAPE_CHARACTERS = 2 + 5;
     private static final char PACKAGE_SEPARATOR_CHAR = '.';
 
     static {
         // Determine the newline character of the current platform.
         String newLine;
 
+        Formatter formatter = new Formatter();
         try {
-            newLine = new Formatter().format("%n").toString();
+            newLine = formatter.format("%n").toString();
         } catch (Exception e) {
             // Should not reach here, but just in case.
             newLine = "\n";
+        } finally {
+            formatter.close();
         }
 
         NEWLINE = newLine;
@@ -312,6 +323,72 @@ public final class StringUtil {
             return className.substring(lastDotIdx + 1);
         }
         return className;
+    }
+
+    /**
+     * Escapes the specified value, if necessary according to
+     * <a href="https://tools.ietf.org/html/rfc4180#section-2">RFC-4180</a>.
+     *
+     * @param value The value which will be escaped according to
+     *              <a href="https://tools.ietf.org/html/rfc4180#section-2">RFC-4180</a>
+     * @return {@link CharSequence} the escaped value if necessary, or the value unchanged
+     */
+    public static CharSequence escapeCsv(CharSequence value) {
+        int length = checkNotNull(value, "value").length();
+        if (length == 0) {
+            return value;
+        }
+        int last = length - 1;
+        boolean quoted = isDoubleQuote(value.charAt(0)) && isDoubleQuote(value.charAt(last)) && length != 1;
+        boolean foundSpecialCharacter = false;
+        boolean escapedDoubleQuote = false;
+        StringBuilder escaped = new StringBuilder(length + CSV_NUMBER_ESCAPE_CHARACTERS).append(DOUBLE_QUOTE);
+        for (int i = 0; i < length; i++) {
+            char current = value.charAt(i);
+            switch (current) {
+                case DOUBLE_QUOTE:
+                    if (i == 0 || i == last) {
+                        if (!quoted) {
+                            escaped.append(DOUBLE_QUOTE);
+                        } else {
+                            continue;
+                        }
+                    } else {
+                        boolean isNextCharDoubleQuote = isDoubleQuote(value.charAt(i + 1));
+                        if (!isDoubleQuote(value.charAt(i - 1)) &&
+                                (!isNextCharDoubleQuote || i + 1 == last)) {
+                            escaped.append(DOUBLE_QUOTE);
+                            escapedDoubleQuote = true;
+                        }
+                        break;
+                    }
+                case LINE_FEED:
+                case CARRIAGE_RETURN:
+                case COMMA:
+                    foundSpecialCharacter = true;
+            }
+            escaped.append(current);
+        }
+        return escapedDoubleQuote || foundSpecialCharacter && !quoted ?
+                escaped.append(DOUBLE_QUOTE) : value;
+    }
+
+    /**
+     * Get the length of a string, {@code null} input is considered {@code 0} length.
+     */
+    public static int length(String s) {
+        return s == null ? 0 : s.length();
+    }
+
+    /**
+     * Determine if a string is {@code null} or {@link String#isEmpty()} returns {@code true}.
+     */
+    public static boolean isNullOrEmpty(String s) {
+        return s == null || s.isEmpty();
+    }
+
+    private static boolean isDoubleQuote(char c) {
+        return c == DOUBLE_QUOTE;
     }
 
     private StringUtil() {
