@@ -51,7 +51,7 @@ public class RuleBasedIpFilter extends AbstractRemoteAddressFilter<InetSocketAdd
             }
 
             if (rule.matches(remoteAddress)) {
-                return rule.ruleType() == IpFilterRuleType.ACCEPT;
+                return rule.ruleType() == IpFilterRuleType.Accept;
             }
         }
 
