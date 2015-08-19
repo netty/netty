@@ -14,10 +14,6 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
-import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static io.netty.handler.codec.http2.Http2Exception.streamError;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpMessage;
@@ -43,6 +39,17 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.regex.Pattern;
+
+import static io.netty.handler.codec.http.HttpScheme.HTTP;
+import static io.netty.handler.codec.http.HttpScheme.HTTPS;
+import static io.netty.handler.codec.http.HttpUtil.isAsteriskForm;
+import static io.netty.handler.codec.http.HttpUtil.isOriginForm;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.handler.codec.http2.Http2Exception.streamError;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.StringUtil.isNullOrEmpty;
+import static io.netty.util.internal.StringUtil.length;
 
 /**
  * Provides utility methods and constants for the HTTP/2 to HTTP conversion
@@ -87,10 +94,10 @@ public final class HttpUtil {
     public static final HttpResponseStatus OUT_OF_MESSAGE_SEQUENCE_RETURN_CODE = HttpResponseStatus.OK;
 
     /**
-     * This pattern will use to avoid compile it each time it is used
-     * when we need to replace some part of authority.
+     * <a href="https://tools.ietf.org/html/rfc7540#section-8.1.2.3">rfc7540, 8.1.2.3</a> states the path must not
+     * be empty, and instead should be {@code /}.
      */
-    private static final Pattern AUTHORITY_REPLACEMENT_PATTERN = Pattern.compile("^.*@");
+    private static final AsciiString EMPTY_REQUEST_PATH = new AsciiString("/");
 
     private HttpUtil() {
     }
@@ -265,39 +272,41 @@ public final class HttpUtil {
 
     /**
      * Converts the given HTTP/1.x headers into HTTP/2 headers.
+     * The following headers are only used if they can not be found in from the {@code HOST} header or the
+     * {@code Request-Line} as defined by <a href="https://tools.ietf.org/html/rfc7230">rfc7230</a>
+     * <ul>
+     * <li>{@link ExtensionHeaderNames#AUTHORITY}</li>
+     * <li>{@link ExtensionHeaderNames#SCHEME}</li>
+     * </ul>
+     * {@link ExtensionHeaderNames#PATH} is ignored and instead extracted from the {@code Request-Line}.
      */
     public static Http2Headers toHttp2Headers(HttpMessage in) throws Exception {
         final Http2Headers out = new DefaultHttp2Headers();
         HttpHeaders inHeaders = in.headers();
         if (in instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) in;
-            out.path(new AsciiString(request.uri()));
-            out.method(new AsciiString(request.method().toString()));
+            URI requestTargetUri = URI.create(request.uri());
+            out.path(toHttp2Path(requestTargetUri));
+            out.method(request.method().asciiName());
 
-            String value = inHeaders.getAsString(HttpHeaderNames.HOST);
-            if (value != null) {
-                URI hostUri = URI.create(value);
-                // The authority MUST NOT include the deprecated "userinfo" subcomponent
-                value = hostUri.getAuthority();
-                if (value != null) {
-                    out.authority(new AsciiString(AUTHORITY_REPLACEMENT_PATTERN.matcher(value).replaceFirst("")));
+            // Attempt to take from HOST header before taking from the request-line
+            String host = inHeaders.getAsString(HttpHeaderNames.HOST);
+            boolean shouldSetAuthroity = !isOriginForm(requestTargetUri) && !isAsteriskForm(requestTargetUri);
+            if (host == null) {
+                if (shouldSetAuthroity) {
+                    setHttp2Authority(inHeaders, requestTargetUri, out);
                 }
-                value = hostUri.getScheme();
-                if (value != null) {
-                    out.scheme(new AsciiString(value));
+                setHttp2Scheme(inHeaders, requestTargetUri, true, out);
+            } else {
+                URI hostUri = URI.create(host);
+                if (shouldSetAuthroity) {
+                    setHttp2Authority(inHeaders, hostUri, out);
                 }
-            }
-
-            // Consume the Authority extension header if present
-            CharSequence cValue = inHeaders.get(ExtensionHeaderNames.AUTHORITY.text());
-            if (cValue != null) {
-                out.authority(AsciiString.of(cValue));
-            }
-
-            // Consume the Scheme extension header if present
-            cValue = inHeaders.get(ExtensionHeaderNames.SCHEME.text());
-            if (cValue != null) {
-                out.scheme(AsciiString.of(cValue));
+                if (!setHttp2Scheme(inHeaders, hostUri, false, out)) {
+                    /** :scheme must be present as defined by
+                    <a href="https://tools.ietf.org/html/rfc7540#section-8.1.2.3">rfc7540, 8.1.2.3</a>. */
+                    setHttp2Scheme(inHeaders, requestTargetUri, true, out);
+                }
             }
         } else if (in instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) in;
@@ -328,6 +337,67 @@ public final class HttpUtil {
             }
         }
         return out;
+    }
+
+    /**
+     * Generate a HTTP/2 {code :path} from a URI in accordance with
+     * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
+     */
+    private static AsciiString toHttp2Path(URI uri) {
+        StringBuilder pathBuilder = new StringBuilder(length(uri.getPath()) +
+                length(uri.getQuery()) + length(uri.getFragment()) + 2);
+        if (!isNullOrEmpty(uri.getPath())) {
+            pathBuilder.append(uri.getPath());
+        }
+        if (!isNullOrEmpty(uri.getQuery())) {
+            pathBuilder.append('?');
+            pathBuilder.append(uri.getQuery());
+        }
+        if (!isNullOrEmpty(uri.getFragment())) {
+            pathBuilder.append('#');
+            pathBuilder.append(uri.getFragment());
+        }
+        String path = pathBuilder.toString();
+        return path.isEmpty() ? EMPTY_REQUEST_PATH : new AsciiString(path);
+    }
+
+    private static void setHttp2Authority(HttpHeaders in, URI uri, Http2Headers out) {
+        // The authority MUST NOT include the deprecated "userinfo" subcomponent
+        String value = uri.getAuthority();
+        if (value != null) {
+            int endOfUserInfo = value.indexOf('@');
+            if (endOfUserInfo < 0) {
+                out.authority(new AsciiString(value));
+            } else if (endOfUserInfo + 1 < value.length()) {
+                out.authority(new AsciiString(value.substring(endOfUserInfo + 1)));
+            }
+        } else {
+            // Consume the Authority extension header if present
+            CharSequence cValue = in.get(ExtensionHeaderNames.AUTHORITY.text());
+            if (cValue != null) {
+                // Assume this is sanitized of all "userinfo"
+                out.authority(AsciiString.of(cValue));
+            }
+        }
+    }
+
+    private static boolean setHttp2Scheme(HttpHeaders in, URI uri, boolean mustSet, Http2Headers out) {
+        String value = uri.getScheme();
+        if (value != null) {
+            out.scheme(new AsciiString(value));
+            return true;
+        }
+        // Consume the Scheme extension header if present
+        CharSequence cValue = in.get(ExtensionHeaderNames.SCHEME.text());
+        if (cValue != null) {
+            out.scheme(AsciiString.of(cValue));
+            return true;
+        }
+        if (uri.getPort() >= 0 || mustSet) {
+            out.scheme(uri.getPort() == HTTPS.port() ? HTTPS.name() : HTTP.name());
+            return true;
+        }
+        return false;
     }
 
     /**

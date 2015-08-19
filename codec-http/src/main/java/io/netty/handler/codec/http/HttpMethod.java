@@ -111,7 +111,6 @@ public class HttpMethod implements Comparable<HttpMethod> {
     }
 
     private final AsciiString name;
-    private final String nameAsString;
 
     /**
      * Creates a new HTTP method with the specified name.  You will not need to
@@ -134,13 +133,19 @@ public class HttpMethod implements Comparable<HttpMethod> {
         }
 
         this.name = new AsciiString(name);
-        nameAsString = name;
     }
 
     /**
      * Returns the name of this method.
      */
-    public AsciiString name() {
+    public String name() {
+        return name.toString();
+    }
+
+    /**
+     * Returns the name of this method.
+     */
+    public AsciiString asciiName() {
         return name;
     }
 
@@ -161,7 +166,7 @@ public class HttpMethod implements Comparable<HttpMethod> {
 
     @Override
     public String toString() {
-        return nameAsString;
+        return name.toString();
     }
 
     @Override

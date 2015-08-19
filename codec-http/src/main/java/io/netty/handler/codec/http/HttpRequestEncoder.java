@@ -39,7 +39,7 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
 
     @Override
     protected void encodeInitialLine(ByteBuf buf, HttpRequest request) throws Exception {
-        AsciiString method = request.method().name();
+        AsciiString method = request.method().asciiName();
         ByteBufUtil.copy(method, method.arrayOffset(), buf, method.length());
         buf.writeByte(SP);
 
