@@ -1160,16 +1160,41 @@
           </execution>
         </executions>
       </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>1.8</version>
+        <executions>
+          <execution>
+            <id>parse-version</id>
+            <goals>
+              <goal>parse-version</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
       <plugin>
         <artifactId>maven-source-plugin</artifactId>
         <version>2.2.1</version>
+        <!-- Eclipse-related OSGi manifests 
+             See https://github.com/netty/netty/issues/3886 
+             More information: http://rajakannappan.blogspot.ie/2010/03/automating-eclipse-source-bundle.html 
+        -->
         <configuration>
-          <!--
-            ~ Add generated MANIFEST.MF.
-            ~ See https://github.com/netty/netty/issues/2058
-          -->
-          <useDefaultManifestFile>true</useDefaultManifestFile>
+          <archive>
+            <manifestEntries>
+              <Bundle-ManifestVersion>2</Bundle-ManifestVersion>
+              <Bundle-Name>${name}</Bundle-Name>
+              <Bundle-SymbolicName>${groupId}.${artifactId}.source</Bundle-SymbolicName>
+              <Bundle-Vendor>${organization.name}</Bundle-Vendor>
+              <Bundle-Version>${parsedVersion.osgiVersion}</Bundle-Version>
+              <Eclipse-SourceBundle>${groupId}.${artifactId};version="${parsedVersion.osgiVersion}";roots:="."</Eclipse-SourceBundle>
+            </manifestEntries>
+          </archive>
         </configuration>
+
         <executions>
           <!--
             ~ This workaround prevents Maven from executing the 'generate-sources' phase twice.
