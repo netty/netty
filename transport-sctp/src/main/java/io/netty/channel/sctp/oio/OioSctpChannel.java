@@ -183,36 +183,29 @@ public class OioSctpChannel extends AbstractOioMessageChannel
             return readMessages;
         }
 
-        Set<SelectionKey> reableKeys = readSelector.selectedKeys();
+        final RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
+        ByteBuf buffer = allocHandle.allocate(config().getAllocator());
+        boolean free = true;
+
         try {
-            for (@SuppressWarnings("unused") SelectionKey ignored : reableKeys) {
-                final RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
-                ByteBuf buffer = allocHandle.allocate(config().getAllocator());
-                boolean free = true;
-
-                try {
-                    ByteBuffer data = buffer.nioBuffer(buffer.writerIndex(), buffer.writableBytes());
-                    MessageInfo messageInfo = ch.receive(data, null, notificationHandler);
-                    if (messageInfo == null) {
-                        return readMessages;
-                    }
-
-                    data.flip();
-                    allocHandle.lastBytesRead(data.remaining());
-                    msgs.add(new SctpMessage(messageInfo,
-                            buffer.writerIndex(buffer.writerIndex() + allocHandle.lastBytesRead())));
-                    free = false;
-                    ++readMessages;
-                } catch (Throwable cause) {
-                    PlatformDependent.throwException(cause);
-                }  finally {
-                    if (free) {
-                        buffer.release();
-                    }
-                }
+            ByteBuffer data = buffer.nioBuffer(buffer.writerIndex(), buffer.writableBytes());
+            MessageInfo messageInfo = ch.receive(data, null, notificationHandler);
+            if (messageInfo == null) {
+                return readMessages;
             }
-        } finally {
-            reableKeys.clear();
+
+            data.flip();
+            allocHandle.lastBytesRead(data.remaining());
+            msgs.add(new SctpMessage(messageInfo,
+                    buffer.writerIndex(buffer.writerIndex() + allocHandle.lastBytesRead())));
+            free = false;
+            ++readMessages;
+        } catch (Throwable cause) {
+            PlatformDependent.throwException(cause);
+        }  finally {
+            if (free) {
+                buffer.release();
+            }
         }
         return readMessages;
     }
