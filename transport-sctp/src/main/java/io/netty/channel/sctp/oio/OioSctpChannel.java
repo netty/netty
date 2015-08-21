@@ -184,39 +184,32 @@ public class OioSctpChannel extends AbstractOioMessageChannel
             return readMessages;
         }
 
-        Set<SelectionKey> reableKeys = readSelector.selectedKeys();
+        RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
+        if (allocHandle == null) {
+            this.allocHandle = allocHandle = config().getRecvByteBufAllocator().newHandle();
+        }
+        ByteBuf buffer = allocHandle.allocate(config().getAllocator());
+        boolean free = true;
+
         try {
-            for (SelectionKey ignored : reableKeys) {
-                RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
-                if (allocHandle == null) {
-                    this.allocHandle = allocHandle = config().getRecvByteBufAllocator().newHandle();
-                }
-                ByteBuf buffer = allocHandle.allocate(config().getAllocator());
-                boolean free = true;
-
-                try {
-                    ByteBuffer data = buffer.nioBuffer(buffer.writerIndex(), buffer.writableBytes());
-                    MessageInfo messageInfo = ch.receive(data, null, notificationHandler);
-                    if (messageInfo == null) {
-                        return readMessages;
-                    }
-
-                    data.flip();
-                    msgs.add(new SctpMessage(messageInfo, buffer.writerIndex(buffer.writerIndex() + data.remaining())));
-                    free = false;
-                    readMessages ++;
-                } catch (Throwable cause) {
-                    PlatformDependent.throwException(cause);
-                }  finally {
-                    int bytesRead = buffer.readableBytes();
-                    allocHandle.record(bytesRead);
-                    if (free) {
-                        buffer.release();
-                    }
-                }
+            ByteBuffer data = buffer.nioBuffer(buffer.writerIndex(), buffer.writableBytes());
+            MessageInfo messageInfo = ch.receive(data, null, notificationHandler);
+            if (messageInfo == null) {
+                return readMessages;
             }
-        } finally {
-            reableKeys.clear();
+
+            data.flip();
+            msgs.add(new SctpMessage(messageInfo, buffer.writerIndex(buffer.writerIndex() + data.remaining())));
+            free = false;
+            readMessages ++;
+        } catch (Throwable cause) {
+            PlatformDependent.throwException(cause);
+        }  finally {
+            int bytesRead = buffer.readableBytes();
+            allocHandle.record(bytesRead);
+            if (free) {
+                buffer.release();
+            }
         }
         return readMessages;
     }
