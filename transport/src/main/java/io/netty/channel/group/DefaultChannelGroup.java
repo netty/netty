@@ -52,13 +52,15 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             remove(future.channel());
         }
     };
+    private final boolean stayClosed;
+    private volatile boolean closed;
 
     /**
      * Creates a new group with a generated name and the provided {@link EventExecutor} to notify the
      * {@link ChannelGroupFuture}s.
      */
     public DefaultChannelGroup(EventExecutor executor) {
-        this("group-0x" + Integer.toHexString(nextId.incrementAndGet()), executor);
+        this(executor, false);
     }
 
     /**
@@ -67,11 +69,33 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
      * duplicate check is done against group names.
      */
     public DefaultChannelGroup(String name, EventExecutor executor) {
+        this(name, executor, false);
+    }
+
+    /**
+     * Creates a new group with a generated name and the provided {@link EventExecutor} to notify the
+     * {@link ChannelGroupFuture}s. {@code stayClosed} defines whether or not, this group can be closed
+     * more than once. Adding channels to a closed group will immediately close them, too. This makes it
+     * easy, to shutdown server and child channels at once.
+     */
+    public DefaultChannelGroup(EventExecutor executor, boolean stayClosed) {
+        this("group-0x" + Integer.toHexString(nextId.incrementAndGet()), executor, stayClosed);
+    }
+
+    /**
+     * Creates a new group with the specified {@code name} and {@link EventExecutor} to notify the
+     * {@link ChannelGroupFuture}s. {@code stayClosed} defines whether or not, this group can be closed
+     * more than once. Adding channels to a closed group will immediately close them, too. This makes it
+     * easy, to shutdown server and child channels at once. Please note that different groups can have
+     * the same name, which means no duplicate check is done against group names.
+     */
+    public DefaultChannelGroup(String name, EventExecutor executor, boolean stayClosed) {
         if (name == null) {
             throw new NullPointerException("name");
         }
         this.name = name;
         this.executor = executor;
+        this.stayClosed = stayClosed;
     }
 
     @Override
@@ -122,6 +146,23 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
         if (added) {
             channel.closeFuture().addListener(remover);
         }
+
+        if (stayClosed && closed) {
+
+            // First add channel, than check if closed.
+            // Seems inefficient at first, but this way a volatile
+            // gives us enough synchronization to be thread-safe.
+            //
+            // If true: Close right away.
+            // (Might be closed a second time by ChannelGroup.close(), but this is ok)
+            //
+            // If false: Channel will definitely be closed by the ChannelGroup.
+            // (Because closed=true always happens-before ChannelGroup.close())
+            //
+            // See https://github.com/netty/netty/issues/4020
+            channel.close();
+        }
+
         return added;
     }
 
@@ -272,6 +313,16 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
         Map<Channel, ChannelFuture> futures =
                 new LinkedHashMap<Channel, ChannelFuture>(size());
+
+        if (stayClosed) {
+            // It is important to set the closed to true, before closing channels.
+            // Our invariants are:
+            // closed=true happens-before ChannelGroup.close()
+            // ChannelGroup.add() happens-before checking closed==true
+            //
+            // See https://github.com/netty/netty/issues/4020
+            closed = true;
+        }
 
         for (Channel c: serverChannels.values()) {
             if (matcher.matches(c)) {
