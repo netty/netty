@@ -414,11 +414,12 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        // Call super class first, as this may result in decode being called.
+        super.channelInactive(ctx);
         if (byteDecoder != null) {
             encoder.flowController().channelHandlerContext(null);
             decoder.flowController().channelHandlerContext(null);
             byteDecoder.channelInactive(ctx);
-            super.channelInactive(ctx);
             byteDecoder = null;
         }
     }
