@@ -26,6 +26,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -182,6 +183,7 @@ public class EpollSocketChannelTest {
     private static class BuggyChannelHandler extends ChannelInboundHandlerAdapter {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            ReferenceCountUtil.release(msg);
             throw new NullPointerException("I am a bug!");
         }
     }
