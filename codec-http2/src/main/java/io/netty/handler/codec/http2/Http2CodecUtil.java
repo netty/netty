@@ -261,7 +261,7 @@ public final class Http2CodecUtil {
          */
         @Override
         public ChannelPromise setFailure(Throwable cause) {
-            if (awaitingPromises()) {
+            if (awaitingPromises() || expectedCount == 0) {
                 ++failureCount;
                 if (failureCount == 1) {
                     promise.setFailure(cause);
