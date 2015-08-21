@@ -79,6 +79,7 @@ public class LocalChannel extends AbstractChannel {
     private volatile ChannelPromise connectPromise;
     private volatile boolean readInProgress;
     private volatile boolean registerInProgress;
+    private volatile boolean writeInProgress;
 
     public LocalChannel() {
         super(null);
@@ -171,7 +172,7 @@ public class LocalChannel extends AbstractChannel {
             // This ensures that if both channels are on the same event loop, the peer's channelActive
             // event is triggered *after* this channel's channelRegistered event, so that this channel's
             // pipeline is fully initialized by ChannelInitializer before any channelRead events.
-            peer.eventLoop().execute(new Runnable() {
+            peer.eventLoop().execute(new OneTimeTask() {
                 @Override
                 public void run() {
                     registerInProgress = false;
@@ -198,7 +199,12 @@ public class LocalChannel extends AbstractChannel {
 
     @Override
     protected void doClose() throws Exception {
+        final LocalChannel peer = this.peer;
         if (state <= 2) {
+            // To preserve ordering of events we must process any pending reads
+            if (writeInProgress && peer != null) {
+                finishPeerRead(peer);
+            }
             // Update all internal state before the closeFuture is notified.
             if (localAddress != null) {
                 if (parent() == null) {
@@ -209,28 +215,31 @@ public class LocalChannel extends AbstractChannel {
             state = 3;
         }
 
-        final LocalChannel peer = this.peer;
         if (peer != null && peer.isActive()) {
-            // Need to execute the close in the correct EventLoop
-            // See https://github.com/netty/netty/issues/1777
-            EventLoop eventLoop = peer.eventLoop();
-
+            // Need to execute the close in the correct EventLoop (see https://github.com/netty/netty/issues/1777).
             // Also check if the registration was not done yet. In this case we submit the close to the EventLoop
-            // to make sure it is run after the registration completes.
-            //
-            // See https://github.com/netty/netty/issues/2144
-            if (eventLoop.inEventLoop() && !registerInProgress) {
-                peer.unsafe().close(unsafe().voidPromise());
+            // to make sure its run after the registration completes (see https://github.com/netty/netty/issues/2144).
+            if (peer.eventLoop().inEventLoop() && !registerInProgress) {
+                doPeerClose(peer, peer.writeInProgress);
             } else {
-                peer.eventLoop().execute(new Runnable() {
+                // This value may change, and so we should save it before executing the Runnable.
+                final boolean peerWriteInProgress = peer.writeInProgress;
+                peer.eventLoop().execute(new OneTimeTask() {
                     @Override
                     public void run() {
-                        peer.unsafe().close(unsafe().voidPromise());
+                        doPeerClose(peer, peerWriteInProgress);
                     }
                 });
             }
             this.peer = null;
         }
+    }
+
+    private void doPeerClose(LocalChannel peer, boolean peerWriteInProgress) {
+        if (peerWriteInProgress) {
+            finishPeerRead0(this);
+        }
+        peer.unsafe().close(peer.unsafe().voidPromise());
     }
 
     @Override
@@ -283,35 +292,49 @@ public class LocalChannel extends AbstractChannel {
         }
 
         final LocalChannel peer = this.peer;
-        final ChannelPipeline peerPipeline = peer.pipeline();
-        final EventLoop peerLoop = peer.eventLoop();
 
-        for (;;) {
-            Object msg = in.current();
-            if (msg == null) {
-                break;
+        writeInProgress = true;
+        try {
+            for (;;) {
+                Object msg = in.current();
+                if (msg == null) {
+                    break;
+                }
+                try {
+                    peer.inboundBuffer.add(ReferenceCountUtil.retain(msg));
+                    in.remove();
+                } catch (Throwable cause) {
+                    in.remove(cause);
+                }
             }
-            try {
-                peer.inboundBuffer.add(ReferenceCountUtil.retain(msg));
-                in.remove();
-            } catch (Throwable cause) {
-                in.remove(cause);
-            }
+        } finally {
+            // The following situation may cause trouble:
+            // 1. Write (with promise X)
+            // 2. promise X is completed when in.remove() is called, and a listener on this promise calls close()
+            // 3. Then the close event will be executed for the peer before the write events, when the write events
+            // actually happened before the close event.
+            writeInProgress = false;
         }
 
-        if (peerLoop == eventLoop()) {
-            finishPeerRead(peer, peerPipeline);
+        finishPeerRead(peer);
+    }
+
+    private void finishPeerRead(final LocalChannel peer) {
+        // If the peer is also writing, then we must schedule the event on the event loop to preserve read order.
+        if (peer.eventLoop() == eventLoop() && !peer.writeInProgress) {
+            finishPeerRead0(peer);
         } else {
-            peerLoop.execute(new OneTimeTask() {
+            peer.eventLoop().execute(new OneTimeTask() {
                 @Override
                 public void run() {
-                    finishPeerRead(peer, peerPipeline);
+                    finishPeerRead0(peer);
                 }
             });
         }
     }
 
-    private static void finishPeerRead(LocalChannel peer, ChannelPipeline peerPipeline) {
+    private static void finishPeerRead0(LocalChannel peer) {
+        ChannelPipeline peerPipeline = peer.pipeline();
         if (peer.readInProgress) {
             peer.readInProgress = false;
             for (;;) {
