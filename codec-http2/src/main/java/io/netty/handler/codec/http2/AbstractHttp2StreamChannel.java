@@ -24,6 +24,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.InternalThreadLocalMap;
@@ -46,9 +47,8 @@ abstract class AbstractHttp2StreamChannel extends AbstractChannel {
     private final Runnable readTask = new Runnable() {
         @Override
         public void run() {
-            ChannelPipeline pipeline = pipeline();
-            int maxMessagesPerRead = config.getMaxMessagesPerRead();
-            for (int messages = 0; messages < maxMessagesPerRead; messages++) {
+            final RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
+            do {
                 Object m = inboundBuffer.poll();
                 if (m == null) {
                     break;
@@ -56,8 +56,10 @@ abstract class AbstractHttp2StreamChannel extends AbstractChannel {
                 if (!doRead0(m)) {
                     return;
                 }
-            }
-            pipeline.fireChannelReadComplete();
+            } while (allocHandle.continueReading());
+
+            allocHandle.readComplete();
+            pipeline().fireChannelReadComplete();
         }
     };
     private final Runnable fireChildReadCompleteTask = new Runnable() {
@@ -65,6 +67,7 @@ abstract class AbstractHttp2StreamChannel extends AbstractChannel {
         public void run() {
             if (readInProgress) {
                 readInProgress = false;
+                unsafe().recvBufAllocHandle().readComplete();
                 pipeline().fireChannelReadComplete();
             }
         }
@@ -138,6 +141,7 @@ abstract class AbstractHttp2StreamChannel extends AbstractChannel {
         if (readInProgress) {
             return;
         }
+        unsafe().recvBufAllocHandle().reset(config());
 
         if (inboundBuffer.isEmpty()) {
             readInProgress = true;
@@ -235,6 +239,9 @@ abstract class AbstractHttp2StreamChannel extends AbstractChannel {
         if (readInProgress) {
             assert inboundBuffer.isEmpty();
             doRead0(msg);
+            if (!unsafe().recvBufAllocHandle().continueReading()) {
+                fireChildReadCompleteTask.run();
+            }
         } else {
             inboundBuffer.add(msg);
         }
@@ -252,7 +259,9 @@ abstract class AbstractHttp2StreamChannel extends AbstractChannel {
      * Returns whether reads should continue.
      */
     private boolean doRead0(Object msg) {
-        if (msg instanceof CloseMessage) {
+        final RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
+        if (msg == CLOSE_MESSAGE) {
+            allocHandle.readComplete();
             pipeline().fireChannelReadComplete();
             unsafe().close(newPromise());
             return false;
@@ -261,7 +270,13 @@ abstract class AbstractHttp2StreamChannel extends AbstractChannel {
         if (msg instanceof Http2DataFrame) {
             Http2DataFrame data = (Http2DataFrame) msg;
             numBytesToBeConsumed = data.content().readableBytes() + data.padding();
+            allocHandle.lastBytesRead(numBytesToBeConsumed);
+        } else {
+            // Count other frames in some way. 9 is arbitrary, but is also the minimum size of an
+            // HTTP/2 frame.
+            allocHandle.lastBytesRead(9);
         }
+        allocHandle.incMessagesRead(1);
         pipeline().fireChannelRead(msg);
         if (numBytesToBeConsumed != 0) {
             bytesConsumed(numBytesToBeConsumed);
