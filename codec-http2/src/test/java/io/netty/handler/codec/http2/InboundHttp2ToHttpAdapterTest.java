@@ -208,9 +208,9 @@ public class InboundHttp2ToHttpAdapterTest {
                 "/some/path/resource2", true);
         try {
             HttpHeaders httpHeaders = request.headers();
-            httpHeaders.set(HttpUtil.ExtensionHeaderNames.SCHEME.text(), "https");
-            httpHeaders.set(HttpUtil.ExtensionHeaderNames.AUTHORITY.text(), "example.org");
-            httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+            httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "https");
+            httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.AUTHORITY.text(), "example.org");
+            httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
             final Http2Headers http2Headers = new DefaultHttp2Headers().method(new AsciiString("GET")).
                     scheme(new AsciiString("https")).authority(new AsciiString("example.org"))
@@ -260,7 +260,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 "/some/path/resource2", content, true);
         try {
             HttpHeaders httpHeaders = request.headers();
-            httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+            httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, text.length());
             final Http2Headers http2Headers = new DefaultHttp2Headers().method(new AsciiString("GET")).path(
                     new AsciiString("/some/path/resource2"));
@@ -290,7 +290,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 "/some/path/resource2", content, true);
         try {
             HttpHeaders httpHeaders = request.headers();
-            httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+            httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, text.length());
             final Http2Headers http2Headers = new DefaultHttp2Headers().method(new AsciiString("GET")).path(
                     new AsciiString("/some/path/resource2"));
@@ -324,7 +324,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 "/some/path/resource2", content, true);
         try {
             HttpHeaders httpHeaders = request.headers();
-            httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+            httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, text.length());
             final Http2Headers http2Headers = new DefaultHttp2Headers().method(new AsciiString("GET")).path(
                     new AsciiString("/some/path/resource2"));
@@ -358,7 +358,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 "/some/path/resource2", content, true);
         try {
             HttpHeaders httpHeaders = request.headers();
-            httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+            httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, text.length());
             HttpHeaders trailingHeaders = request.trailingHeaders();
             trailingHeaders.set("FoO", "goo");
@@ -397,7 +397,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 "/some/path/resource2", content, true);
         try {
             HttpHeaders httpHeaders = request.headers();
-            httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+            httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, text.length());
             HttpHeaders trailingHeaders = request.trailingHeaders();
             trailingHeaders.set("Foo", "goo");
@@ -441,12 +441,12 @@ public class InboundHttp2ToHttpAdapterTest {
                 "/some/path/resource2", content2, true);
         try {
             HttpHeaders httpHeaders = request.headers();
-            httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+            httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, text.length());
             HttpHeaders httpHeaders2 = request2.headers();
-            httpHeaders2.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
-            httpHeaders2.setInt(HttpUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(), 3);
-            httpHeaders2.setInt(HttpUtil.ExtensionHeaderNames.STREAM_WEIGHT.text(), 123);
+            httpHeaders2.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+            httpHeaders2.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(), 3);
+            httpHeaders2.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_WEIGHT.text(), 123);
             httpHeaders2.setInt(HttpHeaderNames.CONTENT_LENGTH, text2.length());
             final Http2Headers http2Headers = new DefaultHttp2Headers().method(new AsciiString("PUT")).path(
                     new AsciiString("/some/path/resource"));
@@ -487,22 +487,23 @@ public class InboundHttp2ToHttpAdapterTest {
         final FullHttpMessage request2 = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT,
                 "/some/path/resource2", content2, true);
         final FullHttpMessage request3 = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
-                HttpUtil.OUT_OF_MESSAGE_SEQUENCE_METHOD, HttpUtil.OUT_OF_MESSAGE_SEQUENCE_PATH, true);
+                HttpConversionUtil.OUT_OF_MESSAGE_SEQUENCE_METHOD,
+                HttpConversionUtil.OUT_OF_MESSAGE_SEQUENCE_PATH, true);
         try {
             HttpHeaders httpHeaders = request.headers();
-            httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+            httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, text.length());
             HttpHeaders httpHeaders2 = request2.headers();
-            httpHeaders2.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+            httpHeaders2.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
             httpHeaders2.setInt(HttpHeaderNames.CONTENT_LENGTH, text2.length());
             final Http2Headers http2Headers = new DefaultHttp2Headers().method(new AsciiString("PUT")).path(
                     new AsciiString("/some/path/resource"));
             final Http2Headers http2Headers2 = new DefaultHttp2Headers().method(new AsciiString("PUT")).path(
                     new AsciiString("/some/path/resource2"));
             HttpHeaders httpHeaders3 = request3.headers();
-            httpHeaders3.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
-            httpHeaders3.setInt(HttpUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(), 3);
-            httpHeaders3.setInt(HttpUtil.ExtensionHeaderNames.STREAM_WEIGHT.text(), 222);
+            httpHeaders3.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+            httpHeaders3.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(), 3);
+            httpHeaders3.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_WEIGHT.text(), 222);
             httpHeaders3.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
@@ -544,17 +545,17 @@ public class InboundHttp2ToHttpAdapterTest {
                 true);
         try {
             HttpHeaders httpHeaders = response.headers();
-            httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+            httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, text.length());
             HttpHeaders httpHeaders2 = response2.headers();
-            httpHeaders2.set(HttpUtil.ExtensionHeaderNames.SCHEME.text(), "https");
-            httpHeaders2.set(HttpUtil.ExtensionHeaderNames.AUTHORITY.text(), "example.org");
-            httpHeaders2.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
-            httpHeaders2.setInt(HttpUtil.ExtensionHeaderNames.STREAM_PROMISE_ID.text(), 3);
+            httpHeaders2.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "https");
+            httpHeaders2.set(HttpConversionUtil.ExtensionHeaderNames.AUTHORITY.text(), "example.org");
+            httpHeaders2.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+            httpHeaders2.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_PROMISE_ID.text(), 3);
             httpHeaders2.setInt(HttpHeaderNames.CONTENT_LENGTH, text2.length());
 
             httpHeaders = request.headers();
-            httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+            httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
             final Http2Headers http2Headers3 = new DefaultHttp2Headers().method(new AsciiString("GET"))
                     .path(new AsciiString("/push/test"));
@@ -603,7 +604,7 @@ public class InboundHttp2ToHttpAdapterTest {
         final FullHttpMessage request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "/info/test",
                 true);
         HttpHeaders httpHeaders = request.headers();
-        httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+        httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
         httpHeaders.set(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE);
         httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
         final Http2Headers http2Headers = new DefaultHttp2Headers().method(new AsciiString("PUT"))
@@ -633,7 +634,7 @@ public class InboundHttp2ToHttpAdapterTest {
             reset(serverListener);
 
             httpHeaders = response.headers();
-            httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+            httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
             final Http2Headers http2HeadersResponse = new DefaultHttp2Headers().status(new AsciiString("100"));
             runInChannel(serverConnectedChannel, new Http2Runnable() {
@@ -670,7 +671,7 @@ public class InboundHttp2ToHttpAdapterTest {
 
             setClientLatch(1);
             httpHeaders = response2.headers();
-            httpHeaders.setInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+            httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
             final Http2Headers http2HeadersResponse2 = new DefaultHttp2Headers().status(new AsciiString("200"));
             runInChannel(serverConnectedChannel, new Http2Runnable() {

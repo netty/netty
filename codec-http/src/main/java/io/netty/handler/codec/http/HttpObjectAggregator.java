@@ -30,7 +30,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
-import static io.netty.handler.codec.http.HttpHeaderUtil.getContentLength;
+import static io.netty.handler.codec.http.HttpUtil.getContentLength;
 
 /**
  * A {@link ChannelHandler} that aggregates an {@link HttpMessage}
@@ -119,7 +119,7 @@ public class HttpObjectAggregator
 
     @Override
     protected Object newContinueResponse(HttpMessage start, int maxContentLength, ChannelPipeline pipeline) {
-        if (HttpHeaderUtil.is100ContinueExpected(start)) {
+        if (HttpUtil.is100ContinueExpected(start)) {
             if (getContentLength(start, -1) <= maxContentLength) {
                 return CONTINUE.duplicate().retain();
             }
@@ -145,7 +145,7 @@ public class HttpObjectAggregator
     protected FullHttpMessage beginAggregation(HttpMessage start, ByteBuf content) throws Exception {
         assert !(start instanceof FullHttpMessage);
 
-        HttpHeaderUtil.setTransferEncodingChunked(start, false);
+        HttpUtil.setTransferEncodingChunked(start, false);
 
         AggregatedFullHttpMessage ret;
         if (start instanceof HttpRequest) {
@@ -174,7 +174,7 @@ public class HttpObjectAggregator
         // transmitted if a GET would have been used.
         //
         // See rfc2616 14.13 Content-Length
-        if (!HttpHeaderUtil.isContentLengthSet(aggregated)) {
+        if (!HttpUtil.isContentLengthSet(aggregated)) {
             aggregated.headers().set(
                     HttpHeaderNames.CONTENT_LENGTH,
                     String.valueOf(aggregated.content().readableBytes()));
@@ -199,7 +199,7 @@ public class HttpObjectAggregator
             // If the client started to send data already, close because it's impossible to recover.
             // If keep-alive is off and 'Expect: 100-continue' is missing, no need to leave the connection open.
             if (oversized instanceof FullHttpMessage ||
-                !HttpHeaderUtil.is100ContinueExpected(oversized) && !HttpHeaderUtil.isKeepAlive(oversized)) {
+                !HttpUtil.is100ContinueExpected(oversized) && !HttpUtil.isKeepAlive(oversized)) {
                 future.addListener(ChannelFutureListener.CLOSE);
             }
 

@@ -670,9 +670,9 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
 
     void encode(ByteBuf buf) {
         if (bytes == null) {
-            HttpHeaders.encodeAscii0(String.valueOf(code()), buf);
+            HttpUtil.encodeAscii0(String.valueOf(code()), buf);
             buf.writeByte(SP);
-            HttpHeaders.encodeAscii0(String.valueOf(reasonPhrase()), buf);
+            HttpUtil.encodeAscii0(String.valueOf(reasonPhrase()), buf);
         } else {
             buf.writeBytes(bytes);
         }

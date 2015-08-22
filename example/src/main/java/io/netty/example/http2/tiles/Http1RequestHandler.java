@@ -17,7 +17,7 @@
 package io.netty.example.http2.tiles;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
-import static io.netty.handler.codec.http.HttpHeaderUtil.isKeepAlive;
+import static io.netty.handler.codec.http.HttpUtil.isKeepAlive;
 import static io.netty.handler.codec.http.HttpResponseStatus.CONTINUE;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import io.netty.channel.ChannelFutureListener;
@@ -25,7 +25,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaderUtil;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpHeaderValues;
 
 import java.util.concurrent.TimeUnit;
@@ -37,7 +37,7 @@ public final class Http1RequestHandler extends Http2RequestHandler {
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
-        if (HttpHeaderUtil.is100ContinueExpected(request)) {
+        if (HttpUtil.is100ContinueExpected(request)) {
             ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE));
         }
         super.channelRead0(ctx, request);
@@ -46,7 +46,7 @@ public final class Http1RequestHandler extends Http2RequestHandler {
     @Override
     protected void sendResponse(final ChannelHandlerContext ctx, String streamId, int latency,
             final FullHttpResponse response, final FullHttpRequest request) {
-        HttpHeaderUtil.setContentLength(response, response.content().readableBytes());
+        HttpUtil.setContentLength(response, response.content().readableBytes());
         ctx.executor().schedule(new Runnable() {
             @Override
             public void run() {

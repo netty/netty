@@ -19,7 +19,7 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderUtil;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
@@ -43,8 +43,8 @@ public class WebSocketServerHandshakerFactoryTest {
         assertEquals(HttpResponseStatus.UPGRADE_REQUIRED, response.status());
         assertEquals(WebSocketVersion.V13.toHttpHeaderValue(),
                 response.headers().get(HttpHeaderNames.SEC_WEBSOCKET_VERSION));
-        assertTrue(HttpHeaderUtil.isContentLengthSet(response));
-        assertEquals(0, HttpHeaderUtil.getContentLength(response));
+        assertTrue(HttpUtil.isContentLengthSet(response));
+        assertEquals(0, HttpUtil.getContentLength(response));
 
         ReferenceCountUtil.release(response);
         assertFalse(ch.finish());

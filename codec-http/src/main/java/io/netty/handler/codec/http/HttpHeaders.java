@@ -488,7 +488,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-     * @deprecated Use {@link HttpHeaderUtil#isKeepAlive(HttpMessage)} instead.
+     * @deprecated Use {@link HttpUtil#isKeepAlive(HttpMessage)} instead.
      *
      * Returns {@code true} if and only if the connection can remain open and
      * thus 'kept alive'.  This methods respects the value of the
@@ -497,11 +497,11 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      */
     @Deprecated
     public static boolean isKeepAlive(HttpMessage message) {
-        return HttpHeaderUtil.isKeepAlive(message);
+        return HttpUtil.isKeepAlive(message);
     }
 
     /**
-     * @deprecated Use {@link HttpHeaderUtil#setKeepAlive(HttpMessage, boolean)} instead.
+     * @deprecated Use {@link HttpUtil#setKeepAlive(HttpMessage, boolean)} instead.
      *
      * Sets the value of the {@code "Connection"} header depending on the
      * protocol version of the specified message.  This getMethod sets or removes
@@ -523,7 +523,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      */
     @Deprecated
     public static void setKeepAlive(HttpMessage message, boolean keepAlive) {
-        HttpHeaderUtil.setKeepAlive(message, keepAlive);
+        HttpUtil.setKeepAlive(message, keepAlive);
     }
 
     /**
@@ -939,7 +939,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-     * @deprecated Use {@link HttpHeaderUtil#getContentLength(HttpMessage)} instead.
+     * @deprecated Use {@link HttpUtil#getContentLength(HttpMessage)} instead.
      *
      * Returns the length of the content.  Please note that this value is
      * not retrieved from {@link HttpContent#content()} but from the
@@ -954,11 +954,11 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      */
     @Deprecated
     public static long getContentLength(HttpMessage message) {
-        return HttpHeaderUtil.getContentLength(message);
+        return HttpUtil.getContentLength(message);
     }
 
     /**
-     * @deprecated Use {@link HttpHeaderUtil#getContentLength(HttpMessage, long)} instead.
+     * @deprecated Use {@link HttpUtil#getContentLength(HttpMessage, long)} instead.
      *
      * Returns the length of the content.  Please note that this value is
      * not retrieved from {@link HttpContent#content()} but from the
@@ -971,15 +971,15 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      */
     @Deprecated
     public static long getContentLength(HttpMessage message, long defaultValue) {
-        return HttpHeaderUtil.getContentLength(message, defaultValue);
+        return HttpUtil.getContentLength(message, defaultValue);
     }
 
     /**
-     * @deprecated Use {@link HttpHeaderUtil#setContentLength(HttpMessage, long)} instead.
+     * @deprecated Use {@link HttpUtil#setContentLength(HttpMessage, long)} instead.
      */
     @Deprecated
     public static void setContentLength(HttpMessage message, long length) {
-        HttpHeaderUtil.setContentLength(message, length);
+        HttpUtil.setContentLength(message, length);
     }
 
     /**
@@ -1059,18 +1059,18 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-     * @deprecated Use {@link HttpHeaderUtil#is100ContinueExpected(HttpMessage)} instead.
+     * @deprecated Use {@link HttpUtil#is100ContinueExpected(HttpMessage)} instead.
      *
      * Returns {@code true} if and only if the specified message contains the
      * {@code "Expect: 100-continue"} header.
      */
     @Deprecated
     public static boolean is100ContinueExpected(HttpMessage message) {
-        return HttpHeaderUtil.is100ContinueExpected(message);
+        return HttpUtil.is100ContinueExpected(message);
     }
 
     /**
-     * @deprecated Use {@link HttpHeaderUtil#set100ContinueExpected(HttpMessage, boolean)} instead.
+     * @deprecated Use {@link HttpUtil#set100ContinueExpected(HttpMessage, boolean)} instead.
      *
      * Sets the {@code "Expect: 100-continue"} header to the specified message.
      * If there is any existing {@code "Expect"} header, they are replaced with
@@ -1078,11 +1078,11 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      */
     @Deprecated
     public static void set100ContinueExpected(HttpMessage message) {
-        HttpHeaderUtil.set100ContinueExpected(message, true);
+        HttpUtil.set100ContinueExpected(message, true);
     }
 
     /**
-     * @deprecated Use {@link HttpHeaderUtil#set100ContinueExpected(HttpMessage, boolean)} instead.
+     * @deprecated Use {@link HttpUtil#set100ContinueExpected(HttpMessage, boolean)} instead.
      *
      * Sets or removes the {@code "Expect: 100-continue"} header to / from the
      * specified message.  If the specified {@code value} is {@code true},
@@ -1092,11 +1092,11 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      */
     @Deprecated
     public static void set100ContinueExpected(HttpMessage message, boolean set) {
-        HttpHeaderUtil.set100ContinueExpected(message, set);
+        HttpUtil.set100ContinueExpected(message, set);
     }
 
     /**
-     * @deprecated Use {@link HttpHeaderUtil#isTransferEncodingChunked(HttpMessage)} instead.
+     * @deprecated Use {@link HttpUtil#isTransferEncodingChunked(HttpMessage)} instead.
      *
      * Checks to see if the transfer encoding in a specified {@link HttpMessage} is chunked
      *
@@ -1105,31 +1105,31 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      */
     @Deprecated
     public static boolean isTransferEncodingChunked(HttpMessage message) {
-        return HttpHeaderUtil.isTransferEncodingChunked(message);
+        return HttpUtil.isTransferEncodingChunked(message);
     }
 
     /**
-     * @deprecated Use {@link HttpHeaderUtil#setTransferEncodingChunked(HttpMessage, boolean)} instead.
+     * @deprecated Use {@link HttpUtil#setTransferEncodingChunked(HttpMessage, boolean)} instead.
      */
     @Deprecated
     public static void removeTransferEncodingChunked(HttpMessage m) {
-        HttpHeaderUtil.setTransferEncodingChunked(m, false);
+        HttpUtil.setTransferEncodingChunked(m, false);
     }
 
     /**
-     * @deprecated Use {@link HttpHeaderUtil#setTransferEncodingChunked(HttpMessage, boolean)} instead.
+     * @deprecated Use {@link HttpUtil#setTransferEncodingChunked(HttpMessage, boolean)} instead.
      */
     @Deprecated
     public static void setTransferEncodingChunked(HttpMessage m) {
-        HttpHeaderUtil.setTransferEncodingChunked(m, true);
+        HttpUtil.setTransferEncodingChunked(m, true);
     }
 
     /**
-     * @deprecated Use {@link HttpHeaderUtil#isContentLengthSet(HttpMessage)} instead.
+     * @deprecated Use {@link HttpUtil#isContentLengthSet(HttpMessage)} instead.
      */
     @Deprecated
     public static boolean isContentLengthSet(HttpMessage m) {
-        return HttpHeaderUtil.isContentLengthSet(m);
+        return HttpUtil.isContentLengthSet(m);
     }
 
     /**
@@ -1153,14 +1153,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         if (seq instanceof AsciiString) {
             ByteBufUtil.copy((AsciiString) seq, 0, buf, seq.length());
         } else {
-            encodeAscii0(seq, buf);
-        }
-    }
-
-    static void encodeAscii0(CharSequence seq, ByteBuf buf) {
-        int length = seq.length();
-        for (int i = 0 ; i < length; i++) {
-            buf.writeByte((byte) seq.charAt(i));
+            HttpUtil.encodeAscii0(seq, buf);
         }
     }
 

@@ -398,7 +398,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
         // Handle the last unfinished message.
         if (message != null) {
-            boolean chunked = HttpHeaderUtil.isTransferEncodingChunked(message);
+            boolean chunked = HttpUtil.isTransferEncodingChunked(message);
             if (currentState == State.READ_VARIABLE_LENGTH_CONTENT && !in.isReadable() && !chunked) {
                 // End of connection.
                 out.add(LastHttpContent.EMPTY_LAST_CONTENT);
@@ -588,9 +588,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         State nextState;
 
         if (isContentAlwaysEmpty(message)) {
-            HttpHeaderUtil.setTransferEncodingChunked(message, false);
+            HttpUtil.setTransferEncodingChunked(message, false);
             nextState = State.SKIP_CONTROL_CHARS;
-        } else if (HttpHeaderUtil.isTransferEncodingChunked(message)) {
+        } else if (HttpUtil.isTransferEncodingChunked(message)) {
             nextState = State.READ_CHUNK_SIZE;
         } else if (contentLength() >= 0) {
             nextState = State.READ_FIXED_LENGTH_CONTENT;
@@ -602,7 +602,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     private long contentLength() {
         if (contentLength == Long.MIN_VALUE) {
-            contentLength = HttpHeaderUtil.getContentLength(message, -1);
+            contentLength = HttpUtil.getContentLength(message, -1);
         }
         return contentLength;
     }
