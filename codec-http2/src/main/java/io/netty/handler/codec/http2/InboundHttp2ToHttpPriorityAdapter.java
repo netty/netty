@@ -35,11 +35,11 @@ import static io.netty.handler.codec.http2.Http2Exception.connectionError;
  */
 public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpAdapter {
     private static final AsciiString OUT_OF_MESSAGE_SEQUENCE_METHOD = new AsciiString(
-            HttpUtil.OUT_OF_MESSAGE_SEQUENCE_METHOD.toString());
+            HttpConversionUtil.OUT_OF_MESSAGE_SEQUENCE_METHOD.toString());
     private static final AsciiString OUT_OF_MESSAGE_SEQUENCE_PATH = new AsciiString(
-            HttpUtil.OUT_OF_MESSAGE_SEQUENCE_PATH);
+            HttpConversionUtil.OUT_OF_MESSAGE_SEQUENCE_PATH);
     private static final AsciiString OUT_OF_MESSAGE_SEQUENCE_RETURN_CODE = new AsciiString(
-            HttpUtil.OUT_OF_MESSAGE_SEQUENCE_RETURN_CODE.toString());
+            HttpConversionUtil.OUT_OF_MESSAGE_SEQUENCE_RETURN_CODE.toString());
     private final IntObjectMap<HttpHeaders> outOfMessageFlowHeaders;
 
     public static final class Builder extends InboundHttp2ToHttpAdapter.Builder {
@@ -112,8 +112,8 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
      * @param headers The headers to remove the priority tree elements from
      */
     private static void removePriorityRelatedHeaders(HttpHeaders headers) {
-        headers.remove(HttpUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text());
-        headers.remove(HttpUtil.ExtensionHeaderNames.STREAM_WEIGHT.text());
+        headers.remove(HttpConversionUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text());
+        headers.remove(HttpConversionUtil.ExtensionHeaderNames.STREAM_WEIGHT.text());
     }
 
     /**
@@ -166,7 +166,7 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
             // and the HTTP message flow exists in OPEN.
             if (parent != null && !parent.equals(connection.connectionStream())) {
                 HttpHeaders headers = new DefaultHttpHeaders();
-                headers.setInt(HttpUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(), parent.id());
+                headers.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(), parent.id());
                 importOutOfMessageFlowHeaders(stream.id(), headers);
             }
         } else {
@@ -175,7 +175,7 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
                 removePriorityRelatedHeaders(msg.trailingHeaders());
             } else if (!parent.equals(connection.connectionStream())) {
                 HttpHeaders headers = getActiveHeaders(msg);
-                headers.setInt(HttpUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(), parent.id());
+                headers.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(), parent.id());
             }
         }
     }
@@ -193,7 +193,7 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
         } else {
             headers = getActiveHeaders(msg);
         }
-        headers.setShort(HttpUtil.ExtensionHeaderNames.STREAM_WEIGHT.text(), stream.weight());
+        headers.setShort(HttpConversionUtil.ExtensionHeaderNames.STREAM_WEIGHT.text(), stream.weight());
     }
 
     @Override

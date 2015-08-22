@@ -29,7 +29,7 @@ import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpChunkedInput;
-import io.netty.handler.codec.http.HttpHeaderUtil;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -175,10 +175,10 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         long fileLength = raf.length();
 
         HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
-        HttpHeaderUtil.setContentLength(response, fileLength);
+        HttpUtil.setContentLength(response, fileLength);
         setContentTypeHeader(response, file);
         setDateAndCacheHeaders(response, file);
-        if (HttpHeaderUtil.isKeepAlive(request)) {
+        if (HttpUtil.isKeepAlive(request)) {
             response.headers().set(CONNECTION, HttpHeaderValues.KEEP_ALIVE);
         }
 
@@ -218,7 +218,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         });
 
         // Decide whether to close the connection or not.
-        if (!HttpHeaderUtil.isKeepAlive(request)) {
+        if (!HttpUtil.isKeepAlive(request)) {
             // Close the connection when the whole content is written out.
             lastContentFuture.addListener(ChannelFutureListener.CLOSE);
         }

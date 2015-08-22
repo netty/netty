@@ -18,7 +18,7 @@ package io.netty.example.http.upload;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpHeaderUtil;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -47,7 +47,7 @@ public class HttpUploadClientHandler extends SimpleChannelInboundHandler<HttpObj
                 }
             }
 
-            if (response.status().code() == 200 && HttpHeaderUtil.isTransferEncodingChunked(response)) {
+            if (response.status().code() == 200 && HttpUtil.isTransferEncodingChunked(response)) {
                 readingChunks = true;
                 System.err.println("CHUNKED CONTENT {");
             } else {

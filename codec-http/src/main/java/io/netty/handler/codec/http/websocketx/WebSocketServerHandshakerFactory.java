@@ -20,7 +20,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderUtil;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -151,7 +151,7 @@ public class WebSocketServerHandshakerFactory {
                 HttpVersion.HTTP_1_1,
                 HttpResponseStatus.UPGRADE_REQUIRED);
         res.headers().set(HttpHeaderNames.SEC_WEBSOCKET_VERSION, WebSocketVersion.V13.toHttpHeaderValue());
-        HttpHeaderUtil.setContentLength(res, 0);
+        HttpUtil.setContentLength(res, 0);
         return channel.writeAndFlush(res, promise);
     }
 }

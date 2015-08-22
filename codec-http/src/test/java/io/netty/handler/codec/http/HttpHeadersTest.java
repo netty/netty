@@ -24,14 +24,14 @@ import java.util.List;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
-public class HttpHeaderUtilTest {
+public class HttpHeadersTest {
 
     @Test
     public void testRemoveTransferEncodingIgnoreCase() {
         HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         message.headers().set(HttpHeaderNames.TRANSFER_ENCODING, "Chunked");
         assertFalse(message.headers().isEmpty());
-        HttpHeaderUtil.setTransferEncodingChunked(message, false);
+        HttpUtil.setTransferEncodingChunked(message, false);
         assertTrue(message.headers().isEmpty());
     }
 
@@ -56,5 +56,17 @@ public class HttpHeaderUtilTest {
         assertThat(AsciiString.contentEqualsIgnoreCase(null, "foo"), is(false));
         assertThat(AsciiString.contentEqualsIgnoreCase("bar", null), is(false));
         assertThat(AsciiString.contentEqualsIgnoreCase("FoO", "fOo"), is(true));
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void testSetNullHeaderValueValidate() {
+        HttpHeaders headers = new DefaultHttpHeaders(true);
+        headers.set("test", (CharSequence) null);
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void testSetNullHeaderValueNotValidate() {
+        HttpHeaders headers = new DefaultHttpHeaders(false);
+        headers.set("test", (CharSequence) null);
     }
 }

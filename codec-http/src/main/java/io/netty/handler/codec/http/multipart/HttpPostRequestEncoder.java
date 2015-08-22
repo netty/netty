@@ -25,7 +25,7 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderUtil;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
@@ -761,7 +761,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
                     }
                 }
             }
-            HttpHeaderUtil.setTransferEncodingChunked(request, true);
+            HttpUtil.setTransferEncodingChunked(request, true);
 
             // wrap to hide the possible content
             return new WrappedHttpRequest(request);

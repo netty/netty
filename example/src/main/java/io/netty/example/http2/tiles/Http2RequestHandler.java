@@ -20,7 +20,7 @@ import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.example.http2.Http2ExampleUtil.firstValue;
 import static io.netty.example.http2.Http2ExampleUtil.toInt;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
-import static io.netty.handler.codec.http.HttpHeaderUtil.setContentLength;
+import static io.netty.handler.codec.http.HttpUtil.setContentLength;
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
@@ -32,7 +32,7 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.QueryStringDecoder;
-import io.netty.handler.codec.http2.HttpUtil;
+import io.netty.handler.codec.http2.HttpConversionUtil;
 import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapter;
 
 import java.util.concurrent.TimeUnit;
@@ -107,11 +107,11 @@ public class Http2RequestHandler extends SimpleChannelInboundHandler<FullHttpReq
     }
 
     private String streamId(FullHttpRequest request) {
-        return request.headers().getAsString(HttpUtil.ExtensionHeaderNames.STREAM_ID.text());
+        return request.headers().getAsString(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text());
     }
 
     private void streamId(FullHttpResponse response, String streamId) {
-        response.headers().set(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), streamId);
+        response.headers().set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), streamId);
     }
 
     @Override

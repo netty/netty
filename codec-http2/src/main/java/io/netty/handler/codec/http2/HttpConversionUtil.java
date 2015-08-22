@@ -20,7 +20,7 @@ import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderUtil;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
@@ -53,7 +53,7 @@ import static io.netty.util.internal.StringUtil.length;
 /**
  * Provides utility methods and constants for the HTTP/2 to HTTP conversion
  */
-public final class HttpUtil {
+public final class HttpConversionUtil {
     /**
      * The set of headers that should not be directly copied when converting headers from HTTP to HTTP/2.
      */
@@ -98,7 +98,7 @@ public final class HttpUtil {
      */
     private static final AsciiString EMPTY_REQUEST_PATH = new AsciiString("/");
 
-    private HttpUtil() {
+    private HttpConversionUtil() {
     }
 
     /**
@@ -265,7 +265,7 @@ public final class HttpUtil {
         headers.remove(HttpHeaderNames.TRAILER);
         if (!addToTrailer) {
             headers.setInt(ExtensionHeaderNames.STREAM_ID.text(), streamId);
-            HttpHeaderUtil.setKeepAlive(destinationMessage, true);
+            HttpUtil.setKeepAlive(destinationMessage, true);
         }
     }
 

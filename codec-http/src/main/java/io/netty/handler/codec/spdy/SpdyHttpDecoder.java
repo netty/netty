@@ -25,7 +25,7 @@ import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderUtil;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
@@ -240,7 +240,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                 httpResponseWithEntity.headers().setInt(Names.STREAM_ID, streamId);
 
                 if (spdySynReplyFrame.isLast()) {
-                    HttpHeaderUtil.setContentLength(httpResponseWithEntity, 0);
+                    HttpUtil.setContentLength(httpResponseWithEntity, 0);
                     out.add(httpResponseWithEntity);
                 } else {
                     // Response body will follow in a series of Data Frames
@@ -280,7 +280,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                         fullHttpMessage.headers().setInt(Names.STREAM_ID, streamId);
 
                         if (spdyHeadersFrame.isLast()) {
-                            HttpHeaderUtil.setContentLength(fullHttpMessage, 0);
+                            HttpUtil.setContentLength(fullHttpMessage, 0);
                             out.add(fullHttpMessage);
                         } else {
                             // Response body will follow in a series of Data Frames
@@ -305,7 +305,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
             }
 
             if (spdyHeadersFrame.isLast()) {
-                HttpHeaderUtil.setContentLength(fullHttpMessage, fullHttpMessage.content().readableBytes());
+                HttpUtil.setContentLength(fullHttpMessage, fullHttpMessage.content().readableBytes());
                 removeMessage(streamId);
                 out.add(fullHttpMessage);
             }
@@ -333,7 +333,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
             content.writeBytes(spdyDataFrameData, spdyDataFrameData.readerIndex(), spdyDataFrameDataLen);
 
             if (spdyDataFrame.isLast()) {
-                HttpHeaderUtil.setContentLength(fullHttpMessage, content.readableBytes());
+                HttpUtil.setContentLength(fullHttpMessage, content.readableBytes());
                 removeMessage(streamId);
                 out.add(fullHttpMessage);
             }
@@ -372,7 +372,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
         }
 
         // The Connection and Keep-Alive headers are no longer valid
-        HttpHeaderUtil.setKeepAlive(req, true);
+        HttpUtil.setKeepAlive(req, true);
 
         // Transfer-Encoding header is not valid
         req.headers().remove(HttpHeaderNames.TRANSFER_ENCODING);
@@ -396,7 +396,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
         }
 
         // The Connection and Keep-Alive headers are no longer valid
-        HttpHeaderUtil.setKeepAlive(res, true);
+        HttpUtil.setKeepAlive(res, true);
 
         // Transfer-Encoding header is not valid
         res.headers().remove(HttpHeaderNames.TRANSFER_ENCODING);
