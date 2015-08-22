@@ -285,7 +285,7 @@ public class Http2MultiplexCodec extends ChannelHandlerAdapter {
 
         private void onStreamClosed0(StreamInfo streamInfo) {
             streamInfo.childChannel.onStreamClosedFired = true;
-            streamInfo.childChannel.fireChildRead(new AbstractHttp2StreamChannel.CloseMessage());
+            streamInfo.childChannel.fireChildRead(AbstractHttp2StreamChannel.CLOSE_MESSAGE);
         }
 
         @Override

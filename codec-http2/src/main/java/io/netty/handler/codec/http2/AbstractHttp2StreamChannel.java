@@ -39,6 +39,12 @@ import java.util.Queue;
  * Child {@link Channel} of another channel, for use for modeling streams as channels.
  */
 abstract class AbstractHttp2StreamChannel extends AbstractChannel {
+    /**
+     * Used by subclasses to queue a close channel within the read queue. When read, it will close
+     * the channel (using Unsafe) instead of notifying handlers of the message with {@code
+     * channelRead()}. Additional inbound messages must not arrive after this one.
+     */
+    protected static final Object CLOSE_MESSAGE = new Object();
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     private static final int MAX_READER_STACK_DEPTH = 8;
 
@@ -295,11 +301,4 @@ abstract class AbstractHttp2StreamChannel extends AbstractChannel {
             promise.setSuccess();
         }
     }
-
-    /**
-     * Used by subclasses to queue a close channel within the read queue. When read, it will close
-     * the channel (using Unsafe) instead of notifying handlers of the message with {@code
-     * channelRead()}. Additional inbound messages must not arrive after this one.
-     */
-    protected static final class CloseMessage { }
 }
