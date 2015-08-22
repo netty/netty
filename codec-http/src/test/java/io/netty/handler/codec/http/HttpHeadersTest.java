@@ -31,7 +31,7 @@ public class HttpHeadersTest {
         HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         message.headers().set(HttpHeaderNames.TRANSFER_ENCODING, "Chunked");
         assertFalse(message.headers().isEmpty());
-        HttpHeaderUtil.setTransferEncodingChunked(message, false);
+        HttpUtil.setTransferEncodingChunked(message, false);
         assertTrue(message.headers().isEmpty());
     }
 

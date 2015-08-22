@@ -25,7 +25,7 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderUtil;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObject;
@@ -61,7 +61,7 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
         if (msg instanceof HttpRequest) {
             HttpRequest request = this.request = (HttpRequest) msg;
 
-            if (HttpHeaderUtil.is100ContinueExpected(request)) {
+            if (HttpUtil.is100ContinueExpected(request)) {
                 send100Continue(ctx);
             }
 
@@ -146,7 +146,7 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
 
     private boolean writeResponse(HttpObject currentObj, ChannelHandlerContext ctx) {
         // Decide whether to close the connection or not.
-        boolean keepAlive = HttpHeaderUtil.isKeepAlive(request);
+        boolean keepAlive = HttpUtil.isKeepAlive(request);
         // Build the response object.
         FullHttpResponse response = new DefaultFullHttpResponse(
                 HTTP_1_1, currentObj.decoderResult().isSuccess()? OK : BAD_REQUEST,

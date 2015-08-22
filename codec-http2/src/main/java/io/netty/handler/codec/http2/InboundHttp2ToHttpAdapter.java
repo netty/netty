@@ -25,7 +25,7 @@ import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderUtil;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
@@ -168,7 +168,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
      */
     protected void fireChannelRead(ChannelHandlerContext ctx, FullHttpMessage msg, int streamId) {
         removeMessage(streamId);
-        HttpHeaderUtil.setContentLength(msg, msg.content().readableBytes());
+        HttpUtil.setContentLength(msg, msg.content().readableBytes());
         ctx.fireChannelRead(msg);
     }
 
@@ -186,8 +186,8 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
      */
     protected FullHttpMessage newMessage(int streamId, Http2Headers headers, boolean validateHttpHeaders)
             throws Http2Exception {
-        return connection.isServer() ? HttpUtil.toHttpRequest(streamId, headers,
-                validateHttpHeaders) : HttpUtil.toHttpResponse(streamId, headers, validateHttpHeaders);
+        return connection.isServer() ? HttpConversionUtil.toHttpRequest(streamId, headers,
+                validateHttpHeaders) : HttpConversionUtil.toHttpResponse(streamId, headers, validateHttpHeaders);
     }
 
     /**
@@ -221,7 +221,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
             msg = newMessage(streamId, headers, validateHttpHeaders);
         } else if (allowAppend) {
             try {
-                HttpUtil.addHttp2ToHttpHeaders(streamId, headers, msg, appendToTrailer);
+                HttpConversionUtil.addHttp2ToHttpHeaders(streamId, headers, msg, appendToTrailer);
             } catch (Http2Exception e) {
                 removeMessage(streamId);
                 throw e;
@@ -320,7 +320,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
                             promisedStreamId);
         }
 
-        msg.headers().setInt(HttpUtil.ExtensionHeaderNames.STREAM_PROMISE_ID.text(), streamId);
+        msg.headers().setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_PROMISE_ID.text(), streamId);
 
         processHeadersEnd(ctx, promisedStreamId, msg, false);
     }
