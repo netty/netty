@@ -18,7 +18,6 @@ package io.netty.handler.codec.http2;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.util.IllegalReferenceCountException;
 

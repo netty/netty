@@ -123,11 +123,7 @@ public class Http2MultiplexCodec extends ChannelHandlerAdapter {
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
-        String name = ctx.name() + "-Http2ConnectionHandler";
-        if (ctx.pipeline().context(name) != null) {
-          throw new Exception("Name conflict: " + name);
-        }
-        ctx.pipeline().addBefore(ctx.invoker(), ctx.name(), name, http2Handler);
+        ctx.pipeline().addBefore(ctx.invoker(), ctx.name(), null, http2Handler);
         this.http2HandlerCtx = ctx.pipeline().context(http2Handler);
     }
 
@@ -182,8 +178,10 @@ public class Http2MultiplexCodec extends ChannelHandlerAdapter {
             if (msg instanceof Http2StreamFrame) {
                 Object streamObject = ((Http2StreamFrame) msg).stream();
                 if (!(streamObject instanceof Http2StreamChannel)) {
+                    // TODO: swap to failing the promise. Today, however, the promise is likely
+                    // being ignored.
                     throw new IllegalArgumentException(
-                        "Http2StreamFrame.stream() has invalid type: " + streamObject.getClass().getName());
+                        "Http2StreamFrame.stream() must be an Http2StreamChannel: " + streamObject);
                 }
                 int streamId = ((Http2StreamChannel) streamObject).stream.id();
                 if (msg instanceof Http2DataFrame) {
@@ -210,6 +208,8 @@ public class Http2MultiplexCodec extends ChannelHandlerAdapter {
                 unexpected = true;
             }
             if (unexpected) {
+                // TODO: swap to failing the promise. Today, however, the promise is likely being
+                // ignored.
                 throw new IllegalStateException("Unexpected Http2Frame type: " + msg.getClass().getName());
             }
         } finally {
@@ -298,10 +298,8 @@ public class Http2MultiplexCodec extends ChannelHandlerAdapter {
                         if (stream.id() > lastStreamId
                                 && http2Handler.connection().local().isValidStreamId(stream.id())) {
                             StreamInfo streamInfo = (StreamInfo) stream.getProperty(streamInfoKey);
-                            if (streamInfo != null) {
-                                streamInfo.childChannel.pipeline()
+                            streamInfo.childChannel.pipeline()
                                     .fireUserEventTriggered(goAway.retain());
-                            }
                         }
                         return true;
                     }
@@ -370,6 +368,7 @@ public class Http2MultiplexCodec extends ChannelHandlerAdapter {
             Http2Stream stream = http2Handler.connection().stream(streamId);
             StreamInfo streamInfo = (StreamInfo) stream.getProperty(streamInfoKey);
             fireChildReadAndRegister(streamInfo, new DefaultHttp2DataFrame(data.retain(), endOfStream, padding));
+            // We return the bytes in bytesConsumed() once the stream channel consumed the bytes.
             return 0;
         }
     }
@@ -393,7 +392,7 @@ public class Http2MultiplexCodec extends ChannelHandlerAdapter {
         boolean onStreamClosedFired;
 
         Http2StreamChannel(Http2Stream stream) {
-            super(Http2MultiplexCodec.this.ctx.channel());
+            super(ctx.channel());
             this.stream = stream;
         }
 
@@ -410,8 +409,7 @@ public class Http2MultiplexCodec extends ChannelHandlerAdapter {
         @Override
         protected void doWrite(Object msg) {
             if (!(msg instanceof Http2StreamFrame)) {
-                throw new IllegalArgumentException(
-                        "Unable to handle message type " + msg.getClass().getName());
+                throw new IllegalArgumentException("Message must be an Http2StreamFrame:" + msg);
             }
             Http2StreamFrame frame = (Http2StreamFrame) msg;
             if (frame.stream() != null) {
@@ -428,7 +426,7 @@ public class Http2MultiplexCodec extends ChannelHandlerAdapter {
         }
 
         @Override
-        protected EventExecutor doWritePreferredEventExecutor() {
+        protected EventExecutor preferredEventExecutor() {
             return ctx.invoker().executor();
         }
 

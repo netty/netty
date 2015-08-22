@@ -17,7 +17,6 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.util.IllegalReferenceCountException;
 
 /**
  * HTTP/2 DATA frame.

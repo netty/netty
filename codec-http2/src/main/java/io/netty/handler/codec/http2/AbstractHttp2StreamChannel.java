@@ -15,6 +15,8 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
@@ -174,7 +176,7 @@ abstract class AbstractHttp2StreamChannel extends AbstractChannel {
             throw new ClosedChannelException();
         }
 
-        EventExecutor preferredExecutor = doWritePreferredEventExecutor();
+        EventExecutor preferredExecutor = preferredEventExecutor();
 
         if (preferredExecutor.inEventLoop()) {
             for (;;) {
@@ -216,12 +218,27 @@ abstract class AbstractHttp2StreamChannel extends AbstractChannel {
         }
     }
 
+    /**
+     * Process a single write. Guaranteed to eventually be followed by a {@link #doWriteComplete()},
+     * which denotes the end of the batch of writes. May be called from any thread.
+     */
     protected abstract void doWrite(Object msg) throws Exception;
 
+    /**
+     * Process end of batch of {@link #doWrite()}s. May be called from any thread.
+     */
     protected abstract void doWriteComplete();
 
-    protected abstract EventExecutor doWritePreferredEventExecutor();
+    /**
+     * The ideal thread for events like {@link #doWrite()} to be processed on. May be used for
+     * efficient batching, but not required.
+     */
+    protected abstract EventExecutor preferredEventExecutor();
 
+    /**
+     * {@code bytes}-count of bytes provided to {@link #fireChildRead} have been read. May be called
+     * from any thread.
+     */
     protected abstract void bytesConsumed(int bytes);
 
     protected void fireChildRead(final Object msg) {
@@ -244,7 +261,9 @@ abstract class AbstractHttp2StreamChannel extends AbstractChannel {
         }
         if (readInProgress) {
             assert inboundBuffer.isEmpty();
-            doRead0(msg);
+            // Check for null because inboundBuffer doesn't support null; we want to be consistent
+            // for what values are supported.
+            doRead0(checkNotNull(msg, "msg"));
             if (!unsafe().recvBufAllocHandle().continueReading()) {
                 fireChildReadCompleteTask.run();
             }
