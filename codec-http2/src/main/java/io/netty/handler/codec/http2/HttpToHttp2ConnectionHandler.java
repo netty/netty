@@ -61,7 +61,8 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
      * @throws Exception If the {@code httpHeaders} object specifies an invalid stream id
      */
     private int getStreamId(HttpHeaders httpHeaders) throws Exception {
-        return httpHeaders.getInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(), connection().local().nextStreamId());
+        return httpHeaders.getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(),
+                                  connection().local().nextStreamId());
     }
 
     /**
@@ -88,7 +89,7 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
                 currentStreamId = getStreamId(httpMsg.headers());
 
                 // Convert and write the headers.
-                Http2Headers http2Headers = HttpUtil.toHttp2Headers(httpMsg);
+                Http2Headers http2Headers = HttpConversionUtil.toHttp2Headers(httpMsg);
                 endStream = msg instanceof FullHttpMessage && !((FullHttpMessage) msg).content().isReadable();
                 encoder.writeHeaders(ctx, currentStreamId, http2Headers, 0, endStream, promiseAggregator.newPromise());
             }
@@ -101,7 +102,7 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
 
                     // Convert any trailing headers.
                     final LastHttpContent lastContent = (LastHttpContent) msg;
-                    trailers = HttpUtil.toHttp2Headers(lastContent.trailingHeaders());
+                    trailers = HttpConversionUtil.toHttp2Headers(lastContent.trailingHeaders());
                 }
 
                 // Write the data

@@ -31,7 +31,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaderUtil;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpHeaderValues;
 
 /**
@@ -46,10 +46,10 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<FullHttp
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
-        if (HttpHeaderUtil.is100ContinueExpected(req)) {
+        if (HttpUtil.is100ContinueExpected(req)) {
             ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE));
         }
-        boolean keepAlive = HttpHeaderUtil.isKeepAlive(req);
+        boolean keepAlive = HttpUtil.isKeepAlive(req);
 
         ByteBuf content = ctx.alloc().buffer();
         content.writeBytes(HelloWorldHttp2Handler.RESPONSE_BYTES.duplicate());

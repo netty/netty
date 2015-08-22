@@ -27,7 +27,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.ssl.SslHandler;
 
-import static io.netty.handler.codec.http.HttpHeaderUtil.*;
+import static io.netty.handler.codec.http.HttpUtil.*;
 import static io.netty.handler.codec.http.HttpMethod.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;

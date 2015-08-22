@@ -29,7 +29,7 @@ import io.netty.util.CharsetUtil;
 
 import java.util.Date;
 
-import static io.netty.handler.codec.http.HttpHeaderUtil.*;
+import static io.netty.handler.codec.http.HttpUtil.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 

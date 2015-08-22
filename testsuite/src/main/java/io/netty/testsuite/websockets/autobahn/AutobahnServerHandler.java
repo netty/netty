@@ -40,7 +40,7 @@ import io.netty.util.internal.StringUtil;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static io.netty.handler.codec.http.HttpHeaderUtil.*;
+import static io.netty.handler.codec.http.HttpUtil.*;
 import static io.netty.handler.codec.http.HttpMethod.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;

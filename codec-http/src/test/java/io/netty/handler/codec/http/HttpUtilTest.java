@@ -24,14 +24,14 @@ import java.util.List;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
-public class HttpHeaderUtilTest {
+public class HttpUtilTest {
 
     @Test
     public void testRemoveTransferEncodingIgnoreCase() {
         HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         message.headers().set(HttpHeaderNames.TRANSFER_ENCODING, "Chunked");
         assertFalse(message.headers().isEmpty());
-        HttpHeaderUtil.setTransferEncodingChunked(message, false);
+        HttpUtil.setTransferEncodingChunked(message, false);
         assertTrue(message.headers().isEmpty());
     }
 

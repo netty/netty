@@ -63,7 +63,7 @@ public class HttpObjectAggregatorTest {
         assertNotNull(aggratedMessage);
 
         assertEquals(chunk1.content().readableBytes() + chunk2.content().readableBytes(),
-                HttpHeaderUtil.getContentLength(aggratedMessage));
+                HttpUtil.getContentLength(aggratedMessage));
         assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
         checkContentBuffer(aggratedMessage);
         assertNull(embedder.readInbound());
@@ -87,7 +87,7 @@ public class HttpObjectAggregatorTest {
         EmbeddedChannel embedder = new EmbeddedChannel(aggr);
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost");
         message.headers().set("X-Test", true);
-        HttpHeaderUtil.setTransferEncodingChunked(message, true);
+        HttpUtil.setTransferEncodingChunked(message, true);
         HttpContent chunk1 = new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
         HttpContent chunk2 = new DefaultHttpContent(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
         LastHttpContent trailer = new DefaultLastHttpContent();
@@ -104,7 +104,7 @@ public class HttpObjectAggregatorTest {
         assertNotNull(aggratedMessage);
 
         assertEquals(chunk1.content().readableBytes() + chunk2.content().readableBytes(),
-                HttpHeaderUtil.getContentLength(aggratedMessage));
+                HttpUtil.getContentLength(aggratedMessage));
         assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
         assertEquals(aggratedMessage.trailingHeaders().get("X-Trailer"), Boolean.TRUE.toString());
         checkContentBuffer(aggratedMessage);
@@ -142,14 +142,14 @@ public class HttpObjectAggregatorTest {
     public void testOversizedRequestWithoutKeepAlive() {
         // send a HTTP/1.0 request with no keep-alive header
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.PUT, "http://localhost");
-        HttpHeaderUtil.setContentLength(message, 5);
+        HttpUtil.setContentLength(message, 5);
         checkOversizedRequest(message);
     }
 
     @Test
     public void testOversizedRequestWithContentLength() {
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "http://localhost");
-        HttpHeaderUtil.setContentLength(message, 5);
+        HttpUtil.setContentLength(message, 5);
         checkOversizedRequest(message);
     }
 
@@ -172,10 +172,10 @@ public class HttpObjectAggregatorTest {
     private static boolean serverShouldCloseConnection(HttpRequest message) {
         // The connection should only be kept open if Expect: 100-continue is set,
         // or if keep-alive is on.
-        if (HttpHeaderUtil.is100ContinueExpected(message)) {
+        if (HttpUtil.is100ContinueExpected(message)) {
             return false;
         }
-        if (HttpHeaderUtil.isKeepAlive(message)) {
+        if (HttpUtil.isKeepAlive(message)) {
             return false;
         }
         return true;
@@ -244,7 +244,7 @@ public class HttpObjectAggregatorTest {
         assertNotNull(aggratedMessage);
 
         assertEquals(chunk1.content().readableBytes() + chunk2.content().readableBytes(),
-                HttpHeaderUtil.getContentLength(aggratedMessage));
+                HttpUtil.getContentLength(aggratedMessage));
         assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
         checkContentBuffer(aggratedMessage);
         assertNull(embedder.readInbound());
@@ -278,8 +278,8 @@ public class HttpObjectAggregatorTest {
 
         // Send an oversized request with 100 continue.
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "http://localhost");
-        HttpHeaderUtil.set100ContinueExpected(message, true);
-        HttpHeaderUtil.setContentLength(message, 16);
+        HttpUtil.set100ContinueExpected(message, true);
+        HttpUtil.setContentLength(message, 16);
 
         HttpContent chunk1 = releaseLater(new DefaultHttpContent(Unpooled.copiedBuffer("some", CharsetUtil.US_ASCII)));
         HttpContent chunk2 = releaseLater(new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII)));
@@ -311,9 +311,9 @@ public class HttpObjectAggregatorTest {
 
         assertEquals(
                 chunk2.content().readableBytes() + chunk3.content().readableBytes(),
-                HttpHeaderUtil.getContentLength(fullMsg));
+                HttpUtil.getContentLength(fullMsg));
 
-        assertEquals(HttpHeaderUtil.getContentLength(fullMsg), fullMsg.content().readableBytes());
+        assertEquals(HttpUtil.getContentLength(fullMsg), fullMsg.content().readableBytes());
 
         fullMsg.release();
         assertFalse(embedder.finish());
@@ -373,8 +373,8 @@ public class HttpObjectAggregatorTest {
 
         // Write first request with Expect: 100-continue.
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "http://localhost");
-        HttpHeaderUtil.set100ContinueExpected(message, true);
-        HttpHeaderUtil.setContentLength(message, 16);
+        HttpUtil.set100ContinueExpected(message, true);
+        HttpUtil.setContentLength(message, 16);
 
         HttpContent chunk1 = releaseLater(new DefaultHttpContent(Unpooled.copiedBuffer("some", CharsetUtil.US_ASCII)));
         HttpContent chunk2 = releaseLater(new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII)));
@@ -406,9 +406,9 @@ public class HttpObjectAggregatorTest {
 
         assertEquals(
                 chunk2.content().readableBytes() + chunk3.content().readableBytes(),
-                HttpHeaderUtil.getContentLength(fullMsg));
+                HttpUtil.getContentLength(fullMsg));
 
-        assertEquals(HttpHeaderUtil.getContentLength(fullMsg), fullMsg.content().readableBytes());
+        assertEquals(HttpUtil.getContentLength(fullMsg), fullMsg.content().readableBytes());
 
         fullMsg.release();
         assertFalse(embedder.finish());
