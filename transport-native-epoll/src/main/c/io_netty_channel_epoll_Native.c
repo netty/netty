@@ -1227,7 +1227,7 @@ JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setTrafficClass(JNIEnv
         solinger.l_linger = 0;
     } else {
         solinger.l_onoff = 1;
-        solinger.l_linger = optval;
+        solinger.l_linger = 0;
     }
     setOption(env, fd, SOL_SOCKET, SO_LINGER, &solinger, sizeof(solinger));
 }
