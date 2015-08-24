@@ -38,7 +38,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import static io.netty.handler.codec.http.HttpScheme.HTTP;
 import static io.netty.handler.codec.http.HttpScheme.HTTPS;
@@ -288,24 +287,15 @@ public final class HttpUtil {
             URI requestTargetUri = URI.create(request.uri());
             out.path(toHttp2Path(requestTargetUri));
             out.method(request.method().asciiName());
+            setHttp2Scheme(inHeaders, requestTargetUri, out);
 
-            // Attempt to take from HOST header before taking from the request-line
-            String host = inHeaders.getAsString(HttpHeaderNames.HOST);
-            boolean shouldSetAuthroity = !isOriginForm(requestTargetUri) && !isAsteriskForm(requestTargetUri);
-            if (host == null) {
-                if (shouldSetAuthroity) {
-                    setHttp2Authority(inHeaders, requestTargetUri, out);
-                }
-                setHttp2Scheme(inHeaders, requestTargetUri, true, out);
-            } else {
-                URI hostUri = URI.create(host);
-                if (shouldSetAuthroity) {
-                    setHttp2Authority(inHeaders, hostUri, out);
-                }
-                if (!setHttp2Scheme(inHeaders, hostUri, false, out)) {
-                    /** :scheme must be present as defined by
-                    <a href="https://tools.ietf.org/html/rfc7540#section-8.1.2.3">rfc7540, 8.1.2.3</a>. */
-                    setHttp2Scheme(inHeaders, requestTargetUri, true, out);
+            if (!isOriginForm(requestTargetUri) && !isAsteriskForm(requestTargetUri)) {
+                // Attempt to take from HOST header before taking from the request-line
+                String host = inHeaders.getAsString(HttpHeaderNames.HOST);
+                if (host == null || host.isEmpty()) {
+                    setHttp2Authority(inHeaders, requestTargetUri.getAuthority(), out);
+                } else {
+                    setHttp2Authority(inHeaders, host, out);
                 }
             }
         } else if (in instanceof HttpResponse) {
@@ -361,15 +351,16 @@ public final class HttpUtil {
         return path.isEmpty() ? EMPTY_REQUEST_PATH : new AsciiString(path);
     }
 
-    private static void setHttp2Authority(HttpHeaders in, URI uri, Http2Headers out) {
+    private static void setHttp2Authority(HttpHeaders in, String autority, Http2Headers out) {
         // The authority MUST NOT include the deprecated "userinfo" subcomponent
-        String value = uri.getAuthority();
-        if (value != null) {
-            int endOfUserInfo = value.indexOf('@');
+        if (autority != null) {
+            int endOfUserInfo = autority.indexOf('@');
             if (endOfUserInfo < 0) {
-                out.authority(new AsciiString(value));
-            } else if (endOfUserInfo + 1 < value.length()) {
-                out.authority(new AsciiString(value.substring(endOfUserInfo + 1)));
+                out.authority(new AsciiString(autority));
+            } else if (endOfUserInfo + 1 < autority.length()) {
+                out.authority(new AsciiString(autority.substring(endOfUserInfo + 1)));
+            } else {
+                throw new IllegalArgumentException("autority: " + autority);
             }
         } else {
             // Consume the Authority extension header if present
@@ -381,23 +372,28 @@ public final class HttpUtil {
         }
     }
 
-    private static boolean setHttp2Scheme(HttpHeaders in, URI uri, boolean mustSet, Http2Headers out) {
+    private static void setHttp2Scheme(HttpHeaders in, URI uri, Http2Headers out) {
         String value = uri.getScheme();
         if (value != null) {
             out.scheme(new AsciiString(value));
-            return true;
+            return;
         }
+
         // Consume the Scheme extension header if present
         CharSequence cValue = in.get(ExtensionHeaderNames.SCHEME.text());
         if (cValue != null) {
             out.scheme(AsciiString.of(cValue));
-            return true;
+            return;
         }
-        if (uri.getPort() >= 0 || mustSet) {
-            out.scheme(uri.getPort() == HTTPS.port() ? HTTPS.name() : HTTP.name());
-            return true;
+
+        if (uri.getPort() == HTTPS.port()) {
+            out.scheme(HTTPS.name());
+        } else if (uri.getPort() == HTTP.port()) {
+            out.scheme(HTTP.name());
+        } else {
+            throw new IllegalArgumentException(":scheme must be specified. " +
+                    "see https://tools.ietf.org/html/rfc7540#section-8.1.2.3");
         }
-        return false;
     }
 
     /**
