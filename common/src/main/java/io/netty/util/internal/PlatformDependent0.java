@@ -30,6 +30,8 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 /**
  * The {@link PlatformDependent} operations which requires access to {@code sun.misc.*}.
  */
@@ -144,8 +146,9 @@ final class PlatformDependent0 {
         return UNALIGNED;
     }
 
-    static void throwException(Throwable t) {
-        UNSAFE.throwException(t);
+    static void throwException(Throwable cause) {
+        // JVM has been observed to crash when passing a null argument. See https://github.com/netty/netty/issues/4131.
+        UNSAFE.throwException(checkNotNull(cause, "cause"));
     }
 
     static void freeDirectBuffer(ByteBuffer buffer) {
