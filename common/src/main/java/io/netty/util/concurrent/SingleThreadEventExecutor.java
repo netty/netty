@@ -19,6 +19,7 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.lang.Thread.State;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -68,6 +69,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private final EventExecutorGroup parent;
     private final Queue<Runnable> taskQueue;
     private final Thread thread;
+    private final ThreadProperties threadProperties;
     private final Semaphore threadLock = new Semaphore(0);
     private final Set<Runnable> shutdownHooks = new LinkedHashSet<Runnable>();
     private final boolean addTaskWakesUp;
@@ -152,7 +154,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 }
             }
         });
-
+        threadProperties = new DefaultThreadProperties(thread);
         taskQueue = newTaskQueue();
     }
 
@@ -697,6 +699,13 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         }
     }
 
+    /**
+     * Returns the {@link ThreadProperties} of the {@link Thread} that powers the {@link SingleThreadEventExecutor}.
+     */
+    public final ThreadProperties threadProperties() {
+        return threadProperties;
+    }
+
     @SuppressWarnings("unused")
     protected boolean wakesUpForTask(Runnable task) {
         return true;
@@ -715,6 +724,54 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             if (STATE_UPDATER.compareAndSet(this, ST_NOT_STARTED, ST_STARTED)) {
                 thread.start();
             }
+        }
+    }
+
+    private static final class DefaultThreadProperties implements ThreadProperties {
+        private final Thread t;
+
+        DefaultThreadProperties(Thread t) {
+            this.t = t;
+        }
+
+        @Override
+        public State state() {
+            return t.getState();
+        }
+
+        @Override
+        public int priority() {
+            return t.getPriority();
+        }
+
+        @Override
+        public boolean isInterrupted() {
+            return t.isInterrupted();
+        }
+
+        @Override
+        public boolean isDaemon() {
+            return t.isDaemon();
+        }
+
+        @Override
+        public String name() {
+            return t.getName();
+        }
+
+        @Override
+        public long id() {
+            return t.getId();
+        }
+
+        @Override
+        public StackTraceElement[] stackTrace() {
+            return t.getStackTrace();
+        }
+
+        @Override
+        public boolean isAlive() {
+            return t.isAlive();
         }
     }
 }
