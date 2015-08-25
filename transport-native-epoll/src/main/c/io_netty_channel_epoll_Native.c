@@ -1217,10 +1217,6 @@ JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setTcpNotSentLowAt(JNI
 }
 
 JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setSoLinger(JNIEnv* env, jclass clazz, jint fd, jint optval) {
-    setOption(env, fd, IPPROTO_IP, IP_TOS, &optval, sizeof(optval));
-}
-
-JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setTrafficClass(JNIEnv* env, jclass clazz, jint fd, jint optval) {
     struct linger solinger;
     if (optval < 0) {
         solinger.l_onoff = 0;
@@ -1230,6 +1226,10 @@ JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setTrafficClass(JNIEnv
         solinger.l_linger = optval;
     }
     setOption(env, fd, SOL_SOCKET, SO_LINGER, &solinger, sizeof(solinger));
+}
+
+JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setTrafficClass(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    setOption(env, fd, IPPROTO_IP, IP_TOS, &optval, sizeof(optval));
 }
 
 JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setBroadcast(JNIEnv* env, jclass clazz, jint fd, jint optval) {
