@@ -43,6 +43,8 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
         }
 
         setIndex(buffer.readerIndex(), buffer.writerIndex());
+        markReaderIndex();
+        markWriterIndex();
     }
 
     @Override

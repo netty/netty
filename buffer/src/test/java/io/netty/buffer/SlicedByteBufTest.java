@@ -15,13 +15,12 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.IllegalReferenceCountException;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Random;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Tests sliced channel buffers
@@ -113,5 +112,29 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
     @Override
     public void testLittleEndianWithExpand() {
        // ignore for SlicedByteBuf
+    }
+
+    @Test
+    public void testReaderIndexAndMarks() {
+        ByteBuf wrapped = Unpooled.buffer(16);
+        try {
+            wrapped.writerIndex(14);
+            wrapped.readerIndex(2);
+            wrapped.markWriterIndex();
+            wrapped.markReaderIndex();
+            ByteBuf slice = new SlicedByteBuf(wrapped, 4, 4);
+            assertEquals(0, slice.readerIndex());
+            assertEquals(4, slice.writerIndex());
+
+            slice.readerIndex(slice.readerIndex() + 1);
+            slice.resetReaderIndex();
+            assertEquals(0, slice.readerIndex());
+
+            slice.writerIndex(slice.writerIndex() - 1);
+            slice.resetWriterIndex();
+            assertEquals(0, slice.writerIndex());
+        } finally {
+            wrapped.release();
+        }
     }
 }
