@@ -32,20 +32,12 @@ import java.nio.channels.ScatteringByteChannel;
  */
 public class SlicedByteBuf extends AbstractDerivedByteBuf {
 
-    private ByteBuf buffer;
-    private int adjustment;
-    private int length;
+    private final ByteBuf buffer;
+    private final int adjustment;
+    private final int length;
 
     public SlicedByteBuf(ByteBuf buffer, int index, int length) {
         super(length);
-        init(buffer, index, length);
-    }
-
-    SlicedByteBuf(int length) {
-        super(length);
-    }
-
-    final void init(ByteBuf buffer, int index, int length) {
         if (index < 0 || index > buffer.capacity() - length) {
             throw new IndexOutOfBoundsException(buffer + ".slice(" + index + ", " + length + ')');
         }
@@ -61,9 +53,8 @@ public class SlicedByteBuf extends AbstractDerivedByteBuf {
             adjustment = index;
         }
         this.length = length;
-        maxCapacity(length);
-        setIndex(0, length);
-        discardMarks();
+
+        writerIndex(length);
     }
 
     @Override

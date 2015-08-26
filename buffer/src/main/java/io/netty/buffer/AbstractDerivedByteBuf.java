@@ -47,20 +47,12 @@ public abstract class AbstractDerivedByteBuf extends AbstractByteBuf {
 
     @Override
     public final boolean release() {
-        if (unwrap().release()) {
-            deallocate();
-            return true;
-        }
-        return false;
+        return unwrap().release();
     }
 
     @Override
     public final boolean release(int decrement) {
-        if (unwrap().release(decrement)) {
-            deallocate();
-            return true;
-        }
-        return false;
+        return unwrap().release(decrement);
     }
 
     @Override
@@ -72,9 +64,4 @@ public abstract class AbstractDerivedByteBuf extends AbstractByteBuf {
     public ByteBuffer nioBuffer(int index, int length) {
         return unwrap().nioBuffer(index, length);
     }
-
-    /**
-     * Called when the wrapped {@link ByteBuf} was released due calling of {@link #release()} or {@link #release(int)}.
-     */
-    protected void deallocate() { }
 }
