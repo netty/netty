@@ -17,7 +17,7 @@ package io.netty.buffer;
 
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Tests duplicated channel buffers
@@ -28,8 +28,10 @@ public class DuplicateByteBufTest extends AbstractByteBufTest {
 
     @Override
     protected ByteBuf newBuffer(int length) {
-        buffer = new DuplicatedByteBuf(Unpooled.buffer(length));
-        assertEquals(0, buffer.writerIndex());
+        ByteBuf wrapped = Unpooled.buffer(length);
+        buffer = new DuplicatedByteBuf(wrapped);
+        assertEquals(wrapped.writerIndex(), buffer.writerIndex());
+        assertEquals(wrapped.readerIndex(), buffer.readerIndex());
         return buffer;
     }
 
@@ -53,5 +55,27 @@ public class DuplicateByteBufTest extends AbstractByteBufTest {
         wrapped.capacity(wrapped.capacity() * 2);
 
         assertEquals((byte) 0, buffer.readByte());
+    }
+
+    @Test
+    public void testMarksInitialized() {
+        ByteBuf wrapped = Unpooled.buffer(8);
+        try {
+            wrapped.writerIndex(6);
+            wrapped.readerIndex(1);
+            ByteBuf duplicate = new DuplicatedByteBuf(wrapped);
+
+            // Test writer mark
+            duplicate.writerIndex(duplicate.writerIndex() + 1);
+            duplicate.resetWriterIndex();
+            assertEquals(wrapped.writerIndex(), duplicate.writerIndex());
+
+            // Test reader mark
+            duplicate.readerIndex(duplicate.readerIndex() + 1);
+            duplicate.resetReaderIndex();
+            assertEquals(wrapped.readerIndex(), duplicate.readerIndex());
+        } finally {
+            wrapped.release();
+        }
     }
 }
