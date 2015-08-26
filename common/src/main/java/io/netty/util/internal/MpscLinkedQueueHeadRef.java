@@ -38,7 +38,7 @@ abstract class MpscLinkedQueueHeadRef<E> extends MpscLinkedQueuePad0<E> implemen
         UPDATER = updater;
     }
 
-    private transient  volatile MpscLinkedQueueNode<E> headRef;
+    private transient volatile MpscLinkedQueueNode<E> headRef;
 
     protected final MpscLinkedQueueNode<E> headRef() {
         return headRef;
