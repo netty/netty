@@ -71,9 +71,7 @@ public class DnsNameResolverTest {
             new InetSocketAddress("208.67.222.220", 53),
             new InetSocketAddress("208.67.220.222", 53),
             new InetSocketAddress("37.235.1.174", 53), // FreeDNS
-            new InetSocketAddress("37.235.1.177", 53),
-            new InetSocketAddress("8.26.56.26", 53), // Comodo Secure DNS
-            new InetSocketAddress("8.20.247.20", 53)
+            new InetSocketAddress("37.235.1.177", 53)
     );
 
     // Using the top-100 web sites ranked in Alexa.com (Oct 2014)

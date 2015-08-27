@@ -119,6 +119,7 @@ abstract class DnsNameResolverContext<T> {
 
     private void query(InetSocketAddress nameServerAddr, final DnsQuestion question) {
         if (allowedQueries == 0 || promise.isCancelled()) {
+            tryToFinishResolve();
             return;
         }
 
