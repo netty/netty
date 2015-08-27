@@ -36,8 +36,17 @@ public abstract class Recycler<T> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Recycler.class);
 
+    @SuppressWarnings("rawtypes")
+    private static final Handle NOOP_HANDLE = new Handle() {
+        @Override
+        public void recycle(Object object) {
+            // NOOP
+        }
+    };
     private static final AtomicInteger ID_GENERATOR = new AtomicInteger(Integer.MIN_VALUE);
     private static final int OWN_THREAD_ID = ID_GENERATOR.getAndIncrement();
+    // TODO: Some arbitrary large number - should adjust as we get more production experience.
+    private static final int DEFAULT_INITIAL_MAX_CAPACITY = 262144;
     private static final int DEFAULT_MAX_CAPACITY;
     private static final int INITIAL_CAPACITY;
 
@@ -45,7 +54,7 @@ public abstract class Recycler<T> {
         // In the future, we might have different maxCapacity for different object types.
         // e.g. io.netty.recycler.maxCapacity.writeTask
         //      io.netty.recycler.maxCapacity.outboundBuffer
-        int maxCapacity = SystemPropertyUtil.getInt("io.netty.recycler.maxCapacity", 0);
+        int maxCapacity = SystemPropertyUtil.getInt("io.netty.recycler.maxCapacity", DEFAULT_INITIAL_MAX_CAPACITY);
         if (maxCapacity <= 0) {
             // TODO: Some arbitrary large number - should adjust as we get more production experience.
             maxCapacity = 262144;
@@ -53,7 +62,11 @@ public abstract class Recycler<T> {
 
         DEFAULT_MAX_CAPACITY = maxCapacity;
         if (logger.isDebugEnabled()) {
-            logger.debug("-Dio.netty.recycler.maxCapacity: {}", DEFAULT_MAX_CAPACITY);
+            if (DEFAULT_MAX_CAPACITY == 0) {
+                logger.debug("-Dio.netty.recycler.maxCapacity.maxCapacity: disabled");
+            } else {
+                logger.debug("-Dio.netty.recycler.maxCapacity.maxCapacity: {}", DEFAULT_MAX_CAPACITY);
+            }
         }
 
         INITIAL_CAPACITY = Math.min(DEFAULT_MAX_CAPACITY, 256);
@@ -77,6 +90,9 @@ public abstract class Recycler<T> {
 
     @SuppressWarnings("unchecked")
     public final T get() {
+        if (maxCapacity == 0) {
+            return newObject((Handle<T>) NOOP_HANDLE);
+        }
         Stack<T> stack = threadLocal.get();
         DefaultHandle<T> handle = stack.pop();
         if (handle == null) {
@@ -87,6 +103,10 @@ public abstract class Recycler<T> {
     }
 
     public final boolean recycle(T o, Handle<T> handle) {
+        if (handle == NOOP_HANDLE) {
+            return false;
+        }
+
         DefaultHandle<T> h = (DefaultHandle<T>) handle;
         if (h.stack.parent != this) {
             return false;
