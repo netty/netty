@@ -72,7 +72,7 @@ public class Http2FrameRoundtripTest {
     private Bootstrap cb;
     private Channel serverChannel;
     private Channel clientChannel;
-    private volatile CountDownLatch requestLatch;
+    private CountDownLatch requestLatch;
     private Http2TestUtil.FrameAdapter serverAdapter;
 
     @Before
