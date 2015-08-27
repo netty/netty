@@ -110,7 +110,7 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
             } else {
                 final int length = buffer.readableBytes();
                 if (length > maxLength) {
-                    discardedBytes = length;
+                    discardedBytes += length;
                     buffer.readerIndex(buffer.writerIndex());
                     discarding = true;
                     if (failFast) {
