@@ -40,6 +40,15 @@ public class RecyclerTest {
         object2.recycle();
     }
 
+    @Test
+    public void testRecycleDisable() {
+        DisabledRecyclableObject object = DisabledRecyclableObject.newInstance();
+        object.recycle();
+        DisabledRecyclableObject object2 = DisabledRecyclableObject.newInstance();
+        assertNotSame(object, object2);
+        object2.recycle();
+    }
+
     static final class RecyclableObject {
 
         private static final Recycler<RecyclableObject> RECYCLER = new Recycler<RecyclableObject>() {
@@ -56,6 +65,30 @@ public class RecyclerTest {
         }
 
         public static RecyclableObject newInstance() {
+            return RECYCLER.get();
+        }
+
+        public void recycle() {
+            RECYCLER.recycle(this, handle);
+        }
+    }
+
+    static final class DisabledRecyclableObject {
+
+        private static final Recycler<DisabledRecyclableObject> RECYCLER = new Recycler<DisabledRecyclableObject>(-1) {
+            @Override
+            protected DisabledRecyclableObject newObject(Handle handle) {
+                return new DisabledRecyclableObject(handle);
+            }
+        };
+
+        private final Recycler.Handle handle;
+
+        private DisabledRecyclableObject(Recycler.Handle handle) {
+            this.handle = handle;
+        }
+
+        public static DisabledRecyclableObject newInstance() {
             return RECYCLER.get();
         }
 
