@@ -1153,7 +1153,7 @@ public class DefaultHttp2Connection implements Http2Connection {
      * Implementation of {@link PropertyKey} that specifies the index position of the property.
      */
     final class DefaultPropertyKey implements PropertyKey {
-        private final int index;
+        final int index;
 
         DefaultPropertyKey(int index) {
             this.index = index;
