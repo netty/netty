@@ -50,7 +50,7 @@ public final class HttpUtil {
 
     /**
      * Returns {@code true} if and only if the connection can remain open and
-     * thus 'kept alive'.  This methods respects the value of the
+     * thus 'kept alive'.  This methods respects the value of the.
      * {@code "Connection"} header first and then the return value of
      * {@link HttpVersion#isKeepAliveDefault()}.
      */
@@ -69,7 +69,7 @@ public final class HttpUtil {
 
     /**
      * Sets the value of the {@code "Connection"} header depending on the
-     * protocol version of the specified message.  This getMethod sets or removes
+     * protocol version of the specified message. This getMethod sets or removes
      * the {@code "Connection"} header depending on what the default keep alive
      * mode of the message's protocol version is, as specified by
      * {@link HttpVersion#isKeepAliveDefault()}.
@@ -104,7 +104,7 @@ public final class HttpUtil {
     }
 
     /**
-     * Returns the length of the content.  Please note that this value is
+     * Returns the length of the content. Please note that this value is
      * not retrieved from {@link HttpContent#content()} but from the
      * {@code "Content-Length"} header, and thus they are independent from each
      * other.
@@ -133,7 +133,7 @@ public final class HttpUtil {
     }
 
     /**
-     * Returns the length of the content.  Please note that this value is
+     * Returns the length of the content. Please note that this value is
      * not retrieved from {@link HttpContent#content()} but from the
      * {@code "Content-Length"} header, and thus they are independent from each
      * other.
@@ -170,7 +170,7 @@ public final class HttpUtil {
     }
 
     /**
-     * Returns the content length of the specified web socket message.  If the
+     * Returns the content length of the specified web socket message. If the
      * specified message is not a web socket message, {@code -1} is returned.
      */
     private static int getWebSocketContentLength(HttpMessage message) {
@@ -237,7 +237,7 @@ public final class HttpUtil {
 
     /**
      * Sets or removes the {@code "Expect: 100-continue"} header to / from the
-     * specified message.  If the specified {@code value} is {@code true},
+     * specified message. If the specified {@code value} is {@code true},
      * the {@code "Expect: 100-continue"} header is set and all other previous
      * {@code "Expect"} headers are removed.  Otherwise, all {@code "Expect"}
      * headers are removed completely.
@@ -260,6 +260,13 @@ public final class HttpUtil {
         return message.headers().contains(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED, true);
     }
 
+    /**
+     * Set the {@link HttpHeaderNames#TRANSFER_ENCODING} to either include {@link HttpHeaderValues#CHUNKED} if
+     * {@code chunked} is {@code true}, or remove {@link HttpHeaderValues#CHUNKED} if {@code chunked} is {@code false}.
+     * @param m The message which contains the headers to modify.
+     * @param chunked if {@code true} then include {@link HttpHeaderValues#CHUNKED} in the headers. otherwise remove
+     * {@link HttpHeaderValues#CHUNKED} from the headers.
+     */
     public static void setTransferEncodingChunked(HttpMessage m, boolean chunked) {
         if (chunked) {
             m.headers().add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
