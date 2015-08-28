@@ -31,7 +31,7 @@ public class IpSubnetFilterTest {
 
     @Test
     public void testIpv4DefaultRoute() {
-        IpSubnetFilterRule rule = new IpSubnetFilterRule("0.0.0.0", 0, IpFilterRuleType.Accept);
+        IpSubnetFilterRule rule = new IpSubnetFilterRule("0.0.0.0", 0, IpFilterRuleType.ACCEPT);
         Assert.assertTrue(rule.matches(newSockAddress("91.114.240.43")));
         Assert.assertTrue(rule.matches(newSockAddress("10.0.0.3")));
         Assert.assertTrue(rule.matches(newSockAddress("192.168.93.2")));
@@ -39,13 +39,13 @@ public class IpSubnetFilterTest {
 
     @Test
     public void testIp4SubnetFilterRule() throws Exception {
-        IpSubnetFilterRule rule = new IpSubnetFilterRule("192.168.56.1", 24, IpFilterRuleType.Accept);
+        IpSubnetFilterRule rule = new IpSubnetFilterRule("192.168.56.1", 24, IpFilterRuleType.ACCEPT);
         for (int i = 0; i <= 255; i++) {
             Assert.assertTrue(rule.matches(newSockAddress(String.format("192.168.56.%d", i))));
         }
         Assert.assertFalse(rule.matches(newSockAddress("192.168.57.1")));
 
-        rule = new IpSubnetFilterRule("91.114.240.1", 23, IpFilterRuleType.Accept);
+        rule = new IpSubnetFilterRule("91.114.240.1", 23, IpFilterRuleType.ACCEPT);
         Assert.assertTrue(rule.matches(newSockAddress("91.114.240.43")));
         Assert.assertTrue(rule.matches(newSockAddress("91.114.240.255")));
         Assert.assertTrue(rule.matches(newSockAddress("91.114.241.193")));
@@ -57,7 +57,7 @@ public class IpSubnetFilterTest {
     public void testIp6SubnetFilterRule() {
         IpSubnetFilterRule rule;
 
-        rule = new IpSubnetFilterRule("2001:db8:abcd:0000::", 52, IpFilterRuleType.Accept);
+        rule = new IpSubnetFilterRule("2001:db8:abcd:0000::", 52, IpFilterRuleType.ACCEPT);
         Assert.assertTrue(rule.matches(newSockAddress("2001:db8:abcd:0000::1")));
         Assert.assertTrue(rule.matches(newSockAddress("2001:db8:abcd:0fff:ffff:ffff:ffff:ffff")));
         Assert.assertFalse(rule.matches(newSockAddress("2001:db8:abcd:1000::")));
@@ -73,7 +73,7 @@ public class IpSubnetFilterTest {
 
             @Override
             public IpFilterRuleType ruleType() {
-                return IpFilterRuleType.Reject;
+                return IpFilterRuleType.REJECT;
             }
         };
 

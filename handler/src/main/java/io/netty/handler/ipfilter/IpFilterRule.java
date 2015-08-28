@@ -27,10 +27,10 @@ public interface IpFilterRule {
     boolean matches(InetSocketAddress remoteAddress);
 
     /**
-     * @return This method should return {@link IpFilterRuleType#Accept} if all
+     * @return This method should return {@link IpFilterRuleType#ACCEPT} if all
      * {@link IpFilterRule#matches(InetSocketAddress)} for which {@link #matches(InetSocketAddress)}
      * returns true should the accepted. If you want to exclude all of those IP addresses then
-     * {@link IpFilterRuleType#Reject} should be returned.
+     * {@link IpFilterRuleType#REJECT} should be returned.
      */
     IpFilterRuleType ruleType();
 }
