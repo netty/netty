@@ -33,8 +33,13 @@ import static io.netty.util.internal.StringUtil.*;
 
 public final class ResourceLeakDetector<T> {
 
-    private static final String PROP_LEVEL = "io.netty.leakDetectionLevel";
+    private static final String PROP_LEVEL_OLD = "io.netty.leakDetectionLevel";
+    private static final String PROP_LEVEL = "io.netty.leakDetection.level";
     private static final Level DEFAULT_LEVEL = Level.SIMPLE;
+
+    private static final String PROP_MAX_RECORDS = "io.netty.leakDetection.maxRecords";
+    private static final int DEFAULT_MAX_RECORDS = 4;
+    private static final int MAX_RECORDS;
 
     /**
      * Represents the level of resource leak detection.
@@ -78,7 +83,12 @@ public final class ResourceLeakDetector<T> {
         }
 
         Level defaultLevel = disabled? Level.DISABLED : DEFAULT_LEVEL;
-        String levelStr = SystemPropertyUtil.get(PROP_LEVEL, defaultLevel.name()).trim().toUpperCase();
+
+        // First read old property name
+        String levelStr = SystemPropertyUtil.get(PROP_LEVEL_OLD, defaultLevel.name()).trim().toUpperCase();
+
+        // If new property name is present, use it
+        levelStr = SystemPropertyUtil.get(PROP_LEVEL, levelStr).trim().toUpperCase();
         Level level = DEFAULT_LEVEL;
         for (Level l: EnumSet.allOf(Level.class)) {
             if (levelStr.equals(l.name()) || levelStr.equals(String.valueOf(l.ordinal()))) {
@@ -86,9 +96,12 @@ public final class ResourceLeakDetector<T> {
             }
         }
 
+        MAX_RECORDS = SystemPropertyUtil.getInt(PROP_MAX_RECORDS, DEFAULT_MAX_RECORDS);
+
         ResourceLeakDetector.level = level;
         if (logger.isDebugEnabled()) {
             logger.debug("-D{}: {}", PROP_LEVEL, level.name().toLowerCase());
+            logger.debug("-D{}: {}", PROP_MAX_RECORDS, MAX_RECORDS);
         }
     }
 
@@ -252,9 +265,6 @@ public final class ResourceLeakDetector<T> {
     }
 
     private final class DefaultResourceLeak extends PhantomReference<Object> implements ResourceLeak {
-
-        private static final int MAX_RECORDS = 4;
-
         private final String creationRecord;
         private final Deque<String> lastRecords = new ArrayDeque<String>();
         private final AtomicBoolean freed;
@@ -368,6 +378,7 @@ public final class ResourceLeakDetector<T> {
             "io.netty.util.ReferenceCountUtil.touch(",
             "io.netty.buffer.AdvancedLeakAwareByteBuf.touch(",
             "io.netty.buffer.AbstractByteBufAllocator.toLeakAwareBuffer(",
+            "io.netty.buffer.AdvancedLeakAwareByteBuf.recordLeakNonRefCountingOperation("
     };
 
     static String newRecord(Object hint, int recordsToSkip) {
