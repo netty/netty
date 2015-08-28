@@ -16,6 +16,7 @@
 
 void throwRuntimeException(JNIEnv* env, char* message);
 void throwRuntimeExceptionErrorNo(JNIEnv* env, char* message, int errorNumber);
+void throwChannelExceptionErrorNo(JNIEnv* env, char* message, int errorNumber);
 void throwIOException(JNIEnv* env, char* message);
 void throwIOExceptionErrorNo(JNIEnv* env, char* message, int errorNumber);
 void throwClosedChannelException(JNIEnv* env);
