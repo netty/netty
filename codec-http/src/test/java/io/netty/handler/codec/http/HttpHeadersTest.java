@@ -51,7 +51,7 @@ public class HttpHeadersTest {
     }
 
     @Test
-    public void testEquansIgnoreCase() {
+    public void testEqualsIgnoreCase() {
         assertThat(AsciiString.contentEqualsIgnoreCase(null, null), is(true));
         assertThat(AsciiString.contentEqualsIgnoreCase(null, "foo"), is(false));
         assertThat(AsciiString.contentEqualsIgnoreCase("bar", null), is(false));
