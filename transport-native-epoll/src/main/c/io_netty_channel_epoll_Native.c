@@ -86,6 +86,7 @@ jfieldID packetCountFieldId = NULL;
 jmethodID inetSocketAddrMethodId = NULL;
 jmethodID datagramSocketAddrMethodId = NULL;
 jclass runtimeExceptionClass = NULL;
+jclass channelExceptionClass = NULL;
 jclass ioExceptionClass = NULL;
 jclass closedChannelExceptionClass = NULL;
 jmethodID closedChannelExceptionMethodId = NULL;
@@ -108,6 +109,13 @@ void throwRuntimeExceptionErrorNo(JNIEnv* env, char* message, int errorNumber) {
     (*env)->ThrowNew(env, runtimeExceptionClass, allocatedMessage);
     free(allocatedMessage);
 }
+
+void throwChannelExceptionErrorNo(JNIEnv* env, char* message, int errorNumber) {
+    char* allocatedMessage = exceptionMessage(message, errorNumber);
+    (*env)->ThrowNew(env, channelExceptionClass, allocatedMessage);
+    free(allocatedMessage);
+}
+
 
 void throwIOException(JNIEnv* env, char* message) {
     (*env)->ThrowNew(env, ioExceptionClass, message);
@@ -163,7 +171,7 @@ static inline jint getOption(JNIEnv* env, jint fd, int level, int optname, void*
         return 0;
     }
     int err = errno;
-    throwRuntimeExceptionErrorNo(env, "getsockopt() failed: ", err);
+    throwChannelExceptionErrorNo(env, "getsockopt() failed: ", err);
     return code;
 }
 
@@ -171,7 +179,7 @@ static inline int setOption(JNIEnv* env, jint fd, int level, int optname, const 
     int rc = setsockopt(fd, level, optname, optval, len);
     if (rc < 0) {
         int err = errno;
-        throwRuntimeExceptionErrorNo(env, "setsockopt() failed: ", err);
+        throwChannelExceptionErrorNo(env, "setsockopt() failed: ", err);
     }
     return rc;
 }
@@ -387,6 +395,18 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
         }
         runtimeExceptionClass = (jclass) (*env)->NewGlobalRef(env, localRuntimeExceptionClass);
         if (runtimeExceptionClass == NULL) {
+            // out-of-memory!
+            throwOutOfMemoryError(env);
+            return JNI_ERR;
+        }
+
+        jclass localChannelExceptionClass = (*env)->FindClass(env, "io/netty/channel/ChannelException");
+        if (localChannelExceptionClass == NULL) {
+            // pending exception...
+            return JNI_ERR;
+        }
+        channelExceptionClass = (jclass) (*env)->NewGlobalRef(env, localChannelExceptionClass);
+        if (channelExceptionClass == NULL) {
             // out-of-memory!
             throwOutOfMemoryError(env);
             return JNI_ERR;
@@ -619,6 +639,9 @@ void JNI_OnUnload(JavaVM* vm, void* reserved) {
         if (runtimeExceptionClass != NULL) {
             (*env)->DeleteGlobalRef(env, runtimeExceptionClass);
         }
+        if (channelExceptionClass != NULL) {
+            (*env)->DeleteGlobalRef(env, channelExceptionClass);
+        }
         if (ioExceptionClass != NULL) {
             (*env)->DeleteGlobalRef(env, ioExceptionClass);
         }
@@ -642,7 +665,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_eventFd(JNIEnv* env, j
 
     if (eventFD < 0) {
         int err = errno;
-        throwRuntimeExceptionErrorNo(env, "eventfd() failed: ", err);
+        throwChannelExceptionErrorNo(env, "eventfd() failed: ", err);
     }
     return eventFD;
 }
@@ -652,7 +675,7 @@ JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_eventFdWrite(JNIEnv* e
 
     if (eventFD < 0) {
         int err = errno;
-        throwRuntimeExceptionErrorNo(env, "eventfd_write() failed: ", err);
+        throwChannelExceptionErrorNo(env, "eventfd_write() failed: ", err);
     }
 }
 
@@ -676,9 +699,9 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollCreate(JNIEnv* en
     if (efd < 0) {
         int err = errno;
         if (epoll_create1) {
-            throwRuntimeExceptionErrorNo(env, "epoll_create1() failed: ", err);
+            throwChannelExceptionErrorNo(env, "epoll_create1() failed: ", err);
         } else {
-            throwRuntimeExceptionErrorNo(env, "epoll_create() failed: ", err);
+            throwChannelExceptionErrorNo(env, "epoll_create() failed: ", err);
         }
         return efd;
     }
@@ -686,7 +709,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollCreate(JNIEnv* en
         if (fcntl(efd, F_SETFD, FD_CLOEXEC) < 0) {
             int err = errno;
             close(efd);
-            throwRuntimeExceptionErrorNo(env, "fcntl() failed: ", err);
+            throwChannelExceptionErrorNo(env, "fcntl() failed: ", err);
             return err;
         }
     }
