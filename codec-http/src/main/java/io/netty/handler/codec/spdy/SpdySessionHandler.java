@@ -700,21 +700,21 @@ public class SpdySessionHandler
     }
 
     // need to synchronize to prevent new streams from being created while updating active streams
-    private synchronized void updateInitialSendWindowSize(int newInitialWindowSize) {
+    private void updateInitialSendWindowSize(int newInitialWindowSize) {
         int deltaWindowSize = newInitialWindowSize - initialSendWindowSize;
         initialSendWindowSize = newInitialWindowSize;
         spdySession.updateAllSendWindowSizes(deltaWindowSize);
     }
 
     // need to synchronize to prevent new streams from being created while updating active streams
-    private synchronized void updateInitialReceiveWindowSize(int newInitialWindowSize) {
+    private void updateInitialReceiveWindowSize(int newInitialWindowSize) {
         int deltaWindowSize = newInitialWindowSize - initialReceiveWindowSize;
         initialReceiveWindowSize = newInitialWindowSize;
         spdySession.updateAllReceiveWindowSizes(deltaWindowSize);
     }
 
     // need to synchronize accesses to sentGoAwayFrame, lastGoodStreamId, and initial window sizes
-    private synchronized boolean acceptStream(
+    private boolean acceptStream(
             int streamId, byte priority, boolean remoteSideClosed, boolean localSideClosed) {
         // Cannot initiate any new streams after receiving or sending GOAWAY
         if (receivedGoAwayFrame || sentGoAwayFrame) {
@@ -833,7 +833,7 @@ public class SpdySessionHandler
         // FIXME: Close the connection forcibly after timeout.
     }
 
-    private synchronized ChannelFuture sendGoAwayFrame(
+    private ChannelFuture sendGoAwayFrame(
             ChannelHandlerContext ctx, SpdySessionStatus status) {
         if (!sentGoAwayFrame) {
             sentGoAwayFrame = true;
