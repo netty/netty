@@ -58,7 +58,7 @@ public class LocalChannelTest {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(LocalChannelTest.class);
 
-    private static final String LOCAL_ADDR_ID = "test.id";
+    private static final LocalAddress TEST_ADDRESS = new LocalAddress("test.id");
 
     private static EventLoopGroup group1;
     private static EventLoopGroup group2;
@@ -84,7 +84,6 @@ public class LocalChannelTest {
     @Test
     public void testLocalAddressReuse() throws Exception {
         for (int i = 0; i < 2; i ++) {
-            LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
             Bootstrap cb = new Bootstrap();
             ServerBootstrap sb = new ServerBootstrap();
 
@@ -105,11 +104,11 @@ public class LocalChannelTest {
             Channel cc = null;
             try {
                 // Start server
-                sc = sb.bind(addr).sync().channel();
+                sc = sb.bind(TEST_ADDRESS).sync().channel();
 
                 final CountDownLatch latch = new CountDownLatch(1);
                 // Connect to the server
-                cc = cb.connect(addr).sync().channel();
+                cc = cb.connect(sc.localAddress()).sync().channel();
                 final Channel ccCpy = cc;
                 cc.eventLoop().execute(new Runnable() {
                     @Override
@@ -128,7 +127,7 @@ public class LocalChannelTest {
 
                 assertNull(String.format(
                         "Expected null, got channel '%s' for local address '%s'",
-                        LocalChannelRegistry.get(addr), addr), LocalChannelRegistry.get(addr));
+                        LocalChannelRegistry.get(TEST_ADDRESS), TEST_ADDRESS), LocalChannelRegistry.get(TEST_ADDRESS));
             } finally {
                 closeChannel(cc);
                 closeChannel(sc);
@@ -138,7 +137,6 @@ public class LocalChannelTest {
 
     @Test
     public void testWriteFailsFastOnClosedChannel() throws Exception {
-        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
 
@@ -159,10 +157,10 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(addr).sync().channel();
+            sc = sb.bind(TEST_ADDRESS).sync().channel();
 
             // Connect to the server
-            cc = cb.connect(addr).sync().channel();
+            cc = cb.connect(sc.localAddress()).sync().channel();
 
             // Close the channel and write something.
             cc.close().sync();
@@ -188,7 +186,6 @@ public class LocalChannelTest {
 
     @Test
     public void testServerCloseChannelSameEventLoop() throws Exception {
-        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
         final CountDownLatch latch = new CountDownLatch(1);
         ServerBootstrap sb = new ServerBootstrap()
                 .group(group2)
@@ -203,7 +200,7 @@ public class LocalChannelTest {
         Channel sc = null;
         Channel cc = null;
         try {
-            sc = sb.bind(addr).sync().channel();
+            sc = sb.bind(TEST_ADDRESS).sync().channel();
 
             Bootstrap b = new Bootstrap()
                     .group(group2)
@@ -214,7 +211,7 @@ public class LocalChannelTest {
                             // discard
                         }
                     });
-            cc = b.connect(addr).sync().channel();
+            cc = b.connect(sc.localAddress()).sync().channel();
             cc.writeAndFlush(new Object());
             assertTrue(latch.await(5, SECONDS));
         } finally {
@@ -225,7 +222,6 @@ public class LocalChannelTest {
 
     @Test
     public void localChannelRaceCondition() throws Exception {
-        final LocalAddress address = new LocalAddress(LOCAL_ADDR_ID);
         final CountDownLatch closeLatch = new CountDownLatch(1);
         final EventLoopGroup clientGroup = new LocalEventLoopGroup(1) {
             @Override
@@ -270,7 +266,7 @@ public class LocalChannelTest {
                             closeLatch.countDown();
                         }
                     }).
-                    bind(address).
+                    bind(TEST_ADDRESS).
                     sync().channel();
             Bootstrap bootstrap = new Bootstrap();
             bootstrap.group(clientGroup).
@@ -281,7 +277,7 @@ public class LocalChannelTest {
                             /* Do nothing */
                         }
                     });
-            ChannelFuture future = bootstrap.connect(address);
+            ChannelFuture future = bootstrap.connect(sc.localAddress());
             assertTrue("Connection should finish, not time out", future.await(200));
             cc = future.channel();
         } finally {
@@ -293,7 +289,6 @@ public class LocalChannelTest {
 
     @Test
     public void testReRegister() {
-        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
 
@@ -314,10 +309,10 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(addr).syncUninterruptibly().channel();
+            sc = sb.bind(TEST_ADDRESS).syncUninterruptibly().channel();
 
             // Connect to the server
-            cc = cb.connect(addr).syncUninterruptibly().channel();
+            cc = cb.connect(sc.localAddress()).syncUninterruptibly().channel();
 
             cc.deregister().syncUninterruptibly();
         } finally {
@@ -328,7 +323,6 @@ public class LocalChannelTest {
 
     @Test
     public void testCloseInWritePromiseCompletePreservesOrder() throws InterruptedException {
-        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         final CountDownLatch messageLatch = new CountDownLatch(2);
@@ -362,10 +356,10 @@ public class LocalChannelTest {
             Channel cc = null;
             try {
                 // Start server
-                sc = sb.bind(addr).syncUninterruptibly().channel();
+                sc = sb.bind(TEST_ADDRESS).syncUninterruptibly().channel();
 
                 // Connect to the server
-                cc = cb.connect(addr).syncUninterruptibly().channel();
+                cc = cb.connect(sc.localAddress()).syncUninterruptibly().channel();
 
                 final Channel ccCpy = cc;
                 // Make sure a write operation is executed in the eventloop
@@ -396,7 +390,6 @@ public class LocalChannelTest {
 
     @Test
     public void testWriteInWritePromiseCompletePreservesOrder() throws InterruptedException {
-        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         final CountDownLatch messageLatch = new CountDownLatch(2);
@@ -427,10 +420,10 @@ public class LocalChannelTest {
             Channel cc = null;
             try {
                 // Start server
-                sc = sb.bind(addr).syncUninterruptibly().channel();
+                sc = sb.bind(TEST_ADDRESS).syncUninterruptibly().channel();
 
                 // Connect to the server
-                cc = cb.connect(addr).syncUninterruptibly().channel();
+                cc = cb.connect(sc.localAddress()).syncUninterruptibly().channel();
 
                 final Channel ccCpy = cc;
                 // Make sure a write operation is executed in the eventloop
@@ -461,7 +454,6 @@ public class LocalChannelTest {
 
     @Test
     public void testPeerWriteInWritePromiseCompleteDifferentEventLoopPreservesOrder() throws InterruptedException {
-        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         final CountDownLatch messageLatch = new CountDownLatch(2);
@@ -509,10 +501,10 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(addr).syncUninterruptibly().channel();
+            sc = sb.bind(TEST_ADDRESS).syncUninterruptibly().channel();
 
             // Connect to the server
-            cc = cb.connect(addr).syncUninterruptibly().channel();
+            cc = cb.connect(sc.localAddress()).syncUninterruptibly().channel();
             assertTrue(serverChannelLatch.await(5, SECONDS));
 
             final Channel ccCpy = cc;
@@ -543,7 +535,6 @@ public class LocalChannelTest {
 
     @Test
     public void testPeerWriteInWritePromiseCompleteSameEventLoopPreservesOrder() throws InterruptedException {
-        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         final CountDownLatch messageLatch = new CountDownLatch(2);
@@ -592,10 +583,10 @@ public class LocalChannelTest {
             Channel cc = null;
             try {
                 // Start server
-                sc = sb.bind(addr).syncUninterruptibly().channel();
+                sc = sb.bind(TEST_ADDRESS).syncUninterruptibly().channel();
 
                 // Connect to the server
-                cc = cb.connect(addr).syncUninterruptibly().channel();
+                cc = cb.connect(sc.localAddress()).syncUninterruptibly().channel();
                 assertTrue(serverChannelLatch.await(5, SECONDS));
 
                 final Channel ccCpy = cc;
@@ -629,7 +620,6 @@ public class LocalChannelTest {
 
     @Test
     public void testClosePeerInWritePromiseCompleteSameEventLoopPreservesOrder() throws InterruptedException {
-        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         final CountDownLatch messageLatch = new CountDownLatch(2);
@@ -672,10 +662,10 @@ public class LocalChannelTest {
             Channel cc = null;
             try {
                 // Start server
-                sc = sb.bind(addr).syncUninterruptibly().channel();
+                sc = sb.bind(TEST_ADDRESS).syncUninterruptibly().channel();
 
                 // Connect to the server
-                cc = cb.connect(addr).syncUninterruptibly().channel();
+                cc = cb.connect(sc.localAddress()).syncUninterruptibly().channel();
 
                 assertTrue(serverChannelLatch.await(5, SECONDS));
 
