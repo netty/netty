@@ -28,6 +28,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
@@ -38,6 +39,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * A {@link Channel} for the local transport.
@@ -46,8 +48,9 @@ public class LocalChannel extends AbstractChannel {
 
     private enum State { OPEN, BOUND, CONNECTED, CLOSED }
 
+    @SuppressWarnings({ "rawtypes" })
+    private static final AtomicReferenceFieldUpdater<LocalChannel, Future> FINISH_READ_FUTURE_UPDATER;
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
-
     private static final int MAX_READER_STACK_DEPTH = 8;
 
     private final ChannelConfig config = new DefaultChannelConfig(this);
@@ -82,6 +85,18 @@ public class LocalChannel extends AbstractChannel {
     private volatile boolean readInProgress;
     private volatile boolean registerInProgress;
     private volatile boolean writeInProgress;
+    private volatile Future<?> finishReadFuture;
+
+    static {
+        @SuppressWarnings({ "rawtypes" })
+        AtomicReferenceFieldUpdater<LocalChannel, Future> finishReadFutureUpdater =
+                PlatformDependent.newAtomicReferenceFieldUpdater(LocalChannel.class, "finishReadFuture");
+        if (finishReadFutureUpdater == null) {
+            finishReadFutureUpdater =
+                AtomicReferenceFieldUpdater.newUpdater(LocalChannel.class, Future.class, "finishReadFuture");
+        }
+        FINISH_READ_FUTURE_UPDATER = finishReadFutureUpdater;
+    }
 
     public LocalChannel() {
         super(null);
@@ -329,16 +344,37 @@ public class LocalChannel extends AbstractChannel {
         if (peer.eventLoop() == eventLoop() && !peer.writeInProgress) {
             finishPeerRead0(peer);
         } else {
-            peer.eventLoop().execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    finishPeerRead0(peer);
-                }
-            });
+            runFinishPeerReadTask(peer);
         }
     }
 
-    private static void finishPeerRead0(LocalChannel peer) {
+    private void runFinishPeerReadTask(final LocalChannel peer) {
+        // If the peer is writing, we must wait until after reads are completed for that peer before we can read. So
+        // we keep track of the task, and coordinate later that our read can't happen until the peer is done.
+        final Runnable finishPeerReadTask = new OneTimeTask() {
+            @Override
+            public void run() {
+                finishPeerRead0(peer);
+            }
+        };
+        if (peer.writeInProgress) {
+            peer.finishReadFuture = peer.eventLoop().submit(finishPeerReadTask);
+        } else {
+            peer.eventLoop().execute(finishPeerReadTask);
+        }
+    }
+
+    private void finishPeerRead0(LocalChannel peer) {
+        Future<?> peerFinishReadFuture = peer.finishReadFuture;
+        if (peerFinishReadFuture != null) {
+            if (!peerFinishReadFuture.isDone()) {
+                runFinishPeerReadTask(peer);
+                return;
+            } else {
+                // Lazy unset to make sure we don't prematurely unset it while scheduling a new task.
+                FINISH_READ_FUTURE_UPDATER.compareAndSet(peer, peerFinishReadFuture, null);
+            }
+        }
         ChannelPipeline peerPipeline = peer.pipeline();
         if (peer.readInProgress) {
             peer.readInProgress = false;
