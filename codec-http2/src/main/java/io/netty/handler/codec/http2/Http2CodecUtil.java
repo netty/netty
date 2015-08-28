@@ -240,7 +240,7 @@ public final class Http2CodecUtil {
 
         @Override
         public boolean tryFailure(Throwable cause) {
-            if (awaitingPromises()) {
+            if (allowFailure()) {
                 ++failureCount;
                 if (failureCount == 1) {
                     promise.tryFailure(cause);
@@ -261,7 +261,7 @@ public final class Http2CodecUtil {
          */
         @Override
         public ChannelPromise setFailure(Throwable cause) {
-            if (awaitingPromises() || expectedCount == 0) {
+            if (allowFailure()) {
                 ++failureCount;
                 if (failureCount == 1) {
                     promise.setFailure(cause);
@@ -269,6 +269,10 @@ public final class Http2CodecUtil {
                 }
             }
             return this;
+        }
+
+        private boolean allowFailure() {
+            return awaitingPromises() || expectedCount == 0;
         }
 
         private boolean awaitingPromises() {
