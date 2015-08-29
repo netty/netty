@@ -136,6 +136,8 @@ public class BinaryMemcacheEncoderTest {
 
         ByteBuf written = channel.readOutbound();
         assertThat(written.readableBytes(), is(DEFAULT_HEADER_SIZE));
+        written.release();
+
         written = channel.readOutbound();
         assertThat(written.readableBytes(), is(content1.content().readableBytes()));
         assertThat(
