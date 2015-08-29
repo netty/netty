@@ -483,19 +483,35 @@ public class DnsNameResolverTest {
         }
     }
 
-    @Test(timeout = 5000)
+    @Test
     public void testNegativeTtl() throws Exception {
         final int oldNegativeTtl = resolver.negativeTtl();
         resolver.setNegativeTtl(10);
         try {
             resolveNonExistentDomain();
 
-            // If negative cache works, this loop should be done really quickly.
-            final List<UnknownHostException> exceptions = new ArrayList<UnknownHostException>();
             final int size = 10000;
+            final List<UnknownHostException> exceptions = new ArrayList<UnknownHostException>();
 
-            for (int i = 0; i < size; i++) {
-                exceptions.add(resolveNonExistentDomain());
+            // If negative cache works, this thread should be done really quickly.
+            final Thread negativeLookupThread = new Thread() {
+                @Override
+                public void run() {
+                    for (int i = 0; i < size; i++) {
+                        exceptions.add(resolveNonExistentDomain());
+                        if (isInterrupted()) {
+                            break;
+                        }
+                    }
+                }
+            };
+
+            negativeLookupThread.start();
+            negativeLookupThread.join(5000);
+
+            if (negativeLookupThread.isAlive()) {
+                negativeLookupThread.interrupt();
+                fail("Cached negative lookups did not finish quickly.");
             }
 
             assertThat(exceptions, hasSize(size));
