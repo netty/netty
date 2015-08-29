@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class SingleThreadEventExecutorTest {
 
     @Test
-    public void testThreadDetails() {
+    public void testThreadProperties() {
         final AtomicReference<Thread> threadRef = new AtomicReference<Thread>();
         SingleThreadEventExecutor executor = new SingleThreadEventExecutor(
                 null, new DefaultThreadFactory("test"), false) {
@@ -45,16 +45,13 @@ public class SingleThreadEventExecutorTest {
             }
         }).syncUninterruptibly();
         ThreadProperties threadProperties = executor.threadProperties();
-        Assert.assertSame(threadProperties, executor.threadProperties());
 
         Thread thread = threadRef.get();
         Assert.assertEquals(thread.getId(), threadProperties.id());
         Assert.assertEquals(thread.getName(), threadProperties.name());
         Assert.assertEquals(thread.getPriority(), threadProperties.priority());
-        Assert.assertEquals(thread.getState(), threadProperties.state());
         Assert.assertEquals(thread.isAlive(), threadProperties.isAlive());
         Assert.assertEquals(thread.isDaemon(), threadProperties.isDaemon());
-        Assert.assertEquals(thread.isInterrupted(), threadProperties.isInterrupted());
         Assert.assertTrue(threadProperties.stackTrace().length > 0);
         executor.shutdownGracefully();
     }
