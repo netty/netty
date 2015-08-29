@@ -31,14 +31,14 @@ public enum MqttConnectReturnCode {
     CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD((byte) 0x04),
     CONNECTION_REFUSED_NOT_AUTHORIZED((byte) 0x05);
 
-    private  static final Map<Byte, MqttConnectReturnCode> valueToCodeMap;
+    private static final Map<Byte, MqttConnectReturnCode> VALUE_TO_CODE_MAP;
 
     static {
         final Map<Byte, MqttConnectReturnCode> valueMap = new HashMap<Byte, MqttConnectReturnCode>();
         for (MqttConnectReturnCode code: values()) {
             valueMap.put(code.byteValue, code);
         }
-        valueToCodeMap = Collections.unmodifiableMap(valueMap);
+        VALUE_TO_CODE_MAP = Collections.unmodifiableMap(valueMap);
     }
 
     private final byte byteValue;
@@ -52,8 +52,8 @@ public enum MqttConnectReturnCode {
     }
 
     public static MqttConnectReturnCode valueOf(byte b) {
-        if (valueToCodeMap.containsKey(b)) {
-            return valueToCodeMap.get(b);
+        if (VALUE_TO_CODE_MAP.containsKey(b)) {
+            return VALUE_TO_CODE_MAP.get(b);
         }
         throw new IllegalArgumentException("unknown connect return code: " + (b & 0xFF));
     }
