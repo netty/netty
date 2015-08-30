@@ -62,6 +62,8 @@ public final class Native {
     public static final int UIO_MAX_IOV = uioMaxIov();
     public static final boolean IS_SUPPORTING_SENDMMSG = isSupportingSendmmsg();
     public static final long SSIZE_MAX = ssizeMax();
+    public static final int TCP_MD5SIG_MAXKEYLEN = tcpMd5SigMaxKeyLen();
+
     private static final byte[] IPV4_MAPPED_IPV6_PREFIX = {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, (byte) 0xff, (byte) 0xff };
 
@@ -661,6 +663,13 @@ public final class Native {
 
     private static native void tcpInfo0(int fd, int[] array);
 
+    public static void setTcpMd5Sig(int fd, InetAddress address, byte[] key) {
+        final NativeInetAddress a = toNativeInetAddress(address);
+        setTcpMd5Sig0(fd, a.address, a.scopeId, key);
+    }
+
+    private static native void setTcpMd5Sig0(int fd, byte[] address, int scopeId, byte[] key);
+
     private static NativeInetAddress toNativeInetAddress(InetAddress addr) {
         byte[] bytes = addr.getAddress();
         if (addr instanceof Inet6Address) {
@@ -709,6 +718,8 @@ public final class Native {
     private static native int epollerr();
 
     private static native long ssizeMax();
+    private static native int tcpMd5SigMaxKeyLen();
+
     private Native() {
         // utility
     }
