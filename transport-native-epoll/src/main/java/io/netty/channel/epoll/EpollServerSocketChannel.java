@@ -20,8 +20,12 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.unix.FileDescriptor;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
 
 /**
  * {@link ServerSocketChannel} implementation that uses linux EPOLL Edge-Triggered Mode for
@@ -31,6 +35,7 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
 
     private final EpollServerSocketChannelConfig config;
     private volatile InetSocketAddress local;
+    private volatile Collection<InetAddress> tcpMd5SigAddresses = Collections.emptyList();
 
     public EpollServerSocketChannel() {
         super(Native.socketStreamFd());
@@ -88,5 +93,13 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
     @Override
     protected Channel newChildChannel(int fd, byte[] address, int offset, int len) throws Exception {
         return new EpollSocketChannel(this, fd, Native.address(address, offset, len));
+    }
+
+    Collection<InetAddress> tcpMd5SigAddresses() {
+        return tcpMd5SigAddresses;
+    }
+
+    void setTcpMd5Sig(Map<InetAddress, byte[]> keys) {
+        this.tcpMd5SigAddresses = TcpMd5Util.newTcpMd5Sigs(this, tcpMd5SigAddresses, keys);
     }
 }

@@ -129,3 +129,6 @@ jint Java_io_netty_channel_epoll_Native_offsetofEpollData(JNIEnv* env, jclass cl
 
 jlong Java_io_netty_channel_epoll_Native_pipe0(JNIEnv* env, jclass clazz);
 jint Java_io_netty_channel_epoll_Native_splice0(JNIEnv* env, jclass clazz, jint fd, jint offIn, jint fdOut, jint offOut, jint len);
+
+jint Java_io_netty_channel_epoll_Native_tcpMd5SigMaxKeyLen(JNIEnv* env, jclass clazz);
+void Java_io_netty_channel_epoll_Native_setTcpMd5Sig0(JNIEnv* env, jclass clazz, jint fd, jbyteArray address, jint scopeId, jbyteArray key);
