@@ -1736,3 +1736,51 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_splice0(JNIEnv* env, j
 JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_ssizeMax(JNIEnv* env, jclass clazz) {
     return SSIZE_MAX;
 }
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_tcpMd5SigMaxKeyLen(JNIEnv* env, jclass clazz) {
+    struct tcp_md5sig md5sig;
+
+    // Defensive size check
+    if (sizeof(md5sig.tcpm_key) < TCP_MD5SIG_MAXKEYLEN) {
+        return sizeof(md5sig.tcpm_key);
+    }
+
+    return TCP_MD5SIG_MAXKEYLEN;
+}
+
+JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setTcpMd5Sig0(JNIEnv* env, jclass clazz, jint fd, jbyteArray address, jint scopeId, jbyteArray key) {
+    struct sockaddr_storage addr;
+    if (init_sockaddr(env, address, scopeId, 0, &addr) == -1) {
+        return;
+    }
+
+    struct tcp_md5sig md5sig;
+    memset(&md5sig, 0, sizeof(md5sig));
+    md5sig.tcpm_addr.ss_family = addr.ss_family;
+
+    struct sockaddr_in* ipaddr;
+    struct sockaddr_in6* ip6addr;
+
+    switch (addr.ss_family) {
+    case AF_INET:
+        ipaddr = (struct sockaddr_in*) &addr;
+        memcpy(&((struct sockaddr_in *) &md5sig.tcpm_addr)->sin_addr, &ipaddr->sin_addr, sizeof(ipaddr->sin_addr));
+        break;
+    case AF_INET6:
+        ip6addr = (struct sockaddr_in6*) &addr;
+        memcpy(&((struct sockaddr_in6 *) &md5sig.tcpm_addr)->sin6_addr, &ip6addr->sin6_addr, sizeof(ip6addr->sin6_addr));
+        break;
+    }
+
+    if (key != NULL) {
+        md5sig.tcpm_keylen = (*env)->GetArrayLength(env, key);
+        (*env)->GetByteArrayRegion(env, key, 0, md5sig.tcpm_keylen, (void *) &md5sig.tcpm_key);
+        if ((*env)->ExceptionCheck(env) == JNI_TRUE) {
+            return;
+        }
+    }
+
+    if (setsockopt(fd, IPPROTO_TCP, TCP_MD5SIG, &md5sig, sizeof(md5sig)) < 0) {
+        throwChannelExceptionErrorNo(env, "setsockopt() failed: ", errno);
+    }
+}
