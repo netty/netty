@@ -635,6 +635,7 @@ public final class Native {
     public static native int getTcpKeepIdle(int fd);
     public static native int getTcpKeepIntvl(int fd);
     public static native int getTcpKeepCnt(int fd);
+    public static native int getTcpUserTimeout(int milliseconds);
     public static native int getSoError(int fd);
     public static native int isIpFreeBind(int fd);
 
@@ -652,6 +653,7 @@ public final class Native {
     public static native void setTcpKeepIdle(int fd, int seconds);
     public static native void setTcpKeepIntvl(int fd, int seconds);
     public static native void setTcpKeepCnt(int fd, int probes);
+    public static native void setTcpUserTimeout(int fd, int milliseconds);
     public static native void setIpFreeBind(int fd, int freeBind);
     public static void tcpInfo(int fd, EpollTcpInfo info) {
         tcpInfo0(fd, info.info);
