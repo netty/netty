@@ -21,6 +21,7 @@ import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ServerSocketChannelConfig;
 
+import java.net.InetAddress;
 import java.util.Map;
 
 public final class EpollServerSocketChannelConfig extends EpollServerChannelConfig
@@ -60,6 +61,10 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
             setReusePort((Boolean) value);
         } else if (option == EpollChannelOption.IP_FREEBIND) {
             setFreeBind((Boolean) value);
+        } else if (option == EpollChannelOption.TCP_MD5SIG) {
+            @SuppressWarnings("unchecked")
+            final Map<InetAddress, byte[]> m = (Map<InetAddress, byte[]>) value;
+            setTcpMd5Sig(m);
         } else {
             return super.setOption(option, value);
         }
@@ -141,6 +146,16 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
     @Override
     public EpollServerSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
         super.setMessageSizeEstimator(estimator);
+        return this;
+    }
+
+    /**
+     * Set the {@code TCP_MD5SIG} option on the socket. See {@code linux/tcp.h} for more details.
+     * Keys can only be set on, not read to prevent a potential leak, as they are confidential.
+     * Allowing them being read would mean anyone with access to the channel could get them.
+     */
+    public EpollServerSocketChannelConfig setTcpMd5Sig(Map<InetAddress, byte[]> keys) {
+        ((EpollServerSocketChannel) channel).setTcpMd5Sig(keys);
         return this;
     }
 

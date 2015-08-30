@@ -18,6 +18,9 @@ package io.netty.channel.epoll;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.unix.DomainSocketReadMode;
 
+import java.net.InetAddress;
+import java.util.Map;
+
 public final class EpollChannelOption<T> extends ChannelOption<T> {
 
     public static final ChannelOption<Boolean> TCP_CORK = valueOf("TCP_CORK");
@@ -34,6 +37,8 @@ public final class EpollChannelOption<T> extends ChannelOption<T> {
 
     public static final ChannelOption<EpollMode> EPOLL_MODE =
             valueOf("EPOLL_MODE");
+
+    public static final ChannelOption<Map<InetAddress, byte[]>> TCP_MD5SIG = valueOf("TCP_MD5SIG");
 
     @SuppressWarnings({ "unused", "deprecation" })
     private EpollChannelOption(String name) {
