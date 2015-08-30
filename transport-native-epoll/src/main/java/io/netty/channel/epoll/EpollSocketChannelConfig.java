@@ -94,6 +94,9 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
         if (option == EpollChannelOption.TCP_KEEPCNT) {
             return (T) Integer.valueOf(getTcpKeepCnt());
         }
+        if (option == EpollChannelOption.TCP_USER_TIMEOUT) {
+            return (T) Integer.valueOf(getTcpUserTimeout());
+        }
         return super.getOption(option);
     }
 
@@ -127,6 +130,8 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
             setTcpKeepCntl((Integer) value);
         } else if (option == EpollChannelOption.TCP_KEEPINTVL) {
             setTcpKeepIntvl((Integer) value);
+        } else if (option == EpollChannelOption.TCP_USER_TIMEOUT) {
+            setTcpUserTimeout((Integer) value);
         } else {
             return super.setOption(option, value);
         }
@@ -203,6 +208,13 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
      */
     public int getTcpKeepCnt() {
         return Native.getTcpKeepCnt(channel.fd().intValue());
+    }
+
+    /**
+     * Get the {@code TCP_USER_TIMEOUT} option on the socket. See {@code man 7 tcp} for more details.
+     */
+    public int getTcpUserTimeout() {
+        return Native.getTcpUserTimeout(channel.fd().intValue());
     }
 
     @Override
@@ -294,6 +306,14 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
      */
     public EpollSocketChannelConfig setTcpKeepCntl(int probes) {
         Native.setTcpKeepCnt(channel.fd().intValue(), probes);
+        return this;
+    }
+
+    /**
+     * Set the {@code TCP_USER_TIMEOUT} option on the socket. See {@code man 7 tcp} for more details.
+     */
+    public EpollSocketChannelConfig setTcpUserTimeout(int milliseconds) {
+        Native.setTcpUserTimeout(channel.fd().intValue(), milliseconds);
         return this;
     }
 
