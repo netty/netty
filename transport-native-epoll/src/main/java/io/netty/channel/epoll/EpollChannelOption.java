@@ -18,7 +18,11 @@ package io.netty.channel.epoll;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.unix.DomainSocketReadMode;
 
+import java.net.InetAddress;
+import java.util.Map;
+
 public final class EpollChannelOption {
+
     private static final Class<EpollChannelOption> T = EpollChannelOption.class;
 
     public static final ChannelOption<Boolean> TCP_CORK = ChannelOption.valueOf(T, "TCP_CORK");
@@ -28,11 +32,13 @@ public final class EpollChannelOption {
     public static final ChannelOption<Integer> TCP_KEEPINTVL = ChannelOption.valueOf(T, "TCP_KEEPINTVL");
     public static final ChannelOption<Integer> TCP_KEEPCNT = ChannelOption.valueOf(T, "TCP_KEEPCNT");
     public static final ChannelOption<Integer> TCP_USER_TIMEOUT = ChannelOption.valueOf(T, "TCP_USER_TIMEOUT");
+    public static final ChannelOption<Map<InetAddress, byte[]>> TCP_MD5SIG = ChannelOption.valueOf(T, "TCP_MD5SIG");
     public static final ChannelOption<Boolean> IP_FREEBIND = ChannelOption.valueOf("IP_FREEBIND");
 
     public static final ChannelOption<DomainSocketReadMode> DOMAIN_SOCKET_READ_MODE =
             ChannelOption.valueOf(T, "DOMAIN_SOCKET_READ_MODE");
     public static final ChannelOption<EpollMode> EPOLL_MODE =
             ChannelOption.valueOf(T, "EPOLL_MODE");
+
     private EpollChannelOption() { }
 }
