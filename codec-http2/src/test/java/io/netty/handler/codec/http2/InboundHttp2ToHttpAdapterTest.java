@@ -639,6 +639,7 @@ public class InboundHttp2ToHttpAdapterTest {
         serverDelegator = null;
         serverConnectedChannel = null;
         maxContentLength = 1024;
+        final CountDownLatch serverChannelLatch = new CountDownLatch(1);
         serverLatch = new CountDownLatch(serverLatchCount);
         clientLatch = new CountDownLatch(clientLatchCount);
         settingsLatch = new CountDownLatch(settingsLatchCount);
@@ -681,6 +682,7 @@ public class InboundHttp2ToHttpAdapterTest {
                         }
                     }
                 });
+                serverChannelLatch.countDown();
             }
         });
 
@@ -709,6 +711,7 @@ public class InboundHttp2ToHttpAdapterTest {
         ChannelFuture ccf = cb.connect(serverChannel.localAddress());
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
         clientChannel = ccf.channel();
+        assertTrue(serverChannelLatch.await(2, SECONDS));
     }
 
     private void cleanupCapturedRequests() {
