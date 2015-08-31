@@ -116,7 +116,6 @@ void throwChannelExceptionErrorNo(JNIEnv* env, char* message, int errorNumber) {
     free(allocatedMessage);
 }
 
-
 void throwIOException(JNIEnv* env, char* message) {
     (*env)->ThrowNew(env, ioExceptionClass, message);
 }
