@@ -721,7 +721,7 @@ public class LocalChannelTest {
             .childHandler(new ChannelInitializer<LocalChannel>() {
                 @Override
                 public void initChannel(LocalChannel ch) throws Exception {
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelHandlerAdapter() {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                             if (data.equals(msg)) {
