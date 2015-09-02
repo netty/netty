@@ -23,39 +23,44 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
+import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static io.netty.util.AsciiString.contentEquals;
 import static java.util.Arrays.asList;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 public class DefaultHttpHeadersTest {
-    private static final String HEADER_NAME = "testHeader";
+    private static final CharSequence HEADER_NAME = "testHeader";
 
     @Test
     public void keysShouldBeCaseInsensitive() {
         DefaultHttpHeaders headers = new DefaultHttpHeaders();
-        headers.add("Name", "value1");
-        headers.add("name", "value2");
-        headers.add("NAME", "value3");
+        headers.add(of("Name"), of("value1"));
+        headers.add(of("name"), of("value2"));
+        headers.add(of("NAME"), of("value3"));
         assertEquals(3, headers.size());
 
         List<String> values = asList("value1", "value2", "value3");
 
-        assertEquals(values, headers.getAll("NAME"));
-        assertEquals(values, headers.getAll("name"));
-        assertEquals(values, headers.getAll("Name"));
-        assertEquals(values, headers.getAll("nAmE"));
+        assertEquals(values, headers.getAll(of("NAME")));
+        assertEquals(values, headers.getAll(of("name")));
+        assertEquals(values, headers.getAll(of("Name")));
+        assertEquals(values, headers.getAll(of("nAmE")));
     }
 
     @Test
     public void keysShouldBeCaseInsensitiveInHeadersEquals() {
         DefaultHttpHeaders headers1 = new DefaultHttpHeaders();
-        headers1.add("name1", Arrays.asList("value1", "value2", "value3"));
-        headers1.add("nAmE2", "value4");
+        headers1.add(of("name1"), Arrays.asList("value1", "value2", "value3"));
+        headers1.add(of("nAmE2"), of("value4"));
 
         DefaultHttpHeaders headers2 = new DefaultHttpHeaders();
-        headers2.add("naMe1", Arrays.asList("value1", "value2", "value3"));
-        headers2.add("NAME2", "value4");
+        headers2.add(of("naMe1"), Arrays.asList("value1", "value2", "value3"));
+        headers2.add(of("NAME2"), of("value4"));
 
         assertEquals(headers1, headers1);
         assertEquals(headers2, headers2);
@@ -70,7 +75,7 @@ public class DefaultHttpHeadersTest {
 
         // Test adding String key and retrieving it using a AsciiString key
         final String connection = "keep-alive";
-        headers.add("Connection", connection);
+        headers.add(of("Connection"), connection);
 
         // Passes
         final String value = headers.getAsString(HttpHeaderNames.CONNECTION.toString());
@@ -113,12 +118,12 @@ public class DefaultHttpHeadersTest {
     @Test
     public void testGetOperations() {
         HttpHeaders headers = new DefaultHttpHeaders();
-        headers.add("Foo", "1");
-        headers.add("Foo", "2");
+        headers.add(of("Foo"), of("1"));
+        headers.add(of("Foo"), of("2"));
 
-        assertEquals("1", headers.get("Foo"));
+        assertEquals("1", headers.get(of("Foo")));
 
-        List<String> values = headers.getAll("Foo");
+        List<String> values = headers.getAll(of("Foo"));
         assertEquals(2, values.size());
         assertEquals("1", values.get(0));
         assertEquals("2", values.get(1));
@@ -135,13 +140,13 @@ public class DefaultHttpHeadersTest {
     @Test(expected = NullPointerException.class)
     public void testSetNullHeaderValueValidate() {
         HttpHeaders headers = new DefaultHttpHeaders(true);
-        headers.set("test", (CharSequence) null);
+        headers.set(of("test"), (CharSequence) null);
     }
 
     @Test(expected = NullPointerException.class)
     public void testSetNullHeaderValueNotValidate() {
         HttpHeaders headers = new DefaultHttpHeaders(false);
-        headers.set("test", (CharSequence) null);
+        headers.set(of("test"), (CharSequence) null);
     }
 
     @Test

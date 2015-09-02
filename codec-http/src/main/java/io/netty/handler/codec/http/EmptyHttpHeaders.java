@@ -26,7 +26,19 @@ public class EmptyHttpHeaders extends HttpHeaders {
     static final Iterator<Entry<CharSequence, CharSequence>> EMPTY_CHARS_ITERATOR =
             Collections.<Entry<CharSequence, CharSequence>>emptyList().iterator();
 
-    public static final EmptyHttpHeaders INSTANCE = new EmptyHttpHeaders();
+    public static final EmptyHttpHeaders INSTANCE = instance();
+
+    /**
+     * @deprecated Use {@link EmptyHttpHeaders#INSTANCE}
+     * <p>
+     * This is needed to break a cyclic static initialization loop between {@link HttpHeaders} and
+     * {@link EmptyHttpHeaders}.
+     * @see HttpUtil#EMPTY_HEADERS
+     */
+    @Deprecated
+    static EmptyHttpHeaders instance() {
+        return HttpUtil.EMPTY_HEADERS;
+    }
 
     protected EmptyHttpHeaders() {
     }

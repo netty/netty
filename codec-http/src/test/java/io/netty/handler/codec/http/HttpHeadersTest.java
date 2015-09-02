@@ -16,13 +16,16 @@
 package io.netty.handler.codec.http;
 
 import io.netty.util.AsciiString;
-
 import org.junit.Test;
 
 import java.util.List;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 public class HttpHeadersTest {
 
@@ -39,12 +42,12 @@ public class HttpHeadersTest {
     @Test
     public void testGetOperations() {
         HttpHeaders headers = new DefaultHttpHeaders();
-        headers.add("Foo", "1");
-        headers.add("Foo", "2");
+        headers.add(of("Foo"), of("1"));
+        headers.add(of("Foo"), of("2"));
 
-        assertEquals("1", headers.get("Foo"));
+        assertEquals("1", headers.get(of("Foo")));
 
-        List<String> values = headers.getAll("Foo");
+        List<String> values = headers.getAll(of("Foo"));
         assertEquals(2, values.size());
         assertEquals("1", values.get(0));
         assertEquals("2", values.get(1));
@@ -61,12 +64,12 @@ public class HttpHeadersTest {
     @Test(expected = NullPointerException.class)
     public void testSetNullHeaderValueValidate() {
         HttpHeaders headers = new DefaultHttpHeaders(true);
-        headers.set("test", (CharSequence) null);
+        headers.set(of("test"), (CharSequence) null);
     }
 
     @Test(expected = NullPointerException.class)
     public void testSetNullHeaderValueNotValidate() {
         HttpHeaders headers = new DefaultHttpHeaders(false);
-        headers.set("test", (CharSequence) null);
+        headers.set(of("test"), (CharSequence) null);
     }
 }

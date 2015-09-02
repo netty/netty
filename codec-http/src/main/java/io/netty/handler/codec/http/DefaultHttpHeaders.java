@@ -114,7 +114,6 @@ public class DefaultHttpHeaders extends HttpHeaders {
         return this;
     }
 
-    @Deprecated
     @Override
     public HttpHeaders add(CharSequence name, Object value) {
         headers.addObject(name, value);
@@ -128,7 +127,6 @@ public class DefaultHttpHeaders extends HttpHeaders {
         return this;
     }
 
-    @Deprecated
     @Override
     public HttpHeaders add(CharSequence name, Iterable<?> values) {
         headers.addObject(name, values);
@@ -154,7 +152,6 @@ public class DefaultHttpHeaders extends HttpHeaders {
         return this;
     }
 
-    @Deprecated
     @Override
     public HttpHeaders remove(CharSequence name) {
         headers.remove(name);
@@ -168,7 +165,6 @@ public class DefaultHttpHeaders extends HttpHeaders {
         return this;
     }
 
-    @Deprecated
     @Override
     public HttpHeaders set(CharSequence name, Object value) {
         headers.setObject(name, value);
@@ -182,7 +178,6 @@ public class DefaultHttpHeaders extends HttpHeaders {
         return this;
     }
 
-    @Deprecated
     @Override
     public HttpHeaders set(CharSequence name, Iterable<?> values) {
         headers.setObject(name, values);
@@ -207,13 +202,11 @@ public class DefaultHttpHeaders extends HttpHeaders {
         return this;
     }
 
-    @Deprecated
     @Override
     public String get(String name) {
         return get((CharSequence) name);
     }
 
-    @Deprecated
     @Override
     public String get(CharSequence name) {
         return HeadersUtils.getAsString(headers, name);
@@ -255,7 +248,6 @@ public class DefaultHttpHeaders extends HttpHeaders {
         return getAll((CharSequence) name);
     }
 
-    @Deprecated
     @Override
     public List<String> getAll(CharSequence name) {
         return HeadersUtils.getAllAsString(headers, name);
@@ -281,13 +273,11 @@ public class DefaultHttpHeaders extends HttpHeaders {
         return HeadersUtils.iteratorAsString(headers);
     }
 
-    @Deprecated
     @Override
     public Iterator<Entry<CharSequence, CharSequence>> iteratorCharSequence() {
         return headers.iterator();
     }
 
-    @Deprecated
     @Override
     public boolean contains(String name) {
         return contains((CharSequence) name);
@@ -318,7 +308,6 @@ public class DefaultHttpHeaders extends HttpHeaders {
         return headers.contains(name, value, ignoreCase ? CASE_INSENSITIVE_HASHER : CASE_SENSITIVE_HASHER);
     }
 
-    @Deprecated
     @Override
     public Set<String> names() {
         return HeadersUtils.namesAsString(headers);

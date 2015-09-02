@@ -15,14 +15,21 @@
  */
 package io.netty.handler.codec.http.cors;
 
+import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import org.junit.Test;
 
-import static io.netty.handler.codec.http.cors.CorsConfig.*;
-import static org.hamcrest.CoreMatchers.*;
-import static org.hamcrest.MatcherAssert.*;
+import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
+import static io.netty.handler.codec.http.cors.CorsConfig.withAnyOrigin;
+import static io.netty.handler.codec.http.cors.CorsConfig.withOrigin;
+import static io.netty.handler.codec.http.cors.CorsConfig.withOrigins;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.hasItems;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class CorsConfigTest {
 
@@ -96,13 +103,13 @@ public class CorsConfigTest {
     @Test
     public void preflightResponseHeadersSingleValue() {
         final CorsConfig cors = withAnyOrigin().preflightResponseHeader("SingleValue", "value").build();
-        assertThat(cors.preflightResponseHeaders().get("SingleValue"), equalTo("value"));
+        assertThat(cors.preflightResponseHeaders().get(of("SingleValue")), equalTo("value"));
     }
 
     @Test
     public void preflightResponseHeadersMultipleValues() {
         final CorsConfig cors = withAnyOrigin().preflightResponseHeader("MultipleValues", "value1", "value2").build();
-        assertThat(cors.preflightResponseHeaders().getAll("MultipleValues"), hasItems("value1", "value2"));
+        assertThat(cors.preflightResponseHeaders().getAll(of("MultipleValues")), hasItems("value1", "value2"));
     }
 
     @Test
@@ -115,7 +122,7 @@ public class CorsConfigTest {
     @Test
     public void emptyPreflightResponseHeaders() {
         final CorsConfig cors = withAnyOrigin().noPreflightResponseHeaders().build();
-        assertThat(cors.preflightResponseHeaders(), equalTo(HttpHeaders.EMPTY_HEADERS));
+        assertThat(cors.preflightResponseHeaders(), equalTo((HttpHeaders) EmptyHttpHeaders.INSTANCE));
     }
 
     @Test (expected = IllegalArgumentException.class)

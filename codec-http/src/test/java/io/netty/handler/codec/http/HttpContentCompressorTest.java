@@ -24,8 +24,16 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class HttpContentCompressorTest {
 
@@ -159,7 +167,7 @@ public class HttpContentCompressorTest {
         ch.writeOutbound(new DefaultHttpContent(Unpooled.copiedBuffer("Hell", CharsetUtil.US_ASCII)));
         ch.writeOutbound(new DefaultHttpContent(Unpooled.copiedBuffer("o, w", CharsetUtil.US_ASCII)));
         LastHttpContent content = new DefaultLastHttpContent(Unpooled.copiedBuffer("orld", CharsetUtil.US_ASCII));
-        content.trailingHeaders().set("X-Test", "Netty");
+        content.trailingHeaders().set(of("X-Test"), of("Netty"));
         ch.writeOutbound(content);
 
         HttpContent chunk;
@@ -183,7 +191,7 @@ public class HttpContentCompressorTest {
         chunk = ch.readOutbound();
         assertThat(chunk.content().isReadable(), is(false));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
-        assertEquals("Netty", ((LastHttpContent) chunk).trailingHeaders().get("X-Test"));
+        assertEquals("Netty", ((LastHttpContent) chunk).trailingHeaders().get(of("X-Test")));
         chunk.release();
 
         assertThat(ch.readOutbound(), is(nullValue()));
@@ -276,7 +284,7 @@ public class HttpContentCompressorTest {
 
         FullHttpResponse res = new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER);
-        res.trailingHeaders().set("X-Test", "Netty");
+        res.trailingHeaders().set(of("X-Test"), of("Netty"));
         ch.writeOutbound(res);
 
         Object o = ch.readOutbound();
@@ -289,14 +297,14 @@ public class HttpContentCompressorTest {
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is(nullValue()));
         assertThat(res.content().readableBytes(), is(0));
         assertThat(res.content().toString(CharsetUtil.US_ASCII), is(""));
-        assertEquals("Netty", res.trailingHeaders().get("X-Test"));
+        assertEquals("Netty", res.trailingHeaders().get(of("X-Test")));
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 
     @Test
     public void test100Continue() throws Exception {
         FullHttpRequest request = newRequest();
-        HttpHeaders.set100ContinueExpected(request);
+        HttpUtil.set100ContinueExpected(request, true);
 
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(request);
@@ -308,7 +316,7 @@ public class HttpContentCompressorTest {
 
         FullHttpResponse res = new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER);
-        res.trailingHeaders().set("X-Test", "Netty");
+        res.trailingHeaders().set(of("X-Test"), of("Netty"));
         ch.writeOutbound(res);
 
         Object o = ch.readOutbound();
@@ -328,7 +336,7 @@ public class HttpContentCompressorTest {
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is(nullValue()));
         assertThat(res.content().readableBytes(), is(0));
         assertThat(res.content().toString(CharsetUtil.US_ASCII), is(""));
-        assertEquals("Netty", res.trailingHeaders().get("X-Test"));
+        assertEquals("Netty", res.trailingHeaders().get(of("X-Test")));
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 

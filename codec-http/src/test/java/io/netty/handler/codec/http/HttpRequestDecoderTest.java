@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
@@ -23,8 +22,16 @@ import org.junit.Test;
 
 import java.util.List;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 public class HttpRequestDecoderTest {
     private static final byte[] CONTENT_CRLF_DELIMITERS = createContent("\r\n");
@@ -98,7 +105,7 @@ public class HttpRequestDecoderTest {
     }
 
     private static void checkHeader(HttpHeaders headers, String name, String value) {
-        List<String> header1 = headers.getAll(name);
+        List<String> header1 = headers.getAll(of(name));
         assertEquals(1, header1.size());
         assertEquals(value, header1.get(0));
     }
@@ -174,7 +181,7 @@ public class HttpRequestDecoderTest {
                 "EmptyHeader:" + crlf + crlf;
         channel.writeInbound(Unpooled.wrappedBuffer(request.getBytes(CharsetUtil.US_ASCII)));
         HttpRequest req = channel.readInbound();
-        assertEquals("", req.headers().get("EmptyHeader"));
+        assertEquals("", req.headers().get(of("EmptyHeader")));
     }
 
     @Test

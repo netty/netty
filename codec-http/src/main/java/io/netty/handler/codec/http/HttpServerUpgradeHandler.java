@@ -295,7 +295,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
         }
 
         // Ensure that all required protocol-specific headers are found in the request.
-        for (String requiredHeader : requiredHeaders) {
+        for (CharSequence requiredHeader : requiredHeaders) {
             if (!request.headers().contains(requiredHeader)) {
                 return false;
             }

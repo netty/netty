@@ -58,6 +58,7 @@ import java.util.concurrent.CountDownLatch;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.getEmbeddedHttp2Exception;
 import static io.netty.handler.codec.http2.Http2Exception.isStreamError;
+import static io.netty.handler.codec.http2.Http2TestUtil.of;
 import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -291,9 +292,9 @@ public class InboundHttp2ToHttpAdapterTest {
             httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, text.length());
             HttpHeaders trailingHeaders = request.trailingHeaders();
-            trailingHeaders.set("FoO", "goo");
-            trailingHeaders.set("foO2", "goo2");
-            trailingHeaders.add("fOo2", "goo3");
+            trailingHeaders.set(of("FoO"), of("goo"));
+            trailingHeaders.set(of("foO2"), of("goo2"));
+            trailingHeaders.add(of("fOo2"), of("goo3"));
             final Http2Headers http2Headers = new DefaultHttp2Headers().method(new AsciiString("GET")).path(
                     new AsciiString("/some/path/resource2"));
             final Http2Headers http2Headers2 = new DefaultHttp2Headers()
@@ -331,9 +332,9 @@ public class InboundHttp2ToHttpAdapterTest {
             httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, text.length());
             HttpHeaders trailingHeaders = request.trailingHeaders();
-            trailingHeaders.set("Foo", "goo");
-            trailingHeaders.set("fOo2", "goo2");
-            trailingHeaders.add("foO2", "goo3");
+            trailingHeaders.set(of("Foo"), of("goo"));
+            trailingHeaders.set(of("fOo2"), of("goo2"));
+            trailingHeaders.add(of("foO2"), of("goo3"));
             final Http2Headers http2Headers = new DefaultHttp2Headers().method(new AsciiString("GET")).path(
                     new AsciiString("/some/path/resource2"));
             final Http2Headers http2Headers2 = new DefaultHttp2Headers()
