@@ -232,7 +232,7 @@ public class HttpObjectAggregator
         public HttpHeaders trailingHeaders() {
             HttpHeaders trailingHeaders = this.trailingHeaders;
             if (trailingHeaders == null) {
-                return HttpHeaders.EMPTY_HEADERS;
+                return EmptyHttpHeaders.INSTANCE;
             } else {
                 return trailingHeaders;
             }

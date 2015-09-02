@@ -23,8 +23,11 @@ import java.util.Map;
 import static io.netty.util.internal.StringUtil.COMMA;
 import static io.netty.util.internal.StringUtil.DOUBLE_QUOTE;
 
-class HttpHeadersTestUtils {
-    public enum HeaderValue {
+/**
+ * Utility methods for {@link HttpHeaders} related unit tests.
+ */
+public final class HttpHeadersTestUtils {
+    enum HeaderValue {
         UNKNOWN("Unknown", 0),
         ONE("One", 1),
         TWO("Two", 2),
@@ -127,4 +130,10 @@ class HttpHeadersTestUtils {
             return v == null ? UNKNOWN : v;
         }
     }
+
+    public static CharSequence of(String s) {
+        return s;
+    }
+
+    private HttpHeadersTestUtils() { }
 }

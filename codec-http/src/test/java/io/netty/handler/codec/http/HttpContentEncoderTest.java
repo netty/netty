@@ -24,8 +24,13 @@ import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 
 public class HttpContentEncoderTest {
 
@@ -126,7 +131,7 @@ public class HttpContentEncoderTest {
         ch.writeOutbound(new DefaultHttpContent(Unpooled.wrappedBuffer(new byte[3])));
         ch.writeOutbound(new DefaultHttpContent(Unpooled.wrappedBuffer(new byte[2])));
         LastHttpContent content = new DefaultLastHttpContent(Unpooled.wrappedBuffer(new byte[1]));
-        content.trailingHeaders().set("X-Test", "Netty");
+        content.trailingHeaders().set(of("X-Test"), of("Netty"));
         ch.writeOutbound(content);
 
         HttpContent chunk;
@@ -146,7 +151,7 @@ public class HttpContentEncoderTest {
         chunk = ch.readOutbound();
         assertThat(chunk.content().isReadable(), is(false));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
-        assertEquals("Netty", ((LastHttpContent) chunk).trailingHeaders().get("X-Test"));
+        assertEquals("Netty", ((LastHttpContent) chunk).trailingHeaders().get(of("X-Test")));
         chunk.release();
 
         assertThat(ch.readOutbound(), is(nullValue()));
@@ -235,7 +240,7 @@ public class HttpContentEncoderTest {
 
         FullHttpResponse res = new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER);
-        res.trailingHeaders().set("X-Test", "Netty");
+        res.trailingHeaders().set(of("X-Test"), of("Netty"));
         ch.writeOutbound(res);
 
         Object o = ch.readOutbound();
@@ -248,7 +253,7 @@ public class HttpContentEncoderTest {
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is(nullValue()));
         assertThat(res.content().readableBytes(), is(0));
         assertThat(res.content().toString(CharsetUtil.US_ASCII), is(""));
-        assertEquals("Netty", res.trailingHeaders().get("X-Test"));
+        assertEquals("Netty", res.trailingHeaders().get(of("X-Test")));
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 

@@ -75,6 +75,10 @@ final class Http2TestUtil {
         return new ByteString(randomBytes());
     }
 
+    public static CharSequence of(String s) {
+        return s;
+    }
+
     private Http2TestUtil() {
     }
 
