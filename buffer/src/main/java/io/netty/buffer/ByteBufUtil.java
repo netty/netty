@@ -17,6 +17,7 @@ package io.netty.buffer;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
+import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
 import io.netty.util.ByteString;
 import io.netty.util.CharsetUtil;
@@ -498,7 +499,10 @@ public final class ByteBufUtil {
         // ASCII uses 1 byte per char
         final int len = seq.length();
         buf.ensureWritable(len);
-        if (buf instanceof AbstractByteBuf) {
+        if (seq instanceof AsciiString) {
+            AsciiString asciiString = (AsciiString) seq;
+            buf.writeBytes(asciiString.array(), asciiString.arrayOffset(), asciiString.length());
+        } else if (buf instanceof AbstractByteBuf) {
             // Fast-Path
             AbstractByteBuf buffer = (AbstractByteBuf) buf;
             int writerIndex = buffer.writerIndex;
