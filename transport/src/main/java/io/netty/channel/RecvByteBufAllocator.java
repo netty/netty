@@ -113,6 +113,14 @@ public interface RecvByteBufAllocator {
             this.delegate = checkNotNull(delegate, "delegate");
         }
 
+        /**
+         * Get the {@link Handle} which all methods will be delegated to.
+         * @return the {@link Handle} which all methods will be delegated to.
+         */
+        protected final Handle delegate() {
+            return delegate;
+        }
+
         @Override
         public ByteBuf allocate(ByteBufAllocator alloc) {
             return delegate.allocate(alloc);
