@@ -89,6 +89,7 @@ public interface Cookie extends io.netty.handler.codec.http.cookie.Cookie {
      * @deprecated Not part of RFC6265
      */
     @Deprecated
+    @Override
     long maxAge();
 
     /**
@@ -103,6 +104,7 @@ public interface Cookie extends io.netty.handler.codec.http.cookie.Cookie {
      * @deprecated Not part of RFC6265
      */
     @Deprecated
+    @Override
     void setMaxAge(long maxAge);
 
     /**

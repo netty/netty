@@ -38,9 +38,13 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>> {
     /**
      * @deprecated Use {@link EmptyHttpHeaders#INSTANCE}.
+     * <p>
+     * The instance is instantiated here to break the cyclic static initialization between {@link EmptyHttpHeaders} and
+     * {@link HttpHeaders}. The issue is that if someone accesses {@link EmptyHttpHeaders#INSTANCE} before
+     * {@link HttpHeaders#EMPTY_HEADERS} then {@link HttpHeaders#EMPTY_HEADERS} will be {@code null}.
      */
     @Deprecated
-    public static final HttpHeaders EMPTY_HEADERS = EmptyHttpHeaders.INSTANCE;
+    public static final HttpHeaders EMPTY_HEADERS = EmptyHttpHeaders.instance();
 
     /**
      * @deprecated Use {@link HttpHeaderNames} instead.
@@ -1148,7 +1152,6 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         }
     }
 
-    @Deprecated
     public static void encodeAscii(CharSequence seq, ByteBuf buf) {
         if (seq instanceof AsciiString) {
             ByteBufUtil.copy((AsciiString) seq, 0, buf, seq.length());
@@ -1159,15 +1162,12 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
 
     /**
      * @deprecated Use {@link AsciiString} instead.
-     *
+     * <p>
      * Create a new {@link CharSequence} which is optimized for reuse as {@link HttpHeaders} name or value.
      * So if you have a Header name or value that you want to reuse you should make use of this.
      */
     @Deprecated
     public static CharSequence newEntity(String name) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
         return new AsciiString(name);
     }
 
@@ -1175,35 +1175,30 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
 
     /**
      * @deprecated Use {@link #get(CharSequence)}
-     * @see {@link #get(CharSequence)}
+     * @see #get(CharSequence)
      */
     @Deprecated
     public abstract String get(String name);
 
     /**
-     * @deprecated Use {@link #getAsString(CharSequence)}
-     * <p>
      * Returns the value of a header with the specified name.  If there are
      * more than one values for the specified name, the first value is returned.
      *
      * @param name The name of the header to search
      * @return The first header value or {@code null} if there is no such header
+     * @see #getAsString(CharSequence)
      */
-    @Deprecated
     public String get(CharSequence name) {
         return get(name.toString());
     }
 
     /**
-     * @deprecated Future releases will use {@link CharSequence} instead of {@link String}.
-     * <p>
      * Returns the value of a header with the specified name.  If there are
      * more than one values for the specified name, the first value is returned.
      *
      * @param name The name of the header to search
      * @return The first header value or {@code defaultValue} if there is no such header
      */
-    @Deprecated
     public String get(CharSequence name, String defaultValue) {
         String value = get(name);
         if (value == null) {
@@ -1276,21 +1271,19 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     public abstract long getTimeMillis(CharSequence name, long defaultValue);
 
     /**
-     * @see {@link #getAll(CharSequence)}
+     * @deprecated Use {@link #getAll(CharSequence)}
      */
     @Deprecated
     public abstract List<String> getAll(String name);
 
     /**
-     * @deprecated Use {@link #getAllAsString(CharSequence)}
-     * <p>
      * Returns the values of headers with the specified name
      *
      * @param name The name of the headers to search
      * @return A {@link List} of header values which will be empty if no values
      *         are found
+     * @see #getAllAsString(CharSequence)
      */
-    @Deprecated
     public List<String> getAll(CharSequence name) {
         return getAll(name.toString());
     }
@@ -1316,18 +1309,14 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     /**
      * @deprecated It is preferred to use {@link #iteratorCharSequence()} unless you need {@link String}.
      * If {@link String} is required then use {@link #iteratorAsString()}.
-     * <p>
-     * {@inheritDoc}
      */
-    @Override
     @Deprecated
+    @Override
     public abstract Iterator<Entry<String, String>> iterator();
 
     /**
-     * @deprecated In future releases this method will be renamed to {@code iterator()}.
      * @return Iterator over the name/value header pairs.
      */
-    @Deprecated
     public abstract Iterator<Entry<CharSequence, CharSequence>> iteratorCharSequence();
 
     /**
@@ -1351,13 +1340,10 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     public abstract int size();
 
     /**
-     * @deprecated Future releases will return a {@link Set} of type {@link CharSequence}.
-     * <p>
      * Returns a new {@link Set} that contains the names of all headers in this object.  Note that modifying the
      * returned {@link Set} will not affect the state of this object.  If you intend to enumerate over the header
      * entries only, use {@link #iterator()} instead, which has much less overhead.
      */
-    @Deprecated
     public abstract Set<String> names();
 
     /**
@@ -1367,8 +1353,6 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     public abstract HttpHeaders add(String name, Object value);
 
     /**
-     * @deprecated Future releases will have a {@code addObject} method.
-     * <p>
      * Adds a new header with the specified name and value.
      *
      * If the specified value is not a {@link String}, it is converted
@@ -1381,7 +1365,6 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      *
      * @return {@code this}
      */
-    @Deprecated
     public HttpHeaders add(CharSequence name, Object value) {
         return add(name.toString(), value);
     }
@@ -1393,8 +1376,6 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     public abstract HttpHeaders add(String name, Iterable<?> values);
 
     /**
-     * @deprecated Future release will have an {@code addObject(...)}.
-     * <p>
      * Adds a new header with the specified name and values.
      *
      * This getMethod can be represented approximately as the following code:
@@ -1411,7 +1392,6 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * @param values The values of the headers being set
      * @return {@code this}
      */
-    @Deprecated
     public HttpHeaders add(CharSequence name, Iterable<?> values) {
         return add(name.toString(), values);
     }
@@ -1454,8 +1434,6 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     public abstract HttpHeaders set(String name, Object value);
 
     /**
-     * @deprecated Future release will have a {@code setObject(...)}.
-     * <p>
      * Sets a header with the specified name and value.
      *
      * If there is an existing header with the same name, it is removed.
@@ -1468,7 +1446,6 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * @param value The value of the header being set
      * @return {@code this}
      */
-    @Deprecated
     public HttpHeaders set(CharSequence name, Object value) {
         return set(name.toString(), value);
     }
@@ -1480,8 +1457,6 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     public abstract HttpHeaders set(String name, Iterable<?> values);
 
     /**
-     * @deprecated Future release will have a {@code setObject(...)}.
-     * <p>
      * Sets a header with the specified name and values.
      *
      * If there is an existing header with the same name, it is removed.
@@ -1500,7 +1475,6 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * @param values The values of the headers being set
      * @return {@code this}
      */
-    @Deprecated
     public HttpHeaders set(CharSequence name, Iterable<?> values) {
         return set(name.toString(), values);
     }
@@ -1567,14 +1541,11 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     public abstract HttpHeaders remove(String name);
 
     /**
-     * @deprecated Future releases the signature will change.
-     * <p>
      * Removes the header with the specified name.
      *
      * @param name The name of the header to remove
      * @return {@code this}
      */
-    @Deprecated
     public HttpHeaders remove(CharSequence name) {
         return remove(name.toString());
     }
@@ -1587,8 +1558,9 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     public abstract HttpHeaders clear();
 
     /**
-     * @see {@link #contains(CharSequence, CharSequence, boolean)}
+     * @deprecated Use {@link #contains(CharSequence, CharSequence, boolean)}
      */
+    @Deprecated
     public boolean contains(String name, String value, boolean ignoreCase) {
         List<String> values = getAll(name);
         if (values.isEmpty()) {

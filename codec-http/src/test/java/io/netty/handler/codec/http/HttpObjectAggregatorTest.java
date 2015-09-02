@@ -29,6 +29,7 @@ import org.junit.Test;
 import java.nio.channels.ClosedChannelException;
 import java.util.List;
 
+import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static io.netty.util.ReferenceCountUtil.releaseLater;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
@@ -48,7 +49,7 @@ public class HttpObjectAggregatorTest {
         EmbeddedChannel embedder = new EmbeddedChannel(aggr);
 
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost");
-        message.headers().set("X-Test", true);
+        message.headers().set(of("X-Test"), true);
         HttpContent chunk1 = new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
         HttpContent chunk2 = new DefaultHttpContent(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
         HttpContent chunk3 = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER);
@@ -64,7 +65,7 @@ public class HttpObjectAggregatorTest {
 
         assertEquals(chunk1.content().readableBytes() + chunk2.content().readableBytes(),
                 HttpUtil.getContentLength(aggratedMessage));
-        assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
+        assertEquals(aggratedMessage.headers().get(of("X-Test")), Boolean.TRUE.toString());
         checkContentBuffer(aggratedMessage);
         assertNull(embedder.readInbound());
     }
@@ -86,12 +87,12 @@ public class HttpObjectAggregatorTest {
         HttpObjectAggregator aggr = new HttpObjectAggregator(1024 * 1024);
         EmbeddedChannel embedder = new EmbeddedChannel(aggr);
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost");
-        message.headers().set("X-Test", true);
+        message.headers().set(of("X-Test"), true);
         HttpUtil.setTransferEncodingChunked(message, true);
         HttpContent chunk1 = new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
         HttpContent chunk2 = new DefaultHttpContent(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
         LastHttpContent trailer = new DefaultLastHttpContent();
-        trailer.trailingHeaders().set("X-Trailer", true);
+        trailer.trailingHeaders().set(of("X-Trailer"), true);
 
         assertFalse(embedder.writeInbound(message));
         assertFalse(embedder.writeInbound(chunk1));
@@ -105,8 +106,8 @@ public class HttpObjectAggregatorTest {
 
         assertEquals(chunk1.content().readableBytes() + chunk2.content().readableBytes(),
                 HttpUtil.getContentLength(aggratedMessage));
-        assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
-        assertEquals(aggratedMessage.trailingHeaders().get("X-Trailer"), Boolean.TRUE.toString());
+        assertEquals(aggratedMessage.headers().get(of("X-Test")), Boolean.TRUE.toString());
+        assertEquals(aggratedMessage.trailingHeaders().get(of("X-Trailer")), Boolean.TRUE.toString());
         checkContentBuffer(aggratedMessage);
         assertNull(embedder.readInbound());
     }
@@ -228,8 +229,8 @@ public class HttpObjectAggregatorTest {
         EmbeddedChannel embedder = new EmbeddedChannel(aggr);
 
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "http://localhost");
-        message.headers().set("X-Test", true);
-        message.headers().set("Transfer-Encoding", "Chunked");
+        message.headers().set(of("X-Test"), true);
+        message.headers().set(of("Transfer-Encoding"), of("Chunked"));
         HttpContent chunk1 = new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
         HttpContent chunk2 = new DefaultHttpContent(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
         HttpContent chunk3 = LastHttpContent.EMPTY_LAST_CONTENT;
@@ -245,7 +246,7 @@ public class HttpObjectAggregatorTest {
 
         assertEquals(chunk1.content().readableBytes() + chunk2.content().readableBytes(),
                 HttpUtil.getContentLength(aggratedMessage));
-        assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
+        assertEquals(aggratedMessage.headers().get(of("X-Test")), Boolean.TRUE.toString());
         checkContentBuffer(aggratedMessage);
         assertNull(embedder.readInbound());
     }

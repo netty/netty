@@ -54,10 +54,11 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import static io.netty.handler.codec.http.HttpMethod.CONNECT;
-import static io.netty.handler.codec.http.HttpMethod.OPTIONS;
 import static io.netty.handler.codec.http.HttpMethod.GET;
+import static io.netty.handler.codec.http.HttpMethod.OPTIONS;
 import static io.netty.handler.codec.http.HttpMethod.POST;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+import static io.netty.handler.codec.http2.Http2TestUtil.of;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -127,9 +128,9 @@ public class HttpToHttp2ConnectionHandlerTest {
         httpHeaders.set(HttpHeaderNames.HOST, "my-user_name@www.example.org:5555");
         httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.AUTHORITY.text(), "www.example.org:5555");
         httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
-        httpHeaders.add("foo", "goo");
-        httpHeaders.add("foo", "goo2");
-        httpHeaders.add("foo2", "goo2");
+        httpHeaders.add(of("foo"), of("goo"));
+        httpHeaders.add(of("foo"), of("goo2"));
+        httpHeaders.add(of("foo2"), of("goo2"));
         final Http2Headers http2Headers =
                 new DefaultHttp2Headers().method(new AsciiString("GET")).path(new AsciiString("/example"))
                 .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("http"))
@@ -325,9 +326,9 @@ public class HttpToHttp2ConnectionHandlerTest {
                 Unpooled.copiedBuffer(text, UTF_8));
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.set(HttpHeaderNames.HOST, "www.example-origin.org:5555");
-        httpHeaders.add("foo", "goo");
-        httpHeaders.add("foo", "goo2");
-        httpHeaders.add("foo2", "goo2");
+        httpHeaders.add(of("foo"), of("goo"));
+        httpHeaders.add(of("foo"), of("goo2"));
+        httpHeaders.add(of("foo2"), of("goo2"));
         final Http2Headers http2Headers =
                 new DefaultHttp2Headers().method(new AsciiString("POST")).path(new AsciiString("/example"))
                 .authority(new AsciiString("www.example-origin.org:5555")).scheme(new AsciiString("http"))
@@ -368,9 +369,9 @@ public class HttpToHttp2ConnectionHandlerTest {
                 Unpooled.copiedBuffer(text, UTF_8));
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.set(HttpHeaderNames.HOST, "www.example.org:5555");
-        httpHeaders.add("foo", "goo");
-        httpHeaders.add("foo", "goo2");
-        httpHeaders.add("foo2", "goo2");
+        httpHeaders.add(of("foo"), of("goo"));
+        httpHeaders.add(of("foo"), of("goo2"));
+        httpHeaders.add(of("foo2"), of("goo2"));
         final Http2Headers http2Headers =
                 new DefaultHttp2Headers().method(new AsciiString("POST")).path(new AsciiString("/example"))
                         .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("http"))
@@ -378,7 +379,7 @@ public class HttpToHttp2ConnectionHandlerTest {
                         .add(new AsciiString("foo"), new AsciiString("goo2"))
                         .add(new AsciiString("foo2"), new AsciiString("goo2"));
 
-        request.trailingHeaders().add("trailing", "bar");
+        request.trailingHeaders().add(of("trailing"), of("bar"));
 
         final Http2Headers http2TrailingHeaders = new DefaultHttp2Headers()
                 .add(new AsciiString("trailing"), new AsciiString("bar"));
@@ -420,9 +421,9 @@ public class HttpToHttp2ConnectionHandlerTest {
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.set(HttpHeaderNames.HOST, "www.example.org:5555");
         httpHeaders.add(HttpHeaderNames.TRANSFER_ENCODING, "chunked");
-        httpHeaders.add("foo", "goo");
-        httpHeaders.add("foo", "goo2");
-        httpHeaders.add("foo2", "goo2");
+        httpHeaders.add(of("foo"), of("goo"));
+        httpHeaders.add(of("foo"), of("goo2"));
+        httpHeaders.add(of("foo2"), of("goo2"));
         final Http2Headers http2Headers =
                 new DefaultHttp2Headers().method(new AsciiString("POST")).path(new AsciiString("/example"))
                         .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("http"))
@@ -433,7 +434,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         final DefaultHttpContent httpContent = new DefaultHttpContent(Unpooled.copiedBuffer(text, UTF_8));
         final LastHttpContent lastHttpContent = new DefaultLastHttpContent(Unpooled.copiedBuffer(text2, UTF_8));
 
-        lastHttpContent.trailingHeaders().add("trailing", "bar");
+        lastHttpContent.trailingHeaders().add(of("trailing"), of("bar"));
 
         final Http2Headers http2TrailingHeaders = new DefaultHttp2Headers()
                 .add(new AsciiString("trailing"), new AsciiString("bar"));

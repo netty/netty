@@ -28,12 +28,30 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.concurrent.Callable;
 
-import static io.netty.handler.codec.http.HttpHeaderNames.*;
-import static io.netty.handler.codec.http.HttpMethod.*;
-import static io.netty.handler.codec.http.HttpResponseStatus.*;
-import static io.netty.handler.codec.http.HttpVersion.*;
-import static org.hamcrest.CoreMatchers.*;
-import static org.hamcrest.MatcherAssert.*;
+import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_ALLOW_CREDENTIALS;
+import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS;
+import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS;
+import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN;
+import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS;
+import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_REQUEST_HEADERS;
+import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
+import static io.netty.handler.codec.http.HttpHeaderNames.DATE;
+import static io.netty.handler.codec.http.HttpHeaderNames.ORIGIN;
+import static io.netty.handler.codec.http.HttpHeaderNames.VARY;
+import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
+import static io.netty.handler.codec.http.HttpMethod.DELETE;
+import static io.netty.handler.codec.http.HttpMethod.GET;
+import static io.netty.handler.codec.http.HttpMethod.OPTIONS;
+import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
+import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class CorsHandlerTest {
 
@@ -116,7 +134,7 @@ public class CorsHandlerTest {
                 .preflightResponseHeader("CustomHeader", "somevalue")
                 .build();
         final HttpResponse response = preflightRequest(config, "http://localhost:8888", "content-type, xheader1");
-        assertThat(response.headers().get("CustomHeader"), equalTo("somevalue"));
+        assertThat(response.headers().get(of("CustomHeader")), equalTo("somevalue"));
         assertThat(response.headers().get(VARY), equalTo(ORIGIN.toString()));
     }
 
@@ -156,7 +174,7 @@ public class CorsHandlerTest {
                     }
                 }).build();
         final HttpResponse response = preflightRequest(config, "http://localhost:8888", "content-type, xheader1");
-        assertThat(response.headers().get("GenHeader"), equalTo("generatedValue"));
+        assertThat(response.headers().get(of("GenHeader")), equalTo("generatedValue"));
         assertThat(response.headers().get(VARY), equalTo(ORIGIN.toString()));
     }
 
@@ -326,7 +344,7 @@ public class CorsHandlerTest {
     }
 
     private static void assertValues(final HttpResponse response, final String headerName, final String... values) {
-        final String header = response.headers().get(headerName);
+        final String header = response.headers().get(of(headerName));
         for (String value : values) {
             assertThat(header, containsString(value));
         }

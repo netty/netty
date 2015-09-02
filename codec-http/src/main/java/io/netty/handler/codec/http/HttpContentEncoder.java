@@ -98,7 +98,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                 assert encoder == null;
 
                 final HttpResponse res = (HttpResponse) msg;
-                final int code = res.getStatus().code();
+                final int code = res.status().code();
                 if (code == CONTINUE_CODE) {
                     // We need to not poll the encoding when response with CONTINUE as another response will follow
                     // for the issued request. See https://github.com/netty/netty/issues/4079

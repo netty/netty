@@ -24,7 +24,11 @@ import org.junit.Test;
 
 import java.util.Random;
 
-import static org.junit.Assert.*;
+import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class HttpInvalidMessageTest {
 
@@ -52,7 +56,7 @@ public class HttpInvalidMessageTest {
         DecoderResult dr = req.decoderResult();
         assertFalse(dr.isSuccess());
         assertTrue(dr.isFailure());
-        assertEquals("Good Value", req.headers().get("Good_Name"));
+        assertEquals("Good Value", req.headers().get(of("Good_Name")));
         assertEquals("/maybe-something", req.uri());
         ensureInboundTrafficDiscarded(ch);
     }
@@ -80,7 +84,7 @@ public class HttpInvalidMessageTest {
         assertFalse(dr.isSuccess());
         assertTrue(dr.isFailure());
         assertEquals("Maybe OK", res.status().reasonPhrase());
-        assertEquals("Good Value", res.headers().get("Good_Name"));
+        assertEquals("Good Value", res.headers().get(of("Good_Name")));
         ensureInboundTrafficDiscarded(ch);
     }
 

@@ -24,7 +24,7 @@ import static io.netty.util.AsciiString.contentEquals;
 import static org.junit.Assert.assertTrue;
 
 public class CombinedHttpHeadersTest {
-    private static final String HEADER_NAME = "testHeader";
+    private static final CharSequence HEADER_NAME = "testHeader";
 
     @Test
     public void addCharSequencesCsv() {

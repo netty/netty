@@ -26,7 +26,6 @@ import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -35,8 +34,11 @@ import org.junit.Test;
 
 import java.util.Arrays;
 
-import static io.netty.util.ReferenceCountUtil.*;
-import static org.junit.Assert.*;
+import static io.netty.util.ReferenceCountUtil.releaseLater;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /** {@link HttpPostRequestDecoder} test case. */
 public class HttpPostRequestDecoderTest {
