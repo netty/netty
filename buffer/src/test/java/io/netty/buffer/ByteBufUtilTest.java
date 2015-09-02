@@ -17,6 +17,8 @@ package io.netty.buffer;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
+import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 
@@ -102,6 +104,17 @@ public class ByteBufUtilTest {
         buf.writeBytes(usAscii.getBytes(CharsetUtil.UTF_8));
         ByteBuf buf2 = ReferenceCountUtil.releaseLater(Unpooled.buffer(16));
         ByteBufUtil.writeUtf8(buf2, usAscii);
+
+        Assert.assertEquals(buf, buf2);
+    }
+
+    @Test
+    public void testWriteUsAsciiString() {
+        AsciiString usAscii = new AsciiString("NettyRocks");
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(16));
+        buf.writeBytes(usAscii.toString().getBytes(CharsetUtil.US_ASCII));
+        ByteBuf buf2 = ReferenceCountUtil.releaseLater(Unpooled.buffer(16));
+        ByteBufUtil.writeAscii(buf2, usAscii);
 
         Assert.assertEquals(buf, buf2);
     }
