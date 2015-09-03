@@ -279,8 +279,8 @@ public final class HttpConversionUtil {
      * </ul>
      * {@link ExtensionHeaderNames#PATH} is ignored and instead extracted from the {@code Request-Line}.
      */
-    public static Http2Headers toHttp2Headers(HttpMessage in) throws Exception {
-        final Http2Headers out = new DefaultHttp2Headers();
+    public static Http2Headers toHttp2Headers(HttpMessage in, boolean validateHeaders) throws Exception {
+        final Http2Headers out = new DefaultHttp2Headers(validateHeaders);
         HttpHeaders inHeaders = in.headers();
         if (in instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) in;
@@ -304,15 +304,15 @@ public final class HttpConversionUtil {
         }
 
         // Add the HTTP headers which have not been consumed above
-        return out.add(toHttp2Headers(inHeaders));
+        return out.add(toHttp2Headers(inHeaders, validateHeaders));
     }
 
-    public static Http2Headers toHttp2Headers(HttpHeaders inHeaders) throws Exception {
+    public static Http2Headers toHttp2Headers(HttpHeaders inHeaders, boolean validateHeaders) throws Exception {
         if (inHeaders.isEmpty()) {
             return EmptyHttp2Headers.INSTANCE;
         }
 
-        final Http2Headers out = new DefaultHttp2Headers();
+        final Http2Headers out = new DefaultHttp2Headers(validateHeaders);
 
         for (Entry<CharSequence, CharSequence> entry : inHeaders) {
             final AsciiString aName = AsciiString.of(entry.getKey()).toLowerCase();
