@@ -398,7 +398,7 @@ public class Http2FrameRoundtripTest {
     }
 
     private static Http2Headers headers() {
-        return new DefaultHttp2Headers().method(new AsciiString("GET")).scheme(new AsciiString("https"))
+        return new DefaultHttp2Headers(false).method(new AsciiString("GET")).scheme(new AsciiString("https"))
                 .authority(new AsciiString("example.org")).path(new AsciiString("/some/path/resource2"))
                 .add(randomString(), randomString());
     }

@@ -482,7 +482,7 @@ public class Http2ConnectionRoundtripTest {
                 serverFrameCountDown =
                         new FrameCountDown(serverListener, serverSettingsAckLatch,
                                 requestLatch, dataLatch, trailersLatch, goAwayLatch);
-                p.addLast(new Http2ConnectionHandler(true, serverFrameCountDown));
+                p.addLast(new Http2ConnectionHandler(true, serverFrameCountDown, false));
             }
         });
 
@@ -492,7 +492,7 @@ public class Http2ConnectionRoundtripTest {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                p.addLast(new Http2ConnectionHandler(false, clientListener));
+                p.addLast(new Http2ConnectionHandler(false, clientListener, false));
             }
         });
 
@@ -513,7 +513,7 @@ public class Http2ConnectionRoundtripTest {
     }
 
     private static Http2Headers dummyHeaders() {
-        return new DefaultHttp2Headers().method(new AsciiString("GET")).scheme(new AsciiString("https"))
+        return new DefaultHttp2Headers(false).method(new AsciiString("GET")).scheme(new AsciiString("https"))
         .authority(new AsciiString("example.org")).path(new AsciiString("/some/path/resource2"))
         .add(randomString(), randomString());
     }

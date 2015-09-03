@@ -72,11 +72,19 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     private long gracefulShutdownTimeoutMillis = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
 
     public Http2ConnectionHandler(boolean server, Http2FrameListener listener) {
-        this(new DefaultHttp2Connection(server), listener);
+        this(server, listener, true);
+    }
+
+    public Http2ConnectionHandler(boolean server, Http2FrameListener listener, boolean validateHeaders) {
+        this(new DefaultHttp2Connection(server), listener, validateHeaders);
     }
 
     public Http2ConnectionHandler(Http2Connection connection, Http2FrameListener listener) {
-        this(connection, new DefaultHttp2FrameReader(), new DefaultHttp2FrameWriter(), listener);
+        this(connection, listener, true);
+    }
+
+    public Http2ConnectionHandler(Http2Connection connection, Http2FrameListener listener, boolean validateHeaders) {
+        this(connection, new DefaultHttp2FrameReader(validateHeaders), new DefaultHttp2FrameWriter(), listener);
     }
 
     public Http2ConnectionHandler(Http2Connection connection, Http2FrameReader frameReader,
