@@ -186,9 +186,9 @@ public interface Http2Headers extends Headers<ByteString> {
     Http2Headers clear();
 
     /**
-     * Returns an iterator over all HTTP/2 headers from this instance. The iteration order is as follows:
-     *   1. All non-pseudo headers (in no particular order).
-     *   2. Headers with multiple values will have their values appear in insertion order.
+     * Returns an iterator over all HTTP/2 headers. The iteration order is as follows:
+     *   1. All pseudo headers (order not specified).
+     *   2. All non-pseudo headers (in insertion order).
      */
     @Override
     Iterator<Entry<ByteString, ByteString>> iterator();
