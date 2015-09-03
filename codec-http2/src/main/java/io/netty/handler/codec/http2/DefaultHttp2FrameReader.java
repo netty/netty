@@ -64,8 +64,22 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
     private HeadersContinuation headersContinuation;
     private int maxFrameSize;
 
+    /**
+     * Create a new instance.
+     * <p>
+     * Header names will be validated.
+     */
     public DefaultHttp2FrameReader() {
-        this(new DefaultHttp2HeadersDecoder());
+        this(true);
+    }
+
+    /**
+     * Create a new instance.
+     * @param validateHeaders {@code true} to validate headers. {@code false} to not validate headers.
+     * @see #DefaultHttp2HeadersDecoder(boolean)
+     */
+    public DefaultHttp2FrameReader(boolean validateHeaders) {
+        this(new DefaultHttp2HeadersDecoder(validateHeaders));
     }
 
     public DefaultHttp2FrameReader(Http2HeadersDecoder headersDecoder) {
