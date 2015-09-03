@@ -121,7 +121,7 @@ public class DefaultHttp2FrameIOTest {
             }
         }).when(ctx).write(any(), any(ChannelPromise.class));
 
-        reader = new DefaultHttp2FrameReader();
+        reader = new DefaultHttp2FrameReader(false);
         writer = new DefaultHttp2FrameWriter();
     }
 
@@ -357,7 +357,7 @@ public class DefaultHttp2FrameIOTest {
     }
 
     private static Http2Headers dummyBinaryHeaders() {
-        DefaultHttp2Headers headers = new DefaultHttp2Headers();
+        DefaultHttp2Headers headers = new DefaultHttp2Headers(false);
         for (int ix = 0; ix < 10; ++ix) {
             headers.add(randomString(), randomString());
         }
@@ -365,13 +365,13 @@ public class DefaultHttp2FrameIOTest {
     }
 
     private static Http2Headers dummyHeaders() {
-        return new DefaultHttp2Headers().method(new AsciiString("GET")).scheme(new AsciiString("https"))
+        return new DefaultHttp2Headers(false).method(new AsciiString("GET")).scheme(new AsciiString("https"))
                 .authority(new AsciiString("example.org")).path(new AsciiString("/some/path"))
                 .add(new AsciiString("accept"), new AsciiString("*/*"));
     }
 
     private static Http2Headers largeHeaders() {
-        DefaultHttp2Headers headers = new DefaultHttp2Headers();
+        DefaultHttp2Headers headers = new DefaultHttp2Headers(false);
         for (int i = 0; i < 100; ++i) {
             String key = "this-is-a-test-header-key-" + i;
             String value = "this-is-a-test-header-value-" + i;
@@ -382,7 +382,7 @@ public class DefaultHttp2FrameIOTest {
 
     private Http2Headers headersOfSize(final int minSize) {
         final ByteString singleByte = new ByteString(new byte[]{0});
-        DefaultHttp2Headers headers = new DefaultHttp2Headers();
+        DefaultHttp2Headers headers = new DefaultHttp2Headers(false);
         for (int size = 0; size < minSize; size += 2) {
             headers.add(singleByte, singleByte);
         }

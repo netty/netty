@@ -17,13 +17,50 @@ package io.netty.handler.codec.http2;
 import io.netty.handler.codec.ByteStringValueConverter;
 import io.netty.handler.codec.DefaultHeaders;
 import io.netty.handler.codec.Headers;
+import io.netty.util.ByteProcessor;
 import io.netty.util.ByteString;
+import io.netty.util.internal.PlatformDependent;
 
 public class DefaultHttp2Headers extends DefaultHeaders<ByteString> implements Http2Headers {
+    private static final ByteProcessor HTTP2_NAME_VALIDATOR_PROCESSOR = new ByteProcessor() {
+        @Override
+        public boolean process(byte value) throws Exception {
+            if (value >= 'A' && value <= 'Z') {
+                throw new IllegalArgumentException("name must be all lower case but found: " + (char) value);
+            }
+            return true;
+        }
+    };
+    private static final NameValidator<ByteString> HTTP2_NAME_VALIDATOR = new NameValidator<ByteString>() {
+        @Override
+        public void validateName(ByteString name) {
+            try {
+                name.forEachByte(HTTP2_NAME_VALIDATOR_PROCESSOR);
+            } catch (Exception e) {
+                PlatformDependent.throwException(e);
+            }
+        }
+    };
     private HeaderEntry<ByteString> firstNonPseudo = head;
 
+    /**
+     * Create a new instance.
+     * <p>
+     * Header names will be validated according to
+     * <a href="https://tools.ietf.org/html/rfc7540">rfc7540</a>.
+     */
     public DefaultHttp2Headers() {
-        super(ByteStringValueConverter.INSTANCE);
+        this(true);
+    }
+
+    /**
+     * Create a new instance.
+     * @param validate {@code true} to validate header names according to
+     * <a href="https://tools.ietf.org/html/rfc7540">rfc7540</a>. {@code false} to not validate header names.
+     */
+    @SuppressWarnings("unchecked")
+    public DefaultHttp2Headers(boolean validate) {
+        super(ByteStringValueConverter.INSTANCE, validate ? HTTP2_NAME_VALIDATOR : NameValidator.NOT_NULL);
     }
 
     @Override
