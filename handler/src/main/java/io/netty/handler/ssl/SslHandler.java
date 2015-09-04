@@ -705,7 +705,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         // Make sure to release SSLEngine,
         // and notify the handshake future if the connection has been closed during handshake.
-        setHandshakeFailure(ctx, CHANNEL_CLOSED);
+        setHandshakeFailure(ctx, CHANNEL_CLOSED, !outboundClosed);
         super.channelInactive(ctx);
     }
 
@@ -1299,6 +1299,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             return;
         }
 
+        outboundClosed = true;
         engine.closeOutbound();
 
         ChannelPromise closeNotifyFuture = ctx.newPromise();
