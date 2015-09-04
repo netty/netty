@@ -26,6 +26,7 @@
 #include <netinet/in.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <linux/socket.h> // SOL_TCP definition
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -38,6 +39,20 @@
 // TCP_NOTSENT_LOWAT is defined in linux 3.12. We define this here so older kernels can compile.
 #ifndef TCP_NOTSENT_LOWAT
 #define TCP_NOTSENT_LOWAT 25
+#endif
+
+
+#ifndef _KERNEL_FASTOPEN
+#define _KERNEL_FASTOPEN
+// conditional define for TCP_FASTOPEN mostly on ubuntu
+#ifndef TCP_FASTOPEN
+#define TCP_FASTOPEN   23
+#endif
+
+// conditional define for SOL_TCP mostly on ubuntu
+#ifndef SOL_TCP
+#define SOL_TCP 6
+#endif
 #endif
 
 /**
@@ -134,6 +149,20 @@ void throwClosedChannelException(JNIEnv* env) {
 void throwOutOfMemoryError(JNIEnv* env) {
     jclass exceptionClass = (*env)->FindClass(env, "java/lang/OutOfMemoryError");
     (*env)->ThrowNew(env, exceptionClass, "");
+}
+
+static int getSysctlValue(const char * property, int* returnValue) {
+    int rc = -1;
+    FILE *fd=fopen(property, "r");
+    if (fd != NULL) {
+      char buf[32] = {0x0};
+      if (fgets(buf, 32, fd) != NULL) {
+        *returnValue = atoi(buf);
+        rc = 0;
+      }
+      fclose(fd);
+    }
+    return rc;
 }
 
 /** Notice: every usage of exceptionMessage needs to release the allocated memory for the sequence of char */
@@ -1234,6 +1263,10 @@ JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setTcpCork(JNIEnv* env
     setOption(env, fd, IPPROTO_TCP, TCP_CORK, &optval, sizeof(optval));
 }
 
+JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setTcpFastopen(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    setOption(env, fd, SOL_TCP, TCP_FASTOPEN, &optval, sizeof(optval));
+}
+
 JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setTcpNotSentLowAt(JNIEnv* env, jclass clazz, jint fd, jint optval) {
     setOption(env, fd, IPPROTO_TCP, TCP_NOTSENT_LOWAT, &optval, sizeof(optval));
 }
@@ -1474,6 +1507,15 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_uioMaxIov(JNIEnv* env,
 
 JNIEXPORT jboolean JNICALL Java_io_netty_channel_epoll_Native_isSupportingSendmmsg(JNIEnv* env, jclass clazz) {
     if (sendmmsg) {
+        return JNI_TRUE;
+    }
+    return JNI_FALSE;
+}
+
+JNIEXPORT jboolean JNICALL Java_io_netty_channel_epoll_Native_isSupportingTcpFastopen(JNIEnv* env, jclass clazz) {
+    int fastopen = 0;
+    getSysctlValue("/proc/sys/net/ipv4/tcp_fastopen", &fastopen);
+    if (fastopen > 0) {
         return JNI_TRUE;
     }
     return JNI_FALSE;

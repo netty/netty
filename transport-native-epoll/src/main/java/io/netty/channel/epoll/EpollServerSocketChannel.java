@@ -66,6 +66,9 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
         int fd = fd().intValue();
         Native.bind(fd, addr);
         local = Native.localAddress(fd);
+        if (Native.IS_SUPPORTING_TCP_FASTOPEN && config.getTcpFastopen() > 0) {
+            Native.setTcpFastopen(fd, config.getTcpFastopen());
+        }
         Native.listen(fd, config.getBacklog());
         active = true;
     }
