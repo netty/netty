@@ -29,9 +29,16 @@ import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.TestsuitePermutation.BootstrapFactory;
 import io.netty.testsuite.transport.socket.SocketTestPermutation;
 import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -44,6 +51,8 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
             new EpollEventLoopGroup(BOSSES, new DefaultThreadFactory("testsuite-epoll-boss", true));
     static final EventLoopGroup EPOLL_WORKER_GROUP =
             new EpollEventLoopGroup(WORKERS, new DefaultThreadFactory("testsuite-epoll-worker", true));
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollSocketTestPermutation.class);
 
     @Override
     public List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> socket() {
@@ -59,22 +68,34 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
     @SuppressWarnings("unchecked")
     @Override
     public List<BootstrapFactory<ServerBootstrap>> serverSocket() {
-        return Arrays.asList(
-                new BootstrapFactory<ServerBootstrap>() {
-                    @Override
-                    public ServerBootstrap newInstance() {
-                        return new ServerBootstrap().group(EPOLL_BOSS_GROUP, EPOLL_WORKER_GROUP)
-                                .channel(EpollServerSocketChannel.class);
-                    }
-                },
-                new BootstrapFactory<ServerBootstrap>() {
-                    @Override
-                    public ServerBootstrap newInstance() {
-                        return new ServerBootstrap().group(nioBossGroup, nioWorkerGroup)
-                                .channel(NioServerSocketChannel.class);
-                    }
+        List<BootstrapFactory<ServerBootstrap>> toReturn = new ArrayList<BootstrapFactory<ServerBootstrap>>();
+        toReturn.add(new BootstrapFactory<ServerBootstrap>() {
+            @Override
+            public ServerBootstrap newInstance() {
+                return new ServerBootstrap().group(EPOLL_BOSS_GROUP, EPOLL_WORKER_GROUP)
+                                            .channel(EpollServerSocketChannel.class);
+            }
+        });
+        if (isServerFastOpen()) {
+            toReturn.add(new BootstrapFactory<ServerBootstrap>() {
+                @Override
+                public ServerBootstrap newInstance() {
+                    ServerBootstrap serverBootstrap = new ServerBootstrap().group(EPOLL_BOSS_GROUP, EPOLL_WORKER_GROUP)
+                                                                           .channel(EpollServerSocketChannel.class);
+                    serverBootstrap.option(EpollChannelOption.TCP_FASTOPEN, 5);
+                    return serverBootstrap;
                 }
-        );
+            });
+        }
+        toReturn.add(new BootstrapFactory<ServerBootstrap>() {
+            @Override
+            public ServerBootstrap newInstance() {
+                return new ServerBootstrap().group(nioBossGroup, nioWorkerGroup)
+                                            .channel(NioServerSocketChannel.class);
+            }
+        });
+
+        return toReturn;
     }
 
     @SuppressWarnings("unchecked")
@@ -155,6 +176,41 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
                     }
                 }
         );
+    }
+
+    public boolean isServerFastOpen() {
+        return AccessController.doPrivileged(new PrivilegedAction<Integer>() {
+            @Override
+            public Integer run() {
+                int fastopen = 0;
+                File file = new File("/proc/sys/net/ipv4/tcp_fastopen");
+                if (file.exists()) {
+                    BufferedReader in = null;
+                    try {
+                        in = new BufferedReader(new FileReader(file));
+                        fastopen = Integer.parseInt(in.readLine());
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("{}: {}", file, fastopen);
+                        }
+                    } catch (Exception e) {
+                        logger.debug("Failed to get TCP_FASTOPEN from: {}", file, e);
+                    } finally {
+                        if (in != null) {
+                            try {
+                                in.close();
+                            } catch (Exception e) {
+                                // Ignored.
+                            }
+                        }
+                    }
+                } else {
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("{}: {} (non-existent)", file, fastopen);
+                    }
+                }
+                return fastopen;
+            }
+        }) == 3;
     }
 
     public static DomainSocketAddress newSocketAddress() {
