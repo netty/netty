@@ -32,6 +32,16 @@ public class DefaultSpdySynReplyFrame extends DefaultSpdyHeadersFrame
         super(streamId);
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param streamId        the Stream-ID of this frame
+     * @param validateHeaders validate the header names and values when adding them to the {@link SpdyHeaders}
+     */
+    public DefaultSpdySynReplyFrame(int streamId, boolean validateHeaders) {
+        super(streamId, validateHeaders);
+    }
+
     @Override
     public SpdySynReplyFrame setStreamId(int streamId) {
         super.setStreamId(streamId);
