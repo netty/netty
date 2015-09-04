@@ -35,7 +35,19 @@ public class DefaultSpdySynStreamFrame extends DefaultSpdyHeadersFrame
      * @param priority           the priority of the stream
      */
     public DefaultSpdySynStreamFrame(int streamId, int associatedStreamId, byte priority) {
-        super(streamId);
+        this(streamId, associatedStreamId, priority, true);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param streamId           the Stream-ID of this frame
+     * @param associatedStreamId the Associated-To-Stream-ID of this frame
+     * @param priority           the priority of the stream
+     * @param validateHeaders    validate the header names and values when adding them to the {@link SpdyHeaders}
+     */
+    public DefaultSpdySynStreamFrame(int streamId, int associatedStreamId, byte priority, boolean validateHeaders) {
+        super(streamId, validateHeaders);
         setAssociatedStreamId(associatedStreamId);
         setPriority(priority);
     }
