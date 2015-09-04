@@ -31,6 +31,7 @@ public final class EpollChannelOption<T> extends ChannelOption<T> {
     public static final ChannelOption<Integer> TCP_KEEPCNT = valueOf("TCP_KEEPCNT");
     public static final ChannelOption<Integer> TCP_USER_TIMEOUT = valueOf("TCP_USER_TIMEOUT");
     public static final ChannelOption<Boolean> IP_FREEBIND = valueOf("IP_FREEBIND");
+    public static final ChannelOption<Integer> TCP_FASTOPEN = valueOf("TCP_FASTOPEN");
 
     public static final ChannelOption<DomainSocketReadMode> DOMAIN_SOCKET_READ_MODE =
             valueOf("DOMAIN_SOCKET_READ_MODE");
