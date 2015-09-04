@@ -27,6 +27,7 @@ import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.util.AsciiString;
 
 import java.util.List;
 import java.util.Map;
@@ -172,7 +173,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
                     SpdyHeadersFrame spdyHeadersFrame = new DefaultSpdyHeadersFrame(currentStreamId);
                     spdyHeadersFrame.setLast(true);
                     for (Map.Entry<CharSequence, CharSequence> entry: trailers) {
-                        spdyHeadersFrame.headers().add(entry.getKey(), entry.getValue());
+                        spdyHeadersFrame.headers().add(AsciiString.of(entry.getKey()).toLowerCase(), entry.getValue());
                     }
 
                     // Write DATA frame and append HEADERS frame
@@ -233,7 +234,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
 
         // Transfer the remaining HTTP headers
         for (Map.Entry<CharSequence, CharSequence> entry: httpHeaders) {
-            frameHeaders.add(entry.getKey(), entry.getValue());
+            frameHeaders.add(AsciiString.of(entry.getKey()).toLowerCase(), entry.getValue());
         }
         currentStreamId = spdySynStreamFrame.streamId();
         if (associatedToStreamId == 0) {
@@ -272,7 +273,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
 
         // Transfer the remaining HTTP headers
         for (Map.Entry<CharSequence, CharSequence> entry: httpHeaders) {
-            spdyHeadersFrame.headers().add(entry.getKey(), entry.getValue());
+            spdyHeadersFrame.headers().add(AsciiString.of(entry.getKey()).toLowerCase(), entry.getValue());
         }
 
         currentStreamId = streamId;
