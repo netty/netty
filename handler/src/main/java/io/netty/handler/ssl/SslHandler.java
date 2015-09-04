@@ -236,6 +236,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      */
     private boolean needsFlush;
 
+    private boolean outboundClosed;
+
     private int packetLength;
 
     /**
@@ -394,6 +396,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         ctx.executor().execute(new Runnable() {
             @Override
             public void run() {
+                SslHandler.this.outboundClosed = true;
                 engine.closeOutbound();
                 try {
                     write(ctx, Unpooled.EMPTY_BUFFER, future);
@@ -702,7 +705,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         // Make sure to release SSLEngine,
         // and notify the handshake future if the connection has been closed during handshake.
-        setHandshakeFailure(ctx, CHANNEL_CLOSED);
+        setHandshakeFailure(ctx, CHANNEL_CLOSED, !this.outboundClosed);
         super.channelInactive(ctx);
     }
 
@@ -1249,20 +1252,29 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * Notify all the handshake futures about the failure during the handshake.
      */
     private void setHandshakeFailure(ChannelHandlerContext ctx, Throwable cause) {
+        setHandshakeFailure(ctx, cause, true);
+    }
+
+    /**
+     * Notify all the handshake futures about the failure during the handshake.
+     */
+    private void setHandshakeFailure(ChannelHandlerContext ctx, Throwable cause, boolean closeInbound) {
         // Release all resources such as internal buffers that SSLEngine
         // is managing.
         engine.closeOutbound();
 
-        try {
-            engine.closeInbound();
-        } catch (SSLException e) {
-            // only log in debug mode as it most likely harmless and latest chrome still trigger
-            // this all the time.
-            //
-            // See https://github.com/netty/netty/issues/1340
-            String msg = e.getMessage();
-            if (msg == null || !msg.contains("possible truncation attack")) {
-                logger.debug("{} SSLEngine.closeInbound() raised an exception.", ctx.channel(), e);
+        if (closeInbound) {
+            try {
+                engine.closeInbound();
+            } catch (SSLException e) {
+                // only log in debug mode as it most likely harmless and latest chrome still trigger
+                // this all the time.
+                //
+                // See https://github.com/netty/netty/issues/1340
+                String msg = e.getMessage();
+                if (msg == null || !msg.contains("possible truncation attack")) {
+                    logger.debug("{} SSLEngine.closeInbound() raised an exception.", ctx.channel(), e);
+                }
             }
         }
         notifyHandshakeFailure(cause);
@@ -1287,6 +1299,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             return;
         }
 
+        this.outboundClosed = true;
         engine.closeOutbound();
 
         ChannelPromise closeNotifyFuture = ctx.newPromise();
