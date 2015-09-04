@@ -123,15 +123,32 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
 
     private int currentStreamId;
 
+    private final boolean validateHeaders;
+    private final boolean headersToLowerCase;
+
     /**
      * Creates a new instance.
      *
      * @param version the protocol version
      */
     public SpdyHttpEncoder(SpdyVersion version) {
+        this(version, true, true);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param version            the protocol version
+     * @param headersToLowerCase convert header names to lowercase. In a controlled environment,
+     *                           one can disable the conversion.
+     * @param validateHeaders    validate the header names and values when adding them to the {@link SpdyHeaders}
+     */
+    public SpdyHttpEncoder(SpdyVersion version, boolean headersToLowerCase, boolean validateHeaders) {
         if (version == null) {
             throw new NullPointerException("version");
         }
+        this.headersToLowerCase = headersToLowerCase;
+        this.validateHeaders = validateHeaders;
     }
 
     @Override
@@ -172,12 +189,14 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
                     out.add(spdyDataFrame);
                 } else {
                     // Create SPDY HEADERS frame out of trailers
-                    SpdyHeadersFrame spdyHeadersFrame = new DefaultSpdyHeadersFrame(currentStreamId);
+                    SpdyHeadersFrame spdyHeadersFrame = new DefaultSpdyHeadersFrame(currentStreamId, validateHeaders);
                     spdyHeadersFrame.setLast(true);
                     Iterator<Entry<CharSequence, CharSequence>> itr = trailers.iteratorCharSequence();
                     while (itr.hasNext()) {
                         Map.Entry<CharSequence, CharSequence> entry = itr.next();
-                        spdyHeadersFrame.headers().add(AsciiString.of(entry.getKey()).toLowerCase(), entry.getValue());
+                        final CharSequence headerName =
+                                headersToLowerCase ? AsciiString.of(entry.getKey()).toLowerCase() : entry.getKey();
+                        spdyHeadersFrame.headers().add(headerName, entry.getValue());
                     }
 
                     // Write DATA frame and append HEADERS frame
@@ -217,7 +236,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
         httpHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 
         SpdySynStreamFrame spdySynStreamFrame =
-                new DefaultSpdySynStreamFrame(streamId, associatedToStreamId, priority);
+                new DefaultSpdySynStreamFrame(streamId, associatedToStreamId, priority, validateHeaders);
 
         // Unfold the first line of the message into name/value pairs
         SpdyHeaders frameHeaders = spdySynStreamFrame.headers();
@@ -240,7 +259,9 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
         Iterator<Entry<CharSequence, CharSequence>> itr = httpHeaders.iteratorCharSequence();
         while (itr.hasNext()) {
             Map.Entry<CharSequence, CharSequence> entry = itr.next();
-            frameHeaders.add(AsciiString.of(entry.getKey()).toLowerCase(), entry.getValue());
+            final CharSequence headerName =
+                    headersToLowerCase ? AsciiString.of(entry.getKey()).toLowerCase() : entry.getKey();
+            frameHeaders.add(headerName, entry.getValue());
         }
         currentStreamId = spdySynStreamFrame.streamId();
         if (associatedToStreamId == 0) {
@@ -268,9 +289,9 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
 
         SpdyHeadersFrame spdyHeadersFrame;
         if (SpdyCodecUtil.isServerId(streamId)) {
-            spdyHeadersFrame = new DefaultSpdyHeadersFrame(streamId);
+            spdyHeadersFrame = new DefaultSpdyHeadersFrame(streamId, validateHeaders);
         } else {
-            spdyHeadersFrame = new DefaultSpdySynReplyFrame(streamId);
+            spdyHeadersFrame = new DefaultSpdySynReplyFrame(streamId, validateHeaders);
         }
         SpdyHeaders frameHeaders = spdyHeadersFrame.headers();
         // Unfold the first line of the response into name/value pairs
@@ -281,7 +302,9 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
         Iterator<Entry<CharSequence, CharSequence>> itr = httpHeaders.iteratorCharSequence();
         while (itr.hasNext()) {
             Map.Entry<CharSequence, CharSequence> entry = itr.next();
-            spdyHeadersFrame.headers().add(AsciiString.of(entry.getKey()).toLowerCase(), entry.getValue());
+            final CharSequence headerName =
+                    headersToLowerCase ? AsciiString.of(entry.getKey()).toLowerCase() : entry.getKey();
+            spdyHeadersFrame.headers().add(headerName, entry.getValue());
         }
 
         currentStreamId = streamId;
