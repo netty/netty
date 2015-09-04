@@ -36,7 +36,13 @@ public class DefaultSpdyHeaders extends DefaultHeaders<CharSequence> implements 
     };
 
     public DefaultSpdyHeaders() {
-        super(CASE_INSENSITIVE_HASHER, HeaderValueConverterAndValidator.INSTANCE, SpydNameValidator);
+        this(true);
+    }
+
+    public DefaultSpdyHeaders(boolean validate) {
+        super(CASE_INSENSITIVE_HASHER,
+                validate ? HeaderValueConverterAndValidator.INSTANCE : HeaderValueConverter.INSTANCE,
+                validate ? SpydNameValidator : NameValidator.NOT_NULL);
     }
 
     @Override
@@ -269,8 +275,8 @@ public class DefaultSpdyHeaders extends DefaultHeaders<CharSequence> implements 
                 ignoreCase ? CASE_INSENSITIVE_HASHER : CASE_SENSITIVE_HASHER);
     }
 
-    private static final class HeaderValueConverterAndValidator extends CharSequenceValueConverter {
-        public static final HeaderValueConverterAndValidator INSTANCE = new HeaderValueConverterAndValidator();
+    private static class HeaderValueConverter extends CharSequenceValueConverter {
+        public static final HeaderValueConverter INSTANCE = new HeaderValueConverter();
 
         @Override
         public CharSequence convertObject(Object value) {
@@ -281,6 +287,16 @@ public class DefaultSpdyHeaders extends DefaultHeaders<CharSequence> implements 
                 seq = value.toString();
             }
 
+            return seq;
+        }
+    }
+
+    private static final class HeaderValueConverterAndValidator extends HeaderValueConverter {
+        public static final HeaderValueConverterAndValidator INSTANCE = new HeaderValueConverterAndValidator();
+
+        @Override
+        public CharSequence convertObject(Object value) {
+            final CharSequence seq = super.convertObject(value);
             SpdyCodecUtil.validateHeaderValue(seq);
             return seq;
         }

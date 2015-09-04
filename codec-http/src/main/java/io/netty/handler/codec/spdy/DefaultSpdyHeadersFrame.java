@@ -27,7 +27,7 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyStreamFrame
 
     private boolean invalid;
     private boolean truncated;
-    private final SpdyHeaders headers = new DefaultSpdyHeaders();
+    private final SpdyHeaders headers;
 
     /**
      * Creates a new instance.
@@ -35,7 +35,18 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyStreamFrame
      * @param streamId the Stream-ID of this frame
      */
     public DefaultSpdyHeadersFrame(int streamId) {
+        this(streamId, true);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param streamId the Stream-ID of this frame
+     * @param validate validate the header names and values when adding them to the {@link SpdyHeaders}
+     */
+    public DefaultSpdyHeadersFrame(int streamId, boolean validate) {
         super(streamId);
+        headers = new DefaultSpdyHeaders(validate);
     }
 
     @Override
