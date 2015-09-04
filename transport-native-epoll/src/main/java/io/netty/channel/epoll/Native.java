@@ -61,6 +61,7 @@ public final class Native {
     public static final int IOV_MAX = iovMax();
     public static final int UIO_MAX_IOV = uioMaxIov();
     public static final boolean IS_SUPPORTING_SENDMMSG = isSupportingSendmmsg();
+    public static final boolean IS_SUPPORTING_TCP_FASTOPEN = isSupportingTcpFastopen();
     public static final long SSIZE_MAX = ssizeMax();
     public static final int TCP_MD5SIG_MAXKEYLEN = tcpMd5SigMaxKeyLen();
 
@@ -398,6 +399,7 @@ public final class Native {
             int fd, NativeDatagramPacketArray.NativeDatagramPacket[] msgs, int offset, int len);
 
     private static native boolean isSupportingSendmmsg();
+    private static native boolean isSupportingTcpFastopen();
 
     // socket operations
     public static int socketStreamFd() {
@@ -648,6 +650,7 @@ public final class Native {
     public static native void setSendBufferSize(int fd, int sendBufferSize);
     public static native void setTcpNoDelay(int fd, int tcpNoDelay);
     public static native void setTcpCork(int fd, int tcpCork);
+    public static native void setTcpFastopen(int fd, int tcpFastopenBacklog);
     public static native void setTcpNotSentLowAt(int fd, int tcpNotSentLowAt);
     public static native void setSoLinger(int fd, int soLinger);
     public static native void setTrafficClass(int fd, int tcpNoDelay);
