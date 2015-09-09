@@ -171,7 +171,7 @@ public final class OpenSslClientContext extends OpenSslContext {
                                 CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
                                 long sessionCacheSize, long sessionTimeout)
             throws SSLException {
-        super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_CLIENT);
+        super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_CLIENT, null);
         boolean success = false;
         try {
             if (trustCertChainFile != null && !trustCertChainFile.isFile()) {
@@ -271,7 +271,7 @@ public final class OpenSslClientContext extends OpenSslContext {
                                 CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
                                 long sessionCacheSize, long sessionTimeout)
             throws SSLException {
-        super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_CLIENT);
+        super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_CLIENT, keyCertChain);
         boolean success = false;
         try {
             if (key == null && keyCertChain != null || key != null && keyCertChain == null) {
