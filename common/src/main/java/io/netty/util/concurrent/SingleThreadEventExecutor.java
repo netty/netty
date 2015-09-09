@@ -251,7 +251,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     private void fetchFromScheduledTaskQueue() {
         if (hasScheduledTasks()) {
-            long nanoTime = AbstractScheduledEventExecutor.nanoTime();
+            long nanoTime = System.nanoTime();
             for (;;) {
                 Runnable scheduledTask = pollScheduledTask(nanoTime);
                 if (scheduledTask == null) {
@@ -333,10 +333,14 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
             task = pollTask();
             if (task == null) {
-                lastExecutionTime = ScheduledFutureTask.nanoTime();
+                lastExecutionTime = System.nanoTime();
                 return true;
             }
         }
+    }
+
+    private static boolean isExpired(long startNanos, long timeoutNanos) {
+        return System.nanoTime() - startNanos > timeoutNanos;
     }
 
     /**
@@ -350,7 +354,6 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             return false;
         }
 
-        final long deadline = ScheduledFutureTask.nanoTime() + timeoutNanos;
         long runTasks = 0;
         long lastExecutionTime;
         for (;;) {
@@ -365,15 +368,15 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             // Check timeout every 64 tasks because nanoTime() is relatively expensive.
             // XXX: Hard-coded value - will make it configurable if it is really a problem.
             if ((runTasks & 0x3F) == 0) {
-                lastExecutionTime = ScheduledFutureTask.nanoTime();
-                if (lastExecutionTime >= deadline) {
+                lastExecutionTime = System.nanoTime();
+                if (!isExpired(lastExecutionTime, timeoutNanos)) {
                     break;
                 }
             }
 
             task = pollTask();
             if (task == null) {
-                lastExecutionTime = ScheduledFutureTask.nanoTime();
+                lastExecutionTime = System.nanoTime();
                 break;
             }
         }
@@ -402,7 +405,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * checks.
      */
     protected void updateLastExecutionTime() {
-        lastExecutionTime = ScheduledFutureTask.nanoTime();
+        lastExecutionTime = System.nanoTime();
     }
 
     /**
@@ -478,7 +481,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         }
 
         if (ran) {
-            lastExecutionTime = ScheduledFutureTask.nanoTime();
+            lastExecutionTime = System.nanoTime();
         }
 
         return ran;
@@ -622,7 +625,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         cancelScheduledTasks();
 
         if (gracefulShutdownStartTime == 0) {
-            gracefulShutdownStartTime = ScheduledFutureTask.nanoTime();
+            gracefulShutdownStartTime = System.nanoTime();
         }
 
         if (runAllTasks() || runShutdownHooks()) {
@@ -636,7 +639,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             return false;
         }
 
-        final long nanoTime = ScheduledFutureTask.nanoTime();
+        final long nanoTime = System.nanoTime();
 
         if (isShutdown() || nanoTime - gracefulShutdownStartTime > gracefulShutdownTimeout) {
             return true;

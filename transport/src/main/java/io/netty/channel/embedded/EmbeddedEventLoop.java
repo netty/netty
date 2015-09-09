@@ -52,7 +52,7 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
     }
 
     long runScheduledTasks() {
-        long time = AbstractScheduledEventExecutor.nanoTime();
+        long time = System.nanoTime();
         for (;;) {
             Runnable task = pollScheduledTask(time);
             if (task == null) {

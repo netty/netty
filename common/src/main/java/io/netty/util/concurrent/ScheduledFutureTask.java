@@ -25,14 +25,9 @@ import java.util.concurrent.atomic.AtomicLong;
 @SuppressWarnings("ComparableImplementedButEqualsNotOverridden")
 final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFuture<V> {
     private static final AtomicLong nextTaskId = new AtomicLong();
-    private static final long START_TIME = System.nanoTime();
-
-    static long nanoTime() {
-        return System.nanoTime() - START_TIME;
-    }
 
     static long deadlineNanos(long delay) {
-        return nanoTime() + delay;
+        return System.nanoTime() + delay;
     }
 
     private final long id = nextTaskId.getAndIncrement();
@@ -78,11 +73,11 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
     }
 
     public long delayNanos() {
-        return Math.max(0, deadlineNanos() - nanoTime());
+        return Math.max(0, deadlineNanos() - System.nanoTime());
     }
 
     public long delayNanos(long currentTimeNanos) {
-        return Math.max(0, deadlineNanos() - (currentTimeNanos - START_TIME));
+        return Math.max(0, deadlineNanos() - currentTimeNanos);
     }
 
     @Override
@@ -129,7 +124,7 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
                         if (p > 0) {
                             deadlineNanos += p;
                         } else {
-                            deadlineNanos = nanoTime() - p;
+                            deadlineNanos = System.nanoTime() - p;
                         }
                         if (!isCancelled()) {
                             // scheduledTaskQueue can never be null as we lazy init it before submit the task!
