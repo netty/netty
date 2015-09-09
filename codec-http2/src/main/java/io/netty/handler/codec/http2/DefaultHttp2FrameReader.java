@@ -14,9 +14,15 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http2.Http2FrameReader.Configuration;
+
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.FRAME_HEADER_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.INT_FIELD_LENGTH;
+import static io.netty.handler.codec.http2.Http2CodecUtil.PING_FRAME_PAYLOAD_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.PRIORITY_ENTRY_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_INITIAL_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_FRAME_SIZE;
@@ -39,10 +45,6 @@ import static io.netty.handler.codec.http2.Http2FrameTypes.PUSH_PROMISE;
 import static io.netty.handler.codec.http2.Http2FrameTypes.RST_STREAM;
 import static io.netty.handler.codec.http2.Http2FrameTypes.SETTINGS;
 import static io.netty.handler.codec.http2.Http2FrameTypes.WINDOW_UPDATE;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http2.Http2FrameReader.Configuration;
 
 /**
  * A {@link Http2FrameReader} that supports all frame types defined by the HTTP/2 specification.
@@ -344,7 +346,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         if (streamId != 0) {
             throw connectionError(PROTOCOL_ERROR, "A stream ID must be zero.");
         }
-        if (payloadLength != 8) {
+        if (payloadLength != PING_FRAME_PAYLOAD_LENGTH) {
             throw connectionError(FRAME_SIZE_ERROR,
                     "Frame length %d incorrect size for ping.", payloadLength);
         }
