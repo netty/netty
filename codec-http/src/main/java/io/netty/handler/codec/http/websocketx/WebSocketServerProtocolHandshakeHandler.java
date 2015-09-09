@@ -78,7 +78,7 @@ class WebSocketServerProtocolHandshakeHandler
                         }
                     }
                 });
-                WebSocketServerProtocolHandler.setHandshaker(ctx, handshaker);
+                WebSocketServerProtocolHandler.setHandshaker(ctx.channel(), handshaker);
                 ctx.pipeline().replace(this, "WS403Responder",
                         WebSocketServerProtocolHandler.forbiddenHttpRequestResponder());
             }
