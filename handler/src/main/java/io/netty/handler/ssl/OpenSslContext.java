@@ -36,6 +36,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.security.PrivateKey;
+import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -81,6 +82,7 @@ public abstract class OpenSslContext extends SslContext {
     private final OpenSslEngineMap engineMap = new DefaultOpenSslEngineMap();
     private final OpenSslApplicationProtocolNegotiator apn;
     private final int mode;
+    private final Certificate[] keyCertChain;
 
     static final OpenSslApplicationProtocolNegotiator NONE_PROTOCOL_NEGOTIATOR =
             new OpenSslApplicationProtocolNegotiator() {
@@ -125,13 +127,14 @@ public abstract class OpenSslContext extends SslContext {
     }
 
     OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apnCfg,
-                   long sessionCacheSize, long sessionTimeout, int mode) throws SSLException {
-        this(ciphers, cipherFilter, toNegotiator(apnCfg), sessionCacheSize, sessionTimeout, mode);
+                   long sessionCacheSize, long sessionTimeout, int mode, Certificate[] keyCertChain)
+            throws SSLException {
+        this(ciphers, cipherFilter, toNegotiator(apnCfg), sessionCacheSize, sessionTimeout, mode, keyCertChain);
     }
 
     OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                    OpenSslApplicationProtocolNegotiator apn, long sessionCacheSize,
-                   long sessionTimeout, int mode) throws SSLException {
+                   long sessionTimeout, int mode, Certificate[] keyCertChain) throws SSLException {
         OpenSsl.ensureAvailability();
 
         if (mode != SSL.SSL_MODE_SERVER && mode != SSL.SSL_MODE_CLIENT) {
@@ -143,6 +146,7 @@ public abstract class OpenSslContext extends SslContext {
             rejectRemoteInitiatedRenegotiation =
                     JDK_REJECT_CLIENT_INITIATED_RENEGOTIATION;
         }
+        this.keyCertChain = keyCertChain == null ? null : keyCertChain.clone();
         final List<String> convertedCiphers;
         if (ciphers == null) {
             convertedCiphers = null;
@@ -287,7 +291,7 @@ public abstract class OpenSslContext extends SslContext {
     @Override
     public final SSLEngine newEngine(ByteBufAllocator alloc, String peerHost, int peerPort) {
         final OpenSslEngine engine = new OpenSslEngine(ctx, alloc, isClient(), sessionContext(), apn, engineMap,
-                rejectRemoteInitiatedRenegotiation, peerHost, peerPort);
+                rejectRemoteInitiatedRenegotiation, peerHost, peerPort, keyCertChain);
         engineMap.add(engine);
         return engine;
     }
