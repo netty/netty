@@ -657,7 +657,7 @@
       <dependency>
         <groupId>com.twitter</groupId>
         <artifactId>hpack</artifactId>
-        <version>0.11.0</version>
+        <version>v1.0.1</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jetty.npn</groupId>
