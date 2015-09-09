@@ -55,7 +55,7 @@ public class WebSocketServerProtocolHandlerTest {
         ChannelHandlerContext handshakerCtx = ch.pipeline().context(WebSocketServerProtocolHandshakeHandler.class);
         writeUpgradeRequest(ch);
         assertEquals(SWITCHING_PROTOCOLS, ReferenceCountUtil.releaseLater(responses.remove()).status());
-        assertNotNull(WebSocketServerProtocolHandler.getHandshaker(handshakerCtx));
+        assertNotNull(WebSocketServerProtocolHandler.getHandshaker(handshakerCtx.channel()));
     }
 
     @Test
