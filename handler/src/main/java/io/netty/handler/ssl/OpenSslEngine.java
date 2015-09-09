@@ -1528,7 +1528,7 @@ public final class OpenSslEngine extends SSLEngine {
         @Override
         public Certificate[] getPeerCertificates() throws SSLPeerUnverifiedException {
             synchronized (OpenSslEngine.this) {
-                if (peerCerts == null) {
+                if (peerCerts == null || peerCerts.length == 0) {
                     throw new SSLPeerUnverifiedException("peer not verified");
                 }
                 return peerCerts;
@@ -1544,7 +1544,7 @@ public final class OpenSslEngine extends SSLEngine {
         @Override
         public X509Certificate[] getPeerCertificateChain() throws SSLPeerUnverifiedException {
             synchronized (OpenSslEngine.this) {
-                if (x509PeerCerts == null) {
+                if (x509PeerCerts == null || x509PeerCerts.length == 0) {
                     throw new SSLPeerUnverifiedException("peer not verified");
                 }
                 return x509PeerCerts;
@@ -1554,9 +1554,8 @@ public final class OpenSslEngine extends SSLEngine {
         @Override
         public Principal getPeerPrincipal() throws SSLPeerUnverifiedException {
             Certificate[] peer = getPeerCertificates();
-            if (peer == null || peer.length == 0) {
-                return null;
-            }
+            // No need for null or length > 0 is needed as this is done in getPeerCertificates()
+            // already.
             return ((java.security.cert.X509Certificate) peer[0]).getSubjectX500Principal();
         }
 
