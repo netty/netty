@@ -174,6 +174,7 @@ public final class OpenSslEngine extends SSLEngine {
     private final OpenSslApplicationProtocolNegotiator apn;
     private final boolean rejectRemoteInitiatedRenegation;
     private final OpenSslSession session;
+    private final java.security.cert.Certificate[] localCerts;
 
     // This is package-private as we set it from OpenSslContext if an exception is thrown during
     // the verification step.
@@ -203,13 +204,15 @@ public final class OpenSslEngine extends SSLEngine {
                   boolean clientMode, OpenSslSessionContext sessionContext,
                   OpenSslApplicationProtocolNegotiator apn, OpenSslEngineMap engineMap,
                   boolean rejectRemoteInitiatedRenegation) {
-        this(sslCtx, alloc, clientMode, sessionContext, apn, engineMap, rejectRemoteInitiatedRenegation, null, -1);
+        this(sslCtx, alloc, clientMode, sessionContext, apn, engineMap, rejectRemoteInitiatedRenegation, null, -1,
+                null);
     }
 
     OpenSslEngine(long sslCtx, ByteBufAllocator alloc,
                   boolean clientMode, OpenSslSessionContext sessionContext,
                   OpenSslApplicationProtocolNegotiator apn, OpenSslEngineMap engineMap,
-                  boolean rejectRemoteInitiatedRenegation, String peerHost, int peerPort) {
+                  boolean rejectRemoteInitiatedRenegation, String peerHost, int peerPort,
+                  java.security.cert.Certificate[] localCerts) {
         super(peerHost, peerPort);
         OpenSsl.ensureAvailability();
         if (sslCtx == 0) {
@@ -224,6 +227,7 @@ public final class OpenSslEngine extends SSLEngine {
         this.clientMode = clientMode;
         this.engineMap = engineMap;
         this.rejectRemoteInitiatedRenegation = rejectRemoteInitiatedRenegation;
+        this.localCerts = localCerts;
     }
 
     @Override
@@ -1537,8 +1541,10 @@ public final class OpenSslEngine extends SSLEngine {
 
         @Override
         public Certificate[] getLocalCertificates() {
-            // TODO: Find out how to get these
-            return EMPTY_CERTIFICATES;
+            if (localCerts == null) {
+                return null;
+            }
+            return localCerts.clone();
         }
 
         @Override
@@ -1562,7 +1568,7 @@ public final class OpenSslEngine extends SSLEngine {
 
         @Override
         public Principal getLocalPrincipal() {
-            Certificate[] local = getLocalCertificates();
+            Certificate[] local = localCerts;
             if (local == null || local.length == 0) {
                 return null;
             }
