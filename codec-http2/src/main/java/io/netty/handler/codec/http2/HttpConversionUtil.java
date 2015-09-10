@@ -239,21 +239,40 @@ public final class HttpConversionUtil {
     }
 
     /**
-     * Translate and add HTTP/2 headers to HTTP/1.x headers
+     * Translate and add HTTP/2 headers to HTTP/1.x headers.
      *
-     * @param streamId The stream associated with {@code sourceHeaders}
-     * @param sourceHeaders The HTTP/2 headers to convert
-     * @param destinationMessage The object which will contain the resulting HTTP/1.x headers
+     * @param streamId The stream associated with {@code sourceHeaders}.
+     * @param sourceHeaders The HTTP/2 headers to convert.
+     * @param destinationMessage The object which will contain the resulting HTTP/1.x headers.
      * @param addToTrailer {@code true} to add to trailing headers. {@code false} to add to initial headers.
-     * @throws Http2Exception If not all HTTP/2 headers can be translated to HTTP/1.x
+     * @throws Http2Exception If not all HTTP/2 headers can be translated to HTTP/1.x.
+     * @see #addHttp2ToHttpHeaders(int, Http2Headers, HttpHeaders, HttpVersion, boolean, boolean)
      */
     public static void addHttp2ToHttpHeaders(int streamId, Http2Headers sourceHeaders,
                     FullHttpMessage destinationMessage, boolean addToTrailer) throws Http2Exception {
-        HttpHeaders headers = addToTrailer ? destinationMessage.trailingHeaders() : destinationMessage.headers();
-        boolean request = destinationMessage instanceof HttpRequest;
-        Http2ToHttpHeaderTranslator translator = new Http2ToHttpHeaderTranslator(streamId, headers, request);
+        addHttp2ToHttpHeaders(streamId, sourceHeaders,
+                addToTrailer ? destinationMessage.trailingHeaders() : destinationMessage.headers(),
+                destinationMessage.protocolVersion(), addToTrailer, destinationMessage instanceof HttpRequest);
+    }
+
+    /**
+     * Translate and add HTTP/2 headers to HTTP/1.x headers.
+     *
+     * @param streamId The stream associated with {@code sourceHeaders}.
+     * @param inputHeaders The HTTP/2 headers to convert.
+     * @param outputHeaders The object which will contain the resulting HTTP/1.x headers..
+     * @param httpVersion What HTTP/1.x version {@code outputHeaders} should be treated as when doing the conversion.
+     * @param isTrailer {@code true} if {@code outputHeaders} should be treated as trailing headers.
+     * {@code false} otherwise.
+     * @param isReqeust {@code true} if the {@code outputHeaders} will be used in a request message.
+     * {@code false} for response message.
+     * @throws Http2Exception If not all HTTP/2 headers can be translated to HTTP/1.x.
+     */
+    public static void addHttp2ToHttpHeaders(int streamId, Http2Headers inputHeaders, HttpHeaders outputHeaders,
+            HttpVersion httpVersion, boolean isTrailer, boolean isRequest) throws Http2Exception {
+        Http2ToHttpHeaderTranslator translator = new Http2ToHttpHeaderTranslator(streamId, outputHeaders, isRequest);
         try {
-            for (Entry<ByteString, ByteString> entry : sourceHeaders) {
+            for (Entry<ByteString, ByteString> entry : inputHeaders) {
                 translator.translate(entry);
             }
         } catch (Http2Exception ex) {
@@ -262,11 +281,11 @@ public final class HttpConversionUtil {
             throw streamError(streamId, PROTOCOL_ERROR, t, "HTTP/2 to HTTP/1.x headers conversion error");
         }
 
-        headers.remove(HttpHeaderNames.TRANSFER_ENCODING);
-        headers.remove(HttpHeaderNames.TRAILER);
-        if (!addToTrailer) {
-            headers.setInt(ExtensionHeaderNames.STREAM_ID.text(), streamId);
-            HttpUtil.setKeepAlive(destinationMessage, true);
+        outputHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
+        outputHeaders.remove(HttpHeaderNames.TRAILER);
+        if (!isTrailer) {
+            outputHeaders.setInt(ExtensionHeaderNames.STREAM_ID.text(), streamId);
+            HttpUtil.setKeepAlive(outputHeaders, httpVersion, true);
         }
     }
 
