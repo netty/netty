@@ -178,12 +178,14 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         int writeSpinCount = -1;
 
+        boolean setOpWrite = false;
         for (;;) {
             Object msg = in.current();
             if (msg == null) {
                 // Wrote all messages.
                 clearOpWrite();
-                break;
+                // Directly return here so incompleteWrite(...) is not called.
+                return;
             }
 
             if (msg instanceof ByteBuf) {
@@ -194,7 +196,6 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     continue;
                 }
 
-                boolean setOpWrite = false;
                 boolean done = false;
                 long flushedAmount = 0;
                 if (writeSpinCount == -1) {
@@ -219,13 +220,12 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 if (done) {
                     in.remove();
                 } else {
-                    incompleteWrite(setOpWrite);
+                    // Break the loop and so incompleteWrite(...) is called.
                     break;
                 }
             } else if (msg instanceof FileRegion) {
                 FileRegion region = (FileRegion) msg;
                 boolean done = region.transfered() >= region.count();
-                boolean setOpWrite = false;
 
                 if (!done) {
                     long flushedAmount = 0;
@@ -253,7 +253,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 if (done) {
                     in.remove();
                 } else {
-                    incompleteWrite(setOpWrite);
+                    // Break the loop and so incompleteWrite(...) is called.
                     break;
                 }
             } else {
@@ -261,6 +261,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 throw new Error();
             }
         }
+        incompleteWrite(setOpWrite);
     }
 
     @Override

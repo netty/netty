@@ -282,9 +282,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
                 }
             } while (offset < end && localWrittenBytes > 0);
         }
-        if (!done) {
-            setFlag(Native.EPOLLOUT);
-        }
         in.removeBytes(initialExpectedWrittenBytes - expectedWrittenBytes);
         return done;
     }
@@ -328,9 +325,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
         }
 
         in.removeBytes(initialExpectedWrittenBytes - expectedWrittenBytes);
-        if (!done) {
-            setFlag(Native.EPOLLOUT);
-        }
         return done;
     }
 
@@ -373,9 +367,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
 
         if (done) {
             in.remove();
-        } else {
-            // Returned EAGAIN need to set EPOLLOUT
-            setFlag(Native.EPOLLOUT);
         }
         return done;
     }
@@ -389,12 +380,14 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
             if (msgCount == 0) {
                 // Wrote all messages.
                 clearFlag(Native.EPOLLOUT);
-                break;
+                // Return here so we not set the EPOLLOUT flag.
+                return;
             }
 
             // Do gathering write if the outbounf buffer entries start with more than one ByteBuf.
             if (msgCount > 1 && in.current() instanceof ByteBuf) {
                 if (!doWriteMultiple(in, writeSpinCount)) {
+                    // Break the loop and so set EPOLLOUT flag.
                     break;
                 }
 
@@ -403,10 +396,14 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
                 // listeners.
             } else { // msgCount == 1
                 if (!doWriteSingle(in, writeSpinCount)) {
+                    // Break the loop and so set EPOLLOUT flag.
                     break;
                 }
             }
         }
+        // Underlying descriptor can not accept all data currently, so set the EPOLLOUT flag to be woken up
+        // when it can accept more data.
+        setFlag(Native.EPOLLOUT);
     }
 
     protected boolean doWriteSingle(ChannelOutboundBuffer in, int writeSpinCount) throws Exception {
