@@ -95,10 +95,33 @@ public final class HttpUtil {
      *     <li>remove otherwise.</li>
      *     </ul></li>
      * </ul>
+     * @see #setKeepAlive(HttpHeaders, HttpVersion, boolean)
      */
     public static void setKeepAlive(HttpMessage message, boolean keepAlive) {
-        HttpHeaders h = message.headers();
-        if (message.protocolVersion().isKeepAliveDefault()) {
+        setKeepAlive(message.headers(), message.protocolVersion(), keepAlive);
+    }
+
+    /**
+     * Sets the value of the {@code "Connection"} header depending on the
+     * protocol version of the specified message. This getMethod sets or removes
+     * the {@code "Connection"} header depending on what the default keep alive
+     * mode of the message's protocol version is, as specified by
+     * {@link HttpVersion#isKeepAliveDefault()}.
+     * <ul>
+     * <li>If the connection is kept alive by default:
+     *     <ul>
+     *     <li>set to {@code "close"} if {@code keepAlive} is {@code false}.</li>
+     *     <li>remove otherwise.</li>
+     *     </ul></li>
+     * <li>If the connection is closed by default:
+     *     <ul>
+     *     <li>set to {@code "keep-alive"} if {@code keepAlive} is {@code true}.</li>
+     *     <li>remove otherwise.</li>
+     *     </ul></li>
+     * </ul>
+     */
+    public static void setKeepAlive(HttpHeaders h, HttpVersion httpVersion, boolean keepAlive) {
+        if (httpVersion.isKeepAliveDefault()) {
             if (keepAlive) {
                 h.remove(HttpHeaderNames.CONNECTION);
             } else {
