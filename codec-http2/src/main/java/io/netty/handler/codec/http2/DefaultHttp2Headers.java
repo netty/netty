@@ -14,6 +14,8 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import io.netty.handler.codec.ByteStringValueConverter;
 import io.netty.handler.codec.DefaultHeaders;
 import io.netty.handler.codec.Headers;
@@ -25,19 +27,26 @@ public class DefaultHttp2Headers extends DefaultHeaders<ByteString> implements H
     private static final ByteProcessor HTTP2_NAME_VALIDATOR_PROCESSOR = new ByteProcessor() {
         @Override
         public boolean process(byte value) throws Exception {
-            if (value >= 'A' && value <= 'Z') {
-                throw new IllegalArgumentException("name must be all lower case but found: " + (char) value);
-            }
-            return true;
+            return value < 'A' || value > 'Z';
         }
     };
     private static final NameValidator<ByteString> HTTP2_NAME_VALIDATOR = new NameValidator<ByteString>() {
         @Override
         public void validateName(ByteString name) {
+            final int index;
             try {
-                name.forEachByte(HTTP2_NAME_VALIDATOR_PROCESSOR);
-            } catch (Exception e) {
+                index = name.forEachByte(HTTP2_NAME_VALIDATOR_PROCESSOR);
+            } catch (Http2Exception e) {
                 PlatformDependent.throwException(e);
+                return;
+            } catch (Throwable t) {
+                PlatformDependent.throwException(connectionError(PROTOCOL_ERROR, t,
+                        "unexpected error. invalid header name [%s]", name));
+                return;
+            }
+
+            if (index != -1) {
+                PlatformDependent.throwException(connectionError(PROTOCOL_ERROR, "invalid header name [%s]", name));
             }
         }
     };

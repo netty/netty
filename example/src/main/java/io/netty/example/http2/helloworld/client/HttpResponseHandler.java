@@ -15,6 +15,7 @@
 package io.netty.example.http2.helloworld.client;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -22,6 +23,7 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http2.HttpConversionUtil;
 import io.netty.util.CharsetUtil;
 
+import java.util.AbstractMap.SimpleEntry;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.SortedMap;
@@ -33,22 +35,23 @@ import java.util.concurrent.TimeUnit;
  */
 public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpResponse> {
 
-    private SortedMap<Integer, ChannelPromise> streamidPromiseMap;
+    private SortedMap<Integer, Entry<ChannelFuture, ChannelPromise>> streamidPromiseMap;
 
     public HttpResponseHandler() {
-        streamidPromiseMap = new TreeMap<Integer, ChannelPromise>();
+        streamidPromiseMap = new TreeMap<Integer, Entry<ChannelFuture, ChannelPromise>>();
     }
 
     /**
      * Create an association between an anticipated response stream id and a {@link ChannelPromise}
      *
      * @param streamId The stream for which a response is expected
+     * @param writeFuture A future that represent the request write operation
      * @param promise The promise object that will be used to wait/notify events
      * @return The previous object associated with {@code streamId}
      * @see HttpResponseHandler#awaitResponses(long, TimeUnit)
      */
-    public ChannelPromise put(int streamId, ChannelPromise promise) {
-        return streamidPromiseMap.put(streamId, promise);
+    public Entry<ChannelFuture, ChannelPromise> put(int streamId, ChannelFuture writeFuture, ChannelPromise promise) {
+        return streamidPromiseMap.put(streamId, new SimpleEntry<ChannelFuture, ChannelPromise>(writeFuture, promise));
     }
 
     /**
@@ -59,10 +62,17 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
      * @see HttpResponseHandler#put(int, ChannelPromise)
      */
     public void awaitResponses(long timeout, TimeUnit unit) {
-        Iterator<Entry<Integer, ChannelPromise>> itr = streamidPromiseMap.entrySet().iterator();
+        Iterator<Entry<Integer, Entry<ChannelFuture, ChannelPromise>>> itr = streamidPromiseMap.entrySet().iterator();
         while (itr.hasNext()) {
-            Entry<Integer, ChannelPromise> entry = itr.next();
-            ChannelPromise promise = entry.getValue();
+            Entry<Integer, Entry<ChannelFuture, ChannelPromise>> entry = itr.next();
+            ChannelFuture writeFuture = entry.getValue().getKey();
+            if (!writeFuture.awaitUninterruptibly(timeout, unit)) {
+                throw new IllegalStateException("Timed out waiting to write for stream id " + entry.getKey());
+            }
+            if (!writeFuture.isSuccess()) {
+                throw new RuntimeException(writeFuture.cause());
+            }
+            ChannelPromise promise = entry.getValue().getValue();
             if (!promise.awaitUninterruptibly(timeout, unit)) {
                 throw new IllegalStateException("Timed out waiting for response on stream id " + entry.getKey());
             }
@@ -82,8 +92,8 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
             return;
         }
 
-        ChannelPromise promise = streamidPromiseMap.get(streamId);
-        if (promise == null) {
+        Entry<ChannelFuture, ChannelPromise> entry = streamidPromiseMap.get(streamId);
+        if (entry == null) {
             System.err.println("Message received for unknown stream id " + streamId);
         } else {
             // Do stuff with the message (for now just print it)
@@ -95,7 +105,7 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
                 System.out.println(new String(arr, 0, contentLength, CharsetUtil.UTF_8));
             }
 
-            promise.setSuccess();
+            entry.getValue().setSuccess();
         }
     }
 }
