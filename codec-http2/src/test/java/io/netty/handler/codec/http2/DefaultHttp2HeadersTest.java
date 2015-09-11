@@ -65,7 +65,7 @@ public class DefaultHttp2HeadersTest {
         }
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = Http2Exception.class)
     public void testHeaderNameValidation() {
         Http2Headers headers = newHeaders();
 
