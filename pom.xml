@@ -682,8 +682,8 @@
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>netty-tcnative</artifactId>
-        <version>1.1.33.Fork6</version>
-        <classifier>${os.detected.classifier}</classifier>
+        <version>1.1.33.Fork7</version>
+        <classifier>${tcnative.classifier}</classifier>
         <scope>compile</scope>
         <optional>true</optional>
       </dependency>
@@ -899,7 +899,7 @@
       <extension>
         <groupId>kr.motd.maven</groupId>
         <artifactId>os-maven-plugin</artifactId>
-        <version>1.2.3.Final</version>
+        <version>1.4.0.Final</version>
       </extension>
     </extensions>
 
@@ -1288,6 +1288,14 @@
                   <entry key="${project.artifactId}.longCommitHash" value="${longCommitHash}" />
                   <entry key="${project.artifactId}.repoStatus" value="${repoStatus}" />
                 </propertyfile>
+              </target>
+              <exportAntProperties>true</exportAntProperties>
+              <target>
+                <condition property="tcnative.classifier"
+                           value="${os.detected.classifier}-fedora"
+                           else="${os.detected.classifier}">
+                  <isset property="os.detected.release.fedora"/>
+                </condition>
               </target>
             </configuration>
           </execution>
