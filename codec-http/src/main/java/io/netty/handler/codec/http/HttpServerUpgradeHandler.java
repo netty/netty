@@ -14,6 +14,10 @@
  */
 package io.netty.handler.codec.http;
 
+import static io.netty.util.AsciiString.containsContentEqualsIgnoreCase;
+import static io.netty.util.AsciiString.containsAllContentEqualsIgnoreCase;
+
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -53,7 +57,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
          * Gets all protocol-specific headers required by this protocol for a successful upgrade.
          * Any supplied header will be required to appear in the {@link HttpHeaderNames#CONNECTION} header as well.
          */
-        Collection<String> requiredUpgradeHeaders();
+        Collection<CharSequence> requiredUpgradeHeaders();
 
         /**
          * Adds any headers to the 101 Switching protocols response that are appropriate for this protocol.
@@ -87,7 +91,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
          *
          * @return a new {@link UpgradeCodec}, or {@code null} if the specified protocol name is not supported
          */
-        UpgradeCodec newUpgradeCodec(String protocol);
+        UpgradeCodec newUpgradeCodec(CharSequence protocol);
     }
 
     /**
@@ -96,10 +100,10 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
      * (if required) can be sent using the new protocol.
      */
     public static final class UpgradeEvent implements ReferenceCounted {
-        private final String protocol;
+        private final CharSequence protocol;
         private final FullHttpRequest upgradeRequest;
 
-        private UpgradeEvent(String protocol, FullHttpRequest upgradeRequest) {
+        private UpgradeEvent(CharSequence protocol, FullHttpRequest upgradeRequest) {
             this.protocol = protocol;
             this.upgradeRequest = upgradeRequest;
         }
@@ -107,7 +111,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
         /**
          * The protocol that the channel has been upgraded to.
          */
-        public String protocol() {
+        public CharSequence protocol() {
             return protocol;
         }
 
@@ -162,8 +166,6 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
             return "UpgradeEvent [protocol=" + protocol + ", upgradeRequest=" + upgradeRequest + ']';
         }
     }
-
-    private static final String UPGRADE_STRING = HttpHeaderNames.UPGRADE.toString();
 
     private final SourceCodec sourceCodec;
     private final UpgradeCodecFactory upgradeCodecFactory;
@@ -262,12 +264,12 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
      */
     private boolean upgrade(final ChannelHandlerContext ctx, final FullHttpRequest request) {
         // Select the best protocol based on those requested in the UPGRADE header.
-        final ArrayList<String> requestedProtocols = splitHeader(request.headers().get(HttpHeaderNames.UPGRADE));
+        final List<CharSequence> requestedProtocols = splitHeader(request.headers().get(HttpHeaderNames.UPGRADE));
         final int numRequestedProtocols = requestedProtocols.size();
         UpgradeCodec upgradeCodec = null;
-        String upgradeProtocol = null;
+        CharSequence upgradeProtocol = null;
         for (int i = 0; i < numRequestedProtocols; i ++) {
-            final String p = requestedProtocols.get(i);
+            final CharSequence p = requestedProtocols.get(i);
             final UpgradeCodec c = upgradeCodecFactory.newUpgradeCodec(p);
             if (c != null) {
                 upgradeProtocol = p;
@@ -288,9 +290,10 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
         }
 
         // Make sure the CONNECTION header contains UPGRADE as well as all protocol-specific headers.
-        Collection<String> requiredHeaders = upgradeCodec.requiredUpgradeHeaders();
-        List<String> values = splitHeader(connectionHeader);
-        if (!values.contains(UPGRADE_STRING) || !values.containsAll(requiredHeaders)) {
+        Collection<CharSequence> requiredHeaders = upgradeCodec.requiredUpgradeHeaders();
+        List<CharSequence> values = splitHeader(connectionHeader);
+        if (!containsContentEqualsIgnoreCase(values, HttpHeaderNames.UPGRADE) ||
+            !containsAllContentEqualsIgnoreCase(values, requiredHeaders)) {
             return false;
         }
 
@@ -340,11 +343,12 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
     /**
      * Creates the 101 Switching Protocols response message.
      */
-    private static FullHttpResponse createUpgradeResponse(String upgradeProtocol) {
-        DefaultFullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, SWITCHING_PROTOCOLS);
+    private static FullHttpResponse createUpgradeResponse(CharSequence upgradeProtocol) {
+        DefaultFullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, SWITCHING_PROTOCOLS,
+                Unpooled.EMPTY_BUFFER, false);
         res.headers().add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
         res.headers().add(HttpHeaderNames.UPGRADE, upgradeProtocol);
-        res.headers().add(HttpHeaderNames.CONTENT_LENGTH, "0");
+        res.headers().add(HttpHeaderNames.CONTENT_LENGTH, HttpHeaderValues.ZERO);
         return res;
     }
 
@@ -352,9 +356,9 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
      * Splits a comma-separated header value. The returned set is case-insensitive and contains each
      * part with whitespace removed.
      */
-    private static ArrayList<String> splitHeader(CharSequence header) {
+    private static List<CharSequence> splitHeader(CharSequence header) {
         final StringBuilder builder = new StringBuilder(header.length());
-        final ArrayList<String> protocols = new ArrayList<String>(4);
+        final List<CharSequence> protocols = new ArrayList<CharSequence>(4);
         for (int i = 0; i < header.length(); ++i) {
             char c = header.charAt(i);
             if (Character.isWhitespace(c)) {
