@@ -31,7 +31,7 @@ public final class Http2ExampleUtil {
     /**
      * Response header sent in response to the http->http2 cleartext upgrade request.
      */
-    public static final String UPGRADE_RESPONSE_HEADER = "Http-To-Http2-Upgrade";
+    public static final String UPGRADE_RESPONSE_HEADER = "http-to-http2-upgrade";
 
     /**
      * Size of the block to be read from the input stream.
