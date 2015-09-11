@@ -157,6 +157,10 @@ public final class HttpHeaderValues {
      */
     public static final AsciiString NONE = new AsciiString("none");
     /**
+     * {@code "0"}
+     */
+    public static final AsciiString ZERO = new AsciiString("0");
+    /**
      * {@code "only-if-cached"}
      */
     public static final AsciiString ONLY_IF_CACHED = new AsciiString("only-if-cached");

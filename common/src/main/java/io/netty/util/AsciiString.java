@@ -22,6 +22,7 @@ import io.netty.util.internal.PlatformDependent;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -881,6 +882,42 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
             char c1 = a.charAt(i);
             char c2 = b.charAt(j);
             if (c1 != c2 && toLowerCase(c1) != toLowerCase(c2)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Determine if {@code collection} contains {@code value} and using
+     * {@link #contentEqualsIgnoreCase(CharSequence, CharSequence)} to compare values.
+     * @param collection The collection to look for and equivalent element as {@code value}.
+     * @param value The value to look for in {@code collection}.
+     * @return {@code true} if {@code collection} contains {@code value} according to
+     * {@link #contentEqualsIgnoreCase(CharSequence, CharSequence)}. {@code false} otherwise.
+     * @see #contentEqualsIgnoreCase(CharSequence, CharSequence)
+     */
+    public static boolean containsContentEqualsIgnoreCase(Collection<CharSequence> collection, CharSequence value) {
+        for (CharSequence v : collection) {
+            if (contentEqualsIgnoreCase(value, v)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Determine if {@code a} contains all of the values in {@code b} using
+     * {@link #contentEqualsIgnoreCase(CharSequence, CharSequence)} to compare values.
+     * @param a The collection under test.
+     * @param b The values to test for.
+     * @return {@code true} if {@code a} contains all of the values in {@code b} using
+     * {@link #contentEqualsIgnoreCase(CharSequence, CharSequence)} to compare values. {@code false} otherwise.
+     * @see #contentEqualsIgnoreCase(CharSequence, CharSequence)
+     */
+    public static boolean containsAllContentEqualsIgnoreCase(Collection<CharSequence> a, Collection<CharSequence> b) {
+        for (CharSequence v : b) {
+            if (!containsContentEqualsIgnoreCase(a, v)) {
                 return false;
             }
         }
