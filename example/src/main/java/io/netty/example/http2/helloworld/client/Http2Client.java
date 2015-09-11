@@ -25,7 +25,9 @@ import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http2.Http2SecurityUtil;
+import io.netty.handler.codec.http2.HttpConversionUtil;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
@@ -37,9 +39,9 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 
-import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.handler.codec.http.HttpMethod.GET;
@@ -106,16 +108,17 @@ public final class Http2Client {
 
             HttpResponseHandler responseHandler = initializer.responseHandler();
             int streamId = 3;
-            URI hostName = URI.create((SSL ? "https" : "http") + "://" + HOST + ':' + PORT);
+            HttpScheme scheme = SSL ? HttpScheme.HTTPS : HttpScheme.HTTP;
+            AsciiString hostName = new AsciiString(HOST + ':' + PORT);
             System.err.println("Sending request(s)...");
             if (URL != null) {
                 // Create a simple GET request.
                 FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, URL);
                 request.headers().add(HttpHeaderNames.HOST, hostName);
+                request.headers().add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), scheme.name());
                 request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
                 request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.DEFLATE);
-                channel.writeAndFlush(request);
-                responseHandler.put(streamId, channel.newPromise());
+                responseHandler.put(streamId, channel.writeAndFlush(request), channel.newPromise());
                 streamId += 2;
             }
             if (URL2 != null) {
@@ -123,10 +126,10 @@ public final class Http2Client {
                 FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, URL2,
                                 Unpooled.copiedBuffer(URL2DATA.getBytes(CharsetUtil.UTF_8)));
                 request.headers().add(HttpHeaderNames.HOST, hostName);
+                request.headers().add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), scheme.name());
                 request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
                 request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.DEFLATE);
-                channel.writeAndFlush(request);
-                responseHandler.put(streamId, channel.newPromise());
+                responseHandler.put(streamId, channel.writeAndFlush(request), channel.newPromise());
                 streamId += 2;
             }
             responseHandler.awaitResponses(5, TimeUnit.SECONDS);
