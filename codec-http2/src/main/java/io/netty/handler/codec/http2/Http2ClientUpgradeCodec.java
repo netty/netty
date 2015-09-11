@@ -41,7 +41,7 @@ import java.util.List;
  */
 public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.UpgradeCodec {
 
-    private static final List<String> UPGRADE_HEADERS = Collections.singletonList(HTTP_UPGRADE_SETTINGS_HEADER);
+    private static final List<CharSequence> UPGRADE_HEADERS = Collections.singletonList(HTTP_UPGRADE_SETTINGS_HEADER);
 
     private final String handlerName;
     private final Http2ConnectionHandler connectionHandler;
@@ -69,14 +69,14 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
     }
 
     @Override
-    public String protocol() {
+    public CharSequence protocol() {
         return HTTP_UPGRADE_PROTOCOL_NAME;
     }
 
     @Override
-    public Collection<String> setUpgradeHeaders(ChannelHandlerContext ctx,
+    public Collection<CharSequence> setUpgradeHeaders(ChannelHandlerContext ctx,
             HttpRequest upgradeRequest) {
-        String settingsValue = getSettingsHeaderValue(ctx);
+        CharSequence settingsValue = getSettingsHeaderValue(ctx);
         upgradeRequest.headers().set(HTTP_UPGRADE_SETTINGS_HEADER, settingsValue);
         return UPGRADE_HEADERS;
     }
@@ -95,7 +95,7 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
      * Converts the current settings for the handler to the Base64-encoded representation used in
      * the HTTP2-Settings upgrade header.
      */
-    private String getSettingsHeaderValue(ChannelHandlerContext ctx) {
+    private CharSequence getSettingsHeaderValue(ChannelHandlerContext ctx) {
         ByteBuf buf = null;
         ByteBuf encodedBuf = null;
         try {

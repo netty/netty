@@ -41,7 +41,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  */
 public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.UpgradeCodec {
 
-    private static final List<String> REQUIRED_UPGRADE_HEADERS =
+    private static final List<CharSequence> REQUIRED_UPGRADE_HEADERS =
             Collections.singletonList(HTTP_UPGRADE_SETTINGS_HEADER);
 
     private final String handlerName;
@@ -72,7 +72,7 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
     }
 
     @Override
-    public Collection<String> requiredUpgradeHeaders() {
+    public Collection<CharSequence> requiredUpgradeHeaders() {
         return REQUIRED_UPGRADE_HEADERS;
     }
 
