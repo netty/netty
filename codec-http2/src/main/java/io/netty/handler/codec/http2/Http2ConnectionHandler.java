@@ -271,7 +271,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                     byteDecoder.decode(ctx, in, out);
                 }
             } catch (Throwable e) {
-                onException(ctx, e);
+                onError(ctx, e);
             }
         }
 
@@ -388,7 +388,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             try {
                 decoder.decodeFrame(ctx, in, out);
             } catch (Throwable e) {
-                onException(ctx, e);
+                onError(ctx, e);
             }
         }
     }
@@ -490,7 +490,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (getEmbeddedHttp2Exception(cause) != null) {
             // Some exception in the causality chain is an Http2Exception - handle it.
-            onException(ctx, cause);
+            onError(ctx, cause);
         } else {
             super.exceptionCaught(ctx, cause);
         }
@@ -556,7 +556,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      * Central handler for all exceptions caught during HTTP/2 processing.
      */
     @Override
-    public void onException(ChannelHandlerContext ctx, Throwable cause) {
+    public void onError(ChannelHandlerContext ctx, Throwable cause) {
         Http2Exception embedded = getEmbeddedHttp2Exception(cause);
         if (isStreamError(embedded)) {
             onStreamError(ctx, cause, (StreamException) embedded);
