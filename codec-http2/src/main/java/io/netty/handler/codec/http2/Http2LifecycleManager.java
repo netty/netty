@@ -85,7 +85,7 @@ public interface Http2LifecycleManager {
             ByteBuf debugData, ChannelPromise promise);
 
     /**
-     * Processes the given exception.
+     * Processes the given error.
      */
-    void onException(ChannelHandlerContext ctx, Throwable cause);
+    void onError(ChannelHandlerContext ctx, Throwable cause);
 }
