@@ -29,21 +29,21 @@ public final class SpdyHttpHeaders {
      */
     public static final class Names {
         /**
-         * {@code "X-SPDY-Stream-ID"}
+         * {@code "x-spdy-stream-id"}
          */
-        public static final String STREAM_ID = "X-SPDY-Stream-ID";
+        public static final String STREAM_ID = "x-spdy-stream-id";
         /**
-         * {@code "X-SPDY-Associated-To-Stream-ID"}
+         * {@code "x-spdy-associated-to-stream-id"}
          */
-        public static final String ASSOCIATED_TO_STREAM_ID = "X-SPDY-Associated-To-Stream-ID";
+        public static final String ASSOCIATED_TO_STREAM_ID = "x-spdy-associated-to-stream-id";
         /**
-         * {@code "X-SPDY-Priority"}
+         * {@code "x-spdy-priority"}
          */
-        public static final String PRIORITY = "X-SPDY-Priority";
+        public static final String PRIORITY = "x-spdy-priority";
         /**
-         * {@code "X-SPDY-Scheme"}
+         * {@code "x-spdy-scheme"}
          */
-        public static final String SCHEME = "X-SPDY-Scheme";
+        public static final String SCHEME = "x-spdy-scheme";
 
         private Names() { }
     }
