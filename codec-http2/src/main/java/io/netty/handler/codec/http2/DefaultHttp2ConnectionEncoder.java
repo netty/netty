@@ -171,7 +171,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                             endOfStream, promise));
             return promise;
         } catch (Http2NoMoreStreamIdsException e) {
-            lifecycleManager.onException(ctx, e);
+            lifecycleManager.onError(ctx, e);
             return promise.setFailure(e);
         } catch (Throwable e) {
             return promise.setFailure(e);
@@ -332,7 +332,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         @Override
         public void error(ChannelHandlerContext ctx, Throwable cause) {
             queue.releaseAndFailAll(cause);
-            lifecycleManager.onException(ctx, cause);
+            lifecycleManager.onError(ctx, cause);
             promise.tryFailure(cause);
         }
 
@@ -400,7 +400,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         @Override
         public void error(ChannelHandlerContext ctx, Throwable cause) {
             if (ctx != null) {
-                lifecycleManager.onException(ctx, cause);
+                lifecycleManager.onError(ctx, cause);
             }
             promise.tryFailure(cause);
         }
