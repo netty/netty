@@ -39,6 +39,7 @@ public class DefaultSpdyHeaders extends DefaultHeaders<CharSequence> implements 
         this(true);
     }
 
+    @SuppressWarnings("unchecked")
     public DefaultSpdyHeaders(boolean validate) {
         super(CASE_INSENSITIVE_HASHER,
                 validate ? HeaderValueConverterAndValidator.INSTANCE : HeaderValueConverter.INSTANCE,
