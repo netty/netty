@@ -135,7 +135,7 @@ public class InboundHttp2ToHttpAdapterTest {
         try {
             HttpHeaders httpHeaders = request.headers();
             httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "https");
-            httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.AUTHORITY.text(), "example.org");
+            httpHeaders.set(HttpHeaderNames.HOST, "example.org");
             httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
             final Http2Headers http2Headers = new DefaultHttp2Headers().method(new AsciiString("GET")).
@@ -481,7 +481,7 @@ public class InboundHttp2ToHttpAdapterTest {
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, text.length());
             HttpHeaders httpHeaders2 = response2.headers();
             httpHeaders2.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "https");
-            httpHeaders2.set(HttpConversionUtil.ExtensionHeaderNames.AUTHORITY.text(), "example.org");
+            httpHeaders2.set(HttpHeaderNames.HOST, "example.org");
             httpHeaders2.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
             httpHeaders2.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_PROMISE_ID.text(), 3);
             httpHeaders2.setInt(HttpHeaderNames.CONTENT_LENGTH, text2.length());

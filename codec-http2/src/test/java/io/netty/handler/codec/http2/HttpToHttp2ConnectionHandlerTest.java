@@ -126,7 +126,6 @@ public class HttpToHttp2ConnectionHandlerTest {
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
         httpHeaders.set(HttpHeaderNames.HOST, "my-user_name@www.example.org:5555");
-        httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.AUTHORITY.text(), "www.example.org:5555");
         httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
         httpHeaders.add(of("foo"), of("goo"));
         httpHeaders.add(of("foo"), of("goo2"));
@@ -183,25 +182,6 @@ public class HttpToHttp2ConnectionHandlerTest {
         httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
         httpHeaders.set(HttpHeaderNames.HOST, "foouser@www.example.org:5555");
         httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.PATH.text(), "ignored_path");
-        httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.AUTHORITY.text(), "ignored_authority");
-        httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "https");
-        final Http2Headers http2Headers =
-                new DefaultHttp2Headers().method(new AsciiString("GET"))
-                .path(new AsciiString("/pub/WWW/TheProject.html"))
-                .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("https"));
-
-        ChannelPromise writePromise = newPromise();
-        verifyHeadersOnly(http2Headers, writePromise, clientChannel.writeAndFlush(request, writePromise));
-    }
-
-    @Test
-    public void testAbsoluteFormRequestTargetHandledFromHeadersNoHost() throws Exception {
-        bootstrapEnv(2, 1, 0);
-        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/pub/WWW/TheProject.html");
-        final HttpHeaders httpHeaders = request.headers();
-        httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
-        httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.PATH.text(), "ignored_path");
-        httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.AUTHORITY.text(), "www.example.org:5555");
         httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "https");
         final Http2Headers http2Headers =
                 new DefaultHttp2Headers().method(new AsciiString("GET"))
