@@ -68,7 +68,6 @@ public final class HttpConversionUtil {
             add(HttpHeaderNames.HOST);
             add(HttpHeaderNames.UPGRADE);
             add(ExtensionHeaderNames.STREAM_ID.text());
-            add(ExtensionHeaderNames.AUTHORITY.text());
             add(ExtensionHeaderNames.SCHEME.text());
             add(ExtensionHeaderNames.PATH.text());
         }
@@ -112,14 +111,6 @@ public final class HttpConversionUtil {
          * {@code "x-http2-stream-id"}
          */
         STREAM_ID("x-http2-stream-id"),
-
-        /**
-         * HTTP extension header which will identify the authority pseudo header from the HTTP/2 event(s) responsible
-         * for generating a {@code HttpObject}
-         * <p>
-         * {@code "x-http2-authority"}
-         */
-        AUTHORITY("x-http2-authority"),
         /**
          * HTTP extension header which will identify the scheme pseudo header from the HTTP/2 event(s) responsible for
          * generating a {@code HttpObject}
@@ -311,11 +302,8 @@ public final class HttpConversionUtil {
             if (!isOriginForm(requestTargetUri) && !isAsteriskForm(requestTargetUri)) {
                 // Attempt to take from HOST header before taking from the request-line
                 String host = inHeaders.getAsString(HttpHeaderNames.HOST);
-                if (host == null || host.isEmpty()) {
-                    setHttp2Authority(inHeaders, requestTargetUri.getAuthority(), out);
-                } else {
-                    setHttp2Authority(inHeaders, host, out);
-                }
+                setHttp2Authority(inHeaders,
+                        (host == null || host.isEmpty()) ? requestTargetUri.getAuthority() : host, out);
             }
         } else if (in instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) in;
@@ -381,13 +369,6 @@ public final class HttpConversionUtil {
             } else {
                 throw new IllegalArgumentException("autority: " + autority);
             }
-        } else {
-            // Consume the Authority extension header if present
-            CharSequence cValue = in.get(ExtensionHeaderNames.AUTHORITY.text());
-            if (cValue != null) {
-                // Assume this is sanitized of all "userinfo"
-                out.authority(AsciiString.of(cValue));
-            }
         }
     }
 
@@ -428,7 +409,7 @@ public final class HttpConversionUtil {
             RESPONSE_HEADER_TRANSLATIONS = new HashMap<ByteString, ByteString>();
         static {
             RESPONSE_HEADER_TRANSLATIONS.put(Http2Headers.PseudoHeaderName.AUTHORITY.value(),
-                            ExtensionHeaderNames.AUTHORITY.text());
+                            HttpHeaderNames.HOST);
             RESPONSE_HEADER_TRANSLATIONS.put(Http2Headers.PseudoHeaderName.SCHEME.value(),
                             ExtensionHeaderNames.SCHEME.text());
             REQUEST_HEADER_TRANSLATIONS.putAll(RESPONSE_HEADER_TRANSLATIONS);
