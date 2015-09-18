@@ -701,10 +701,8 @@ public final class OpenSslEngine extends SSLEngine {
 
                     if (!dst.hasRemaining()) {
                         idx ++;
-                    } else {
-                        // We read everything return now.
-                        return newResult(bytesConsumed, bytesProduced);
                     }
+                    // continue reading into the buffer.
                 } else {
                     int sslError = SSL.getError(ssl, bytesRead);
                     switch (sslError) {
