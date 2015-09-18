@@ -95,6 +95,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         pipeline = createChannelPipeline();
     }
 
+    /**
+     * Creates channel pipeline.
+     *
+     * @return
+     *      pipeline for this channel
+     */
     protected AbstractChannelPipeline createChannelPipeline() {
         return new DefaultChannelPipeline(this);
     }

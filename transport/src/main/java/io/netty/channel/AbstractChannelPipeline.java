@@ -40,8 +40,12 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 /**
- * The default {@link ChannelPipeline} implementation.  It is usually created
- * by a {@link Channel} implementation when the {@link Channel} is created.
+ * This class provides a skeletal implementation of {@link ChannelPipeline}
+ * interface.
+ *
+ * This partial implementation allows programmer to override specific
+ * behaviours like connecting the head and tail elements of pipeline to various
+ * backends.
  */
 public class AbstractChannelPipeline implements ChannelPipeline {
 
@@ -83,10 +87,24 @@ public class AbstractChannelPipeline implements ChannelPipeline {
         tail.prev = head;
     }
 
+    /**
+     * Creates head context of this pipeline. This is supposed to be overriden
+     * by children for specific implementations.
+     *
+     * @return
+     *      head context
+     */
     protected AbstractChannelHandlerContext createHeadContext() {
         return new HeadContext(this);
     }
 
+    /**
+     * Creates tail context of this pipeline. This is supposed to be overriden
+     * by children for specific implementations.
+     *
+     * @return
+     *      tail context
+     */
     protected AbstractChannelHandlerContext createTailContext() {
         return new TailContext(this);
     }
