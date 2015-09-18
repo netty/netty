@@ -110,6 +110,7 @@ public final class SslContextBuilder {
     private ApplicationProtocolConfig apn;
     private long sessionCacheSize;
     private long sessionTimeout;
+    private ClientAuth clientAuth = ClientAuth.NONE;
 
     private SslContextBuilder(boolean forServer) {
         this.forServer = forServer;
@@ -299,13 +300,21 @@ public final class SslContextBuilder {
     }
 
     /**
+     * Sets the client authentication mode.
+     */
+    public SslContextBuilder clientAuth(ClientAuth clientAuth) {
+        this.clientAuth = checkNotNull(clientAuth, "clientAuth");
+        return this;
+    }
+
+    /**
      * Create new {@code SslContext} instance with configured settings.
      */
     public SslContext build() throws SSLException {
         if (forServer) {
             return SslContext.newServerContextInternal(provider, trustCertChain,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
-                ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
+                ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, clientAuth);
         } else {
             return SslContext.newClientContextInternal(provider, trustCertChain,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,

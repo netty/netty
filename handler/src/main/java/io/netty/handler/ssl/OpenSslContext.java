@@ -83,6 +83,7 @@ public abstract class OpenSslContext extends SslContext {
     private final OpenSslApplicationProtocolNegotiator apn;
     private final int mode;
     private final Certificate[] keyCertChain;
+    private final ClientAuth clientAuth;
 
     static final OpenSslApplicationProtocolNegotiator NONE_PROTOCOL_NEGOTIATOR =
             new OpenSslApplicationProtocolNegotiator() {
@@ -127,20 +128,24 @@ public abstract class OpenSslContext extends SslContext {
     }
 
     OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apnCfg,
-                   long sessionCacheSize, long sessionTimeout, int mode, Certificate[] keyCertChain)
+                   long sessionCacheSize, long sessionTimeout, int mode, Certificate[] keyCertChain,
+                   ClientAuth clientAuth)
             throws SSLException {
-        this(ciphers, cipherFilter, toNegotiator(apnCfg), sessionCacheSize, sessionTimeout, mode, keyCertChain);
+        this(ciphers, cipherFilter, toNegotiator(apnCfg), sessionCacheSize, sessionTimeout, mode, keyCertChain,
+                clientAuth);
     }
 
     OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                    OpenSslApplicationProtocolNegotiator apn, long sessionCacheSize,
-                   long sessionTimeout, int mode, Certificate[] keyCertChain) throws SSLException {
+                   long sessionTimeout, int mode, Certificate[] keyCertChain,
+                   ClientAuth clientAuth) throws SSLException {
         OpenSsl.ensureAvailability();
 
         if (mode != SSL.SSL_MODE_SERVER && mode != SSL.SSL_MODE_CLIENT) {
             throw new IllegalArgumentException("mode most be either SSL.SSL_MODE_SERVER or SSL.SSL_MODE_CLIENT");
         }
         this.mode = mode;
+        this.clientAuth = isServer() ? checkNotNull(clientAuth, "clientAuth") : ClientAuth.NONE;
 
         if (mode == SSL.SSL_MODE_SERVER) {
             rejectRemoteInitiatedRenegotiation =
@@ -291,7 +296,7 @@ public abstract class OpenSslContext extends SslContext {
     @Override
     public final SSLEngine newEngine(ByteBufAllocator alloc, String peerHost, int peerPort) {
         final OpenSslEngine engine = new OpenSslEngine(ctx, alloc, isClient(), sessionContext(), apn, engineMap,
-                rejectRemoteInitiatedRenegotiation, peerHost, peerPort, keyCertChain);
+                rejectRemoteInitiatedRenegotiation, peerHost, peerPort, keyCertChain, clientAuth);
         engineMap.add(engine);
         return engine;
     }
