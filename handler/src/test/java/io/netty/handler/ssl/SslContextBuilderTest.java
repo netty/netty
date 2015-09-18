@@ -15,6 +15,9 @@
  */
 package io.netty.handler.ssl;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.Assume;
@@ -70,20 +73,31 @@ public class SslContextBuilderTest {
 
     private static void testClientContextFromFile(SslProvider provider) throws Exception {
         SelfSignedCertificate cert = new SelfSignedCertificate();
-        SslContextBuilder builder = SslContextBuilder.forClient().sslProvider(provider).keyManager(
-                cert.certificate(), cert.privateKey()).trustManager(cert.certificate());
+        SslContextBuilder builder = SslContextBuilder.forClient()
+                                                     .sslProvider(provider)
+                                                     .keyManager(cert.certificate(),
+                                                             cert.privateKey())
+                                                     .trustManager(cert.certificate())
+                                                     .clientAuth(ClientAuth.OPTIONAL);
         SslContext context = builder.build();
         SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        assertFalse(engine.getWantClientAuth());
+        assertFalse(engine.getNeedClientAuth());
         engine.closeInbound();
         engine.closeOutbound();
     }
 
     private static void testClientContext(SslProvider provider) throws Exception {
         SelfSignedCertificate cert = new SelfSignedCertificate();
-        SslContextBuilder builder = SslContextBuilder.forClient().sslProvider(provider).keyManager(
-                cert.key(), cert.cert()).trustManager(cert.cert());
+        SslContextBuilder builder = SslContextBuilder.forClient()
+                                                     .sslProvider(provider)
+                                                     .keyManager(cert.key(), cert.cert())
+                                                     .trustManager(cert.cert())
+                                                     .clientAuth(ClientAuth.OPTIONAL);
         SslContext context = builder.build();
         SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        assertFalse(engine.getWantClientAuth());
+        assertFalse(engine.getNeedClientAuth());
         engine.closeInbound();
         engine.closeOutbound();
     }
@@ -91,9 +105,13 @@ public class SslContextBuilderTest {
     private static void testServerContextFromFile(SslProvider provider) throws Exception {
         SelfSignedCertificate cert = new SelfSignedCertificate();
         SslContextBuilder builder = SslContextBuilder.forServer(cert.certificate(), cert.privateKey())
-                                                     .sslProvider(provider).trustManager(cert.certificate());
+                                                     .sslProvider(provider)
+                                                     .trustManager(cert.certificate())
+                                                     .clientAuth(ClientAuth.OPTIONAL);
         SslContext context = builder.build();
         SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        assertTrue(engine.getWantClientAuth());
+        assertFalse(engine.getNeedClientAuth());
         engine.closeInbound();
         engine.closeOutbound();
     }
@@ -101,9 +119,13 @@ public class SslContextBuilderTest {
     private static void testServerContext(SslProvider provider) throws Exception {
         SelfSignedCertificate cert = new SelfSignedCertificate();
         SslContextBuilder builder = SslContextBuilder.forServer(cert.key(), cert.cert())
-                                                     .sslProvider(provider).trustManager(cert.cert());
+                                                     .sslProvider(provider)
+                                                     .trustManager(cert.cert())
+                                                     .clientAuth(ClientAuth.REQUIRE);
         SslContext context = builder.build();
         SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        assertFalse(engine.getWantClientAuth());
+        assertTrue(engine.getNeedClientAuth());
         engine.closeInbound();
         engine.closeOutbound();
     }
