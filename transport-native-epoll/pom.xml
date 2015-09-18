@@ -51,7 +51,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-tcnative</artifactId>
-      <classifier>${os.detected.classifier}</classifier>
+      <classifier>${tcnative.classifier}</classifier>
       <scope>test</scope>
     </dependency>
   </dependencies>
