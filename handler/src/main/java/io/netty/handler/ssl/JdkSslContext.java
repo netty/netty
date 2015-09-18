@@ -139,14 +139,12 @@ public abstract class JdkSslContext extends SslContext {
     private final String[] cipherSuites;
     private final List<String> unmodifiableCipherSuites;
     private final JdkApplicationProtocolNegotiator apn;
+    private final ClientAuth clientAuth;
 
-    JdkSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig config,
-            boolean isServer) {
-        this(ciphers, cipherFilter, toNegotiator(config, isServer));
-    }
-
-    JdkSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter, JdkApplicationProtocolNegotiator apn) {
+    JdkSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter, JdkApplicationProtocolNegotiator apn,
+                  ClientAuth clientAuth) {
         this.apn = checkNotNull(apn, "apn");
+        this.clientAuth = checkNotNull(clientAuth, "clientAuth");
         cipherSuites = checkNotNull(cipherFilter, "cipherFilter").filterCipherSuites(
                 ciphers, DEFAULT_CIPHERS, SUPPORTED_CIPHERS);
         unmodifiableCipherSuites = Collections.unmodifiableList(Arrays.asList(cipherSuites));
@@ -186,23 +184,28 @@ public abstract class JdkSslContext extends SslContext {
 
     @Override
     public final SSLEngine newEngine(ByteBufAllocator alloc) {
-        SSLEngine engine = context().createSSLEngine();
-        engine.setEnabledCipherSuites(cipherSuites);
-        engine.setEnabledProtocols(PROTOCOLS);
-        engine.setUseClientMode(isClient());
-        return wrapEngine(engine);
+        return configureAndWrapEngine(context().createSSLEngine());
     }
 
     @Override
     public final SSLEngine newEngine(ByteBufAllocator alloc, String peerHost, int peerPort) {
-        SSLEngine engine = context().createSSLEngine(peerHost, peerPort);
+        return configureAndWrapEngine(context().createSSLEngine(peerHost, peerPort));
+    }
+
+    private SSLEngine configureAndWrapEngine(SSLEngine engine) {
         engine.setEnabledCipherSuites(cipherSuites);
         engine.setEnabledProtocols(PROTOCOLS);
         engine.setUseClientMode(isClient());
-        return wrapEngine(engine);
-    }
-
-    private SSLEngine wrapEngine(SSLEngine engine) {
+        if (isServer()) {
+            switch (clientAuth) {
+                case OPTIONAL:
+                    engine.setWantClientAuth(true);
+                    break;
+                case REQUIRE:
+                    engine.setNeedClientAuth(true);
+                    break;
+            }
+        }
         return apn.wrapperFactory().wrapSslEngine(engine, apn, isServer());
     }
 
