@@ -94,7 +94,7 @@
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-epoll</artifactId>
           <version>${project.version}</version>
-          <classifier>${os.detected.classifier}</classifier>
+          <classifier>${epoll.classifier}</classifier>
           <scope>compile</scope>
           <optional>true</optional>
         </dependency>
