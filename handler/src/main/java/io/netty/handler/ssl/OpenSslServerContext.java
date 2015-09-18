@@ -291,7 +291,8 @@ public final class OpenSslServerContext extends OpenSslContext {
             File keyCertChainFile, File keyFile, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, OpenSslApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
-        super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_SERVER, null);
+        super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_SERVER, null,
+                ClientAuth.NONE);
         OpenSsl.ensureAvailability();
 
         checkNotNull(keyCertChainFile, "keyCertChainFile");
@@ -391,8 +392,9 @@ public final class OpenSslServerContext extends OpenSslContext {
             X509Certificate[] trustCertChain, TrustManagerFactory trustManagerFactory,
             X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
-            long sessionCacheSize, long sessionTimeout) throws SSLException {
-        super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_SERVER, keyCertChain);
+            long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth) throws SSLException {
+        super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_SERVER, keyCertChain,
+                clientAuth);
         OpenSsl.ensureAvailability();
 
         checkNotNull(keyCertChain, "keyCertChainFile");
