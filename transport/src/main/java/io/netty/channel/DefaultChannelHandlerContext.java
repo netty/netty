@@ -15,11 +15,11 @@
 */
 package io.netty.channel;
 
-final class DefaultChannelHandlerContext extends AbstractChannelHandlerContext {
+public final class DefaultChannelHandlerContext extends AbstractChannelHandlerContext {
     private final ChannelHandler handler;
 
-    DefaultChannelHandlerContext(
-            DefaultChannelPipeline pipeline, ChannelHandlerInvoker invoker, String name, ChannelHandler handler) {
+    public DefaultChannelHandlerContext(
+            AbstractChannelPipeline pipeline, ChannelHandlerInvoker invoker, String name, ChannelHandler handler) {
         super(pipeline, invoker, name, skipFlags(checkNull(handler)));
         this.handler = handler;
     }

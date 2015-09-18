@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 /**
  * Abstract base class for {@link ChannelHandlerContext} implementations.
  */
-abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, ResourceLeakHint {
+public abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, ResourceLeakHint {
 
     // This class keeps an integer member field 'skipFlags' whose each bit tells if the corresponding handler method
     // is annotated with @Skip. 'skipFlags' is retrieved in runtime via the reflection API and is cached.
@@ -211,7 +211,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     volatile AbstractChannelHandlerContext prev;
 
     private final AbstractChannel channel;
-    private final DefaultChannelPipeline pipeline;
+    private final AbstractChannelPipeline pipeline;
     private final String name;
     private boolean removed;
 
@@ -236,8 +236,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     @SuppressWarnings("UnusedDeclaration")
     private volatile PausableChannelEventExecutor wrappedEventLoop;
 
-    AbstractChannelHandlerContext(
-            DefaultChannelPipeline pipeline, ChannelHandlerInvoker invoker, String name, int skipFlags) {
+    protected AbstractChannelHandlerContext(
+            AbstractChannelPipeline pipeline, ChannelHandlerInvoker invoker, String name, int skipFlags) {
 
         if (name == null) {
             throw new NullPointerException("name");

@@ -54,7 +54,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final Channel parent;
     private final ChannelId id;
     private final Unsafe unsafe;
-    private final DefaultChannelPipeline pipeline;
+    private final AbstractChannelPipeline pipeline;
     private final ChannelFuture succeededFuture = new SucceededChannelFuture(this, null);
     private final VoidChannelPromise voidPromise = new VoidChannelPromise(this, true);
     private final VoidChannelPromise unsafeVoidPromise = new VoidChannelPromise(this, false);
@@ -79,7 +79,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         this.parent = parent;
         id = DefaultChannelId.newInstance();
         unsafe = newUnsafe();
-        pipeline = new DefaultChannelPipeline(this);
+        pipeline = createChannelPipeline();
     }
 
     /**
@@ -92,7 +92,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         this.parent = parent;
         this.id = id;
         unsafe = newUnsafe();
-        pipeline = new DefaultChannelPipeline(this);
+        pipeline = createChannelPipeline();
+    }
+
+    protected AbstractChannelPipeline createChannelPipeline() {
+        return new DefaultChannelPipeline(this);
     }
 
     @Override
@@ -458,22 +462,22 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final ChannelOutboundBuffer outboundBuffer() {
+        public ChannelOutboundBuffer outboundBuffer() {
             return outboundBuffer;
         }
 
         @Override
-        public final SocketAddress localAddress() {
+        public SocketAddress localAddress() {
             return localAddress0();
         }
 
         @Override
-        public final SocketAddress remoteAddress() {
+        public SocketAddress remoteAddress() {
             return remoteAddress0();
         }
 
         @Override
-        public final void register(EventLoop eventLoop, final ChannelPromise promise) {
+        public void register(EventLoop eventLoop, final ChannelPromise promise) {
             if (eventLoop == null) {
                 throw new NullPointerException("eventLoop");
             }
@@ -547,7 +551,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void bind(final SocketAddress localAddress, final ChannelPromise promise) {
+        public void bind(final SocketAddress localAddress, final ChannelPromise promise) {
             if (!promise.setUncancellable() || !ensureOpen(promise)) {
                 return;
             }
@@ -587,7 +591,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void disconnect(final ChannelPromise promise) {
+        public void disconnect(final ChannelPromise promise) {
             if (!promise.setUncancellable()) {
                 return;
             }
@@ -615,7 +619,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void close(final ChannelPromise promise) {
+        public void close(final ChannelPromise promise) {
             if (!promise.setUncancellable()) {
                 return;
             }
@@ -718,7 +722,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void closeForcibly() {
+        public void closeForcibly() {
             try {
                 doClose();
             } catch (Exception e) {
@@ -734,7 +738,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
          * events. See the comments in {@link #invokeLater(Runnable)} for more details.
          */
         @Override
-        public final void deregister(final ChannelPromise promise) {
+        public void deregister(final ChannelPromise promise) {
             if (!promise.setUncancellable()) {
                 return;
             }
@@ -764,7 +768,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void beginRead() {
+        public void beginRead() {
             if (!isActive()) {
                 return;
             }
@@ -783,7 +787,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void write(Object msg, ChannelPromise promise) {
+        public void write(Object msg, ChannelPromise promise) {
             ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
             if (outboundBuffer == null) {
                 // If the outboundBuffer is null we know the channel was closed and so
@@ -813,7 +817,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void flush() {
+        public void flush() {
             ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
             if (outboundBuffer == null) {
                 return;
@@ -861,11 +865,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final ChannelPromise voidPromise() {
+        public ChannelPromise voidPromise() {
             return unsafeVoidPromise;
         }
 
-        protected final boolean ensureOpen(ChannelPromise promise) {
+        protected boolean ensureOpen(ChannelPromise promise) {
             if (isOpen()) {
                 return true;
             }
@@ -942,7 +946,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         /**
          * @return {@link Executor} to execute {@link #doClose()} or {@code null} if it should be done in the
          * {@link EventLoop}.
-         +
          */
         protected Executor closeExecutor() {
             return null;
