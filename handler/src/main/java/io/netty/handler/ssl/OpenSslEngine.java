@@ -401,8 +401,8 @@ public final class OpenSslEngine extends SSLEngine {
         return bioRead;
     }
 
-    private SSLEngineResult readPendingBytesFromBIO(ByteBuffer dst, int bytesConsumed, int bytesProduced)
-            throws SSLException {
+    private SSLEngineResult readPendingBytesFromBIO(
+            ByteBuffer dst, int bytesConsumed, int bytesProduced, HandshakeStatus status) throws SSLException {
         // Check to see if the engine wrote data into the network BIO
         int pendingNet = SSL.pendingWrittenBytesInBIO(networkBIO);
         if (pendingNet > 0) {
@@ -410,7 +410,8 @@ public final class OpenSslEngine extends SSLEngine {
             // Do we have enough room in dst to write encrypted data?
             int capacity = dst.remaining();
             if (capacity < pendingNet) {
-                return new SSLEngineResult(BUFFER_OVERFLOW, mayFinishHandshake(getHandshakeStatus(pendingNet)),
+                return new SSLEngineResult(BUFFER_OVERFLOW,
+                        mayFinishHandshake(status != FINISHED ? getHandshakeStatus(pendingNet) : status),
                                            bytesConsumed, bytesProduced);
             }
 
@@ -465,6 +466,7 @@ public final class OpenSslEngine extends SSLEngine {
             throw new ReadOnlyBufferException();
         }
 
+        HandshakeStatus status = NOT_HANDSHAKING;
         // Prepare OpenSSL to work in server mode and receive handshake
         if (handshakeState != HandshakeState.FINISHED) {
             if (handshakeState != HandshakeState.STARTED_EXPLICITLY) {
@@ -472,7 +474,7 @@ public final class OpenSslEngine extends SSLEngine {
                 handshakeState = HandshakeState.STARTED_IMPLICITLY;
             }
 
-            HandshakeStatus status = handshake();
+            status = handshake();
             if (status == NEED_UNWRAP) {
                 return NEED_UNWRAP_OK;
             }
@@ -517,7 +519,7 @@ public final class OpenSslEngine extends SSLEngine {
                     }
                 }
 
-                SSLEngineResult pendingNetResult = readPendingBytesFromBIO(dst, bytesConsumed, bytesProduced);
+                SSLEngineResult pendingNetResult = readPendingBytesFromBIO(dst, bytesConsumed, bytesProduced, status);
                 if (pendingNetResult != null) {
                     return pendingNetResult;
                 }
@@ -526,13 +528,13 @@ public final class OpenSslEngine extends SSLEngine {
         // We need to check if pendingWrittenBytesInBIO was checked yet, as we may not checked if the srcs was empty,
         // or only contained empty buffers.
         if (bytesConsumed == 0) {
-            SSLEngineResult pendingNetResult = readPendingBytesFromBIO(dst, 0, bytesProduced);
+            SSLEngineResult pendingNetResult = readPendingBytesFromBIO(dst, 0, bytesProduced, status);
             if (pendingNetResult != null) {
                 return pendingNetResult;
             }
         }
 
-        return newResult(bytesConsumed, bytesProduced);
+        return newResult(bytesConsumed, bytesProduced, status);
     }
 
     private void checkPendingHandshakeException() throws SSLHandshakeException {
@@ -605,6 +607,7 @@ public final class OpenSslEngine extends SSLEngine {
             capacity += dst.remaining();
         }
 
+        HandshakeStatus status = NOT_HANDSHAKING;
         // Prepare OpenSSL to work in server mode and receive handshake
         if (handshakeState != HandshakeState.FINISHED) {
             if (handshakeState != HandshakeState.STARTED_EXPLICITLY) {
@@ -612,7 +615,7 @@ public final class OpenSslEngine extends SSLEngine {
                 handshakeState = HandshakeState.STARTED_IMPLICITLY;
             }
 
-            HandshakeStatus status = handshake();
+            status = handshake();
             if (status == NEED_WRAP) {
                 return NEED_WRAP_OK;
             }
@@ -703,7 +706,7 @@ public final class OpenSslEngine extends SSLEngine {
                         idx ++;
                     } else {
                         // We read everything return now.
-                        return newResult(bytesConsumed, bytesProduced);
+                        return newResult(bytesConsumed, bytesProduced, status);
                     }
                 } else {
                     int sslError = SSL.getError(ssl, bytesRead);
@@ -717,7 +720,7 @@ public final class OpenSslEngine extends SSLEngine {
                     case SSL.SSL_ERROR_WANT_READ:
                     case SSL.SSL_ERROR_WANT_WRITE:
                         // break to the outer loop
-                        return newResult(bytesConsumed, bytesProduced);
+                        return newResult(bytesConsumed, bytesProduced, status);
                     default:
                         // Everything else is considered as error so shutdown and throw an exceptions
                         shutdownWithError("SSL_read");
@@ -738,7 +741,8 @@ public final class OpenSslEngine extends SSLEngine {
         if (pendingAppData() > 0) {
             // We filled all buffers but there is still some data pending in the BIO buffer, return BUFFER_OVERFLOW.
             return new SSLEngineResult(
-                    BUFFER_OVERFLOW, mayFinishHandshake(getHandshakeStatus()), bytesConsumed, bytesProduced);
+                    BUFFER_OVERFLOW, mayFinishHandshake(status != FINISHED ? getHandshakeStatus(): status),
+                    bytesConsumed, bytesProduced);
         }
 
         // Check to see if we received a close_notify message from the peer.
@@ -746,7 +750,7 @@ public final class OpenSslEngine extends SSLEngine {
             closeAll();
         }
 
-        return newResult(bytesConsumed, bytesProduced);
+        return newResult(bytesConsumed, bytesProduced, status);
     }
 
     private int pendingAppData() {
@@ -755,9 +759,11 @@ public final class OpenSslEngine extends SSLEngine {
         return handshakeState == HandshakeState.FINISHED ? SSL.pendingReadableBytesInSSL(ssl) : 0;
     }
 
-    private SSLEngineResult newResult(int bytesConsumed, int bytesProduced) throws SSLException {
+    private SSLEngineResult newResult(
+            int bytesConsumed, int bytesProduced, HandshakeStatus status) throws SSLException {
        return new SSLEngineResult(
-               getEngineStatus(), mayFinishHandshake(getHandshakeStatus()), bytesConsumed, bytesProduced);
+               getEngineStatus(), mayFinishHandshake(status != FINISHED ? getHandshakeStatus() : status)
+               , bytesConsumed, bytesProduced);
     }
 
     private void closeAll() throws SSLException {
