@@ -154,7 +154,7 @@
                         Release process must be performed on linux-x86_64.
                       </regexMessage>
                       <property>os.detected.classifier</property>
-                      <regex>^linux-x86_64$</regex>
+                      <regex>^linux-x86_64(\\-fedora)?$</regex>
                     </requireProperty>
                     <requireFilesContent>
                       <message>
@@ -607,6 +607,11 @@
     <argLine.bootcp>-Xbootclasspath/p:${jetty.alpn.path}</argLine.bootcp>
     <argLine.leak>-D_</argLine.leak> <!-- Overridden when 'leak' profile is active -->
     <argLine.coverage>-D_</argLine.coverage> <!-- Overridden when 'coverage' profile is active -->
+    <!-- Configure the os-maven-plugin extension to expand the classifier on                  -->
+    <!-- Fedora-"like" systems. This is currently only used for the netty-tcnative dependency -->
+    <os.detection.classifierWithLikes>fedora</os.detection.classifierWithLikes>
+    <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
+    <epoll.classifier>${os.detected.name}-${os.detected.arch}</epoll.classifier>
   </properties>
 
   <modules>
@@ -696,8 +701,8 @@
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>netty-tcnative</artifactId>
-        <version>1.1.33.Fork6</version>
-        <classifier>${os.detected.classifier}</classifier>
+        <version>1.1.33.Fork7</version>
+        <classifier>${tcnative.classifier}</classifier>
         <scope>compile</scope>
         <optional>true</optional>
       </dependency>
@@ -942,7 +947,7 @@
       <extension>
         <groupId>kr.motd.maven</groupId>
         <artifactId>os-maven-plugin</artifactId>
-        <version>1.2.3.Final</version>
+        <version>1.4.0.Final</version>
       </extension>
     </extensions>
 
