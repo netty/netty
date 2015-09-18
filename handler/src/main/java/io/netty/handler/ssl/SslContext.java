@@ -377,7 +377,7 @@ public abstract class SslContext {
                                             toX509Certificates(keyCertChainFile),
                                             toPrivateKey(keyFile, keyPassword),
                                             keyPassword, keyManagerFactory, ciphers, cipherFilter, apn,
-                                            sessionCacheSize, sessionTimeout);
+                                            sessionCacheSize, sessionTimeout, ClientAuth.NONE);
         } catch (Exception e) {
             if (e instanceof SSLException) {
                 throw (SSLException) e;
@@ -391,7 +391,8 @@ public abstract class SslContext {
             X509Certificate[] trustCertChain, TrustManagerFactory trustManagerFactory,
             X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
-            long sessionCacheSize, long sessionTimeout) throws SSLException {
+            long sessionCacheSize, long sessionTimeout,
+            ClientAuth clientAuth) throws SSLException {
 
         if (provider == null) {
             provider = defaultServerProvider();
@@ -401,11 +402,13 @@ public abstract class SslContext {
         case JDK:
             return new JdkSslServerContext(
                     trustCertChain, trustManagerFactory, keyCertChain, key, keyPassword,
-                    keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
+                    keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
+                    clientAuth);
         case OPENSSL:
             return new OpenSslServerContext(
                     trustCertChain, trustManagerFactory, keyCertChain, key, keyPassword,
-                    keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
+                    keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
+                    clientAuth);
         default:
             throw new Error(provider.toString());
         }

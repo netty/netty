@@ -110,12 +110,6 @@ public final class OpenSslEngine extends SSLEngine {
 
     static final int MAX_ENCRYPTION_OVERHEAD_LENGTH = MAX_ENCRYPTED_PACKET_LENGTH - MAX_PLAINTEXT_LENGTH;
 
-    enum ClientAuthMode {
-        NONE,
-        OPTIONAL,
-        REQUIRE,
-    }
-
     private static final AtomicIntegerFieldUpdater<OpenSslEngine> DESTROYED_UPDATER;
 
     private static final String INVALID_CIPHER = "SSL_NULL_WITH_NULL_NULL";
@@ -157,7 +151,7 @@ public final class OpenSslEngine extends SSLEngine {
     @SuppressWarnings("UnusedDeclaration")
     private volatile int destroyed;
 
-    private volatile ClientAuthMode clientAuth = ClientAuthMode.NONE;
+    private volatile ClientAuth clientAuth = ClientAuth.NONE;
 
     private volatile String endPointIdentificationAlgorithm;
     // Store as object as AlgorithmConstraints only exists since java 7.
@@ -189,30 +183,25 @@ public final class OpenSslEngine extends SSLEngine {
     @Deprecated
     public OpenSslEngine(long sslCtx, ByteBufAllocator alloc,
                          @SuppressWarnings("unused") String fallbackApplicationProtocol) {
-        this(sslCtx, alloc, false, null, OpenSslContext.NONE_PROTOCOL_NEGOTIATOR, OpenSslEngineMap.EMPTY, false);
+        this(sslCtx, alloc, false, null, OpenSslContext.NONE_PROTOCOL_NEGOTIATOR, OpenSslEngineMap.EMPTY, false,
+                ClientAuth.NONE);
     }
 
-    /**
-     * Creates a new instance
-     *
-     * @param sslCtx an OpenSSL {@code SSL_CTX} object
-     * @param alloc the {@link ByteBufAllocator} that will be used by this engine
-     * @param clientMode {@code true} if this is used for clients, {@code false} otherwise
-     * @param sessionContext the {@link OpenSslSessionContext} this {@link SSLEngine} belongs to.
-     */
     OpenSslEngine(long sslCtx, ByteBufAllocator alloc,
                   boolean clientMode, OpenSslSessionContext sessionContext,
                   OpenSslApplicationProtocolNegotiator apn, OpenSslEngineMap engineMap,
-                  boolean rejectRemoteInitiatedRenegation) {
+                  boolean rejectRemoteInitiatedRenegation,
+                  ClientAuth clientAuth) {
         this(sslCtx, alloc, clientMode, sessionContext, apn, engineMap, rejectRemoteInitiatedRenegation, null, -1,
-                null);
+                null, clientAuth);
     }
 
     OpenSslEngine(long sslCtx, ByteBufAllocator alloc,
                   boolean clientMode, OpenSslSessionContext sessionContext,
                   OpenSslApplicationProtocolNegotiator apn, OpenSslEngineMap engineMap,
                   boolean rejectRemoteInitiatedRenegation, String peerHost, int peerPort,
-                  java.security.cert.Certificate[] localCerts) {
+                  java.security.cert.Certificate[] localCerts,
+                  ClientAuth clientAuth) {
         super(peerHost, peerPort);
         OpenSsl.ensureAvailability();
         if (sslCtx == 0) {
@@ -221,6 +210,7 @@ public final class OpenSslEngine extends SSLEngine {
 
         this.alloc = checkNotNull(alloc, "alloc");
         this.apn = checkNotNull(apn, "apn");
+        this.clientAuth = clientMode ? ClientAuth.NONE : checkNotNull(clientAuth, "clientAuth");
         ssl = SSL.newSSL(sslCtx, !clientMode);
         session = new OpenSslSession(ssl, sessionContext);
         networkBIO = SSL.makeNetworkBIO(ssl);
@@ -1194,25 +1184,25 @@ public final class OpenSslEngine extends SSLEngine {
 
     @Override
     public void setNeedClientAuth(boolean b) {
-        setClientAuth(b ? ClientAuthMode.REQUIRE : ClientAuthMode.NONE);
+        setClientAuth(b ? ClientAuth.REQUIRE : ClientAuth.NONE);
     }
 
     @Override
     public boolean getNeedClientAuth() {
-        return clientAuth == ClientAuthMode.REQUIRE;
+        return clientAuth == ClientAuth.REQUIRE;
     }
 
     @Override
     public void setWantClientAuth(boolean b) {
-        setClientAuth(b ? ClientAuthMode.OPTIONAL : ClientAuthMode.NONE);
+        setClientAuth(b ? ClientAuth.OPTIONAL : ClientAuth.NONE);
     }
 
     @Override
     public boolean getWantClientAuth() {
-        return clientAuth == ClientAuthMode.OPTIONAL;
+        return clientAuth == ClientAuth.OPTIONAL;
     }
 
-    private void setClientAuth(ClientAuthMode mode) {
+    private void setClientAuth(ClientAuth mode) {
         if (clientMode) {
             return;
         }

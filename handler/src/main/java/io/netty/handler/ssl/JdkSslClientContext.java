@@ -243,7 +243,7 @@ public final class JdkSslClientContext extends JdkSslContext {
             File keyCertChainFile, File keyFile, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, JdkApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
-        super(ciphers, cipherFilter, apn);
+        super(ciphers, cipherFilter, apn, ClientAuth.NONE);
         try {
             ctx = newSSLContext(toX509Certificates(trustCertChainFile), trustManagerFactory,
                                 toX509Certificates(keyCertChainFile), toPrivateKey(keyFile, keyPassword),
@@ -260,7 +260,7 @@ public final class JdkSslClientContext extends JdkSslContext {
                         X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
                         KeyManagerFactory keyManagerFactory, Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                         ApplicationProtocolConfig apn, long sessionCacheSize, long sessionTimeout) throws SSLException {
-        super(ciphers, cipherFilter, toNegotiator(apn, false));
+        super(ciphers, cipherFilter, toNegotiator(apn, false), ClientAuth.NONE);
         ctx = newSSLContext(trustCertChain, trustManagerFactory, keyCertChain, key, keyPassword,
                             keyManagerFactory, sessionCacheSize, sessionTimeout);
     }
