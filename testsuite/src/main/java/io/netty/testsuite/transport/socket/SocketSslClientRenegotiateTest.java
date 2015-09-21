@@ -158,7 +158,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
         Future<Channel> clientHandshakeFuture = clientSslHandler.handshakeFuture();
         clientHandshakeFuture.sync();
 
-        String renegotiation = "SSL_RSA_WITH_RC4_128_SHA";
+        String renegotiation = "SSL_RSA_WITH_3DES_EDE_CBC_SHA";
         clientSslHandler.engine().setEnabledCipherSuites(new String[] { renegotiation });
         clientSslHandler.renegotiate().await();
         serverChannel.close().awaitUninterruptibly();
