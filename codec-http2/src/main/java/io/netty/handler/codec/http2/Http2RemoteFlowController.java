@@ -31,7 +31,7 @@ public interface Http2RemoteFlowController extends Http2FlowController {
 
     /**
      * Queues a payload for transmission to the remote endpoint. There is no guarantee as to when the data
-     * will be written or how it will be allocated to frames.
+     * will be written or how it will be assigned to frames.
      * before sending.
      * <p>
      * Writes do not actually occur until {@link #writePendingBytes()} is called.
