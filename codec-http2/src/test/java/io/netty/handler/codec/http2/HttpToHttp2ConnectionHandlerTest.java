@@ -159,6 +159,23 @@ public class HttpToHttp2ConnectionHandlerTest {
     }
 
     @Test
+    public void testOriginFormRequestTargetHandledFromUrlencodedUri() throws Exception {
+        bootstrapEnv(2, 1, 0);
+        final FullHttpRequest request = new DefaultFullHttpRequest(
+                HTTP_1_1, GET, "/where%2B0?q=now%2B0&f=then%2B0#section1%2B0");
+        final HttpHeaders httpHeaders = request.headers();
+        httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
+        final Http2Headers http2Headers =
+                new DefaultHttp2Headers().method(new AsciiString("GET"))
+                                         .path(new AsciiString("/where%2B0?q=now%2B0&f=then%2B0#section1%2B0"))
+                                         .scheme(new AsciiString("http"));
+
+        ChannelPromise writePromise = newPromise();
+        verifyHeadersOnly(http2Headers, writePromise, clientChannel.writeAndFlush(request, writePromise));
+    }
+
+    @Test
     public void testAbsoluteFormRequestTargetHandledFromHeaders() throws Exception {
         bootstrapEnv(2, 1, 0);
         final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/pub/WWW/TheProject.html");

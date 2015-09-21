@@ -356,18 +356,18 @@ public final class HttpConversionUtil {
      * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
      */
     private static AsciiString toHttp2Path(URI uri) {
-        StringBuilder pathBuilder = new StringBuilder(length(uri.getPath()) +
-                length(uri.getQuery()) + length(uri.getFragment()) + 2);
-        if (!isNullOrEmpty(uri.getPath())) {
-            pathBuilder.append(uri.getPath());
+        StringBuilder pathBuilder = new StringBuilder(length(uri.getRawPath()) +
+                length(uri.getRawQuery()) + length(uri.getRawFragment()) + 2);
+        if (!isNullOrEmpty(uri.getRawPath())) {
+            pathBuilder.append(uri.getRawPath());
         }
-        if (!isNullOrEmpty(uri.getQuery())) {
+        if (!isNullOrEmpty(uri.getRawQuery())) {
             pathBuilder.append('?');
-            pathBuilder.append(uri.getQuery());
+            pathBuilder.append(uri.getRawQuery());
         }
-        if (!isNullOrEmpty(uri.getFragment())) {
+        if (!isNullOrEmpty(uri.getRawFragment())) {
             pathBuilder.append('#');
-            pathBuilder.append(uri.getFragment());
+            pathBuilder.append(uri.getRawFragment());
         }
         String path = pathBuilder.toString();
         return path.isEmpty() ? EMPTY_REQUEST_PATH : new AsciiString(path);
