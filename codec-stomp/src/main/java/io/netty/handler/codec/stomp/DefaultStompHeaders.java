@@ -30,7 +30,7 @@ import static io.netty.util.AsciiString.CASE_SENSITIVE_HASHER;
 
 public class DefaultStompHeaders extends DefaultHeaders<CharSequence> implements StompHeaders {
     public DefaultStompHeaders() {
-        super(CharSequenceValueConverter.INSTANCE);
+        super(CASE_SENSITIVE_HASHER, CharSequenceValueConverter.INSTANCE);
     }
 
     @Override
