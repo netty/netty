@@ -425,8 +425,6 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         // Call super class first, as this may result in decode being called.
         super.channelInactive(ctx);
         if (byteDecoder != null) {
-            encoder.flowController().channelHandlerContext(null);
-            decoder.flowController().channelHandlerContext(null);
             byteDecoder.channelInactive(ctx);
             byteDecoder = null;
         }
