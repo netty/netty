@@ -297,17 +297,22 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
      */
     @Override
     public void writePendingBytes() throws Http2Exception {
-        Http2Stream connectionStream = connection.connectionStream();
-        int connectionWindowSize = writableBytes(state(connectionStream).windowSize());
+        AbstractState connectionState = connectionState();
+        int connectionWindowSize;
+        do {
+            connectionWindowSize = writableBytes(connectionState.windowSize());
 
-        if (connectionWindowSize > 0) {
-            // Allocate the bytes for the connection window to the streams, but do not write.
-            allocateBytesForTree(connectionStream, connectionWindowSize);
-        }
+            if (connectionWindowSize > 0) {
+                // Allocate the bytes for the connection window to the streams, but do not write.
+                allocateBytesForTree(connectionState.stream(), connectionWindowSize);
+            }
 
-        // Now write all of the allocated bytes, must write as there may be empty frames with
-        // EOS = true
-        connection.forEachActiveStream(WRITE_ALLOCATED_BYTES);
+            // Write all of allocated bytes. We must call this even if no bytes are allocated as it is possible there
+            // are empty frames indicating the End Of Stream.
+            connection.forEachActiveStream(WRITE_ALLOCATED_BYTES);
+        } while (connectionState.streamableBytesForTree() > 0 &&
+                 connectionWindowSize > 0 &&
+                 ctx.channel().isWritable());
     }
 
     /**
