@@ -94,6 +94,11 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
     }
 
     @Override
+    protected void shutdown(int fd) throws IOException {
+        Native.shutdown(fd, true, true);
+    }
+
+    @Override
     protected AbstractEpollUnsafe newUnsafe() {
         return new EpollStreamUnsafe();
     }

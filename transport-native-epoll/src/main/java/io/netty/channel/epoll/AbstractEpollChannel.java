@@ -102,15 +102,27 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     @Override
     protected void doClose() throws Exception {
-        active = false;
+        boolean active = this.active;
+        this.active = false;
+        FileDescriptor fd = fileDescriptor;
         try {
-            // deregister from epoll now
+            // deregister from epoll now and shutdown the socket.
             doDeregister();
+            if (active) {
+                shutdown(fd.intValue());
+            }
         } finally {
             // Ensure the file descriptor is closed in all cases.
-            FileDescriptor fd = fileDescriptor;
             fd.close();
         }
+    }
+
+    /**
+     * Called on {@link #doClose()} before the actual {@link FileDescriptor} is closed.
+     * This implementation does nothing.
+     */
+    protected void shutdown(int fd) throws IOException {
+        // NOOP
     }
 
     @Override
