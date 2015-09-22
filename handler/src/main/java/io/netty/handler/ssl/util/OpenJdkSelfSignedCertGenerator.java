@@ -28,6 +28,7 @@ import sun.security.x509.X500Name;
 import sun.security.x509.X509CertImpl;
 import sun.security.x509.X509CertInfo;
 
+import java.util.Date;
 import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.PrivateKey;
@@ -41,7 +42,8 @@ import static io.netty.handler.ssl.util.SelfSignedCertificate.*;
  */
 final class OpenJdkSelfSignedCertGenerator {
 
-    static String[] generate(String fqdn, KeyPair keypair, SecureRandom random) throws Exception {
+    static String[] generate(String fqdn, KeyPair keypair, SecureRandom random, Date notBefore, Date notAfter)
+            throws Exception {
         PrivateKey key = keypair.getPrivate();
 
         // Prepare the information required for generating an X.509 certificate.
@@ -59,7 +61,7 @@ final class OpenJdkSelfSignedCertGenerator {
         } catch (CertificateException ignore) {
             info.set(X509CertInfo.ISSUER, owner);
         }
-        info.set(X509CertInfo.VALIDITY, new CertificateValidity(NOT_BEFORE, NOT_AFTER));
+        info.set(X509CertInfo.VALIDITY, new CertificateValidity(notBefore, notAfter));
         info.set(X509CertInfo.KEY, new CertificateX509Key(keypair.getPublic()));
         info.set(X509CertInfo.ALGORITHM_ID,
                 new CertificateAlgorithmId(new AlgorithmId(AlgorithmId.sha1WithRSAEncryption_oid)));
