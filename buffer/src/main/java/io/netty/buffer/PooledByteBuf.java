@@ -51,8 +51,6 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
         this.offset = offset;
         this.length = length;
         this.maxLength = maxLength;
-        setIndex(0, 0);
-        discardMarks();
         tmpNioBuf = null;
         this.cache = cache;
     }
@@ -65,9 +63,18 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
         memory = chunk.memory;
         offset = 0;
         this.length = maxLength = length;
-        setIndex(0, 0);
         tmpNioBuf = null;
         cache = null;
+    }
+
+    /**
+     * Method must be called before reuse this {@link PooledByteBufAllocator}
+     */
+    final void reuse(int maxCapacity) {
+        maxCapacity(maxCapacity);
+        setRefCnt(1);
+        setIndex0(0, 0);
+        discardMarks();
     }
 
     @Override
