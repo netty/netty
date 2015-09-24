@@ -756,6 +756,56 @@ public class DefaultHttp2RemoteFlowControllerTest {
     }
 
     /**
+     * Test that the maximum allowed amount the flow controller allows to be sent is always fully allocated if
+     * the streams have at least this much data to send. See https://github.com/netty/netty/issues/4266.
+     * <pre>
+     *            0
+     *          / | \
+     *        /   |   \
+     *      A(0) B(0) C(0)
+     *     /
+     *    D(> allowed to send in 1 allocation attempt)
+     * </pre>
+     */
+    @Test
+    public void unstreamableParentsShouldFeedHungryChildren() throws Http2Exception {
+        // Max all connection windows. We don't want this being a limiting factor in the test.
+        maxStreamWindow(CONNECTION_STREAM_ID);
+        maxStreamWindow(STREAM_A);
+        maxStreamWindow(STREAM_B);
+        maxStreamWindow(STREAM_C);
+        maxStreamWindow(STREAM_D);
+
+        // Setup the priority tree.
+        setPriority(STREAM_A, 0, (short) 32, false);
+        setPriority(STREAM_B, 0, (short) 16, false);
+        setPriority(STREAM_C, 0, (short) 16, false);
+        setPriority(STREAM_D, STREAM_A, (short) 16, false);
+
+        // The bytesBeforeUnwritable defaults to Long.MAX_VALUE, we need to leave room to send enough data to exceed
+        // the writableBytes, and so we must reduce this value to something no-zero.
+        when(channel.bytesBeforeUnwritable()).thenReturn(1L);
+
+        // Calculate the max amount of data the flow controller will allow to be sent now.
+        final int writableBytes = controller.writableBytes(window(CONNECTION_STREAM_ID));
+
+        // This is insider knowledge into how writePendingBytes works. Because the algorithm will keep looping while
+        // the channel is writable, we simulate that the channel will become unwritable after the first write.
+        when(channel.isWritable()).thenReturn(false);
+
+        // Send enough so it can not be completely written out
+        final int expectedUnsentAmount = 1;
+        // Make sure we don't overflow
+        assertTrue(Integer.MAX_VALUE - expectedUnsentAmount > writableBytes);
+        FakeFlowControlled dataD = new FakeFlowControlled(writableBytes + expectedUnsentAmount);
+        sendData(STREAM_D, dataD);
+        controller.writePendingBytes();
+
+        dataD.assertPartiallyWritten(writableBytes);
+        verify(listener, times(1)).streamWritten(eq(stream(STREAM_D)), eq(writableBytes));
+    }
+
+    /**
      * In this test, we root all streams at the connection, and then verify that data is split appropriately based on
      * weight (all available data is the same).
      *
@@ -1429,6 +1479,10 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
     private void exhaustStreamWindow(int streamId) throws Http2Exception {
         incrementWindowSize(streamId, -window(streamId));
+    }
+
+    private void maxStreamWindow(int streamId) throws Http2Exception {
+        incrementWindowSize(streamId, Http2CodecUtil.MAX_INITIAL_WINDOW_SIZE - window(streamId));
     }
 
     private int window(int streamId) throws Http2Exception {
