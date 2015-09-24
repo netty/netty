@@ -67,4 +67,16 @@ public class HttpHeadersTest {
         HttpHeaders headers = new DefaultHttpHeaders(false);
         headers.set("test", (CharSequence) null);
     }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testAddSelf() {
+        HttpHeaders headers = new DefaultHttpHeaders(false);
+        headers.add(headers);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testSetSelf() {
+        HttpHeaders headers = new DefaultHttpHeaders(false);
+        headers.set(headers);
+    }
 }

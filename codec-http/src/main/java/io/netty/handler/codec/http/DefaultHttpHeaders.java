@@ -59,6 +59,9 @@ public class DefaultHttpHeaders extends HttpHeaders {
     @Override
     public HttpHeaders add(HttpHeaders headers) {
         if (headers instanceof DefaultHttpHeaders) {
+            if (headers == this) {
+                throw new IllegalArgumentException("can't add to itself.");
+            }
             DefaultHttpHeaders defaultHttpHeaders = (DefaultHttpHeaders) headers;
             HeaderEntry e = defaultHttpHeaders.head.after;
             while (e != defaultHttpHeaders.head) {
@@ -74,6 +77,9 @@ public class DefaultHttpHeaders extends HttpHeaders {
     @Override
     public HttpHeaders set(HttpHeaders headers) {
         if (headers instanceof DefaultHttpHeaders) {
+            if (headers == this) {
+                throw new IllegalArgumentException("can't add to itself.");
+            }
             clear();
             DefaultHttpHeaders defaultHttpHeaders = (DefaultHttpHeaders) headers;
             HeaderEntry e = defaultHttpHeaders.head.after;
