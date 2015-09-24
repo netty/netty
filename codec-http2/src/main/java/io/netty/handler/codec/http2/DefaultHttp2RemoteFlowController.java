@@ -288,7 +288,12 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         return min(connectionState().windowSize(), useableBytes);
     }
 
-    private int writableBytes(int requestedBytes) {
+    /**
+     * Package private for testing purposes only!
+     * @param requestedBytes The desired amount of bytes.
+     * @return The amount of bytes that can be supported by underlying {@link Channel} without queuing "too-much".
+     */
+    final int writableBytes(int requestedBytes) {
         return Math.min(requestedBytes, maxUsableChannelBytes());
     }
 
@@ -386,15 +391,6 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                 bytesAllocated += bytesForChild;
                 nextConnectionWindow -= bytesForChild;
                 bytesForTree -= bytesForChild;
-
-                // If this subtree still wants to send then re-insert into children list and re-consider for next
-                // iteration. This is needed because we don't yet know if all the peers will be able to use
-                // all of their "fair share" of the connection window, and if they don't use it then we should
-                // divide their unused shared up for the peers who still want to send.
-                if (nextConnectionWindow > 0 && state.streamableBytesForTree() > 0) {
-                    stillHungry(child);
-                    nextTotalWeight += child.weight();
-                }
             }
 
             // Allocate any remaining bytes to the children of this stream.
@@ -404,7 +400,18 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                 nextConnectionWindow -= childBytesAllocated;
             }
 
-            return nextConnectionWindow > 0;
+            if (nextConnectionWindow > 0) {
+                // If this subtree still wants to send then it should be re-considered to take bytes that are unused by
+                // sibling nodes. This is needed because we don't yet know if all the peers will be able to use all of
+                // their "fair share" of the connection window, and if they don't use it then we should divide their
+                // unused shared up for the peers who still want to send.
+                if (state.streamableBytesForTree() > 0) {
+                    stillHungry(child);
+                }
+                return true;
+            }
+
+            return false;
         }
 
         void feedHungryChildren() throws Http2Exception {
@@ -438,15 +445,16 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          * Indicates that the given child is still hungry (i.e. still has streamable bytes that can
          * fit within the current connection window).
          */
-        void stillHungry(Http2Stream child) {
+        private void stillHungry(Http2Stream child) {
             ensureSpaceIsAllocated(nextTail);
             stillHungry[nextTail++] = child;
+            nextTotalWeight += child.weight();
         }
 
         /**
          * Ensures that the {@link #stillHungry} array is properly sized to hold the given index.
          */
-        void ensureSpaceIsAllocated(int index) {
+        private void ensureSpaceIsAllocated(int index) {
             if (stillHungry == null) {
                 // Initial size is 1/4 the number of children. Clipping the minimum at 2, which will over allocate if
                 // maxSize == 1 but if this was true we shouldn't need to re-allocate because the 1 child should get
