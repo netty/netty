@@ -701,10 +701,8 @@ public final class OpenSslEngine extends SSLEngine {
 
                     if (!dst.hasRemaining()) {
                         idx ++;
-                    } else {
-                        // We read everything return now.
-                        return newResult(bytesConsumed, bytesProduced);
                     }
+                    // continue reading into the buffer.
                 } else {
                     int sslError = SSL.getError(ssl, bytesRead);
                     switch (sslError) {
@@ -724,6 +722,7 @@ public final class OpenSslEngine extends SSLEngine {
                     }
                 }
             }
+            return newResult(bytesConsumed, bytesProduced);
         } else {
             // If the capacity of all destination buffers is 0 we need to trigger a SSL_read anyway to ensure
             // everything is flushed in the BIO pair and so we can detect it in the pendingAppData() call.
