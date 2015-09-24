@@ -433,8 +433,9 @@ public final class OpenSslEngine extends SSLEngine {
                 shutdown();
             }
 
-            return new SSLEngineResult(getEngineStatus(), mayFinishHandshake(getHandshakeStatus(pendingNet)),
-                                       bytesConsumed, bytesProduced);
+            return new SSLEngineResult(getEngineStatus(),
+                    mayFinishHandshake(status != FINISHED ? getHandshakeStatus(pendingNet) : status),
+                    bytesConsumed, bytesProduced);
         }
         return null;
     }
