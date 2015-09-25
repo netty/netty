@@ -135,6 +135,8 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     private boolean singleDecode;
     private boolean decodeWasNull;
     private boolean first;
+    private int discardAfterReads = 16;
+    private int numReads;
 
     protected ByteToMessageDecoder() {
         CodecUtil.ensureNotSharable(this);
@@ -168,6 +170,17 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             throw new NullPointerException("cumulator");
         }
         this.cumulator = cumulator;
+    }
+
+    /**
+     * Set the number of reads after which {@link ByteBuf#discardSomeReadBytes()} are called and so free up memory.
+     * The default is {@code 16}.
+     */
+    public void setDiscardAfterReads(int discardAfterReads) {
+        if (discardAfterReads <= 0) {
+            throw new IllegalArgumentException("discardAfterReads must be > 0");
+        }
+        this.discardAfterReads = discardAfterReads;
     }
 
     /**
@@ -205,6 +218,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             buf.release();
         }
         cumulation = null;
+        numReads = 0;
         ctx.fireChannelReadComplete();
         handlerRemoved0(ctx);
     }
@@ -234,9 +248,16 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 throw new DecoderException(t);
             } finally {
                 if (cumulation != null && !cumulation.isReadable()) {
+                    numReads = 0;
                     cumulation.release();
                     cumulation = null;
+                } else if (++ numReads >= discardAfterReads) {
+                    // We did enough reads already try to discard some bytes so we not risk to see a OOME.
+                    // See https://github.com/netty/netty/issues/4275
+                    numReads = 0;
+                    discardSomeReadBytes();
                 }
+
                 int size = out.size();
                 decodeWasNull = size == 0;
 
@@ -252,6 +273,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        numReads = 0;
         discardSomeReadBytes();
         if (decodeWasNull) {
             decodeWasNull = false;
