@@ -51,6 +51,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     private final Http2Connection connection;
     private final Http2Connection.PropertyKey stateKey;
     private final StreamByteDistributor streamByteDistributor;
+    private final AbstractState connectionState;
     private int initialWindowSize = DEFAULT_WINDOW_SIZE;
     private ChannelHandlerContext ctx;
     private Listener listener;
@@ -66,8 +67,8 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
         // Add a flow state for the connection.
         stateKey = connection.newKey();
-        connection.connectionStream().setProperty(stateKey,
-                new DefaultState(connection.connectionStream(), initialWindowSize));
+        connectionState = new DefaultState(connection.connectionStream(), initialWindowSize);
+        connection.connectionStream().setProperty(stateKey, connectionState);
 
         // Register for notification of new streams.
         connection.addListener(new Http2ConnectionAdapter() {
@@ -194,7 +195,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         assert ctx == null || ctx.executor().inEventLoop();
         if (stream.id() == CONNECTION_STREAM_ID) {
             // Update the connection window
-            connectionState().incrementStreamWindow(delta);
+            connectionState.incrementStreamWindow(delta);
         } else {
             // Update the stream window
             AbstractState state = state(stream);
@@ -230,15 +231,11 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         return (AbstractState) checkNotNull(stream, "stream").getProperty(stateKey);
     }
 
-    private AbstractState connectionState() {
-        return (AbstractState) connection.connectionStream().getProperty(stateKey);
-    }
-
     /**
      * Returns the flow control window for the entire connection.
      */
     private int connectionWindowSize() {
-        return connectionState().windowSize();
+        return connectionState.windowSize();
     }
 
     private int minUsableChannelBytes() {
@@ -261,13 +258,12 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         int useableBytes = channelWritableBytes > 0 ? max(channelWritableBytes, minUsableChannelBytes()) : 0;
 
         // Clip the usable bytes by the connection window.
-        return min(connectionState().windowSize(), useableBytes);
+        return min(connectionState.windowSize(), useableBytes);
     }
 
     /**
      * Package private for testing purposes only!
      *
-     * @param requestedBytes The desired amount of bytes.
      * @return The amount of bytes that can be supported by underlying {@link
      * io.netty.channel.Channel} without queuing "too-much".
      */
@@ -497,7 +493,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         private void decrementFlowControlWindow(int bytes) {
             try {
                 int negativeBytes = -bytes;
-                connectionState().incrementStreamWindow(negativeBytes);
+                connectionState.incrementStreamWindow(negativeBytes);
                 incrementStreamWindow(negativeBytes);
             } catch (Http2Exception e) {
                 // Should never get here since we're decrementing.

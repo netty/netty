@@ -327,10 +327,12 @@ public final class PriorityStreamByteDistributor implements StreamByteDistributo
         void allocate(int bytes) {
             allocated += bytes;
 
-            // Also artificially reduce the streamable bytes for this tree to give the appearance
-            // that the data has been written. This will be restored before the allocated bytes are
-            // actually written.
-            unallocatedStreamableBytesForTreeChanged(-bytes);
+            if (bytes != 0) {
+                // Also artificially reduce the streamable bytes for this tree to give the appearance
+                // that the data has been written. This will be restored before the allocated bytes are
+                // actually written.
+                unallocatedStreamableBytesForTreeChanged(-bytes);
+            }
         }
 
         /**
@@ -347,8 +349,10 @@ public final class PriorityStreamByteDistributor implements StreamByteDistributo
             int delta = newStreamableBytes - streamableBytes;
             streamableBytes = newStreamableBytes;
 
-            // Update this branch of the priority tree if the streamable bytes have changed for this node.
-            unallocatedStreamableBytesForTreeChanged(delta);
+            if (delta != 0) {
+                // Update this branch of the priority tree if the streamable bytes have changed for this node.
+                unallocatedStreamableBytesForTreeChanged(delta);
+            }
         }
 
         void close() {
