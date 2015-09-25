@@ -84,7 +84,7 @@ public final class SelfSignedCertificate {
      * @param notAfter Certificate is not valid after this time
      */
     public SelfSignedCertificate(Date notBefore, Date notAfter) throws CertificateException {
-        this("example.com");
+        this("example.com", notBefore, notAfter);
     }
 
     /**
