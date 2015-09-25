@@ -382,13 +382,9 @@ public final class PriorityStreamByteDistributor implements StreamByteDistributo
     private class WriteVisitor implements Http2StreamVisitor {
         Writer writer;
         RuntimeException error;
-        boolean writing;
 
         void writeAllocatedBytes(Writer writer) {
-            assert !writing;
-            writing = true;
             try {
-                error = null;
                 this.writer = writer;
                 try {
                     connection.forEachActiveStream(this);
@@ -402,7 +398,7 @@ public final class PriorityStreamByteDistributor implements StreamByteDistributo
                     throw error;
                 }
             } finally {
-                writing = false;
+                error = null;
             }
         }
 
