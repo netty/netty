@@ -347,9 +347,9 @@ public final class PriorityStreamByteDistributor implements StreamByteDistributo
             this.hasFrame = hasFrame;
 
             int delta = newStreamableBytes - streamableBytes;
-            streamableBytes = newStreamableBytes;
-
             if (delta != 0) {
+                streamableBytes = newStreamableBytes;
+
                 // Update this branch of the priority tree if the streamable bytes have changed for this node.
                 unallocatedStreamableBytesForTreeChanged(delta);
             }
