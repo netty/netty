@@ -42,6 +42,21 @@ public final class StompTestConstants {
             '\n' +
             "hello, queue a!!!" +
             "\0\n";
+    public static final String[] SEND_FRAMES_3 = {
+            "SEND\n" +
+                    "destination:/queue/a\n" +
+                    "content-type:text/plain\n" +
+                    '\n' +
+                    "first part of body\n",
+            "second part of body\0"
+    };
+
+    public static final String SEND_FRAME_4 = "SEND\n" +
+            "destination:/queue/a\n" +
+            "content-type:text/plain\n" +
+            '\n' +
+            "body\0";
 
     private StompTestConstants() { }
+
 }
