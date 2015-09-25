@@ -96,14 +96,14 @@ public final class PriorityStreamByteDistributor implements StreamByteDistributo
     /**
      * For testing only.
      */
-    final int unallocatedStreamableBytes(Http2Stream stream) {
+    int unallocatedStreamableBytes(Http2Stream stream) {
         return state(stream).unallocatedStreamableBytes();
     }
 
     /**
      * For testing only.
      */
-    final int unallocatedStreamableBytesForTree(Http2Stream stream) {
+    int unallocatedStreamableBytesForTree(Http2Stream stream) {
         return state(stream).unallocatedStreamableBytesForTree();
     }
 
