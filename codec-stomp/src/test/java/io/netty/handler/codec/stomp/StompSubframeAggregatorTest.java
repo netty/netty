@@ -67,6 +67,39 @@ public class StompSubframeAggregatorTest {
     }
 
     @Test
+    public void testSingleFrameWithBodyAndNoContentLength() {
+        ByteBuf incoming = Unpooled.buffer();
+        incoming.writeBytes(StompTestConstants.SEND_FRAME_4.getBytes());
+        channel.writeInbound(incoming);
+
+        StompFrame frame = channel.readInbound();
+        Assert.assertNotNull(frame);
+        Assert.assertEquals(StompCommand.SEND, frame.command());
+        Assert.assertEquals("body", frame.content().toString(CharsetUtil.UTF_8));
+        frame.release();
+
+        Assert.assertNull(channel.readInbound());
+    }
+
+    @Test
+    public void testSingleFrameWithSplitBodyAndNoContentLength() {
+        for (int n = 0; n < StompTestConstants.SEND_FRAMES_3.length; ++n) {
+            ByteBuf incoming = Unpooled.buffer();
+            incoming.writeBytes(StompTestConstants.SEND_FRAMES_3[n].getBytes());
+            channel.writeInbound(incoming);
+            channel.flush();
+        }
+
+        StompFrame frame = channel.readInbound();
+        Assert.assertNotNull(frame);
+        Assert.assertEquals(StompCommand.SEND, frame.command());
+        Assert.assertEquals("first part of body\nsecond part of body", frame.content().toString(CharsetUtil.UTF_8));
+        frame.release();
+
+        Assert.assertNull(channel.readInbound());
+    }
+
+    @Test
     public void testSingleFrameChunked() {
         EmbeddedChannel channel = new EmbeddedChannel(
                 new StompSubframeDecoder(10000, 5), new StompSubframeAggregator(100000));
