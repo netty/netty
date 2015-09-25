@@ -54,7 +54,7 @@ public final class PriorityStreamByteDistributor implements StreamByteDistributo
             public void onPriorityTreeParentChanged(Http2Stream stream, Http2Stream oldParent) {
                 Http2Stream parent = stream.parent();
                 if (parent != null) {
-                    int delta = state(stream).unallocatedStreamableBytesForTree();
+                    long delta = state(stream).unallocatedStreamableBytesForTree();
                     if (delta != 0) {
                         state(parent).unallocatedStreamableBytesForTreeChanged(delta);
                     }
@@ -65,7 +65,7 @@ public final class PriorityStreamByteDistributor implements StreamByteDistributo
             public void onPriorityTreeParentChanging(Http2Stream stream, Http2Stream newParent) {
                 Http2Stream parent = stream.parent();
                 if (parent != null) {
-                    int delta = state(stream).unallocatedStreamableBytesForTree();
+                    long delta = state(stream).unallocatedStreamableBytesForTree();
                     if (delta != 0) {
                         state(parent).unallocatedStreamableBytesForTreeChanged(-delta);
                     }
@@ -103,7 +103,7 @@ public final class PriorityStreamByteDistributor implements StreamByteDistributo
     /**
      * For testing only.
      */
-    int unallocatedStreamableBytesForTree(Http2Stream stream) {
+    long unallocatedStreamableBytesForTree(Http2Stream stream) {
         return state(stream).unallocatedStreamableBytesForTree();
     }
 
@@ -307,7 +307,7 @@ public final class PriorityStreamByteDistributor implements StreamByteDistributo
         boolean hasFrame;
         int streamableBytes;
         int allocated;
-        int unallocatedStreamableBytesForTree;
+        long unallocatedStreamableBytesForTree;
 
         PriorityState(Http2Stream stream) {
             this.stream = stream;
@@ -317,7 +317,7 @@ public final class PriorityStreamByteDistributor implements StreamByteDistributo
          * Recursively increments the {@link #unallocatedStreamableBytesForTree()} for this branch in
          * the priority tree starting at the current node.
          */
-        void unallocatedStreamableBytesForTreeChanged(int delta) {
+        void unallocatedStreamableBytesForTreeChanged(long delta) {
             unallocatedStreamableBytesForTree += delta;
             if (!stream.isRoot()) {
                 state(stream.parent()).unallocatedStreamableBytesForTreeChanged(delta);
@@ -371,7 +371,7 @@ public final class PriorityStreamByteDistributor implements StreamByteDistributo
             return streamableBytes - allocated;
         }
 
-        int unallocatedStreamableBytesForTree() {
+        long unallocatedStreamableBytesForTree() {
             return unallocatedStreamableBytesForTree;
         }
     }

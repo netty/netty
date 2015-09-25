@@ -438,6 +438,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             if (ctx.channel().isWritable()) {
                 flush(ctx);
             }
+            encoder.flowController().channelWritabilityChanged();
         } finally {
             super.channelWritabilityChanged(ctx);
         }

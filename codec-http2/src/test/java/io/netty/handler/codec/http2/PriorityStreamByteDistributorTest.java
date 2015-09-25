@@ -15,6 +15,21 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.collection.IntObjectMap;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.AdditionalMatchers;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+import org.mockito.verification.VerificationMode;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -31,21 +46,6 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-
-import io.netty.util.collection.IntObjectHashMap;
-import io.netty.util.collection.IntObjectMap;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.AdditionalMatchers;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-import org.mockito.verification.VerificationMode;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * Tests for {@link PriorityStreamByteDistributor}.
@@ -661,7 +661,7 @@ public class PriorityStreamByteDistributorTest {
         stream(streamId).setPriority(parent, (short) weight, exclusive);
     }
 
-    private int streamableBytesForTree(Http2Stream stream) {
+    private long streamableBytesForTree(Http2Stream stream) {
         return distributor.unallocatedStreamableBytesForTree(stream);
     }
 
@@ -681,8 +681,8 @@ public class PriorityStreamByteDistributorTest {
         verify(writer).write(same(stream(streamId)), (int) AdditionalMatchers.eq(numBytes, delta));
     }
 
-    private static int calculateStreamSizeSum(IntObjectMap<Integer> streamSizes, List<Integer> streamIds) {
-        int sum = 0;
+    private static long calculateStreamSizeSum(IntObjectMap<Integer> streamSizes, List<Integer> streamIds) {
+        long sum = 0;
         for (Integer streamId : streamIds) {
             Integer streamSize = streamSizes.get(streamId);
             if (streamSize != null) {
