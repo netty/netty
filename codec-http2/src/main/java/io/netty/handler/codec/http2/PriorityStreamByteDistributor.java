@@ -15,6 +15,8 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -28,7 +30,8 @@ import java.util.Arrays;
 public final class PriorityStreamByteDistributor implements StreamByteDistributor {
     private final Http2Connection connection;
     private final Http2Connection.PropertyKey stateKey;
-    private final WriteVisitor writeVisitor = new WriteVisitor();
+    private Http2StreamVisitor writeVisitor;
+    private Http2Exception writerError;
 
     public PriorityStreamByteDistributor(Http2Connection connection) {
         this.connection = checkNotNull(connection, "connection");
@@ -81,14 +84,54 @@ public final class PriorityStreamByteDistributor implements StreamByteDistributo
     }
 
     @Override
-    public boolean distribute(int maxBytes, Writer writer) {
+    public void writer(final Writer writer) {
         checkNotNull(writer, "writer");
+        writeVisitor = new Http2StreamVisitor() {
+            @Override
+            public boolean visit(Http2Stream stream) throws Http2Exception {
+                PriorityState state = state(stream);
+                try {
+                    int allocated = state.allocated;
+
+                    // Unallocate all bytes for this stream.
+                    state.resetAllocated();
+
+                    // Write the allocated bytes.
+                    if (writerError == null) {
+                        writer.write(stream, allocated);
+                    }
+                } catch (RuntimeException e) {
+                    // Stop calling the visitor, but continue in the loop to reset the allocated for
+                    // all remaining states.
+                    if (writerError == null) {
+                        writerError = connectionError(INTERNAL_ERROR, e, "allocation error");
+                    }
+                } // Don't catch Http2Exception. This should end iteration and the loop that creates
+                  // this exception is responsible for reseting all allocated state
+
+                // We have to iterate across all streams to ensure that we reset the allocated bytes.
+                return true;
+            }
+        };
+    }
+
+    @Override
+    public boolean distribute(int maxBytes) throws Http2Exception {
         if (maxBytes > 0) {
             allocateBytesForTree(connection.connectionStream(), maxBytes);
         }
 
-        // Need to write even if maxBytes == 0 in order to handle the case of empty frames.
-        writeVisitor.writeAllocatedBytes(writer);
+        try {
+            // Need to write even if maxBytes == 0 in order to handle the case of empty frames.
+            connection.forEachActiveStream(writeVisitor);
+
+            // If an error was caught when calling back the visitor, throw it now.
+            if (writerError != null) {
+                throw writerError;
+            }
+        } finally {
+            writerError = null;
+        }
 
         return state(connection.connectionStream()).unallocatedStreamableBytesForTree() > 0;
     }
@@ -373,56 +416,6 @@ public final class PriorityStreamByteDistributor implements StreamByteDistributo
 
         int unallocatedStreamableBytesForTree() {
             return unallocatedStreamableBytesForTree;
-        }
-    }
-
-    /**
-     * A connection stream visitor that delegates to the user provided visitor.
-     */
-    private class WriteVisitor implements Http2StreamVisitor {
-        Writer writer;
-        RuntimeException error;
-
-        void writeAllocatedBytes(Writer writer) {
-            try {
-                this.writer = writer;
-                try {
-                    connection.forEachActiveStream(this);
-                } catch (Http2Exception e) {
-                    // Should never happen since the visitor doesn't throw.
-                    throw new IllegalStateException(e);
-                }
-
-                // If an error was caught when calling back the visitor, throw it now.
-                if (error != null) {
-                    throw error;
-                }
-            } finally {
-                error = null;
-            }
-        }
-
-        @Override
-        public boolean visit(Http2Stream stream) {
-            PriorityState state = state(stream);
-            try {
-                int allocated = state.allocated;
-
-                // Unallocate all bytes for this stream.
-                state.resetAllocated();
-
-                // Write the allocated bytes.
-                if (error == null) {
-                    writer.write(stream, allocated);
-                }
-            } catch (RuntimeException e) {
-                // Stop calling the visitor, but continue in the loop to reset the allocated for
-                // all remaining states.
-                error = e;
-            }
-
-            // We have to iterate across all streams to ensure that we reset the allocated bytes.
-            return true;
         }
     }
 }

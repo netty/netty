@@ -66,6 +66,12 @@ public interface StreamByteDistributor {
     void updateStreamableBytes(StreamState state);
 
     /**
+     * Set the object which is to be used during the {@link #distribute(int)} operations.
+     * @param writer Used to actually write the bytes after they are distributed.
+     */
+    void writer(Writer writer);
+
+    /**
      * Distributes up to {@code maxBytes} to those streams containing streamable bytes and
      * iterates across those streams to write the appropriate bytes. Criteria for
      * traversing streams is undefined and it is up to the implementation to determine when to stop
@@ -79,5 +85,5 @@ public interface StreamByteDistributor {
      * @return {@code true} if there are still streamable bytes that have not yet been written,
      * otherwise {@code false}.
      */
-    boolean distribute(int maxBytes, Writer writer);
+    boolean distribute(int maxBytes) throws Http2Exception;
 }

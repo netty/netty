@@ -15,26 +15,6 @@
 
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.verifyZeroInteractions;
-import static org.mockito.Mockito.when;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
@@ -53,6 +33,27 @@ import org.mockito.stubbing.Answer;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.when;
+
 /**
  * Tests for {@link DefaultHttp2RemoteFlowController}.
  */
@@ -63,6 +64,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
     private static final int STREAM_D = 7;
 
     private DefaultHttp2RemoteFlowController controller;
+    private PriorityStreamByteDistributor distributor;
 
     @Mock
     private ByteBuf buffer;
@@ -112,7 +114,8 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
     private void initConnectionAndController() throws Http2Exception {
         connection = new DefaultHttp2Connection(false);
-        controller = new DefaultHttp2RemoteFlowController(connection);
+        distributor = new PriorityStreamByteDistributor(connection);
+        controller = new DefaultHttp2RemoteFlowController(connection, distributor);
         controller.listener(listener);
         connection.remote().flowController(controller);
 
@@ -538,7 +541,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock invocationOnMock) {
-                throw new RuntimeException("error failed");
+                throw new RuntimeException("Fake exception");
             }
         }).when(flowControlled).error(any(ChannelHandlerContext.class), any(Throwable.class));
 
@@ -548,7 +551,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         try {
             controller.addFlowControlled(stream, flowControlled);
             controller.writePendingBytes();
-        } catch (RuntimeException e) {
+        } catch (Http2Exception e) {
             exceptionThrown = true;
         } finally {
             assertTrue(exceptionThrown);
@@ -679,6 +682,40 @@ public class DefaultHttp2RemoteFlowControllerTest {
         dataA.assertFullyWritten();
     }
 
+    @Test
+    public void reentryDeallocatesAllBytesAndPropegatesHttp2Exception() throws Http2Exception {
+        final int dataSize = 1;
+        final AtomicInteger exceptionsSeen = new AtomicInteger();
+        final AtomicInteger callCount = new AtomicInteger(2);
+        final RuntimeException fakeException = new RuntimeException("Fake exception");
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocationOnMock) {
+                if (callCount.decrementAndGet() == 0) {
+                    throw fakeException;
+                } else {
+                    try {
+                        FakeFlowControlled dataA = new FakeFlowControlled(dataSize);
+                        final Http2Stream stream = stream(STREAM_A);
+                        controller.addFlowControlled(stream, dataA);
+                        controller.writePendingBytes();
+                    } catch (Http2Exception e) {
+                        assertSame(fakeException, e.getCause());
+                        exceptionsSeen.incrementAndGet();
+                    }
+                }
+                return null;
+            }
+        }).when(listener).streamWritten(any(Http2Stream.class), anyInt());
+
+        FakeFlowControlled dataA = new FakeFlowControlled(dataSize);
+        final Http2Stream stream = stream(STREAM_A);
+        controller.addFlowControlled(stream, dataA);
+        controller.writePendingBytes();
+        assertEquals(1, exceptionsSeen.get());
+        assertEquals(0, distributor.unallocatedStreamableBytesForTree(stream(CONNECTION_STREAM_ID)));
+    }
+
     private static Http2RemoteFlowController.FlowControlled mockedFlowControlledThatThrowsOnWrite() throws Exception {
         final Http2RemoteFlowController.FlowControlled flowControlled =
                 Mockito.mock(Http2RemoteFlowController.FlowControlled.class);
@@ -712,10 +749,6 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
     private void exhaustStreamWindow(int streamId) throws Http2Exception {
         incrementWindowSize(streamId, -window(streamId));
-    }
-
-    private void maxStreamWindow(int streamId) throws Http2Exception {
-        incrementWindowSize(streamId, Http2CodecUtil.MAX_INITIAL_WINDOW_SIZE - window(streamId));
     }
 
     private int window(int streamId) throws Http2Exception {

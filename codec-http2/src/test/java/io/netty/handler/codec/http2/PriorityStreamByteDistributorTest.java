@@ -69,6 +69,7 @@ public class PriorityStreamByteDistributorTest {
 
         connection = new DefaultHttp2Connection(false);
         distributor = new PriorityStreamByteDistributor(connection);
+        distributor.writer(writer);
 
         // Assume we always write all the allocated bytes.
         doAnswer(new Answer<Void>() {
@@ -91,7 +92,7 @@ public class PriorityStreamByteDistributorTest {
     }
 
     @Test
-    public void bytesUnassignedAfterProcessing() {
+    public void bytesUnassignedAfterProcessing() throws Http2Exception {
         updateStream(STREAM_A, 1, true);
         updateStream(STREAM_B, 2, true);
         updateStream(STREAM_C, 3, true);
@@ -111,7 +112,7 @@ public class PriorityStreamByteDistributorTest {
     }
 
     @Test
-    public void bytesUnassignedAfterProcessingWithException() {
+    public void bytesUnassignedAfterProcessingWithException() throws Http2Exception {
         updateStream(STREAM_A, 1, true);
         updateStream(STREAM_B, 2, true);
         updateStream(STREAM_C, 3, true);
@@ -123,8 +124,8 @@ public class PriorityStreamByteDistributorTest {
         try {
             write(10);
             fail("Expected an exception");
-        } catch (RuntimeException e) {
-            assertSame(fakeException, e);
+        } catch (Http2Exception e) {
+            assertSame(fakeException, e.getCause());
         }
 
         verifyWrite(atMost(1), STREAM_A, 1);
@@ -665,8 +666,8 @@ public class PriorityStreamByteDistributorTest {
         return distributor.unallocatedStreamableBytesForTree(stream);
     }
 
-    private boolean write(int numBytes) {
-        return distributor.distribute(numBytes, writer);
+    private boolean write(int numBytes) throws Http2Exception {
+        return distributor.distribute(numBytes);
     }
 
     private void verifyWrite(int streamId, int numBytes) {

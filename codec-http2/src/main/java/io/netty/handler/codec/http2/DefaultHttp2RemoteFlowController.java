@@ -64,6 +64,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                                             StreamByteDistributor streamByteDistributor) {
         this.connection = checkNotNull(connection, "connection");
         this.streamByteDistributor = checkNotNull(streamByteDistributor, "streamWriteDistributor");
+        streamByteDistributor.writer(writer);
 
         // Add a flow state for the connection.
         stateKey = connection.newKey();
@@ -283,7 +284,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         // bytesToWrite or not. This ensures that zero-length frames will always be written.
         do {
             // Distribute the connection window across the streams and write the data.
-            haveUnwrittenBytes = streamByteDistributor.distribute(bytesToWrite, writer);
+            haveUnwrittenBytes = streamByteDistributor.distribute(bytesToWrite);
         } while (haveUnwrittenBytes && (bytesToWrite = writableBytes()) > 0 && ctx.channel().isWritable());
     }
 
