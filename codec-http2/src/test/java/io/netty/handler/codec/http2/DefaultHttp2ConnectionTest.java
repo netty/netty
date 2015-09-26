@@ -15,13 +15,31 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http2.Http2Connection.Endpoint;
+import io.netty.handler.codec.http2.Http2Stream.State;
+import io.netty.util.internal.PlatformDependent;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyLong;
@@ -33,23 +51,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http2.Http2Connection.Endpoint;
-import io.netty.handler.codec.http2.Http2Stream.State;
-import io.netty.util.internal.PlatformDependent;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
-
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 /**
  * Tests for {@link DefaultHttp2Connection}.
@@ -977,119 +978,216 @@ public class DefaultHttp2ConnectionTest {
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
     }
 
-    /**
-     * We force {@link #clientListener} methods to all throw a {@link RuntimeException} and verify the following:
-     * <ol>
-     * <li>all listener methods are called for both {@link #clientListener} and {@link #clientListener2}</li>
-     * <li>{@link #clientListener2} is notified after {@link #clientListener}</li>
-     * <li>{@link #clientListener2} methods are all still called despite {@link #clientListener}'s
-     * method throwing a {@link RuntimeException}</li>
-     * </ol>
-     */
     @Test
-    public void listenerThrowShouldNotPreventOtherListenersFromBeingNotified() throws Http2Exception {
-        final boolean[] calledArray = new boolean[128];
-        // The following setup will ensure that clienListener throws exceptions, and marks a value in an array
-        // such that clientListener2 will verify that is is set or fail the test.
-        int methodIndex = 0;
-        doAnswer(new ListenerExceptionThrower(calledArray, methodIndex))
-            .when(clientListener).onStreamAdded(any(Http2Stream.class));
-        doAnswer(new ListenerVerifyCallAnswer(calledArray, methodIndex++))
-            .when(clientListener2).onStreamAdded(any(Http2Stream.class));
-
-        doAnswer(new ListenerExceptionThrower(calledArray, methodIndex))
-            .when(clientListener).onStreamActive(any(Http2Stream.class));
-        doAnswer(new ListenerVerifyCallAnswer(calledArray, methodIndex++))
-            .when(clientListener2).onStreamActive(any(Http2Stream.class));
-
-        doAnswer(new ListenerExceptionThrower(calledArray, methodIndex))
-            .when(clientListener).onStreamHalfClosed(any(Http2Stream.class));
-        doAnswer(new ListenerVerifyCallAnswer(calledArray, methodIndex++))
-            .when(clientListener2).onStreamHalfClosed(any(Http2Stream.class));
-
-        doAnswer(new ListenerExceptionThrower(calledArray, methodIndex))
-            .when(clientListener).onStreamClosed(any(Http2Stream.class));
-        doAnswer(new ListenerVerifyCallAnswer(calledArray, methodIndex++))
-            .when(clientListener2).onStreamClosed(any(Http2Stream.class));
-
-        doAnswer(new ListenerExceptionThrower(calledArray, methodIndex))
-            .when(clientListener).onStreamRemoved(any(Http2Stream.class));
-        doAnswer(new ListenerVerifyCallAnswer(calledArray, methodIndex++))
-            .when(clientListener2).onStreamRemoved(any(Http2Stream.class));
-
-        doAnswer(new ListenerExceptionThrower(calledArray, methodIndex))
-            .when(clientListener).onPriorityTreeParentChanged(any(Http2Stream.class), any(Http2Stream.class));
-        doAnswer(new ListenerVerifyCallAnswer(calledArray, methodIndex++))
-            .when(clientListener2).onPriorityTreeParentChanged(any(Http2Stream.class), any(Http2Stream.class));
-
-        doAnswer(new ListenerExceptionThrower(calledArray, methodIndex))
-            .when(clientListener).onPriorityTreeParentChanging(any(Http2Stream.class), any(Http2Stream.class));
-        doAnswer(new ListenerVerifyCallAnswer(calledArray, methodIndex++))
-            .when(clientListener2).onPriorityTreeParentChanging(any(Http2Stream.class), any(Http2Stream.class));
-
-        doAnswer(new ListenerExceptionThrower(calledArray, methodIndex))
-            .when(clientListener).onWeightChanged(any(Http2Stream.class), anyShort());
-        doAnswer(new ListenerVerifyCallAnswer(calledArray, methodIndex++))
-            .when(clientListener2).onWeightChanged(any(Http2Stream.class), anyShort());
-
-        doAnswer(new ListenerExceptionThrower(calledArray, methodIndex))
-            .when(clientListener).onGoAwaySent(anyInt(), anyLong(), any(ByteBuf.class));
-        doAnswer(new ListenerVerifyCallAnswer(calledArray, methodIndex++))
-            .when(clientListener2).onGoAwaySent(anyInt(), anyLong(), any(ByteBuf.class));
-
-        doAnswer(new ListenerExceptionThrower(calledArray, methodIndex))
-            .when(clientListener).onGoAwayReceived(anyInt(), anyLong(), any(ByteBuf.class));
-        doAnswer(new ListenerVerifyCallAnswer(calledArray, methodIndex++))
-            .when(clientListener2).onGoAwayReceived(anyInt(), anyLong(), any(ByteBuf.class));
-
-        doAnswer(new ListenerExceptionThrower(calledArray, methodIndex))
-            .when(clientListener).onStreamAdded(any(Http2Stream.class));
-        doAnswer(new ListenerVerifyCallAnswer(calledArray, methodIndex++))
-            .when(clientListener2).onStreamAdded(any(Http2Stream.class));
-
-        // Now we add clienListener2 and exercise all listener functionality
+    public void listenerStreamAddedThrowShouldThrowConnectionError() throws Http2Exception {
+        client.addListener(clientListener2);
         try {
-            client.addListener(clientListener2);
-            Http2Stream stream = client.local().createIdleStream(3);
-            verify(clientListener).onStreamAdded(any(Http2Stream.class));
-            verify(clientListener2).onStreamAdded(any(Http2Stream.class));
+            doAnswer(ListenerExceptionThrower.INSTANCE)
+                .when(clientListener).onStreamAdded(any(Http2Stream.class));
+            try {
+                client.local().createIdleStream(3);
+                fail();
+            } catch (Http2Exception e) {
+                assertFalse(Http2Exception.isStreamError(e));
+            }
+            verify(clientListener, times(1)).onStreamAdded(any(Http2Stream.class));
+            verify(clientListener2, never()).onStreamAdded(any(Http2Stream.class));
             verify(clientListener, never()).onStreamActive(any(Http2Stream.class));
             verify(clientListener2, never()).onStreamActive(any(Http2Stream.class));
+        } finally {
+            client.removeListener(clientListener2);
+        }
+    }
 
-            stream.open(false);
-            verify(clientListener).onStreamActive(any(Http2Stream.class));
-            verify(clientListener2).onStreamActive(any(Http2Stream.class));
+    @Test
+    public void listenerStreamActiveThrowShouldThrowConnectionError() throws Http2Exception {
+        client.addListener(clientListener2);
+        try {
+            doAnswer(ListenerExceptionThrower.INSTANCE)
+                .when(clientListener).onStreamActive(any(Http2Stream.class));
+            Http2Stream stream = client.local().createIdleStream(3);
+            try {
+                stream.open(false);
+                fail();
+            } catch (Http2Exception e) {
+                assertFalse(Http2Exception.isStreamError(e));
+            }
+            verify(clientListener, times(1)).onStreamActive(any(Http2Stream.class));
+            verify(clientListener2, never()).onStreamActive(any(Http2Stream.class));
+        } finally {
+            client.removeListener(clientListener2);
+        }
+    }
 
-            stream.setPriority(0, (short) (stream.weight() + 1), true);
-            verify(clientListener).onWeightChanged(any(Http2Stream.class), anyShort());
-            verify(clientListener2).onWeightChanged(any(Http2Stream.class), anyShort());
-            verify(clientListener).onPriorityTreeParentChanged(any(Http2Stream.class),
-                    any(Http2Stream.class));
-            verify(clientListener2).onPriorityTreeParentChanged(any(Http2Stream.class),
-                    any(Http2Stream.class));
-            verify(clientListener).onPriorityTreeParentChanging(any(Http2Stream.class),
-                    any(Http2Stream.class));
-            verify(clientListener2).onPriorityTreeParentChanging(any(Http2Stream.class),
-                    any(Http2Stream.class));
+    @Test
+    public void listenerOnWeightChangeThrowShouldThrowConnectionError() throws Http2Exception {
+        client.addListener(clientListener2);
+        try {
+            doAnswer(ListenerExceptionThrower.INSTANCE)
+                .when(clientListener).onWeightChanged(any(Http2Stream.class), anyShort());
+            Http2Stream stream = client.local().createStream(3, false);
+            try {
+                stream.setPriority(0, (short) (stream.weight() + 1), true);
+                fail();
+            } catch (Http2Exception e) {
+                assertFalse(Http2Exception.isStreamError(e));
+            }
+            verify(clientListener, times(1)).onWeightChanged(any(Http2Stream.class), anyShort());
+            verify(clientListener2, never()).onWeightChanged(any(Http2Stream.class), anyShort());
+        } finally {
+            client.removeListener(clientListener2);
+        }
+    }
 
-            stream.closeLocalSide();
-            verify(clientListener).onStreamHalfClosed(any(Http2Stream.class));
-            verify(clientListener2).onStreamHalfClosed(any(Http2Stream.class));
+    @Test
+    public void listenerOnPriorityChangingThrowShouldThrowConnectionError() throws Http2Exception {
+        client.addListener(clientListener2);
+        try {
+            doAnswer(ListenerExceptionThrower.INSTANCE)
+                .when(clientListener).onPriorityTreeParentChanging(any(Http2Stream.class), any(Http2Stream.class));
+            try {
+                client.local().createStream(3, false);
+                fail();
+            } catch (Http2Exception e) {
+                assertFalse(Http2Exception.isStreamError(e));
+            }
+            verify(clientListener, times(1))
+                .onPriorityTreeParentChanging(any(Http2Stream.class), any(Http2Stream.class));
+            verify(clientListener2, never())
+                .onPriorityTreeParentChanging(any(Http2Stream.class), any(Http2Stream.class));
+            verify(clientListener, never())
+                .onPriorityTreeParentChanged(any(Http2Stream.class), any(Http2Stream.class));
+            verify(clientListener2, never())
+                .onPriorityTreeParentChanged(any(Http2Stream.class), any(Http2Stream.class));
+        } finally {
+            client.removeListener(clientListener2);
+        }
+    }
 
-            stream.close();
-            verify(clientListener).onStreamClosed(any(Http2Stream.class));
-            verify(clientListener2).onStreamClosed(any(Http2Stream.class));
-            verify(clientListener).onStreamRemoved(any(Http2Stream.class));
-            verify(clientListener2).onStreamRemoved(any(Http2Stream.class));
+    @Test
+    public void listenerOnPriorityChangedThrowShouldThrowConnectionError() throws Http2Exception {
+        client.addListener(clientListener2);
+        try {
+            doAnswer(ListenerExceptionThrower.INSTANCE)
+                .when(clientListener).onPriorityTreeParentChanged(any(Http2Stream.class), any(Http2Stream.class));
+            try {
+                client.local().createStream(3, false);
+                fail();
+            } catch (Http2Exception e) {
+                assertFalse(Http2Exception.isStreamError(e));
+            }
+            verify(clientListener, times(1))
+                .onPriorityTreeParentChanging(any(Http2Stream.class), any(Http2Stream.class));
+            verify(clientListener2, times(1))
+                .onPriorityTreeParentChanging(any(Http2Stream.class), any(Http2Stream.class));
+            verify(clientListener, times(1))
+                .onPriorityTreeParentChanged(any(Http2Stream.class), any(Http2Stream.class));
+            verify(clientListener2, never())
+                .onPriorityTreeParentChanged(any(Http2Stream.class), any(Http2Stream.class));
+        } finally {
+            client.removeListener(clientListener2);
+        }
+    }
 
-            client.goAwaySent(client.connectionStream().id(), Http2Error.INTERNAL_ERROR.code(), Unpooled.EMPTY_BUFFER);
-            verify(clientListener).onGoAwaySent(anyInt(), anyLong(), any(ByteBuf.class));
-            verify(clientListener2).onGoAwaySent(anyInt(), anyLong(), any(ByteBuf.class));
+    @Test
+    public void listenerOnHalfClosedThrowShouldThrowConnectionError() throws Http2Exception {
+        client.addListener(clientListener2);
+        try {
+            doAnswer(ListenerExceptionThrower.INSTANCE)
+                .when(clientListener).onStreamHalfClosed(any(Http2Stream.class));
+            Http2Stream stream = client.local().createStream(3, false);
+            try {
+                stream.closeLocalSide();
+                fail();
+            } catch (Http2Exception e) {
+                assertFalse(Http2Exception.isStreamError(e));
+            }
+            verify(clientListener, times(1)).onStreamHalfClosed(any(Http2Stream.class));
+            verify(clientListener2, never()).onStreamHalfClosed(any(Http2Stream.class));
+        } finally {
+            client.removeListener(clientListener2);
+        }
+    }
 
-            client.goAwayReceived(client.connectionStream().id(),
-                    Http2Error.INTERNAL_ERROR.code(), Unpooled.EMPTY_BUFFER);
-            verify(clientListener).onGoAwayReceived(anyInt(), anyLong(), any(ByteBuf.class));
-            verify(clientListener2).onGoAwayReceived(anyInt(), anyLong(), any(ByteBuf.class));
+    @Test
+    public void listenerOnClosedThrowShouldThrowConnectionError() throws Http2Exception {
+        client.addListener(clientListener2);
+        try {
+            doAnswer(ListenerExceptionThrower.INSTANCE)
+                .when(clientListener).onStreamClosed(any(Http2Stream.class));
+            Http2Stream stream = client.local().createStream(3, false);
+            try {
+                stream.close();
+                fail();
+            } catch (Http2Exception e) {
+                assertFalse(Http2Exception.isStreamError(e));
+            }
+            verify(clientListener, times(1)).onStreamClosed(any(Http2Stream.class));
+            verify(clientListener2, never()).onStreamClosed(any(Http2Stream.class));
+            verify(clientListener, never()).onStreamRemoved(any(Http2Stream.class));
+            verify(clientListener2, never()).onStreamRemoved(any(Http2Stream.class));
+        } finally {
+            client.removeListener(clientListener2);
+        }
+    }
+
+    @Test
+    public void listenerOnRemovedThrowShouldThrowConnectionError() throws Http2Exception {
+        client.addListener(clientListener2);
+        try {
+            doAnswer(ListenerExceptionThrower.INSTANCE)
+                .when(clientListener).onStreamRemoved(any(Http2Stream.class));
+            Http2Stream stream = client.local().createStream(3, false);
+            try {
+                stream.close();
+                fail();
+            } catch (Http2Exception e) {
+                assertFalse(Http2Exception.isStreamError(e));
+            }
+            verify(clientListener, times(1)).onStreamClosed(any(Http2Stream.class));
+            verify(clientListener2, times(1)).onStreamClosed(any(Http2Stream.class));
+            verify(clientListener, times(1)).onStreamRemoved(any(Http2Stream.class));
+            verify(clientListener2, never()).onStreamRemoved(any(Http2Stream.class));
+        } finally {
+            client.removeListener(clientListener2);
+        }
+    }
+
+    @Test
+    public void listenerOnGoAwaySentThrowShouldThrowConnectionError() throws Http2Exception {
+        client.addListener(clientListener2);
+        try {
+            doAnswer(ListenerExceptionThrower.INSTANCE)
+                .when(clientListener).onGoAwaySent(anyInt(), anyLong(), any(ByteBuf.class));
+            try {
+                client.goAwaySent(client.connectionStream().id(), Http2Error.INTERNAL_ERROR.code(),
+                        Unpooled.EMPTY_BUFFER);
+                fail();
+            } catch (Http2Exception e) {
+                assertFalse(Http2Exception.isStreamError(e));
+            }
+            verify(clientListener, times(1)).onGoAwaySent(anyInt(), anyLong(), any(ByteBuf.class));
+            verify(clientListener2, never()).onGoAwaySent(anyInt(), anyLong(), any(ByteBuf.class));
+        } finally {
+            client.removeListener(clientListener2);
+        }
+    }
+
+    @Test
+    public void listenerOnGoAwayReceivedThrowShouldThrowConnectionError() throws Http2Exception {
+        client.addListener(clientListener2);
+        try {
+            doAnswer(ListenerExceptionThrower.INSTANCE)
+                .when(clientListener).onGoAwayReceived(anyInt(), anyLong(), any(ByteBuf.class));
+            try {
+                client.goAwayReceived(client.connectionStream().id(),
+                        Http2Error.INTERNAL_ERROR.code(), Unpooled.EMPTY_BUFFER);
+                fail();
+            } catch (Http2Exception e) {
+                assertFalse(Http2Exception.isStreamError(e));
+            }
+            verify(clientListener, times(1)).onGoAwayReceived(anyInt(), anyLong(), any(ByteBuf.class));
+            verify(clientListener2, never()).onGoAwayReceived(anyInt(), anyLong(), any(ByteBuf.class));
         } finally {
             client.removeListener(clientListener2);
         }
@@ -1097,38 +1195,17 @@ public class DefaultHttp2ConnectionTest {
 
     private static final class ListenerExceptionThrower implements Answer<Void> {
         private static final RuntimeException FAKE_EXCEPTION = new RuntimeException("Fake Exception");
-        private final boolean[] array;
-        private final int index;
-
-        public ListenerExceptionThrower(boolean[] array, int index) {
-            this.array = array;
-            this.index = index;
-        }
+        public static final ListenerExceptionThrower INSTANCE = new ListenerExceptionThrower();
+        private ListenerExceptionThrower() { }
 
         @Override
         public Void answer(InvocationOnMock invocation) throws Throwable {
-            array[index] = true;
             throw FAKE_EXCEPTION;
         }
     }
 
-    private static final class ListenerVerifyCallAnswer implements Answer<Void> {
-        private final boolean[] array;
-        private final int index;
-
-        public ListenerVerifyCallAnswer(boolean[] array, int index) {
-            this.array = array;
-            this.index = index;
-        }
-
-        @Override
-        public Void answer(InvocationOnMock invocation) throws Throwable {
-            assertTrue(array[index]);
-            return null;
-        }
-    }
-
-    private void verifyParentChanging(List<Http2Stream> expectedArg1, List<Http2Stream> expectedArg2) {
+    private void verifyParentChanging(List<Http2Stream> expectedArg1, List<Http2Stream> expectedArg2)
+            throws Http2Exception {
         assertSame(expectedArg1.size(), expectedArg2.size());
         ArgumentCaptor<Http2Stream> arg1Captor = ArgumentCaptor.forClass(Http2Stream.class);
         ArgumentCaptor<Http2Stream> arg2Captor = ArgumentCaptor.forClass(Http2Stream.class);
@@ -1144,7 +1221,8 @@ public class DefaultHttp2ConnectionTest {
         }
     }
 
-    private void verifyParentsChanged(List<Http2Stream> expectedArg1, List<Http2Stream> expectedArg2) {
+    private void verifyParentsChanged(List<Http2Stream> expectedArg1, List<Http2Stream> expectedArg2)
+            throws Http2Exception {
         assertSame(expectedArg1.size(), expectedArg2.size());
         ArgumentCaptor<Http2Stream> arg1Captor = ArgumentCaptor.forClass(Http2Stream.class);
         ArgumentCaptor<Http2Stream> arg2Captor = ArgumentCaptor.forClass(Http2Stream.class);
@@ -1183,13 +1261,14 @@ public class DefaultHttp2ConnectionTest {
         return (T) (stream == null ? isNull(Http2Stream.class) : eq(stream));
     }
 
-    private void verifyParentChanging(Http2Stream stream, Http2Stream newParent) {
+    private void verifyParentChanging(Http2Stream stream, Http2Stream newParent) throws Http2Exception {
         verify(clientListener).onPriorityTreeParentChanging(streamEq(stream), streamEq(newParent));
     }
 
-    private void verifyParentChanged(Http2Stream stream, Http2Stream oldParent) {
+    private void verifyParentChanged(Http2Stream stream, Http2Stream oldParent) throws Http2Exception {
         verify(clientListener).onPriorityTreeParentChanged(streamEq(stream), streamEq(oldParent));
     }
+
     private Http2Stream child(Http2Stream parent, final int id) {
         try {
             final AtomicReference<Http2Stream> streamReference = new AtomicReference<Http2Stream>();

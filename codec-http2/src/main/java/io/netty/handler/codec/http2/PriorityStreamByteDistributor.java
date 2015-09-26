@@ -15,6 +15,9 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.handler.codec.http2.Http2Exception.isStreamError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -81,7 +84,7 @@ public final class PriorityStreamByteDistributor implements StreamByteDistributo
     }
 
     @Override
-    public boolean distribute(int maxBytes, Writer writer) {
+    public boolean distribute(int maxBytes, Writer writer) throws Http2Exception {
         checkNotNull(writer, "writer");
         if (maxBytes > 0) {
             allocateBytesForTree(connection.connectionStream(), maxBytes);
@@ -379,47 +382,30 @@ public final class PriorityStreamByteDistributor implements StreamByteDistributo
     /**
      * A connection stream visitor that delegates to the user provided visitor.
      */
-    private class WriteVisitor implements Http2StreamVisitor {
+    private final class WriteVisitor implements Http2StreamVisitor {
         Writer writer;
-        RuntimeException error;
 
-        void writeAllocatedBytes(Writer writer) {
+        void writeAllocatedBytes(Writer writer) throws Http2Exception {
+            this.writer = writer;
             try {
-                this.writer = writer;
-                try {
-                    connection.forEachActiveStream(this);
-                } catch (Http2Exception e) {
-                    // Should never happen since the visitor doesn't throw.
-                    throw new IllegalStateException(e);
-                }
-
-                // If an error was caught when calling back the visitor, throw it now.
-                if (error != null) {
-                    throw error;
-                }
-            } finally {
-                error = null;
+                connection.forEachActiveStream(this);
+            } catch (Http2Exception e) {
+                throw isStreamError(e) ? connectionError(INTERNAL_ERROR, e, "unexpected stream error") : e;
+            } catch (Throwable cause) {
+                throw connectionError(INTERNAL_ERROR, cause, "unexpected error");
             }
         }
 
         @Override
-        public boolean visit(Http2Stream stream) {
+        public boolean visit(Http2Stream stream) throws Http2Exception {
             PriorityState state = state(stream);
-            try {
-                int allocated = state.allocated;
+            int allocated = state.allocated;
 
-                // Unallocate all bytes for this stream.
-                state.resetAllocated();
+            // Unallocate all bytes for this stream.
+            state.resetAllocated();
 
-                // Write the allocated bytes.
-                if (error == null) {
-                    writer.write(stream, allocated);
-                }
-            } catch (RuntimeException e) {
-                // Stop calling the visitor, but continue in the loop to reset the allocated for
-                // all remaining states.
-                error = e;
-            }
+            // Write the allocated bytes.
+            writer.write(stream, allocated);
 
             // We have to iterate across all streams to ensure that we reset the allocated bytes.
             return true;

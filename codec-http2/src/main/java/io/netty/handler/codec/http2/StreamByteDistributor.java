@@ -54,8 +54,12 @@ public interface StreamByteDistributor {
          * Writes the allocated bytes for this stream.
          * @param stream the stream for which to perform the write.
          * @param numBytes the number of bytes to write.
+         * @throws Http2Exception If a connection error occurs.
+         * @throws Http2Exception  Any exception thrown from this method (even of type {@link RutimeException}) will be
+         * translated into a fatal connection error, cause a {@code GO_AWAY} frame to be sent with a fatal error code,
+         * and then the connection will be shutdown.
          */
-        void write(Http2Stream stream, int numBytes);
+        void write(Http2Stream stream, int numBytes) throws Http2Exception;
     }
 
     /**
@@ -78,6 +82,7 @@ public interface StreamByteDistributor {
      * @param maxBytes the maximum number of bytes to write.
      * @return {@code true} if there are still streamable bytes that have not yet been written,
      * otherwise {@code false}.
+     * @throws Http2Exception if an exception is thrown {@link Writer#write(Http2Stream, int)}.
      */
-    boolean distribute(int maxBytes, Writer writer);
+    boolean distribute(int maxBytes, Writer writer) throws Http2Exception;
 }

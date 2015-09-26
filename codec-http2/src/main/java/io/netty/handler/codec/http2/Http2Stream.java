@@ -60,20 +60,23 @@ public interface Http2Stream {
 
     /**
      * Closes the stream.
+     * @throws Http2Exception If an error from {@link Http2Connection.Listener} is caught.
      */
-    Http2Stream close();
+    Http2Stream close() throws Http2Exception;
 
     /**
      * Closes the local side of this stream. If this makes the stream closed, the child is closed as
      * well.
+     * @throws Http2Exception If an error from {@link Http2Connection.Listener} is caught.
      */
-    Http2Stream closeLocalSide();
+    Http2Stream closeLocalSide() throws Http2Exception;
 
     /**
      * Closes the remote side of this stream. If this makes the stream closed, the child is closed
      * as well.
+     * @throws Http2Exception If an error from {@link Http2Connection.Listener} is caught.
      */
-    Http2Stream closeRemoteSide();
+    Http2Stream closeRemoteSide() throws Http2Exception;
 
     /**
      * Indicates whether a {@code RST_STREAM} frame has been sent from the local endpoint for this stream.

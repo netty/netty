@@ -28,27 +28,30 @@ public interface Http2LifecycleManager {
     /**
      * Closes the local side of the {@code stream}. Depending on the {@code stream} state this may result in
      * {@code stream} being closed. See {@link closeStream(Http2Stream, ChannelFuture)}.
+     * @param ctx Context used to propagate a connection error if necessary.
      * @param stream the stream to be half closed.
      * @param future See {@link closeStream(Http2Stream, ChannelFuture)}.
      */
-    void closeStreamLocal(Http2Stream stream, ChannelFuture future);
+    void closeStreamLocal(ChannelHandlerContext ctx, Http2Stream stream, ChannelFuture future);
 
     /**
      * Closes the remote side of the {@code stream}. Depending on the {@code stream} state this may result in
      * {@code stream} being closed. See {@link closeStream(Http2Stream, ChannelFuture)}.
+     * @param ctx Context used to propagate a connection error if necessary.
      * @param stream the stream to be half closed.
      * @param future See {@link closeStream(Http2Stream, ChannelFuture)}.
      */
-    void closeStreamRemote(Http2Stream stream, ChannelFuture future);
+    void closeStreamRemote(ChannelHandlerContext ctx, Http2Stream stream, ChannelFuture future);
 
     /**
      * Closes and deactivates the given {@code stream}. A listener is also attached to {@code future} and upon
      * completion the underlying channel will be closed if {@link Http2Connection#numActiveStreams()} is 0.
+     * @param ctx Context used to propagate a connection error if necessary.
      * @param stream the stream to be closed and deactivated.
      * @param future when completed if {@link Http2Connection#numActiveStreams()} is 0 then the underlying channel
      * will be closed.
      */
-    void closeStream(Http2Stream stream, ChannelFuture future);
+    void closeStream(ChannelHandlerContext ctx, Http2Stream stream, ChannelFuture future);
 
     /**
      * Ensure the stream identified by {@code streamId} is reset. If our local state does not indicate the stream has

@@ -31,6 +31,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
+import static io.netty.handler.codec.http2.Http2Exception.isStreamError;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
@@ -91,7 +92,7 @@ public class PriorityStreamByteDistributorTest {
     }
 
     @Test
-    public void bytesUnassignedAfterProcessing() {
+    public void bytesUnassignedAfterProcessing() throws Http2Exception {
         updateStream(STREAM_A, 1, true);
         updateStream(STREAM_B, 2, true);
         updateStream(STREAM_C, 3, true);
@@ -111,7 +112,7 @@ public class PriorityStreamByteDistributorTest {
     }
 
     @Test
-    public void bytesUnassignedAfterProcessingWithException() {
+    public void bytesUnassignedAfterProcessingWithException() throws Http2Exception {
         updateStream(STREAM_A, 1, true);
         updateStream(STREAM_B, 2, true);
         updateStream(STREAM_C, 3, true);
@@ -123,8 +124,9 @@ public class PriorityStreamByteDistributorTest {
         try {
             write(10);
             fail("Expected an exception");
-        } catch (RuntimeException e) {
-            assertSame(fakeException, e);
+        } catch (Http2Exception e) {
+            assertFalse(isStreamError(e));
+            assertSame(fakeException, e.getCause());
         }
 
         verifyWrite(atMost(1), STREAM_A, 1);
@@ -665,19 +667,19 @@ public class PriorityStreamByteDistributorTest {
         return distributor.unallocatedStreamableBytesForTree(stream);
     }
 
-    private boolean write(int numBytes) {
+    private boolean write(int numBytes) throws Http2Exception {
         return distributor.distribute(numBytes, writer);
     }
 
-    private void verifyWrite(int streamId, int numBytes) {
+    private void verifyWrite(int streamId, int numBytes) throws Http2Exception {
         verify(writer).write(same(stream(streamId)), eq(numBytes));
     }
 
-    private void verifyWrite(VerificationMode mode, int streamId, int numBytes) {
+    private void verifyWrite(VerificationMode mode, int streamId, int numBytes) throws Http2Exception {
         verify(writer, mode).write(same(stream(streamId)), eq(numBytes));
     }
 
-    private void verifyWriteWithDelta(int streamId, int numBytes, int delta) {
+    private void verifyWriteWithDelta(int streamId, int numBytes, int delta) throws Http2Exception {
         verify(writer).write(same(stream(streamId)), (int) AdditionalMatchers.eq(numBytes, delta));
     }
 

@@ -124,11 +124,11 @@ final class Http2TestUtil {
             return null;
         }
 
-        private void closeStream(Http2Stream stream) {
+        private void closeStream(Http2Stream stream) throws Http2Exception {
             closeStream(stream, false);
         }
 
-        protected void closeStream(Http2Stream stream, boolean dataRead) {
+        protected void closeStream(Http2Stream stream, boolean dataRead) throws Http2Exception {
             if (stream != null) {
                 stream.close();
             }

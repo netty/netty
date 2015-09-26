@@ -252,7 +252,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 flowController.consumeBytes(stream, bytesToReturn);
 
                 if (endOfStream) {
-                    lifecycleManager.closeStreamRemote(stream, ctx.newSucceededFuture());
+                    lifecycleManager.closeStreamRemote(ctx, stream, ctx.newSucceededFuture());
                 }
             }
         }
@@ -315,7 +315,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
             // If the headers completes this stream, close it.
             if (endOfStream) {
-                lifecycleManager.closeStreamRemote(stream, ctx.newSucceededFuture());
+                lifecycleManager.closeStreamRemote(ctx, stream, ctx.newSucceededFuture());
             }
         }
 
@@ -369,7 +369,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
             listener.onRstStreamRead(ctx, streamId, errorCode);
 
-            lifecycleManager.closeStream(stream, ctx.newSucceededFuture());
+            lifecycleManager.closeStream(ctx, stream, ctx.newSucceededFuture());
         }
 
         @Override

@@ -504,7 +504,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         ByteBuf data = dummyData();
         encoder.writeData(ctx, STREAM_ID, data.retain(), 0, true, promise);
         verify(remoteFlow).addFlowControlled(eq(stream), any(FlowControlled.class));
-        verify(lifecycleManager).closeStreamLocal(stream, promise);
+        verify(lifecycleManager).closeStreamLocal(any(ChannelHandlerContext.class), eq(stream), eq(promise));
         assertEquals(data.toString(UTF_8), writtenData.get(0));
         data.release();
     }
@@ -526,7 +526,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         assertNotNull(payloadCaptor.getValue());
         payloadCaptor.getValue().write(ctx, 0);
         promise.trySuccess();
-        verify(lifecycleManager).closeStreamLocal(eq(stream), eq(promise));
+        verify(lifecycleManager).closeStreamLocal(any(ChannelHandlerContext.class), eq(stream), eq(promise));
     }
 
     @Test
@@ -541,7 +541,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         verify(stream).open(true);
 
         promise.trySuccess();
-        verify(lifecycleManager).closeStreamLocal(eq(stream), eq(promise));
+        verify(lifecycleManager).closeStreamLocal(any(ChannelHandlerContext.class), eq(stream), eq(promise));
     }
 
     @Test
@@ -614,7 +614,7 @@ public class DefaultHttp2ConnectionEncoderTest {
             public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
                 FlowControlled flowControlled = (FlowControlled) invocationOnMock.getArguments()[1];
                 flowControlled.write(ctx, Integer.MAX_VALUE);
-                flowControlled.writeComplete();
+                flowControlled.writeComplete(ctx);
                 return null;
             }
         }).when(remoteFlow).addFlowControlled(eq(stream), payloadCaptor.capture());

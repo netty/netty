@@ -157,7 +157,7 @@ public class StreamBufferingEncoderTest {
     }
 
     @Test
-    public void ensureCanCreateNextStreamWhenStreamCloses() {
+    public void ensureCanCreateNextStreamWhenStreamCloses() throws Http2Exception {
         encoder.writeSettingsAck(ctx, promise);
         setMaxConcurrentStreams(1);
 
@@ -203,7 +203,7 @@ public class StreamBufferingEncoderTest {
     }
 
     @Test
-    public void bufferingNewStreamFailsAfterGoAwayReceived() {
+    public void bufferingNewStreamFailsAfterGoAwayReceived() throws Http2Exception {
         encoder.writeSettingsAck(ctx, promise);
         setMaxConcurrentStreams(0);
         connection.goAwayReceived(1, 8, EMPTY_BUFFER);
@@ -215,7 +215,7 @@ public class StreamBufferingEncoderTest {
     }
 
     @Test
-    public void receivingGoAwayFailsBufferedStreams() {
+    public void receivingGoAwayFailsBufferedStreams() throws Http2Exception {
         encoder.writeSettingsAck(ctx, promise);
         setMaxConcurrentStreams(5);
 

@@ -315,7 +315,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         try {
             decode().onDataRead(ctx, STREAM_ID, data, 10, true);
             verify(localFlow).receiveFlowControlledFrame(eq(stream), eq(data), eq(10), eq(true));
-            verify(lifecycleManager).closeStreamRemote(eq(stream), eq(future));
+            verify(lifecycleManager).closeStreamRemote(any(ChannelHandlerContext.class), eq(stream), eq(future));
             verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(10), eq(true));
         } finally {
             data.release();
@@ -358,7 +358,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         } catch (RuntimeException cause) {
             verify(localFlow)
                     .receiveFlowControlledFrame(eq(stream), eq(data), eq(padding), eq(true));
-            verify(lifecycleManager).closeStreamRemote(eq(stream), eq(future));
+            verify(lifecycleManager).closeStreamRemote(any(ChannelHandlerContext.class), eq(stream), eq(future));
             verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(padding), eq(true));
             assertEquals(0, localFlow.unconsumedBytes(stream));
         } finally {
@@ -426,7 +426,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         when(stream.state()).thenReturn(RESERVED_REMOTE);
         decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true);
         verify(stream).open(true);
-        verify(lifecycleManager).closeStreamRemote(eq(stream), eq(future));
+        verify(lifecycleManager).closeStreamRemote(any(ChannelHandlerContext.class), eq(stream), eq(future));
         verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true));
     }
@@ -439,7 +439,8 @@ public class DefaultHttp2ConnectionDecoderTest {
         verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(STREAM_DEPENDENCY_ID),
                 eq(weight), eq(true), eq(0), eq(true));
         verify(stream).setPriority(eq(STREAM_DEPENDENCY_ID), eq(weight), eq(true));
-        verify(lifecycleManager).closeStreamRemote(eq(stream), any(ChannelFuture.class));
+        verify(lifecycleManager).closeStreamRemote(any(ChannelHandlerContext.class),
+                eq(stream), any(ChannelFuture.class));
     }
 
     @Test
@@ -456,7 +457,8 @@ public class DefaultHttp2ConnectionDecoderTest {
         verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(STREAM_DEPENDENCY_ID),
                 eq(weight), eq(true), eq(0), eq(true));
         verify(stream).setPriority(eq(STREAM_DEPENDENCY_ID), eq(weight), eq(true));
-        verify(lifecycleManager).closeStreamRemote(eq(stream), any(ChannelFuture.class));
+        verify(lifecycleManager).closeStreamRemote(any(ChannelHandlerContext.class),
+                eq(stream), any(ChannelFuture.class));
     }
 
     @Test(expected = RuntimeException.class)
@@ -473,7 +475,8 @@ public class DefaultHttp2ConnectionDecoderTest {
         verify(listener, never()).onHeadersRead(any(ChannelHandlerContext.class), anyInt(), any(Http2Headers.class),
                 anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean());
         verify(stream).setPriority(eq(STREAM_DEPENDENCY_ID), eq(weight), eq(true));
-        verify(lifecycleManager, never()).closeStreamRemote(eq(stream), any(ChannelFuture.class));
+        verify(lifecycleManager, never()).closeStreamRemote(any(ChannelHandlerContext.class),
+                eq(stream), any(ChannelFuture.class));
     }
 
     @Test
@@ -596,7 +599,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     public void rstStreamReadAfterGoAwayShouldSucceed() throws Exception {
         when(connection.goAwaySent()).thenReturn(true);
         decode().onRstStreamRead(ctx, STREAM_ID, PROTOCOL_ERROR.code());
-        verify(lifecycleManager).closeStream(eq(stream), eq(future));
+        verify(lifecycleManager).closeStream(any(ChannelHandlerContext.class), eq(stream), eq(future));
         verify(listener).onRstStreamRead(eq(ctx), anyInt(), anyLong());
     }
 
@@ -611,14 +614,14 @@ public class DefaultHttp2ConnectionDecoderTest {
     public void rstStreamReadForUnknownStreamShouldBeIgnored() throws Exception {
         when(connection.stream(STREAM_ID)).thenReturn(null);
         decode().onRstStreamRead(ctx, STREAM_ID, PROTOCOL_ERROR.code());
-        verify(lifecycleManager, never()).closeStream(eq(stream), eq(future));
+        verify(lifecycleManager, never()).closeStream(any(ChannelHandlerContext.class), eq(stream), eq(future));
         verify(listener, never()).onRstStreamRead(eq(ctx), anyInt(), anyLong());
     }
 
     @Test
     public void rstStreamReadShouldCloseStream() throws Exception {
         decode().onRstStreamRead(ctx, STREAM_ID, PROTOCOL_ERROR.code());
-        verify(lifecycleManager).closeStream(eq(stream), eq(future));
+        verify(lifecycleManager).closeStream(any(ChannelHandlerContext.class), eq(stream), eq(future));
         verify(listener).onRstStreamRead(eq(ctx), eq(STREAM_ID), eq(PROTOCOL_ERROR.code()));
     }
 
@@ -626,7 +629,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     public void rstStreamOnIdleStreamShouldThrow() throws Exception {
         when(stream.state()).thenReturn(IDLE);
         decode().onRstStreamRead(ctx, STREAM_ID, PROTOCOL_ERROR.code());
-        verify(lifecycleManager).closeStream(eq(stream), eq(future));
+        verify(lifecycleManager).closeStream(any(ChannelHandlerContext.class), eq(stream), eq(future));
         verify(listener, never()).onRstStreamRead(any(ChannelHandlerContext.class), anyInt(), anyLong());
     }
 
