@@ -1043,8 +1043,8 @@ public final class OpenSslEngine extends SSLEngine {
     public synchronized void beginHandshake() throws SSLException {
         switch (handshakeState) {
             case NOT_STARTED:
-                handshake();
                 handshakeState = HandshakeState.STARTED_EXPLICITLY;
+                handshake();
                 break;
             case STARTED_IMPLICITLY:
                 checkEngineClosed();
@@ -1058,6 +1058,7 @@ public final class OpenSslEngine extends SSLEngine {
                 handshakeState = HandshakeState.STARTED_EXPLICITLY; // Next time this method is invoked by the user,
                                                           // we should raise an exception.
                 break;
+            case FINISHED:
             case STARTED_EXPLICITLY:
                 throw RENEGOTIATION_UNSUPPORTED;
             default:
