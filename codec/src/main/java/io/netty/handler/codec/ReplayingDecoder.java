@@ -372,6 +372,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                     decode(ctx, replayable, out);
                     somethingRead = somethingRead || out.size() > 0;
 
+
                     // Check if this handler was removed before continuing the loop.
                     // If it was removed, it is not safe to continue to operate on the buffer.
                     //
@@ -427,6 +428,12 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
         } catch (Throwable cause) {
             throw new DecoderException(cause);
         }
+
+        for (int i = 0; i < out.size(); i++) {
+            ctx.fireChannelRead(out.get(0));
+        }
+
+        out.clear();
 
         return somethingRead;
     }
