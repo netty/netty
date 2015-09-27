@@ -180,7 +180,7 @@ public class Http2ConnectionHandlerTest {
     }
 
     private Http2ConnectionHandler newHandler() throws Exception {
-        Http2ConnectionHandler handler = new Http2ConnectionHandler(decoder, encoder);
+        Http2ConnectionHandler handler = new Http2ConnectionHandler.Builder().build(decoder, encoder);
         handler.handlerAdded(ctx);
         return handler;
     }
