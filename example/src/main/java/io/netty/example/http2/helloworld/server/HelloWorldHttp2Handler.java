@@ -19,21 +19,15 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
-import io.netty.handler.codec.http2.DefaultHttp2Connection;
-import io.netty.handler.codec.http2.DefaultHttp2FrameReader;
-import io.netty.handler.codec.http2.DefaultHttp2FrameWriter;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
-import io.netty.handler.codec.http2.Http2Connection;
+import io.netty.handler.codec.http2.Http2ConnectionDecoder;
+import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Flags;
 import io.netty.handler.codec.http2.Http2FrameListener;
 import io.netty.handler.codec.http2.Http2FrameLogger;
-import io.netty.handler.codec.http2.Http2FrameReader;
-import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2Headers;
-import io.netty.handler.codec.http2.Http2InboundFrameLogger;
-import io.netty.handler.codec.http2.Http2OutboundFrameLogger;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
@@ -47,21 +41,27 @@ import static io.netty.handler.logging.LogLevel.INFO;
 /**
  * A simple handler that responds with the message "Hello World!".
  */
-public class HelloWorldHttp2Handler extends Http2ConnectionHandler implements Http2FrameListener {
+public final class HelloWorldHttp2Handler extends Http2ConnectionHandler implements Http2FrameListener {
 
     private static final Http2FrameLogger logger = new Http2FrameLogger(INFO, HelloWorldHttp2Handler.class);
     static final ByteBuf RESPONSE_BYTES = unreleasableBuffer(copiedBuffer("Hello World", CharsetUtil.UTF_8));
 
-    public HelloWorldHttp2Handler() {
-        this(new DefaultHttp2Connection(true), new Http2InboundFrameLogger(
-                new DefaultHttp2FrameReader(), logger), new Http2OutboundFrameLogger(
-                new DefaultHttp2FrameWriter(), logger));
+    public static final class Builder extends BuilderBase<HelloWorldHttp2Handler, Builder> {
+        public Builder() {
+            frameLogger(logger);
+        }
+
+        @Override
+        public HelloWorldHttp2Handler build0(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder) {
+            HelloWorldHttp2Handler handler = new HelloWorldHttp2Handler(decoder, encoder, initialSettings());
+            frameListener(handler);
+            return handler;
+        }
     }
 
-    private HelloWorldHttp2Handler(Http2Connection connection, Http2FrameReader frameReader,
-            Http2FrameWriter frameWriter) {
-        super(connection, frameReader, frameWriter);
-        decoder().frameListener(this);
+    private HelloWorldHttp2Handler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
+                                   Http2Settings initialSettings) {
+        super(decoder, encoder, initialSettings);
     }
 
     /**

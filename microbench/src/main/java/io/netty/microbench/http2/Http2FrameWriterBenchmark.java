@@ -263,8 +263,9 @@ public class Http2FrameWriterBenchmark extends AbstractSharedExecutorMicrobenchm
                 Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, environment.writer());
                 Http2ConnectionDecoder decoder =
                         new DefaultHttp2ConnectionDecoder(connection, encoder, new DefaultHttp2FrameReader());
-                decoder.frameListener(new Http2FrameAdapter());
-                Http2ConnectionHandler connectionHandler = new Http2ConnectionHandler(decoder, encoder);
+                Http2ConnectionHandler connectionHandler = new Http2ConnectionHandler.Builder()
+                            .encoderEnforceMaxConcurrentStreams(false)
+                            .frameListener(new Http2FrameAdapter()).build(decoder, encoder);
                 p.addLast(connectionHandler);
                 environment.context(p.lastContext());
                 // Must wait for context to be set.
@@ -292,8 +293,9 @@ public class Http2FrameWriterBenchmark extends AbstractSharedExecutorMicrobenchm
         Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, env.writer());
         Http2ConnectionDecoder decoder =
                 new DefaultHttp2ConnectionDecoder(connection, encoder, new DefaultHttp2FrameReader());
-        decoder.frameListener(new Http2FrameAdapter());
-        Http2ConnectionHandler connectionHandler = new Http2ConnectionHandler(decoder, encoder);
+        Http2ConnectionHandler connectionHandler = new Http2ConnectionHandler.Builder()
+                    .encoderEnforceMaxConcurrentStreams(false)
+                    .frameListener(new Http2FrameAdapter()).build(decoder, encoder);
         env.context(new EmbeddedChannelWriteReleaseHandlerContext(alloc, connectionHandler) {
             @Override
             protected void handleException(Throwable t) {

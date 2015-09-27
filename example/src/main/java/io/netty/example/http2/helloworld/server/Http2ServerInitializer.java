@@ -43,7 +43,7 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
         @Override
         public UpgradeCodec newUpgradeCodec(CharSequence protocol) {
             if (AsciiString.contentEquals(Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME, protocol)) {
-                return new Http2ServerUpgradeCodec(new HelloWorldHttp2Handler());
+                return new Http2ServerUpgradeCodec(new HelloWorldHttp2Handler.Builder().build());
             } else {
                 return null;
             }

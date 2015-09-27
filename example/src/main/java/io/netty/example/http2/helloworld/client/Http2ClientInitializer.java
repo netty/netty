@@ -25,16 +25,10 @@ import io.netty.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http2.DefaultHttp2Connection;
-import io.netty.handler.codec.http2.DefaultHttp2FrameReader;
-import io.netty.handler.codec.http2.DefaultHttp2FrameWriter;
 import io.netty.handler.codec.http2.DelegatingDecompressorFrameListener;
 import io.netty.handler.codec.http2.Http2ClientUpgradeCodec;
 import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2FrameLogger;
-import io.netty.handler.codec.http2.Http2FrameReader;
-import io.netty.handler.codec.http2.Http2FrameWriter;
-import io.netty.handler.codec.http2.Http2InboundFrameLogger;
-import io.netty.handler.codec.http2.Http2OutboundFrameLogger;
 import io.netty.handler.codec.http2.HttpToHttp2ConnectionHandler;
 import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapter;
 import io.netty.handler.ssl.SslContext;
@@ -61,13 +55,14 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
     @Override
     public void initChannel(SocketChannel ch) throws Exception {
         final Http2Connection connection = new DefaultHttp2Connection(false);
-        final Http2FrameWriter frameWriter = frameWriter();
-        connectionHandler = new HttpToHttp2ConnectionHandler(connection, frameReader(), frameWriter);
-        connectionHandler.decoder().frameListener(new DelegatingDecompressorFrameListener(connection,
+        connectionHandler = new HttpToHttp2ConnectionHandler.Builder()
+                .frameListener(new DelegatingDecompressorFrameListener(connection,
                         new InboundHttp2ToHttpAdapter.Builder(connection)
-                                .maxContentLength(maxContentLength)
-                                .propagateSettings(true)
-                                .build()));
+                            .maxContentLength(maxContentLength)
+                            .propagateSettings(true)
+                            .build()))
+                .frameLogger(logger)
+                .build(connection);
         responseHandler = new HttpResponseHandler();
         settingsHandler = new Http2SettingsHandler(ch.newPromise());
         if (sslCtx != null) {
@@ -141,13 +136,5 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
             System.out.println("User Event Triggered: " + evt);
             super.userEventTriggered(ctx, evt);
         }
-    }
-
-    private static Http2FrameReader frameReader() {
-        return new Http2InboundFrameLogger(new DefaultHttp2FrameReader(), logger);
-    }
-
-    private static Http2FrameWriter frameWriter() {
-        return new Http2OutboundFrameLogger(new DefaultHttp2FrameWriter(), logger);
     }
 }
