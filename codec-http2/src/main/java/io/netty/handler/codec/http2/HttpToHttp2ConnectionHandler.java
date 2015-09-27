@@ -36,43 +36,20 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
     private final boolean validateHeaders;
     private int currentStreamId;
 
-    public HttpToHttp2ConnectionHandler(boolean server) {
-        this(server, true);
+    /**
+     * Builder which builds {@link HttpToHttp2ConnectionHandler} objects.
+     */
+    public static final class Builder extends BuilderBase<HttpToHttp2ConnectionHandler, Builder> {
+        @Override
+        public HttpToHttp2ConnectionHandler build0(Http2ConnectionDecoder decoder,
+                                                   Http2ConnectionEncoder encoder) {
+            return new HttpToHttp2ConnectionHandler(decoder, encoder, initialSettings(), isValidateHeaders());
+        }
     }
 
-    public HttpToHttp2ConnectionHandler(boolean server, boolean validateHeaders) {
-        super(server);
-        this.validateHeaders = validateHeaders;
-    }
-
-    public HttpToHttp2ConnectionHandler(Http2Connection connection) {
-        this(connection, true);
-    }
-
-    public HttpToHttp2ConnectionHandler(Http2Connection connection, boolean validateHeaders) {
-        super(connection);
-        this.validateHeaders = validateHeaders;
-    }
-
-    public HttpToHttp2ConnectionHandler(Http2Connection connection, Http2FrameReader frameReader,
-            Http2FrameWriter frameWriter) {
-        this(connection, frameReader, frameWriter, true);
-    }
-
-    public HttpToHttp2ConnectionHandler(Http2Connection connection, Http2FrameReader frameReader,
-            Http2FrameWriter frameWriter, boolean validateHeaders) {
-        super(connection, frameReader, frameWriter);
-        this.validateHeaders = validateHeaders;
-    }
-
-    public HttpToHttp2ConnectionHandler(Http2ConnectionDecoder decoder,
-                                        Http2ConnectionEncoder encoder) {
-        this(decoder, encoder, true);
-    }
-
-    public HttpToHttp2ConnectionHandler(Http2ConnectionDecoder decoder,
-            Http2ConnectionEncoder encoder, boolean validateHeaders) {
-        super(decoder, encoder);
+    protected HttpToHttp2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
+                                           Http2Settings initialSettings, boolean validateHeaders) {
+        super(decoder, encoder, initialSettings);
         this.validateHeaders = validateHeaders;
     }
 

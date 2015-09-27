@@ -51,6 +51,11 @@ public interface Http2ConnectionDecoder extends Closeable {
     void frameListener(Http2FrameListener listener);
 
     /**
+     * Get the {@link Http2FrameListener} which will be notified when frames are decoded.
+     */
+    Http2FrameListener frameListener();
+
+    /**
      * Called by the {@link Http2ConnectionHandler} to decode the next frame from the input buffer.
      */
     void decodeFrame(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Http2Exception;
