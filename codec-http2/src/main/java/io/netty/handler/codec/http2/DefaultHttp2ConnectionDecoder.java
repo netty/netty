@@ -88,6 +88,11 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     }
 
     @Override
+    public Http2FrameListener frameListener() {
+        return listener;
+    }
+
+    @Override
     public boolean prefaceReceived() {
         return FrameReadListener.class == internalFrameListener.getClass();
     }
