@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -25,6 +26,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -87,6 +89,8 @@ public final class ChannelOutboundBuffer {
 
     private volatile Runnable fireChannelWritabilityChangedTask;
 
+    private static final boolean SQUASHER_ENABLED;
+
     static {
         AtomicIntegerFieldUpdater<ChannelOutboundBuffer> unwritableUpdater =
                 PlatformDependent.newAtomicIntegerFieldUpdater(ChannelOutboundBuffer.class, "unwritable");
@@ -101,6 +105,8 @@ public final class ChannelOutboundBuffer {
             pendingSizeUpdater = AtomicLongFieldUpdater.newUpdater(ChannelOutboundBuffer.class, "totalPendingSize");
         }
         TOTAL_PENDING_SIZE_UPDATER = pendingSizeUpdater;
+
+        SQUASHER_ENABLED = SystemPropertyUtil.getBoolean("io.netty.voidPromiseWriteCumulator", true); // it's sane to get it enabled by default
     }
 
     ChannelOutboundBuffer(AbstractChannel channel) {
@@ -112,6 +118,19 @@ public final class ChannelOutboundBuffer {
      * the message was written.
      */
     public void addMessage(Object msg, int size, ChannelPromise promise) {
+        if (SQUASHER_ENABLED && promise.isVoid() && tailEntry != null && tailEntry.promise.isVoid() && msg instanceof ByteBuf && tailEntry.msg instanceof ByteBuf) {
+            ByteBuf input = ((ByteBuf) msg);
+            ByteBuf old = (ByteBuf) tailEntry.msg;
+
+            if (input.refCnt() == 1) {
+                tailEntry.msg = MERGE_CUMULATOR.cumulate(ByteBufAllocator.DEFAULT, old, input); // our input buffer will be released by the cumulator
+                tailEntry.pendingSize += size;
+
+                incrementPendingOutboundBytes(size, false);
+                return;
+            }
+        }
+
         Entry entry = Entry.newInstance(msg, size, total(msg), promise);
         if (tailEntry == null) {
             flushedEntry = null;
@@ -146,7 +165,7 @@ public final class ChannelOutboundBuffer {
                 flushedEntry = entry;
             }
             do {
-                flushed ++;
+                flushed++;
                 if (!entry.promise.setUncancellable()) {
                     // Was cancelled so make sure we free up memory and notify about the freed bytes
                     int pending = entry.cancel();
@@ -194,7 +213,7 @@ public final class ChannelOutboundBuffer {
 
         long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, -size);
         if (notifyWritability && (newWriteBufferSize == 0
-            || newWriteBufferSize <= channel.config().getWriteBufferLowWaterMark())) {
+                || newWriteBufferSize <= channel.config().getWriteBufferLowWaterMark())) {
             setWritable(invokeLater);
         }
     }
@@ -306,7 +325,7 @@ public final class ChannelOutboundBuffer {
     }
 
     private void removeEntry(Entry e) {
-        if (-- flushed == 0) {
+        if (--flushed == 0) {
             // processed everything
             flushedEntry = null;
             if (e == tailEntry) {
@@ -323,7 +342,7 @@ public final class ChannelOutboundBuffer {
      * This operation assumes all messages in this buffer is {@link ByteBuf}.
      */
     public void removeBytes(long writtenBytes) {
-        for (;;) {
+        for (; ; ) {
             Object msg = current();
             if (!(msg instanceof ByteBuf)) {
                 assert writtenBytes == 0;
@@ -401,7 +420,7 @@ public final class ChannelOutboundBuffer {
                     int count = entry.count;
                     if (count == -1) {
                         //noinspection ConstantValueVariableUse
-                        entry.count = count =  buf.nioBufferCount();
+                        entry.count = count = buf.nioBufferCount();
                     }
                     int neededSpace = nioBufferCount + count;
                     if (neededSpace > nioBuffers.length) {
@@ -415,7 +434,7 @@ public final class ChannelOutboundBuffer {
                             // derived buffer
                             entry.buf = nioBuf = buf.internalNioBuffer(readerIndex, readableBytes);
                         }
-                        nioBuffers[nioBufferCount ++] = nioBuf;
+                        nioBuffers[nioBufferCount++] = nioBuf;
                     } else {
                         ByteBuffer[] nioBufs = entry.bufs;
                         if (nioBufs == null) {
@@ -436,11 +455,11 @@ public final class ChannelOutboundBuffer {
     }
 
     private static int fillBufferArray(ByteBuffer[] nioBufs, ByteBuffer[] nioBuffers, int nioBufferCount) {
-        for (ByteBuffer nioBuf: nioBufs) {
+        for (ByteBuffer nioBuf : nioBufs) {
             if (nioBuf == null) {
                 break;
             }
-            nioBuffers[nioBufferCount ++] = nioBuf;
+            nioBuffers[nioBufferCount++] = nioBuf;
         }
         return nioBufferCount;
     }
@@ -513,7 +532,7 @@ public final class ChannelOutboundBuffer {
 
     private void setUserDefinedWritability(int index) {
         final int mask = ~writabilityMask(index);
-        for (;;) {
+        for (; ; ) {
             final int oldValue = unwritable;
             final int newValue = oldValue & mask;
             if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
@@ -527,7 +546,7 @@ public final class ChannelOutboundBuffer {
 
     private void clearUserDefinedWritability(int index) {
         final int mask = writabilityMask(index);
-        for (;;) {
+        for (; ; ) {
             final int oldValue = unwritable;
             final int newValue = oldValue | mask;
             if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
@@ -547,7 +566,7 @@ public final class ChannelOutboundBuffer {
     }
 
     private void setWritable(boolean invokeLater) {
-        for (;;) {
+        for (; ; ) {
             final int oldValue = unwritable;
             final int newValue = oldValue & ~1;
             if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
@@ -560,7 +579,7 @@ public final class ChannelOutboundBuffer {
     }
 
     private void setUnwritable(boolean invokeLater) {
-        for (;;) {
+        for (; ; ) {
             final int oldValue = unwritable;
             final int newValue = oldValue | 1;
             if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
@@ -617,7 +636,7 @@ public final class ChannelOutboundBuffer {
 
         try {
             inFail = true;
-            for (;;) {
+            for (; ; ) {
                 if (!remove0(cause, notify)) {
                     break;
                 }
@@ -827,5 +846,50 @@ public final class ChannelOutboundBuffer {
             recycle();
             return next;
         }
+    }
+
+    // the cumulator copied from ByteToMessageDecoder
+
+    public static final Cumulator MERGE_CUMULATOR = new Cumulator() {
+        @Override
+        public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
+            ByteBuf buffer;
+            if (cumulation.writerIndex() > cumulation.maxCapacity() - in.readableBytes()
+                    || cumulation.refCnt() > 1) {
+                // Expand cumulation (by replace it) when either there is not more room in the buffer
+                // or if the refCnt is greater then 1 which may happen when the user use slice().retain() or
+                // duplicate().retain().
+                //
+                // See:
+                // - https://github.com/netty/netty/issues/2327
+                // - https://github.com/netty/netty/issues/1764
+                buffer = expandCumulation(alloc, cumulation, in.readableBytes());
+            } else {
+                buffer = cumulation;
+            }
+            buffer.writeBytes(in);
+            in.release();
+            return buffer;
+        }
+    };
+
+    /**
+     * Cumulate {@link ByteBuf}s.
+     */
+    public interface Cumulator {
+        /**
+         * Cumulate the given {@link ByteBuf}s and return the {@link ByteBuf} that holds the cumulated bytes.
+         * The implementation is responsible to correctly handle the life-cycle of the given {@link ByteBuf}s and so
+         * call {@link ByteBuf#release()} if a {@link ByteBuf} is fully consumed.
+         */
+        ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in);
+    }
+
+    static ByteBuf expandCumulation(ByteBufAllocator alloc, ByteBuf cumulation, int readable) {
+        ByteBuf oldCumulation = cumulation;
+        cumulation = alloc.buffer(oldCumulation.readableBytes() + readable);
+        cumulation.writeBytes(oldCumulation);
+        oldCumulation.release();
+        return cumulation;
     }
 }
