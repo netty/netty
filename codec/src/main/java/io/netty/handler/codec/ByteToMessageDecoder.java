@@ -135,9 +135,20 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     private boolean singleDecode;
     private boolean decodeWasNull;
     private boolean first;
+    private int fireAfterReads = 16;
 
     protected ByteToMessageDecoder() {
         CodecUtil.ensureNotSharable(this);
+    }
+
+    /**
+     * Sets the number of reads after which the messages will be passed to the next handler(before the full decoding is over), allowing quicker re-use of pooled objects like ByteBufs.
+     */
+    public void setFireAfterReads(int fireAfterReads) {
+        if (fireAfterReads <= 0) {
+            throw new IllegalArgumentException("fireAfterReads must be > 0");
+        }
+        this.fireAfterReads = fireAfterReads;
     }
 
     /**
@@ -333,7 +344,6 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 if (ctx.isRemoved()) {
                     break;
                 }
-
                 if (outSize == out.size()) {
                     if (oldInputLength == in.readableBytes()) {
                         break;
@@ -350,6 +360,19 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
                 if (isSingleDecode()) {
                     break;
+                }
+
+                if (out.size() < fireAfterReads) {
+                    continue;
+                }
+
+                if (out.size() == 1) {
+                    ctx.fireChannelRead(out.remove(0));
+                    continue;
+                }
+
+                for (int i = 0; i < out.size(); i++) {
+                    ctx.fireChannelRead(out.remove(0));
                 }
             }
         } catch (DecoderException e) {
