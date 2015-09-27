@@ -358,8 +358,10 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
     }
 
     @Override
-    protected void callDecode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+    protected boolean callDecode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         replayable.setCumulation(in);
+        boolean somethingRead = false;
+
         try {
             while (in.isReadable()) {
                 int oldReaderIndex = checkpoint = in.readerIndex();
@@ -368,6 +370,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                 int oldInputLength = in.readableBytes();
                 try {
                     decode(ctx, replayable, out);
+                    somethingRead = somethingRead || out.size() > 0;
 
                     // Check if this handler was removed before continuing the loop.
                     // If it was removed, it is not safe to continue to operate on the buffer.
@@ -424,5 +427,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
         } catch (Throwable cause) {
             throw new DecoderException(cause);
         }
+
+        return somethingRead;
     }
 }
