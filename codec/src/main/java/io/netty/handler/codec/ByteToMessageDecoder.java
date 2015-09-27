@@ -243,9 +243,11 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 int size = out.size();
 
                 // this should trigger only when an exception was thrown by decoder
-                for (int i = 0; i < size; i++) {
-                    // release without firing to avoid firing the same message TWICE if an exception happened
-                    ReferenceCountUtil.safeRelease(out.get(i));
+                if (size != 0) {
+                    for (int i = 0; i < size; i++) {
+                        // release without firing to avoid firing the same message TWICE if an exception happened
+                        ReferenceCountUtil.safeRelease(out.get(i));
+                    }
                 }
 
                 decodeWasNull = !somethingRead;
@@ -316,8 +318,10 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 ctx.fireChannelInactive();
             } finally {
                 // recycle in all cases
-                for (int i = 0; i < out.size(); i++) {
-                    ReferenceCountUtil.safeRelease(out.get(i));
+                if (!out.isEmpty()) {
+                    for (int i = 0; i < out.size(); i++) {
+                        ReferenceCountUtil.safeRelease(out.get(i));
+                    }
                 }
                 out.recycle();
             }
