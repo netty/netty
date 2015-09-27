@@ -311,11 +311,6 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 for (int i = 0; i < size; i++) {
                     ctx.fireChannelRead(out.get(i));
                 }
-                if (size > 0 || somethingRead) {
-                    // Something was read, call fireChannelReadComplete()
-                    ctx.fireChannelReadComplete();
-                }
-                ctx.fireChannelInactive();
             } finally {
                 // recycle in all cases
                 if (!out.isEmpty()) {
@@ -324,6 +319,11 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                     }
                 }
                 out.recycle();
+
+                if (size > 0 || somethingRead) {
+                    // Something was read, call fireChannelReadComplete()
+                    ctx.fireChannelReadComplete();
+                }
             }
         }
     }
