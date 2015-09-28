@@ -41,7 +41,6 @@ import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.REFUSED_STREAM;
 import static io.netty.handler.codec.http2.Http2Exception.closedStreamError;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static io.netty.handler.codec.http2.Http2Exception.isStreamError;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
@@ -156,10 +155,8 @@ public class DefaultHttp2Connection implements Http2Connection {
             for (int i = 0; i < listeners.size(); ++i) {
                 listeners.get(i).onGoAwayReceived(lastKnownStream, errorCode, debugData);
             }
-        } catch (Http2Exception e) {
-            throw isStreamError(e) ? connectionError(INTERNAL_ERROR, e, "unexpected stream error") : e;
         } catch (Throwable cause) {
-            throw connectionError(INTERNAL_ERROR, cause, "unexpected error");
+            throw connectionError(INTERNAL_ERROR, cause, "unexpected error from onGoAwayReceived");
         }
 
         forEachActiveStream(new Http2StreamVisitor() {
@@ -185,10 +182,8 @@ public class DefaultHttp2Connection implements Http2Connection {
             for (int i = 0; i < listeners.size(); ++i) {
                 listeners.get(i).onGoAwaySent(lastKnownStream, errorCode, debugData);
             }
-        } catch (Http2Exception e) {
-            throw isStreamError(e) ? connectionError(INTERNAL_ERROR, e, "unexpected stream error") : e;
         } catch (Throwable cause) {
-            throw connectionError(INTERNAL_ERROR, cause, "unexpected error");
+            throw connectionError(INTERNAL_ERROR, cause, "unexpected error from onGoAwaySent");
         }
 
         forEachActiveStream(new Http2StreamVisitor() {
@@ -222,10 +217,8 @@ public class DefaultHttp2Connection implements Http2Connection {
                 for (int i = 0; i < listeners.size(); i++) {
                     listeners.get(i).onStreamRemoved(stream);
                 }
-            } catch (Http2Exception e) {
-                throw isStreamError(e) ? connectionError(INTERNAL_ERROR, e, "unexpected stream error") : e;
             } catch (Throwable cause) {
-                throw connectionError(INTERNAL_ERROR, cause, "unexpected error");
+                throw connectionError(INTERNAL_ERROR, cause, "unexpected error from onStreamRemoved");
             }
         }
     }
@@ -250,10 +243,8 @@ public class DefaultHttp2Connection implements Http2Connection {
             for (int i = 0; i < listeners.size(); i++) {
                 listeners.get(i).onStreamHalfClosed(stream);
             }
-        } catch (Http2Exception e) {
-            throw isStreamError(e) ? connectionError(INTERNAL_ERROR, e, "unexpected stream error") : e;
         } catch (Throwable cause) {
-            throw connectionError(INTERNAL_ERROR, cause, "unexpected error");
+            throw connectionError(INTERNAL_ERROR, cause, "unexpected error from onStreamHalfClosed");
         }
     }
 
@@ -262,10 +253,8 @@ public class DefaultHttp2Connection implements Http2Connection {
             for (int i = 0; i < listeners.size(); i++) {
                 listeners.get(i).onStreamClosed(stream);
             }
-        } catch (Http2Exception e) {
-            throw isStreamError(e) ? connectionError(INTERNAL_ERROR, e, "unexpected stream error") : e;
         } catch (Throwable cause) {
-            throw connectionError(INTERNAL_ERROR, cause, "unexpected error");
+            throw connectionError(INTERNAL_ERROR, cause, "unexpected error from onStreamClosed");
         }
     }
 
@@ -580,10 +569,8 @@ public class DefaultHttp2Connection implements Http2Connection {
                     for (int i = 0; i < listeners.size(); i++) {
                         listeners.get(i).onWeightChanged(this, oldWeight);
                     }
-                } catch (Http2Exception e) {
-                    throw isStreamError(e) ? connectionError(INTERNAL_ERROR, e, "unexpected stream error") : e;
                 } catch (Throwable cause) {
-                    throw connectionError(INTERNAL_ERROR, cause, "unexpected error");
+                    throw connectionError(INTERNAL_ERROR, cause, "unexpected error from onWeightChanged");
                 }
             }
         }
@@ -759,10 +746,8 @@ public class DefaultHttp2Connection implements Http2Connection {
         public void notifyListener(Listener l) throws Http2Exception {
             try {
                 l.onPriorityTreeParentChanged(stream, oldParent);
-            } catch (Http2Exception e) {
-                throw isStreamError(e) ? connectionError(INTERNAL_ERROR, e, "unexpected stream error") : e;
             } catch (Throwable cause) {
-                throw connectionError(INTERNAL_ERROR, cause, "unexpected error");
+                throw connectionError(INTERNAL_ERROR, cause, "unexpected error from onPriorityTreeParentChanged");
             }
         }
     }
@@ -786,10 +771,8 @@ public class DefaultHttp2Connection implements Http2Connection {
             for (int i = 0; i < listeners.size(); i++) {
                 listeners.get(i).onPriorityTreeParentChanging(stream, newParent);
             }
-        } catch (Http2Exception e) {
-            throw isStreamError(e) ? connectionError(INTERNAL_ERROR, e, "unexpected stream error") : e;
         } catch (Throwable cause) {
-            throw connectionError(INTERNAL_ERROR, cause, "unexpected error");
+            throw connectionError(INTERNAL_ERROR, cause, "unexpected error from onPriorityTreeParentChanging");
         }
     }
 
@@ -955,10 +938,8 @@ public class DefaultHttp2Connection implements Http2Connection {
                 for (int i = 0; i < listeners.size(); i++) {
                     listeners.get(i).onStreamAdded(stream);
                 }
-            } catch (Http2Exception e) {
-                throw isStreamError(e) ? connectionError(INTERNAL_ERROR, e, "unexpected stream error") : e;
             } catch (Throwable cause) {
-                throw connectionError(INTERNAL_ERROR, cause, "unexpected error");
+                throw connectionError(INTERNAL_ERROR, cause, "unexpected error from onStreamAdded");
             }
 
             notifyParentChanged(events);
@@ -1138,10 +1119,8 @@ public class DefaultHttp2Connection implements Http2Connection {
                     for (int i = 0; i < listeners.size(); i++) {
                         listeners.get(i).onStreamActive(stream);
                     }
-                } catch (Http2Exception e) {
-                    throw isStreamError(e) ? connectionError(INTERNAL_ERROR, e, "unexpected stream error") : e;
                 } catch (Throwable cause) {
-                    throw connectionError(INTERNAL_ERROR, cause, "unexpected error");
+                    throw connectionError(INTERNAL_ERROR, cause, "unexpected error from onStreamActive");
                 }
             }
         }

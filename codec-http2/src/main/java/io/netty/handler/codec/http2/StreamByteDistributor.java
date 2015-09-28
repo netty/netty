@@ -52,14 +52,14 @@ public interface StreamByteDistributor {
     interface Writer {
         /**
          * Writes the allocated bytes for this stream.
+         * <p>
+         * Any exception thrown from this method will be translated into a fatal connection error, cause a
+         * {@code GO_AWAY} frame to be sent with a fatal error code, and then the connection will be shutdown.
          * @param stream the stream for which to perform the write.
          * @param numBytes the number of bytes to write.
          * @throws Http2Exception If a connection error occurs.
-         * @throws Http2Exception  Any exception thrown from this method (even of type {@link RutimeException}) will be
-         * translated into a fatal connection error, cause a {@code GO_AWAY} frame to be sent with a fatal error code,
-         * and then the connection will be shutdown.
          */
-        void write(Http2Stream stream, int numBytes) throws Http2Exception;
+        void write(Http2Stream stream, int numBytes);
     }
 
     /**
@@ -74,15 +74,16 @@ public interface StreamByteDistributor {
      * iterates across those streams to write the appropriate bytes. Criteria for
      * traversing streams is undefined and it is up to the implementation to determine when to stop
      * at a given stream.
-     *
-     * <p>The streamable bytes are not automatically updated by calling this method. It is up to the
+     * <p>
+     * The streamable bytes are not automatically updated by calling this method. It is up to the
      * caller to indicate the number of bytes streamable after the write by calling
      * {@link #updateStreamableBytes(StreamState)}.
-     *
+     * <p>
+     * Any exception thrown from this method will be translated into a fatal connection error, cause a
+     * {@code GO_AWAY} frame to be sent with a fatal error code, and then the connection will be shutdown.
      * @param maxBytes the maximum number of bytes to write.
      * @return {@code true} if there are still streamable bytes that have not yet been written,
      * otherwise {@code false}.
-     * @throws Http2Exception if an exception is thrown {@link Writer#write(Http2Stream, int)}.
      */
-    boolean distribute(int maxBytes, Writer writer) throws Http2Exception;
+    boolean distribute(int maxBytes, Writer writer);
 }

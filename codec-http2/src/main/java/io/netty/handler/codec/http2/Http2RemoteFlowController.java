@@ -144,25 +144,21 @@ public interface Http2RemoteFlowController extends Http2FlowController {
          * Report the number of {@code writtenBytes} for a {@code stream}. Called after the
          * flow-controller has flushed bytes for the given stream.
          * <p>
-         * This method should not throw. Any thrown exceptions are considered a programming error and are ignored.
+         * Any exception thrown from this method will be translated into a fatal connection error, cause a
+         * {@code GO_AWAY} frame to be sent with a fatal error code, and then the connection will be shutdown.
          * @param stream that had bytes written.
          * @param writtenBytes the number of bytes written for a stream, can be 0 in the case of an
          *                     empty DATA frame.
-         * @throws Http2Exception  Any exception thrown from this method (even of type {@link RutimeException}) will be
-         * translated into a fatal connection error, cause a {@code GO_AWAY} frame to be sent with a fatal error code,
-         * and then the connection will be shutdown.
          */
-        void streamWritten(Http2Stream stream, int writtenBytes) throws Http2Exception;
+        void streamWritten(Http2Stream stream, int writtenBytes);
 
         /**
          * Notification that {@link Http2RemoteFlowController#isWritable(Http2Stream)} has changed for {@code stream}.
          * <p>
-         * This method should not throw. Any thrown exceptions are considered a programming error and are ignored.
+         * Any exception thrown from this method will be translated into a fatal connection error, cause a
+         * {@code GO_AWAY} frame to be sent with a fatal error code, and then the connection will be shutdown.
          * @param stream The stream which writability has changed for.
-         * @throws Http2Exception  Any exception thrown from this method (even of type {@link RutimeException}) will be
-         * translated into a fatal connection error, cause a {@code GO_AWAY} frame to be sent with a fatal error code,
-         * and then the connection will be shutdown.
          */
-        void writabilityChanged(Http2Stream stream) throws Http2Exception;
+        void writabilityChanged(Http2Stream stream);
     }
 }

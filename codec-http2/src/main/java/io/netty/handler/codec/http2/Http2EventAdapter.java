@@ -84,42 +84,42 @@ public class Http2EventAdapter implements Http2Connection.Listener, Http2FrameLi
     }
 
     @Override
-    public void onStreamAdded(Http2Stream stream) throws Http2Exception {
+    public void onStreamAdded(Http2Stream stream) {
     }
 
     @Override
-    public void onStreamActive(Http2Stream stream) throws Http2Exception {
+    public void onStreamActive(Http2Stream stream) {
     }
 
     @Override
-    public void onStreamHalfClosed(Http2Stream stream) throws Http2Exception {
+    public void onStreamHalfClosed(Http2Stream stream) {
     }
 
     @Override
-    public void onStreamClosed(Http2Stream stream) throws Http2Exception {
+    public void onStreamClosed(Http2Stream stream) {
     }
 
     @Override
-    public void onStreamRemoved(Http2Stream stream) throws Http2Exception {
+    public void onStreamRemoved(Http2Stream stream) {
     }
 
     @Override
-    public void onPriorityTreeParentChanged(Http2Stream stream, Http2Stream oldParent) throws Http2Exception {
+    public void onPriorityTreeParentChanged(Http2Stream stream, Http2Stream oldParent) {
     }
 
     @Override
-    public void onPriorityTreeParentChanging(Http2Stream stream, Http2Stream newParent) throws Http2Exception {
+    public void onPriorityTreeParentChanging(Http2Stream stream, Http2Stream newParent) {
     }
 
     @Override
-    public void onWeightChanged(Http2Stream stream, short oldWeight) throws Http2Exception {
+    public void onWeightChanged(Http2Stream stream, short oldWeight) {
     }
 
     @Override
-    public void onGoAwaySent(int lastStreamId, long errorCode, ByteBuf debugData) throws Http2Exception {
+    public void onGoAwaySent(int lastStreamId, long errorCode, ByteBuf debugData) {
     }
 
     @Override
-    public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) throws Http2Exception {
+    public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
     }
 }

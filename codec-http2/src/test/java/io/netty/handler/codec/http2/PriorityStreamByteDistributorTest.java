@@ -124,9 +124,8 @@ public class PriorityStreamByteDistributorTest {
         try {
             write(10);
             fail("Expected an exception");
-        } catch (Http2Exception e) {
-            assertFalse(isStreamError(e));
-            assertSame(fakeException, e.getCause());
+        } catch (RuntimeException e) {
+            assertSame(fakeException, e);
         }
 
         verifyWrite(atMost(1), STREAM_A, 1);

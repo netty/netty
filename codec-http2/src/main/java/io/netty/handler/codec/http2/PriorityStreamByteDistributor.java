@@ -15,14 +15,13 @@
 
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
-import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static io.netty.handler.codec.http2.Http2Exception.isStreamError;
+import io.netty.util.internal.PlatformDependent;
+
+import java.util.Arrays;
+
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
-
-import java.util.Arrays;
 
 /**
  * A {@link StreamByteDistributor} that implements the HTTP/2 priority tree algorithm for allocating
@@ -84,7 +83,7 @@ public final class PriorityStreamByteDistributor implements StreamByteDistributo
     }
 
     @Override
-    public boolean distribute(int maxBytes, Writer writer) throws Http2Exception {
+    public boolean distribute(int maxBytes, Writer writer) {
         checkNotNull(writer, "writer");
         if (maxBytes > 0) {
             allocateBytesForTree(connection.connectionStream(), maxBytes);
@@ -385,19 +384,17 @@ public final class PriorityStreamByteDistributor implements StreamByteDistributo
     private final class WriteVisitor implements Http2StreamVisitor {
         Writer writer;
 
-        void writeAllocatedBytes(Writer writer) throws Http2Exception {
+        void writeAllocatedBytes(Writer writer) {
             this.writer = writer;
             try {
                 connection.forEachActiveStream(this);
             } catch (Http2Exception e) {
-                throw isStreamError(e) ? connectionError(INTERNAL_ERROR, e, "unexpected stream error") : e;
-            } catch (Throwable cause) {
-                throw connectionError(INTERNAL_ERROR, cause, "unexpected error");
+                PlatformDependent.throwException(e);
             }
         }
 
         @Override
-        public boolean visit(Http2Stream stream) throws Http2Exception {
+        public boolean visit(Http2Stream stream) {
             PriorityState state = state(stream);
             int allocated = state.allocated;
 

@@ -16,6 +16,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.StreamByteDistributor.Writer;
+import io.netty.util.internal.PlatformDependent;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -24,7 +25,6 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static io.netty.handler.codec.http2.Http2Exception.isStreamError;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
@@ -101,7 +101,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             }
 
             @Override
-            public void onStreamClosed(Http2Stream stream) throws Http2Exception {
+            public void onStreamClosed(Http2Stream stream) {
                 // Any pending frames can never be written, cancel and
                 // write errors for any pending frames.
                 AbstractState state = state(stream);
@@ -119,7 +119,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             }
 
             @Override
-            public void onStreamHalfClosed(Http2Stream stream) throws Http2Exception {
+            public void onStreamHalfClosed(Http2Stream stream) {
                 if (HALF_CLOSED_LOCAL.equals(stream.state())) {
                     /**
                      * When this method is called there should not be any
@@ -678,9 +678,8 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         /**
          * Called when the state is cancelled outside of a write operation.
          * @param state the state that was cancelled.
-         * @throws Http2Exception If {@link Listener#writabilityChanged(Http2Stream)} throws an exception.
          */
-        public void stateCancelled(AbstractState state) throws Http2Exception { }
+        public void stateCancelled(AbstractState state) { }
 
         /**
          * Increment the window size for a particular stream.
@@ -726,14 +725,18 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         protected final void writePendingBytes(Writer writer) throws Http2Exception {
             int bytesToWrite = writableBytes();
 
-            // Make sure we always write at least once, regardless if we have bytesToWrite or not.
-            // This ensures that zero-length frames will always be written.
-            for (;;) {
-                if (!streamByteDistributor.distribute(bytesToWrite, writer) ||
-                    (bytesToWrite = writableBytes()) <= 0 ||
-                    !isChannelWritable0()) {
-                    break;
+            try {
+                // Make sure we always write at least once, regardless if we have bytesToWrite or not.
+                // This ensures that zero-length frames will always be written.
+                for (;;) {
+                    if (!streamByteDistributor.distribute(bytesToWrite, writer) ||
+                        (bytesToWrite = writableBytes()) <= 0 ||
+                        !isChannelWritable0()) {
+                        break;
+                    }
                 }
+            } catch (Throwable cause) {
+                throw connectionError(INTERNAL_ERROR, cause, "unexpected error from distribute");
             }
         }
 
@@ -799,7 +802,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         private final Listener listener;
         private final Http2StreamVisitor checkStreamWritabilityVisitor = new Http2StreamVisitor() {
             @Override
-            public boolean visit(Http2Stream stream) throws Http2Exception {
+            public boolean visit(Http2Stream stream) {
                 AbstractState state = state(stream);
                 if (isWritable(state) != state.markWritability()) {
                     notifyWritabilityChanged(state);
@@ -809,7 +812,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         };
         private final Writer initialWindowSizeWriter = new StreamByteDistributor.Writer() {
             @Override
-            public void write(Http2Stream stream, int numBytes) throws Http2Exception {
+            public void write(Http2Stream stream, int numBytes) {
                 AbstractState state = state(stream);
                 writeAllocatedBytes(state, numBytes);
                 if (isWritable(state) != state.markWritability()) {
@@ -819,7 +822,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         };
         private final Writer writeAllocatedBytesWriter = new StreamByteDistributor.Writer() {
             @Override
-            public void write(Http2Stream stream, int numBytes) throws Http2Exception {
+            public void write(Http2Stream stream, int numBytes) {
                 writeAllocatedBytes(state(stream), numBytes);
             }
         };
@@ -863,7 +866,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
 
         @Override
-        public void stateCancelled(AbstractState state) throws Http2Exception {
+        public void stateCancelled(AbstractState state) {
             checkConnectionThenStreamWritabilityChanged(state);
         }
 
@@ -874,18 +877,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             }
         }
 
-        private void notifyWritabilityChanged(AbstractState state) throws Http2Exception {
-            state.markWritability(!state.markWritability());
-            try {
-                listener.writabilityChanged(state.stream);
-            } catch (Http2Exception e) {
-                throw isStreamError(e) ? connectionError(INTERNAL_ERROR, e, "unexpected stream error") : e;
-            } catch (Throwable cause) {
-                throw connectionError(INTERNAL_ERROR, cause, "unexpected error");
-            }
-        }
-
-        private void checkConnectionThenStreamWritabilityChanged(AbstractState state) throws Http2Exception {
+        private void checkConnectionThenStreamWritabilityChanged(AbstractState state) {
             // It is possible that the connection window and/or the individual stream writability could change.
             if (isWritableConnection() != connectionState.markWritability()) {
                 checkAllWritabilityChanged();
@@ -894,22 +886,31 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             }
         }
 
-        private void checkAllWritabilityChanged() throws Http2Exception {
+        private void checkAllWritabilityChanged() {
             // Make sure we mark that we have notified as a result of this change.
             connectionState.markWritability(isWritableConnection());
-            connection.forEachActiveStream(checkStreamWritabilityVisitor);
+            try {
+                connection.forEachActiveStream(checkStreamWritabilityVisitor);
+            } catch (Http2Exception e) {
+                PlatformDependent.throwException(e);
+            }
         }
 
-        private void writeAllocatedBytes(AbstractState state, int numBytes) throws Http2Exception {
+        /**
+         * @throws RuntimeException if {@link Listener#writabilityChanged(Http2Stream)} throws.
+         */
+        private void notifyWritabilityChanged(AbstractState state) {
+            state.markWritability(!state.markWritability());
+            listener.writabilityChanged(state.stream);
+        }
+
+        /**
+         * @throws RuntimeException if {@link Listener#streamWritten(Http2Stream, int)} throws.
+         */
+        private void writeAllocatedBytes(AbstractState state, int numBytes) {
             int written = state.writeAllocatedBytes(numBytes);
             if (written != -1) {
-                try {
-                    listener.streamWritten(state.stream(), written);
-                } catch (Http2Exception e) {
-                    throw isStreamError(e) ? connectionError(INTERNAL_ERROR, e, "unexpected stream error") : e;
-                } catch (Throwable cause) {
-                    throw connectionError(INTERNAL_ERROR, cause, "unexpected error");
-                }
+                listener.streamWritten(state.stream(), written);
             }
         }
     }

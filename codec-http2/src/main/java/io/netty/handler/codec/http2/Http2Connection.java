@@ -28,46 +28,49 @@ public interface Http2Connection {
         /**
          * Notifies the listener that the given stream was added to the connection. This stream may
          * not yet be active (i.e. {@code OPEN} or {@code HALF CLOSED}).
-         * @throws Http2Exception  Any exception thrown from this method (even of type {@link RutimeException}) will be
-         * translated into a fatal connection error, cause a {@code GO_AWAY} frame to be sent with a fatal error code,
-         * and then the connection will be shutdown.
+         * <p>
+         * Any exception thrown from this method will be translated into a fatal connection error, cause a
+         * {@code GO_AWAY} frame to be sent with a fatal error code, and then the connection will be shutdown.
          */
-        void onStreamAdded(Http2Stream stream) throws Http2Exception;
+        void onStreamAdded(Http2Stream stream);
 
         /**
          * Notifies the listener that the given stream was made active (i.e. {@code OPEN} or {@code HALF CLOSED}).
-         * @throws Http2Exception  Any exception thrown from this method (even of type {@link RutimeException}) will be
-         * translated into a fatal connection error, cause a {@code GO_AWAY} frame to be sent with a fatal error code,
-         * and then the connection will be shutdown.
+         * <p>
+         * Any exception thrown from this method will be translated into a fatal connection error, cause a
+         * {@code GO_AWAY} frame to be sent with a fatal error code, and then the connection will be shutdown.
          */
-        void onStreamActive(Http2Stream stream) throws Http2Exception;
+        void onStreamActive(Http2Stream stream);
 
         /**
          * Notifies the listener that the given stream has transitioned from {@code OPEN} to {@code HALF CLOSED}.
          * This method will <strong>not</strong> be called until a state transition occurs from when
          * {@link #onStreamActive(Http2Stream)} was called.
          * The stream can be inspected to determine which side is {@code HALF CLOSED}.
-         * @throws Http2Exception  Any exception thrown from this method (even of type {@link RutimeException}) will be
-         * translated into a fatal connection error, cause a {@code GO_AWAY} frame to be sent with a fatal error code,
-         * and then the connection will be shutdown.
+         * <p>
+         * Any exception thrown from this method will be translated into a fatal connection error, cause a
+         * {@code GO_AWAY} frame to be sent with a fatal error code, and then the connection will be shutdown.
          */
-        void onStreamHalfClosed(Http2Stream stream) throws Http2Exception;
+        void onStreamHalfClosed(Http2Stream stream);
 
         /**
          * Notifies the listener that the given stream is now {@code CLOSED} in both directions and will no longer
          * be accessible via {@link #forEachActiveStream(Http2StreamVisitor)}.
+         * <p>
+         * Any exception thrown from this method will be translated into a fatal connection error, cause a
+         * {@code GO_AWAY} frame to be sent with a fatal error code, and then the connection will be shutdown.
          */
-        void onStreamClosed(Http2Stream stream) throws Http2Exception;
+        void onStreamClosed(Http2Stream stream);
 
         /**
          * Notifies the listener that the given stream has now been removed from the connection and
          * will no longer be returned via {@link Http2Connection#stream(int)}. The connection may
          * maintain inactive streams for some time before removing them.
-         * @throws Http2Exception  Any exception thrown from this method (even of type {@link RutimeException}) will be
-         * translated into a fatal connection error, cause a {@code GO_AWAY} frame to be sent with a fatal error code,
-         * and then the connection will be shutdown.
+         * <p>
+         * Any exception thrown from this method will be translated into a fatal connection error, cause a
+         * {@code GO_AWAY} frame to be sent with a fatal error code, and then the connection will be shutdown.
          */
-        void onStreamRemoved(Http2Stream stream) throws Http2Exception;
+        void onStreamRemoved(Http2Stream stream);
 
         /**
          * Notifies the listener that a priority tree parent change has occurred. This method will be invoked
@@ -76,11 +79,11 @@ public interface Http2Connection {
          * which caused the tree structure to change.
          * @param stream The stream which had a parent change (new parent and children will be steady state)
          * @param oldParent The old parent which {@code stream} used to be a child of (may be {@code null})
-         * @throws Http2Exception  Any exception thrown from this method (even of type {@link RutimeException}) will be
-         * translated into a fatal connection error, cause a {@code GO_AWAY} frame to be sent with a fatal error code,
-         * and then the connection will be shutdown.
+         * <p>
+         * Any exception thrown from this method will be translated into a fatal connection error, cause a
+         * {@code GO_AWAY} frame to be sent with a fatal error code, and then the connection will be shutdown.
          */
-        void onPriorityTreeParentChanged(Http2Stream stream, Http2Stream oldParent) throws Http2Exception;
+        void onPriorityTreeParentChanged(Http2Stream stream, Http2Stream oldParent);
 
         /**
          * Notifies the listener that a parent dependency is about to change
@@ -88,32 +91,32 @@ public interface Http2Connection {
          * structure is not necessarily steady state.
          * @param stream The stream which the parent is about to change to {@code newParent}
          * @param newParent The stream which will be the parent of {@code stream}
-         * @throws Http2Exception  Any exception thrown from this method (even of type {@link RutimeException}) will be
-         * translated into a fatal connection error, cause a {@code GO_AWAY} frame to be sent with a fatal error code,
-         * and then the connection will be shutdown.
+         * <p>
+         * Any exception thrown from this method will be translated into a fatal connection error, cause a
+         * {@code GO_AWAY} frame to be sent with a fatal error code, and then the connection will be shutdown.
          */
-        void onPriorityTreeParentChanging(Http2Stream stream, Http2Stream newParent) throws Http2Exception;
+        void onPriorityTreeParentChanging(Http2Stream stream, Http2Stream newParent);
 
         /**
          * Notifies the listener that the weight has changed for {@code stream}.
          * @param stream The stream which the weight has changed
          * @param oldWeight The old weight for {@code stream}
-         * @throws Http2Exception  Any exception thrown from this method (even of type {@link RutimeException}) will be
-         * translated into a fatal connection error, cause a {@code GO_AWAY} frame to be sent with a fatal error code,
-         * and then the connection will be shutdown.
+         * <p>
+         * Any exception thrown from this method will be translated into a fatal connection error, cause a
+         * {@code GO_AWAY} frame to be sent with a fatal error code, and then the connection will be shutdown.
          */
-        void onWeightChanged(Http2Stream stream, short oldWeight) throws Http2Exception;
+        void onWeightChanged(Http2Stream stream, short oldWeight);
 
         /**
          * Called when a {@code GOAWAY} frame was sent for the connection.
          * @param lastStreamId the last known stream of the remote endpoint.
          * @param errorCode    the error code, if abnormal closure.
          * @param debugData    application-defined debug data.
-         * @throws Http2Exception  Any exception thrown from this method (even of type {@link RutimeException}) will be
-         * translated into a fatal connection error, cause a {@code GO_AWAY} frame to be sent with a fatal error code,
-         * and then the connection will be shutdown.
+         * <p>
+         * Any exception thrown from this method will be translated into a fatal connection error, cause a
+         * {@code GO_AWAY} frame to be sent with a fatal error code, and then the connection will be shutdown.
          */
-        void onGoAwaySent(int lastStreamId, long errorCode, ByteBuf debugData) throws Http2Exception;
+        void onGoAwaySent(int lastStreamId, long errorCode, ByteBuf debugData);
 
         /**
          * Called when a {@code GOAWAY} was received from the remote endpoint. This event handler duplicates {@link
@@ -124,11 +127,11 @@ public interface Http2Connection {
          * @param lastStreamId the last known stream of the remote endpoint.
          * @param errorCode    the error code, if abnormal closure.
          * @param debugData    application-defined debug data.
-         * @throws Http2Exception  Any exception thrown from this method (even of type {@link RutimeException}) will be
-         * translated into a fatal connection error, cause a {@code GO_AWAY} frame to be sent with a fatal error code,
-         * and then the connection will be shutdown.
+         * <p>
+         * Any exception thrown from this method will be translated into a fatal connection error, cause a
+         * {@code GO_AWAY} frame to be sent with a fatal error code, and then the connection will be shutdown.
          */
-        void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) throws Http2Exception;
+        void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData);
     }
 
     /**
