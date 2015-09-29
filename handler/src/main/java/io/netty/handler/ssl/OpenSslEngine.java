@@ -169,6 +169,8 @@ public final class OpenSslEngine extends SSLEngine {
     private final boolean rejectRemoteInitiatedRenegation;
     private final OpenSslSession session;
     private final java.security.cert.Certificate[] localCerts;
+    private final ByteBuffer[] singleSrcBuffer = new ByteBuffer[1];
+    private final ByteBuffer[] singleDstBuffer = new ByteBuffer[1];
 
     // This is package-private as we set it from OpenSslContext if an exception is thrown during
     // the verification step.
@@ -577,7 +579,7 @@ public final class OpenSslEngine extends SSLEngine {
             return CLOSED_NOT_HANDSHAKING;
         }
 
-        // Throw requried runtime exceptions
+        // Throw required runtime exceptions
         if (srcs == null) {
             throw new NullPointerException("srcs");
         }
@@ -786,10 +788,60 @@ public final class OpenSslEngine extends SSLEngine {
         return unwrap(srcs, 0, srcs.length, dsts, 0, dsts.length);
     }
 
+    private ByteBuffer[] singleSrcBuffer(ByteBuffer src) {
+        singleSrcBuffer[0] = src;
+        return singleSrcBuffer;
+    }
+
+    private void resetSingleSrcBuffer() {
+        singleSrcBuffer[0] = null;
+    }
+
+    private ByteBuffer[] singleDstBuffer(ByteBuffer src) {
+        singleDstBuffer[0] = src;
+        return singleDstBuffer;
+    }
+
+    private void resetSingleDstBuffer() {
+        singleDstBuffer[0] = null;
+    }
+
     @Override
-    public SSLEngineResult unwrap(
+    public synchronized SSLEngineResult unwrap(
             final ByteBuffer src, final ByteBuffer[] dsts, final int offset, final int length) throws SSLException {
-        return unwrap(new ByteBuffer[] { src }, 0, 1, dsts, offset, length);
+        try {
+            return unwrap(singleSrcBuffer(src), 0, 1, dsts, offset, length);
+        } finally {
+            resetSingleSrcBuffer();
+        }
+    }
+
+    @Override
+    public synchronized SSLEngineResult wrap(ByteBuffer src, ByteBuffer dst) throws SSLException {
+        try {
+            return wrap(singleSrcBuffer(src), dst);
+        } finally {
+            resetSingleSrcBuffer();
+        }
+    }
+
+    @Override
+    public synchronized SSLEngineResult unwrap(ByteBuffer src, ByteBuffer dst) throws SSLException {
+        try {
+            return unwrap(singleSrcBuffer(src), singleDstBuffer(dst));
+        } finally {
+            resetSingleSrcBuffer();
+            resetSingleDstBuffer();
+        }
+    }
+
+    @Override
+    public synchronized SSLEngineResult unwrap(ByteBuffer src, ByteBuffer[] dsts) throws SSLException {
+        try {
+            return unwrap(singleSrcBuffer(src), dsts);
+        } finally {
+            resetSingleSrcBuffer();
+        }
     }
 
     @Override
