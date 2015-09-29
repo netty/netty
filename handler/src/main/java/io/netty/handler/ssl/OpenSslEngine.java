@@ -1042,10 +1042,6 @@ public final class OpenSslEngine extends SSLEngine {
     @Override
     public synchronized void beginHandshake() throws SSLException {
         switch (handshakeState) {
-            case NOT_STARTED:
-                handshakeState = HandshakeState.STARTED_EXPLICITLY;
-                handshake();
-                break;
             case STARTED_IMPLICITLY:
                 checkEngineClosed();
 
@@ -1056,11 +1052,39 @@ public final class OpenSslEngine extends SSLEngine {
                 // for renegotiation.
 
                 handshakeState = HandshakeState.STARTED_EXPLICITLY; // Next time this method is invoked by the user,
-                                                          // we should raise an exception.
+                                                                    // we should raise an exception.
+                break;
+            case STARTED_EXPLICITLY:
+                // Nothing to do as the handshake is not done yet.
                 break;
             case FINISHED:
-            case STARTED_EXPLICITLY:
-                throw RENEGOTIATION_UNSUPPORTED;
+                if (clientMode) {
+                    // Only supported for server mode at the moment.
+                    throw RENEGOTIATION_UNSUPPORTED;
+                }
+                // For renegotiate on the server side we need to issue the following command sequence with openssl:
+                //
+                // SSL_renegotiate(ssl)
+                // SSL_do_handshake(ssl)
+                // ssl->state = SSL_ST_ACCEPT
+                // SSL_do_handshake(ssl)
+                //
+                // Bcause of this we fall-through to call handshake() after setting the state, as this will also take
+                // care of updating the internal OpenSslSession object.
+                //
+                // See also:
+                // https://github.com/apache/httpd/blob/2.4.16/modules/ssl/ssl_engine_kernel.c#L812
+                // http://h71000.www7.hp.com/doc/83final/ba554_90007/ch04s03.html
+                if (SSL.renegotiate(ssl) != 1 || SSL.doHandshake(ssl) != 1) {
+                    shutdownWithError("renegotiation failed");
+                }
+
+                SSL.setState(ssl, SSL.SSL_ST_ACCEPT);
+                // fall-through
+            case NOT_STARTED:
+                handshakeState = HandshakeState.STARTED_EXPLICITLY;
+                handshake();
+                break;
             default:
                 throw new Error();
         }
@@ -1078,6 +1102,9 @@ public final class OpenSslEngine extends SSLEngine {
     }
 
     private HandshakeStatus handshake() throws SSLException {
+        if (handshakeState == HandshakeState.FINISHED) {
+            return FINISHED;
+        }
         checkEngineClosed();
         int code = SSL.doHandshake(ssl);
         if (code <= 0) {
