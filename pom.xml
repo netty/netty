@@ -696,7 +696,7 @@
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>netty-tcnative</artifactId>
-        <version>1.1.33.Fork9</version>
+        <version>1.1.33.Fork10</version>
         <classifier>${tcnative.classifier}</classifier>
         <scope>compile</scope>
         <optional>true</optional>
