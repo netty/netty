@@ -154,7 +154,7 @@
                         Release process must be performed on linux-x86_64.
                       </regexMessage>
                       <property>os.detected.classifier</property>
-                      <regex>^linux-x86_64(\\-fedora)?$</regex>
+                      <regex>^linux-x86_64-fedora$</regex>
                     </requireProperty>
                     <requireFilesContent>
                       <message>
