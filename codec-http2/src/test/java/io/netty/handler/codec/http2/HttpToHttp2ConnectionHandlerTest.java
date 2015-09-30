@@ -486,7 +486,9 @@ public class HttpToHttp2ConnectionHandlerTest {
                 ChannelPipeline p = ch.pipeline();
                 serverFrameCountDown =
                         new FrameCountDown(serverListener, serverSettingsAckLatch, requestLatch, null, trailersLatch);
-                p.addLast(new HttpToHttp2ConnectionHandler(true, serverFrameCountDown));
+                HttpToHttp2ConnectionHandler handler = new HttpToHttp2ConnectionHandler(true);
+                handler.decoder().frameListener(serverFrameCountDown);
+                p.addLast(handler);
             }
         });
 
@@ -496,7 +498,8 @@ public class HttpToHttp2ConnectionHandlerTest {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                HttpToHttp2ConnectionHandler handler = new HttpToHttp2ConnectionHandler(false, clientListener);
+                HttpToHttp2ConnectionHandler handler = new HttpToHttp2ConnectionHandler(false);
+                handler.decoder().frameListener(clientListener);
                 handler.gracefulShutdownTimeoutMillis(0);
                 p.addLast(handler);
             }

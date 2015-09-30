@@ -62,10 +62,8 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
     public void initChannel(SocketChannel ch) throws Exception {
         final Http2Connection connection = new DefaultHttp2Connection(false);
         final Http2FrameWriter frameWriter = frameWriter();
-        connectionHandler = new HttpToHttp2ConnectionHandler(connection,
-                frameReader(),
-                frameWriter,
-                new DelegatingDecompressorFrameListener(connection,
+        connectionHandler = new HttpToHttp2ConnectionHandler(connection, frameReader(), frameWriter);
+        connectionHandler.decoder().frameListener(new DelegatingDecompressorFrameListener(connection,
                         new InboundHttp2ToHttpAdapter.Builder(connection)
                                 .maxContentLength(maxContentLength)
                                 .propagateSettings(true)
