@@ -71,27 +71,27 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     private BaseDecoder byteDecoder;
     private long gracefulShutdownTimeoutMillis = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
 
-    public Http2ConnectionHandler(boolean server, Http2FrameListener listener) {
-        this(server, listener, true);
+    public Http2ConnectionHandler(boolean server) {
+        this(server, true);
     }
 
-    public Http2ConnectionHandler(boolean server, Http2FrameListener listener, boolean validateHeaders) {
-        this(new DefaultHttp2Connection(server), listener, validateHeaders);
+    public Http2ConnectionHandler(boolean server, boolean validateHeaders) {
+        this(new DefaultHttp2Connection(server), validateHeaders);
     }
 
-    public Http2ConnectionHandler(Http2Connection connection, Http2FrameListener listener) {
-        this(connection, listener, true);
+    public Http2ConnectionHandler(Http2Connection connection) {
+        this(connection, true);
     }
 
-    public Http2ConnectionHandler(Http2Connection connection, Http2FrameListener listener, boolean validateHeaders) {
-        this(connection, new DefaultHttp2FrameReader(validateHeaders), new DefaultHttp2FrameWriter(), listener);
+    public Http2ConnectionHandler(Http2Connection connection, boolean validateHeaders) {
+        this(connection, new DefaultHttp2FrameReader(validateHeaders), new DefaultHttp2FrameWriter());
     }
 
     public Http2ConnectionHandler(Http2Connection connection, Http2FrameReader frameReader,
-                                  Http2FrameWriter frameWriter, Http2FrameListener listener) {
+                                  Http2FrameWriter frameWriter) {
         initialSettings = null;
         encoder = new DefaultHttp2ConnectionEncoder(connection, frameWriter);
-        decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader, listener);
+        decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader);
     }
 
     /**
@@ -108,18 +108,16 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
     }
 
-    public Http2ConnectionHandler(Http2Connection connection, Http2FrameListener listener,
-                                  Http2Settings initialSettings) {
-        this(connection, new DefaultHttp2FrameReader(), new DefaultHttp2FrameWriter(), listener,
+    public Http2ConnectionHandler(Http2Connection connection, Http2Settings initialSettings) {
+        this(connection, new DefaultHttp2FrameReader(), new DefaultHttp2FrameWriter(),
                 initialSettings);
     }
 
     public Http2ConnectionHandler(Http2Connection connection, Http2FrameReader frameReader,
-                                  Http2FrameWriter frameWriter, Http2FrameListener listener,
-                                  Http2Settings initialSettings) {
+                                  Http2FrameWriter frameWriter, Http2Settings initialSettings) {
         this.initialSettings = initialSettings;
         encoder = new DefaultHttp2ConnectionEncoder(connection, frameWriter);
-        decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader, listener);
+        decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader);
     }
 
     public Http2ConnectionHandler(Http2ConnectionDecoder decoder,

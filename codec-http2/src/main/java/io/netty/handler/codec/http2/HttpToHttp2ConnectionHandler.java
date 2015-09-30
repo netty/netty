@@ -36,33 +36,32 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
     private final boolean validateHeaders;
     private int currentStreamId;
 
-    public HttpToHttp2ConnectionHandler(boolean server, Http2FrameListener listener) {
-        this(server, listener, true);
+    public HttpToHttp2ConnectionHandler(boolean server) {
+        this(server, true);
     }
 
-    public HttpToHttp2ConnectionHandler(boolean server, Http2FrameListener listener, boolean validateHeaders) {
-        super(server, listener);
+    public HttpToHttp2ConnectionHandler(boolean server, boolean validateHeaders) {
+        super(server);
         this.validateHeaders = validateHeaders;
     }
 
-    public HttpToHttp2ConnectionHandler(Http2Connection connection, Http2FrameListener listener) {
-        this(connection, listener, true);
+    public HttpToHttp2ConnectionHandler(Http2Connection connection) {
+        this(connection, true);
     }
 
-    public HttpToHttp2ConnectionHandler(Http2Connection connection, Http2FrameListener listener,
-                                        boolean validateHeaders) {
-        super(connection, listener);
+    public HttpToHttp2ConnectionHandler(Http2Connection connection, boolean validateHeaders) {
+        super(connection);
         this.validateHeaders = validateHeaders;
     }
 
     public HttpToHttp2ConnectionHandler(Http2Connection connection, Http2FrameReader frameReader,
-            Http2FrameWriter frameWriter, Http2FrameListener listener) {
-        this(connection, frameReader, frameWriter, listener, true);
+            Http2FrameWriter frameWriter) {
+        this(connection, frameReader, frameWriter, true);
     }
 
     public HttpToHttp2ConnectionHandler(Http2Connection connection, Http2FrameReader frameReader,
-            Http2FrameWriter frameWriter, Http2FrameListener listener, boolean validateHeaders) {
-        super(connection, frameReader, frameWriter, listener);
+            Http2FrameWriter frameWriter, boolean validateHeaders) {
+        super(connection, frameReader, frameWriter);
         this.validateHeaders = validateHeaders;
     }
 
