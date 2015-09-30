@@ -49,6 +49,12 @@ public class OpenSslEngineTest extends SSLEngineTest {
     }
 
     @Override
+    public void testSessionInvalidate() throws Exception {
+        assumeTrue(OpenSsl.isAvailable());
+        super.testSessionInvalidate();
+    }
+
+    @Override
     protected SslProvider sslProvider() {
         return SslProvider.OPENSSL;
     }
