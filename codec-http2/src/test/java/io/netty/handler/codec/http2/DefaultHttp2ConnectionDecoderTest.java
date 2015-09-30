@@ -150,8 +150,9 @@ public class DefaultHttp2ConnectionDecoderTest {
         when(ctx.newPromise()).thenReturn(promise);
         when(ctx.write(any())).thenReturn(future);
 
-        decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader, listener);
+        decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader);
         decoder.lifecycleManager(lifecycleManager);
+        decoder.frameListener(listener);
 
         // Simulate receiving the initial settings from the remote endpoint.
         decode().onSettingsRead(ctx, new Http2Settings());

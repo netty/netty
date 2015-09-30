@@ -61,12 +61,14 @@ public class Http2OrHttpHandler extends ApplicationProtocolNegotiationHandler {
         InboundHttp2ToHttpAdapter listener = new InboundHttp2ToHttpAdapter.Builder(connection)
                 .propagateSettings(true).validateHttpHeaders(false).maxContentLength(MAX_CONTENT_LENGTH).build();
 
-        ctx.pipeline().addLast(new HttpToHttp2ConnectionHandler(
+        HttpToHttp2ConnectionHandler handler = new HttpToHttp2ConnectionHandler(
                 connection,
                 // Loggers can be activated for debugging purposes
                 // new Http2InboundFrameLogger(reader, TilesHttp2ToHttpHandler.logger),
                 // new Http2OutboundFrameLogger(writer, TilesHttp2ToHttpHandler.logger)
-                reader, writer, listener));
+                reader, writer);
+        handler.decoder().frameListener(listener);
+        ctx.pipeline().addLast(handler);
         ctx.pipeline().addLast(new Http2RequestHandler());
     }
 

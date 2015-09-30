@@ -44,9 +44,11 @@ public interface Http2ConnectionDecoder extends Closeable {
     Http2LocalFlowController flowController();
 
     /**
-     * Provides direct access to the underlying frame listener.
+     * Set the {@link Http2FrameListener} which will be notified when frames are decoded.
+     * <p>
+     * This <strong>must</strong> be set before frames are decoded.
      */
-    Http2FrameListener listener();
+    void frameListener(Http2FrameListener listener);
 
     /**
      * Called by the {@link Http2ConnectionHandler} to decode the next frame from the input buffer.
