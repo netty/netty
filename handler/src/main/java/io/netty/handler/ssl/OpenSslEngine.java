@@ -1411,11 +1411,20 @@ public final class OpenSslEngine extends SSLEngine {
 
         @Override
         public void invalidate() {
-            // NOOP
+            synchronized (OpenSslEngine.this) {
+                if (!isDestroyed()) {
+                    SSL.setTimeout(ssl, 0);
+                }
+            }
         }
 
         @Override
         public boolean isValid() {
+            synchronized (OpenSslEngine.this) {
+                if (!isDestroyed()) {
+                    return System.currentTimeMillis() - (SSL.getTimeout(ssl) * 1000L) < (SSL.getTime(ssl) * 1000L);
+                }
+            }
             return false;
         }
 

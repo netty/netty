@@ -30,6 +30,8 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
 import org.junit.After;
@@ -40,10 +42,13 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLSession;
 import java.io.File;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -292,6 +297,77 @@ public abstract class SSLEngineTest {
         SslContext context = SslContextBuilder.forClient().sslProvider(sslProvider()).build();
         SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
         assertTrue(engine.getSession().getCreationTime() <= System.currentTimeMillis());
+    }
+
+    @Test
+    public void testSessionInvalidate() throws Exception {
+        final SslContext clientContext = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(sslProvider())
+                .build();
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SslContext serverContext = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(sslProvider())
+                .build();
+        SSLEngine clientEngine = clientContext.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine serverEngine = serverContext.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        handshake(clientEngine, serverEngine);
+
+        SSLSession session = serverEngine.getSession();
+        assertTrue(session.isValid());
+        session.invalidate();
+        assertFalse(session.isValid());
+    }
+
+    private static void handshake(SSLEngine clientEngine, SSLEngine serverEngine) throws SSLException {
+        int netBufferSize = 17 * 1024;
+        ByteBuffer cTOs = ByteBuffer.allocateDirect(netBufferSize);
+        ByteBuffer sTOc = ByteBuffer.allocateDirect(netBufferSize);
+
+        ByteBuffer serverAppReadBuffer = ByteBuffer.allocateDirect(
+                serverEngine.getSession().getApplicationBufferSize());
+        ByteBuffer clientAppReadBuffer = ByteBuffer.allocateDirect(
+                clientEngine.getSession().getApplicationBufferSize());
+
+        clientEngine.beginHandshake();
+        serverEngine.beginHandshake();
+
+        ByteBuffer empty = ByteBuffer.allocate(0);
+
+        SSLEngineResult clientResult;
+        SSLEngineResult serverResult;
+
+        do {
+            clientResult = clientEngine.wrap(empty, cTOs);
+            runDelegatedTasks(clientResult, clientEngine);
+            serverResult = serverEngine.wrap(empty, sTOc);
+            runDelegatedTasks(serverResult, serverEngine);
+            cTOs.flip();
+            sTOc.flip();
+            clientResult = clientEngine.unwrap(sTOc, clientAppReadBuffer);
+            runDelegatedTasks(clientResult, clientEngine);
+            serverResult = serverEngine.unwrap(cTOs, serverAppReadBuffer);
+            runDelegatedTasks(serverResult, serverEngine);
+            cTOs.compact();
+            sTOc.compact();
+        } while (isHandshaking(clientResult) && isHandshaking(serverResult));
+    }
+
+    private static boolean isHandshaking(SSLEngineResult result) {
+        return result.getHandshakeStatus() != SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING &&
+                result.getHandshakeStatus() != SSLEngineResult.HandshakeStatus.FINISHED;
+    }
+
+    private static void runDelegatedTasks(SSLEngineResult result, SSLEngine engine) {
+        if (result.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NEED_TASK) {
+            for (;;) {
+                Runnable task = engine.getDelegatedTask();
+                if (task == null) {
+                    break;
+                }
+                task.run();
+            }
+        }
     }
 
     protected abstract SslProvider sslProvider();
