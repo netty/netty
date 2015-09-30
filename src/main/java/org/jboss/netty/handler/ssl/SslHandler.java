@@ -1644,7 +1644,7 @@ public class SslHandler extends FrameDecoder
                         if (ev == null) {
                             break;
                         }
-                        if (futures != null) {
+                        if (futures == null) {
                             futures = new ArrayList<ChannelFuture>();
                         }
                         futures.add(ev.getFuture());
