@@ -299,9 +299,8 @@ public class DataCompressionHttp2Test {
                 Http2ConnectionEncoder encoder = new CompressorHttp2ConnectionEncoder(
                         new DefaultHttp2ConnectionEncoder(serverConnection, new DefaultHttp2FrameWriter()));
                 Http2ConnectionDecoder decoder =
-                        new DefaultHttp2ConnectionDecoder(serverConnection, encoder, new DefaultHttp2FrameReader(),
-                                new DelegatingDecompressorFrameListener(serverConnection,
-                                        serverListener));
+                        new DefaultHttp2ConnectionDecoder(serverConnection, encoder, new DefaultHttp2FrameReader());
+                decoder.frameListener(new DelegatingDecompressorFrameListener(serverConnection, serverListener));
                 Http2ConnectionHandler connectionHandler = new Http2ConnectionHandler(decoder, encoder);
                 p.addLast(connectionHandler);
                 serverChannelLatch.countDown();
@@ -318,9 +317,8 @@ public class DataCompressionHttp2Test {
                         new DefaultHttp2ConnectionEncoder(clientConnection, new DefaultHttp2FrameWriter()));
                 Http2ConnectionDecoder decoder =
                         new DefaultHttp2ConnectionDecoder(clientConnection, clientEncoder,
-                                new DefaultHttp2FrameReader(),
-                                new DelegatingDecompressorFrameListener(clientConnection,
-                                        clientListener));
+                                new DefaultHttp2FrameReader());
+                decoder.frameListener(new DelegatingDecompressorFrameListener(clientConnection, clientListener));
                 clientHandler = new Http2ConnectionHandler(decoder, clientEncoder);
 
                 // By default tests don't wait for server to gracefully shutdown streams

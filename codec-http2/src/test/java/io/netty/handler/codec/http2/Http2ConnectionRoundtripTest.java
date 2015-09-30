@@ -482,7 +482,9 @@ public class Http2ConnectionRoundtripTest {
                 serverFrameCountDown =
                         new FrameCountDown(serverListener, serverSettingsAckLatch,
                                 requestLatch, dataLatch, trailersLatch, goAwayLatch);
-                p.addLast(new Http2ConnectionHandler(true, serverFrameCountDown, false));
+                Http2ConnectionHandler handler = new Http2ConnectionHandler(true, false);
+                handler.decoder().frameListener(serverFrameCountDown);
+                p.addLast(handler);
             }
         });
 
@@ -492,7 +494,9 @@ public class Http2ConnectionRoundtripTest {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                p.addLast(new Http2ConnectionHandler(false, clientListener, false));
+                Http2ConnectionHandler handler = new Http2ConnectionHandler(false, false);
+                handler.decoder().frameListener(clientListener);
+                p.addLast(handler);
             }
         });
 

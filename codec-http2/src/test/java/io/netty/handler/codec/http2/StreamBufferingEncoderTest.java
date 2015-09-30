@@ -110,8 +110,8 @@ public class StreamBufferingEncoderTest {
                 new DefaultHttp2ConnectionEncoder(connection, writer);
         encoder = new StreamBufferingEncoder(defaultEncoder);
         DefaultHttp2ConnectionDecoder decoder =
-                new DefaultHttp2ConnectionDecoder(connection, encoder,
-                        mock(Http2FrameReader.class), mock(Http2FrameListener.class));
+                new DefaultHttp2ConnectionDecoder(connection, encoder, mock(Http2FrameReader.class));
+        decoder.frameListener(mock(Http2FrameListener.class));
 
         Http2ConnectionHandler handler = new Http2ConnectionHandler(decoder, encoder);
         // Set LifeCycleManager on encoder and decoder
