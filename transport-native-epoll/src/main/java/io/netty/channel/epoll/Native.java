@@ -205,7 +205,7 @@ public final class Native {
 
     private static native int close0(int fd);
 
-    public static int splice(int fd, int offIn, int fdOut, int offOut, int len) throws IOException {
+    public static int splice(int fd, long offIn, int fdOut, long offOut, long len) throws IOException {
         int res = splice0(fd, offIn, fdOut, offOut, len);
         if (res >= 0) {
             return res;
@@ -213,7 +213,7 @@ public final class Native {
         return ioResult("splice", res, CONNECTION_RESET_EXCEPTION_SPLICE);
     }
 
-    private static native int splice0(int fd, int offIn, int fdOut, int offOut, int len);
+    private static native int splice0(int fd, long offIn, int fdOut, long offOut, long len);
 
     public static long pipe() throws IOException {
         long res = pipe0();
