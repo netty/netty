@@ -16,8 +16,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.StreamByteDistributor.Writer;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
+import io.netty.util.internal.PlatformDependent;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -25,6 +24,7 @@ import java.util.Deque;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
@@ -39,8 +39,6 @@ import static java.lang.Math.min;
  * Typically this thread is the event loop thread for the {@link ChannelHandlerContext} managed by this class.
  */
 public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowController {
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(DefaultHttp2RemoteFlowController.class);
     private static final int MIN_WRITABLE_CHUNK = 32 * 1024;
     private final Http2Connection connection;
     private final Http2Connection.PropertyKey stateKey;
@@ -446,7 +444,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                     // This frame has been fully written, remove this frame and notify it. Since we remove this frame
                     // first, we're guaranteed that its error method will not be called when we call cancel.
                     pendingWriteQueue.remove();
-                    frame.writeComplete();
+                    frame.writeComplete(ctx);
                 }
             } catch (Throwable t) {
                 // Mark the state as cancelled, we'll clear the pending queue via cancel() below.
@@ -727,19 +725,22 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         protected final void writePendingBytes(Writer writer) throws Http2Exception {
             int bytesToWrite = writableBytes();
 
-            // Make sure we always write at least once, regardless if we have bytesToWrite or not.
-            // This ensures that zero-length frames will always be written.
-            for (;;) {
-                if (!streamByteDistributor.distribute(bytesToWrite, writer) ||
-                    (bytesToWrite = writableBytes()) <= 0 ||
-                    !isChannelWritable0()) {
-                    break;
+            try {
+                // Make sure we always write at least once, regardless if we have bytesToWrite or not.
+                // This ensures that zero-length frames will always be written.
+                for (;;) {
+                    if (!streamByteDistributor.distribute(bytesToWrite, writer) ||
+                        (bytesToWrite = writableBytes()) <= 0 ||
+                        !isChannelWritable0()) {
+                        break;
+                    }
                 }
+            } catch (Throwable cause) {
+                throw connectionError(INTERNAL_ERROR, cause, "unexpected error from distribute");
             }
         }
 
-        protected final boolean initialWindowSize(int newWindowSize, Writer writer)
-                throws Http2Exception {
+        protected final boolean initialWindowSize(int newWindowSize, Writer writer) throws Http2Exception {
             if (newWindowSize < 0) {
                 throw new IllegalArgumentException("Invalid initial window size: " + newWindowSize);
             }
@@ -801,7 +802,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         private final Listener listener;
         private final Http2StreamVisitor checkStreamWritabilityVisitor = new Http2StreamVisitor() {
             @Override
-            public boolean visit(Http2Stream stream) throws Http2Exception {
+            public boolean visit(Http2Stream stream) {
                 AbstractState state = state(stream);
                 if (isWritable(state) != state.markWritability()) {
                     notifyWritabilityChanged(state);
@@ -866,11 +867,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
         @Override
         public void stateCancelled(AbstractState state) {
-            try {
-                checkConnectionThenStreamWritabilityChanged(state);
-            } catch (Http2Exception e) {
-                logger.error("Caught unexpected exception from checkAllWritabilityChanged", e);
-            }
+            checkConnectionThenStreamWritabilityChanged(state);
         }
 
         @Override
@@ -880,16 +877,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             }
         }
 
-        private void notifyWritabilityChanged(AbstractState state) {
-            state.markWritability(!state.markWritability());
-            try {
-                listener.writabilityChanged(state.stream);
-            } catch (RuntimeException e) {
-                logger.error("Caught unexpected exception from listener.writabilityChanged", e);
-            }
-        }
-
-        private void checkConnectionThenStreamWritabilityChanged(AbstractState state) throws Http2Exception {
+        private void checkConnectionThenStreamWritabilityChanged(AbstractState state) {
             // It is possible that the connection window and/or the individual stream writability could change.
             if (isWritableConnection() != connectionState.markWritability()) {
                 checkAllWritabilityChanged();
@@ -898,12 +886,27 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             }
         }
 
-        private void checkAllWritabilityChanged() throws Http2Exception {
+        private void checkAllWritabilityChanged() {
             // Make sure we mark that we have notified as a result of this change.
             connectionState.markWritability(isWritableConnection());
-            connection.forEachActiveStream(checkStreamWritabilityVisitor);
+            try {
+                connection.forEachActiveStream(checkStreamWritabilityVisitor);
+            } catch (Http2Exception e) {
+                PlatformDependent.throwException(e);
+            }
         }
 
+        /**
+         * @throws RuntimeException if {@link Listener#writabilityChanged(Http2Stream)} throws.
+         */
+        private void notifyWritabilityChanged(AbstractState state) {
+            state.markWritability(!state.markWritability());
+            listener.writabilityChanged(state.stream);
+        }
+
+        /**
+         * @throws RuntimeException if {@link Listener#streamWritten(Http2Stream, int)} throws.
+         */
         private void writeAllocatedBytes(AbstractState state, int numBytes) {
             int written = state.writeAllocatedBytes(numBytes);
             if (written != -1) {

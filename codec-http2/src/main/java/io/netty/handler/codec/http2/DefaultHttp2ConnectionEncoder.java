@@ -444,14 +444,14 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         }
 
         @Override
-        public void writeComplete() {
+        public final void writeComplete(ChannelHandlerContext ctx) {
             if (endOfStream) {
-                lifecycleManager.closeStreamLocal(stream, promise);
+                lifecycleManager.closeStreamLocal(ctx, stream, promise);
             }
         }
 
         @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
+        public final void operationComplete(ChannelFuture future) throws Exception {
             if (!future.isSuccess()) {
                 error(flowController().channelHandlerContext(), future.cause());
             }

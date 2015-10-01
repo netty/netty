@@ -15,10 +15,28 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http2.Http2Stream.State;
+import io.netty.util.collection.IntCollections;
+import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.collection.IntObjectMap;
+import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.SystemPropertyUtil;
+
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Queue;
+import java.util.Set;
+
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
+import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.REFUSED_STREAM;
 import static io.netty.handler.codec.http2.Http2Exception.closedStreamError;
@@ -32,31 +50,11 @@ import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.http2.Http2Stream.State;
-import io.netty.util.collection.IntCollections;
-import io.netty.util.collection.IntObjectHashMap;
-import io.netty.util.collection.IntObjectMap;
-import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SystemPropertyUtil;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
-
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Queue;
-import java.util.Set;
 
 /**
  * Simple implementation of {@link Http2Connection}.
  */
 public class DefaultHttp2Connection implements Http2Connection {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultHttp2Connection.class);
     // Fields accessed by inner classes
     final IntObjectMap<Http2Stream> streamMap = new IntObjectHashMap<Http2Stream>();
     final PropertyKeyRegistry propertyKeyRegistry = new PropertyKeyRegistry();
@@ -151,29 +149,25 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     @Override
-    public void goAwayReceived(final int lastKnownStream, long errorCode, ByteBuf debugData) {
+    public void goAwayReceived(final int lastKnownStream, long errorCode, ByteBuf debugData) throws Http2Exception {
         localEndpoint.lastStreamKnownByPeer(lastKnownStream);
-        for (int i = 0; i < listeners.size(); ++i) {
-            try {
+        try {
+            for (int i = 0; i < listeners.size(); ++i) {
                 listeners.get(i).onGoAwayReceived(lastKnownStream, errorCode, debugData);
-            } catch (RuntimeException e) {
-                logger.error("Caught RuntimeException from listener onGoAwayReceived.", e);
             }
+        } catch (Throwable cause) {
+            throw connectionError(INTERNAL_ERROR, cause, "unexpected error from onGoAwayReceived");
         }
 
-        try {
-            forEachActiveStream(new Http2StreamVisitor() {
-                @Override
-                public boolean visit(Http2Stream stream) {
-                    if (stream.id() > lastKnownStream && localEndpoint.isValidStreamId(stream.id())) {
-                        stream.close();
-                    }
-                    return true;
+        forEachActiveStream(new Http2StreamVisitor() {
+            @Override
+            public boolean visit(Http2Stream stream) throws Http2Exception {
+                if (stream.id() > lastKnownStream && localEndpoint.isValidStreamId(stream.id())) {
+                    stream.close();
                 }
-            });
-        } catch (Http2Exception e) {
-            PlatformDependent.throwException(e);
-        }
+                return true;
+            }
+        });
     }
 
     @Override
@@ -182,29 +176,25 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     @Override
-    public void goAwaySent(final int lastKnownStream, long errorCode, ByteBuf debugData) {
+    public void goAwaySent(final int lastKnownStream, long errorCode, ByteBuf debugData) throws Http2Exception {
         remoteEndpoint.lastStreamKnownByPeer(lastKnownStream);
-        for (int i = 0; i < listeners.size(); ++i) {
-            try {
+        try {
+            for (int i = 0; i < listeners.size(); ++i) {
                 listeners.get(i).onGoAwaySent(lastKnownStream, errorCode, debugData);
-            } catch (RuntimeException e) {
-                logger.error("Caught RuntimeException from listener onGoAwaySent.", e);
             }
+        } catch (Throwable cause) {
+            throw connectionError(INTERNAL_ERROR, cause, "unexpected error from onGoAwaySent");
         }
 
-        try {
-            forEachActiveStream(new Http2StreamVisitor() {
-                @Override
-                public boolean visit(Http2Stream stream) {
-                    if (stream.id() > lastKnownStream && remoteEndpoint.isValidStreamId(stream.id())) {
-                        stream.close();
-                    }
-                    return true;
+        forEachActiveStream(new Http2StreamVisitor() {
+            @Override
+            public boolean visit(Http2Stream stream) throws Http2Exception {
+                if (stream.id() > lastKnownStream && remoteEndpoint.isValidStreamId(stream.id())) {
+                    stream.close();
                 }
-            });
-        } catch (Http2Exception e) {
-            PlatformDependent.throwException(e);
-        }
+                return true;
+            }
+        });
     }
 
     /**
@@ -215,19 +205,20 @@ public class DefaultHttp2Connection implements Http2Connection {
      * When a priority tree edge changes we also have to re-evaluate viable nodes
      * (see [3] {@link DefaultStream#takeChild(DefaultStream, boolean, List)}).
      * @param stream The stream to remove.
+     * @throws Http2Exception If an error occurs from {@link Http2Connection.Listener#onStreamRemoved(Http2Stream)}.
      */
-    void removeStream(DefaultStream stream) {
+    final void removeStream(DefaultStream stream) throws Http2Exception {
         // [1] Check if this stream can be removed because it has no prioritizable descendants.
         if (stream.parent().removeChild(stream)) {
             // Remove it from the map and priority tree.
             streamMap.remove(stream.id());
 
-            for (int i = 0; i < listeners.size(); i++) {
-                try {
+            try {
+                for (int i = 0; i < listeners.size(); i++) {
                     listeners.get(i).onStreamRemoved(stream);
-                } catch (RuntimeException e) {
-                    logger.error("Caught RuntimeException from listener onStreamRemoved.", e);
                 }
+            } catch (Throwable cause) {
+                throw connectionError(INTERNAL_ERROR, cause, "unexpected error from onStreamRemoved");
             }
         }
     }
@@ -247,23 +238,23 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
     }
 
-    void notifyHalfClosed(Http2Stream stream) {
-        for (int i = 0; i < listeners.size(); i++) {
-            try {
+    final void notifyHalfClosed(Http2Stream stream) throws Http2Exception {
+        try {
+            for (int i = 0; i < listeners.size(); i++) {
                 listeners.get(i).onStreamHalfClosed(stream);
-            } catch (RuntimeException e) {
-                logger.error("Caught RuntimeException from listener onStreamHalfClosed.", e);
             }
+        } catch (Throwable cause) {
+            throw connectionError(INTERNAL_ERROR, cause, "unexpected error from onStreamHalfClosed");
         }
     }
 
-    void notifyClosed(Http2Stream stream) {
-        for (int i = 0; i < listeners.size(); i++) {
-            try {
+    final void notifyClosed(Http2Stream stream) throws Http2Exception {
+        try {
+            for (int i = 0; i < listeners.size(); i++) {
                 listeners.get(i).onStreamClosed(stream);
-            } catch (RuntimeException e) {
-                logger.error("Caught RuntimeException from listener onStreamClosed.", e);
             }
+        } catch (Throwable cause) {
+            throw connectionError(INTERNAL_ERROR, cause, "unexpected error from onStreamClosed");
         }
     }
 
@@ -436,12 +427,12 @@ public class DefaultHttp2Connection implements Http2Connection {
             return this;
         }
 
-        void activate() {
+        final void activate() throws Http2Exception {
             activeStreams.activate(this);
         }
 
         @Override
-        public Http2Stream close() {
+        public Http2Stream close() throws Http2Exception {
             if (state == CLOSED) {
                 return this;
             }
@@ -454,7 +445,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public Http2Stream closeLocalSide() {
+        public Http2Stream closeLocalSide() throws Http2Exception {
             switch (state) {
             case OPEN:
                 state = HALF_CLOSED_LOCAL;
@@ -470,7 +461,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public Http2Stream closeRemoteSide() {
+        public Http2Stream closeRemoteSide() throws Http2Exception {
             switch (state) {
             case OPEN:
                 state = HALF_CLOSED_REMOTE;
@@ -566,7 +557,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             return localEndpoint.isValidStreamId(id);
         }
 
-        final void weight(short weight) {
+        final void weight(short weight) throws Http2Exception {
             if (weight != this.weight) {
                 if (parent != null) {
                     int delta = weight - this.weight;
@@ -574,12 +565,12 @@ public class DefaultHttp2Connection implements Http2Connection {
                 }
                 final short oldWeight = this.weight;
                 this.weight = weight;
-                for (int i = 0; i < listeners.size(); i++) {
-                    try {
+                try {
+                    for (int i = 0; i < listeners.size(); i++) {
                         listeners.get(i).onWeightChanged(this, oldWeight);
-                    } catch (RuntimeException e) {
-                        logger.error("Caught RuntimeException from listener onWeightChanged.", e);
                     }
+                } catch (Throwable cause) {
+                    throw connectionError(INTERNAL_ERROR, cause, "unexpected error from onWeightChanged");
                 }
             }
         }
@@ -610,8 +601,10 @@ public class DefaultHttp2Connection implements Http2Connection {
         /**
          * Adds a child to this priority. If exclusive is set, any children of this node are moved to being dependent on
          * the child.
+         * @throws Http2Exception If an error is caught from a {@link Listener} method.
          */
-        final void takeChild(DefaultStream child, boolean exclusive, List<ParentChangedEvent> events) {
+        final void takeChild(DefaultStream child, boolean exclusive, List<ParentChangedEvent> events)
+                throws Http2Exception {
             DefaultStream oldParent = child.parent();
 
             if (oldParent != this) {
@@ -657,8 +650,9 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         /**
          * Removes the child priority and moves any of its dependencies to being direct dependencies on this node.
+         * @throws Http2Exception If an error is caught from a {@link Listener} method.
          */
-        final boolean removeChild(DefaultStream child) {
+        final boolean removeChild(DefaultStream child) throws Http2Exception {
             if (child.prioritizableForTree() == 0 && children.remove(child.id()) != null) {
                 List<ParentChangedEvent> events = new ArrayList<ParentChangedEvent>(1 + child.numChildren());
                 events.add(new ParentChangedEvent(child, child.parent()));
@@ -746,12 +740,14 @@ public class DefaultHttp2Connection implements Http2Connection {
         /**
          * Notify all listeners of the tree change event
          * @param l The listener to notify
+         * @throws Http2Exception If an error from a
+         * {@link Listener#onPriorityTreeParentChanged(Http2Stream, Http2Stream)} occurs.
          */
-        public void notifyListener(Listener l) {
+        public void notifyListener(Listener l) throws Http2Exception {
             try {
                 l.onPriorityTreeParentChanged(stream, oldParent);
-            } catch (RuntimeException e) {
-                logger.error("Caught RuntimeException from listener onPriorityTreeParentChanged.", e);
+            } catch (Throwable cause) {
+                throw connectionError(INTERNAL_ERROR, cause, "unexpected error from onPriorityTreeParentChanged");
             }
         }
     }
@@ -759,8 +755,9 @@ public class DefaultHttp2Connection implements Http2Connection {
     /**
      * Notify all listeners of the priority tree change events (in ascending order)
      * @param events The events (top down order) which have changed
+     * @throws Http2Exception If an error from a {@link Listener} is caught.
      */
-    private void notifyParentChanged(List<ParentChangedEvent> events) {
+    private void notifyParentChanged(List<ParentChangedEvent> events) throws Http2Exception {
         for (int i = 0; i < events.size(); ++i) {
             ParentChangedEvent event = events.get(i);
             for (int j = 0; j < listeners.size(); j++) {
@@ -769,13 +766,13 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
     }
 
-    private void notifyParentChanging(Http2Stream stream, Http2Stream newParent) {
-        for (int i = 0; i < listeners.size(); i++) {
-            try {
+    private void notifyParentChanging(Http2Stream stream, Http2Stream newParent) throws Http2Exception {
+        try {
+            for (int i = 0; i < listeners.size(); i++) {
                 listeners.get(i).onPriorityTreeParentChanging(stream, newParent);
-            } catch (RuntimeException e) {
-                logger.error("Caught RuntimeException from listener onPriorityTreeParentChanging.", e);
             }
+        } catch (Throwable cause) {
+            throw connectionError(INTERNAL_ERROR, cause, "unexpected error from onPriorityTreeParentChanging");
         }
     }
 
@@ -929,20 +926,20 @@ public class DefaultHttp2Connection implements Http2Connection {
             return stream;
         }
 
-        private void addStream(DefaultStream stream) {
+        private void addStream(DefaultStream stream) throws Http2Exception {
             // Add the stream to the map and priority tree.
             streamMap.put(stream.id(), stream);
 
             List<ParentChangedEvent> events = new ArrayList<ParentChangedEvent>(1);
             connectionStream.takeChild(stream, false, events);
 
-            // Notify the listeners of the event.
-            for (int i = 0; i < listeners.size(); i++) {
-                try {
+            try {
+                // Notify the listeners of the event.
+                for (int i = 0; i < listeners.size(); i++) {
                     listeners.get(i).onStreamAdded(stream);
-                } catch (RuntimeException e) {
-                    logger.error("Caught RuntimeException from listener onStreamAdded.", e);
                 }
+            } catch (Throwable cause) {
+                throw connectionError(INTERNAL_ERROR, cause, "unexpected error from onStreamAdded");
             }
 
             notifyParentChanged(events);
@@ -1035,17 +1032,14 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     /**
-     * Allows events which would modify the collection of active streams to be queued while iterating via {@link
-     * #forEachActiveStream(Http2StreamVisitor)}.
+     * Allows events which would modify the collection of active streams to be queued while iterating via
+     * {@link #forEachActiveStream(Http2StreamVisitor)}.
      */
     interface Event {
         /**
          * Trigger the original intention of this event. Expect to modify the active streams list.
-         * <p/>
-         * If a {@link RuntimeException} object is thrown it will be logged and <strong>not propagated</strong>.
-         * Throwing from this method is not supported and is considered a programming error.
          */
-        void process();
+        void process() throws Http2Exception;
     }
 
     /**
@@ -1067,26 +1061,26 @@ public class DefaultHttp2Connection implements Http2Connection {
             return streams.size();
         }
 
-        public void activate(final DefaultStream stream) {
+        public void activate(final DefaultStream stream) throws Http2Exception {
             if (allowModifications()) {
                 addToActiveStreams(stream);
             } else {
                 pendingEvents.add(new Event() {
                     @Override
-                    public void process() {
+                    public void process() throws Http2Exception {
                         addToActiveStreams(stream);
                     }
                 });
             }
         }
 
-        public void deactivate(final DefaultStream stream) {
+        public void deactivate(final DefaultStream stream) throws Http2Exception {
             if (allowModifications()) {
                 removeFromActiveStreams(stream);
             } else {
                 pendingEvents.add(new Event() {
                     @Override
-                    public void process() {
+                    public void process() throws Http2Exception {
                         removeFromActiveStreams(stream);
                     }
                 });
@@ -1110,32 +1104,28 @@ public class DefaultHttp2Connection implements Http2Connection {
                         if (event == null) {
                             break;
                         }
-                        try {
-                            event.process();
-                        } catch (RuntimeException e) {
-                            logger.error("Caught RuntimeException while processing pending ActiveStreams$Event.", e);
-                        }
+                        event.process();
                     }
                 }
             }
         }
 
-        void addToActiveStreams(DefaultStream stream) {
+        void addToActiveStreams(DefaultStream stream) throws Http2Exception {
             if (streams.add(stream)) {
                 // Update the number of active streams initiated by the endpoint.
                 stream.createdBy().numActiveStreams++;
 
-                for (int i = 0; i < listeners.size(); i++) {
-                    try {
+                try {
+                    for (int i = 0; i < listeners.size(); i++) {
                         listeners.get(i).onStreamActive(stream);
-                    } catch (RuntimeException e) {
-                        logger.error("Caught RuntimeException from listener onStreamActive.", e);
                     }
+                } catch (Throwable cause) {
+                    throw connectionError(INTERNAL_ERROR, cause, "unexpected error from onStreamActive");
                 }
             }
         }
 
-        void removeFromActiveStreams(DefaultStream stream) {
+        void removeFromActiveStreams(DefaultStream stream) throws Http2Exception {
             if (streams.remove(stream)) {
                 // Update the number of active streams initiated by the endpoint.
                 stream.createdBy().numActiveStreams--;

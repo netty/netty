@@ -15,11 +15,13 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.util.internal.PlatformDependent;
+
+import java.util.Arrays;
+
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
-
-import java.util.Arrays;
 
 /**
  * A {@link StreamByteDistributor} that implements the HTTP/2 priority tree algorithm for allocating
@@ -379,47 +381,28 @@ public final class PriorityStreamByteDistributor implements StreamByteDistributo
     /**
      * A connection stream visitor that delegates to the user provided visitor.
      */
-    private class WriteVisitor implements Http2StreamVisitor {
+    private final class WriteVisitor implements Http2StreamVisitor {
         Writer writer;
-        RuntimeException error;
 
         void writeAllocatedBytes(Writer writer) {
+            this.writer = writer;
             try {
-                this.writer = writer;
-                try {
-                    connection.forEachActiveStream(this);
-                } catch (Http2Exception e) {
-                    // Should never happen since the visitor doesn't throw.
-                    throw new IllegalStateException(e);
-                }
-
-                // If an error was caught when calling back the visitor, throw it now.
-                if (error != null) {
-                    throw error;
-                }
-            } finally {
-                error = null;
+                connection.forEachActiveStream(this);
+            } catch (Http2Exception e) {
+                PlatformDependent.throwException(e);
             }
         }
 
         @Override
         public boolean visit(Http2Stream stream) {
             PriorityState state = state(stream);
-            try {
-                int allocated = state.allocated;
+            int allocated = state.allocated;
 
-                // Unallocate all bytes for this stream.
-                state.resetAllocated();
+            // Unallocate all bytes for this stream.
+            state.resetAllocated();
 
-                // Write the allocated bytes.
-                if (error == null) {
-                    writer.write(stream, allocated);
-                }
-            } catch (RuntimeException e) {
-                // Stop calling the visitor, but continue in the loop to reset the allocated for
-                // all remaining states.
-                error = e;
-            }
+            // Write the allocated bytes.
+            writer.write(stream, allocated);
 
             // We have to iterate across all streams to ensure that we reset the allocated bytes.
             return true;

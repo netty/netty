@@ -805,7 +805,7 @@ public class InboundHttp2ToHttpAdapterTest {
         }
 
         @Override
-        protected void closeStream(Http2Stream stream, boolean dataRead) {
+        protected void closeStream(Http2Stream stream, boolean dataRead) throws Http2Exception {
             if (!dataRead) { // NOTE: Do not close the stream to allow the out of order messages to be processed
                 super.closeStream(stream, dataRead);
             }

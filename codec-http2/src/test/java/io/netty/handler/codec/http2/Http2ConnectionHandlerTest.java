@@ -351,9 +351,9 @@ public class Http2ConnectionHandlerTest {
         if (future.isDone()) {
             when(connection.numActiveStreams()).thenReturn(0);
         }
-        handler.closeStream(stream, future);
+        handler.closeStream(ctx, stream, future);
         // Simulate another stream close call being made after the context should already be closed.
-        handler.closeStream(stream, future);
+        handler.closeStream(ctx, stream, future);
         verify(ctx, times(1)).close(any(ChannelPromise.class));
     }
 

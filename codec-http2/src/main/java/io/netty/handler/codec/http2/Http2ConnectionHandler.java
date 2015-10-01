@@ -70,6 +70,14 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     private ChannelFutureListener closeListener;
     private BaseDecoder byteDecoder;
     private long gracefulShutdownTimeoutMillis = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
+    /**
+     * It is possible that a users's Listener object will generate an unexpected exception, which we will translate
+     * into a connection error. However while processing that connection error it is possible a Listener will throw
+     * another unexpected error which will also be translated into a connection error. To be sure we don't fall into
+     * an infinite recursive cycle we only allow 1 fatal connection error to be processed at a time. The assumption
+     * is a fatal connection error is a terminal state and will close the connection.
+     */
+    private boolean inFatalConnectionError;
 
     public Http2ConnectionHandler(boolean server) {
         this(server, true);
@@ -220,7 +228,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         public void handlerRemoved(ChannelHandlerContext ctx) throws Exception { }
         public void channelActive(ChannelHandlerContext ctx) throws Exception { }
 
-        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
             // Connection has terminated, close the encoder and decoder.
             encoder().close();
             decoder().close();
@@ -232,7 +240,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                 connection.forEachActiveStream(new Http2StreamVisitor() {
                     @Override
                     public boolean visit(Http2Stream stream) throws Http2Exception {
-                        closeStream(stream, future);
+                        closeStream(ctx, stream, future);
                         return true;
                     }
                 });
@@ -529,49 +537,47 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
     }
 
-    /**
-     * Closes the local side of the given stream. If this causes the stream to be closed, adds a
-     * hook to close the channel after the given future completes.
-     *
-     * @param stream the stream to be half closed.
-     * @param future If closing, the future after which to close the channel.
-     */
     @Override
-    public void closeStreamLocal(Http2Stream stream, ChannelFuture future) {
+    public void closeStreamLocal(ChannelHandlerContext ctx, Http2Stream stream, ChannelFuture future) {
         switch (stream.state()) {
             case HALF_CLOSED_LOCAL:
             case OPEN:
-                stream.closeLocalSide();
+                try {
+                    stream.closeLocalSide();
+                } catch (Throwable cause) {
+                    onError(ctx, cause);
+                }
                 break;
             default:
-                closeStream(stream, future);
+                closeStream(ctx, stream, future);
                 break;
         }
     }
 
-    /**
-     * Closes the remote side of the given stream. If this causes the stream to be closed, adds a
-     * hook to close the channel after the given future completes.
-     *
-     * @param stream the stream to be half closed.
-     * @param future If closing, the future after which to close the channel.
-     */
     @Override
-    public void closeStreamRemote(Http2Stream stream, ChannelFuture future) {
+    public void closeStreamRemote(ChannelHandlerContext ctx, Http2Stream stream, ChannelFuture future) {
         switch (stream.state()) {
             case HALF_CLOSED_REMOTE:
             case OPEN:
-                stream.closeRemoteSide();
+                try {
+                    stream.closeRemoteSide();
+                } catch (Throwable cause) {
+                    onError(ctx, cause);
+                }
                 break;
             default:
-                closeStream(stream, future);
+                closeStream(ctx, stream, future);
                 break;
         }
     }
 
     @Override
-    public void closeStream(final Http2Stream stream, ChannelFuture future) {
-        stream.close();
+    public void closeStream(ChannelHandlerContext ctx, final Http2Stream stream, ChannelFuture future) {
+        try {
+            stream.close();
+        } catch (Throwable cause) {
+            onError(ctx, cause);
+        }
 
         if (future.isDone()) {
             checkCloseConnection(future);
@@ -627,15 +633,28 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             http2Ex = new Http2Exception(INTERNAL_ERROR, cause.getMessage(), cause);
         }
 
-        ChannelPromise promise = ctx.newPromise();
-        ChannelFuture future = goAway(ctx, http2Ex);
-        switch (http2Ex.shutdownHint()) {
-        case GRACEFUL_SHUTDOWN:
-            doGracefulShutdown(ctx, future, promise);
-            break;
-        default:
-            future.addListener(new ClosingChannelFutureListener(ctx, promise));
-            break;
+        boolean isFatal = http2Ex.error() != Http2Error.NO_ERROR;
+        if (isFatal && inFatalConnectionError) {
+            logger.error("Reentrant call to onConnectionError while processing a fatal connection error.", cause);
+            return;
+        }
+
+        inFatalConnectionError = isFatal;
+        try {
+            ChannelPromise promise = ctx.newPromise();
+            ChannelFuture future = goAway(ctx, http2Ex);
+            switch (http2Ex.shutdownHint()) {
+            case GRACEFUL_SHUTDOWN:
+                doGracefulShutdown(ctx, future, promise);
+                break;
+            default:
+                future.addListener(new ClosingChannelFutureListener(ctx, promise));
+                break;
+            }
+        } finally {
+            if (isFatal) {
+                inFatalConnectionError = false;
+            }
         }
     }
 
@@ -674,7 +693,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isSuccess()) {
-                    closeStream(stream, promise);
+                    closeStream(ctx, stream, promise);
                 } else {
                     // The connection will be closed and so no need to change the resetSent flag to false.
                     onConnectionError(ctx, future.cause(), null);

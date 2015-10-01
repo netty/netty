@@ -106,8 +106,9 @@ public interface Http2RemoteFlowController extends Http2FlowController {
          * The {@link Http2RemoteFlowController} will make exactly one call to either {@link #error(Throwable)} or
          * {@link #writeComplete()}.
          * </p>
+         * @param ctx Used to send a connection error if necessary.
          */
-        void writeComplete();
+        void writeComplete(ChannelHandlerContext ctx);
 
         /**
          * Writes up to {@code allowedBytes} of the encapsulated payload to the stream. Note that
@@ -143,7 +144,8 @@ public interface Http2RemoteFlowController extends Http2FlowController {
          * Report the number of {@code writtenBytes} for a {@code stream}. Called after the
          * flow-controller has flushed bytes for the given stream.
          * <p>
-         * This method should not throw. Any thrown exceptions are considered a programming error and are ignored.
+         * Any exception thrown from this method will be translated into a fatal connection error, cause a
+         * {@code GO_AWAY} frame to be sent with a fatal error code, and then the connection will be shutdown.
          * @param stream that had bytes written.
          * @param writtenBytes the number of bytes written for a stream, can be 0 in the case of an
          *                     empty DATA frame.
@@ -153,7 +155,8 @@ public interface Http2RemoteFlowController extends Http2FlowController {
         /**
          * Notification that {@link Http2RemoteFlowController#isWritable(Http2Stream)} has changed for {@code stream}.
          * <p>
-         * This method should not throw. Any thrown exceptions are considered a programming error and are ignored.
+         * Any exception thrown from this method will be translated into a fatal connection error, cause a
+         * {@code GO_AWAY} frame to be sent with a fatal error code, and then the connection will be shutdown.
          * @param stream The stream which writability has changed for.
          */
         void writabilityChanged(Http2Stream stream);
