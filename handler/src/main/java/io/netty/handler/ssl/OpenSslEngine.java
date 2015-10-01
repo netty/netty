@@ -212,7 +212,7 @@ public final class OpenSslEngine extends SSLEngine {
         this.apn = checkNotNull(apn, "apn");
         this.clientAuth = clientMode ? ClientAuth.NONE : checkNotNull(clientAuth, "clientAuth");
         ssl = SSL.newSSL(sslCtx, !clientMode);
-        session = new OpenSslSession(ssl, sessionContext);
+        session = new OpenSslSession(sessionContext);
         networkBIO = SSL.makeNetworkBIO(ssl);
         this.clientMode = clientMode;
         this.engineMap = engineMap;
@@ -1308,7 +1308,6 @@ public final class OpenSslEngine extends SSLEngine {
 
     private final class OpenSslSession implements SSLSession, ApplicationProtocolAccessor {
         private final OpenSslSessionContext sessionContext;
-        private final long creationTime;
 
         // These are guarded by synchronized(OpenSslEngine.this) as handshakeFinished() may be triggered by any
         // thread.
@@ -1318,12 +1317,12 @@ public final class OpenSslEngine extends SSLEngine {
         private Certificate[] peerCerts;
         private String cipher;
         private byte[] id;
+        private long creationTime;
 
         // lazy init for memory reasons
         private Map<String, Object> values;
 
-        OpenSslSession(long ssl, OpenSslSessionContext sessionContext) {
-            creationTime = SSL.getTime(ssl) * 1000L;
+        OpenSslSession(OpenSslSessionContext sessionContext) {
             this.sessionContext = sessionContext;
         }
 
@@ -1344,6 +1343,11 @@ public final class OpenSslEngine extends SSLEngine {
 
         @Override
         public long getCreationTime() {
+            synchronized (OpenSslEngine.this) {
+                if (creationTime == 0 && !isDestroyed()) {
+                    creationTime = SSL.getTime(ssl) * 1000L;
+                }
+            }
             return creationTime;
         }
 
