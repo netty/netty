@@ -63,8 +63,12 @@ final class DnsQueryContext {
 
         id = allocateId();
         recursionDesired = parent.isRecursionDesired();
-        optResource = new DefaultDnsRawRecord(
-                StringUtil.EMPTY_STRING, DnsRecordType.OPT, parent.maxPayloadSize(), 0, Unpooled.EMPTY_BUFFER);
+        if (parent.isOptResourceEnabled()) {
+            optResource = new DefaultDnsRawRecord(
+                    StringUtil.EMPTY_STRING, DnsRecordType.OPT, parent.maxPayloadSize(), 0, Unpooled.EMPTY_BUFFER);
+        } else {
+            optResource = null;
+        }
     }
 
     private int allocateId() {
@@ -89,7 +93,9 @@ final class DnsQueryContext {
         final DatagramDnsQuery query = new DatagramDnsQuery(null, nameServerAddr, id);
         query.setRecursionDesired(recursionDesired);
         query.setRecord(DnsSection.QUESTION, question);
-        query.setRecord(DnsSection.ADDITIONAL, optResource);
+        if (optResource != null) {
+            query.setRecord(DnsSection.ADDITIONAL, optResource);
+        }
 
         if (logger.isDebugEnabled()) {
             logger.debug("{} WRITE: [{}: {}], {}", parent.ch, id, nameServerAddr, question);

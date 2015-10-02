@@ -129,6 +129,7 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
     private volatile boolean recursionDesired = true;
 
     private volatile int maxPayloadSize;
+    private volatile boolean optResourceEnabled = true;
 
     /**
      * Creates a new DNS-based name resolver that communicates with the specified list of DNS servers.
@@ -518,6 +519,24 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
         ch.config().setRecvByteBufAllocator(new FixedRecvByteBufAllocator(maxPayloadSize));
 
         return this;
+    }
+
+    /**
+     * Enable the automatic inclusion of a optional records that tries to give the remote DNS server a hint about how
+     * much data the resolver can read per response. Some DNSServer may not support this and so fail to answer
+     * queries. If you find problems you may want to disable this.
+     */
+    public DnsNameResolver setOptResourceEnabled(boolean optResourceEnabled) {
+        this.optResourceEnabled = optResourceEnabled;
+        return this;
+    }
+
+    /**
+     * Returns the automatic inclusion of a optional records that tries to give the remote DNS server a hint about how
+     * much data the resolver can read per response is enabled.
+     */
+    public boolean isOptResourceEnabled() {
+        return optResourceEnabled;
     }
 
     /**
