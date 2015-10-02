@@ -442,7 +442,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
             // Send an ack back to the remote client.
             // Need to retain the buffer here since it will be released after the write completes.
-            encoder.writePing(ctx, true, data.retain(), ctx.newPromise());
+            encoder.writePing(ctx, true, data.slice().retain(), ctx.newPromise());
 
             listener.onPingRead(ctx, data);
         }
