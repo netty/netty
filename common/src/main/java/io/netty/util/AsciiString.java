@@ -264,9 +264,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
         if (string.getClass() == AsciiString.class) {
             AsciiString rhs = (AsciiString) string;
             for (int i = arrayOffset(), j = rhs.arrayOffset(); i < length(); ++i, ++j) {
-                byte c1 = value[i];
-                byte c2 = value[j];
-                if (c1 != c2 && toLowerCase(c1) != toLowerCase(c2)) {
+                if (!equalsIgnoreCase(value[i], value[j])) {
                     return false;
                 }
             }
@@ -274,9 +272,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
         }
 
         for (int i = arrayOffset(), j = 0; i < length(); ++i, ++j) {
-            char c1 = (char) (value[i] & 0xFF);
-            char c2 = string.charAt(j);
-            if (c1 != c2 && toLowerCase(c1) != toLowerCase(c2)) {
+            if (!equalsIgnoreCase((char) (value[i] & 0xFF), string.charAt(j))) {
                 return false;
             }
         }
@@ -553,9 +549,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
         thisStart += arrayOffset();
         final int thisEnd = thisStart + length;
         while (thisStart < thisEnd) {
-            char c1 = (char) (value[thisStart++] & 0xFF);
-            char c2 = string.charAt(start++);
-            if (c1 != c2 && toLowerCase(c1) != toLowerCase(c2)) {
+            if (!equalsIgnoreCase((char) (value[thisStart++] & 0xFF), string.charAt(start++))) {
                 return false;
             }
         }
@@ -756,13 +750,6 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
         return toAsciiStringArray(Pattern.compile(expr).split(this, max));
     }
 
-    private static byte c2b(char c) {
-        if (c > MAX_CHAR_VALUE) {
-            return '?';
-        }
-        return (byte) c;
-    }
-
     /**
      * Splits the specified {@link String} with the specified delimiter..
      */
@@ -856,6 +843,20 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
     }
 
     /**
+     * Determine if {@code a} contains {@code b} in a case sensitive manner.
+     */
+    public static boolean contains(CharSequence a, CharSequence b) {
+        return contains(a, b, DefaultCharEqualityComparator.INSTANCE);
+    }
+
+    /**
+     * Determine if {@code a} contains {@code b} in a case insensitive manner.
+     */
+    public static boolean containsIgnoreCase(CharSequence a, CharSequence b) {
+        return contains(a, b, CaseInsensativeCharEqualityComparator.INSTANCE);
+    }
+
+    /**
      * Returns {@code true} if both {@link CharSequence}'s are equals when ignore the case. This only supports 8-bit
      * ASCII.
      */
@@ -879,9 +880,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
             return false;
         }
         for (int i = 0, j = 0; i < a.length(); ++i, ++j) {
-            char c1 = a.charAt(i);
-            char c2 = b.charAt(j);
-            if (c1 != c2 && toLowerCase(c1) != toLowerCase(c2)) {
+            if (!equalsIgnoreCase(a.charAt(i),  b.charAt(j))) {
                 return false;
             }
         }
@@ -976,6 +975,62 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
         return indexOf(cs) >= 0;
     }
 
+    private interface CharEqualityComparator {
+        boolean equals(char a, char b);
+    }
+
+    private static final class DefaultCharEqualityComparator implements CharEqualityComparator {
+        static final DefaultCharEqualityComparator INSTANCE = new DefaultCharEqualityComparator();
+        private DefaultCharEqualityComparator() { }
+
+        @Override
+        public boolean equals(char a, char b) {
+            return a == b;
+        }
+    }
+
+    private static final class CaseInsensativeCharEqualityComparator implements CharEqualityComparator {
+        static final CaseInsensativeCharEqualityComparator INSTANCE = new CaseInsensativeCharEqualityComparator();
+        private CaseInsensativeCharEqualityComparator() { }
+
+        @Override
+        public boolean equals(char a, char b) {
+            return equalsIgnoreCase(a, b);
+        }
+    }
+
+    private static boolean contains(CharSequence a, CharSequence b, CharEqualityComparator cmp) {
+        if (a == null || b == null || a.length() < b.length()) {
+            return false;
+        }
+        if (b.length() == 0) {
+            return true;
+        }
+        int bStart = 0;
+        for (int i = 0; i < a.length(); ++i) {
+            if (cmp.equals(b.charAt(bStart), a.charAt(i))) {
+                // If b is consumed then true.
+                if (++bStart == b.length()) {
+                    return true;
+                }
+            } else if (a.length() - i < b.length()) {
+                // If there are not enough characters left in a for b to be contained, then false.
+                return false;
+            } else {
+                bStart = 0;
+            }
+        }
+        return false;
+    }
+
+    private static boolean equalsIgnoreCase(byte a, byte b) {
+        return a == b || toLowerCase(a) == toLowerCase(b);
+    }
+
+    private static boolean equalsIgnoreCase(char a, char b) {
+        return a == b || toLowerCase(a) == toLowerCase(b);
+    }
+
     private static byte toLowerCase(byte b) {
         if ('A' <= b && b <= 'Z') {
             return (byte) (b + 32);
@@ -995,5 +1050,12 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
             return (byte) (b - 32);
         }
         return b;
+    }
+
+    private static byte c2b(char c) {
+        if (c > MAX_CHAR_VALUE) {
+            return '?';
+        }
+        return (byte) c;
     }
 }
