@@ -26,6 +26,8 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static io.netty.util.AsciiString.caseInsensitiveHashCode;
+import static io.netty.util.AsciiString.contains;
+import static io.netty.util.AsciiString.containsIgnoreCase;
 
 /**
  * Test for the {@link AsciiString} class
@@ -97,6 +99,59 @@ public class AsciiStringTest {
         for (int i = start; i < end; ++i) {
             assertEquals(init[i], sub1.byteAt(i - start));
         }
+    }
+
+    @Test
+    public void testContains() {
+        String[] falseLhs = {null, "a", "aa", "aaa" };
+        String[] falseRhs = {null, "b", "ba", "baa" };
+        for (int i = 0; i < falseLhs.length; ++i) {
+            for (int j = 0; j < falseRhs.length; ++j) {
+                assertContains(falseLhs[i], falseRhs[i], false, false);
+            }
+        }
+
+        assertContains("", "", true, true);
+        assertContains("AsfdsF", "", true, true);
+        assertContains("", "b", false, false);
+        assertContains("a", "a", true, true);
+        assertContains("a", "b", false, false);
+        assertContains("a", "A", false, true);
+        String b = "xyz";
+        String a = b;
+        assertContains(a, b, true, true);
+
+        a = "a" + b;
+        assertContains(a, b, true, true);
+
+        a = b + "a";
+        assertContains(a, b, true, true);
+
+        a = "a" + b + "a";
+        assertContains(a, b, true, true);
+
+        b = "xYz";
+        a = "xyz";
+        assertContains(a, b, false, true);
+
+        b = "xYz";
+        a = "xyzxxxXyZ" + b + "aaa";
+        assertContains(a, b, true, true);
+
+        b = "foOo";
+        a = "fooofoO";
+        assertContains(a, b, false, true);
+
+        b = "Content-Equals: 10000";
+        a = "content-equals: 1000";
+        assertContains(a, b, false, false);
+        a += "0";
+        assertContains(a, b, false, true);
+    }
+
+    private static void assertContains(String a, String b, boolean caseSensativeEquals, boolean caseInsenstaiveEquals) {
+        assertEquals(caseSensativeEquals, contains(a, b));
+        assertEquals(caseInsenstaiveEquals, containsIgnoreCase(a, b));
     }
 
     @Test
