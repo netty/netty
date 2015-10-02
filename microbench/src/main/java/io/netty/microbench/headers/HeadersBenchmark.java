@@ -17,7 +17,6 @@ package io.netty.microbench.headers;
 
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
-import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.AsciiString;
 import io.netty.util.ByteString;
@@ -44,7 +43,7 @@ import java.util.concurrent.TimeUnit;
 @Threads(1)
 @State(Scope.Benchmark)
 @Warmup(iterations = 5)
-@Measurement(iterations = 10)
+@Measurement(iterations = 5)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 public class HeadersBenchmark extends AbstractMicrobenchmark {
 
@@ -68,7 +67,7 @@ public class HeadersBenchmark extends AbstractMicrobenchmark {
         http2Names = new ByteString[headers.size()];
         http2Values = new ByteString[headers.size()];
         httpHeaders = new DefaultHttpHeaders(false);
-        http2Headers = new DefaultHttp2Headers();
+        http2Headers = new DefaultHttp2Headers(false);
         int idx = 0;
         for (Map.Entry<String, String> header : headers.entrySet()) {
             String name = header.getKey();
@@ -137,7 +136,7 @@ public class HeadersBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     @BenchmarkMode(Mode.AverageTime)
     public DefaultHttp2Headers http2Put() {
-        DefaultHttp2Headers headers = new DefaultHttp2Headers();
+        DefaultHttp2Headers headers = new DefaultHttp2Headers(false);
         for (int i = 0; i < httpNames.length; i++) {
             headers.add(httpNames[i], httpValues[i]);
         }
@@ -146,30 +145,9 @@ public class HeadersBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     @BenchmarkMode(Mode.AverageTime)
-    public void http2IterateNew(Blackhole bh) {
+    public void http2Iterate(Blackhole bh) {
         for (Entry<ByteString, ByteString> entry : http2Headers) {
             bh.consume(entry);
-        }
-    }
-
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    public void http2IterateOld(Blackhole bh) {
-        // This is how we had to iterate in the Http2HeadersEncoder when writing the frames on the wire
-        // in order to ensure that reserved headers come first.
-        for (Http2Headers.PseudoHeaderName pseudoHeader : Http2Headers.PseudoHeaderName.values()) {
-            ByteString name = pseudoHeader.value();
-            ByteString value = http2Headers.get(name);
-            if (value != null) {
-                bh.consume(value);
-            }
-        }
-        for (Entry<ByteString, ByteString> entry : http2Headers) {
-            final ByteString name = entry.getKey();
-            final ByteString value = entry.getValue();
-            if (!Http2Headers.PseudoHeaderName.isPseudoHeader(name)) {
-                bh.consume(value);
-            }
         }
     }
 }
