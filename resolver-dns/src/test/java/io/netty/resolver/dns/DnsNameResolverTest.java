@@ -28,15 +28,42 @@ import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.handler.codec.dns.DnsSection;
+import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.apache.directory.server.dns.DnsServer;
+import org.apache.directory.server.dns.io.encoder.DnsMessageEncoder;
+import org.apache.directory.server.dns.io.encoder.ResourceRecordEncoder;
+import org.apache.directory.server.dns.messages.DnsMessage;
+import org.apache.directory.server.dns.messages.QuestionRecord;
+import org.apache.directory.server.dns.messages.RecordClass;
+import org.apache.directory.server.dns.messages.RecordType;
+import org.apache.directory.server.dns.messages.ResourceRecord;
+import org.apache.directory.server.dns.messages.ResourceRecordModifier;
+import org.apache.directory.server.dns.protocol.DnsProtocolHandler;
+import org.apache.directory.server.dns.protocol.DnsUdpDecoder;
+import org.apache.directory.server.dns.protocol.DnsUdpEncoder;
+import org.apache.directory.server.dns.store.DnsAttribute;
+import org.apache.directory.server.dns.store.RecordStore;
+import org.apache.directory.server.protocol.shared.transport.UdpTransport;
+import org.apache.mina.core.buffer.IoBuffer;
+import org.apache.mina.core.session.IoSession;
+import org.apache.mina.filter.codec.ProtocolCodecFactory;
+import org.apache.mina.filter.codec.ProtocolCodecFilter;
+import org.apache.mina.filter.codec.ProtocolDecoder;
+import org.apache.mina.filter.codec.ProtocolEncoder;
+import org.apache.mina.filter.codec.ProtocolEncoderOutput;
+import org.apache.mina.transport.socket.DatagramAcceptor;
+import org.apache.mina.transport.socket.DatagramSessionConfig;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -63,86 +90,12 @@ public class DnsNameResolverTest {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsNameResolver.class);
 
-    private static final List<InetSocketAddress> SERVERS = Arrays.asList(
-            new InetSocketAddress("8.8.8.8", 53), // Google Public DNS
-            new InetSocketAddress("8.8.4.4", 53),
-            new InetSocketAddress("208.67.222.222", 53), // OpenDNS
-            new InetSocketAddress("208.67.220.220", 53),
-            new InetSocketAddress("208.67.222.220", 53),
-            new InetSocketAddress("208.67.220.222", 53),
-            new InetSocketAddress("37.235.1.174", 53), // FreeDNS
-            new InetSocketAddress("37.235.1.177", 53),
-            //
-            // OpenNIC - Fusl's Tier 2 DNS servers
-            //
-            // curl http://meo.ws/dnsrec.php | \
-            //   perl -p0 -e 's#(^(.|\r|\n)*<textarea[^>]*>|</textarea>(.|\r|\n)*)##g' | \
-            //   awk -F ',' '{ print $14 }' | \
-            //   grep -E '^[0-9]+.[0-9]+.[0-9]+.[0-9]+$' | \
-            //   perl -p -e 's/^/new InetSocketAddress("/' | \
-            //   perl -p -e 's/$/", 53),/'
-            //
-            new InetSocketAddress("79.133.43.124", 53),
-            new InetSocketAddress("151.236.10.36", 53),
-            new InetSocketAddress("163.47.20.30", 53),
-            new InetSocketAddress("103.25.56.238", 53),
-            new InetSocketAddress("111.223.227.125", 53),
-            new InetSocketAddress("103.241.0.207", 53),
-            new InetSocketAddress("192.71.249.83", 53),
-            new InetSocketAddress("69.28.67.83", 53),
-            new InetSocketAddress("192.121.170.22", 53),
-            new InetSocketAddress("62.141.38.230", 53),
-            new InetSocketAddress("185.97.7.7", 53),
-            new InetSocketAddress("84.200.83.161", 53),
-            new InetSocketAddress("78.47.34.12", 53),
-            new InetSocketAddress("41.215.240.141", 53),
-            new InetSocketAddress("5.134.117.239", 53),
-            new InetSocketAddress("95.175.99.231", 53),
-            new InetSocketAddress("92.222.80.28", 53),
-            new InetSocketAddress("178.79.174.162", 53),
-            new InetSocketAddress("95.129.41.126", 53),
-            new InetSocketAddress("103.53.199.71", 53),
-            new InetSocketAddress("176.62.0.26", 53),
-            new InetSocketAddress("185.112.156.159", 53),
-            new InetSocketAddress("217.78.6.191", 53),
-            new InetSocketAddress("193.182.144.83", 53),
-            new InetSocketAddress("37.235.55.46", 53),
-            new InetSocketAddress("103.250.184.85", 53),
-            new InetSocketAddress("151.236.24.245", 53),
-            new InetSocketAddress("192.121.47.47", 53),
-            new InetSocketAddress("106.185.41.36", 53),
-            new InetSocketAddress("88.82.109.119", 53),
-            new InetSocketAddress("212.117.180.145", 53),
-            new InetSocketAddress("185.61.149.228", 53),
-            new InetSocketAddress("93.158.205.94", 53),
-            new InetSocketAddress("31.220.43.191", 53),
-            new InetSocketAddress("91.247.228.155", 53),
-            new InetSocketAddress("163.47.21.44", 53),
-            new InetSocketAddress("94.46.12.224", 53),
-            new InetSocketAddress("46.108.39.139", 53),
-            new InetSocketAddress("94.242.57.130", 53),
-            new InetSocketAddress("46.151.215.199", 53),
-            new InetSocketAddress("31.220.5.106", 53),
-            new InetSocketAddress("103.25.202.192", 53),
-            new InetSocketAddress("185.65.206.121", 53),
-            new InetSocketAddress("91.229.79.104", 53),
-            new InetSocketAddress("74.207.241.202", 53),
-            new InetSocketAddress("104.245.33.185", 53),
-            new InetSocketAddress("104.245.39.112", 53),
-            new InetSocketAddress("74.207.232.103", 53),
-            new InetSocketAddress("104.237.144.172", 53),
-            new InetSocketAddress("104.237.136.225", 53),
-            new InetSocketAddress("104.219.55.89", 53),
-            new InetSocketAddress("23.226.230.72", 53),
-            new InetSocketAddress("41.185.78.25", 53)
-            );
-
     // Using the top-100 web sites ranked in Alexa.com (Oct 2014)
     // Please use the following series of shell commands to get this up-to-date:
     // $ curl -O http://s3.amazonaws.com/alexa-static/top-1m.csv.zip
     // $ unzip -o top-1m.csv.zip top-1m.csv
     // $ head -100 top-1m.csv | cut -d, -f2 | cut -d/ -f1 | while read L; do echo '"'"$L"'",'; done > topsites.txt
-    private static final String[] DOMAINS = {
+    private static final Set<String> DOMAINS = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
             "google.com",
             "facebook.com",
             "youtube.com",
@@ -241,8 +194,7 @@ public class DnsNameResolverTest {
             "cnet.com",
             "vimeo.com",
             "redtube.com",
-            "blogspot.in",
-    };
+            "blogspot.in")));
 
     /**
      * The list of the domain names to exclude from {@link #testResolveAorAAAA()}.
@@ -263,7 +215,7 @@ public class DnsNameResolverTest {
     private static final Set<String> EXCLUSIONS_RESOLVE_AAAA = new HashSet<String>();
     static {
         EXCLUSIONS_RESOLVE_AAAA.addAll(EXCLUSIONS_RESOLVE_A);
-        Collections.addAll(EXCLUSIONS_RESOLVE_AAAA, DOMAINS);
+        EXCLUSIONS_RESOLVE_AAAA.addAll(DOMAINS);
         EXCLUSIONS_RESOLVE_AAAA.removeAll(Arrays.asList(
                 "google.com",
                 "facebook.com",
@@ -311,16 +263,21 @@ public class DnsNameResolverTest {
                 StringUtil.EMPTY_STRING);
     }
 
+    private static final TestDnsServer dnsServer = new TestDnsServer();
     private static final EventLoopGroup group = new NioEventLoopGroup(1);
-    private static final DnsNameResolver resolver = new DnsNameResolver(
-            group.next(), NioDatagramChannel.class, DnsServerAddresses.shuffled(SERVERS));
+    private static DnsNameResolver resolver;
 
-    static {
-        resolver.setMaxQueriesPerResolve(SERVERS.size());
+    @BeforeClass
+    public static void init() throws Exception {
+        dnsServer.start();
+        resolver = new DnsNameResolver(group.next(), NioDatagramChannel.class,
+                                       DnsServerAddresses.singleton(dnsServer.localAddress()));
+        resolver.setMaxQueriesPerResolve(1);
+        resolver.setOptResourceEnabled(false);
     }
-
     @AfterClass
     public static void destroy() {
+        dnsServer.stop();
         group.shutdownGracefully();
     }
 
@@ -340,8 +297,7 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testResolveA() throws Exception {
-
+    public void  testResolveA() throws Exception {
         final int oldMinTtl = resolver.minTtl();
         final int oldMaxTtl = resolver.maxTtl();
 
@@ -448,15 +404,6 @@ public class DnsNameResolverTest {
         for (Entry<String, Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>> e: futures.entrySet()) {
             String hostname = e.getKey();
             Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f = e.getValue().awaitUninterruptibly();
-            if (!f.isSuccess()) {
-                // Try again because the DNS servers might be throttling us down.
-                for (int i = 0; i < SERVERS.size(); i++) {
-                    f = queryMx(hostname).awaitUninterruptibly();
-                    if (f.isSuccess() && !DnsResponseCode.SERVFAIL.equals(f.getNow().content().code())) {
-                        break;
-                    }
-                }
-            }
 
             DnsResponse response = f.getNow().content();
             assertThat(response.code(), is(DnsResponseCode.NOERROR));
@@ -563,7 +510,174 @@ public class DnsNameResolverTest {
         futures.put(hostname, resolver.query(new DefaultDnsQuestion(hostname, DnsRecordType.MX)));
     }
 
-    private static Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> queryMx(String hostname) throws Exception {
-        return resolver.query(new DefaultDnsQuestion(hostname, DnsRecordType.MX));
+    private static final class TestDnsServer extends DnsServer {
+        private static final Map<String, byte[]> BYTES = new HashMap<String, byte[]>();
+        private static final String[] IPV6_ADDRESSES;
+        static {
+            BYTES.put("::1", new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1});
+            BYTES.put("0:0:0:0:0:0:1:1", new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1});
+            BYTES.put("0:0:0:0:0:1:1:1", new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1});
+            BYTES.put("0:0:0:0:1:1:1:1", new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1});
+            BYTES.put("0:0:0:1:1:1:1:1", new byte[] {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1});
+            BYTES.put("0:0:1:1:1:1:1:1", new byte[] {0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1});
+            BYTES.put("0:1:1:1:1:1:1:1", new byte[] {0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1});
+            BYTES.put("1:1:1:1:1:1:1:1", new byte[] {0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1});
+
+            IPV6_ADDRESSES = BYTES.keySet().toArray(new String[BYTES.size()]);
+        }
+
+        @Override
+        public void start() throws IOException {
+            InetSocketAddress address = new InetSocketAddress(NetUtil.LOCALHOST4, 0);
+            UdpTransport transport = new UdpTransport(address.getHostName(), address.getPort());
+            setTransports(transport);
+
+            DatagramAcceptor acceptor = transport.getAcceptor();
+
+            acceptor.setHandler(new DnsProtocolHandler(this, new TestRecordStore()) {
+                @Override
+                public void sessionCreated(IoSession session) throws Exception {
+                    // USe our own codec to support AAAA testing
+                    session.getFilterChain()
+                           .addFirst("codec", new ProtocolCodecFilter(new TestDnsProtocolUdpCodecFactory()));
+                }
+            });
+
+            ((DatagramSessionConfig) acceptor.getSessionConfig()).setReuseAddress(true);
+
+            // Start the listener
+            acceptor.bind();
+        }
+
+        public InetSocketAddress localAddress() {
+            return (InetSocketAddress) getTransports()[0].getAcceptor().getLocalAddress();
+        }
+
+        /**
+         * {@link ProtocolCodecFactory} which allows to test AAAA resolution.
+         */
+        private static final class TestDnsProtocolUdpCodecFactory implements ProtocolCodecFactory {
+            private final DnsMessageEncoder encoder = new DnsMessageEncoder();
+            private final TestAAAARecordEncoder recordEncoder = new TestAAAARecordEncoder();
+
+            @Override
+            public ProtocolEncoder getEncoder(IoSession session) throws Exception {
+                return new DnsUdpEncoder() {
+
+                    @Override
+                    public void encode(IoSession session, Object message, ProtocolEncoderOutput out) {
+                        IoBuffer buf = IoBuffer.allocate(1024);
+                        DnsMessage dnsMessage = (DnsMessage) message;
+                        encoder.encode(buf, dnsMessage);
+                        for (ResourceRecord record: dnsMessage.getAnswerRecords()) {
+                            // This is a hack to allow to also test for AAAA resolution as DnsMessageEncoder
+                            // does not support it and it is hard to extend, because the interesting methods
+                            // are private...
+                            // In case of RecordType.AAAA we need to encode the RecordType by ourself.
+                            if (record.getRecordType() == RecordType.AAAA) {
+                                try {
+                                    recordEncoder.put(buf, record);
+                                } catch (IOException e) {
+                                    // Should never happen
+                                    throw new IllegalStateException(e);
+                                }
+                            }
+                        }
+                        buf.flip();
+
+                        out.write(buf);
+                    }
+                };
+            }
+
+            @Override
+            public ProtocolDecoder getDecoder(IoSession session) throws Exception {
+                return new DnsUdpDecoder();
+            }
+
+            private static final class TestAAAARecordEncoder extends ResourceRecordEncoder {
+
+                @Override
+                protected void putResourceRecordData(IoBuffer ioBuffer, ResourceRecord resourceRecord) {
+                    byte[] bytes = BYTES.get(resourceRecord.get(DnsAttribute.IP_ADDRESS));
+                    if (bytes == null) {
+                        throw new IllegalStateException();
+                    }
+                    // encode the ::1
+                    ioBuffer.put(bytes);
+                }
+            }
+        }
+
+        private static final class TestRecordStore implements RecordStore {
+            private static final int[] NUMBERS = new int[254];
+            private static final char[] CHARS = new char[26];
+
+            static {
+                for (int i = 0; i < NUMBERS.length; i++) {
+                    NUMBERS[i] = i + 1;
+                }
+
+                for (int i = 0; i < CHARS.length; i++) {
+                    CHARS[i] =  (char) ('a' + i);
+                }
+            }
+
+            private static int index(int arrayLength) {
+                return Math.abs(ThreadLocalRandom.current().nextInt()) % arrayLength;
+            }
+
+            private static String nextDomain() {
+               return CHARS[index(CHARS.length)] + ".netty.io";
+            }
+
+            private static String nextIp() {
+                return ippart() + "." + ippart() + '.' + ippart() + '.' + ippart();
+            }
+
+            private static int ippart() {
+                return NUMBERS[index(NUMBERS.length)];
+            }
+
+            private static String nextIp6() {
+                return IPV6_ADDRESSES[index(IPV6_ADDRESSES.length)];
+            }
+
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord questionRecord) {
+                String name = questionRecord.getDomainName();
+                if (DOMAINS.contains(name)) {
+                    ResourceRecordModifier rm = new ResourceRecordModifier();
+                    rm.setDnsClass(RecordClass.IN);
+                    rm.setDnsName(name);
+                    rm.setDnsTtl(100);
+                    rm.setDnsType(questionRecord.getRecordType());
+
+                    switch (questionRecord.getRecordType()) {
+                    case A:
+                        do {
+                            rm.put(DnsAttribute.IP_ADDRESS, nextIp());
+                        } while (ThreadLocalRandom.current().nextBoolean());
+                        break;
+                    case AAAA:
+                        do {
+                            rm.put(DnsAttribute.IP_ADDRESS, nextIp6());
+                        } while (ThreadLocalRandom.current().nextBoolean());
+                        break;
+                    case MX:
+                        int prioritity = 0;
+                        do {
+                            rm.put(DnsAttribute.DOMAIN_NAME, nextDomain());
+                            rm.put(DnsAttribute.MX_PREFERENCE, String.valueOf(++prioritity));
+                        } while (ThreadLocalRandom.current().nextBoolean());
+                        break;
+                    default:
+                        return null;
+                    }
+                    return Collections.singleton(rm.getEntry());
+                }
+                return null;
+            }
+        }
     }
 }
