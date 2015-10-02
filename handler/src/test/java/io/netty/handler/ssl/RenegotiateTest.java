@@ -18,13 +18,13 @@ package io.netty.handler.ssl;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
-import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
@@ -43,7 +43,7 @@ public abstract class RenegotiateTest {
         final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
         final CountDownLatch latch = new CountDownLatch(2);
         SelfSignedCertificate cert = new SelfSignedCertificate();
-        EventLoopGroup group = new LocalEventLoopGroup();
+        EventLoopGroup group = new DefaultEventLoopGroup();
         try {
             final SslContext context = SslContextBuilder.forServer(cert.key(), cert.cert())
                     .sslProvider(serverSslProvider()).build();
@@ -53,7 +53,7 @@ public abstract class RenegotiateTest {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
                             ch.pipeline().addLast(context.newHandler(ch.alloc()));
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelHandlerAdapter() {
                                 private boolean renegotiate;
 
                                 @Override
@@ -103,7 +103,7 @@ public abstract class RenegotiateTest {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
                             ch.pipeline().addLast(clientContext.newHandler(ch.alloc()));
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelHandlerAdapter() {
                                 @Override
                                 public void userEventTriggered(
                                         ChannelHandlerContext ctx, Object evt) throws Exception {
