@@ -52,7 +52,20 @@ public class ByteBufUtilTest {
         final int iB1 = b1.length / 2;
         final int iB2 = iB1 + b1.length;
         final int length = b1.length - iB1;
-        System.arraycopy(b1, iB1, b2, iB2, length - 1);
+        // Even though we choose random values...make sure they are not equal.
+        final int copyLength = length - 1;
+        final int end = iB1 + copyLength;
+        boolean foundDiff = false;
+        for (int i = iB1, j = iB2; i < end; ++i, ++j) {
+            if (b1[i] != b2[j]) {
+                foundDiff = true;
+                break;
+            }
+        }
+        if (!foundDiff) {
+            ++b1[iB1];
+        }
+        System.arraycopy(b1, iB1, b2, iB2, copyLength);
         assertFalse(ByteBufUtil.equals(Unpooled.wrappedBuffer(b1), iB1, Unpooled.wrappedBuffer(b2), iB2, length));
     }
 
