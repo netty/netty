@@ -255,7 +255,7 @@ public final class HttpConversionUtil {
      * @param httpVersion What HTTP/1.x version {@code outputHeaders} should be treated as when doing the conversion.
      * @param isTrailer {@code true} if {@code outputHeaders} should be treated as trailing headers.
      * {@code false} otherwise.
-     * @param isReqeust {@code true} if the {@code outputHeaders} will be used in a request message.
+     * @param isRequest {@code true} if the {@code outputHeaders} will be used in a request message.
      * {@code false} for response message.
      * @throws Http2Exception If not all HTTP/2 headers can be translated to HTTP/1.x.
      */
@@ -303,8 +303,7 @@ public final class HttpConversionUtil {
             if (!isOriginForm(requestTargetUri) && !isAsteriskForm(requestTargetUri)) {
                 // Attempt to take from HOST header before taking from the request-line
                 String host = inHeaders.getAsString(HttpHeaderNames.HOST);
-                setHttp2Authority(inHeaders,
-                        (host == null || host.isEmpty()) ? requestTargetUri.getAuthority() : host, out);
+                setHttp2Authority((host == null || host.isEmpty()) ? requestTargetUri.getAuthority() : host, out);
             }
         } else if (in instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) in;
@@ -361,7 +360,7 @@ public final class HttpConversionUtil {
         return path.isEmpty() ? EMPTY_REQUEST_PATH : new AsciiString(path);
     }
 
-    private static void setHttp2Authority(HttpHeaders in, String autority, Http2Headers out) {
+    private static void setHttp2Authority(String autority, Http2Headers out) {
         // The authority MUST NOT include the deprecated "userinfo" subcomponent
         if (autority != null) {
             int endOfUserInfo = autority.indexOf('@');
