@@ -341,11 +341,10 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                     cumulation.release();
                     cumulation = null;
                 }
+
                 int size = out.size();
-                for (int i = 0; i < size; i++) {
-                    ctx.fireChannelRead(out.get(i));
-                }
                 if (size > 0) {
+                    fireChannelRead(ctx, out, size);
                     // Something was read, call fireChannelReadComplete()
                     ctx.fireChannelReadComplete();
                 }
@@ -364,6 +363,13 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
             while (in.isReadable()) {
                 int oldReaderIndex = checkpoint = in.readerIndex();
                 int outSize = out.size();
+
+                if (outSize > 0) {
+                    fireChannelRead(ctx, out, outSize);
+                    out.clear();
+                    outSize = 0;
+                }
+
                 S oldState = state;
                 int oldInputLength = in.readableBytes();
                 try {
