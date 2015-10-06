@@ -69,7 +69,7 @@ public final class Native {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, (byte) 0xff, (byte) 0xff };
 
     // As all our JNI methods return -errno on error we need to compare with the negative errno codes.
-    private static final int ERRNO_ENOTCONN_NEGATIVE = -errorENOTCONN();
+    private static final int ERRNO_ENOTCONN_NEGATIVE = -errnoENOTCONN();
     private static final int ERRNO_EBADF_NEGATIVE = -errnoEBADF();
     private static final int ERRNO_EPIPE_NEGATIVE = -errnoEPIPE();
     private static final int ERRNO_ECONNRESET_NEGATIVE = -errnoECONNRESET();
@@ -190,7 +190,7 @@ public final class Native {
     private static native int errnoEBADF();
     private static native int errnoEPIPE();
     private static native int errnoECONNRESET();
-    private static native int errorENOTCONN();
+    private static native int errnoENOTCONN();
 
     private static native int errnoEAGAIN();
     private static native int errnoEWOULDBLOCK();
