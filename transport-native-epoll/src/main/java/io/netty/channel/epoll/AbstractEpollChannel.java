@@ -357,8 +357,14 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 inputShutdown = true;
                 if (isOpen()) {
                     if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
-                        clearEpollIn0();
-                        pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+                        try {
+                            Native.shutdown(fd().intValue(), true, false);
+                            clearEpollIn0();
+                            pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+                        } catch (IOException e) {
+                            pipeline().fireExceptionCaught(e);
+                            close(voidPromise());
+                        }
                     } else {
                         close(voidPromise());
                     }
