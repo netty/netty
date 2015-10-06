@@ -21,6 +21,7 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.StringUtil;
 
@@ -232,6 +233,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof ByteBuf) {
+            boolean somethingRead = false;
             RecyclableArrayList out = RecyclableArrayList.newInstance();
             try {
                 ByteBuf data = (ByteBuf) msg;
@@ -241,7 +243,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 } else {
                     cumulation = cumulator.cumulate(ctx.alloc(), cumulation, data);
                 }
-                callDecode(ctx, cumulation, out);
+                somethingRead = callDecode(ctx, cumulation, out);
             } catch (DecoderException e) {
                 throw e;
             } catch (Throwable t) {
@@ -259,11 +261,16 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 }
 
                 int size = out.size();
-                decodeWasNull = size == 0;
 
-                for (int i = 0; i < size; i ++) {
-                    ctx.fireChannelRead(out.get(i));
+                // this should trigger only when an exception was thrown by decoder
+                if (size != 0) {
+                    for (int i = 0; i < size; i++) {
+                        // release without firing to avoid firing the same message TWICE if an exception happened
+                        ReferenceCountUtil.safeRelease(out.get(i));
+                    }
                 }
+
+                decodeWasNull = !somethingRead;
                 out.recycle();
             }
         } else {
@@ -300,9 +307,11 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         RecyclableArrayList out = RecyclableArrayList.newInstance();
+        boolean somethingRead = false;
+
         try {
             if (cumulation != null) {
-                callDecode(ctx, cumulation, out);
+                somethingRead = callDecode(ctx, cumulation, out);
                 decodeLast(ctx, cumulation, out);
             } else {
                 decodeLast(ctx, Unpooled.EMPTY_BUFFER, out);
@@ -312,23 +321,32 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
         } catch (Exception e) {
             throw new DecoderException(e);
         } finally {
+            int size = out.size();
             try {
                 if (cumulation != null) {
                     cumulation.release();
                     cumulation = null;
                 }
-                int size = out.size();
+
+                // this will fire if decodeLast(...) was in use
                 for (int i = 0; i < size; i++) {
                     ctx.fireChannelRead(out.get(i));
                 }
-                if (size > 0) {
+            } finally {
+                // recycle in all cases
+                if (!out.isEmpty()) {
+                    for (int i = 0; i < out.size(); i++) {
+                        ReferenceCountUtil.safeRelease(out.get(i));
+                    }
+                }
+                out.recycle();
+
+                if (size > 0 || somethingRead) {
                     // Something was read, call fireChannelReadComplete()
                     ctx.fireChannelReadComplete();
                 }
+
                 ctx.fireChannelInactive();
-            } finally {
-                // recycle in all cases
-                out.recycle();
             }
         }
     }
@@ -341,44 +359,56 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * @param in            the {@link ByteBuf} from which to read data
      * @param out           the {@link List} to which decoded messages should be added
      */
-    protected void callDecode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
-        try {
-            while (in.isReadable()) {
-                int outSize = out.size();
-                int oldInputLength = in.readableBytes();
+    protected boolean callDecode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+        boolean somethingRead = false;
+
+        while (in.isReadable()) {
+            int outSize = out.size();
+            int oldInputLength = in.readableBytes();
+
+            try {
                 decode(ctx, in, out);
+            } catch (DecoderException e) {
+                throw e;
+            } catch (Throwable cause) {
+                throw new DecoderException(cause);
+            }
 
-                // Check if this handler was removed before continuing the loop.
-                // If it was removed, it is not safe to continue to operate on the buffer.
-                //
-                // See https://github.com/netty/netty/issues/1664
-                if (ctx.isRemoved()) {
-                    break;
-                }
+            // Check if this handler was removed before continuing the loop.
+            // If it was removed, it is not safe to continue to operate on the buffer.
+            //
+            // See https://github.com/netty/netty/issues/1664
+            if (ctx.isRemoved()) {
+                break;
+            }
 
-                if (outSize == out.size()) {
-                    if (oldInputLength == in.readableBytes()) {
-                        break;
-                    } else {
-                        continue;
-                    }
-                }
-
+            if (outSize == out.size()) {
                 if (oldInputLength == in.readableBytes()) {
-                    throw new DecoderException(
-                            StringUtil.simpleClassName(getClass()) +
-                            ".decode() did not read anything but decoded a message.");
-                }
-
-                if (isSingleDecode()) {
                     break;
+                } else {
+                    continue;
                 }
             }
-        } catch (DecoderException e) {
-            throw e;
-        } catch (Throwable cause) {
-            throw new DecoderException(cause);
+
+            if (oldInputLength == in.readableBytes()) {
+                throw new DecoderException(
+                        StringUtil.simpleClassName(getClass()) +
+                        ".decode() did not read anything but decoded a message.");
+            }
+
+            for (int i = 0; i < out.size(); i++) {
+                ctx.fireChannelRead(out.get(i));
+            }
+
+            somethingRead = somethingRead || out.size() > 0;
+            out.clear();
+
+            if (isSingleDecode()) {
+                break;
+            }
         }
+
+        return somethingRead;
     }
 
     /**
