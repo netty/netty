@@ -243,14 +243,42 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public boolean finish() {
         close();
-        runPendingTasks();
+        checkException();
+        return isNotEmpty(inboundMessages) || isNotEmpty(outboundMessages);
+    }
 
+    private void finishPendingTasks() {
+        runPendingTasks();
         // Cancel all scheduled tasks that are left.
         loop.cancelScheduledTasks();
+    }
 
-        checkException();
+    @Override
+    public final ChannelFuture close() {
+        ChannelFuture future = super.close();
+        finishPendingTasks();
+        return future;
+    }
 
-        return isNotEmpty(inboundMessages) || isNotEmpty(outboundMessages);
+    @Override
+    public final ChannelFuture disconnect() {
+        ChannelFuture future = super.disconnect();
+        finishPendingTasks();
+        return future;
+    }
+
+    @Override
+    public final ChannelFuture close(ChannelPromise promise) {
+        ChannelFuture future = super.close(promise);
+        finishPendingTasks();
+        return future;
+    }
+
+    @Override
+    public final ChannelFuture disconnect(ChannelPromise promise) {
+        ChannelFuture future = super.disconnect(promise);
+        finishPendingTasks();
+        return future;
     }
 
     private static boolean isNotEmpty(Queue<Object> queue) {
