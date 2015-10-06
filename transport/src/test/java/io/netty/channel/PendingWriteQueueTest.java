@@ -248,9 +248,10 @@ public class PendingWriteQueueTest {
     @Test
     public void testCloseChannelOnCreation() {
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
+        ChannelHandlerContext context = channel.pipeline().firstContext();
         channel.close().syncUninterruptibly();
 
-        final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
+        final PendingWriteQueue queue = new PendingWriteQueue(context);
 
         IllegalStateException ex = new IllegalStateException();
         ChannelPromise promise = channel.newPromise();
