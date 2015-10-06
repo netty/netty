@@ -260,15 +260,21 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
                 }
 
                 int size = out.size();
-                decodeWasNull = size == 0;
-
-                for (int i = 0; i < size; i ++) {
-                    ctx.fireChannelRead(out.get(i));
-                }
+                decodeWasNull = !out.insertSinceRecycled();
+                fireChannelRead(ctx, out, size);
                 out.recycle();
             }
         } else {
             ctx.fireChannelRead(msg);
+        }
+    }
+
+    /**
+     * Get {@code numElements} out of the {@link List} and forward these through the pipeline.
+     */
+    static void fireChannelRead(ChannelHandlerContext ctx, List<Object> msgs, int numElements) {
+        for (int i = 0; i < numElements; i ++) {
+            ctx.fireChannelRead(msgs.get(i));
         }
     }
 
@@ -319,9 +325,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
                     cumulation = null;
                 }
                 int size = out.size();
-                for (int i = 0; i < size; i++) {
-                    ctx.fireChannelRead(out.get(i));
-                }
+                fireChannelRead(ctx, out, size);
                 if (size > 0) {
                     // Something was read, call fireChannelReadComplete()
                     ctx.fireChannelReadComplete();
@@ -346,6 +350,13 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
         try {
             while (in.isReadable()) {
                 int outSize = out.size();
+
+                if (outSize > 0) {
+                    fireChannelRead(ctx, out, outSize);
+                    out.clear();
+                    outSize = 0;
+                }
+
                 int oldInputLength = in.readableBytes();
                 decode(ctx, in, out);
 
