@@ -171,7 +171,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
                             break;
                         }
                     }
-                } while (++ messages < maxMessagesPerRead);
+                } while (++ messages < maxMessagesPerRead || isRdHup());
 
                 pipeline.fireChannelReadComplete();
 

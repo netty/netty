@@ -120,7 +120,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
                                 break;
                             }
                         }
-                    } while (++ messages < maxMessagesPerRead);
+                    } while (++ messages < maxMessagesPerRead || isRdHup());
                 } catch (Throwable t) {
                     exception = t;
                 }

@@ -1526,6 +1526,10 @@ JNIEXPORT jboolean JNICALL Java_io_netty_channel_epoll_Native_isSupportingTcpFas
     return JNI_FALSE;
 }
 
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_errnoENOTCONN(JNIEnv* env, jclass clazz) {
+    return ENOTCONN;
+}
+
 JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_errnoEBADF(JNIEnv* env, jclass clazz) {
     return EBADF;
 }

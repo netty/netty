@@ -825,7 +825,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
                         // pending data
                         break;
                     }
-                } while (++ messages < maxMessagesPerRead);
+                } while (++ messages < maxMessagesPerRead || isRdHup());
 
                 pipeline.fireChannelReadComplete();
                 allocHandle.record(totalReadAmount);

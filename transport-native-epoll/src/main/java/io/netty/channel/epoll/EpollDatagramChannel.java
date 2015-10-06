@@ -578,7 +578,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                             break;
                         }
                     }
-                } while (++ messages < maxMessagesPerRead);
+                } while (++ messages < maxMessagesPerRead || isRdHup());
 
                 int size = readBuf.size();
                 for (int i = 0; i < size; i ++) {
