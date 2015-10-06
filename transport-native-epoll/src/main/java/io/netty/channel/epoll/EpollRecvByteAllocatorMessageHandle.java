@@ -31,7 +31,9 @@ final class EpollRecvByteAllocatorMessageHandle extends EpollRecvByteAllocatorHa
          * If edgeTriggered is used we need to read all bytes/messages as we are not notified again otherwise. For
          * packet oriented descriptors must read until we get a EAGAIN
          * (see Q9 in <a href="http://man7.org/linux/man-pages/man7/epoll.7.html">epoll man</a>).
+         *
+         * If EPOLLRDHUP has been received we must read until we get a read error.
          */
-        return isEdgeTriggered() ? true : super.continueReading();
+        return isEdgeTriggered() || isRdHup() ? true : super.continueReading();
     }
 }

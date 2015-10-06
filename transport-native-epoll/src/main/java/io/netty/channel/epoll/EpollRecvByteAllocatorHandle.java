@@ -19,6 +19,7 @@ import io.netty.channel.RecvByteBufAllocator;
 
 abstract class EpollRecvByteAllocatorHandle extends RecvByteBufAllocator.DelegatingHandle {
     private final boolean isEdgeTriggered;
+    private boolean receivedRdHup;
 
     public EpollRecvByteAllocatorHandle(RecvByteBufAllocator.Handle handle, boolean isEdgeTriggered) {
         super(handle);
@@ -27,5 +28,13 @@ abstract class EpollRecvByteAllocatorHandle extends RecvByteBufAllocator.Delegat
 
     public final boolean isEdgeTriggered() {
         return isEdgeTriggered;
+    }
+
+    public final void receivedRdHup() {
+        receivedRdHup = true;
+    }
+
+    public final boolean isRdHup() {
+        return receivedRdHup;
     }
 }

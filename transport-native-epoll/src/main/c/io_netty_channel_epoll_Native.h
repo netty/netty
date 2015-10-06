@@ -113,6 +113,7 @@ jlong Java_io_netty_channel_epoll_Native_ssizeMax(JNIEnv* env, jclass clazz);
 jboolean Java_io_netty_channel_epoll_Native_isSupportingSendmmsg(JNIEnv* env, jclass clazz);
 jboolean Java_io_netty_channel_epoll_Native_isSupportingTcpFastopen(JNIEnv* env, jclass clazz);
 
+jint Java_io_netty_channel_epoll_Native_errnoENOTCONN(JNIEnv* env, jclass clazz);
 jint Java_io_netty_channel_epoll_Native_errnoEBADF(JNIEnv* env, jclass clazz);
 jint Java_io_netty_channel_epoll_Native_errnoEPIPE(JNIEnv* env, jclass clazz);
 jint Java_io_netty_channel_epoll_Native_errnoECONNRESET(JNIEnv* env, jclass clazz);
