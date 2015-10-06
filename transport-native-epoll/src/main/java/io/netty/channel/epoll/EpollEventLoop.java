@@ -314,9 +314,6 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                     // past.
                     AbstractEpollUnsafe unsafe = (AbstractEpollUnsafe) ch.unsafe();
 
-                    // Check if an error was the cause of the wakeup.
-                    boolean err = (ev & Native.EPOLLERR) != 0;
-
                     // First check for EPOLLOUT as we may need to fail the connect ChannelPromise before try
                     // to read from the file descriptor.
                     // See https://github.com/netty/netty/issues/3785
@@ -325,9 +322,19 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                     // In either case epollOutReady() will do the correct thing (finish connecting, or fail
                     // the connection).
                     // See https://github.com/netty/netty/issues/3848
-                    if (err || ((ev & Native.EPOLLOUT) != 0) && ch.isOpen()) {
+                    if ((ev & (Native.EPOLLERR | Native.EPOLLOUT)) != 0 && ch.isOpen()) {
                         // Force flush of data as the epoll is writable again
                         unsafe.epollOutReady();
+                    }
+
+                    // Check EPOLLIN before EPOLLRDHUP to ensure all data is read before shutting down the input.
+                    // See https://github.com/netty/netty/issues/4317.
+                    //
+                    // If EPOLLIN or EPOLLERR was received and the channel is still open call epollInReady(). This will
+                    // try to read from the underlying file descriptor and so notify the user about the error.
+                    if ((ev & (Native.EPOLLERR | Native.EPOLLIN)) != 0 && ch.isOpen()) {
+                        // The Channel is still open and there is something to read. Do it now.
+                        unsafe.epollInReady();
                     }
 
                     // Check if EPOLLRDHUP was set, this will notify us for connection-reset in which case
@@ -335,14 +342,6 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                     // Channel and als depending on the AbstractEpollChannel subtype.
                     if ((ev & Native.EPOLLRDHUP) != 0) {
                         unsafe.epollRdHupReady();
-                    }
-
-                    // If EPOLLOUT or EPOLLING was received and the channel is still open call epollInReady().
-                    // This will try to read from the underlying filedescriptor and so notify the user about the
-                    // error.
-                    if ((err || (ev & Native.EPOLLIN) != 0) && ch.isOpen()) {
-                        // The Channel is still open and there is something to read. Do it now.
-                        unsafe.epollInReady();
                     }
                 } else {
                     // We received an event for an fd which we not use anymore. Remove it from the epoll_event set.

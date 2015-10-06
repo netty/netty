@@ -32,7 +32,10 @@ final class EpollRecvByteAllocatorStreamingHandle extends EpollRecvByteAllocator
          * if edgeTriggered is used we need to read all bytes/messages as we are not notified again otherwise.
          * For stream oriented descriptors we can assume we are done reading if the last read attempt didn't produce
          * a full buffer (see Q9 in <a href="http://man7.org/linux/man-pages/man7/epoll.7.html">epoll man</a>).
+         *
+         * If EPOLLRDHUP has been received we must read until we get a read error.
          */
-        return isEdgeTriggered() ? lastBytesRead() == attemptedBytesRead() : super.continueReading();
+        return isRdHup() ? true :
+                           isEdgeTriggered() ? lastBytesRead() == attemptedBytesRead() : super.continueReading();
     }
 }

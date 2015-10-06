@@ -344,6 +344,9 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
          * Called once EPOLLRDHUP event is ready to be processed
          */
         final void epollRdHupReady() {
+            // This must happen before we attempt to read. This will ensure reading continues until an error occurs.
+            recvBufAllocHandle().receivedRdHup();
+
             if (isActive()) {
                 // If it is still active, we need to call epollInReady as otherwise we may miss to
                 // read pending data from the underlying file descriptor.
@@ -353,6 +356,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 // Clear the EPOLLRDHUP flag to prevent continuously getting woken up on this event.
                 clearEpollRdHup();
             }
+
             // epollInReady may call this, but we should ensure that it gets called.
             shutdownInput();
         }

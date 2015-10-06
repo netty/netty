@@ -69,6 +69,7 @@ public final class Native {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, (byte) 0xff, (byte) 0xff };
 
     // As all our JNI methods return -errno on error we need to compare with the negative errno codes.
+    private static final int ERRNO_ENOTCONN_NEGATIVE = -errnoENOTCONN();
     private static final int ERRNO_EBADF_NEGATIVE = -errnoEBADF();
     private static final int ERRNO_EPIPE_NEGATIVE = -errnoEPIPE();
     private static final int ERRNO_ECONNRESET_NEGATIVE = -errnoECONNRESET();
@@ -83,7 +84,7 @@ public final class Native {
      *
      * The array length of 1024 should be more then enough because errno.h only holds < 200 codes.
      */
-    private static final String[] ERRORS = new String[1024]; //
+    private static final String[] ERRORS = new String[1024];
 
     // Pre-instantiated exceptions which does not need any stacktrace and
     // can be thrown multiple times for performance reasons.
@@ -141,7 +142,7 @@ public final class Native {
         if (err == ERRNO_EPIPE_NEGATIVE || err == ERRNO_ECONNRESET_NEGATIVE) {
             throw resetCause;
         }
-        if (err == ERRNO_EBADF_NEGATIVE) {
+        if (err == ERRNO_EBADF_NEGATIVE || err == ERRNO_ENOTCONN_NEGATIVE) {
             throw CLOSED_CHANNEL_EXCEPTION;
         }
         // TODO: We could even go futher and use a pre-instanced IOException for the other error codes, but for
@@ -189,6 +190,7 @@ public final class Native {
     private static native int errnoEBADF();
     private static native int errnoEPIPE();
     private static native int errnoECONNRESET();
+    private static native int errnoENOTCONN();
 
     private static native int errnoEAGAIN();
     private static native int errnoEWOULDBLOCK();
