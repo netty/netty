@@ -148,6 +148,9 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
         }
 
         private void epollInReadFd() {
+            if (fd().isInputShutdown()) {
+                return;
+            }
             boolean edgeTriggered = isFlagSet(Native.EPOLLET);
             final ChannelConfig config = config();
             if (!readPending && !edgeTriggered && !config.isAutoRead()) {

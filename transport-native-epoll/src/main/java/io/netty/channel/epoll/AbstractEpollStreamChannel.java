@@ -71,8 +71,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
     private SocketAddress requestedRemoteAddress;
     private final Queue<SpliceInTask> spliceQueue = PlatformDependent.newMpscQueue();
 
-    private volatile boolean outputShutdown;
-
     // Lazy init these if we need to splice(...)
     private FileDescriptor pipeIn;
     private FileDescriptor pipeOut;
@@ -528,14 +526,9 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
                 "unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPES);
     }
 
-    protected boolean isOutputShutdown0() {
-        return outputShutdown || !isActive();
-    }
-
     protected void shutdownOutput0(final ChannelPromise promise) {
         try {
             fd().shutdown(false, true);
-            outputShutdown = true;
             promise.setSuccess();
         } catch (Throwable cause) {
             promise.setFailure(cause);
@@ -773,6 +766,9 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
 
         @Override
         void epollInReady() {
+            if (fd().isInputShutdown()) {
+                return;
+            }
             final ChannelConfig config = config();
             boolean edgeTriggered = isFlagSet(Native.EPOLLET);
 

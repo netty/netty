@@ -100,6 +100,9 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
         @Override
         void epollInReady() {
             assert eventLoop().inEventLoop();
+            if (fd().isInputShutdown()) {
+                return;
+            }
             boolean edgeTriggered = isFlagSet(Native.EPOLLET);
 
             final ChannelConfig config = config();

@@ -25,7 +25,6 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
-import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
@@ -45,7 +44,6 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     protected int flags = Native.EPOLLET;
 
     protected volatile boolean active;
-    private volatile boolean inputShutdown;
 
     AbstractEpollChannel(Socket fd, int flag) {
         this(null, fd, flag, false);
@@ -97,15 +95,14 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     @Override
     protected void doClose() throws Exception {
-        boolean active = this.active;
         this.active = false;
-        FileDescriptor fd = fileDescriptor;
+        Socket fd = fileDescriptor;
         try {
             // deregister from epoll now and shutdown the socket.
             doDeregister();
-            if (active) {
+            if (!fd.isShutdown()) {
                 try {
-                    fd().shutdown(true, true);
+                    fd().shutdown();
                 } catch (IOException ignored) {
                     // The FD will be closed, so if shutdown fails there is nothing we can do.
                 }
@@ -180,10 +177,6 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     protected void doRegister() throws Exception {
         EpollEventLoop loop = (EpollEventLoop) eventLoop();
         loop.add(this);
-    }
-
-    protected final boolean isInputShutdown0() {
-        return inputShutdown;
     }
 
     @Override
@@ -352,21 +345,18 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
          * Shutdown the input side of the channel.
          */
         void shutdownInput() {
-            if (!inputShutdown) { // Best effort check on volatile variable to prevent multiple shutdowns
-                inputShutdown = true;
-                if (isOpen()) {
-                    if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
-                        try {
-                            fd().shutdown(true, false);
-                            clearEpollIn0();
-                            pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
-                        } catch (IOException e) {
-                            pipeline().fireExceptionCaught(e);
-                            close(voidPromise());
-                        }
-                    } else {
+            if (!fd().isInputShutdown()) {
+                if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
+                    try {
+                        fd().shutdown(true, false);
+                        clearEpollIn0();
+                        pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+                    } catch (IOException e) {
+                        pipeline().fireExceptionCaught(e);
                         close(voidPromise());
                     }
+                } else {
+                    close(voidPromise());
                 }
             }
         }
@@ -386,6 +376,9 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
          * Called once a EPOLLOUT event is ready to be processed
          */
         void epollOutReady() {
+            if (fd().isOutputShutdown()) {
+                return;
+            }
             // directly call super.flush0() to force a flush now
             super.flush0();
         }
