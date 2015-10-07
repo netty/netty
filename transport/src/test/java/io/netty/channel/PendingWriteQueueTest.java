@@ -196,7 +196,7 @@ public class PendingWriteQueueTest {
 
     @Test
     public void testRemoveAndFailAllReentrance() {
-        EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
+        EmbeddedChannel channel = new EmbeddedChannel();
         final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
 
         ChannelPromise promise = channel.newPromise();
@@ -218,7 +218,7 @@ public class PendingWriteQueueTest {
 
     @Test
     public void testRemoveAndWriteAllReentrance() {
-        EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
+        EmbeddedChannel channel = new EmbeddedChannel();
         final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
 
         ChannelPromise promise = channel.newPromise();
