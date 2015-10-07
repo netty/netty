@@ -526,6 +526,9 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         @Override
         void epollInReady() {
             assert eventLoop().inEventLoop();
+            if (fd().isInputShutdown()) {
+                return;
+            }
             DatagramChannelConfig config = config();
             boolean edgeTriggered = isFlagSet(Native.EPOLLET);
 

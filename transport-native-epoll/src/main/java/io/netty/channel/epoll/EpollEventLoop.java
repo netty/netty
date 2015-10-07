@@ -323,7 +323,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                     // In either case epollOutReady() will do the correct thing (finish connecting, or fail
                     // the connection).
                     // See https://github.com/netty/netty/issues/3848
-                    if ((ev & (Native.EPOLLERR | Native.EPOLLOUT)) != 0 && ch.isOpen()) {
+                    if ((ev & (Native.EPOLLERR | Native.EPOLLOUT)) != 0) {
                         // Force flush of data as the epoll is writable again
                         unsafe.epollOutReady();
                     }
@@ -333,7 +333,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                     //
                     // If EPOLLIN or EPOLLERR was received and the channel is still open call epollInReady(). This will
                     // try to read from the underlying file descriptor and so notify the user about the error.
-                    if ((ev & (Native.EPOLLERR | Native.EPOLLIN)) != 0 && ch.isOpen()) {
+                    if ((ev & (Native.EPOLLERR | Native.EPOLLIN)) != 0) {
                         // The Channel is still open and there is something to read. Do it now.
                         unsafe.epollInReady();
                     }
