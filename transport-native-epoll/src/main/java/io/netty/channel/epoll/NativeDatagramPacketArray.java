@@ -15,6 +15,7 @@
  */
 package io.netty.channel.epoll;
 
+import static io.netty.channel.unix.NativeInetAddress.ipv4MappedIpv6Address;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.socket.DatagramPacket;
@@ -148,7 +149,7 @@ final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessagePr
                 addr = address.getAddress();
                 scopeId = ((Inet6Address) address).getScopeId();
             } else {
-                addr = Native.ipv4MappedIpv6Address(address.getAddress());
+                addr = ipv4MappedIpv6Address(address.getAddress());
                 scopeId = 0;
             }
             port = recipient.getPort();
