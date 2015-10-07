@@ -19,6 +19,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.epoll.AbstractEpollChannel.AbstractEpollUnsafe;
+import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.internal.PlatformDependent;
@@ -48,8 +49,8 @@ final class EpollEventLoop extends SingleThreadEventLoop {
         WAKEN_UP_UPDATER = updater;
     }
 
-    private final int epollFd;
-    private final int eventFd;
+    private final FileDescriptor epollFd;
+    private final FileDescriptor eventFd;
     private final IntObjectMap<AbstractEpollChannel> channels = new IntObjectHashMap<AbstractEpollChannel>(4096);
     private final boolean allowGrowing;
     private final EpollEventArray events;
@@ -67,29 +68,29 @@ final class EpollEventLoop extends SingleThreadEventLoop {
             events = new EpollEventArray(maxEvents);
         }
         boolean success = false;
-        int epollFd = -1;
-        int eventFd = -1;
+        FileDescriptor epollFd = null;
+        FileDescriptor eventFd = null;
         try {
-            this.epollFd = epollFd = Native.epollCreate();
-            this.eventFd = eventFd = Native.eventFd();
+            this.epollFd = epollFd = Native.newEpollCreate();
+            this.eventFd = eventFd = Native.newEventFd();
             try {
-                Native.epollCtlAdd(epollFd, eventFd, Native.EPOLLIN);
+                Native.epollCtlAdd(epollFd.intValue(), eventFd.intValue(), Native.EPOLLIN);
             } catch (IOException e) {
                 throw new IllegalStateException("Unable to add eventFd filedescriptor to epoll", e);
             }
             success = true;
         } finally {
             if (!success) {
-                if (epollFd != -1) {
+                if (epollFd != null) {
                     try {
-                        Native.close(epollFd);
+                        epollFd.close();
                     } catch (Exception e) {
                         // ignore
                     }
                 }
-                if (eventFd != -1) {
+                if (eventFd != null) {
                     try {
-                        Native.close(eventFd);
+                        eventFd.close();
                     } catch (Exception e) {
                         // ignore
                     }
@@ -102,7 +103,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     protected void wakeup(boolean inEventLoop) {
         if (!inEventLoop && WAKEN_UP_UPDATER.compareAndSet(this, 0, 1)) {
             // write to the evfd which will then wake-up epoll_wait(...)
-            Native.eventFdWrite(eventFd, 1L);
+            Native.eventFdWrite(eventFd.intValue(), 1L);
         }
     }
 
@@ -112,7 +113,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     void add(AbstractEpollChannel ch) throws IOException {
         assert inEventLoop();
         int fd = ch.fd().intValue();
-        Native.epollCtlAdd(epollFd, fd, ch.flags);
+        Native.epollCtlAdd(epollFd.intValue(), fd, ch.flags);
         channels.put(fd, ch);
     }
 
@@ -121,7 +122,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
      */
     void modify(AbstractEpollChannel ch) throws IOException {
         assert inEventLoop();
-        Native.epollCtlMod(epollFd, ch.fd().intValue(), ch.flags);
+        Native.epollCtlMod(epollFd.intValue(), ch.fd().intValue(), ch.flags);
     }
 
     /**
@@ -135,7 +136,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
             if (channels.remove(fd) != null) {
                 // Remove the epoll. This is only needed if it's still open as otherwise it will be automatically
                 // removed once the file-descriptor is closed.
-                Native.epollCtlDel(epollFd, ch.fd().intValue());
+                Native.epollCtlDel(epollFd.intValue(), ch.fd().intValue());
             }
         }
     }
@@ -172,7 +173,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
             long timeoutMillis = (selectDeadLineNanos - currentTimeNanos + 500000L) / 1000000L;
             if (timeoutMillis <= 0) {
                 if (selectCnt == 0) {
-                    int ready = Native.epollWait(epollFd, events, 0);
+                    int ready = Native.epollWait(epollFd.intValue(), events, 0);
                     if (ready > 0) {
                         return ready;
                     }
@@ -180,7 +181,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                 break;
             }
 
-            int selectedKeys = Native.epollWait(epollFd, events, (int) timeoutMillis);
+            int selectedKeys = Native.epollWait(epollFd.intValue(), events, (int) timeoutMillis);
             selectCnt ++;
 
             if (selectedKeys != 0 || oldWakenUp || wakenUp == 1 || hasTasks() || hasScheduledTasks()) {
@@ -203,7 +204,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                 int ready;
                 if (hasTasks()) {
                     // Non blocking just return what is ready directly without block
-                    ready = Native.epollWait(epollFd, events, 0);
+                    ready = Native.epollWait(epollFd.intValue(), events, 0);
                 } else {
                     ready = epollWait(oldWakenUp);
 
@@ -236,7 +237,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                     // (OK - no wake-up required).
 
                     if (wakenUp == 1) {
-                        Native.eventFdWrite(eventFd, 1L);
+                        Native.eventFdWrite(eventFd.intValue(), 1L);
                     }
                 }
 
@@ -282,7 +283,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
 
     private void closeAll() {
         try {
-            Native.epollWait(epollFd, events, 0);
+            Native.epollWait(epollFd.intValue(), events, 0);
         } catch (IOException ignore) {
             // ignore on close
         }
@@ -300,9 +301,9 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     private void processReady(EpollEventArray events, int ready) {
         for (int i = 0; i < ready; i ++) {
             final int fd = events.fd(i);
-            if (fd == eventFd) {
+            if (fd == eventFd.intValue()) {
                 // consume wakeup event
-                Native.eventFdRead(eventFd);
+                Native.eventFdRead(eventFd.intValue());
             } else {
                 final long ev = events.events(i);
 
@@ -346,7 +347,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                 } else {
                     // We received an event for an fd which we not use anymore. Remove it from the epoll_event set.
                     try {
-                        Native.epollCtlDel(epollFd, fd);
+                        Native.epollCtlDel(epollFd.intValue(), fd);
                     } catch (IOException ignore) {
                         // This can happen but is nothing we need to worry about as we only try to delete
                         // the fd from the epoll set as we not found it in our mappings. So this call to
@@ -362,12 +363,12 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     protected void cleanup() {
         try {
             try {
-                Native.close(epollFd);
+                epollFd.close();
             } catch (IOException e) {
                 logger.warn("Failed to close the epoll fd.", e);
             }
             try {
-                Native.close(eventFd);
+                eventFd.close();
             } catch (IOException e) {
                 logger.warn("Failed to close the event fd.", e);
             }
