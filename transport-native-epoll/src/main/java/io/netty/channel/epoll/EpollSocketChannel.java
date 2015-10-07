@@ -149,12 +149,12 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
 
     @Override
     public boolean isInputShutdown() {
-        return isInputShutdown0();
+        return fd().isInputShutdown();
     }
 
     @Override
     public boolean isOutputShutdown() {
-        return isOutputShutdown0();
+        return fd().isOutputShutdown();
     }
 
     @Override
