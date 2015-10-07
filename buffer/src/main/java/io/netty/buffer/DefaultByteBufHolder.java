@@ -90,8 +90,16 @@ public class DefaultByteBufHolder implements ByteBufHolder {
         return data.release(decrement);
     }
 
+    /**
+     * Return {@link ByteBuf#toString()} without checking the reference count first. This is useful to implemement
+     * {@link #toString()}.
+     */
+    protected final String contentToString() {
+        return data.toString();
+    }
+
     @Override
     public String toString() {
-        return StringUtil.simpleClassName(this) + '(' + content().toString() + ')';
+        return StringUtil.simpleClassName(this) + '(' + contentToString() + ')';
     }
 }
