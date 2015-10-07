@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicReference;
@@ -35,7 +34,7 @@ public class PendingWriteQueueTest {
         assertWrite(new TestHandler() {
             @Override
             public void flush(ChannelHandlerContext ctx) throws Exception {
-                Assert.assertFalse("Should not be writable anymore", ctx.channel().isWritable());
+                assertFalse("Should not be writable anymore", ctx.channel().isWritable());
 
                 ChannelFuture future = queue.removeAndWrite();
                 future.addListener(new ChannelFutureListener() {
@@ -54,7 +53,7 @@ public class PendingWriteQueueTest {
         assertWrite(new TestHandler() {
             @Override
             public void flush(ChannelHandlerContext ctx) throws Exception {
-                Assert.assertFalse("Should not be writable anymore", ctx.channel().isWritable());
+                assertFalse("Should not be writable anymore", ctx.channel().isWritable());
 
                 ChannelFuture future = queue.removeAndWriteAll();
                 future.addListener(new ChannelFutureListener() {
@@ -150,29 +149,29 @@ public class PendingWriteQueueTest {
         for (int i = 0; i < buffers.length; i++) {
             buffers[i] = buffer.duplicate().retain();
         }
-        Assert.assertTrue(channel.writeOutbound(buffers));
-        Assert.assertTrue(channel.finish());
+        assertTrue(channel.writeOutbound(buffers));
+        assertTrue(channel.finish());
         channel.closeFuture().syncUninterruptibly();
 
         for (int i = 0; i < buffers.length; i++) {
             assertBuffer(channel, buffer);
         }
         buffer.release();
-        Assert.assertNull(channel.readOutbound());
+        assertNull(channel.readOutbound());
     }
 
     private static void assertBuffer(EmbeddedChannel channel, ByteBuf buffer) {
         ByteBuf written = channel.readOutbound();
-        Assert.assertEquals(buffer, written);
+        assertEquals(buffer, written);
         written.release();
     }
 
     private static void assertQueueEmpty(PendingWriteQueue queue) {
-        Assert.assertTrue(queue.isEmpty());
-        Assert.assertEquals(0, queue.size());
-        Assert.assertNull(queue.current());
-        Assert.assertNull(queue.removeAndWrite());
-        Assert.assertNull(queue.removeAndWriteAll());
+        assertTrue(queue.isEmpty());
+        assertEquals(0, queue.size());
+        assertNull(queue.current());
+        assertNull(queue.removeAndWrite());
+        assertNull(queue.removeAndWriteAll());
     }
 
     private static void assertWriteFails(ChannelHandler handler, int count) {
@@ -183,21 +182,21 @@ public class PendingWriteQueueTest {
             buffers[i] = buffer.duplicate().retain();
         }
         try {
-            Assert.assertFalse(channel.writeOutbound(buffers));
-            Assert.fail();
+            assertFalse(channel.writeOutbound(buffers));
+            fail();
         } catch (Exception e) {
-            Assert.assertTrue(e instanceof TestException);
+            assertTrue(e instanceof TestException);
         }
-        Assert.assertFalse(channel.finish());
+        assertFalse(channel.finish());
         channel.closeFuture().syncUninterruptibly();
 
         buffer.release();
-        Assert.assertNull(channel.readOutbound());
+        assertNull(channel.readOutbound());
     }
 
     @Test
     public void testRemoveAndFailAllReentrance() {
-        EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
+        EmbeddedChannel channel = new EmbeddedChannel();
         final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
 
         ChannelPromise promise = channel.newPromise();
@@ -219,7 +218,7 @@ public class PendingWriteQueueTest {
 
     @Test
     public void testRemoveAndWriteAllReentrance() {
-        EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
+        EmbeddedChannel channel = new EmbeddedChannel();
         final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
 
         ChannelPromise promise = channel.newPromise();
@@ -269,15 +268,15 @@ public class PendingWriteQueueTest {
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             super.channelActive(ctx);
             assertQueueEmpty(queue);
-            Assert.assertTrue("Should be writable", ctx.channel().isWritable());
+            assertTrue("Should be writable", ctx.channel().isWritable());
         }
 
         @Override
         public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
             queue.add(msg, promise);
-            Assert.assertFalse(queue.isEmpty());
-            Assert.assertEquals(++ expectedSize, queue.size());
-            Assert.assertNotNull(queue.current());
+            assertFalse(queue.isEmpty());
+            assertEquals(++expectedSize, queue.size());
+            assertNotNull(queue.current());
         }
 
         @Override
