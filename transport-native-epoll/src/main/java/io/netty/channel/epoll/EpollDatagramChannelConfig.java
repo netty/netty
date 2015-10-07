@@ -186,23 +186,23 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
 
     @Override
     public int getSendBufferSize() {
-        return Native.getSendBufferSize(datagramChannel.fd().intValue());
+        return datagramChannel.fd().getSendBufferSize();
     }
 
     @Override
     public EpollDatagramChannelConfig setSendBufferSize(int sendBufferSize) {
-        Native.setSendBufferSize(datagramChannel.fd().intValue(), sendBufferSize);
+        datagramChannel.fd().setSendBufferSize(sendBufferSize);
         return this;
     }
 
     @Override
     public int getReceiveBufferSize() {
-        return Native.getReceiveBufferSize(datagramChannel.fd().intValue());
+        return datagramChannel.fd().getReceiveBufferSize();
     }
 
     @Override
     public EpollDatagramChannelConfig setReceiveBufferSize(int receiveBufferSize) {
-        Native.setReceiveBufferSize(datagramChannel.fd().intValue(), receiveBufferSize);
+        datagramChannel.fd().setReceiveBufferSize(receiveBufferSize);
         return this;
     }
 
