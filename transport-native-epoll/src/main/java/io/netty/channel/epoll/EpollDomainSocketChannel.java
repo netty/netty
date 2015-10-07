@@ -22,8 +22,11 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.DomainSocketChannel;
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.Socket;
 
 import java.net.SocketAddress;
+
+import static io.netty.channel.unix.Socket.newSocketDomain;
 
 public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel implements DomainSocketChannel {
     private final EpollDomainSocketChannelConfig config = new EpollDomainSocketChannelConfig(this);
@@ -32,22 +35,36 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
     private volatile DomainSocketAddress remote;
 
     public EpollDomainSocketChannel() {
-        super(Native.socketDomainFd());
+        super(newSocketDomain(), false);
     }
 
+    /**
+     * @deprecated Use {@link #EpollDomainSocketChannel(Channel, Socket)}.
+     */
+    @Deprecated
     public EpollDomainSocketChannel(Channel parent, FileDescriptor fd) {
-        super(parent, fd.intValue());
+        super(parent, new Socket(fd.intValue()));
+    }
+
+    /**
+     * @deprecated Use {@link #EpollDomainSocketChannel(Socket, boolean)}.
+     * <p>
+     * Creates a new {@link EpollDomainSocketChannel} from an existing {@link FileDescriptor}
+     */
+    @Deprecated
+    public EpollDomainSocketChannel(FileDescriptor fd) {
+        super(fd);
+    }
+
+    public EpollDomainSocketChannel(Channel parent, Socket fd) {
+        super(parent, fd);
     }
 
     /**
      * Creates a new {@link EpollDomainSocketChannel} from an existing {@link FileDescriptor}
      */
-    public EpollDomainSocketChannel(FileDescriptor fd) {
-        super(fd);
-    }
-
-    EpollDomainSocketChannel(Channel parent, int fd) {
-        super(parent, fd);
+    public EpollDomainSocketChannel(Socket fd, boolean active) {
+        super(fd, active);
     }
 
     @Override
@@ -67,7 +84,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
 
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
-        Native.bind(fd().intValue(), localAddress);
+        fd().bind(localAddress);
         local = (DomainSocketAddress) localAddress;
     }
 

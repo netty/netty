@@ -13,12 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+#ifndef NETTY_UNIX_FILEDESCRIPTOR_H_
+#define NETTY_UNIX_FILEDESCRIPTOR_H_
 
-void throwRuntimeException(JNIEnv* env, char* message);
-void throwRuntimeExceptionErrorNo(JNIEnv* env, char* message, int errorNumber);
-void throwChannelExceptionErrorNo(JNIEnv* env, char* message, int errorNumber);
-void throwIOException(JNIEnv* env, char* message);
-void throwIOExceptionErrorNo(JNIEnv* env, char* message, int errorNumber);
-void throwClosedChannelException(JNIEnv* env);
-void throwOutOfMemoryError(JNIEnv* env);
-char* exceptionMessage(char* msg, int error);
+#include <jni.h>
+
+// JNI initialization hooks. Users of this file are responsible for calling these in the JNI_OnLoad and JNI_OnUnload methods.
+jint netty_unix_filedescriptor_JNI_OnLoad(JNIEnv* env);
+void netty_unix_filedescriptor_JNI_OnUnLoad(JNIEnv* env);
+
+#endif /* NETTY_UNIX_FILEDESCRIPTOR_H_ */

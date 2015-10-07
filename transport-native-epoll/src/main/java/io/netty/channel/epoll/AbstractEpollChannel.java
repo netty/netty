@@ -26,6 +26,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.OneTimeTask;
@@ -35,32 +36,27 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.UnresolvedAddressException;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 abstract class AbstractEpollChannel extends AbstractChannel implements UnixChannel {
     private static final ChannelMetadata DATA = new ChannelMetadata(false);
     private final int readFlag;
-    private final FileDescriptor fileDescriptor;
+    private final Socket fileDescriptor;
     protected int flags = Native.EPOLLET;
 
     protected volatile boolean active;
     private volatile boolean inputShutdown;
 
-    AbstractEpollChannel(int fd, int flag) {
+    AbstractEpollChannel(Socket fd, int flag) {
         this(null, fd, flag, false);
     }
 
-    AbstractEpollChannel(Channel parent, int fd, int flag, boolean active) {
-        this(parent, new FileDescriptor(fd), flag, active);
-    }
-
-    AbstractEpollChannel(Channel parent, FileDescriptor fd, int flag, boolean active) {
+    AbstractEpollChannel(Channel parent, Socket fd, int flag, boolean active) {
         super(parent);
-        if (fd == null) {
-            throw new NullPointerException("fd");
-        }
+        fileDescriptor = checkNotNull(fd, "fd");
         readFlag = flag;
         flags |= flag;
         this.active = active;
-        fileDescriptor = fd;
     }
 
     void setFlag(int flag) throws IOException {
@@ -82,7 +78,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     @Override
-    public final FileDescriptor fd() {
+    public final Socket fd() {
         return fileDescriptor;
     }
 
@@ -108,20 +104,16 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             // deregister from epoll now and shutdown the socket.
             doDeregister();
             if (active) {
-                shutdown(fd.intValue());
+                try {
+                    fd().shutdown(true, true);
+                } catch (IOException ignored) {
+                    // The FD will be closed, so if shutdown fails there is nothing we can do.
+                }
             }
         } finally {
             // Ensure the file descriptor is closed in all cases.
             fd.close();
         }
-    }
-
-    /**
-     * Called on {@link #doClose()} before the actual {@link FileDescriptor} is closed.
-     * This implementation does nothing.
-     */
-    protected void shutdown(int fd) throws IOException {
-        // NOOP
     }
 
     @Override
@@ -251,11 +243,10 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         int writerIndex = byteBuf.writerIndex();
         int localReadAmount;
         if (byteBuf.hasMemoryAddress()) {
-            localReadAmount = Native.readAddress(
-                    fileDescriptor.intValue(), byteBuf.memoryAddress(), writerIndex, byteBuf.capacity());
+            localReadAmount = fileDescriptor.readAddress(byteBuf.memoryAddress(), writerIndex, byteBuf.capacity());
         } else {
             ByteBuffer buf = byteBuf.internalNioBuffer(writerIndex, byteBuf.writableBytes());
-            localReadAmount = Native.read(fileDescriptor.intValue(), buf, buf.position(), buf.limit());
+            localReadAmount = fileDescriptor.read(buf, buf.position(), buf.limit());
         }
         if (localReadAmount > 0) {
             byteBuf.writerIndex(writerIndex + localReadAmount);
@@ -271,8 +262,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             int readerIndex = buf.readerIndex();
             int writerIndex = buf.writerIndex();
             for (int i = writeSpinCount - 1; i >= 0; i--) {
-                int localFlushedAmount = Native.writeAddress(
-                        fileDescriptor.intValue(), memoryAddress, readerIndex, writerIndex);
+                int localFlushedAmount = fileDescriptor.writeAddress(memoryAddress, readerIndex, writerIndex);
                 if (localFlushedAmount > 0) {
                     writtenBytes += localFlushedAmount;
                     if (writtenBytes == readableBytes) {
@@ -293,7 +283,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             for (int i = writeSpinCount - 1; i >= 0; i--) {
                 int pos = nioBuf.position();
                 int limit = nioBuf.limit();
-                int localFlushedAmount = Native.write(fileDescriptor.intValue(), nioBuf, pos, limit);
+                int localFlushedAmount = fileDescriptor.write(nioBuf, pos, limit);
                 if (localFlushedAmount > 0) {
                     nioBuf.position(pos + localFlushedAmount);
                     writtenBytes += localFlushedAmount;
@@ -367,7 +357,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 if (isOpen()) {
                     if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
                         try {
-                            Native.shutdown(fd().intValue(), true, false);
+                            fd().shutdown(true, false);
                             clearEpollIn0();
                             pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                         } catch (IOException e) {

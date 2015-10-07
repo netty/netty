@@ -30,6 +30,7 @@ import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.Socket;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.MpscLinkedQueueNode;
 import io.netty.util.internal.OneTimeTask;
@@ -46,6 +47,7 @@ import java.util.Queue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import static io.netty.channel.unix.FileDescriptor.pipe;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
@@ -72,31 +74,51 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
     private volatile boolean outputShutdown;
 
     // Lazy init these if we need to splice(...)
-    private int pipeIn = -1;
-    private int pipeOut = -1;
+    private FileDescriptor pipeIn;
+    private FileDescriptor pipeOut;
 
+    /**
+     * @deprecated Use {@link #AbstractEpollStreamChannel(Channel, Socket)}.
+     */
+    @Deprecated
     protected AbstractEpollStreamChannel(Channel parent, int fd) {
+        this(parent, new Socket(fd));
+    }
+
+    /**
+     * @deprecated Use {@link #AbstractEpollStreamChannel(Socket, boolean)}.
+     */
+    @Deprecated
+    protected AbstractEpollStreamChannel(int fd) {
+        this(new Socket(fd));
+    }
+
+    /**
+     * @deprecated Use {@link #AbstractEpollStreamChannel(Socket, boolean)}.
+     */
+    @Deprecated
+    protected AbstractEpollStreamChannel(FileDescriptor fd) {
+        this(new Socket(fd.intValue()));
+    }
+
+    /**
+     * @deprecated Use {@link #AbstractEpollStreamChannel(Socket, boolean)}.
+     */
+    @Deprecated
+    protected AbstractEpollStreamChannel(Socket fd) {
+        this(fd, fd.getSoError() == 0);
+    }
+
+    protected AbstractEpollStreamChannel(Channel parent, Socket fd) {
         super(parent, fd, Native.EPOLLIN, true);
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
         flags |= Native.EPOLLRDHUP;
     }
 
-    protected AbstractEpollStreamChannel(int fd) {
-        super(fd, Native.EPOLLIN);
+    protected AbstractEpollStreamChannel(Socket fd, boolean active) {
+        super(null, fd, Native.EPOLLIN, active);
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
         flags |= Native.EPOLLRDHUP;
-    }
-
-    protected AbstractEpollStreamChannel(FileDescriptor fd) {
-        super(null, fd, Native.EPOLLIN, Native.getSoError(fd.intValue()) == 0);
-
-        // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
-        flags |= Native.EPOLLRDHUP;
-    }
-
-    @Override
-    protected void shutdown(int fd) throws IOException {
-        Native.shutdown(fd, true, true);
     }
 
     @Override
@@ -263,7 +285,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
         int offset = 0;
         int end = offset + cnt;
         for (int i = writeSpinCount - 1; i >= 0; i--) {
-            long localWrittenBytes = Native.writevAddresses(fd().intValue(), array.memoryAddress(offset), cnt);
+            long localWrittenBytes = fd().writevAddresses(array.memoryAddress(offset), cnt);
             if (localWrittenBytes == 0) {
                 break;
             }
@@ -302,7 +324,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
         int offset = 0;
         int end = offset + nioBufferCnt;
         for (int i = writeSpinCount - 1; i >= 0; i--) {
-            long localWrittenBytes = Native.writev(fd().intValue(), nioBuffers, offset, nioBufferCnt);
+            long localWrittenBytes = fd().writev(nioBuffers, offset, nioBufferCnt);
             if (localWrittenBytes == 0) {
                 break;
             }
@@ -512,7 +534,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
 
     protected void shutdownOutput0(final ChannelPromise promise) {
         try {
-            Native.shutdown(fd().intValue(), false, true);
+            fd().shutdown(false, true);
             outputShutdown = true;
             promise.setSuccess();
         } catch (Throwable cause) {
@@ -559,12 +581,12 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
      */
     protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         if (localAddress != null) {
-            Native.bind(fd().intValue(), localAddress);
+            fd().bind(localAddress);
         }
 
         boolean success = false;
         try {
-            boolean connected = Native.connect(fd().intValue(), remoteAddress);
+            boolean connected = fd().connect(remoteAddress);
             if (!connected) {
                 setFlag(Native.EPOLLOUT);
             }
@@ -577,10 +599,10 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
         }
     }
 
-    private void safeClosePipe(int pipe) {
-        if (pipe != -1) {
+    private void safeClosePipe(FileDescriptor fd) {
+        if (fd != null) {
             try {
-                Native.close(pipe);
+                fd.close();
             } catch (IOException e) {
                 if (logger.isWarnEnabled()) {
                     logger.warn("Error while closing a pipe", e);
@@ -740,7 +762,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
          * Finish the connect
          */
         private boolean doFinishConnect() throws Exception {
-            if (Native.finishConnect(fd().intValue())) {
+            if (fd().finishConnect()) {
                 clearFlag(Native.EPOLLOUT);
                 return true;
             } else {
@@ -876,13 +898,13 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
 
         abstract boolean spliceIn(RecvByteBufAllocator.Handle handle) throws IOException;
 
-        protected final int spliceIn(int pipeOut, RecvByteBufAllocator.Handle handle) throws IOException {
+        protected final int spliceIn(FileDescriptor pipeOut, RecvByteBufAllocator.Handle handle) throws IOException {
             // calculate the maximum amount of data we are allowed to splice
             int length = Math.min(handle.guess(), len);
             int splicedIn = 0;
             for (;;) {
                 // Splicing until there is nothing left to splice.
-                int localSplicedIn = Native.splice(fd().intValue(), -1, pipeOut, -1, length);
+                int localSplicedIn = Native.splice(fd().intValue(), -1, pipeOut.intValue(), -1, length);
                 if (localSplicedIn == 0) {
                     break;
                 }
@@ -923,12 +945,12 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
                 // We create the pipe on the target channel as this will allow us to just handle pending writes
                 // later in a correct fashion without get into any ordering issues when spliceTo(...) is called
                 // on multiple Channels pointing to one target Channel.
-                int pipeOut = ch.pipeOut;
-                if (pipeOut == -1) {
+                FileDescriptor pipeOut = ch.pipeOut;
+                if (pipeOut == null) {
                     // Create a new pipe as non was created before.
-                    long fds = Native.pipe();
-                    ch.pipeIn = (int) (fds >> 32);
-                    pipeOut = ch.pipeOut = (int) fds;
+                    FileDescriptor[] pipe = pipe();
+                    ch.pipeIn = pipe[0];
+                    pipeOut = ch.pipeOut = pipe[1];
                 }
 
                 int splicedIn = spliceIn(pipeOut, handle);
@@ -984,7 +1006,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
         public boolean spliceOut() throws Exception {
             assert ch.eventLoop().inEventLoop();
             try {
-                int splicedOut = Native.splice(ch.pipeIn, -1, ch.fd().intValue(), -1, len);
+                int splicedOut = Native.splice(ch.pipeIn.intValue(), -1, ch.fd().intValue(), -1, len);
                 len -= splicedOut;
                 if (len == 0) {
                     if (autoRead) {
@@ -1029,35 +1051,34 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
                 return true;
             }
 
-            int pipeIn = -1;
-            int pipeOut = -1;
             try {
-                long fds = Native.pipe();
-                pipeIn = (int) (fds >> 32);
-                pipeOut = (int) fds;
-
-                int splicedIn = spliceIn(pipeOut, handle);
-                if (splicedIn > 0) {
-                    // Integer.MAX_VALUE is a special value which will result in splice forever.
-                    if (len != Integer.MAX_VALUE) {
-                        len -= splicedIn;
+                FileDescriptor[] pipe = pipe();
+                FileDescriptor pipeIn = pipe[0];
+                FileDescriptor pipeOut = pipe[1];
+                try {
+                    int splicedIn = spliceIn(pipeOut, handle);
+                    if (splicedIn > 0) {
+                        // Integer.MAX_VALUE is a special value which will result in splice forever.
+                        if (len != Integer.MAX_VALUE) {
+                            len -= splicedIn;
+                        }
+                        do {
+                            int splicedOut = Native.splice(pipeIn.intValue(), -1, fd.intValue(), offset, splicedIn);
+                            splicedIn -= splicedOut;
+                        } while (splicedIn > 0);
+                        if (len == 0) {
+                            promise.setSuccess();
+                            return true;
+                        }
                     }
-                    do {
-                        int splicedOut = Native.splice(pipeIn, -1, fd.intValue(), offset, splicedIn);
-                        splicedIn -= splicedOut;
-                    } while (splicedIn > 0);
-                    if (len == 0) {
-                        promise.setSuccess();
-                        return true;
-                    }
+                    return false;
+                } finally {
+                    safeClosePipe(pipeIn);
+                    safeClosePipe(pipeOut);
                 }
-                return false;
             } catch (Throwable cause) {
                 promise.setFailure(cause);
                 return true;
-            } finally {
-                safeClosePipe(pipeIn);
-                safeClosePipe(pipeOut);
             }
         }
     }

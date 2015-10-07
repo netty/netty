@@ -15,6 +15,8 @@
  */
 package io.netty.channel.epoll;
 
+import io.netty.channel.unix.FileDescriptor;
+
 /**
  * Tells if <a href="http://netty.io/wiki/native-transports.html">{@code netty-transport-native-epoll}</a> is supported.
  */
@@ -24,24 +26,24 @@ public final class Epoll {
 
     static  {
         Throwable cause = null;
-        int epollFd = -1;
-        int eventFd = -1;
+        FileDescriptor epollFd = null;
+        FileDescriptor eventFd = null;
         try {
-            epollFd = Native.epollCreate();
-            eventFd = Native.eventFd();
+            epollFd = Native.newEpollCreate();
+            eventFd = Native.newEventFd();
         } catch (Throwable t) {
             cause = t;
         } finally {
-            if (epollFd != -1) {
+            if (epollFd != null) {
                 try {
-                    Native.close(epollFd);
+                    epollFd.close();
                 } catch (Exception ignore) {
                     // ignore
                 }
             }
-            if (eventFd != -1) {
+            if (eventFd != null) {
                 try {
-                    Native.close(eventFd);
+                    eventFd.close();
                 } catch (Exception ignore) {
                     // ignore
                 }

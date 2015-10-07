@@ -13,11 +13,125 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-#include <jni.h>
-#include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/uio.h>
+
+#include "netty_unix_errors.h"
+#include "netty_unix_filedescriptor.h"
 #include "io_netty_channel_unix_FileDescriptor.h"
+
+static jmethodID posId = NULL;
+static jmethodID limitId = NULL;
+static jfieldID posFieldId = NULL;
+static jfieldID limitFieldId = NULL;
+
+// Optional external methods
+extern int pipe2(int pipefd[2], int flags) __attribute__((weak));
+
+static jint _write(JNIEnv* env, jclass clazz, jint fd, void* buffer, jint pos, jint limit) {
+    ssize_t res;
+    int err;
+    do {
+       res = write(fd, buffer + pos, (size_t) (limit - pos));
+       // keep on writing if it was interrupted
+    } while (res == -1 && ((err = errno) == EINTR));
+
+    if (res < 0) {
+        return -err;
+    }
+    return (jint) res;
+}
+
+static jlong _writev(JNIEnv* env, jclass clazz, jint fd, struct iovec* iov, jint length) {
+    ssize_t res;
+    int err;
+    do {
+        res = writev(fd, iov, length);
+        // keep on writing if it was interrupted
+    } while (res == -1 && ((err = errno) == EINTR));
+
+    if (res < 0) {
+        return -err;
+    }
+    return (jlong) res;
+}
+
+static jint _read(JNIEnv* env, jclass clazz, jint fd, void* buffer, jint pos, jint limit) {
+    ssize_t res;
+    int err;
+    do {
+        res = read(fd, buffer + pos, (size_t) (limit - pos));
+        // Keep on reading if we was interrupted
+    } while (res == -1 && ((err = errno) == EINTR));
+
+    if (res < 0) {
+        return -err;
+    }
+    return (jint) res;
+}
+
+jint netty_unix_filedescriptor_JNI_OnLoad(JNIEnv* env) {
+    void* mem = malloc(1);
+    if (mem == NULL) {
+        netty_unix_errors_throwOutOfMemoryError(env);
+        return JNI_ERR;
+    }
+    jobject directBuffer = (*env)->NewDirectByteBuffer(env, mem, 1);
+    if (directBuffer == NULL) {
+        free(mem);
+
+        netty_unix_errors_throwOutOfMemoryError(env);
+        return JNI_ERR;
+    }
+    if ((*env)->GetDirectBufferAddress(env, directBuffer) == NULL) {
+        free(mem);
+
+        netty_unix_errors_throwRuntimeException(env, "failed to get direct buffer address");
+        return JNI_ERR;
+    }
+
+    jclass cls = (*env)->GetObjectClass(env, directBuffer);
+
+    // Get the method id for Buffer.position() and Buffer.limit(). These are used as fallback if
+    // it is not possible to obtain the position and limit using the fields directly.
+    posId = (*env)->GetMethodID(env, cls, "position", "()I");
+    if (posId == NULL) {
+        free(mem);
+
+        // position method was not found.. something is wrong so bail out
+        netty_unix_errors_throwRuntimeException(env, "failed to get method ID: ByteBuffer.position()");
+        return JNI_ERR;
+    }
+
+    limitId = (*env)->GetMethodID(env, cls, "limit", "()I");
+    if (limitId == NULL) {
+        free(mem);
+
+        // limit method was not found.. something is wrong so bail out
+        netty_unix_errors_throwRuntimeException(env, "failed to get method ID: ByteBuffer.limit()");
+        return JNI_ERR;
+    }
+    // Try to get the ids of the position and limit fields. We later then check if we was able
+    // to find them and if so use them get the position and limit of the buffer. This is
+    // much faster then call back into java via (*env)->CallIntMethod(...).
+    posFieldId = (*env)->GetFieldID(env, cls, "position", "I");
+    if (posFieldId == NULL) {
+        // this is ok as we can still use the method so just clear the exception
+        (*env)->ExceptionClear(env);
+    }
+    limitFieldId = (*env)->GetFieldID(env, cls, "limit", "I");
+    if (limitFieldId == NULL) {
+        // this is ok as we can still use the method so just clear the exception
+        (*env)->ExceptionClear(env);
+    }
+
+    free(mem);
+}
+
+void netty_unix_filedescriptor_JNI_OnUnLoad(JNIEnv* env) { }
 
 JNIEXPORT int JNICALL Java_io_netty_channel_unix_FileDescriptor_close(JNIEnv* env, jclass clazz, jint fd) {
    if (close(fd) < 0) {
@@ -27,7 +141,6 @@ JNIEXPORT int JNICALL Java_io_netty_channel_unix_FileDescriptor_close(JNIEnv* en
 }
 
 JNIEXPORT int JNICALL Java_io_netty_channel_unix_FileDescriptor_open(JNIEnv* env, jclass clazz, jstring path) {
-
     const char* f_path = (*env)->GetStringUTFChars(env, path, 0);
 
     int res = open(f_path, O_WRONLY | O_CREAT | O_TRUNC, 0666);
@@ -37,4 +150,96 @@ JNIEXPORT int JNICALL Java_io_netty_channel_unix_FileDescriptor_open(JNIEnv* env
         return -errno;
     }
     return res;
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_unix_FileDescriptor_write(JNIEnv* env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit) {
+    // We check that GetDirectBufferAddress will not return NULL in OnLoad
+    return _write(env, clazz, fd, (*env)->GetDirectBufferAddress(env, jbuffer), pos, limit);
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_unix_FileDescriptor_writeAddress(JNIEnv* env, jclass clazz, jint fd, jlong address, jint pos, jint limit) {
+    return _write(env, clazz, fd, (void*) address, pos, limit);
+}
+
+
+JNIEXPORT jlong JNICALL Java_io_netty_channel_unix_FileDescriptor_writevAddresses(JNIEnv* env, jclass clazz, jint fd, jlong memoryAddress, jint length) {
+    struct iovec* iov = (struct iovec*) memoryAddress;
+    return _writev(env, clazz, fd, iov, length);
+}
+
+JNIEXPORT jlong JNICALL Java_io_netty_channel_unix_FileDescriptor_writev(JNIEnv* env, jclass clazz, jint fd, jobjectArray buffers, jint offset, jint length) {
+    struct iovec iov[length];
+    int iovidx = 0;
+    int i;
+    int num = offset + length;
+    for (i = offset; i < num; i++) {
+        jobject bufObj = (*env)->GetObjectArrayElement(env, buffers, i);
+        jint pos;
+        // Get the current position using the (*env)->GetIntField if possible and fallback
+        // to slower (*env)->CallIntMethod(...) if needed
+        if (posFieldId == NULL) {
+            pos = (*env)->CallIntMethod(env, bufObj, posId, NULL);
+        } else {
+            pos = (*env)->GetIntField(env, bufObj, posFieldId);
+        }
+        jint limit;
+        // Get the current limit using the (*env)->GetIntField if possible and fallback
+        // to slower (*env)->CallIntMethod(...) if needed
+        if (limitFieldId == NULL) {
+            limit = (*env)->CallIntMethod(env, bufObj, limitId, NULL);
+        } else {
+            limit = (*env)->GetIntField(env, bufObj, limitFieldId);
+        }
+        void* buffer = (*env)->GetDirectBufferAddress(env, bufObj);
+        // We check that GetDirectBufferAddress will not return NULL in OnLoad
+        iov[iovidx].iov_base = buffer + pos;
+        iov[iovidx].iov_len = (size_t) (limit - pos);
+        iovidx++;
+
+        // Explicit delete local reference as otherwise the local references will only be released once the native method returns.
+        // Also there may be a lot of these and JNI specification only specify that 16 must be able to be created.
+        //
+        // See https://github.com/netty/netty/issues/2623
+        (*env)->DeleteLocalRef(env, bufObj);
+    }
+    return _writev(env, clazz, fd, iov, length);
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_unix_FileDescriptor_read(JNIEnv* env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit) {
+    // We check that GetDirectBufferAddress will not return NULL in OnLoad
+    return _read(env, clazz, fd, (*env)->GetDirectBufferAddress(env, jbuffer), pos, limit);
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_unix_FileDescriptor_readAddress(JNIEnv* env, jclass clazz, jint fd, jlong address, jint pos, jint limit) {
+    return _read(env, clazz, fd, (void*) address, pos, limit);
+}
+
+JNIEXPORT jlong JNICALL Java_io_netty_channel_unix_FileDescriptor_newPipe(JNIEnv* env, jclass clazz) {
+    int fd[2];
+    if (pipe2) {
+        // we can just use pipe2 and so save extra syscalls;
+        if (pipe2(fd, O_NONBLOCK) != 0) {
+            return -errno;
+        }
+    } else {
+         if (pipe(fd) == 0) {
+            if (fcntl(fd[0], F_SETFD, O_NONBLOCK) < 0) {
+                int err = errno;
+                close(fd[0]);
+                close(fd[1]);
+                return -err;
+            }
+            if (fcntl(fd[1], F_SETFD, O_NONBLOCK) < 0) {
+                int err = errno;
+                close(fd[0]);
+                close(fd[1]);
+                return -err;
+            }
+         } else {
+            return -errno;
+         }
+    }
+
+    // encode the fds into a 64 bit value
+    return (((jlong) fd[0]) << 32) | fd[1];
 }

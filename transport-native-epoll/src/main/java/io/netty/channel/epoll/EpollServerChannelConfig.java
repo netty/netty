@@ -16,7 +16,6 @@
 package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
@@ -96,11 +95,11 @@ public class EpollServerChannelConfig extends EpollChannelConfig {
     }
 
     public int getReceiveBufferSize() {
-        return Native.getReceiveBufferSize(channel.fd().intValue());
+        return channel.fd().getReceiveBufferSize();
     }
 
     public EpollServerChannelConfig setReceiveBufferSize(int receiveBufferSize) {
-        Native.setReceiveBufferSize(channel.fd().intValue(), receiveBufferSize);
+        channel.fd().setReceiveBufferSize(receiveBufferSize);
         return this;
     }
 

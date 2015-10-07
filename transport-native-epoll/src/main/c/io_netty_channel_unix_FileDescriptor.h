@@ -15,5 +15,16 @@
  */
 #include <jni.h>
 
-int Java_io_netty_channel_unix_FileDescriptor_close(JNIEnv* env, jclass clazz, jint fd);
-int Java_io_netty_channel_unix_FileDescriptor_open(JNIEnv* env, jclass clazz, jstring path);
+// Exported JNI Methods
+jint Java_io_netty_channel_unix_FileDescriptor_close(JNIEnv* env, jclass clazz, jint fd);
+jint Java_io_netty_channel_unix_FileDescriptor_open(JNIEnv* env, jclass clazz, jstring path);
+
+jlong Java_io_netty_channel_unix_FileDescriptor_newPipe(JNIEnv* env, jclass clazz);
+
+jint Java_io_netty_channel_unix_FileDescriptor_write(JNIEnv* env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit);
+jint Java_io_netty_channel_unix_FileDescriptor_writeAddress(JNIEnv* env, jclass clazz, jint fd, jlong address, jint pos, jint limit);
+jlong Java_io_netty_channel_unix_FileDescriptor_writev(JNIEnv* env, jclass clazz, jint fd, jobjectArray buffers, jint offset, jint length);
+jlong Java_io_netty_channel_unix_FileDescriptor_writevAddresses(JNIEnv* env, jclass clazz, jint fd, jlong memoryAddress, jint length);
+
+jint Java_io_netty_channel_unix_FileDescriptor_read(JNIEnv* env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit);
+jint Java_io_netty_channel_unix_FileDescriptor_readAddress(JNIEnv* env, jclass clazz, jint fd, jlong address, jint pos, jint limit);
