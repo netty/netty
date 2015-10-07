@@ -22,6 +22,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.Socket;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.internal.OneTimeTask;
 
@@ -32,6 +33,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.Executor;
+
+import static io.netty.channel.unix.Socket.newSocketStream;
 
 /**
  * {@link SocketChannel} implementation that uses linux EPOLL Edge-Triggered Mode for
@@ -45,13 +48,13 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
     private volatile InetSocketAddress remote;
     private volatile Collection<InetAddress> tcpMd5SigAddresses = Collections.emptyList();
 
-    EpollSocketChannel(Channel parent, int fd, InetSocketAddress remote) {
+    EpollSocketChannel(Channel parent, Socket fd, InetSocketAddress remote) {
         super(parent, fd);
         config = new EpollSocketChannelConfig(this);
         // Directly cache the remote and local addresses
         // See https://github.com/netty/netty/issues/2359
         this.remote = remote;
-        local = Native.localAddress(fd);
+        local = fd.localAddress();
 
         if (parent instanceof EpollServerSocketChannel) {
             tcpMd5SigAddresses = ((EpollServerSocketChannel) parent).tcpMd5SigAddresses();
@@ -59,21 +62,33 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
     }
 
     public EpollSocketChannel() {
-        super(Native.socketStreamFd());
+        super(newSocketStream(), false);
+        config = new EpollSocketChannelConfig(this);
+    }
+
+    /**
+     * @deprecated Use {@link #EpollSocketChannel(Socket, boolean)}.
+     */
+    @Deprecated
+    public EpollSocketChannel(FileDescriptor fd) {
+        super(fd);
+        // As we create an EpollSocketChannel from a FileDescriptor we should try to obtain the remote and local
+        // address from it. This is needed as the FileDescriptor may be bound/connected already.
+        remote = fd().remoteAddress();
+        local = fd().localAddress();
         config = new EpollSocketChannelConfig(this);
     }
 
     /**
      * Creates a new {@link EpollSocketChannel} from an existing {@link FileDescriptor}.
      */
-    public EpollSocketChannel(FileDescriptor fd) {
-        super(fd);
-        config = new EpollSocketChannelConfig(this);
-
+    public EpollSocketChannel(Socket fd, boolean active) {
+        super(fd, active);
         // As we create an EpollSocketChannel from a FileDescriptor we should try to obtain the remote and local
         // address from it. This is needed as the FileDescriptor may be bound/connected already.
-        remote = Native.remoteAddress(fd.intValue());
-        local = Native.localAddress(fd.intValue());
+        remote = fd.remoteAddress();
+        local = fd.localAddress();
+        config = new EpollSocketChannelConfig(this);
     }
 
     /**
@@ -111,7 +126,7 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
     protected SocketAddress remoteAddress0() {
         if (remote == null) {
             // Remote address not know, try to get it now.
-            InetSocketAddress address = Native.remoteAddress(fd().intValue());
+            InetSocketAddress address = fd().remoteAddress();
             if (address != null) {
                 remote = address;
             }
@@ -123,9 +138,8 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
     @Override
     protected void doBind(SocketAddress local) throws Exception {
         InetSocketAddress localAddress = (InetSocketAddress) local;
-        int fd = fd().intValue();
-        Native.bind(fd, localAddress);
-        this.local = Native.localAddress(fd);
+        fd().bind(localAddress);
+        this.local = fd().localAddress();
     }
 
     @Override
@@ -190,7 +204,6 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
             checkResolvable((InetSocketAddress) localAddress);
         }
         checkResolvable((InetSocketAddress) remoteAddress);
-        int fd = fd().intValue();
         boolean connected = super.doConnect(remoteAddress, localAddress);
         if (connected) {
             remote = (InetSocketAddress) remoteAddress;
@@ -199,7 +212,7 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
         // We always need to set the localAddress even if not connected yet
         //
         // See https://github.com/netty/netty/issues/3463
-        local = Native.localAddress(fd);
+        local = fd().localAddress();
         return connected;
     }
 

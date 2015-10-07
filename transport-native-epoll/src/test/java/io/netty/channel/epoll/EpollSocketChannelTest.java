@@ -145,7 +145,6 @@ public class EpollSocketChannelTest {
             Bootstrap b = new Bootstrap();
             b.group(group);
             b.channel(channelClass);
-            b.option(ChannelOption.SO_KEEPALIVE, true);
             b.remoteAddress(serverChannel.localAddress());
             b.handler(new MyInitializer());
             clientChannel = b.connect().syncUninterruptibly().channel();

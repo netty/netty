@@ -25,6 +25,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.Socket;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -32,12 +33,31 @@ import java.net.SocketAddress;
 public abstract class AbstractEpollServerChannel extends AbstractEpollChannel implements ServerChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
+    /**
+     * @deprecated Use {@link #AbstractEpollServerChannel(Socket, boolean)}.
+     */
     protected AbstractEpollServerChannel(int fd) {
-        super(fd, Native.EPOLLIN);
+        this(new Socket(fd), false);
     }
 
+    /**
+     * @deprecated Use {@link #AbstractEpollServerChannel(Socket, boolean)}.
+     */
+    @Deprecated
     protected AbstractEpollServerChannel(FileDescriptor fd) {
-        super(null, fd, Native.EPOLLIN, Native.getSoError(fd.intValue()) == 0);
+        this(new Socket(fd.intValue()));
+    }
+
+    /**
+     * @deprecated Use {@link #AbstractEpollServerChannel(Socket, boolean)}.
+     */
+    @Deprecated
+    protected AbstractEpollServerChannel(Socket fd) {
+        this(fd, fd.getSoError() == 0);
+    }
+
+    protected AbstractEpollServerChannel(Socket fd, boolean active) {
+        super(null, fd, Native.EPOLLIN, active);
     }
 
     @Override
@@ -109,7 +129,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
             try {
                 try {
                     do {
-                        int socketFd = Native.accept(fd().intValue(), acceptedAddress);
+                        int socketFd = fd().accept(acceptedAddress);
                         if (socketFd == -1) {
                             // this means everything was handled for now
                             break;
