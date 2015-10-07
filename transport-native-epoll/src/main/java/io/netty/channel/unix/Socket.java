@@ -58,6 +58,10 @@ public final class Socket extends FileDescriptor {
         }
     }
 
+    public void shutdown() throws IOException {
+        shutdown(true, true);
+    }
+
     public boolean isShutdown() {
         return isInputShutdown() && isOutputShutdown();
     }
