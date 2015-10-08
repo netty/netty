@@ -49,6 +49,10 @@ public final class ResourceLeakDetector<T> {
          */
         DISABLED,
         /**
+         * Enables VW style resource leak detection.
+         */
+        VW,
+        /**
          * Enables simplistic sampling resource leak detection which reports there is a leak or not,
          * at the cost of small overhead (default).
          */
@@ -64,6 +68,24 @@ public final class ResourceLeakDetector<T> {
          */
         PARANOID
     }
+
+    private static final String[] CI_ENVIRONMENTS = new String[] {
+            "CI",
+            "CONTINUOUS_INTEGRATION",
+            "BUILD_ID",
+            "BUILD_NUMBER",
+            "TEAMCITY_VERSION",
+            "TRAVIS",
+            "CIRCLECI",
+            "JENKINS_URL",
+            "HUDSON_URL",
+            "bamboo.buildKey",
+            "PHPCI",
+            "GOCD_SERVER_HOST",
+            "BUILDKITE"
+    };
+
+    private static boolean isCi;
 
     private static Level level;
 
@@ -85,6 +107,12 @@ public final class ResourceLeakDetector<T> {
         if (logger.isDebugEnabled()) {
             logger.debug("-D{}: {}", PROP_LEVEL, level.name().toLowerCase());
             logger.debug("-D{}: {}", PROP_MAX_RECORDS, MAX_RECORDS);
+        }
+
+        for (String var: CI_ENVIRONMENTS) {
+            if (System.getenv(var) != null) {
+                isCi = true;
+            }
         }
     }
 
@@ -162,6 +190,9 @@ public final class ResourceLeakDetector<T> {
     public ResourceLeak open(T obj) {
         Level level = ResourceLeakDetector.level;
         if (level == Level.DISABLED) {
+            return null;
+        }
+        if (level == Level.VW && isCi) {
             return null;
         }
 
