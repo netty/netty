@@ -927,7 +927,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf slice(int index, int length) {
-        return new SlicedByteBuf(this, index, length);
+        return new SlicedAbstractByteBuf(this, index, length);
     }
 
     @Override
