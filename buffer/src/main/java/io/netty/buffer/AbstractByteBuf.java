@@ -462,7 +462,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf setBoolean(int index, boolean value) {
-        setByte(index, value ? 1 : 0);
+        setByte(index, value? 1 : 0);
         return this;
     }
 
@@ -944,7 +944,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf duplicate() {
-        return new DuplicatedByteBuf(this);
+        return new DuplicatedAbstractByteBuf(this);
     }
 
     @Override

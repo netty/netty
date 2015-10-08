@@ -105,7 +105,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public byte getByte(int index) {
-        return _getByte(index);
+        return buffer.getByte(index);
     }
 
     @Override
@@ -115,7 +115,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public short getShort(int index) {
-        return _getShort(index);
+        return buffer.getShort(index);
     }
 
     @Override
@@ -125,7 +125,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public int getUnsignedMedium(int index) {
-        return _getUnsignedMedium(index);
+        return buffer.getUnsignedMedium(index);
     }
 
     @Override
@@ -135,7 +135,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public int getInt(int index) {
-        return _getInt(index);
+        return buffer.getInt(index);
     }
 
     @Override
@@ -145,7 +145,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public long getLong(int index) {
-        return _getLong(index);
+        return buffer.getLong(index);
     }
 
     @Override
@@ -183,7 +183,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public ByteBuf setByte(int index, int value) {
-        _setByte(index, value);
+        buffer.setByte(index, value);
         return this;
     }
 
@@ -194,7 +194,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public ByteBuf setShort(int index, int value) {
-        _setShort(index, value);
+        buffer.setShort(index, value);
         return this;
     }
 
@@ -205,7 +205,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public ByteBuf setMedium(int index, int value) {
-        _setMedium(index, value);
+        buffer.setMedium(index, value);
         return this;
     }
 
@@ -216,7 +216,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public ByteBuf setInt(int index, int value) {
-        _setInt(index, value);
+        buffer.setInt(index, value);
         return this;
     }
 
@@ -227,7 +227,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public ByteBuf setLong(int index, long value) {
-        _setLong(index, value);
+        buffer.setLong(index, value);
         return this;
     }
 
