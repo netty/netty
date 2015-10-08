@@ -28,7 +28,14 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 
-public class WrappedByteBuf extends ByteBuf {
+/**
+ * Wraps another {@link ByteBuf}.
+ *
+ * It's important that the {@link #readerIndex()} and {@link #writerIndex()} will not do any adjustments on the
+ * indices on the fly because of internal optimizations made by {@link ByteBufUtil#writeAscii(ByteBuf, CharSequence)}
+ * and {@link ByteBufUtil#writeUtf8(ByteBuf, CharSequence)}.
+ */
+class WrappedByteBuf extends ByteBuf {
 
     protected final ByteBuf buf;
 
@@ -40,17 +47,17 @@ public class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
-    public boolean hasMemoryAddress() {
+    public final boolean hasMemoryAddress() {
         return buf.hasMemoryAddress();
     }
 
     @Override
-    public long memoryAddress() {
+    public final long memoryAddress() {
         return buf.memoryAddress();
     }
 
     @Override
-    public int capacity() {
+    public final int capacity() {
         return buf.capacity();
     }
 
@@ -61,17 +68,17 @@ public class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
-    public int maxCapacity() {
+    public final int maxCapacity() {
         return buf.maxCapacity();
     }
 
     @Override
-    public ByteBufAllocator alloc() {
+    public final ByteBufAllocator alloc() {
         return buf.alloc();
     }
 
     @Override
-    public ByteOrder order() {
+    public final ByteOrder order() {
         return buf.order();
     }
 
@@ -81,33 +88,33 @@ public class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
-    public ByteBuf unwrap() {
+    public final ByteBuf unwrap() {
         return buf;
     }
 
     @Override
-    public boolean isDirect() {
+    public final boolean isDirect() {
         return buf.isDirect();
     }
 
     @Override
-    public int readerIndex() {
+    public final int readerIndex() {
         return buf.readerIndex();
     }
 
     @Override
-    public ByteBuf readerIndex(int readerIndex) {
+    public final ByteBuf readerIndex(int readerIndex) {
         buf.readerIndex(readerIndex);
         return this;
     }
 
     @Override
-    public int writerIndex() {
+    public final int writerIndex() {
         return buf.writerIndex();
     }
 
     @Override
-    public ByteBuf writerIndex(int writerIndex) {
+    public final ByteBuf writerIndex(int writerIndex) {
         buf.writerIndex(writerIndex);
         return this;
     }
@@ -119,56 +126,56 @@ public class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
-    public int readableBytes() {
+    public final int readableBytes() {
         return buf.readableBytes();
     }
 
     @Override
-    public int writableBytes() {
+    public final int writableBytes() {
         return buf.writableBytes();
     }
 
     @Override
-    public int maxWritableBytes() {
+    public final int maxWritableBytes() {
         return buf.maxWritableBytes();
     }
 
     @Override
-    public boolean isReadable() {
+    public final boolean isReadable() {
         return buf.isReadable();
     }
 
     @Override
-    public boolean isWritable() {
+    public final boolean isWritable() {
         return buf.isWritable();
     }
 
     @Override
-    public ByteBuf clear() {
+    public final ByteBuf clear() {
         buf.clear();
         return this;
     }
 
     @Override
-    public ByteBuf markReaderIndex() {
+    public final ByteBuf markReaderIndex() {
         buf.markReaderIndex();
         return this;
     }
 
     @Override
-    public ByteBuf resetReaderIndex() {
+    public final ByteBuf resetReaderIndex() {
         buf.resetReaderIndex();
         return this;
     }
 
     @Override
-    public ByteBuf markWriterIndex() {
+    public final ByteBuf markWriterIndex() {
         buf.markWriterIndex();
         return this;
     }
 
     @Override
-    public ByteBuf resetWriterIndex() {
+    public final ByteBuf resetWriterIndex() {
         buf.resetWriterIndex();
         return this;
     }
@@ -814,17 +821,17 @@ public class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
-    public boolean isReadable(int size) {
+    public final boolean isReadable(int size) {
         return buf.isReadable(size);
     }
 
     @Override
-    public boolean isWritable(int size) {
+    public final boolean isWritable(int size) {
         return buf.isWritable(size);
     }
 
     @Override
-    public int refCnt() {
+    public final int refCnt() {
         return buf.refCnt();
     }
 
