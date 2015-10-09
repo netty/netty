@@ -22,6 +22,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
@@ -64,19 +65,39 @@ public class EmbeddedChannel extends AbstractChannel {
     private State state;
 
     /**
-     * Create a new instance with an empty pipeline.
+     * Create a new instance with an {@link EmbeddedChannelId} and an empty pipeline.
      */
     public EmbeddedChannel() {
         this(EMPTY_HANDLERS);
     }
 
     /**
+     * Create a new instance with the specified ID and an empty pipeline.
+     *
+     * @param channelId the {@link ChannelId} that will be used to identify this channel
+     */
+    public EmbeddedChannel(ChannelId channelId) {
+        this(channelId, EMPTY_HANDLERS);
+    }
+
+    /**
      * Create a new instance with the pipeline initialized with the specified handlers.
      *
-     * @param handlers the @link ChannelHandler}s which will be add in the {@link ChannelPipeline}
+     * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
      */
     public EmbeddedChannel(final ChannelHandler... handlers) {
-        super(null, EmbeddedChannelId.INSTANCE);
+        this(EmbeddedChannelId.INSTANCE, handlers);
+    }
+
+    /**
+     * Create a new instance with the channel ID set to the given ID and the pipeline
+     * initialized with the specified handlers.
+     *
+     * @param channelId the {@link ChannelId} that will be used to identify this channel
+     * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
+     */
+    public EmbeddedChannel(ChannelId channelId, final ChannelHandler... handlers) {
+        super(null, channelId);
 
         if (handlers == null) {
             throw new NullPointerException("handlers");

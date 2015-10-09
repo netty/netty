@@ -20,6 +20,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -134,6 +135,13 @@ public class EmbeddedChannelTest {
         Assert.assertNull(channel.readInbound());
         Assert.assertSame(2, channel.readOutbound());
         Assert.assertNull(channel.readOutbound());
+    }
+
+    @Test
+    public void testConstructWithChannelId() {
+        ChannelId channelId = new CustomChannelId(1);
+        EmbeddedChannel channel = new EmbeddedChannel(channelId);
+        Assert.assertSame(channelId, channel.id());
     }
 
     // See https://github.com/netty/netty/issues/4316.

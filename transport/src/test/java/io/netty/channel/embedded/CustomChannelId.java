@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,21 +13,44 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.channel.embedded;
 
 import io.netty.channel.ChannelId;
 
-/**
- * A dummy {@link ChannelId} implementation.
- */
-final class EmbeddedChannelId implements ChannelId {
+public class CustomChannelId implements ChannelId {
+    private static final long serialVersionUID = 1L;
 
-    private static final long serialVersionUID = -251711922203466130L;
+    private int id;
 
-    static final ChannelId INSTANCE = new EmbeddedChannelId();
+    public CustomChannelId(int id) {
+        this.id = id;
+    }
 
-    private EmbeddedChannelId() { }
+    @Override
+    public int compareTo(ChannelId o) {
+        if (o instanceof CustomChannelId) {
+            return id - ((CustomChannelId) o).id;
+        }
+        return -1;
+    }
+
+    @Override
+    public int hashCode() {
+        return id;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof CustomChannelId) {
+            return id == ((CustomChannelId) obj).id;
+        }
+        return false;
+    }
+
+    @Override
+    public String toString() {
+        return "CustomChannelId " + id;
+    }
 
     @Override
     public String asShortText() {
@@ -39,27 +62,4 @@ final class EmbeddedChannelId implements ChannelId {
         return toString();
     }
 
-    @Override
-    public int compareTo(ChannelId o) {
-        if (o instanceof EmbeddedChannelId) {
-            return 0;
-        }
-
-        return asLongText().compareTo(o.asLongText());
-    }
-
-    @Override
-    public int hashCode() {
-        return 0;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return obj instanceof EmbeddedChannelId;
-    }
-
-    @Override
-    public String toString() {
-        return "embedded";
-    }
 }
