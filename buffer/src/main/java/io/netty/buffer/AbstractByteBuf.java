@@ -20,6 +20,9 @@ import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -35,6 +38,16 @@ import java.nio.charset.Charset;
  * A skeletal implementation of a buffer.
  */
 public abstract class AbstractByteBuf extends ByteBuf {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractByteBuf.class);
+    private static final String PROP_MODE = "io.netty.buffer.bytebuf.checkAccessible";
+    private static final boolean checkAccessible;
+
+    static {
+        checkAccessible = SystemPropertyUtil.getBoolean(PROP_MODE, true);
+        if (logger.isDebugEnabled()) {
+            logger.debug("-D{}: {}", PROP_MODE, checkAccessible);
+        }
+    }
 
     static final ResourceLeakDetector<ByteBuf> leakDetector = new ResourceLeakDetector<ByteBuf>(ByteBuf.class);
 
@@ -1158,7 +1171,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
      * if the buffer was released before.
      */
     protected final void ensureAccessible() {
-        if (refCnt() == 0) {
+        if (checkAccessible && refCnt() == 0) {
             throw new IllegalReferenceCountException(0);
         }
     }
