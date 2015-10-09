@@ -532,8 +532,6 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
 
     /**
      * @deprecated Use {@link #get(CharSequence)} instead.
-     *
-     * @see {@link #getHeader(HttpMessage, CharSequence)}
      */
     @Deprecated
     public static String getHeader(HttpMessage message, String name) {
@@ -1174,10 +1172,8 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     protected HttpHeaders() { }
 
     /**
-     * @deprecated Use {@link #get(CharSequence)}
      * @see #get(CharSequence)
      */
-    @Deprecated
     public abstract String get(String name);
 
     /**
@@ -1271,9 +1267,8 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     public abstract long getTimeMillis(CharSequence name, long defaultValue);
 
     /**
-     * @deprecated Use {@link #getAll(CharSequence)}
+     * @see #getAll(CharSequence)
      */
-    @Deprecated
     public abstract List<String> getAll(String name);
 
     /**
@@ -1289,21 +1284,16 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-     * @deprecated Use {@link #iteratorCharSequence()}
-     * <p>
      * Returns a new {@link List} that contains all headers in this object.  Note that modifying the
      * returned {@link List} will not affect the state of this object.  If you intend to enumerate over the header
      * entries only, use {@link #iterator()} instead, which has much less overhead.
+     * @see #iteratorCharSequence()
      */
-    @Deprecated
     public abstract List<Map.Entry<String, String>> entries();
 
     /**
-     * @deprecated Use {@link #contains(CharSequence)}
-     * <p>
      * @see {@link #contains(CharSequence)}
      */
-    @Deprecated
     public abstract boolean contains(String name);
 
     /**
@@ -1347,9 +1337,8 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     public abstract Set<String> names();
 
     /**
-     * @deprecated Use {@link #add(CharSequence, Object)}
+     * @see #add(CharSequence, Object)
      */
-    @Deprecated
     public abstract HttpHeaders add(String name, Object value);
 
     /**
@@ -1370,9 +1359,8 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-     * @deprecated Use {@link #add(CharSequence, Iterable)}
+     * @see #add(CharSequence, Iterable)
      */
-    @Deprecated
     public abstract HttpHeaders add(String name, Iterable<?> values);
 
     /**
@@ -1428,9 +1416,8 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     public abstract HttpHeaders addShort(CharSequence name, short value);
 
     /**
-     * @deprecated Use {@link #set(CharSequence, Object)}
+     * @see #set(CharSequence, Object)
      */
-    @Deprecated
     public abstract HttpHeaders set(String name, Object value);
 
     /**
@@ -1451,9 +1438,8 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-     * @deprecated {@link #set(CharSequence, Iterable)}
+     * @see #set(CharSequence, Iterable)
      */
-    @Deprecated
     public abstract HttpHeaders set(String name, Iterable<?> values);
 
     /**
@@ -1535,9 +1521,8 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     public abstract HttpHeaders setShort(CharSequence name, short value);
 
     /**
-     * @deprecated {@link #remove(CharSequence)}
+     * @see #remove(CharSequence)
      */
-    @Deprecated
     public abstract HttpHeaders remove(String name);
 
     /**
@@ -1558,9 +1543,8 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     public abstract HttpHeaders clear();
 
     /**
-     * @deprecated Use {@link #contains(CharSequence, CharSequence, boolean)}
+     * @see #contains(CharSequence, CharSequence, boolean)
      */
-    @Deprecated
     public boolean contains(String name, String value, boolean ignoreCase) {
         List<String> values = getAll(name);
         if (values.isEmpty()) {

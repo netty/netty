@@ -107,7 +107,6 @@ public class DefaultHttpHeaders extends HttpHeaders {
         }
     }
 
-    @Deprecated
     @Override
     public HttpHeaders add(String name, Object value) {
         headers.addObject(name, value);
@@ -120,7 +119,6 @@ public class DefaultHttpHeaders extends HttpHeaders {
         return this;
     }
 
-    @Deprecated
     @Override
     public HttpHeaders add(String name, Iterable<?> values) {
         headers.addObject(name, values);
@@ -145,7 +143,6 @@ public class DefaultHttpHeaders extends HttpHeaders {
         return this;
     }
 
-    @Deprecated
     @Override
     public HttpHeaders remove(String name) {
         headers.remove(name);
@@ -158,7 +155,6 @@ public class DefaultHttpHeaders extends HttpHeaders {
         return this;
     }
 
-    @Deprecated
     @Override
     public HttpHeaders set(String name, Object value) {
         headers.setObject(name, value);
@@ -171,7 +167,6 @@ public class DefaultHttpHeaders extends HttpHeaders {
         return this;
     }
 
-    @Deprecated
     @Override
     public HttpHeaders set(String name, Iterable<?> values) {
         headers.setObject(name, values);
@@ -242,7 +237,6 @@ public class DefaultHttpHeaders extends HttpHeaders {
         return headers.getTimeMillis(name, defaultValue);
     }
 
-    @Deprecated
     @Override
     public List<String> getAll(String name) {
         return getAll((CharSequence) name);
@@ -253,7 +247,6 @@ public class DefaultHttpHeaders extends HttpHeaders {
         return HeadersUtils.getAllAsString(headers, name);
     }
 
-    @Deprecated
     @Override
     public List<Entry<String, String>> entries() {
         if (isEmpty()) {
