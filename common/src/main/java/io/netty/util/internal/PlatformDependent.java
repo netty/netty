@@ -30,6 +30,7 @@ import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Deque;
 import java.util.List;
 import java.util.Locale;
@@ -77,7 +78,7 @@ public final class PlatformDependent {
             HAS_UNSAFE && !SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
     private static final long MAX_DIRECT_MEMORY = maxDirectMemory0();
 
-    private static final long ARRAY_BASE_OFFSET = PlatformDependent0.arrayBaseOffset();
+    private static final long BYTE_ARRAY_BASE_OFFSET = PlatformDependent0.byteArrayBaseOffset();
 
     private static final boolean HAS_JAVASSIST = hasJavassist0();
 
@@ -86,6 +87,7 @@ public final class PlatformDependent {
     private static final int BIT_MODE = bitMode0();
 
     private static final int ADDRESS_SIZE = addressSize0();
+    private static final boolean NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
 
     static {
         if (logger.isDebugEnabled()) {
@@ -343,6 +345,22 @@ public final class PlatformDependent {
         return PlatformDependent0.getLong(address);
     }
 
+    public static byte getByte(byte[] data, int index) {
+        return PlatformDependent0.getByte(data, index);
+    }
+
+    public static short getShort(byte[] data, int index) {
+        return PlatformDependent0.getShort(data, index);
+    }
+
+    public static int getInt(byte[] data, int index) {
+        return PlatformDependent0.getInt(data, index);
+    }
+
+    public static long getLong(byte[] data, int index) {
+        return PlatformDependent0.getLong(data, index);
+    }
+
     public static void putOrderedObject(Object object, long address, Object value) {
         PlatformDependent0.putOrderedObject(object, address, value);
     }
@@ -363,16 +381,32 @@ public final class PlatformDependent {
         PlatformDependent0.putLong(address, value);
     }
 
+    public static void putByte(byte[] data, int index, byte value) {
+        PlatformDependent0.putByte(data, index, value);
+    }
+
+    public static void putShort(byte[] data, int index, short value) {
+        PlatformDependent0.putShort(data, index, value);
+    }
+
+    public static void putInt(byte[] data, int index, int value) {
+        PlatformDependent0.putInt(data, index, value);
+    }
+
+    public static void putLong(byte[] data, int index, long value) {
+        PlatformDependent0.putLong(data, index, value);
+    }
+
     public static void copyMemory(long srcAddr, long dstAddr, long length) {
         PlatformDependent0.copyMemory(srcAddr, dstAddr, length);
     }
 
     public static void copyMemory(byte[] src, int srcIndex, long dstAddr, long length) {
-        PlatformDependent0.copyMemory(src, ARRAY_BASE_OFFSET + srcIndex, null, dstAddr, length);
+        PlatformDependent0.copyMemory(src, BYTE_ARRAY_BASE_OFFSET + srcIndex, null, dstAddr, length);
     }
 
     public static void copyMemory(long srcAddr, byte[] dst, int dstIndex, long length) {
-        PlatformDependent0.copyMemory(null, srcAddr, dst, ARRAY_BASE_OFFSET + dstIndex, length);
+        PlatformDependent0.copyMemory(null, srcAddr, dst, BYTE_ARRAY_BASE_OFFSET + dstIndex, length);
     }
 
     /**

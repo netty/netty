@@ -32,7 +32,7 @@ import java.nio.channels.ScatteringByteChannel;
 public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     private final ByteBufAllocator alloc;
-    private byte[] array;
+    byte[] array;
     private ByteBuffer tmpNioBuf;
 
     /**
