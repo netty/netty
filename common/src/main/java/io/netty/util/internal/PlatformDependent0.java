@@ -39,6 +39,7 @@ final class PlatformDependent0 {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PlatformDependent0.class);
     static final Unsafe UNSAFE;
     private static final long ADDRESS_FIELD_OFFSET;
+    private static final long BYTE_ARRAY_BASE_OFFSET;
 
     /**
      * Limits the number of bytes to copy per {@link Unsafe#copyMemory(long, long, long)} to allow safepoint polling
@@ -106,6 +107,7 @@ final class PlatformDependent0 {
         UNSAFE = unsafe;
 
         if (unsafe == null) {
+            BYTE_ARRAY_BASE_OFFSET = -1;
             ADDRESS_FIELD_OFFSET = -1;
             UNALIGNED = false;
         } else {
@@ -125,6 +127,7 @@ final class PlatformDependent0 {
 
             UNALIGNED = unaligned;
             logger.debug("java.nio.Bits.unaligned: {}", UNALIGNED);
+            BYTE_ARRAY_BASE_OFFSET = arrayBaseOffset();
         }
     }
 
@@ -191,6 +194,22 @@ final class PlatformDependent0 {
         return UNSAFE.getLong(address);
     }
 
+    static byte getByte(byte[] data, int index) {
+        return UNSAFE.getByte(data, BYTE_ARRAY_BASE_OFFSET + index);
+    }
+
+    static short getShort(byte[] data, int index) {
+        return UNSAFE.getShort(data, BYTE_ARRAY_BASE_OFFSET + index);
+    }
+
+    static int getInt(byte[] data, int index) {
+        return UNSAFE.getInt(data, BYTE_ARRAY_BASE_OFFSET + index);
+    }
+
+    static long getLong(byte[] data, int index) {
+        return UNSAFE.getLong(data, BYTE_ARRAY_BASE_OFFSET + index);
+    }
+
     static void putOrderedObject(Object object, long address, Object value) {
         UNSAFE.putOrderedObject(object, address, value);
     }
@@ -209,6 +228,22 @@ final class PlatformDependent0 {
 
     static void putLong(long address, long value) {
         UNSAFE.putLong(address, value);
+    }
+
+    static void putByte(byte[] data, int index, byte value) {
+        UNSAFE.putByte(data, BYTE_ARRAY_BASE_OFFSET + index, value);
+    }
+
+    static void putShort(byte[] data, int index, short value) {
+        UNSAFE.putShort(data, BYTE_ARRAY_BASE_OFFSET + index, value);
+    }
+
+    static void putInt(byte[] data, int index, int value) {
+        UNSAFE.putInt(data, BYTE_ARRAY_BASE_OFFSET + index, value);
+    }
+
+    static void putLong(byte[] data, int index, long value) {
+        UNSAFE.putLong(data, BYTE_ARRAY_BASE_OFFSET + index, value);
     }
 
     static void copyMemory(long srcAddr, long dstAddr, long length) {
