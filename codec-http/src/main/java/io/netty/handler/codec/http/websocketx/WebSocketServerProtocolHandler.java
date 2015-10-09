@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -113,7 +114,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     @Override
     protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame, List<Object> out) throws Exception {
         if (frame instanceof CloseWebSocketFrame) {
-            WebSocketServerHandshaker handshaker = getHandshaker(ctx);
+            WebSocketServerHandshaker handshaker = getHandshaker(ctx.channel());
             if (handshaker != null) {
                 frame.retain();
                 handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
@@ -136,12 +137,12 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
         }
     }
 
-    static WebSocketServerHandshaker getHandshaker(ChannelHandlerContext ctx) {
-        return ctx.attr(HANDSHAKER_ATTR_KEY).get();
+    static WebSocketServerHandshaker getHandshaker(Channel channel) {
+        return channel.attr(HANDSHAKER_ATTR_KEY).get();
     }
 
-    static void setHandshaker(ChannelHandlerContext ctx, WebSocketServerHandshaker handshaker) {
-        ctx.attr(HANDSHAKER_ATTR_KEY).set(handshaker);
+    static void setHandshaker(Channel channel, WebSocketServerHandshaker handshaker) {
+        channel.attr(HANDSHAKER_ATTR_KEY).set(handshaker);
     }
 
     static ChannelHandler forbiddenHttpRequestResponder() {

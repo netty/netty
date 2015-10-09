@@ -56,17 +56,13 @@ public class Http2OrHttpHandler extends ApplicationProtocolNegotiationHandler {
 
     private static void configureHttp2(ChannelHandlerContext ctx) {
         DefaultHttp2Connection connection = new DefaultHttp2Connection(true);
-        DefaultHttp2FrameWriter writer = new DefaultHttp2FrameWriter();
-        DefaultHttp2FrameReader reader = new DefaultHttp2FrameReader();
         InboundHttp2ToHttpAdapter listener = new InboundHttp2ToHttpAdapter.Builder(connection)
                 .propagateSettings(true).validateHttpHeaders(false).maxContentLength(MAX_CONTENT_LENGTH).build();
 
-        ctx.pipeline().addLast(new HttpToHttp2ConnectionHandler(
-                connection,
-                // Loggers can be activated for debugging purposes
-                // new Http2InboundFrameLogger(reader, TilesHttp2ToHttpHandler.logger),
-                // new Http2OutboundFrameLogger(writer, TilesHttp2ToHttpHandler.logger)
-                reader, writer, listener));
+        ctx.pipeline().addLast(new HttpToHttp2ConnectionHandler.Builder()
+                .frameListener(listener)
+                // .frameLogger(TilesHttp2ToHttpHandler.logger)
+                .build(connection));
         ctx.pipeline().addLast(new Http2RequestHandler());
     }
 

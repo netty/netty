@@ -51,7 +51,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-tcnative</artifactId>
-      <classifier>${os.detected.classifier}</classifier>
+      <classifier>${tcnative.classifier}</classifier>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -105,7 +105,7 @@
               <goal>jar</goal>
             </goals>
             <configuration>
-              <classifier>${os.detected.classifier}</classifier>
+              <classifier>${epoll.classifier}</classifier>
             </configuration>
           </execution>
         </executions>
@@ -186,7 +186,7 @@
               <value>${linux.sendmmsg.support}${glibc.sendmmsg.support}</value>
               <!-- If glibc and linux kernel are both not sufficient...then define the CFLAGS -->
               <regex>.*IO_NETTY_SENDMSSG_NOT_FOUND.*</regex>
-              <replacement>CFLAGS=-O3 -DIO_NETTY_SENDMMSG_NOT_FOUND</replacement>
+              <replacement>CFLAGS=-O3 -DIO_NETTY_SENDMMSG_NOT_FOUND -Werror</replacement>
               <failIfNoMatch>false</failIfNoMatch>
             </configuration>
           </execution>
@@ -202,7 +202,7 @@
               <value>${jni.compiler.args}</value>
               <!-- If glibc and linux kernel are both not sufficient...then define the CFLAGS -->
               <regex>^((?!CFLAGS=).)*$</regex>
-              <replacement>CFLAGS=-O3</replacement>
+              <replacement>CFLAGS=-O3 -Werror</replacement>
               <failIfNoMatch>false</failIfNoMatch>
             </configuration>
           </execution>

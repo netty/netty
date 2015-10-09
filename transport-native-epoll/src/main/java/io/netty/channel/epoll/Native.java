@@ -61,6 +61,7 @@ public final class Native {
     public static final int IOV_MAX = iovMax();
     public static final int UIO_MAX_IOV = uioMaxIov();
     public static final boolean IS_SUPPORTING_SENDMMSG = isSupportingSendmmsg();
+    public static final boolean IS_SUPPORTING_TCP_FASTOPEN = isSupportingTcpFastopen();
     public static final long SSIZE_MAX = ssizeMax();
     public static final int TCP_MD5SIG_MAXKEYLEN = tcpMd5SigMaxKeyLen();
 
@@ -68,6 +69,7 @@ public final class Native {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, (byte) 0xff, (byte) 0xff };
 
     // As all our JNI methods return -errno on error we need to compare with the negative errno codes.
+    private static final int ERRNO_ENOTCONN_NEGATIVE = -errnoENOTCONN();
     private static final int ERRNO_EBADF_NEGATIVE = -errnoEBADF();
     private static final int ERRNO_EPIPE_NEGATIVE = -errnoEPIPE();
     private static final int ERRNO_ECONNRESET_NEGATIVE = -errnoECONNRESET();
@@ -82,7 +84,7 @@ public final class Native {
      *
      * The array length of 1024 should be more then enough because errno.h only holds < 200 codes.
      */
-    private static final String[] ERRORS = new String[1024]; //
+    private static final String[] ERRORS = new String[1024];
 
     // Pre-instantiated exceptions which does not need any stacktrace and
     // can be thrown multiple times for performance reasons.
@@ -140,7 +142,7 @@ public final class Native {
         if (err == ERRNO_EPIPE_NEGATIVE || err == ERRNO_ECONNRESET_NEGATIVE) {
             throw resetCause;
         }
-        if (err == ERRNO_EBADF_NEGATIVE) {
+        if (err == ERRNO_EBADF_NEGATIVE || err == ERRNO_ENOTCONN_NEGATIVE) {
             throw CLOSED_CHANNEL_EXCEPTION;
         }
         // TODO: We could even go futher and use a pre-instanced IOException for the other error codes, but for
@@ -188,6 +190,7 @@ public final class Native {
     private static native int errnoEBADF();
     private static native int errnoEPIPE();
     private static native int errnoECONNRESET();
+    private static native int errnoENOTCONN();
 
     private static native int errnoEAGAIN();
     private static native int errnoEWOULDBLOCK();
@@ -204,7 +207,7 @@ public final class Native {
 
     private static native int close0(int fd);
 
-    public static int splice(int fd, int offIn, int fdOut, int offOut, int len) throws IOException {
+    public static int splice(int fd, long offIn, int fdOut, long offOut, long len) throws IOException {
         int res = splice0(fd, offIn, fdOut, offOut, len);
         if (res >= 0) {
             return res;
@@ -212,7 +215,7 @@ public final class Native {
         return ioResult("splice", res, CONNECTION_RESET_EXCEPTION_SPLICE);
     }
 
-    private static native int splice0(int fd, int offIn, int fdOut, int offOut, int len);
+    private static native int splice0(int fd, long offIn, int fdOut, long offOut, long len);
 
     public static long pipe() throws IOException {
         long res = pipe0();
@@ -398,6 +401,7 @@ public final class Native {
             int fd, NativeDatagramPacketArray.NativeDatagramPacket[] msgs, int offset, int len);
 
     private static native boolean isSupportingSendmmsg();
+    private static native boolean isSupportingTcpFastopen();
 
     // socket operations
     public static int socketStreamFd() {
@@ -648,6 +652,7 @@ public final class Native {
     public static native void setSendBufferSize(int fd, int sendBufferSize);
     public static native void setTcpNoDelay(int fd, int tcpNoDelay);
     public static native void setTcpCork(int fd, int tcpCork);
+    public static native void setTcpFastopen(int fd, int tcpFastopenBacklog);
     public static native void setTcpNotSentLowAt(int fd, int tcpNotSentLowAt);
     public static native void setSoLinger(int fd, int soLinger);
     public static native void setTrafficClass(int fd, int tcpNoDelay);

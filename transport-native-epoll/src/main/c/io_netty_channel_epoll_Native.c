@@ -26,18 +26,34 @@
 #include <netinet/in.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <linux/socket.h> // SOL_TCP definition
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <sys/utsname.h>
 #include <stddef.h>
 #include <limits.h>
+#include <inttypes.h>
 #include "io_netty_channel_epoll_Native.h"
 #include "exception_helper.h"
 
 // TCP_NOTSENT_LOWAT is defined in linux 3.12. We define this here so older kernels can compile.
 #ifndef TCP_NOTSENT_LOWAT
 #define TCP_NOTSENT_LOWAT 25
+#endif
+
+
+#ifndef _KERNEL_FASTOPEN
+#define _KERNEL_FASTOPEN
+// conditional define for TCP_FASTOPEN mostly on ubuntu
+#ifndef TCP_FASTOPEN
+#define TCP_FASTOPEN   23
+#endif
+
+// conditional define for SOL_TCP mostly on ubuntu
+#ifndef SOL_TCP
+#define SOL_TCP 6
+#endif
 #endif
 
 /**
@@ -134,6 +150,20 @@ void throwClosedChannelException(JNIEnv* env) {
 void throwOutOfMemoryError(JNIEnv* env) {
     jclass exceptionClass = (*env)->FindClass(env, "java/lang/OutOfMemoryError");
     (*env)->ThrowNew(env, exceptionClass, "");
+}
+
+static int getSysctlValue(const char * property, int* returnValue) {
+    int rc = -1;
+    FILE *fd=fopen(property, "r");
+    if (fd != NULL) {
+      char buf[32] = {0x0};
+      if (fgets(buf, 32, fd) != NULL) {
+        *returnValue = atoi(buf);
+        rc = 0;
+      }
+      fclose(fd);
+    }
+    return rc;
 }
 
 /** Notice: every usage of exceptionMessage needs to release the allocated memory for the sequence of char */
@@ -1028,6 +1058,8 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_shutdown0(JNIEnv* env,
         mode = SHUT_RD;
     } else if (write) {
         mode = SHUT_WR;
+    } else {
+        return -EINVAL;
     }
     if (shutdown(fd, mode) < 0) {
         return -errno;
@@ -1068,12 +1100,14 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_bind(JNIEnv* env, jcla
     if (bind(fd, (struct sockaddr*) &addr, sizeof(addr)) == -1) {
         return -errno;
     }
+    return 0;
 }
 
 JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_listen0(JNIEnv* env, jclass clazz, jint fd, jint backlog) {
     if (listen(fd, backlog) == -1) {
         return -errno;
     }
+    return 0;
 }
 
 JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_connect(JNIEnv* env, jclass clazz, jint fd, jbyteArray address, jint scopeId, jint port) {
@@ -1232,6 +1266,10 @@ JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setKeepAlive(JNIEnv* e
 
 JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setTcpCork(JNIEnv* env, jclass clazz, jint fd, jint optval) {
     setOption(env, fd, IPPROTO_TCP, TCP_CORK, &optval, sizeof(optval));
+}
+
+JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setTcpFastopen(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    setOption(env, fd, SOL_TCP, TCP_FASTOPEN, &optval, sizeof(optval));
 }
 
 JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setTcpNotSentLowAt(JNIEnv* env, jclass clazz, jint fd, jint optval) {
@@ -1479,6 +1517,19 @@ JNIEXPORT jboolean JNICALL Java_io_netty_channel_epoll_Native_isSupportingSendmm
     return JNI_FALSE;
 }
 
+JNIEXPORT jboolean JNICALL Java_io_netty_channel_epoll_Native_isSupportingTcpFastopen(JNIEnv* env, jclass clazz) {
+    int fastopen = 0;
+    getSysctlValue("/proc/sys/net/ipv4/tcp_fastopen", &fastopen);
+    if (fastopen > 0) {
+        return JNI_TRUE;
+    }
+    return JNI_FALSE;
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_errnoENOTCONN(JNIEnv* env, jclass clazz) {
+    return ENOTCONN;
+}
+
 JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_errnoEBADF(JNIEnv* env, jclass clazz) {
     return EBADF;
 }
@@ -1518,7 +1569,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_socketDomain(JNIEnv* e
 
 // macro to calculate the length of a sockaddr_un struct for a given path length.
 // see sys/un.h#SUN_LEN, this is modified to allow nul bytes
-#define _UNIX_ADDR_LENGTH(path_len) (((struct sockaddr_un *) 0)->sun_path) + path_len
+#define _UNIX_ADDR_LENGTH(path_len) (uintptr_t) (((struct sockaddr_un *) 0)->sun_path) + path_len
 
 JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_bindDomainSocket(JNIEnv* env, jclass clazz, jint fd, jbyteArray socketPath) {
     struct sockaddr_un addr;
@@ -1526,7 +1577,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_bindDomainSocket(JNIEn
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
 
-    const jbyte* socket_path = (*env)->GetByteArrayElements(env, socketPath, 0);
+    jbyte* socket_path = (*env)->GetByteArrayElements(env, socketPath, 0);
     jint socket_path_len = (*env)->GetArrayLength(env, socketPath);
     if (socket_path_len > sizeof(addr.sun_path)) {
         socket_path_len = sizeof(addr.sun_path);
@@ -1553,7 +1604,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_connectDomainSocket(JN
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
 
-    const jbyte* socket_path = (*env)->GetByteArrayElements(env, socketPath, 0);
+    jbyte* socket_path = (*env)->GetByteArrayElements(env, socketPath, 0);
     socket_path_len = (*env)->GetArrayLength(env, socketPath);
     if (socket_path_len > sizeof(addr.sun_path)) {
         socket_path_len = sizeof(addr.sun_path);
@@ -1643,7 +1694,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_sendFd0(JNIEnv* env, j
         iov[0].iov_base = iovecData;
         iov[0].iov_len = sizeof(iovecData);
 
-        size_t res;
+        ssize_t res;
         int err;
         do {
             res = sendmsg(socketFd, &descriptorMessage, 0);
@@ -1716,14 +1767,17 @@ JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_pipe0(JNIEnv* env, jc
     return (((long) fd[0]) << 32) | (fd[1] & 0xffffffffL);
 }
 
-JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_splice0(JNIEnv* env, jclass clazz, jint fd, jint offIn, jint fdOut, jint offOut, jint len) {
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_splice0(JNIEnv* env, jclass clazz, jint fd, jlong offIn, jint fdOut, jlong offOut, jlong len) {
     ssize_t res;
     int err;
-    loff_t off_in = offIn >= 0 ? (loff_t) offIn : NULL;
-    loff_t off_out = offOut >= 0 ? (loff_t) offOut : NULL;
+    loff_t off_in = (loff_t) offIn;
+    loff_t off_out = (loff_t) offOut;
+
+    loff_t* p_off_in = off_in >= 0 ? &off_in : NULL;
+    loff_t* p_off_out = off_in >= 0 ? &off_out : NULL;
 
     do {
-       res = splice(fd, off_in, fdOut, off_out, (size_t) len, SPLICE_F_NONBLOCK | SPLICE_F_MOVE);
+       res = splice(fd, p_off_in, fdOut, p_off_out, (size_t) len, SPLICE_F_NONBLOCK | SPLICE_F_MOVE);
        // keep on splicing if it was interrupted
     } while (res == -1 && ((err = errno) == EINTR));
 

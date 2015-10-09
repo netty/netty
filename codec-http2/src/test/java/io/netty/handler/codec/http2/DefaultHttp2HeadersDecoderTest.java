@@ -40,7 +40,7 @@ public class DefaultHttp2HeadersDecoderTest {
 
     @Before
     public void setup() {
-        decoder = new DefaultHttp2HeadersDecoder();
+        decoder = new DefaultHttp2HeadersDecoder(false);
     }
 
     @Test

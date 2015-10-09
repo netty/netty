@@ -73,13 +73,13 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator {
         /**
          * Returns the name of the protocol supported by this codec, as indicated by the {@code 'UPGRADE'} header.
          */
-        String protocol();
+        CharSequence protocol();
 
         /**
          * Sets any protocol-specific headers required to the upgrade request. Returns the names of
          * all headers that were added. These headers will be used to populate the CONNECTION header.
          */
-        Collection<String> setUpgradeHeaders(ChannelHandlerContext ctx, HttpRequest upgradeRequest);
+        Collection<CharSequence> setUpgradeHeaders(ChannelHandlerContext ctx, HttpRequest upgradeRequest);
 
         /**
          * Performs an HTTP protocol upgrade from the source codec. This method is responsible for
@@ -219,12 +219,12 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator {
         request.headers().set(HttpHeaderNames.UPGRADE, upgradeCodec.protocol());
 
         // Add all protocol-specific headers to the request.
-        Set<String> connectionParts = new LinkedHashSet<String>(2);
+        Set<CharSequence> connectionParts = new LinkedHashSet<CharSequence>(2);
         connectionParts.addAll(upgradeCodec.setUpgradeHeaders(ctx, request));
 
         // Set the CONNECTION header from the set of all protocol-specific headers that were added.
         StringBuilder builder = new StringBuilder();
-        for (String part : connectionParts) {
+        for (CharSequence part : connectionParts) {
             builder.append(part);
             builder.append(',');
         }

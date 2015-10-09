@@ -89,7 +89,7 @@ final class Http2TestUtil {
         }
 
         FrameAdapter(Http2Connection connection, Http2FrameListener listener, CountDownLatch latch) {
-            this(connection, new DefaultHttp2FrameReader(), listener, latch);
+            this(connection, new DefaultHttp2FrameReader(false), listener, latch);
         }
 
         FrameAdapter(Http2Connection connection, DefaultHttp2FrameReader reader, Http2FrameListener listener,

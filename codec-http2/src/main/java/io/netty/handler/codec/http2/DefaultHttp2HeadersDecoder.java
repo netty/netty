@@ -36,18 +36,28 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
     private final int maxHeaderSize;
     private final Decoder decoder;
     private final Http2HeaderTable headerTable;
+    private final boolean validateHeaders;
 
     public DefaultHttp2HeadersDecoder() {
-        this(DEFAULT_MAX_HEADER_SIZE, DEFAULT_HEADER_TABLE_SIZE);
+        this(true);
+    }
+
+    public DefaultHttp2HeadersDecoder(boolean validateHeaders) {
+        this(DEFAULT_MAX_HEADER_SIZE, DEFAULT_HEADER_TABLE_SIZE, validateHeaders);
     }
 
     public DefaultHttp2HeadersDecoder(int maxHeaderSize, int maxHeaderTableSize) {
+        this(maxHeaderSize, maxHeaderTableSize, true);
+    }
+
+    public DefaultHttp2HeadersDecoder(int maxHeaderSize, int maxHeaderTableSize, boolean validateHeaders) {
         if (maxHeaderSize <= 0) {
             throw new IllegalArgumentException("maxHeaderSize must be positive: " + maxHeaderSize);
         }
         decoder = new Decoder(maxHeaderSize, maxHeaderTableSize);
         headerTable = new Http2HeaderTableDecoder();
         this.maxHeaderSize = maxHeaderSize;
+        this.validateHeaders = validateHeaders;
     }
 
     @Override
@@ -77,7 +87,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
     public Http2Headers decodeHeaders(ByteBuf headerBlock) throws Http2Exception {
         InputStream in = new ByteBufInputStream(headerBlock);
         try {
-            final Http2Headers headers = new DefaultHttp2Headers();
+            final Http2Headers headers = new DefaultHttp2Headers(validateHeaders);
             HeaderListener listener = new HeaderListener() {
                 @Override
                 public void addHeader(byte[] key, byte[] value, boolean sensitive) {

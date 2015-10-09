@@ -40,7 +40,16 @@ public abstract class AbstractPooledByteBufTest extends AbstractByteBufTest {
 
     @Test
     public void testDiscardMarks() {
-        ByteBuf buf = newBuffer(4);
+        testDiscardMarks(4);
+    }
+
+    @Test
+    public void testDiscardMarksUnpooled() {
+        testDiscardMarks(32 * 1024 * 1024);
+    }
+
+    private void testDiscardMarks(int capacity) {
+        ByteBuf buf = newBuffer(capacity);
         buf.writeShort(1);
 
         buf.skipBytes(1);
@@ -49,7 +58,7 @@ public abstract class AbstractPooledByteBufTest extends AbstractByteBufTest {
         buf.markWriterIndex();
         assertTrue(buf.release());
 
-        ByteBuf buf2 = newBuffer(4);
+        ByteBuf buf2 = newBuffer(capacity);
 
         assertSame(unwrapIfNeeded(buf), unwrapIfNeeded(buf2));
 

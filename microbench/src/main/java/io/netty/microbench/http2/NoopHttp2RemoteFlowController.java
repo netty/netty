@@ -42,6 +42,11 @@ public final class NoopHttp2RemoteFlowController implements Http2RemoteFlowContr
     }
 
     @Override
+    public boolean isWritable(Http2Stream stream) {
+        return true;
+    }
+
+    @Override
     public int initialWindowSize(Http2Stream stream) {
         return MAX_INITIAL_WINDOW_SIZE;
     }
@@ -56,11 +61,6 @@ public final class NoopHttp2RemoteFlowController implements Http2RemoteFlowContr
 
     @Override
     public void listener(Listener listener) {
-    }
-
-    @Override
-    public Listener listener() {
-        return null;
     }
 
     @Override
@@ -79,5 +79,9 @@ public final class NoopHttp2RemoteFlowController implements Http2RemoteFlowContr
     @Override
     public ChannelHandlerContext channelHandlerContext() {
         return ctx;
+    }
+
+    @Override
+    public void channelWritabilityChanged() throws Http2Exception {
     }
 }

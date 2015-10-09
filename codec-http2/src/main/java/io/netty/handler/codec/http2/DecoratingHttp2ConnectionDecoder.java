@@ -47,8 +47,13 @@ public class DecoratingHttp2ConnectionDecoder implements Http2ConnectionDecoder 
     }
 
     @Override
-    public Http2FrameListener listener() {
-        return delegate.listener();
+    public void frameListener(Http2FrameListener listener) {
+        delegate.frameListener(listener);
+    }
+
+    @Override
+    public Http2FrameListener frameListener() {
+        return delegate.frameListener();
     }
 
     @Override

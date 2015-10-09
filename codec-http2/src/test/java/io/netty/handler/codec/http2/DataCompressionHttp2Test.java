@@ -299,10 +299,10 @@ public class DataCompressionHttp2Test {
                 Http2ConnectionEncoder encoder = new CompressorHttp2ConnectionEncoder(
                         new DefaultHttp2ConnectionEncoder(serverConnection, new DefaultHttp2FrameWriter()));
                 Http2ConnectionDecoder decoder =
-                        new DefaultHttp2ConnectionDecoder(serverConnection, encoder, new DefaultHttp2FrameReader(),
-                                new DelegatingDecompressorFrameListener(serverConnection,
-                                        serverListener));
-                Http2ConnectionHandler connectionHandler = new Http2ConnectionHandler(decoder, encoder);
+                        new DefaultHttp2ConnectionDecoder(serverConnection, encoder, new DefaultHttp2FrameReader());
+                Http2ConnectionHandler connectionHandler = new Http2ConnectionHandler.Builder()
+                        .frameListener(new DelegatingDecompressorFrameListener(serverConnection, serverListener))
+                        .build(decoder, encoder);
                 p.addLast(connectionHandler);
                 serverChannelLatch.countDown();
             }
@@ -318,13 +318,12 @@ public class DataCompressionHttp2Test {
                         new DefaultHttp2ConnectionEncoder(clientConnection, new DefaultHttp2FrameWriter()));
                 Http2ConnectionDecoder decoder =
                         new DefaultHttp2ConnectionDecoder(clientConnection, clientEncoder,
-                                new DefaultHttp2FrameReader(),
-                                new DelegatingDecompressorFrameListener(clientConnection,
-                                        clientListener));
-                clientHandler = new Http2ConnectionHandler(decoder, clientEncoder);
-
-                // By default tests don't wait for server to gracefully shutdown streams
-                clientHandler.gracefulShutdownTimeoutMillis(0);
+                                new DefaultHttp2FrameReader());
+                clientHandler = new Http2ConnectionHandler.Builder()
+                        .frameListener(new DelegatingDecompressorFrameListener(clientConnection, clientListener))
+                        // By default tests don't wait for server to gracefully shutdown streams
+                        .gracefulShutdownTimeoutMillis(0)
+                        .build(decoder, clientEncoder);
                 p.addLast(clientHandler);
             }
         });

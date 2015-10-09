@@ -96,11 +96,11 @@ public class StreamBufferingEncoderTest {
         when(writer.configuration()).thenReturn(configuration);
         when(configuration.frameSizePolicy()).thenReturn(frameSizePolicy);
         when(frameSizePolicy.maxFrameSize()).thenReturn(DEFAULT_MAX_FRAME_SIZE);
-        when(writer.writeData(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean(),
-                eq(promise))).thenAnswer(successAnswer());
+        when(writer.writeData(any(ChannelHandlerContext.class), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean(),
+                any(ChannelPromise.class))).thenAnswer(successAnswer());
         when(writer.writeRstStream(eq(ctx), anyInt(), anyLong(), eq(promise))).thenAnswer(
                 successAnswer());
-        when(writer.writeGoAway(eq(ctx), anyInt(), anyLong(), any(ByteBuf.class),
+        when(writer.writeGoAway(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class),
                 any(ChannelPromise.class)))
                 .thenAnswer(successAnswer());
 
@@ -110,10 +110,10 @@ public class StreamBufferingEncoderTest {
                 new DefaultHttp2ConnectionEncoder(connection, writer);
         encoder = new StreamBufferingEncoder(defaultEncoder);
         DefaultHttp2ConnectionDecoder decoder =
-                new DefaultHttp2ConnectionDecoder(connection, encoder,
-                        mock(Http2FrameReader.class), mock(Http2FrameListener.class));
+                new DefaultHttp2ConnectionDecoder(connection, encoder, mock(Http2FrameReader.class));
+        Http2ConnectionHandler handler = new Http2ConnectionHandler.Builder()
+                .frameListener(mock(Http2FrameListener.class)).build(decoder, encoder);
 
-        Http2ConnectionHandler handler = new Http2ConnectionHandler(decoder, encoder);
         // Set LifeCycleManager on encoder and decoder
         when(ctx.channel()).thenReturn(channel);
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
@@ -141,7 +141,9 @@ public class StreamBufferingEncoderTest {
         encoder.writeSettingsAck(ctx, promise);
         encoderWriteHeaders(3, promise);
         assertEquals(0, encoder.numBufferedStreams());
-        encoder.writeData(ctx, 3, data(), 0, false, promise);
+        ByteBuf data = data();
+        final int expectedBytes = data.readableBytes() * 3;
+        encoder.writeData(ctx, 3, data, 0, false, promise);
         encoder.writeData(ctx, 3, data(), 0, false, promise);
         encoder.writeData(ctx, 3, data(), 0, false, promise);
         encoderWriteHeaders(3, promise);
@@ -151,7 +153,7 @@ public class StreamBufferingEncoderTest {
         ArgumentCaptor<ByteBuf> bufCaptor = ArgumentCaptor.forClass(ByteBuf.class);
         verify(writer, times(1))
                 .writeData(eq(ctx), eq(3), bufCaptor.capture(), eq(0), eq(false), eq(promise));
-        assertEquals(data().readableBytes() * 3, bufCaptor.getValue().readableBytes());
+        assertEquals(expectedBytes, bufCaptor.getValue().readableBytes());
     }
 
     @Test

@@ -65,6 +65,13 @@ public class DefaultHttp2HeadersTest {
         }
     }
 
+    @Test(expected = Http2Exception.class)
+    public void testHeaderNameValidation() {
+        Http2Headers headers = newHeaders();
+
+        headers.add(fromAscii("Foo"), fromAscii("foo"));
+    }
+
     private static void verifyAllPseudoHeadersPresent(Http2Headers headers) {
         for (PseudoHeaderName pseudoName : PseudoHeaderName.values()) {
             assertNotNull(headers.get(pseudoName.value()));

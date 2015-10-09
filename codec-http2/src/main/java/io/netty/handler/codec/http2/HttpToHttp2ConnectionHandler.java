@@ -33,24 +33,24 @@ import io.netty.util.ReferenceCountUtil;
  */
 public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
 
+    private final boolean validateHeaders;
     private int currentStreamId;
 
-    public HttpToHttp2ConnectionHandler(boolean server, Http2FrameListener listener) {
-        super(server, listener);
+    /**
+     * Builder which builds {@link HttpToHttp2ConnectionHandler} objects.
+     */
+    public static final class Builder extends BuilderBase<HttpToHttp2ConnectionHandler, Builder> {
+        @Override
+        public HttpToHttp2ConnectionHandler build0(Http2ConnectionDecoder decoder,
+                                                   Http2ConnectionEncoder encoder) {
+            return new HttpToHttp2ConnectionHandler(decoder, encoder, initialSettings(), isValidateHeaders());
+        }
     }
 
-    public HttpToHttp2ConnectionHandler(Http2Connection connection, Http2FrameListener listener) {
-        super(connection, listener);
-    }
-
-    public HttpToHttp2ConnectionHandler(Http2Connection connection, Http2FrameReader frameReader,
-            Http2FrameWriter frameWriter, Http2FrameListener listener) {
-        super(connection, frameReader, frameWriter, listener);
-    }
-
-    public HttpToHttp2ConnectionHandler(Http2ConnectionDecoder decoder,
-                                        Http2ConnectionEncoder encoder) {
-        super(decoder, encoder);
+    protected HttpToHttp2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
+                                           Http2Settings initialSettings, boolean validateHeaders) {
+        super(decoder, encoder, initialSettings);
+        this.validateHeaders = validateHeaders;
     }
 
     /**
@@ -89,7 +89,7 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
                 currentStreamId = getStreamId(httpMsg.headers());
 
                 // Convert and write the headers.
-                Http2Headers http2Headers = HttpConversionUtil.toHttp2Headers(httpMsg);
+                Http2Headers http2Headers = HttpConversionUtil.toHttp2Headers(httpMsg, validateHeaders);
                 endStream = msg instanceof FullHttpMessage && !((FullHttpMessage) msg).content().isReadable();
                 encoder.writeHeaders(ctx, currentStreamId, http2Headers, 0, endStream, promiseAggregator.newPromise());
             }
@@ -102,7 +102,7 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
 
                     // Convert any trailing headers.
                     final LastHttpContent lastContent = (LastHttpContent) msg;
-                    trailers = HttpConversionUtil.toHttp2Headers(lastContent.trailingHeaders());
+                    trailers = HttpConversionUtil.toHttp2Headers(lastContent.trailingHeaders(), validateHeaders);
                 }
 
                 // Write the data

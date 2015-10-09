@@ -17,6 +17,8 @@ package io.netty.buffer;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
+import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 
@@ -50,7 +52,20 @@ public class ByteBufUtilTest {
         final int iB1 = b1.length / 2;
         final int iB2 = iB1 + b1.length;
         final int length = b1.length - iB1;
-        System.arraycopy(b1, iB1, b2, iB2, length - 1);
+        // Even though we choose random values...make sure they are not equal.
+        final int copyLength = length - 1;
+        final int end = iB1 + copyLength;
+        boolean foundDiff = false;
+        for (int i = iB1, j = iB2; i < end; ++i, ++j) {
+            if (b1[i] != b2[j]) {
+                foundDiff = true;
+                break;
+            }
+        }
+        if (!foundDiff) {
+            ++b1[iB1];
+        }
+        System.arraycopy(b1, iB1, b2, iB2, copyLength);
         assertFalse(ByteBufUtil.equals(Unpooled.wrappedBuffer(b1), iB1, Unpooled.wrappedBuffer(b2), iB2, length));
     }
 
@@ -102,6 +117,17 @@ public class ByteBufUtilTest {
         buf.writeBytes(usAscii.getBytes(CharsetUtil.UTF_8));
         ByteBuf buf2 = ReferenceCountUtil.releaseLater(Unpooled.buffer(16));
         ByteBufUtil.writeUtf8(buf2, usAscii);
+
+        Assert.assertEquals(buf, buf2);
+    }
+
+    @Test
+    public void testWriteUsAsciiString() {
+        AsciiString usAscii = new AsciiString("NettyRocks");
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(16));
+        buf.writeBytes(usAscii.toString().getBytes(CharsetUtil.US_ASCII));
+        ByteBuf buf2 = ReferenceCountUtil.releaseLater(Unpooled.buffer(16));
+        ByteBufUtil.writeAscii(buf2, usAscii);
 
         Assert.assertEquals(buf, buf2);
     }

@@ -19,6 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -284,6 +285,13 @@ public abstract class SSLEngineTest {
                 }
             }
         }
+    }
+
+    @Test
+    public void testGetCreationTime() throws Exception {
+        SslContext context = SslContextBuilder.forClient().sslProvider(sslProvider()).build();
+        SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        assertTrue(engine.getSession().getCreationTime() <= System.currentTimeMillis());
     }
 
     protected abstract SslProvider sslProvider();

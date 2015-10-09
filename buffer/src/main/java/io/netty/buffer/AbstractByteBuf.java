@@ -101,8 +101,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
                     "readerIndex: %d, writerIndex: %d (expected: 0 <= readerIndex <= writerIndex <= capacity(%d))",
                     readerIndex, writerIndex, capacity()));
         }
-        this.readerIndex = readerIndex;
-        this.writerIndex = writerIndex;
+        setIndex0(readerIndex, writerIndex);
         return this;
     }
 
@@ -1152,7 +1151,12 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
     }
 
-    void discardMarks() {
+    final void setIndex0(int readerIndex, int writerIndex) {
+        this.readerIndex = readerIndex;
+        this.writerIndex = writerIndex;
+    }
+
+    final void discardMarks() {
         markedReaderIndex = markedWriterIndex = 0;
     }
 }

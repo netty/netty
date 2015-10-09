@@ -68,7 +68,6 @@ public final class HttpConversionUtil {
             add(HttpHeaderNames.HOST);
             add(HttpHeaderNames.UPGRADE);
             add(ExtensionHeaderNames.STREAM_ID.text());
-            add(ExtensionHeaderNames.AUTHORITY.text());
             add(ExtensionHeaderNames.SCHEME.text());
             add(ExtensionHeaderNames.PATH.text());
         }
@@ -112,14 +111,6 @@ public final class HttpConversionUtil {
          * {@code "x-http2-stream-id"}
          */
         STREAM_ID("x-http2-stream-id"),
-
-        /**
-         * HTTP extension header which will identify the authority pseudo header from the HTTP/2 event(s) responsible
-         * for generating a {@code HttpObject}
-         * <p>
-         * {@code "x-http2-authority"}
-         */
-        AUTHORITY("x-http2-authority"),
         /**
          * HTTP extension header which will identify the scheme pseudo header from the HTTP/2 event(s) responsible for
          * generating a {@code HttpObject}
@@ -238,21 +229,40 @@ public final class HttpConversionUtil {
     }
 
     /**
-     * Translate and add HTTP/2 headers to HTTP/1.x headers
+     * Translate and add HTTP/2 headers to HTTP/1.x headers.
      *
-     * @param streamId The stream associated with {@code sourceHeaders}
-     * @param sourceHeaders The HTTP/2 headers to convert
-     * @param destinationMessage The object which will contain the resulting HTTP/1.x headers
+     * @param streamId The stream associated with {@code sourceHeaders}.
+     * @param sourceHeaders The HTTP/2 headers to convert.
+     * @param destinationMessage The object which will contain the resulting HTTP/1.x headers.
      * @param addToTrailer {@code true} to add to trailing headers. {@code false} to add to initial headers.
-     * @throws Http2Exception If not all HTTP/2 headers can be translated to HTTP/1.x
+     * @throws Http2Exception If not all HTTP/2 headers can be translated to HTTP/1.x.
+     * @see #addHttp2ToHttpHeaders(int, Http2Headers, HttpHeaders, HttpVersion, boolean, boolean)
      */
     public static void addHttp2ToHttpHeaders(int streamId, Http2Headers sourceHeaders,
                     FullHttpMessage destinationMessage, boolean addToTrailer) throws Http2Exception {
-        HttpHeaders headers = addToTrailer ? destinationMessage.trailingHeaders() : destinationMessage.headers();
-        boolean request = destinationMessage instanceof HttpRequest;
-        Http2ToHttpHeaderTranslator translator = new Http2ToHttpHeaderTranslator(streamId, headers, request);
+        addHttp2ToHttpHeaders(streamId, sourceHeaders,
+                addToTrailer ? destinationMessage.trailingHeaders() : destinationMessage.headers(),
+                destinationMessage.protocolVersion(), addToTrailer, destinationMessage instanceof HttpRequest);
+    }
+
+    /**
+     * Translate and add HTTP/2 headers to HTTP/1.x headers.
+     *
+     * @param streamId The stream associated with {@code sourceHeaders}.
+     * @param inputHeaders The HTTP/2 headers to convert.
+     * @param outputHeaders The object which will contain the resulting HTTP/1.x headers..
+     * @param httpVersion What HTTP/1.x version {@code outputHeaders} should be treated as when doing the conversion.
+     * @param isTrailer {@code true} if {@code outputHeaders} should be treated as trailing headers.
+     * {@code false} otherwise.
+     * @param isRequest {@code true} if the {@code outputHeaders} will be used in a request message.
+     * {@code false} for response message.
+     * @throws Http2Exception If not all HTTP/2 headers can be translated to HTTP/1.x.
+     */
+    public static void addHttp2ToHttpHeaders(int streamId, Http2Headers inputHeaders, HttpHeaders outputHeaders,
+            HttpVersion httpVersion, boolean isTrailer, boolean isRequest) throws Http2Exception {
+        Http2ToHttpHeaderTranslator translator = new Http2ToHttpHeaderTranslator(streamId, outputHeaders, isRequest);
         try {
-            for (Entry<ByteString, ByteString> entry : sourceHeaders) {
+            for (Entry<ByteString, ByteString> entry : inputHeaders) {
                 translator.translate(entry);
             }
         } catch (Http2Exception ex) {
@@ -261,11 +271,11 @@ public final class HttpConversionUtil {
             throw streamError(streamId, PROTOCOL_ERROR, t, "HTTP/2 to HTTP/1.x headers conversion error");
         }
 
-        headers.remove(HttpHeaderNames.TRANSFER_ENCODING);
-        headers.remove(HttpHeaderNames.TRAILER);
-        if (!addToTrailer) {
-            headers.setInt(ExtensionHeaderNames.STREAM_ID.text(), streamId);
-            HttpUtil.setKeepAlive(destinationMessage, true);
+        outputHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
+        outputHeaders.remove(HttpHeaderNames.TRAILER);
+        if (!isTrailer) {
+            outputHeaders.setInt(ExtensionHeaderNames.STREAM_ID.text(), streamId);
+            HttpUtil.setKeepAlive(outputHeaders, httpVersion, true);
         }
     }
 
@@ -279,8 +289,8 @@ public final class HttpConversionUtil {
      * </ul>
      * {@link ExtensionHeaderNames#PATH} is ignored and instead extracted from the {@code Request-Line}.
      */
-    public static Http2Headers toHttp2Headers(HttpMessage in) throws Exception {
-        final Http2Headers out = new DefaultHttp2Headers();
+    public static Http2Headers toHttp2Headers(HttpMessage in, boolean validateHeaders) throws Exception {
+        final Http2Headers out = new DefaultHttp2Headers(validateHeaders);
         HttpHeaders inHeaders = in.headers();
         if (in instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) in;
@@ -292,11 +302,7 @@ public final class HttpConversionUtil {
             if (!isOriginForm(requestTargetUri) && !isAsteriskForm(requestTargetUri)) {
                 // Attempt to take from HOST header before taking from the request-line
                 String host = inHeaders.getAsString(HttpHeaderNames.HOST);
-                if (host == null || host.isEmpty()) {
-                    setHttp2Authority(inHeaders, requestTargetUri.getAuthority(), out);
-                } else {
-                    setHttp2Authority(inHeaders, host, out);
-                }
+                setHttp2Authority((host == null || host.isEmpty()) ? requestTargetUri.getAuthority() : host, out);
             }
         } else if (in instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) in;
@@ -304,15 +310,15 @@ public final class HttpConversionUtil {
         }
 
         // Add the HTTP headers which have not been consumed above
-        return out.add(toHttp2Headers(inHeaders));
+        return out.add(toHttp2Headers(inHeaders, validateHeaders));
     }
 
-    public static Http2Headers toHttp2Headers(HttpHeaders inHeaders) throws Exception {
+    public static Http2Headers toHttp2Headers(HttpHeaders inHeaders, boolean validateHeaders) throws Exception {
         if (inHeaders.isEmpty()) {
             return EmptyHttp2Headers.INSTANCE;
         }
 
-        final Http2Headers out = new DefaultHttp2Headers();
+        final Http2Headers out = new DefaultHttp2Headers(validateHeaders);
 
         for (Entry<CharSequence, CharSequence> entry : inHeaders) {
             final AsciiString aName = AsciiString.of(entry.getKey()).toLowerCase();
@@ -334,24 +340,24 @@ public final class HttpConversionUtil {
      * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
      */
     private static AsciiString toHttp2Path(URI uri) {
-        StringBuilder pathBuilder = new StringBuilder(length(uri.getPath()) +
-                length(uri.getQuery()) + length(uri.getFragment()) + 2);
-        if (!isNullOrEmpty(uri.getPath())) {
-            pathBuilder.append(uri.getPath());
+        StringBuilder pathBuilder = new StringBuilder(length(uri.getRawPath()) +
+                length(uri.getRawQuery()) + length(uri.getRawFragment()) + 2);
+        if (!isNullOrEmpty(uri.getRawPath())) {
+            pathBuilder.append(uri.getRawPath());
         }
-        if (!isNullOrEmpty(uri.getQuery())) {
+        if (!isNullOrEmpty(uri.getRawQuery())) {
             pathBuilder.append('?');
-            pathBuilder.append(uri.getQuery());
+            pathBuilder.append(uri.getRawQuery());
         }
-        if (!isNullOrEmpty(uri.getFragment())) {
+        if (!isNullOrEmpty(uri.getRawFragment())) {
             pathBuilder.append('#');
-            pathBuilder.append(uri.getFragment());
+            pathBuilder.append(uri.getRawFragment());
         }
         String path = pathBuilder.toString();
         return path.isEmpty() ? EMPTY_REQUEST_PATH : new AsciiString(path);
     }
 
-    private static void setHttp2Authority(HttpHeaders in, String autority, Http2Headers out) {
+    private static void setHttp2Authority(String autority, Http2Headers out) {
         // The authority MUST NOT include the deprecated "userinfo" subcomponent
         if (autority != null) {
             int endOfUserInfo = autority.indexOf('@');
@@ -361,13 +367,6 @@ public final class HttpConversionUtil {
                 out.authority(new AsciiString(autority.substring(endOfUserInfo + 1)));
             } else {
                 throw new IllegalArgumentException("autority: " + autority);
-            }
-        } else {
-            // Consume the Authority extension header if present
-            CharSequence cValue = in.get(ExtensionHeaderNames.AUTHORITY.text());
-            if (cValue != null) {
-                // Assume this is sanitized of all "userinfo"
-                out.authority(AsciiString.of(cValue));
             }
         }
     }
@@ -409,7 +408,7 @@ public final class HttpConversionUtil {
             RESPONSE_HEADER_TRANSLATIONS = new HashMap<ByteString, ByteString>();
         static {
             RESPONSE_HEADER_TRANSLATIONS.put(Http2Headers.PseudoHeaderName.AUTHORITY.value(),
-                            ExtensionHeaderNames.AUTHORITY.text());
+                            HttpHeaderNames.HOST);
             RESPONSE_HEADER_TRANSLATIONS.put(Http2Headers.PseudoHeaderName.SCHEME.value(),
                             ExtensionHeaderNames.SCHEME.text());
             REQUEST_HEADER_TRANSLATIONS.putAll(RESPONSE_HEADER_TRANSLATIONS);

@@ -15,8 +15,6 @@
 
 package io.netty.handler.codec.http2;
 
-import static io.netty.util.CharsetUtil.UTF_8;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
@@ -25,21 +23,23 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.ssl.ApplicationProtocolNames;
+import io.netty.util.AsciiString;
 import io.netty.util.concurrent.EventExecutor;
+
+import static io.netty.buffer.Unpooled.directBuffer;
+import static io.netty.buffer.Unpooled.unmodifiableBuffer;
+import static io.netty.buffer.Unpooled.unreleasableBuffer;
+import static io.netty.util.CharsetUtil.UTF_8;
 
 /**
  * Constants and utility method used for encoding/decoding HTTP2 frames.
  */
 public final class Http2CodecUtil {
-
-    private static final byte[] CONNECTION_PREFACE = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes(UTF_8);
-    private static final byte[] EMPTY_PING = new byte[8];
-
     public static final int CONNECTION_STREAM_ID = 0;
     public static final int HTTP_UPGRADE_STREAM_ID = 1;
-    public static final String HTTP_UPGRADE_SETTINGS_HEADER = "HTTP2-Settings";
-    public static final String HTTP_UPGRADE_PROTOCOL_NAME = "h2c";
-    public static final String TLS_UPGRADE_PROTOCOL_NAME = ApplicationProtocolNames.HTTP_2;
+    public static final CharSequence HTTP_UPGRADE_SETTINGS_HEADER = new AsciiString("HTTP2-Settings");
+    public static final CharSequence HTTP_UPGRADE_PROTOCOL_NAME = "h2c";
+    public static final CharSequence TLS_UPGRADE_PROTOCOL_NAME = ApplicationProtocolNames.HTTP_2;
 
     public static final int PING_FRAME_PAYLOAD_LENGTH = 8;
     public static final short MAX_UNSIGNED_BYTE = 0xFF;
@@ -51,6 +51,11 @@ public final class Http2CodecUtil {
     public static final int INT_FIELD_LENGTH = 4;
     public static final short MAX_WEIGHT = 256;
     public static final short MIN_WEIGHT = 1;
+
+    private static final ByteBuf CONNECTION_PREFACE = unmodifiableBuffer(
+            unreleasableBuffer(directBuffer(24).writeBytes("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes(UTF_8))));
+    private static final ByteBuf EMPTY_PING = unmodifiableBuffer(
+            unreleasableBuffer(directBuffer(PING_FRAME_PAYLOAD_LENGTH).writeZero(PING_FRAME_PAYLOAD_LENGTH)));
 
     private static final int MAX_PADDING_LENGTH_LENGTH = 1;
     public static final int DATA_FRAME_HEADER_LENGTH = FRAME_HEADER_LENGTH + MAX_PADDING_LENGTH_LENGTH;
@@ -109,7 +114,7 @@ public final class Http2CodecUtil {
      */
     public static ByteBuf connectionPrefaceBuf() {
         // Return a duplicate so that modifications to the reader index will not affect the original buffer.
-        return Unpooled.wrappedBuffer(CONNECTION_PREFACE);
+        return CONNECTION_PREFACE.duplicate().retain();
     }
 
     /**
@@ -117,7 +122,7 @@ public final class Http2CodecUtil {
      */
     public static ByteBuf emptyPingBuf() {
         // Return a duplicate so that modifications to the reader index will not affect the original buffer.
-        return Unpooled.wrappedBuffer(EMPTY_PING);
+        return EMPTY_PING.duplicate().retain();
     }
 
     /**

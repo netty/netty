@@ -44,25 +44,22 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     private Http2LifecycleManager lifecycleManager;
     private final Http2ConnectionEncoder encoder;
     private final Http2FrameReader frameReader;
-    private final Http2FrameListener listener;
+    private Http2FrameListener listener;
     private final Http2PromisedRequestVerifier requestVerifier;
 
     public DefaultHttp2ConnectionDecoder(Http2Connection connection,
                                          Http2ConnectionEncoder encoder,
-                                         Http2FrameReader frameReader,
-                                         Http2FrameListener listener) {
-        this(connection, encoder, frameReader, listener, ALWAYS_VERIFY);
+                                         Http2FrameReader frameReader) {
+        this(connection, encoder, frameReader, ALWAYS_VERIFY);
     }
 
     public DefaultHttp2ConnectionDecoder(Http2Connection connection,
                                          Http2ConnectionEncoder encoder,
                                          Http2FrameReader frameReader,
-                                         Http2FrameListener listener,
                                          Http2PromisedRequestVerifier requestVerifier) {
         this.connection = checkNotNull(connection, "connection");
         this.frameReader = checkNotNull(frameReader, "frameReader");
         this.encoder = checkNotNull(encoder, "encoder");
-        this.listener = checkNotNull(listener, "listener");
         this.requestVerifier = checkNotNull(requestVerifier, "requestVerifier");
         if (connection.local().flowController() == null) {
             connection.local().flowController(
@@ -86,7 +83,12 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     }
 
     @Override
-    public Http2FrameListener listener() {
+    public void frameListener(Http2FrameListener listener) {
+        this.listener = checkNotNull(listener, "listener");
+    }
+
+    @Override
+    public Http2FrameListener frameListener() {
         return listener;
     }
 
@@ -440,7 +442,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
             // Send an ack back to the remote client.
             // Need to retain the buffer here since it will be released after the write completes.
-            encoder.writePing(ctx, true, data.retain(), ctx.newPromise());
+            encoder.writePing(ctx, true, data.slice().retain(), ctx.newPromise());
 
             listener.onPingRead(ctx, data);
         }

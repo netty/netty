@@ -102,15 +102,27 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     @Override
     protected void doClose() throws Exception {
-        active = false;
+        boolean active = this.active;
+        this.active = false;
+        FileDescriptor fd = fileDescriptor;
         try {
-            // deregister from epoll now
+            // deregister from epoll now and shutdown the socket.
             doDeregister();
+            if (active) {
+                shutdown(fd.intValue());
+            }
         } finally {
             // Ensure the file descriptor is closed in all cases.
-            FileDescriptor fd = fileDescriptor;
             fd.close();
         }
+    }
+
+    /**
+     * Called on {@link #doClose()} before the actual {@link FileDescriptor} is closed.
+     * This implementation does nothing.
+     */
+    protected void shutdown(int fd) throws IOException {
+        // NOOP
     }
 
     @Override
@@ -331,6 +343,9 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
          * Called once EPOLLRDHUP event is ready to be processed
          */
         final void epollRdHupReady() {
+            // This must happen before we attempt to read. This will ensure reading continues until an error occurs.
+            recvBufAllocHandle().receivedRdHup();
+
             if (isActive()) {
                 // If it is still active, we need to call epollInReady as otherwise we may miss to
                 // read pending data from the underlying file descriptor.
@@ -340,6 +355,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 // Clear the EPOLLRDHUP flag to prevent continuously getting woken up on this event.
                 clearEpollRdHup();
             }
+
             // epollInReady may call this, but we should ensure that it gets called.
             shutdownInput();
         }
@@ -364,8 +380,14 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 inputShutdown = true;
                 if (isOpen()) {
                     if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
-                        clearEpollIn0();
-                        pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+                        try {
+                            Native.shutdown(fd().intValue(), true, false);
+                            clearEpollIn0();
+                            pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+                        } catch (IOException e) {
+                            pipeline().fireExceptionCaught(e);
+                            close(voidPromise());
+                        }
                     } else {
                         close(voidPromise());
                     }

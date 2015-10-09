@@ -379,6 +379,18 @@ public class DefaultHeadersTest {
         assertEquals(headers1, expected);
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void testAddSelf() {
+        Headers<ByteString> headers = newInstance();
+        headers.add(headers);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testSetSelf() {
+        Headers<ByteString> headers = newInstance();
+        headers.set(headers);
+    }
+
     private ByteString bs(String value) {
         return new ByteString(value, CharsetUtil.US_ASCII);
     }
