@@ -42,6 +42,10 @@ public class ByteBufUtilTest {
         assertTrue(ByteBufUtil.equals(Unpooled.wrappedBuffer(b1), iB1, Unpooled.wrappedBuffer(b2), iB2, length));
     }
 
+    private static int random(Random r, int min, int max) {
+        return r.nextInt((max - min) + 1) + min;
+    }
+
     @Test
     public void notEqualsBufferSubsections() {
         byte[] b1 = new byte[50];
@@ -52,20 +56,11 @@ public class ByteBufUtilTest {
         final int iB1 = b1.length / 2;
         final int iB2 = iB1 + b1.length;
         final int length = b1.length - iB1;
-        // Even though we choose random values...make sure they are not equal.
-        final int copyLength = length - 1;
-        final int end = iB1 + copyLength;
-        boolean foundDiff = false;
-        for (int i = iB1, j = iB2; i < end; ++i, ++j) {
-            if (b1[i] != b2[j]) {
-                foundDiff = true;
-                break;
-            }
-        }
-        if (!foundDiff) {
-            ++b1[iB1];
-        }
-        System.arraycopy(b1, iB1, b2, iB2, copyLength);
+        System.arraycopy(b1, iB1, b2, iB2, length);
+        // Randomly pick an index in the range that will be compared and make the value at that index differ between
+        // the 2 arrays.
+        int diffIndex = random(rand, iB1, iB1 + length - 1);
+        ++b1[diffIndex];
         assertFalse(ByteBufUtil.equals(Unpooled.wrappedBuffer(b1), iB1, Unpooled.wrappedBuffer(b2), iB2, length));
     }
 
