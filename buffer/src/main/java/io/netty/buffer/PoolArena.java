@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.List;
 
 abstract class PoolArena<T> implements PoolArenaMetric {
+    static final boolean HAS_UNSAFE = PlatformDependent.hasUnsafe();
 
     enum SizeClass {
         Tiny,
@@ -614,7 +615,8 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
         @Override
         protected PooledByteBuf<byte[]> newByteBuf(int maxCapacity) {
-            return PooledHeapByteBuf.newInstance(maxCapacity);
+            return HAS_UNSAFE ? PooledUnsafeHeapByteBuf.newUnsafeInstance(maxCapacity)
+                    : PooledHeapByteBuf.newInstance(maxCapacity);
         }
 
         @Override
@@ -628,8 +630,6 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     }
 
     static final class DirectArena extends PoolArena<ByteBuffer> {
-
-        private static final boolean HAS_UNSAFE = PlatformDependent.hasUnsafe();
 
         DirectArena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
             super(parent, pageSize, maxOrder, pageShifts, chunkSize);

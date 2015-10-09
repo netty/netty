@@ -39,7 +39,7 @@ final class PlatformDependent0 {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PlatformDependent0.class);
     static final Unsafe UNSAFE;
     private static final long ADDRESS_FIELD_OFFSET;
-    private static final long ARRAY_BASE_OFFSET;
+    private static final long BYTE_ARRAY_BASE_OFFSET;
 
     /**
      * Limits the number of bytes to copy per {@link Unsafe#copyMemory(long, long, long)} to allow safepoint polling
@@ -108,11 +108,11 @@ final class PlatformDependent0 {
 
         if (unsafe == null) {
             ADDRESS_FIELD_OFFSET = -1;
-            ARRAY_BASE_OFFSET = -1;
+            BYTE_ARRAY_BASE_OFFSET = -1;
             UNALIGNED = false;
         } else {
             ADDRESS_FIELD_OFFSET = objectFieldOffset(addressField);
-            ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(byte[].class);
+            BYTE_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(byte[].class);
             boolean unaligned;
             try {
                 Class<?> bitsClass = Class.forName("java.nio.Bits", false, ClassLoader.getSystemClassLoader());
@@ -158,8 +158,8 @@ final class PlatformDependent0 {
         return getLong(buffer, ADDRESS_FIELD_OFFSET);
     }
 
-    static long arrayBaseOffset() {
-        return ARRAY_BASE_OFFSET;
+    static long byteArrayBaseOffset() {
+        return BYTE_ARRAY_BASE_OFFSET;
     }
 
     static Object getObject(Object object, long fieldOffset) {
@@ -198,6 +198,22 @@ final class PlatformDependent0 {
         return UNSAFE.getLong(address);
     }
 
+    static byte getByte(byte[] data, int index) {
+        return UNSAFE.getByte(data, BYTE_ARRAY_BASE_OFFSET + index);
+    }
+
+    static short getShort(byte[] data, int index) {
+        return UNSAFE.getShort(data, BYTE_ARRAY_BASE_OFFSET + index);
+    }
+
+    static int getInt(byte[] data, int index) {
+        return UNSAFE.getInt(data, BYTE_ARRAY_BASE_OFFSET + index);
+    }
+
+    static long getLong(byte[] data, int index) {
+        return UNSAFE.getLong(data, BYTE_ARRAY_BASE_OFFSET + index);
+    }
+
     static void putOrderedObject(Object object, long address, Object value) {
         UNSAFE.putOrderedObject(object, address, value);
     }
@@ -216,6 +232,22 @@ final class PlatformDependent0 {
 
     static void putLong(long address, long value) {
         UNSAFE.putLong(address, value);
+    }
+
+    static void putByte(byte[] data, int index, byte value) {
+        UNSAFE.putByte(data, BYTE_ARRAY_BASE_OFFSET + index, value);
+    }
+
+    static void putShort(byte[] data, int index, short value) {
+        UNSAFE.putShort(data, BYTE_ARRAY_BASE_OFFSET + index, value);
+    }
+
+    static void putInt(byte[] data, int index, int value) {
+        UNSAFE.putInt(data, BYTE_ARRAY_BASE_OFFSET + index, value);
+    }
+
+    static void putLong(byte[] data, int index, long value) {
+        UNSAFE.putLong(data, BYTE_ARRAY_BASE_OFFSET + index, value);
     }
 
     static void copyMemory(long srcAddr, long dstAddr, long length) {
@@ -249,8 +281,8 @@ final class PlatformDependent0 {
         if (len1 == 0) {
             return true;
         }
-        final long baseOffset1 = ARRAY_BASE_OFFSET + startPos1;
-        final long baseOffset2 = ARRAY_BASE_OFFSET + startPos2;
+        final long baseOffset1 = BYTE_ARRAY_BASE_OFFSET + startPos1;
+        final long baseOffset2 = BYTE_ARRAY_BASE_OFFSET + startPos2;
         int remainingBytes = len1 & 7;
         for (int i = len1 - 8; i >= remainingBytes; i -= 8) {
             if (UNSAFE.getLong(bytes1, baseOffset1 + i) != UNSAFE.getLong(bytes2, baseOffset2 + i)) {
