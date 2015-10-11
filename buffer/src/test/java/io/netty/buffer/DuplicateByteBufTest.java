@@ -29,7 +29,7 @@ public class DuplicateByteBufTest extends AbstractByteBufTest {
     @Override
     protected ByteBuf newBuffer(int length) {
         ByteBuf wrapped = Unpooled.buffer(length);
-        buffer = new DuplicatedByteBuf(wrapped);
+        buffer = new UnpooledDuplicatedByteBuf(wrapped);
         assertEquals(wrapped.writerIndex(), buffer.writerIndex());
         assertEquals(wrapped.readerIndex(), buffer.readerIndex());
         return buffer;
@@ -42,7 +42,7 @@ public class DuplicateByteBufTest extends AbstractByteBufTest {
 
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullInConstructor() {
-        new DuplicatedByteBuf(null);
+        new UnpooledDuplicatedByteBuf(null);
     }
 
     // See https://github.com/netty/netty/issues/1800
@@ -63,7 +63,7 @@ public class DuplicateByteBufTest extends AbstractByteBufTest {
         try {
             wrapped.writerIndex(6);
             wrapped.readerIndex(1);
-            ByteBuf duplicate = new DuplicatedByteBuf(wrapped);
+            ByteBuf duplicate = new UnpooledDuplicatedByteBuf(wrapped);
 
             // Test writer mark
             duplicate.writerIndex(duplicate.writerIndex() + 1);
