@@ -95,4 +95,29 @@ public class PerFrameDeflateDecoderTest {
         newFrame.release();
     }
 
+    // See https://github.com/netty/netty/issues/4348
+    @Test
+    public void testCompressedEmptyFrame() {
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(
+                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
+        EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerFrameDeflateDecoder(false));
+
+        encoderChannel.writeOutbound(Unpooled.EMPTY_BUFFER);
+        ByteBuf compressedPayload = encoderChannel.readOutbound();
+        BinaryWebSocketFrame compressedFrame =
+                new BinaryWebSocketFrame(true, WebSocketExtension.RSV1 | WebSocketExtension.RSV3, compressedPayload);
+
+        // execute
+        decoderChannel.writeInbound(compressedFrame);
+        BinaryWebSocketFrame uncompressedFrame = decoderChannel.readInbound();
+
+        // test
+        assertNotNull(uncompressedFrame);
+        assertNotNull(uncompressedFrame.content());
+        assertTrue(uncompressedFrame instanceof BinaryWebSocketFrame);
+        assertEquals(WebSocketExtension.RSV3, uncompressedFrame.rsv());
+        assertEquals(0, uncompressedFrame.content().readableBytes());
+        uncompressedFrame.release();
+    }
+
 }

@@ -68,6 +68,7 @@ abstract class DeflateDecoder extends WebSocketExtensionDecoder {
             decoder = new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE));
         }
 
+        boolean readable = msg.content().isReadable();
         decoder.writeInbound(msg.content().retain());
         if (appendFrameTail(msg)) {
             decoder.writeInbound(Unpooled.wrappedBuffer(FRAME_TAIL));
@@ -87,7 +88,9 @@ abstract class DeflateDecoder extends WebSocketExtensionDecoder {
             compositeUncompressedContent.writerIndex(compositeUncompressedContent.writerIndex() +
                     partUncompressedContent.readableBytes());
         }
-        if (compositeUncompressedContent.numComponents() <= 0) {
+        // Correctly handle empty frames
+        // See https://github.com/netty/netty/issues/4348
+        if (readable && compositeUncompressedContent.numComponents() <= 0) {
             compositeUncompressedContent.release();
             throw new CodecException("cannot read uncompressed buffer");
         }
