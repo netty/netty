@@ -15,7 +15,6 @@
  */
 package io.netty.example.proxy;
 
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -33,7 +32,6 @@ public class HexDumpProxyBackendHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
         ctx.read();
-        ctx.write(Unpooled.EMPTY_BUFFER);
     }
 
     @Override
