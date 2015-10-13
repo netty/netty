@@ -950,20 +950,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public String toString(int index, int length, Charset charset) {
-        if (length == 0) {
-            return "";
-        }
-
-        ByteBuffer nioBuffer;
-        if (nioBufferCount() == 1) {
-            nioBuffer = nioBuffer(index, length);
-        } else {
-            nioBuffer = ByteBuffer.allocate(length);
-            getBytes(index, nioBuffer);
-            nioBuffer.flip();
-        }
-
-        return ByteBufUtil.decodeString(nioBuffer, charset);
+        return ByteBufUtil.decodeString(this, index, length, charset);
     }
 
     @Override

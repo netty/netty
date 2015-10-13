@@ -18,6 +18,7 @@ package io.netty.buffer;
 import io.netty.util.CharsetUtil;
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
+import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
@@ -42,7 +43,14 @@ import java.util.Locale;
 public final class ByteBufUtil {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ByteBufUtil.class);
+    private static final FastThreadLocal<CharBuffer> CHAR_BUFFERS = new FastThreadLocal<CharBuffer>() {
+        @Override
+        protected CharBuffer initialValue() throws Exception {
+            return CharBuffer.allocate(1024);
+        }
+    };
 
+    private static final int MAX_CHAR_BUFFER_SIZE;
     private static final char[] HEXDUMP_TABLE = new char[256 * 4];
     private static final String NEWLINE = StringUtil.NEWLINE;
     private static final String[] BYTE2HEX = new String[256];
@@ -125,6 +133,9 @@ public final class ByteBufUtil {
 
         THREAD_LOCAL_BUFFER_SIZE = SystemPropertyUtil.getInt("io.netty.threadLocalDirectBufferSize", 64 * 1024);
         logger.debug("-Dio.netty.threadLocalDirectBufferSize: {}", THREAD_LOCAL_BUFFER_SIZE);
+
+        MAX_CHAR_BUFFER_SIZE = SystemPropertyUtil.getInt("io.netty.maxThreadLocalCharBufferSize", 16 * 1024);
+        logger.debug("-Dio.netty.maxThreadLocalCharBufferSize: {}", MAX_CHAR_BUFFER_SIZE);
     }
 
     /**
@@ -505,10 +516,41 @@ public final class ByteBufUtil {
         }
     }
 
-    static String decodeString(ByteBuffer src, Charset charset) {
+    static String decodeString(ByteBuf src, int readerIndex, int len, Charset charset) {
+        if (len == 0) {
+            return StringUtil.EMPTY_STRING;
+        }
         final CharsetDecoder decoder = CharsetUtil.getDecoder(charset);
-        final CharBuffer dst = CharBuffer.allocate(
-                (int) ((double) src.remaining() * decoder.maxCharsPerByte()));
+        final int maxLength = (int) ((double) len * decoder.maxCharsPerByte());
+        CharBuffer dst = CHAR_BUFFERS.get();
+        if (dst.length() < maxLength) {
+            dst = CharBuffer.allocate(maxLength);
+            if (maxLength <= MAX_CHAR_BUFFER_SIZE) {
+                CHAR_BUFFERS.set(dst);
+            }
+        } else {
+            dst.clear();
+        }
+        if (src.nioBufferCount() == 1) {
+            // Use internalNioBuffer(...) to reduce object creation.
+            decodeString(decoder, src.internalNioBuffer(readerIndex, len), dst);
+        } else {
+            // We use a heap buffer as CharsetDecoder is most likely able to use a fast-path if src and dst buffers
+            // are both backed by a byte array.
+            ByteBuf buffer = src.alloc().heapBuffer(len);
+            try {
+                buffer.writeBytes(src, readerIndex, len);
+                // Use internalNioBuffer(...) to reduce object creation.
+                decodeString(decoder, buffer.internalNioBuffer(readerIndex, len), dst);
+            } finally {
+                // Release the temporary buffer again.
+                buffer.release();
+            }
+        }
+        return dst.flip().toString();
+    }
+
+    private static void decodeString(CharsetDecoder decoder, ByteBuffer src, CharBuffer dst) {
         try {
             CoderResult cr = decoder.decode(src, dst, true);
             if (!cr.isUnderflow()) {
@@ -521,7 +563,6 @@ public final class ByteBufUtil {
         } catch (CharacterCodingException x) {
             throw new IllegalStateException(x);
         }
-        return dst.flip().toString();
     }
 
     /**
