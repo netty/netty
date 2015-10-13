@@ -20,6 +20,8 @@ import io.netty.util.ReferenceCountUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.nio.charset.Charset;
+
 public class ByteBufUtilTest {
 
     @Test
@@ -72,5 +74,21 @@ public class ByteBufUtilTest {
 
     private static void assertWrapped(ByteBuf buf) {
         Assert.assertTrue(buf instanceof WrappedByteBuf);
+    }
+
+    @Test
+    public void testDecodeUsAscii() {
+        testDecodeString("This is a test", CharsetUtil.US_ASCII);
+    }
+
+    @Test
+    public void testDecodeUtf8() {
+        testDecodeString("Some UTF-8 like äÄ∏ŒŒ", CharsetUtil.UTF_8);
+    }
+
+    private static void testDecodeString(String text, Charset charset) {
+        ByteBuf buffer = Unpooled.copiedBuffer(text, charset);
+        Assert.assertEquals(text, ByteBufUtil.decodeString(buffer, 0, buffer.readableBytes(), charset));
+        buffer.release();
     }
 }

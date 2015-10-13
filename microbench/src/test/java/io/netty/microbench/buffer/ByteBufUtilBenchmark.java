@@ -30,12 +30,14 @@ import org.openjdk.jmh.annotations.Warmup;
 
 
 @State(Scope.Benchmark)
-@Warmup(iterations = 10)
-@Measurement(iterations = 25)
+@Warmup(iterations = 5)
+@Measurement(iterations = 10)
 public class
     ByteBufUtilBenchmark extends AbstractMicrobenchmark {
     private ByteBuf buffer;
     private ByteBuf wrapped;
+    private ByteBuf asciiBuffer;
+    private ByteBuf utf8Buffer;
 
     private StringBuilder asciiSequence;
     private String ascii;
@@ -62,12 +64,17 @@ public class
         }
         utf8 = utf8Sequence.toString();
         asciiSequence = utf8Sequence;
+
+        asciiBuffer = Unpooled.copiedBuffer(ascii, CharsetUtil.US_ASCII);
+        utf8Buffer = Unpooled.copiedBuffer(utf8, CharsetUtil.UTF_8);
     }
 
     @TearDown
     public void tearDown() {
         buffer.release();
         wrapped.release();
+        asciiBuffer.release();
+        utf8Buffer.release();
     }
 
     @Benchmark
@@ -164,5 +171,15 @@ public class
     public void writeUtf8Wrapped() {
         wrapped.resetWriterIndex();
         ByteBufUtil.writeUtf8(wrapped, utf8Sequence);
+    }
+
+    @Benchmark
+    public String decodeStringAscii() {
+        return asciiBuffer.toString(CharsetUtil.US_ASCII);
+    }
+
+    @Benchmark
+    public String decodeStringUtf8() {
+        return utf8Buffer.toString(CharsetUtil.UTF_8);
     }
 }
