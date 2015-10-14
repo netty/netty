@@ -16,55 +16,17 @@
 
 package io.netty.buffer;
 
+import io.netty.util.AbstractReferenceCounted;
+
 import java.nio.ByteBuffer;
 
 /**
  * Abstract base class for {@link ByteBuf} implementations that wrap another
  * {@link ByteBuf}.
  */
-public abstract class AbstractDerivedByteBuf extends AbstractByteBuf {
-
+public abstract class AbstractDerivedByteBuf extends AbstractReferenceCountedByteBuf {
     protected AbstractDerivedByteBuf(int maxCapacity) {
         super(maxCapacity);
-    }
-
-    @Override
-    public final int refCnt() {
-        return unwrap().refCnt();
-    }
-
-    @Override
-    public final ByteBuf retain() {
-        unwrap().retain();
-        return this;
-    }
-
-    @Override
-    public final ByteBuf retain(int increment) {
-        unwrap().retain(increment);
-        return this;
-    }
-
-    @Override
-    public final ByteBuf touch() {
-        unwrap().touch();
-        return this;
-    }
-
-    @Override
-    public final ByteBuf touch(Object hint) {
-        unwrap().touch(hint);
-        return this;
-    }
-
-    @Override
-    public final boolean release() {
-        return unwrap().release();
-    }
-
-    @Override
-    public final boolean release(int decrement) {
-        return unwrap().release(decrement);
     }
 
     @Override
@@ -76,4 +38,9 @@ public abstract class AbstractDerivedByteBuf extends AbstractByteBuf {
     public ByteBuffer nioBuffer(int index, int length) {
         return unwrap().nioBuffer(index, length);
     }
+
+    /**
+     * Called when the wrapped {@link ByteBuf} was released due calling of {@link #release()} or {@link #release(int)}.
+     */
+    protected void deallocate() { }
 }

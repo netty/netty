@@ -44,7 +44,7 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public final int refCnt() {
+    public int refCnt() {
         return refCnt;
     }
 
@@ -104,7 +104,7 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public final boolean release() {
+    public boolean release() {
         for (;;) {
             int refCnt = this.refCnt;
             if (refCnt == 0) {
@@ -122,7 +122,7 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public final boolean release(int decrement) {
+    public boolean release(int decrement) {
         if (decrement <= 0) {
             throw new IllegalArgumentException("decrement: " + decrement + " (expected: > 0)");
         }

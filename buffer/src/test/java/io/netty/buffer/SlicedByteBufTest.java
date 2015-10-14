@@ -45,7 +45,7 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
 
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullInConstructor() {
-        new SlicedByteBuf(null, 0, 0);
+        new UnpooledSlicedByteBuf(null, 0, 0);
     }
 
     @Test(expected = IndexOutOfBoundsException.class)
@@ -122,7 +122,7 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
             wrapped.readerIndex(2);
             wrapped.markWriterIndex();
             wrapped.markReaderIndex();
-            ByteBuf slice = new SlicedByteBuf(wrapped, 4, 4);
+            ByteBuf slice = new UnpooledSlicedByteBuf(wrapped, 4, 4);
             assertEquals(0, slice.readerIndex());
             assertEquals(4, slice.writerIndex());
 

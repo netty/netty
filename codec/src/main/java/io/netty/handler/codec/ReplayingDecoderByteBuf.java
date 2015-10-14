@@ -1011,6 +1011,29 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
         return this;
     }
 
+    @Override
+    public ByteBuf readRefSlice(int length) {
+        return null;
+    }
+
+    @Override
+    public ByteBuf rslice() {
+        reject();
+        return this;
+    }
+
+    @Override
+    public ByteBuf rslice(int index, int length) {
+        reject();
+        return this;
+    }
+
+    @Override
+    public ByteBuf rduplicate() {
+        reject();
+        return this;
+    }
+
     private static void reject() {
         throw new UnsupportedOperationException("not a replayable operation");
     }

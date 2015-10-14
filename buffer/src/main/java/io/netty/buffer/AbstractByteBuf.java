@@ -20,6 +20,9 @@ import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -35,7 +38,6 @@ import java.nio.charset.Charset;
  * A skeletal implementation of a buffer.
  */
 public abstract class AbstractByteBuf extends ByteBuf {
-
     static final ResourceLeakDetector<ByteBuf> leakDetector = new ResourceLeakDetector<ByteBuf>(ByteBuf.class);
 
     int readerIndex;
@@ -644,6 +646,13 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf readRefSlice(int length) {
+        ByteBuf slice = rslice(readerIndex, length);
+        readerIndex += length;
+        return slice;
+    }
+
+    @Override
     public ByteBuf readBytes(byte[] dst, int dstIndex, int length) {
         checkReadableBytes(length);
         getBytes(readerIndex, dst, dstIndex, length);
@@ -893,7 +902,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf duplicate() {
-        return new DuplicatedByteBuf(this);
+        return new UnpooledDuplicatedByteBuf(this);
     }
 
     @Override
@@ -903,7 +912,22 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf slice(int index, int length) {
-        return new SlicedByteBuf(this, index, length);
+        return new UnpooledSlicedByteBuf(this, index, length);
+    }
+
+    @Override
+    public ByteBuf rslice() {
+        return rslice(readerIndex, readableBytes());
+    }
+
+    @Override
+    public ByteBuf rduplicate() {
+        return PooledDuplicatedByteBuf.newInstance(this);
+    }
+
+    @Override
+    public ByteBuf rslice(int index, int length) {
+        return PooledSlicedByteBuf.newInstance(this, index, length);
     }
 
     @Override

@@ -31,13 +31,21 @@ import java.nio.channels.ScatteringByteChannel;
  * parent.  It is recommended to use {@link ByteBuf#duplicate()} instead
  * of calling the constructor explicitly.
  */
-public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
+public abstract class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
-    private final ByteBuf buffer;
+    private ByteBuf buffer;
 
     public DuplicatedByteBuf(ByteBuf buffer) {
         super(buffer.maxCapacity());
+        init(buffer);
+    }
 
+    DuplicatedByteBuf(int maxCapacity) {
+        super(maxCapacity);
+    }
+
+    final void init(ByteBuf buffer) {
+        maxCapacity(buffer.maxCapacity());
         if (buffer instanceof DuplicatedByteBuf) {
             this.buffer = ((DuplicatedByteBuf) buffer).buffer;
         } else {

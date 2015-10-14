@@ -507,6 +507,11 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf readRefSlice(int length) {
+        return readSlice(length);
+    }
+
+    @Override
     public ByteBuf readBytes(ByteBuf dst) {
         return checkLength(dst.writableBytes());
     }
@@ -877,5 +882,20 @@ public final class EmptyByteBuf extends ByteBuf {
             throw new IndexOutOfBoundsException();
         }
         return this;
+    }
+
+    @Override
+    public ByteBuf rduplicate() {
+        return Unpooled.EMPTY_BUFFER;
+    }
+
+    @Override
+    public ByteBuf rslice() {
+        return Unpooled.EMPTY_BUFFER;
+    }
+
+    @Override
+    public ByteBuf rslice(int index, int length) {
+        return Unpooled.EMPTY_BUFFER;
     }
 }

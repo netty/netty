@@ -32,14 +32,22 @@ import java.nio.channels.ScatteringByteChannel;
  * {@link ByteBuf#slice(int, int)} instead of calling the constructor
  * explicitly.
  */
-public class SlicedByteBuf extends AbstractDerivedByteBuf {
+public abstract class SlicedByteBuf extends AbstractDerivedByteBuf {
 
-    private final ByteBuf buffer;
-    private final int adjustment;
-    private final int length;
+    private ByteBuf buffer;
+    private int adjustment;
+    private int length;
 
     public SlicedByteBuf(ByteBuf buffer, int index, int length) {
         super(length);
+        init(buffer, index, length);
+    }
+
+    SlicedByteBuf(int length) {
+        super(length);
+    }
+
+    final void init(ByteBuf buffer, int index, int length) {
         if (index < 0 || index > buffer.capacity() - length) {
             throw new IndexOutOfBoundsException(buffer + ".slice(" + index + ", " + length + ')');
         }
@@ -55,8 +63,9 @@ public class SlicedByteBuf extends AbstractDerivedByteBuf {
             adjustment = index;
         }
         this.length = length;
-
-        writerIndex(length);
+        maxCapacity(length);
+        setIndex(0, length);
+        discardMarks();
     }
 
     @Override
