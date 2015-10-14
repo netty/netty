@@ -33,7 +33,6 @@ import java.util.concurrent.TimeUnit;
 
 import static io.netty.buffer.ByteBufUtil.hexDump;
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
-import static io.netty.handler.codec.http2.Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS;
 import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static io.netty.handler.codec.http2.Http2CodecUtil.getEmbeddedHttp2Exception;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
@@ -91,7 +90,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         private Http2FrameLogger frameLogger;
         private boolean validateHeaders = true;
         private boolean server = true;
-        private int encoderMaxConcurrentStreams = SMALLEST_MAX_CONCURRENT_STREAMS;
+        private boolean encoderEnforceMaxConcurrentStreams;
         private long gracefulShutdownTimeoutMillis = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
 
         /**
@@ -158,31 +157,11 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
 
         /**
-         * Determine if the encoder should queue frames to honor the value set by
-         * {@link #encoderMaxConcurrentStreams(int)}.
+         * Determine if the encoder should queue frames if the maximum number of concurrent streams
+         * would otherwise be exceeded.
          */
         public B encoderEnforceMaxConcurrentStreams(boolean encoderEnforceMaxConcurrentStreams) {
-            encoderMaxConcurrentStreams = -1;
-            return thisB();
-        }
-
-        private boolean encoderEnforceMaxConcurrentStreams() {
-            return encoderMaxConcurrentStreams >= 0;
-        }
-
-        /**
-         * How many initial streams are allowed to exists concurrently. Frames will be queued if they would result in
-         * creating a stream which would cause the number of existing streams to exceed this number.
-         * @see #encoderEnforceMaxConcurrentStreams(boolean)
-         */
-        public B encoderMaxConcurrentStreams(int encoderMaxConcurrentStreams) {
-            // This bounds are enforced here because the builder makes assumptions about its valid range to determine
-            // if it should be used.
-            if (encoderMaxConcurrentStreams < 0) {
-                throw new IllegalArgumentException("encoderMaxConcurrentStreams: " + encoderMaxConcurrentStreams +
-                        " (expected >= 0)");
-            }
-            this.encoderMaxConcurrentStreams = encoderMaxConcurrentStreams;
+            this.encoderEnforceMaxConcurrentStreams = encoderEnforceMaxConcurrentStreams;
             return thisB();
         }
 
@@ -207,8 +186,13 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                 writer = new Http2OutboundFrameLogger(writer, frameLogger);
             }
             Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, writer);
-            if (encoderEnforceMaxConcurrentStreams()) {
-                encoder = new StreamBufferingEncoder(encoder, encoderMaxConcurrentStreams);
+            if (encoderEnforceMaxConcurrentStreams) {
+                if (connection.isServer()) {
+                    throw new IllegalArgumentException(
+                            "encoderEnforceMaxConcurrentStreams: " + encoderEnforceMaxConcurrentStreams +
+                            " not supported for server");
+                }
+                encoder = new StreamBufferingEncoder(encoder);
             }
             Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader);
             return build(decoder, encoder);
@@ -218,9 +202,9 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
          * Build a new instance with an existing {@link Http2ConnectionDecoder} and {@link Http2ConnectionEncoder}.
          * <p>
          * Methods that will be ignored due to objects already being created:
-         * <ul><li>{@link #server(boolean)}</li><li>{@link #validateHttp2Headers(boolean)}</li><li>
+         * <ul><li>{@link #server(boolean)}</li><li>
          * {@link #frameLogger(Http2FrameLogger)}</li><li>{@link #encoderEnforceMaxConcurrentStreams(boolean)}</li><li>
-         * {@link #encoderMaxConcurrentStreams(int)}</li></ul>
+         * {@link #encoderEnforceMaxConcurrentStreams(boolean)} (int)}</li></ul>
          */
         public final T build(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder) {
             // Call the abstract build method
