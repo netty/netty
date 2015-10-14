@@ -214,8 +214,11 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor {
     private void startThread() {
         if (started.compareAndSet(false, true)) {
             Thread t = threadFactory.newThread(taskRunner);
-            t.start();
+            // Set the thread before starting it as otherwise inEventLoop() may return false and so produce
+            // an assert error.
+            // See https://github.com/netty/netty/issues/4357
             thread = t;
+            t.start();
         }
     }
 
