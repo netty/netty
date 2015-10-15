@@ -30,6 +30,7 @@ final class UnsafeDirectSwappedByteBuf extends SwappedByteBuf {
 
     UnsafeDirectSwappedByteBuf(AbstractByteBuf buf) {
         super(buf);
+        assert PlatformDependent.isUnaligned();
         wrapped = buf;
         nativeByteOrder = NATIVE_ORDER == (order() == ByteOrder.BIG_ENDIAN);
     }
