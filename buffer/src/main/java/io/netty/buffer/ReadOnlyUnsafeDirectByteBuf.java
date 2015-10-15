@@ -19,15 +19,12 @@ package io.netty.buffer;
 import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-
 
 
 /**
  * Read-only ByteBuf which wraps a read-only direct ByteBuffer and use unsafe for best performance.
  */
 final class ReadOnlyUnsafeDirectByteBuf extends ReadOnlyByteBufferBuf {
-    private static final boolean NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
     private final long memoryAddress;
 
     ReadOnlyUnsafeDirectByteBuf(ByteBufAllocator allocator, ByteBuffer buffer) {
@@ -37,33 +34,27 @@ final class ReadOnlyUnsafeDirectByteBuf extends ReadOnlyByteBufferBuf {
 
     @Override
     protected byte _getByte(int index) {
-        return PlatformDependent.getByte(addr(index));
+        return UnsafeByteBufUtil.getByte(addr(index));
     }
 
     @Override
     protected short _getShort(int index) {
-        short v = PlatformDependent.getShort(addr(index));
-        return NATIVE_ORDER? v : Short.reverseBytes(v);
+        return UnsafeByteBufUtil.getShort(addr(index));
     }
 
     @Override
     protected int _getUnsignedMedium(int index) {
-        long addr = addr(index);
-        return (PlatformDependent.getByte(addr) & 0xff) << 16 |
-                (PlatformDependent.getByte(addr + 1) & 0xff) << 8 |
-                PlatformDependent.getByte(addr + 2) & 0xff;
+        return UnsafeByteBufUtil.getUnsignedMedium(addr(index));
     }
 
     @Override
     protected int _getInt(int index) {
-        int v = PlatformDependent.getInt(addr(index));
-        return NATIVE_ORDER? v : Integer.reverseBytes(v);
+        return UnsafeByteBufUtil.getInt(addr(index));
     }
 
     @Override
     protected long _getLong(int index) {
-        long v = PlatformDependent.getLong(addr(index));
-        return NATIVE_ORDER? v : Long.reverseBytes(v);
+        return UnsafeByteBufUtil.getLong(addr(index));
     }
 
     @Override
