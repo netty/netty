@@ -153,6 +153,15 @@ public final class PlatformDependent {
     }
 
     /**
+     * {@code true} if and only if the platform supports unaligned access.
+     *
+     * @see <a href="http://en.wikipedia.org/wiki/Segmentation_fault#Bus_error">Wikipedia on segfault</a>
+     */
+    public static boolean isUnaligned() {
+        return PlatformDependent0.isUnaligned();
+    }
+
+    /**
      * Returns {@code true} if the platform has reliable low-level direct buffer access API and a user has not specified
      * {@code -Dio.netty.noPreferDirect} option.
      */
