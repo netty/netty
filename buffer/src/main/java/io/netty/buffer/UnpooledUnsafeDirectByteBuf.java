@@ -33,8 +33,6 @@ import java.nio.channels.ScatteringByteChannel;
  */
 public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
-    private static final boolean NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
-
     private final ByteBufAllocator alloc;
 
     private long memoryAddress;
@@ -217,33 +215,27 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
 
     @Override
     protected byte _getByte(int index) {
-        return PlatformDependent.getByte(addr(index));
+        return UnsafeByteBufUtil.getByte(addr(index));
     }
 
     @Override
     protected short _getShort(int index) {
-        short v = PlatformDependent.getShort(addr(index));
-        return NATIVE_ORDER? v : Short.reverseBytes(v);
+        return UnsafeByteBufUtil.getShort(addr(index));
     }
 
     @Override
     protected int _getUnsignedMedium(int index) {
-        long addr = addr(index);
-        return (PlatformDependent.getByte(addr) & 0xff) << 16 |
-                (PlatformDependent.getByte(addr + 1) & 0xff) << 8 |
-                PlatformDependent.getByte(addr + 2) & 0xff;
+        return UnsafeByteBufUtil.getUnsignedMedium(addr(index));
     }
 
     @Override
     protected int _getInt(int index) {
-        int v = PlatformDependent.getInt(addr(index));
-        return NATIVE_ORDER? v : Integer.reverseBytes(v);
+        return UnsafeByteBufUtil.getInt(addr(index));
     }
 
     @Override
     protected long _getLong(int index) {
-        long v = PlatformDependent.getLong(addr(index));
-        return NATIVE_ORDER? v : Long.reverseBytes(v);
+        return UnsafeByteBufUtil.getLong(addr(index));
     }
 
     @Override
@@ -317,30 +309,27 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
 
     @Override
     protected void _setByte(int index, int value) {
-        PlatformDependent.putByte(addr(index), (byte) value);
+        UnsafeByteBufUtil.setByte(addr(index), value);
     }
 
     @Override
     protected void _setShort(int index, int value) {
-        PlatformDependent.putShort(addr(index), NATIVE_ORDER ? (short) value : Short.reverseBytes((short) value));
+        UnsafeByteBufUtil.setShort(addr(index), value);
     }
 
     @Override
     protected void _setMedium(int index, int value) {
-        long addr = addr(index);
-        PlatformDependent.putByte(addr, (byte) (value >>> 16));
-        PlatformDependent.putByte(addr + 1, (byte) (value >>> 8));
-        PlatformDependent.putByte(addr + 2, (byte) value);
+        UnsafeByteBufUtil.setMedium(addr(index), value);
     }
 
     @Override
     protected void _setInt(int index, int value) {
-        PlatformDependent.putInt(addr(index), NATIVE_ORDER ? value : Integer.reverseBytes(value));
+        UnsafeByteBufUtil.setInt(addr(index), value);
     }
 
     @Override
     protected void _setLong(int index, long value) {
-        PlatformDependent.putLong(addr(index), NATIVE_ORDER ? value : Long.reverseBytes(value));
+        UnsafeByteBufUtil.setLong(addr(index), value);
     }
 
     @Override
@@ -520,6 +509,10 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
 
     @Override
     protected SwappedByteBuf newSwappedByteBuf() {
-        return new UnsafeDirectSwappedByteBuf(this);
+        if (PlatformDependent.isUnaligned()) {
+            // Only use if unaligned access is supported otherwise there is no gain.
+            return new UnsafeDirectSwappedByteBuf(this);
+        }
+        return super.newSwappedByteBuf();
     }
 }

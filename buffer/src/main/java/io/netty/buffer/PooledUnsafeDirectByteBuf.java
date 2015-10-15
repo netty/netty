@@ -16,7 +16,6 @@
 
 package io.netty.buffer;
 
-import io.netty.buffer.PooledByteBufAllocator.PoolThreadLocalCache;
 import io.netty.util.Recycler;
 import io.netty.util.internal.PlatformDependent;
 
@@ -24,15 +23,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
 final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
-
-    private static final boolean NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
-
     private static final Recycler<PooledUnsafeDirectByteBuf> RECYCLER = new Recycler<PooledUnsafeDirectByteBuf>() {
         @Override
         protected PooledUnsafeDirectByteBuf newObject(Handle handle) {
@@ -81,33 +76,27 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     @Override
     protected byte _getByte(int index) {
-        return PlatformDependent.getByte(addr(index));
+        return UnsafeByteBufUtil.getByte(addr(index));
     }
 
     @Override
     protected short _getShort(int index) {
-        short v = PlatformDependent.getShort(addr(index));
-        return NATIVE_ORDER? v : Short.reverseBytes(v);
+        return UnsafeByteBufUtil.getShort(addr(index));
     }
 
     @Override
     protected int _getUnsignedMedium(int index) {
-        long addr = addr(index);
-        return (PlatformDependent.getByte(addr) & 0xff) << 16 |
-                (PlatformDependent.getByte(addr + 1) & 0xff) << 8 |
-                PlatformDependent.getByte(addr + 2) & 0xff;
+        return UnsafeByteBufUtil.getUnsignedMedium(addr(index));
     }
 
     @Override
     protected int _getInt(int index) {
-        int v = PlatformDependent.getInt(addr(index));
-        return NATIVE_ORDER? v : Integer.reverseBytes(v);
+        return UnsafeByteBufUtil.getInt(addr(index));
     }
 
     @Override
     protected long _getLong(int index) {
-        long v = PlatformDependent.getLong(addr(index));
-        return NATIVE_ORDER? v : Long.reverseBytes(v);
+        return UnsafeByteBufUtil.getLong(addr(index));
     }
 
     @Override
@@ -220,30 +209,27 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     @Override
     protected void _setByte(int index, int value) {
-        PlatformDependent.putByte(addr(index), (byte) value);
+        UnsafeByteBufUtil.setByte(addr(index), (byte) value);
     }
 
     @Override
     protected void _setShort(int index, int value) {
-        PlatformDependent.putShort(addr(index), NATIVE_ORDER ? (short) value : Short.reverseBytes((short) value));
+        UnsafeByteBufUtil.setShort(addr(index), value);
     }
 
     @Override
     protected void _setMedium(int index, int value) {
-        long addr = addr(index);
-        PlatformDependent.putByte(addr, (byte) (value >>> 16));
-        PlatformDependent.putByte(addr + 1, (byte) (value >>> 8));
-        PlatformDependent.putByte(addr + 2, (byte) value);
+        UnsafeByteBufUtil.setMedium(addr(index), value);
     }
 
     @Override
     protected void _setInt(int index, int value) {
-        PlatformDependent.putInt(addr(index), NATIVE_ORDER ? value : Integer.reverseBytes(value));
+        UnsafeByteBufUtil.setInt(addr(index), value);
     }
 
     @Override
     protected void _setLong(int index, long value) {
-        PlatformDependent.putLong(addr(index), NATIVE_ORDER ? value : Long.reverseBytes(value));
+        UnsafeByteBufUtil.setLong(addr(index), value);
     }
 
     @Override
@@ -391,6 +377,10 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     @Override
     protected SwappedByteBuf newSwappedByteBuf() {
-        return new UnsafeDirectSwappedByteBuf(this);
+        if (PlatformDependent.isUnaligned()) {
+            // Only use if unaligned access is supported otherwise there is no gain.
+            return new UnsafeDirectSwappedByteBuf(this);
+        }
+        return super.newSwappedByteBuf();
     }
 }
