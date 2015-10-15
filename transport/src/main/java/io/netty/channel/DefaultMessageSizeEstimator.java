@@ -47,9 +47,9 @@ public final class DefaultMessageSizeEstimator implements MessageSizeEstimator {
     }
 
     /**
-     * Return the default implementation which returns {@code -1} for unknown messages.
+     * Return the default implementation which returns {@code 8} for unknown messages.
      */
-    public static final MessageSizeEstimator DEFAULT = new DefaultMessageSizeEstimator(0);
+    public static final MessageSizeEstimator DEFAULT = new DefaultMessageSizeEstimator(8);
 
     private final Handle handle;
 
