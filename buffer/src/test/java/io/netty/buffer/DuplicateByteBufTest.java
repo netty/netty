@@ -24,20 +24,13 @@ import static org.junit.Assert.assertEquals;
  */
 public class DuplicateByteBufTest extends AbstractByteBufTest {
 
-    private ByteBuf buffer;
-
     @Override
     protected ByteBuf newBuffer(int length) {
         ByteBuf wrapped = Unpooled.buffer(length);
-        buffer = new DuplicatedByteBuf(wrapped);
+        ByteBuf buffer = new DuplicatedByteBuf(wrapped);
         assertEquals(wrapped.writerIndex(), buffer.writerIndex());
         assertEquals(wrapped.readerIndex(), buffer.readerIndex());
         return buffer;
-    }
-
-    @Override
-    protected ByteBuf[] components() {
-        return new ByteBuf[] { buffer };
     }
 
     @Test(expected = NullPointerException.class)
@@ -48,6 +41,7 @@ public class DuplicateByteBufTest extends AbstractByteBufTest {
     // See https://github.com/netty/netty/issues/1800
     @Test
     public void testIncreaseCapacityWrapped() {
+        ByteBuf buffer = newBuffer(8);
         ByteBuf wrapped = buffer.unwrap();
         wrapped.writeByte(0);
         wrapped.readerIndex(wrapped.readerIndex() + 1);

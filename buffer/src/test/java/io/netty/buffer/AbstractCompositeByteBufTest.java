@@ -46,12 +46,9 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         this.order = order;
     }
 
-    private List<ByteBuf> buffers;
-    private ByteBuf buffer;
-
     @Override
     protected ByteBuf newBuffer(int length) {
-        buffers = new ArrayList<ByteBuf>();
+        List<ByteBuf> buffers = new ArrayList<ByteBuf>();
         for (int i = 0; i < length + 45; i += 45) {
             buffers.add(EMPTY_BUFFER);
             buffers.add(wrappedBuffer(new byte[1]));
@@ -74,7 +71,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
             buffers.add(EMPTY_BUFFER);
         }
 
-        buffer = wrappedBuffer(Integer.MAX_VALUE, buffers.toArray(new ByteBuf[buffers.size()])).order(order);
+        ByteBuf buffer = wrappedBuffer(Integer.MAX_VALUE, buffers.toArray(new ByteBuf[buffers.size()])).order(order);
 
         // Truncate to the requested capacity.
         buffer.capacity(length);
@@ -84,11 +81,6 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         assertFalse(buffer.isWritable());
         buffer.writerIndex(0);
         return buffer;
-    }
-
-    @Override
-    protected ByteBuf[] components() {
-        return buffers.toArray(new ByteBuf[buffers.size()]);
     }
 
     // Composite buffer does not waste bandwidth on discardReadBytes, but
