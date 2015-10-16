@@ -1106,6 +1106,10 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     protected final void checkIndex(int index, int fieldLength) {
         ensureAccessible();
+        checkIndex0(index, fieldLength);
+    }
+
+    final void checkIndex0(int index, int fieldLength) {
         if (isInvalid(index, fieldLength, capacity())) {
             throw new IndexOutOfBoundsException(String.format(
                     "index: %d, length: %d (expected: range(0, %d))", index, fieldLength, capacity()));
