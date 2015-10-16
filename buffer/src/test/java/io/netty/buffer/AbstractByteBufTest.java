@@ -60,7 +60,6 @@ public abstract class AbstractByteBufTest {
     private ByteBuf buffer;
 
     protected abstract ByteBuf newBuffer(int capacity);
-    protected abstract ByteBuf[] components();
 
     protected boolean discardReadBytesDoesNotMoveWritableBytes() {
         return true;
