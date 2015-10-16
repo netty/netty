@@ -31,10 +31,23 @@ import java.nio.channels.ScatteringByteChannel;
  */
 public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
-    private final ByteBuf buffer;
+    private ByteBuf buffer;
 
     public DuplicatedByteBuf(ByteBuf buffer) {
         super(buffer.maxCapacity());
+        init(buffer);
+    }
+
+    /**
+     * Special constructor for sub-classes. Be aware that {@link #init(ByteBuf)} needs to be called after
+     * construction.
+     */
+    DuplicatedByteBuf() {
+        super(Integer.MAX_VALUE);
+    }
+
+    final void init(ByteBuf buffer) {
+        maxCapacity(buffer.maxCapacity());
 
         if (buffer instanceof DuplicatedByteBuf) {
             this.buffer = ((DuplicatedByteBuf) buffer).buffer;
@@ -42,7 +55,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
             this.buffer = buffer;
         }
 
-        setIndex(buffer.readerIndex(), buffer.writerIndex());
+        setIndex0(buffer.readerIndex(), buffer.writerIndex());
         markReaderIndex();
         markWriterIndex();
     }

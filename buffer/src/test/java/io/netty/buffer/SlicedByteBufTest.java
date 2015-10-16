@@ -27,7 +27,7 @@ import static org.junit.Assert.*;
  */
 public class SlicedByteBufTest extends AbstractByteBufTest {
 
-    private final Random random = new Random();
+    final Random random = new Random();
 
     @Override
     protected ByteBuf newBuffer(int length) {
