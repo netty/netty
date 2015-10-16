@@ -153,9 +153,6 @@ public class SlicedByteBuf extends AbstractDerivedByteBuf {
     @Override
     public ByteBuf slice(int index, int length) {
         checkIndex(index, length);
-        if (length == 0) {
-            return Unpooled.EMPTY_BUFFER;
-        }
         return buffer.slice(idx(index), length);
     }
 
