@@ -146,33 +146,33 @@ public class SlicedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public ByteBuf copy(int index, int length) {
-        checkIndex(index, length);
+        checkIndex0(index, length);
         return buffer.copy(idx(index), length);
     }
 
     @Override
     public ByteBuf slice(int index, int length) {
-        checkIndex(index, length);
+        checkIndex0(index, length);
         return buffer.slice(idx(index), length);
     }
 
     @Override
     public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
-        checkIndex(index, length);
+        checkIndex0(index, length);
         buffer.getBytes(idx(index), dst, dstIndex, length);
         return this;
     }
 
     @Override
     public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
-        checkIndex(index, length);
+        checkIndex0(index, length);
         buffer.getBytes(idx(index), dst, dstIndex, length);
         return this;
     }
 
     @Override
     public ByteBuf getBytes(int index, ByteBuffer dst) {
-        checkIndex(index, dst.remaining());
+        checkIndex0(index, dst.remaining());
         buffer.getBytes(idx(index), dst);
         return this;
     }
@@ -204,47 +204,47 @@ public class SlicedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
-        checkIndex(index, length);
+        checkIndex0(index, length);
         buffer.setBytes(idx(index), src, srcIndex, length);
         return this;
     }
 
     @Override
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
-        checkIndex(index, length);
+        checkIndex0(index, length);
         buffer.setBytes(idx(index), src, srcIndex, length);
         return this;
     }
 
     @Override
     public ByteBuf setBytes(int index, ByteBuffer src) {
-        checkIndex(index, src.remaining());
+        checkIndex0(index, src.remaining());
         buffer.setBytes(idx(index), src);
         return this;
     }
 
     @Override
     public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
-        checkIndex(index, length);
+        checkIndex0(index, length);
         buffer.getBytes(idx(index), out, length);
         return this;
     }
 
     @Override
     public int getBytes(int index, GatheringByteChannel out, int length) throws IOException {
-        checkIndex(index, length);
+        checkIndex0(index, length);
         return buffer.getBytes(idx(index), out, length);
     }
 
     @Override
     public int setBytes(int index, InputStream in, int length) throws IOException {
-        checkIndex(index, length);
+        checkIndex0(index, length);
         return buffer.setBytes(idx(index), in, length);
     }
 
     @Override
     public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
-        checkIndex(index, length);
+        checkIndex0(index, length);
         return buffer.setBytes(idx(index), in, length);
     }
 
@@ -255,24 +255,24 @@ public class SlicedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public ByteBuffer nioBuffer(int index, int length) {
-        checkIndex(index, length);
+        checkIndex0(index, length);
         return buffer.nioBuffer(idx(index), length);
     }
 
     @Override
     public ByteBuffer[] nioBuffers(int index, int length) {
-        checkIndex(index, length);
+        checkIndex0(index, length);
         return buffer.nioBuffers(idx(index), length);
     }
 
     @Override
     public ByteBuffer internalNioBuffer(int index, int length) {
-        checkIndex(index, length);
         return nioBuffer(index, length);
     }
 
     @Override
     public int forEachByte(int index, int length, ByteBufProcessor processor) {
+        checkIndex0(index, length);
         int ret = buffer.forEachByte(idx(index), length, processor);
         if (ret >= adjustment) {
             return ret - adjustment;
@@ -283,6 +283,7 @@ public class SlicedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public int forEachByteDesc(int index, int length, ByteBufProcessor processor) {
+        checkIndex0(index, length);
         int ret = buffer.forEachByteDesc(idx(index), length, processor);
         if (ret >= adjustment) {
             return ret - adjustment;
