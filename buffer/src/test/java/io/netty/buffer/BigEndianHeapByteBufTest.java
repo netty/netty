@@ -24,18 +24,11 @@ import static org.junit.Assert.*;
  */
 public class BigEndianHeapByteBufTest extends AbstractByteBufTest {
 
-    private ByteBuf buffer;
-
     @Override
     protected ByteBuf newBuffer(int length) {
-        buffer = Unpooled.buffer(length);
+        ByteBuf buffer = Unpooled.buffer(length);
         assertEquals(0, buffer.writerIndex());
         return buffer;
-    }
-
-    @Override
-    protected ByteBuf[] components() {
-        return new ByteBuf[] { buffer };
     }
 
     @Test(expected = NullPointerException.class)

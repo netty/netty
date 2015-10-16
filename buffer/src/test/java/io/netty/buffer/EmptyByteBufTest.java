@@ -14,7 +14,6 @@
  * under the License.
  */package io.netty.buffer;
 
-import org.junit.Assert;
 import org.junit.Test;
 
 import static org.hamcrest.Matchers.*;
@@ -25,15 +24,15 @@ public class EmptyByteBufTest {
     @Test
     public void testIsWritable() {
         EmptyByteBuf empty = new EmptyByteBuf(UnpooledByteBufAllocator.DEFAULT);
-        Assert.assertFalse(empty.isWritable());
-        Assert.assertFalse(empty.isWritable(1));
+        assertFalse(empty.isWritable());
+        assertFalse(empty.isWritable(1));
     }
 
     @Test
     public void testIsReadable() {
         EmptyByteBuf empty = new EmptyByteBuf(UnpooledByteBufAllocator.DEFAULT);
-        Assert.assertFalse(empty.isReadable());
-        Assert.assertFalse(empty.isReadable(1));
+        assertFalse(empty.isReadable());
+        assertFalse(empty.isReadable(1));
     }
 
     @Test
