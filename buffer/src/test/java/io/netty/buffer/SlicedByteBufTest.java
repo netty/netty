@@ -28,19 +28,13 @@ import static org.junit.Assert.assertEquals;
 public class SlicedByteBufTest extends AbstractByteBufTest {
 
     private final Random random = new Random();
-    private ByteBuf buffer;
 
     @Override
     protected ByteBuf newBuffer(int length) {
-        buffer = Unpooled.wrappedBuffer(
+        ByteBuf buffer = Unpooled.wrappedBuffer(
                 new byte[length * 2], random.nextInt(length - 1) + 1, length);
         assertEquals(length, buffer.writerIndex());
         return buffer;
-    }
-
-    @Override
-    protected ByteBuf[] components() {
-        return new ByteBuf[] { buffer };
     }
 
     @Test(expected = NullPointerException.class)

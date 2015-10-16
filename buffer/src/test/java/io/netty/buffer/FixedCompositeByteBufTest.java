@@ -58,7 +58,7 @@ public class FixedCompositeByteBufTest {
         }
     }
 
-    private ByteBuf newBuffer(ByteBuf... buffers) {
+    private static ByteBuf newBuffer(ByteBuf... buffers) {
         return new FixedCompositeByteBuf(UnpooledByteBufAllocator.DEFAULT, buffers);
     }
 
@@ -97,17 +97,17 @@ public class FixedCompositeByteBufTest {
         ByteBuf buf = newBuffer(Unpooled.wrappedBuffer(new byte[8]));
         buf.setBytes(0, new ScatteringByteChannel() {
             @Override
-            public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
+            public long read(ByteBuffer[] dsts, int offset, int length) {
                 return 0;
             }
 
             @Override
-            public long read(ByteBuffer[] dsts) throws IOException {
+            public long read(ByteBuffer[] dsts) {
                 return 0;
             }
 
             @Override
-            public int read(ByteBuffer dst) throws IOException {
+            public int read(ByteBuffer dst) {
                 return 0;
             }
 
@@ -117,7 +117,7 @@ public class FixedCompositeByteBufTest {
             }
 
             @Override
-            public void close() throws IOException {
+            public void close() {
             }
         }, 4);
     }
@@ -240,7 +240,7 @@ public class FixedCompositeByteBufTest {
                 PooledByteBufAllocator.DEFAULT.directBuffer());
     }
 
-    private void testGatheringWritesPartial(ByteBuf buf1, ByteBuf buf2) throws Exception {
+    private static void testGatheringWritesPartial(ByteBuf buf1, ByteBuf buf2) throws Exception {
         buf1.writeBytes(new byte[]{1, 2, 3, 4});
         buf2.writeBytes(new byte[]{1, 2, 3, 4});
         ByteBuf buf = newBuffer(buf1, buf2);
@@ -266,7 +266,7 @@ public class FixedCompositeByteBufTest {
         testGatheringWritesSingleBuf(directBuffer());
     }
 
-    private void testGatheringWritesSingleBuf(ByteBuf buf1) throws Exception {
+    private static void testGatheringWritesSingleBuf(ByteBuf buf1) throws Exception {
         ByteBuf buf = newBuffer(buf1.writeBytes(new byte[]{1, 2, 3, 4}));
         buf.readerIndex(1);
 
