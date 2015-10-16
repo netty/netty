@@ -21,21 +21,14 @@ import static org.junit.Assert.*;
 
 public abstract class AbstractPooledByteBufTest extends AbstractByteBufTest {
 
-    private ByteBuf buffer;
-
     protected abstract ByteBuf alloc(int length);
 
     @Override
     protected ByteBuf newBuffer(int length) {
-        buffer = alloc(length);
+        ByteBuf buffer = alloc(length);
         assertEquals(0, buffer.writerIndex());
         assertEquals(0, buffer.readerIndex());
         return buffer;
-    }
-
-    @Override
-    protected ByteBuf[] components() {
-        return new ByteBuf[] { buffer };
     }
 
     @Test
