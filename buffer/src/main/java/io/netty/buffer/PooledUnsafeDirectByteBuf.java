@@ -148,29 +148,30 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     @Override
     public ByteBuf getBytes(int index, ByteBuffer dst) {
-        getBytes(index, dst, false);
-        return this;
-    }
-
-    private void getBytes(int index, ByteBuffer dst, boolean internal) {
         checkIndex(index);
         int bytesToCopy = Math.min(capacity() - index, dst.remaining());
-        ByteBuffer tmpBuf;
-        if (internal) {
-            tmpBuf = internalNioBuffer();
-        } else {
-            tmpBuf = memory.duplicate();
+        if (bytesToCopy == 0) {
+            return this;
         }
-        index = idx(index);
-        tmpBuf.clear().position(index).limit(index + bytesToCopy);
-        dst.put(tmpBuf);
+
+        if (dst.isDirect()) {
+            // Copy to direct memory
+            long dstAddress = PlatformDependent.directBufferAddress(dst);
+            PlatformDependent.copyMemory(addr(index), dstAddress + dst.position(), bytesToCopy);
+        } else {
+            // Copy to array
+            PlatformDependent.copyMemory(addr(index), dst.array(), dst.arrayOffset() + dst.position(), bytesToCopy);
+        }
+
+        dst.position(dst.position() + bytesToCopy);
+        return this;
     }
 
     @Override
     public ByteBuf readBytes(ByteBuffer dst) {
         int length = dst.remaining();
         checkReadableBytes(length);
-        getBytes(readerIndex, dst, true);
+        getBytes(readerIndex, dst);
         readerIndex += length;
         return this;
     }
@@ -279,14 +280,21 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     @Override
     public ByteBuf setBytes(int index, ByteBuffer src) {
         checkIndex(index, src.remaining());
-        ByteBuffer tmpBuf = internalNioBuffer();
-        if (src == tmpBuf) {
-            src = src.duplicate();
+
+        int length = src.remaining();
+        if (length == 0) {
+            return this;
         }
 
-        index = idx(index);
-        tmpBuf.clear().position(index).limit(index + src.remaining());
-        tmpBuf.put(src);
+        if (src.isDirect()) {
+            // Copy from direct memory
+            long srcAddress = PlatformDependent.directBufferAddress(src);
+            PlatformDependent.copyMemory(srcAddress + src.position(), addr(index), src.remaining());
+        } else {
+            // Copy from array
+            PlatformDependent.copyMemory(src.array(), src.arrayOffset() + src.position(), addr(index), length);
+        }
+        src.position(src.position() + length);
         return this;
     }
 
