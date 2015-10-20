@@ -1138,6 +1138,11 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
+        public void userEventTriggeredOutbound(ChannelHandlerContext ctx, Object evt) throws Exception {
+            ctx.fireUserEventTriggeredOutbound(evt);
+        }
+
+        @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             try {
                 logger.warn(
@@ -1345,6 +1350,12 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
             ctx.fireUserEventTriggered(evt);
+        }
+
+        @Skip
+        @Override
+        public void userEventTriggeredOutbound(ChannelHandlerContext ctx, Object evt) throws Exception {
+            ctx.fireUserEventTriggeredOutbound(evt);
         }
 
         @Skip

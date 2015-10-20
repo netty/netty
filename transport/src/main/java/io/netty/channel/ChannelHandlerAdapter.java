@@ -167,6 +167,18 @@ public class ChannelHandlerAdapter implements ChannelHandler {
     }
 
     /**
+     * Calls {@link ChannelHandlerContext#fireUserEventTriggered(Object)} to forward
+     * to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     */
+    @Skip
+    @Override
+    public void userEventTriggeredOutbound(ChannelHandlerContext ctx, Object evt) throws Exception {
+        ctx.fireUserEventTriggeredOutbound(evt);
+    }
+
+    /**
      * Calls {@link ChannelHandlerContext#fireChannelWritabilityChanged()} to forward
      * to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
      *

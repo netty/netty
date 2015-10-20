@@ -220,6 +220,8 @@ public interface ChannelHandlerContext extends AttributeMap {
      */
     ChannelHandlerContext fireUserEventTriggered(Object event);
 
+    ChannelHandlerContext fireUserEventTriggeredOutbound(Object event);
+
     /**
      * A {@link Channel} received a message.
      *

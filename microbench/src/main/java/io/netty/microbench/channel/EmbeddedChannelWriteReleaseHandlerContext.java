@@ -155,6 +155,16 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext implements Chann
     }
 
     @Override
+    public ChannelHandlerContext fireUserEventTriggeredOutbound(Object event) {
+        try {
+            handler().userEventTriggeredOutbound(this, event);
+        } catch (Exception e) {
+            handleException(e);
+        }
+        return this;
+    }
+
+    @Override
     public ChannelHandlerContext fireChannelRead(Object msg) {
         try {
             handler().channelRead(this, msg);

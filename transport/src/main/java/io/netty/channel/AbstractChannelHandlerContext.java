@@ -353,6 +353,13 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     @Override
+    public ChannelHandlerContext fireUserEventTriggeredOutbound(Object event) {
+        AbstractChannelHandlerContext prev = findContextOutbound();
+        prev.invoker().invokeUserEventTriggered(prev, event);
+        return this;
+    }
+
+    @Override
     public ChannelHandlerContext fireChannelRead(Object msg) {
         AbstractChannelHandlerContext next = findContextInbound();
         ReferenceCountUtil.touch(msg, next);
