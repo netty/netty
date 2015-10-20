@@ -21,6 +21,8 @@ package io.netty.channel;
  */
 public class FixedRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufAllocator {
 
+    private final int bufferSize;
+
     private final class HandleImpl extends MaxMessageHandle {
         private final int bufferSize;
 
@@ -34,8 +36,6 @@ public class FixedRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufAllo
         }
     }
 
-    private final Handle handle;
-
     /**
      * Creates a new predictor that always returns the same prediction of
      * the specified buffer size.
@@ -45,12 +45,11 @@ public class FixedRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufAllo
             throw new IllegalArgumentException(
                     "bufferSize must greater than 0: " + bufferSize);
         }
-
-        handle = new HandleImpl(bufferSize);
+        this.bufferSize = bufferSize;
     }
 
     @Override
     public Handle newHandle() {
-        return handle;
+        return new HandleImpl(bufferSize);
     }
 }
