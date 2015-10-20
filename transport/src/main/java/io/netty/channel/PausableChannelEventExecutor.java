@@ -82,6 +82,11 @@ abstract class PausableChannelEventExecutor implements PausableEventExecutor, Ch
     }
 
     @Override
+    public void invokeUserEventTriggeredBackward(ChannelHandlerContext ctx, Object event) {
+        unwrapInvoker().invokeUserEventTriggeredBackward(ctx, event);
+    }
+
+    @Override
     public void invokeChannelRead(ChannelHandlerContext ctx, Object msg) {
         unwrapInvoker().invokeChannelRead(ctx, msg);
     }

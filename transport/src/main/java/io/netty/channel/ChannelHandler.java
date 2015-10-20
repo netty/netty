@@ -233,7 +233,7 @@ public interface ChannelHandler {
     /**
      * Gets called if an user event was triggered.
      */
-    void userEventTriggeredOutbound(ChannelHandlerContext ctx, Object evt) throws Exception;
+    void userEventTriggeredBackward(ChannelHandlerContext ctx, Object evt) throws Exception;
 
     /**
      * Gets called once the writable state of a {@link Channel} changed. You can check the state with

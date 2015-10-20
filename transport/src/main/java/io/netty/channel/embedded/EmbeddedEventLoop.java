@@ -191,6 +191,11 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
     }
 
     @Override
+    public void invokeUserEventTriggeredBackward(ChannelHandlerContext ctx, Object event) {
+        invokeUserEventTriggeredBackwardNow(ctx, event);
+    }
+
+    @Override
     public void invokeChannelRead(ChannelHandlerContext ctx, Object msg) {
         invokeChannelReadNow(ctx, msg);
     }

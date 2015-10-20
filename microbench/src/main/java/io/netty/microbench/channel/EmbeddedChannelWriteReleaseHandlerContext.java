@@ -155,9 +155,9 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext implements Chann
     }
 
     @Override
-    public ChannelHandlerContext fireUserEventTriggeredOutbound(Object event) {
+    public ChannelHandlerContext fireUserEventTriggeredBackward(Object event) {
         try {
-            handler().userEventTriggeredOutbound(this, event);
+            handler().userEventTriggeredBackward(this, event);
         } catch (Exception e) {
             handleException(e);
         }

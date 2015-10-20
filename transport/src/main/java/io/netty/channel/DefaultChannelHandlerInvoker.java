@@ -144,6 +144,24 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
     }
 
     @Override
+    public void invokeUserEventTriggeredBackward(final ChannelHandlerContext ctx, final Object event) {
+        if (event == null) {
+            throw new NullPointerException("event");
+        }
+
+        if (executor.inEventLoop()) {
+            invokeUserEventTriggeredBackwardNow(ctx, event);
+        } else {
+            safeExecuteInbound(new OneTimeTask() {
+                @Override
+                public void run() {
+                    invokeUserEventTriggeredBackwardNow(ctx, event);
+                }
+            }, event);
+        }
+    }
+
+    @Override
     public void invokeChannelRead(final ChannelHandlerContext ctx, final Object msg) {
         if (msg == null) {
             throw new NullPointerException("msg");

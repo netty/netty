@@ -23,7 +23,7 @@ final class LoggingHandler implements ChannelHandler {
 
     enum Event {
         WRITE, FLUSH, BIND, CONNECT, DISCONNECT, CLOSE, DEREGISTER, READ, WRITABILITY, HANDLER_ADDED,
-        HANDLER_REMOVED, EXCEPTION, READ_COMPLETE, REGISTERED, UNREGISTERED, ACTIVE, INACTIVE, USER, USER_OUTBOUND
+        HANDLER_REMOVED, EXCEPTION, READ_COMPLETE, REGISTERED, UNREGISTERED, ACTIVE, INACTIVE, USER, USER_BACKWARD
     }
 
     private StringBuilder log = new StringBuilder();
@@ -144,9 +144,9 @@ final class LoggingHandler implements ChannelHandler {
     }
 
     @Override
-    public void userEventTriggeredOutbound(ChannelHandlerContext ctx, Object evt) throws Exception {
-        log(Event.USER_OUTBOUND, evt.toString());
-        ctx.fireUserEventTriggeredOutbound(evt);
+    public void userEventTriggeredBackward(ChannelHandlerContext ctx, Object evt) throws Exception {
+        log(Event.USER_BACKWARD, evt.toString());
+        ctx.fireUserEventTriggeredBackward(evt);
     }
 
     String getLog() {

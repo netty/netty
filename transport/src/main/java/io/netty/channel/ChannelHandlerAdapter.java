@@ -174,8 +174,8 @@ public class ChannelHandlerAdapter implements ChannelHandler {
      */
     @Skip
     @Override
-    public void userEventTriggeredOutbound(ChannelHandlerContext ctx, Object evt) throws Exception {
-        ctx.fireUserEventTriggeredOutbound(evt);
+    public void userEventTriggeredBackward(ChannelHandlerContext ctx, Object evt) throws Exception {
+        ctx.fireUserEventTriggeredBackward(evt);
     }
 
     /**

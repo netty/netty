@@ -1138,8 +1138,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void userEventTriggeredOutbound(ChannelHandlerContext ctx, Object evt) throws Exception {
-            ctx.fireUserEventTriggeredOutbound(evt);
+        public void userEventTriggeredBackward(ChannelHandlerContext ctx, Object evt) throws Exception {
+            ctx.fireUserEventTriggeredBackward(evt);
         }
 
         @Override
@@ -1354,8 +1354,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         @Skip
         @Override
-        public void userEventTriggeredOutbound(ChannelHandlerContext ctx, Object evt) throws Exception {
-            ctx.fireUserEventTriggeredOutbound(evt);
+        public void userEventTriggeredBackward(ChannelHandlerContext ctx, Object evt) throws Exception {
+            ctx.fireUserEventTriggeredBackward(evt);
         }
 
         @Skip

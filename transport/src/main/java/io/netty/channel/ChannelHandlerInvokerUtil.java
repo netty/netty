@@ -78,6 +78,14 @@ public final class ChannelHandlerInvokerUtil {
         }
     }
 
+    public static void invokeUserEventTriggeredBackwardNow(final ChannelHandlerContext ctx, final Object event) {
+        try {
+            ctx.handler().userEventTriggeredBackward(ctx, event);
+        } catch (Throwable t) {
+            notifyHandlerException(ctx, t);
+        }
+    }
+
     public static void invokeChannelReadNow(final ChannelHandlerContext ctx, final Object msg) {
         try {
             ctx.handler().channelRead(ctx, msg);

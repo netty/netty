@@ -75,6 +75,13 @@ public interface ChannelHandlerInvoker {
     void invokeUserEventTriggered(ChannelHandlerContext ctx, Object event);
 
     /**
+     * Invokes {@link ChannelHandler#userEventTriggeredBackward(ChannelHandlerContext, Object)}. This method is not for
+     * a user but for the internal {@link ChannelHandlerContext} implementation. To trigger an event, use the methods in
+     * {@link ChannelHandlerContext} instead.
+     */
+    void invokeUserEventTriggeredBackward(ChannelHandlerContext ctx, Object event);
+
+    /**
      * Invokes {@link ChannelHandler#channelRead(ChannelHandlerContext, Object)}. This method is not for a user
      * but for the internal {@link ChannelHandlerContext} implementation. To trigger an event, use the methods in
      * {@link ChannelHandlerContext} instead.
