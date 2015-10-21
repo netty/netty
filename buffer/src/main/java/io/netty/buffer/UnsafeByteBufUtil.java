@@ -17,7 +17,13 @@ package io.netty.buffer;
 
 import io.netty.util.internal.PlatformDependent;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * All operations get and set as {@link ByteOrder#BIG_ENDIAN}.
@@ -240,6 +246,141 @@ final class UnsafeByteBufUtil {
             PlatformDependent.putByte(array, index + 5, (byte) (value >>> 16));
             PlatformDependent.putByte(array, index + 6, (byte) (value >>> 8));
             PlatformDependent.putByte(array, index + 7, (byte) value);
+        }
+    }
+
+    static ByteBuf copy(AbstractByteBuf buf, long addr, int index, int length) {
+        buf.checkIndex(index, length);
+        ByteBuf copy = buf.alloc().directBuffer(length, buf.maxCapacity());
+        if (length != 0) {
+            if (copy.hasMemoryAddress()) {
+                PlatformDependent.copyMemory(addr, copy.memoryAddress(), length);
+                copy.setIndex(0, length);
+            } else {
+                copy.writeBytes(buf, index, length);
+            }
+        }
+        return copy;
+    }
+
+    static int setBytes(AbstractByteBuf buf, long addr, int index, InputStream in, int length) throws IOException {
+        buf.checkIndex(index, length);
+        ByteBuf tmpBuf = buf.alloc().heapBuffer(length);
+        try {
+            byte[] tmp = tmpBuf.array();
+            int offset = tmpBuf.arrayOffset();
+            int readBytes = in.read(tmp, offset, length);
+            if (readBytes > 0) {
+                PlatformDependent.copyMemory(tmp, offset, addr, readBytes);
+            }
+            return readBytes;
+        } finally {
+            tmpBuf.release();
+        }
+    }
+
+    static void getBytes(AbstractByteBuf buf, long addr, int index, ByteBuf dst, int dstIndex, int length) {
+        buf.checkIndex(index, length);
+        checkNotNull(dst, "dst");
+        if (AbstractByteBuf.isInvalid(dstIndex, length, dst.capacity())) {
+            throw new IndexOutOfBoundsException("dstIndex: " + dstIndex);
+        }
+
+        if (dst.hasMemoryAddress()) {
+            PlatformDependent.copyMemory(addr, dst.memoryAddress() + dstIndex, length);
+        } else if (dst.hasArray()) {
+            PlatformDependent.copyMemory(addr, dst.array(), dst.arrayOffset() + dstIndex, length);
+        } else {
+            dst.setBytes(dstIndex, buf, index, length);
+        }
+    }
+
+    static void getBytes(AbstractByteBuf buf, long addr, int index, byte[] dst, int dstIndex, int length) {
+        buf.checkIndex(index, length);
+        checkNotNull(dst, "dst");
+        if (AbstractByteBuf.isInvalid(dstIndex, length, dst.length)) {
+            throw new IndexOutOfBoundsException("dstIndex: " + dstIndex);
+        }
+        if (length != 0) {
+            PlatformDependent.copyMemory(addr, dst, dstIndex, length);
+        }
+    }
+
+    static void getBytes(AbstractByteBuf buf, long addr, int index, ByteBuffer dst) {
+        buf.checkIndex(index);
+        int bytesToCopy = Math.min(buf.capacity() - index, dst.remaining());
+        if (bytesToCopy == 0) {
+            return;
+        }
+
+        if (dst.isDirect()) {
+            // Copy to direct memory
+            long dstAddress = PlatformDependent.directBufferAddress(dst);
+            PlatformDependent.copyMemory(addr, dstAddress + dst.position(), bytesToCopy);
+        } else {
+            // Copy to array
+            PlatformDependent.copyMemory(addr, dst.array(), dst.arrayOffset() + dst.position(), bytesToCopy);
+        }
+
+        dst.position(dst.position() + bytesToCopy);
+    }
+
+    static void setBytes(AbstractByteBuf buf, long addr, int index, ByteBuf src, int srcIndex, int length) {
+        buf.checkIndex(index, length);
+        checkNotNull(src, "src");
+        if (AbstractByteBuf.isInvalid(srcIndex, length, src.capacity())) {
+            throw new IndexOutOfBoundsException("srcIndex: " + srcIndex);
+        }
+
+        if (length != 0) {
+            if (src.hasMemoryAddress()) {
+                PlatformDependent.copyMemory(src.memoryAddress() + srcIndex, addr, length);
+            } else if (src.hasArray()) {
+                PlatformDependent.copyMemory(src.array(), src.arrayOffset() + srcIndex, addr, length);
+            } else {
+                src.getBytes(srcIndex, buf, index, length);
+            }
+        }
+    }
+
+    static void setBytes(AbstractByteBuf buf, long addr, int index, byte[] src, int srcIndex, int length) {
+        buf.checkIndex(index, length);
+        if (length != 0) {
+            PlatformDependent.copyMemory(src, srcIndex, addr, length);
+        }
+    }
+
+    static void setBytes(AbstractByteBuf buf, long addr, int index, ByteBuffer src) {
+        buf.checkIndex(index, src.remaining());
+
+        int length = src.remaining();
+        if (length == 0) {
+            return;
+        }
+
+        if (src.isDirect()) {
+            // Copy from direct memory
+            long srcAddress = PlatformDependent.directBufferAddress(src);
+            PlatformDependent.copyMemory(srcAddress + src.position(), addr, src.remaining());
+        } else {
+            // Copy from array
+            PlatformDependent.copyMemory(src.array(), src.arrayOffset() + src.position(), addr, length);
+        }
+        src.position(src.position() + length);
+    }
+
+    static void getBytes(AbstractByteBuf buf, long addr, int index, OutputStream out, int length) throws IOException {
+        buf.checkIndex(index, length);
+        if (length != 0) {
+            ByteBuf tmpBuf = buf.alloc().heapBuffer(length);
+            try {
+                byte[] tmp = tmpBuf.array();
+                int offset = tmpBuf.arrayOffset();
+                PlatformDependent.copyMemory(addr, tmp, offset, length);
+                out.write(tmp, offset, length);
+            } finally {
+                tmpBuf.release();
+            }
         }
     }
 
