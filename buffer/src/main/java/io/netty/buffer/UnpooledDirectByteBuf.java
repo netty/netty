@@ -291,11 +291,6 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     private void getBytes(int index, byte[] dst, int dstIndex, int length, boolean internal) {
         checkDstIndex(index, length, dstIndex, dst.length);
 
-        if (dstIndex < 0 || dstIndex > dst.length - length) {
-            throw new IndexOutOfBoundsException(String.format(
-                    "dstIndex: %d, length: %d (expected: range(0, %d))", dstIndex, length, dst.length));
-        }
-
         ByteBuffer tmpBuf;
         if (internal) {
             tmpBuf = internalNioBuffer();
