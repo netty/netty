@@ -101,59 +101,19 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     @Override
     public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
-        checkIndex(index, length);
-        if (dst == null) {
-            throw new NullPointerException("dst");
-        }
-        if (dstIndex < 0 || dstIndex > dst.capacity() - length) {
-            throw new IndexOutOfBoundsException("dstIndex: " + dstIndex);
-        }
-
-        if (length != 0) {
-            if (dst.hasMemoryAddress()) {
-                PlatformDependent.copyMemory(addr(index), dst.memoryAddress() + dstIndex, length);
-            } else if (dst.hasArray()) {
-                PlatformDependent.copyMemory(addr(index), dst.array(), dst.arrayOffset() + dstIndex, length);
-            } else {
-                dst.setBytes(dstIndex, this, index, length);
-            }
-        }
+        UnsafeByteBufUtil.getBytes(this, addr(index), index, dst, dstIndex, length);
         return this;
     }
 
     @Override
     public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
-        checkIndex(index, length);
-        if (dst == null) {
-            throw new NullPointerException("dst");
-        }
-        if (dstIndex < 0 || dstIndex > dst.length - length) {
-            throw new IndexOutOfBoundsException("dstIndex: " + dstIndex);
-        }
-        if (length != 0) {
-            PlatformDependent.copyMemory(addr(index), dst, dstIndex, length);
-        }
+        UnsafeByteBufUtil.getBytes(this, addr(index), index, dst, dstIndex, length);
         return this;
     }
 
     @Override
     public ByteBuf getBytes(int index, ByteBuffer dst) {
-        checkIndex(index);
-        int bytesToCopy = Math.min(capacity() - index, dst.remaining());
-        if (bytesToCopy == 0) {
-            return this;
-        }
-
-        if (dst.isDirect()) {
-            // Copy to direct memory
-            long dstAddress = PlatformDependent.directBufferAddress(dst);
-            PlatformDependent.copyMemory(addr(index), dstAddress + dst.position(), bytesToCopy);
-        } else {
-            // Copy to array
-            PlatformDependent.copyMemory(addr(index), dst.array(), dst.arrayOffset() + dst.position(), bytesToCopy);
-        }
-
-        dst.position(dst.position() + bytesToCopy);
+        UnsafeByteBufUtil.getBytes(this, addr(index), index, dst);
         return this;
     }
 
@@ -168,12 +128,7 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     @Override
     public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
-        checkIndex(index, length);
-        if (length != 0) {
-            byte[] tmp = new byte[length];
-            PlatformDependent.copyMemory(addr(index), tmp, 0, length);
-            out.write(tmp);
-        }
+        UnsafeByteBufUtil.getBytes(this, addr(index), index, out, length);
         return this;
     }
 
@@ -235,65 +190,25 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     @Override
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
-        checkIndex(index, length);
-        if (src == null) {
-            throw new NullPointerException("src");
-        }
-        if (srcIndex < 0 || srcIndex > src.capacity() - length) {
-            throw new IndexOutOfBoundsException("srcIndex: " + srcIndex);
-        }
-
-        if (length != 0) {
-            if (src.hasMemoryAddress()) {
-                PlatformDependent.copyMemory(src.memoryAddress() + srcIndex, addr(index), length);
-            } else if (src.hasArray()) {
-                PlatformDependent.copyMemory(src.array(), src.arrayOffset() + srcIndex, addr(index), length);
-            } else {
-                src.getBytes(srcIndex, this, index, length);
-            }
-        }
+        UnsafeByteBufUtil.setBytes(this, addr(index), index, src, srcIndex, length);
         return this;
     }
 
     @Override
     public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
-        checkIndex(index, length);
-        if (length != 0) {
-            PlatformDependent.copyMemory(src, srcIndex, addr(index), length);
-        }
+        UnsafeByteBufUtil.setBytes(this, addr(index), index, src, srcIndex, length);
         return this;
     }
 
     @Override
     public ByteBuf setBytes(int index, ByteBuffer src) {
-        checkIndex(index, src.remaining());
-
-        int length = src.remaining();
-        if (length == 0) {
-            return this;
-        }
-
-        if (src.isDirect()) {
-            // Copy from direct memory
-            long srcAddress = PlatformDependent.directBufferAddress(src);
-            PlatformDependent.copyMemory(srcAddress + src.position(), addr(index), src.remaining());
-        } else {
-            // Copy from array
-            PlatformDependent.copyMemory(src.array(), src.arrayOffset() + src.position(), addr(index), length);
-        }
-        src.position(src.position() + length);
+        UnsafeByteBufUtil.setBytes(this, addr(index), index, src);
         return this;
     }
 
     @Override
     public int setBytes(int index, InputStream in, int length) throws IOException {
-        checkIndex(index, length);
-        byte[] tmp = new byte[length];
-        int readBytes = in.read(tmp);
-        if (readBytes > 0) {
-            PlatformDependent.copyMemory(tmp, 0, addr(index), readBytes);
-        }
-        return readBytes;
+        return UnsafeByteBufUtil.setBytes(this, addr(index), index, in, length);
     }
 
     @Override
@@ -311,17 +226,7 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     @Override
     public ByteBuf copy(int index, int length) {
-        checkIndex(index, length);
-        ByteBuf copy = alloc().directBuffer(length, maxCapacity());
-        if (length != 0) {
-            if (copy.hasMemoryAddress()) {
-                PlatformDependent.copyMemory(addr(index), copy.memoryAddress(), length);
-                copy.setIndex(0, length);
-            } else {
-                copy.writeBytes(this, index, length);
-            }
-        }
-        return copy;
+        return UnsafeByteBufUtil.copy(this, addr(index), index, length);
     }
 
     @Override

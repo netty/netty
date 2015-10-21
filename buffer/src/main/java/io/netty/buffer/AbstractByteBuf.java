@@ -1132,7 +1132,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
     }
 
-    private static boolean isInvalid(int index, int length, int capacity) {
+    static boolean isInvalid(int index, int length, int capacity) {
         return (index | length | (index + length) | (capacity - (index + length))) < 0;
     }
 
