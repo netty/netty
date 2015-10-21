@@ -51,43 +51,27 @@ class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
 
     @Override
     protected byte _getByte(int index) {
-        return memory[idx(index)];
+        return HeapByteBufUtil.getByte(memory, idx(index));
     }
 
     @Override
     protected short _getShort(int index) {
-        index = idx(index);
-        return (short) (memory[index] << 8 | memory[index + 1] & 0xFF);
+        return HeapByteBufUtil.getShort(memory, idx(index));
     }
 
     @Override
     protected int _getUnsignedMedium(int index) {
-        index = idx(index);
-        return (memory[index]     & 0xff) << 16 |
-               (memory[index + 1] & 0xff) <<  8 |
-                memory[index + 2] & 0xff;
+        return HeapByteBufUtil.getUnsignedMedium(memory, idx(index));
     }
 
     @Override
     protected int _getInt(int index) {
-        index = idx(index);
-        return (memory[index]     & 0xff) << 24 |
-               (memory[index + 1] & 0xff) << 16 |
-               (memory[index + 2] & 0xff) <<  8 |
-                memory[index + 3] & 0xff;
+        return HeapByteBufUtil.getInt(memory, idx(index));
     }
 
     @Override
     protected long _getLong(int index) {
-        index = idx(index);
-        return ((long) memory[index]     & 0xff) << 56 |
-               ((long) memory[index + 1] & 0xff) << 48 |
-               ((long) memory[index + 2] & 0xff) << 40 |
-               ((long) memory[index + 3] & 0xff) << 32 |
-               ((long) memory[index + 4] & 0xff) << 24 |
-               ((long) memory[index + 5] & 0xff) << 16 |
-               ((long) memory[index + 6] & 0xff) <<  8 |
-                (long) memory[index + 7] & 0xff;
+        return HeapByteBufUtil.getLong(memory, idx(index));
     }
 
     @Override
@@ -151,44 +135,27 @@ class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
 
     @Override
     protected void _setByte(int index, int value) {
-        memory[idx(index)] = (byte) value;
+        HeapByteBufUtil.setByte(memory, idx(index), value);
     }
 
     @Override
     protected void _setShort(int index, int value) {
-        index = idx(index);
-        memory[index]     = (byte) (value >>> 8);
-        memory[index + 1] = (byte) value;
+        HeapByteBufUtil.setShort(memory, idx(index), value);
     }
 
     @Override
     protected void _setMedium(int index, int   value) {
-        index = idx(index);
-        memory[index]     = (byte) (value >>> 16);
-        memory[index + 1] = (byte) (value >>> 8);
-        memory[index + 2] = (byte) value;
+        HeapByteBufUtil.setMedium(memory, idx(index), value);
     }
 
     @Override
     protected void _setInt(int index, int   value) {
-        index = idx(index);
-        memory[index]     = (byte) (value >>> 24);
-        memory[index + 1] = (byte) (value >>> 16);
-        memory[index + 2] = (byte) (value >>> 8);
-        memory[index + 3] = (byte) value;
+        HeapByteBufUtil.setInt(memory, idx(index), value);
     }
 
     @Override
     protected void _setLong(int index, long  value) {
-        index = idx(index);
-        memory[index]     = (byte) (value >>> 56);
-        memory[index + 1] = (byte) (value >>> 48);
-        memory[index + 2] = (byte) (value >>> 40);
-        memory[index + 3] = (byte) (value >>> 32);
-        memory[index + 4] = (byte) (value >>> 24);
-        memory[index + 5] = (byte) (value >>> 16);
-        memory[index + 6] = (byte) (value >>> 8);
-        memory[index + 7] = (byte) value;
+        HeapByteBufUtil.setLong(memory, idx(index), value);
     }
 
     @Override
