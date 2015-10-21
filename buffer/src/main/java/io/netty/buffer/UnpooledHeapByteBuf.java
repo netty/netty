@@ -289,7 +289,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected byte _getByte(int index) {
-        return array[index];
+        return HeapByteBufUtil.getByte(array, index);
     }
 
     @Override
@@ -300,7 +300,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected short _getShort(int index) {
-        return (short) (array[index] << 8 | array[index + 1] & 0xFF);
+        return HeapByteBufUtil.getShort(array, index);
     }
 
     @Override
@@ -311,9 +311,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected int _getUnsignedMedium(int index) {
-        return  (array[index]     & 0xff) << 16 |
-                (array[index + 1] & 0xff) <<  8 |
-                 array[index + 2] & 0xff;
+        return HeapByteBufUtil.getUnsignedMedium(array, index);
     }
 
     @Override
@@ -324,10 +322,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected int _getInt(int index) {
-        return  (array[index]     & 0xff) << 24 |
-                (array[index + 1] & 0xff) << 16 |
-                (array[index + 2] & 0xff) <<  8 |
-                 array[index + 3] & 0xff;
+        return HeapByteBufUtil.getInt(array, index);
     }
 
     @Override
@@ -338,14 +333,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected long _getLong(int index) {
-        return  ((long) array[index]     & 0xff) << 56 |
-                ((long) array[index + 1] & 0xff) << 48 |
-                ((long) array[index + 2] & 0xff) << 40 |
-                ((long) array[index + 3] & 0xff) << 32 |
-                ((long) array[index + 4] & 0xff) << 24 |
-                ((long) array[index + 5] & 0xff) << 16 |
-                ((long) array[index + 6] & 0xff) <<  8 |
-                 (long) array[index + 7] & 0xff;
+        return HeapByteBufUtil.getLong(array, index);
     }
 
     @Override
@@ -357,7 +345,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void _setByte(int index, int value) {
-        array[index] = (byte) value;
+        HeapByteBufUtil.setByte(array, index, value);
     }
 
     @Override
@@ -369,8 +357,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void _setShort(int index, int value) {
-        array[index]     = (byte) (value >>> 8);
-        array[index + 1] = (byte) value;
+        HeapByteBufUtil.setShort(array, index, value);
     }
 
     @Override
@@ -382,9 +369,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void _setMedium(int index, int value) {
-        array[index]     = (byte) (value >>> 16);
-        array[index + 1] = (byte) (value >>> 8);
-        array[index + 2] = (byte) value;
+        HeapByteBufUtil.setMedium(array, index, value);
     }
 
     @Override
@@ -396,10 +381,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void _setInt(int index, int value) {
-        array[index]     = (byte) (value >>> 24);
-        array[index + 1] = (byte) (value >>> 16);
-        array[index + 2] = (byte) (value >>> 8);
-        array[index + 3] = (byte) value;
+        HeapByteBufUtil.setInt(array, index, value);
     }
 
     @Override
@@ -411,14 +393,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void _setLong(int index, long value) {
-        array[index]     = (byte) (value >>> 56);
-        array[index + 1] = (byte) (value >>> 48);
-        array[index + 2] = (byte) (value >>> 40);
-        array[index + 3] = (byte) (value >>> 32);
-        array[index + 4] = (byte) (value >>> 24);
-        array[index + 5] = (byte) (value >>> 16);
-        array[index + 6] = (byte) (value >>> 8);
-        array[index + 7] = (byte) value;
+        HeapByteBufUtil.setLong(array, index, value);
     }
 
     @Override
