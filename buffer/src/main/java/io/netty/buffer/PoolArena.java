@@ -183,8 +183,8 @@ abstract class PoolArena<T> implements PoolArenaMetric {
             final PoolSubpage<T> head = table[tableIdx];
 
             /**
-             * Synchronize on the head. This is needed as {@link PoolSubpage#allocate()} and
-             * {@link PoolSubpage#free(int)} may modify the doubly linked list as well.
+             * Synchronize on the head. This is needed as {@link PoolChunk#allocateSubpage(int)} and
+             * {@link PoolChunk#free(long)} may modify the doubly linked list as well.
              */
             synchronized (head) {
                 final PoolSubpage<T> s = head.next;
