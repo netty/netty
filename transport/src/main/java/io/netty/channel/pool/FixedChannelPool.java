@@ -69,6 +69,7 @@ public final class FixedChannelPool extends SimpleChannelPool {
     private final int maxPendingAcquires;
     private int acquiredChannelCount;
     private int pendingAcquireCount;
+    private boolean closed;
 
     /**
      * Creates a new instance using the {@link ChannelHealthChecker#ACTIVE}.
@@ -217,6 +218,10 @@ public final class FixedChannelPool extends SimpleChannelPool {
     private void acquire0(final Promise<Channel> promise) {
         assert executor.inEventLoop();
 
+        if (closed) {
+            promise.setFailure(new IllegalStateException("FixedChannelPooled was closed"));
+            return;
+        }
         if (acquiredChannelCount < maxConnections) {
             assert acquiredChannelCount >= 0;
 
@@ -255,6 +260,11 @@ public final class FixedChannelPool extends SimpleChannelPool {
             @Override
             public void operationComplete(Future<Void> future) throws Exception {
                 assert executor.inEventLoop();
+
+                if (closed) {
+                    promise.setFailure(new IllegalStateException("FixedChannelPooled was closed"));
+                    return;
+                }
 
                 if (future.isSuccess()) {
                     decrementAndRunTaskQueue();
@@ -359,6 +369,11 @@ public final class FixedChannelPool extends SimpleChannelPool {
         public void operationComplete(Future<Channel> future) throws Exception {
             assert executor.inEventLoop();
 
+            if (closed) {
+                originalPromise.setFailure(new IllegalStateException("FixedChannelPooled was closed"));
+                return;
+            }
+
             if (future.isSuccess()) {
                 originalPromise.setSuccess(future.getNow());
             } else {
@@ -386,20 +401,23 @@ public final class FixedChannelPool extends SimpleChannelPool {
         executor.execute(new OneTimeTask() {
             @Override
             public void run() {
-                for (;;) {
-                    AcquireTask task = pendingAcquireQueue.poll();
-                    if (task == null) {
-                        break;
+                if (!closed) {
+                    closed = true;
+                    for (;;) {
+                        AcquireTask task = pendingAcquireQueue.poll();
+                        if (task == null) {
+                            break;
+                        }
+                        ScheduledFuture<?> f = task.timeoutFuture;
+                        if (f != null) {
+                            f.cancel(false);
+                        }
+                        task.promise.setFailure(new ClosedChannelException());
                     }
-                    ScheduledFuture<?> f = task.timeoutFuture;
-                    if (f != null) {
-                        f.cancel(false);
-                    }
-                    task.promise.setFailure(new ClosedChannelException());
+                    acquiredChannelCount = 0;
+                    pendingAcquireCount = 0;
+                    FixedChannelPool.super.close();
                 }
-                acquiredChannelCount = 0;
-                pendingAcquireCount = 0;
-                FixedChannelPool.super.close();
             }
         });
     }
