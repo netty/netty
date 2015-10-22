@@ -263,6 +263,42 @@ public class FixedChannelPoolTest {
         }
     }
 
+    @Test
+    public void testReleaseAfterClosePool() throws Exception {
+        EventLoopGroup group = new LocalEventLoopGroup(1);
+        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        Bootstrap cb = new Bootstrap();
+        cb.remoteAddress(addr);
+        cb.group(group).channel(LocalChannel.class);
+
+        ServerBootstrap sb = new ServerBootstrap();
+        sb.group(group)
+                .channel(LocalServerChannel.class)
+                .childHandler(new ChannelInitializer<LocalChannel>() {
+                    @Override
+                    public void initChannel(LocalChannel ch) throws Exception {
+                        ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
+                    }
+                });
+
+        // Start server
+        Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+
+        FixedChannelPool pool = new FixedChannelPool(cb, new TestChannelPoolHandler(), 2);
+        final Future<Channel> acquire = pool.acquire();
+        final Channel channel = acquire.get();
+        pool.close();
+        group.submit(new Runnable() {
+            @Override
+            public void run() {
+                // NOOP
+            }
+        }).syncUninterruptibly();
+        pool.release(channel).syncUninterruptibly();
+        sc.close().syncUninterruptibly();
+        channel.close().syncUninterruptibly();
+    }
+
     private static final class TestChannelPoolHandler extends AbstractChannelPoolHandler {
         @Override
         public void channelCreated(Channel ch) throws Exception {
