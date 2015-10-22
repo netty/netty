@@ -47,16 +47,16 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
         bitmap = null;
     }
 
-    PoolSubpage(PoolChunk<T> chunk, int memoryMapIdx, int runOffset, int pageSize, int elemSize) {
+    PoolSubpage(PoolSubpage<T> head, PoolChunk<T> chunk, int memoryMapIdx, int runOffset, int pageSize, int elemSize) {
         this.chunk = chunk;
         this.memoryMapIdx = memoryMapIdx;
         this.runOffset = runOffset;
         this.pageSize = pageSize;
         bitmap = new long[pageSize >>> 10]; // pageSize / 16 / 64
-        init(elemSize);
+        init(head, elemSize);
     }
 
-    void init(int elemSize) {
+    void init(PoolSubpage<T> head, int elemSize) {
         doNotDestroy = true;
         this.elemSize = elemSize;
         if (elemSize != 0) {
@@ -71,11 +71,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
                 bitmap[i] = 0;
             }
         }
-
-        PoolSubpage<T> head = chunk.arena.findSubpagePoolHead(elemSize);
-        synchronized (head) {
-            addToPool(head);
-        }
+        addToPool(head);
     }
 
     /**
@@ -86,75 +82,56 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
             return toHandle(0);
         }
 
-        /**
-         * Synchronize on the head of the SubpagePool stored in the {@link PoolArena. This is needed as we synchronize
-         * on it when calling {@link PoolArena#allocate(PoolThreadCache, int, int)} und try to allocate out of the
-         * {@link PoolSubpage} pool for a given size.
-         */
-        PoolSubpage<T> head = chunk.arena.findSubpagePoolHead(elemSize);
-        synchronized (head) {
-            if (numAvail == 0 || !doNotDestroy) {
-                return -1;
-            }
-
-            final int bitmapIdx = getNextAvail();
-            int q = bitmapIdx >>> 6;
-            int r = bitmapIdx & 63;
-            assert (bitmap[q] >>> r & 1) == 0;
-            bitmap[q] |= 1L << r;
-
-            if (-- numAvail == 0) {
-                removeFromPool();
-            }
-
-            return toHandle(bitmapIdx);
+        if (numAvail == 0 || !doNotDestroy) {
+            return -1;
         }
+
+        final int bitmapIdx = getNextAvail();
+        int q = bitmapIdx >>> 6;
+        int r = bitmapIdx & 63;
+        assert (bitmap[q] >>> r & 1) == 0;
+        bitmap[q] |= 1L << r;
+
+        if (-- numAvail == 0) {
+            removeFromPool();
+        }
+
+        return toHandle(bitmapIdx);
     }
 
     /**
      * @return {@code true} if this subpage is in use.
      *         {@code false} if this subpage is not used by its chunk and thus it's OK to be released.
      */
-    boolean free(int bitmapIdx) {
-
+    boolean free(PoolSubpage<T> head, int bitmapIdx) {
         if (elemSize == 0) {
             return true;
         }
+        int q = bitmapIdx >>> 6;
+        int r = bitmapIdx & 63;
+        assert (bitmap[q] >>> r & 1) != 0;
+        bitmap[q] ^= 1L << r;
 
-        /**
-         * Synchronize on the head of the SubpagePool stored in the {@link PoolArena. This is needed as we synchronize
-         * on it when calling {@link PoolArena#allocate(PoolThreadCache, int, int)} und try to allocate out of the
-         * {@link PoolSubpage} pool for a given size.
-         */
-        PoolSubpage<T> head = chunk.arena.findSubpagePoolHead(elemSize);
+        setNextAvail(bitmapIdx);
 
-        synchronized (head) {
-            int q = bitmapIdx >>> 6;
-            int r = bitmapIdx & 63;
-            assert (bitmap[q] >>> r & 1) != 0;
-            bitmap[q] ^= 1L << r;
+        if (numAvail ++ == 0) {
+            addToPool(head);
+            return true;
+        }
 
-            setNextAvail(bitmapIdx);
-
-            if (numAvail ++ == 0) {
-                addToPool(head);
+        if (numAvail != maxNumElems) {
+            return true;
+        } else {
+            // Subpage not in use (numAvail == maxNumElems)
+            if (prev == next) {
+                // Do not remove if this subpage is the only one left in the pool.
                 return true;
             }
 
-            if (numAvail != maxNumElems) {
-                return true;
-            } else {
-                // Subpage not in use (numAvail == maxNumElems)
-                if (prev == next) {
-                    // Do not remove if this subpage is the only one left in the pool.
-                    return true;
-                }
-
-                // Remove this subpage from the pool if there are other subpages left in the pool.
-                doNotDestroy = false;
-                removeFromPool();
-                return false;
-            }
+            // Remove this subpage from the pool if there are other subpages left in the pool.
+            doNotDestroy = false;
+            removeFromPool();
+            return false;
         }
     }
 

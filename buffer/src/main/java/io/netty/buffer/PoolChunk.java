@@ -306,26 +306,31 @@ final class PoolChunk<T> implements PoolChunkMetric {
      * @return index in memoryMap
      */
     private long allocateSubpage(int normCapacity) {
-        int d = maxOrder; // subpages are only be allocated from pages i.e., leaves
-        int id = allocateNode(d);
-        if (id < 0) {
-            return id;
+        // Obtain the head of the PoolSubPage pool that is owned by the PoolArena and synchronize on it.
+        // This is need as we may add it back and so alter the linked-list structure.
+        PoolSubpage<T> head = arena.findSubpagePoolHead(normCapacity);
+        synchronized (head) {
+            int d = maxOrder; // subpages are only be allocated from pages i.e., leaves
+            int id = allocateNode(d);
+            if (id < 0) {
+                return id;
+            }
+
+            final PoolSubpage<T>[] subpages = this.subpages;
+            final int pageSize = this.pageSize;
+
+            freeBytes -= pageSize;
+
+            int subpageIdx = subpageIdx(id);
+            PoolSubpage<T> subpage = subpages[subpageIdx];
+            if (subpage == null) {
+                subpage = new PoolSubpage<T>(head, this, id, runOffset(id), pageSize, normCapacity);
+                subpages[subpageIdx] = subpage;
+            } else {
+                subpage.init(head, normCapacity);
+            }
+            return subpage.allocate();
         }
-
-        final PoolSubpage<T>[] subpages = this.subpages;
-        final int pageSize = this.pageSize;
-
-        freeBytes -= pageSize;
-
-        int subpageIdx = subpageIdx(id);
-        PoolSubpage<T> subpage = subpages[subpageIdx];
-        if (subpage == null) {
-            subpage = new PoolSubpage<T>(this, id, runOffset(id), pageSize, normCapacity);
-            subpages[subpageIdx] = subpage;
-        } else {
-            subpage.init(normCapacity);
-        }
-        return subpage.allocate();
     }
 
     /**
@@ -343,8 +348,14 @@ final class PoolChunk<T> implements PoolChunkMetric {
         if (bitmapIdx != 0) { // free a subpage
             PoolSubpage<T> subpage = subpages[subpageIdx(memoryMapIdx)];
             assert subpage != null && subpage.doNotDestroy;
-            if (subpage.free(bitmapIdx & 0x3FFFFFFF)) {
-                return;
+
+            // Obtain the head of the PoolSubPage pool that is owned by the PoolArena and synchronize on it.
+            // This is need as we may add it back and so alter the linked-list structure.
+            PoolSubpage<T> head = arena.findSubpagePoolHead(subpage.elemSize);
+            synchronized (head) {
+                if (subpage.free(head, bitmapIdx & 0x3FFFFFFF)) {
+                    return;
+                }
             }
         }
         freeBytes += runLength(memoryMapIdx);
