@@ -341,16 +341,13 @@ public final class OpenSslServerContext extends OpenSslContext {
                     throw new SSLException("failed to set certificate: " + keyCertChainFile + " and " + keyFile, e);
                 }
                 try {
-                    if (trustManagerFactory == null) {
+                    if (trustCertChainFile != null) {
+                        trustManagerFactory = buildTrustManagerFactory(trustCertChainFile, trustManagerFactory);
+                    } else if (trustManagerFactory == null) {
                         // Mimic the way SSLContext.getInstance(KeyManager[], null, null) works
                         trustManagerFactory = TrustManagerFactory.getInstance(
                                 TrustManagerFactory.getDefaultAlgorithm());
-                    }
-                    if (trustCertChainFile != null) {
-                        trustManagerFactory = buildTrustManagerFactory(trustCertChainFile, trustManagerFactory);
-                    } else {
-                        KeyStore ks = buildKeyStore(keyCertChainFile, keyFile, keyPassword);
-                        trustManagerFactory.init(ks);
+                        trustManagerFactory.init((KeyStore) null);
                     }
 
                     final X509TrustManager manager = chooseTrustManager(trustManagerFactory.getTrustManagers());
@@ -458,16 +455,13 @@ public final class OpenSslServerContext extends OpenSslContext {
                     }
                 }
                 try {
-                    if (trustManagerFactory == null) {
+                    if (trustCertChain != null) {
+                        trustManagerFactory = buildTrustManagerFactory(trustCertChain, trustManagerFactory);
+                    } else if (trustManagerFactory == null) {
                         // Mimic the way SSLContext.getInstance(KeyManager[], null, null) works
                         trustManagerFactory = TrustManagerFactory.getInstance(
                                 TrustManagerFactory.getDefaultAlgorithm());
-                    }
-                    if (trustCertChain != null) {
-                        trustManagerFactory = buildTrustManagerFactory(trustCertChain, trustManagerFactory);
-                    } else {
-                        KeyStore ks = buildKeyStore(keyCertChain, key, keyPassword.toCharArray());
-                        trustManagerFactory.init(ks);
+                        trustManagerFactory.init((KeyStore) null);
                     }
 
                     final X509TrustManager manager = chooseTrustManager(trustManagerFactory.getTrustManagers());
