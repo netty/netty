@@ -188,6 +188,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, writer);
             if (encoderEnforceMaxConcurrentStreams) {
                 if (connection.isServer()) {
+                    encoder.close();
+                    reader.close();
                     throw new IllegalArgumentException(
                             "encoderEnforceMaxConcurrentStreams: " + encoderEnforceMaxConcurrentStreams +
                             " not supported for server");
@@ -207,8 +209,15 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
          * {@link #encoderEnforceMaxConcurrentStreams(boolean)} (int)}</li></ul>
          */
         public final T build(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder) {
-            // Call the abstract build method
-            T handler = build0(decoder, encoder);
+            final T handler;
+            try {
+                // Call the abstract build method
+                handler = build0(decoder, encoder);
+            } catch (RuntimeException e) {
+                encoder.close();
+                decoder.close();
+                throw e;
+            }
 
             // Setup post build options
             handler.gracefulShutdownTimeoutMillis(gracefulShutdownTimeoutMillis);
