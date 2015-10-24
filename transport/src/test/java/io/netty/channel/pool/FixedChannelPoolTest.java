@@ -265,7 +265,7 @@ public class FixedChannelPoolTest {
 
     @Test
     public void testReleaseAfterClosePool() throws Exception {
-        EventLoopGroup group = new LocalEventLoopGroup(1);
+        EventLoopGroup group = new DefaultEventLoopGroup(1);
         LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
         Bootstrap cb = new Bootstrap();
         cb.remoteAddress(addr);
@@ -277,7 +277,7 @@ public class FixedChannelPoolTest {
                 .childHandler(new ChannelInitializer<LocalChannel>() {
                     @Override
                     public void initChannel(LocalChannel ch) throws Exception {
-                        ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
+                        ch.pipeline().addLast(new ChannelHandlerAdapter());
                     }
                 });
 
