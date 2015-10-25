@@ -198,7 +198,7 @@ public class ChunkedWriteHandlerTest {
         ch.checkException();
         assertTrue(ch.finish());
 
-        assertEquals(0, ch.readOutbound());
+        assertEquals(Integer.valueOf(0), ch.<Integer>readOutbound());
         assertNull(ch.readOutbound());
     }
 

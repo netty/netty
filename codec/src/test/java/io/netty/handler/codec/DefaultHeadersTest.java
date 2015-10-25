@@ -30,199 +30,198 @@ import java.util.NoSuchElementException;
 
 import org.junit.Test;
 
-import io.netty.util.ByteString;
-import io.netty.util.CharsetUtil;
+import io.netty.util.AsciiString;
 
 /**
  * Tests for {@link DefaultHeaders}.
  */
 public class DefaultHeadersTest {
 
-    private Headers<ByteString> newInstance() {
-        return new DefaultHeaders<ByteString>(ByteStringValueConverter.INSTANCE);
+    private Headers<AsciiString> newInstance() {
+        return new DefaultHeaders<AsciiString>(AsciiStringValueConverter.INSTANCE);
     }
 
     @Test
     public void addShouldIncreaseAndRemoveShouldDecreaseTheSize() {
-        Headers<ByteString> headers = newInstance();
+        Headers<AsciiString> headers = newInstance();
         assertEquals(0, headers.size());
-        headers.add(bs("name1"), bs("value1"), bs("value2"));
+        headers.add(as("name1"), as("value1"), as("value2"));
         assertEquals(2, headers.size());
-        headers.add(bs("name2"), bs("value3"), bs("value4"));
+        headers.add(as("name2"), as("value3"), as("value4"));
         assertEquals(4, headers.size());
-        headers.add(bs("name3"), bs("value5"));
+        headers.add(as("name3"), as("value5"));
         assertEquals(5, headers.size());
 
-        headers.remove(bs("name3"));
+        headers.remove(as("name3"));
         assertEquals(4, headers.size());
-        headers.remove(bs("name1"));
+        headers.remove(as("name1"));
         assertEquals(2, headers.size());
-        headers.remove(bs("name2"));
+        headers.remove(as("name2"));
         assertEquals(0, headers.size());
         assertTrue(headers.isEmpty());
     }
 
     @Test
     public void afterClearHeadersShouldBeEmpty() {
-        Headers<ByteString> headers = newInstance();
-        headers.add(bs("name1"), bs("value1"));
-        headers.add(bs("name2"), bs("value2"));
+        Headers<AsciiString> headers = newInstance();
+        headers.add(as("name1"), as("value1"));
+        headers.add(as("name2"), as("value2"));
         assertEquals(2, headers.size());
         headers.clear();
         assertEquals(0, headers.size());
         assertTrue(headers.isEmpty());
-        assertFalse(headers.contains(bs("name1")));
-        assertFalse(headers.contains(bs("name2")));
+        assertFalse(headers.contains(as("name1")));
+        assertFalse(headers.contains(as("name2")));
     }
 
     @Test
     public void removingANameForASecondTimeShouldReturnFalse() {
-        Headers<ByteString> headers = newInstance();
-        headers.add(bs("name1"), bs("value1"));
-        headers.add(bs("name2"), bs("value2"));
-        assertTrue(headers.remove(bs("name2")));
-        assertFalse(headers.remove(bs("name2")));
+        Headers<AsciiString> headers = newInstance();
+        headers.add(as("name1"), as("value1"));
+        headers.add(as("name2"), as("value2"));
+        assertTrue(headers.remove(as("name2")));
+        assertFalse(headers.remove(as("name2")));
     }
 
     @Test
     public void multipleValuesPerNameShouldBeAllowed() {
-        Headers<ByteString> headers = newInstance();
-        headers.add(bs("name"), bs("value1"));
-        headers.add(bs("name"), bs("value2"));
-        headers.add(bs("name"), bs("value3"));
+        Headers<AsciiString> headers = newInstance();
+        headers.add(as("name"), as("value1"));
+        headers.add(as("name"), as("value2"));
+        headers.add(as("name"), as("value3"));
         assertEquals(3, headers.size());
 
-        List<ByteString> values = headers.getAll(bs("name"));
+        List<AsciiString> values = headers.getAll(as("name"));
         assertEquals(3, values.size());
-        assertTrue(values.containsAll(asList(bs("value1"), bs("value2"), bs("value3"))));
+        assertTrue(values.containsAll(asList(as("value1"), as("value2"), as("value3"))));
     }
 
     @Test
     public void testContains() {
-        Headers<ByteString> headers = newInstance();
-        headers.addBoolean(bs("boolean"), true);
-        assertTrue(headers.containsBoolean(bs("boolean"), true));
-        assertFalse(headers.containsBoolean(bs("boolean"), false));
+        Headers<AsciiString> headers = newInstance();
+        headers.addBoolean(as("boolean"), true);
+        assertTrue(headers.containsBoolean(as("boolean"), true));
+        assertFalse(headers.containsBoolean(as("boolean"), false));
 
-        headers.addLong(bs("long"), Long.MAX_VALUE);
-        assertTrue(headers.containsLong(bs("long"), Long.MAX_VALUE));
-        assertFalse(headers.containsLong(bs("long"), Long.MIN_VALUE));
+        headers.addLong(as("long"), Long.MAX_VALUE);
+        assertTrue(headers.containsLong(as("long"), Long.MAX_VALUE));
+        assertFalse(headers.containsLong(as("long"), Long.MIN_VALUE));
 
-        headers.addInt(bs("int"), Integer.MIN_VALUE);
-        assertTrue(headers.containsInt(bs("int"), Integer.MIN_VALUE));
-        assertFalse(headers.containsInt(bs("int"), Integer.MAX_VALUE));
+        headers.addInt(as("int"), Integer.MIN_VALUE);
+        assertTrue(headers.containsInt(as("int"), Integer.MIN_VALUE));
+        assertFalse(headers.containsInt(as("int"), Integer.MAX_VALUE));
 
-        headers.addShort(bs("short"), Short.MAX_VALUE);
-        assertTrue(headers.containsShort(bs("short"), Short.MAX_VALUE));
-        assertFalse(headers.containsShort(bs("short"), Short.MIN_VALUE));
+        headers.addShort(as("short"), Short.MAX_VALUE);
+        assertTrue(headers.containsShort(as("short"), Short.MAX_VALUE));
+        assertFalse(headers.containsShort(as("short"), Short.MIN_VALUE));
 
-        headers.addChar(bs("char"), Character.MAX_VALUE);
-        assertTrue(headers.containsChar(bs("char"), Character.MAX_VALUE));
-        assertFalse(headers.containsChar(bs("char"), Character.MIN_VALUE));
+        headers.addChar(as("char"), Character.MAX_VALUE);
+        assertTrue(headers.containsChar(as("char"), Character.MAX_VALUE));
+        assertFalse(headers.containsChar(as("char"), Character.MIN_VALUE));
 
-        headers.addByte(bs("byte"), Byte.MAX_VALUE);
-        assertTrue(headers.containsByte(bs("byte"), Byte.MAX_VALUE));
-        assertFalse(headers.containsLong(bs("byte"), Byte.MIN_VALUE));
+        headers.addByte(as("byte"), Byte.MAX_VALUE);
+        assertTrue(headers.containsByte(as("byte"), Byte.MAX_VALUE));
+        assertFalse(headers.containsLong(as("byte"), Byte.MIN_VALUE));
 
-        headers.addDouble(bs("double"), Double.MAX_VALUE);
-        assertTrue(headers.containsDouble(bs("double"), Double.MAX_VALUE));
-        assertFalse(headers.containsDouble(bs("double"), Double.MIN_VALUE));
+        headers.addDouble(as("double"), Double.MAX_VALUE);
+        assertTrue(headers.containsDouble(as("double"), Double.MAX_VALUE));
+        assertFalse(headers.containsDouble(as("double"), Double.MIN_VALUE));
 
-        headers.addFloat(bs("float"), Float.MAX_VALUE);
-        assertTrue(headers.containsFloat(bs("float"), Float.MAX_VALUE));
-        assertFalse(headers.containsFloat(bs("float"), Float.MIN_VALUE));
+        headers.addFloat(as("float"), Float.MAX_VALUE);
+        assertTrue(headers.containsFloat(as("float"), Float.MAX_VALUE));
+        assertFalse(headers.containsFloat(as("float"), Float.MIN_VALUE));
 
         long millis = System.currentTimeMillis();
-        headers.addTimeMillis(bs("millis"), millis);
-        assertTrue(headers.containsTimeMillis(bs("millis"), millis));
+        headers.addTimeMillis(as("millis"), millis);
+        assertTrue(headers.containsTimeMillis(as("millis"), millis));
         // This test doesn't work on midnight, January 1, 1970 UTC
-        assertFalse(headers.containsTimeMillis(bs("millis"), 0));
+        assertFalse(headers.containsTimeMillis(as("millis"), 0));
 
-        headers.addObject(bs("object"), "Hello World");
-        assertTrue(headers.containsObject(bs("object"), "Hello World"));
-        assertFalse(headers.containsObject(bs("object"), ""));
+        headers.addObject(as("object"), "Hello World");
+        assertTrue(headers.containsObject(as("object"), "Hello World"));
+        assertFalse(headers.containsObject(as("object"), ""));
 
-        headers.add(bs("name"), bs("value"));
-        assertTrue(headers.contains(bs("name"), bs("value")));
-        assertFalse(headers.contains(bs("name"), bs("value1")));
+        headers.add(as("name"), as("value"));
+        assertTrue(headers.contains(as("name"), as("value")));
+        assertFalse(headers.contains(as("name"), as("value1")));
     }
 
     @Test
     public void canMixConvertedAndNormalValues() {
-        Headers<ByteString> headers = newInstance();
-        headers.add(bs("name"), bs("value"));
-        headers.addInt(bs("name"), 100);
-        headers.addBoolean(bs("name"), false);
+        Headers<AsciiString> headers = newInstance();
+        headers.add(as("name"), as("value"));
+        headers.addInt(as("name"), 100);
+        headers.addBoolean(as("name"), false);
 
         assertEquals(3, headers.size());
-        assertTrue(headers.contains(bs("name")));
-        assertTrue(headers.contains(bs("name"), bs("value")));
-        assertTrue(headers.containsInt(bs("name"), 100));
-        assertTrue(headers.containsBoolean(bs("name"), false));
+        assertTrue(headers.contains(as("name")));
+        assertTrue(headers.contains(as("name"), as("value")));
+        assertTrue(headers.containsInt(as("name"), 100));
+        assertTrue(headers.containsBoolean(as("name"), false));
     }
 
     @Test
     public void testGetAndRemove() {
-        Headers<ByteString> headers = newInstance();
-        headers.add(bs("name1"), bs("value1"));
-        headers.add(bs("name2"), bs("value2"), bs("value3"));
-        headers.add(bs("name3"), bs("value4"), bs("value5"), bs("value6"));
+        Headers<AsciiString> headers = newInstance();
+        headers.add(as("name1"), as("value1"));
+        headers.add(as("name2"), as("value2"), as("value3"));
+        headers.add(as("name3"), as("value4"), as("value5"), as("value6"));
 
-        assertEquals(bs("value1"), headers.getAndRemove(bs("name1"), bs("defaultvalue")));
-        assertEquals(bs("value2"), headers.getAndRemove(bs("name2")));
-        assertNull(headers.getAndRemove(bs("name2")));
-        assertEquals(asList(bs("value4"), bs("value5"), bs("value6")), headers.getAllAndRemove(bs("name3")));
+        assertEquals(as("value1"), headers.getAndRemove(as("name1"), as("defaultvalue")));
+        assertEquals(as("value2"), headers.getAndRemove(as("name2")));
+        assertNull(headers.getAndRemove(as("name2")));
+        assertEquals(asList(as("value4"), as("value5"), as("value6")), headers.getAllAndRemove(as("name3")));
         assertEquals(0, headers.size());
-        assertNull(headers.getAndRemove(bs("noname")));
-        assertEquals(bs("defaultvalue"), headers.getAndRemove(bs("noname"), bs("defaultvalue")));
+        assertNull(headers.getAndRemove(as("noname")));
+        assertEquals(as("defaultvalue"), headers.getAndRemove(as("noname"), as("defaultvalue")));
     }
 
     @Test
     public void whenNameContainsMultipleValuesGetShouldReturnTheFirst() {
-        Headers<ByteString> headers = newInstance();
-        headers.add(bs("name1"), bs("value1"), bs("value2"));
-        assertEquals(bs("value1"), headers.get(bs("name1")));
+        Headers<AsciiString> headers = newInstance();
+        headers.add(as("name1"), as("value1"), as("value2"));
+        assertEquals(as("value1"), headers.get(as("name1")));
     }
 
     @Test
     public void getWithDefaultValueWorks() {
-        Headers<ByteString> headers = newInstance();
-        headers.add(bs("name1"), bs("value1"));
+        Headers<AsciiString> headers = newInstance();
+        headers.add(as("name1"), as("value1"));
 
-        assertEquals(bs("value1"), headers.get(bs("name1"), bs("defaultvalue")));
-        assertEquals(bs("defaultvalue"), headers.get(bs("noname"), bs("defaultvalue")));
+        assertEquals(as("value1"), headers.get(as("name1"), as("defaultvalue")));
+        assertEquals(as("defaultvalue"), headers.get(as("noname"), as("defaultvalue")));
     }
 
     @Test
     public void setShouldOverWritePreviousValue() {
-        Headers<ByteString> headers = newInstance();
-        headers.set(bs("name"), bs("value1"));
-        headers.set(bs("name"), bs("value2"));
+        Headers<AsciiString> headers = newInstance();
+        headers.set(as("name"), as("value1"));
+        headers.set(as("name"), as("value2"));
         assertEquals(1, headers.size());
-        assertEquals(1, headers.getAll(bs("name")).size());
-        assertEquals(bs("value2"), headers.getAll(bs("name")).get(0));
-        assertEquals(bs("value2"), headers.get(bs("name")));
+        assertEquals(1, headers.getAll(as("name")).size());
+        assertEquals(as("value2"), headers.getAll(as("name")).get(0));
+        assertEquals(as("value2"), headers.get(as("name")));
     }
 
     @Test
     public void setAllShouldOverwriteSomeAndLeaveOthersUntouched() {
-        Headers<ByteString> h1 = newInstance();
+        Headers<AsciiString> h1 = newInstance();
 
-        h1.add(bs("name1"), bs("value1"));
-        h1.add(bs("name2"), bs("value2"));
-        h1.add(bs("name2"), bs("value3"));
-        h1.add(bs("name3"), bs("value4"));
+        h1.add(as("name1"), as("value1"));
+        h1.add(as("name2"), as("value2"));
+        h1.add(as("name2"), as("value3"));
+        h1.add(as("name3"), as("value4"));
 
-        Headers<ByteString> h2 = newInstance();
-        h2.add(bs("name1"), bs("value5"));
-        h2.add(bs("name2"), bs("value6"));
-        h2.add(bs("name1"), bs("value7"));
+        Headers<AsciiString> h2 = newInstance();
+        h2.add(as("name1"), as("value5"));
+        h2.add(as("name2"), as("value6"));
+        h2.add(as("name1"), as("value7"));
 
-        Headers<ByteString> expected = newInstance();
-        expected.add(bs("name1"), bs("value5"));
-        expected.add(bs("name2"), bs("value6"));
-        expected.add(bs("name1"), bs("value7"));
-        expected.add(bs("name3"), bs("value4"));
+        Headers<AsciiString> expected = newInstance();
+        expected.add(as("name1"), as("value5"));
+        expected.add(as("name2"), as("value6"));
+        expected.add(as("name1"), as("value7"));
+        expected.add(as("name3"), as("value4"));
 
         h1.setAll(h2);
 
@@ -231,15 +230,15 @@ public class DefaultHeadersTest {
 
     @Test
     public void headersWithSameNamesAndValuesShouldBeEquivalent() {
-        Headers<ByteString> headers1 = newInstance();
-        headers1.add(bs("name1"), bs("value1"));
-        headers1.add(bs("name2"), bs("value2"));
-        headers1.add(bs("name2"), bs("value3"));
+        Headers<AsciiString> headers1 = newInstance();
+        headers1.add(as("name1"), as("value1"));
+        headers1.add(as("name2"), as("value2"));
+        headers1.add(as("name2"), as("value3"));
 
-        Headers<ByteString> headers2 = newInstance();
-        headers2.add(bs("name1"), bs("value1"));
-        headers2.add(bs("name2"), bs("value2"));
-        headers2.add(bs("name2"), bs("value3"));
+        Headers<AsciiString> headers2 = newInstance();
+        headers2.add(as("name1"), as("value1"));
+        headers2.add(as("name2"), as("value2"));
+        headers2.add(as("name2"), as("value3"));
 
         assertEquals(headers1, headers2);
         assertEquals(headers2, headers1);
@@ -252,8 +251,8 @@ public class DefaultHeadersTest {
 
     @Test
     public void emptyHeadersShouldBeEqual() {
-        Headers<ByteString> headers1 = newInstance();
-        Headers<ByteString> headers2 = newInstance();
+        Headers<AsciiString> headers1 = newInstance();
+        Headers<AsciiString> headers2 = newInstance();
         assertNotSame(headers1, headers2);
         assertEquals(headers1, headers2);
         assertEquals(headers1.hashCode(), headers2.hashCode());
@@ -261,29 +260,29 @@ public class DefaultHeadersTest {
 
     @Test
     public void headersWithSameNamesButDifferentValuesShouldNotBeEquivalent() {
-        Headers<ByteString> headers1 = newInstance();
-        headers1.add(bs("name1"), bs("value1"));
-        Headers<ByteString> headers2 = newInstance();
-        headers1.add(bs("name1"), bs("value2"));
+        Headers<AsciiString> headers1 = newInstance();
+        headers1.add(as("name1"), as("value1"));
+        Headers<AsciiString> headers2 = newInstance();
+        headers1.add(as("name1"), as("value2"));
         assertNotEquals(headers1, headers2);
     }
 
     @Test
     public void subsetOfHeadersShouldNotBeEquivalent() {
-        Headers<ByteString> headers1 = newInstance();
-        headers1.add(bs("name1"), bs("value1"));
-        headers1.add(bs("name2"), bs("value2"));
-        Headers<ByteString> headers2 = newInstance();
-        headers1.add(bs("name1"), bs("value1"));
+        Headers<AsciiString> headers1 = newInstance();
+        headers1.add(as("name1"), as("value1"));
+        headers1.add(as("name2"), as("value2"));
+        Headers<AsciiString> headers2 = newInstance();
+        headers1.add(as("name1"), as("value1"));
         assertNotEquals(headers1, headers2);
     }
 
     @Test
     public void headersWithDifferentNamesAndValuesShouldNotBeEquivalent() {
-        Headers<ByteString> h1 = newInstance();
-        h1.set(bs("name1"), bs("value1"));
-        Headers<ByteString> h2 = newInstance();
-        h2.set(bs("name2"), bs("value2"));
+        Headers<AsciiString> h1 = newInstance();
+        h1.set(as("name1"), as("value1"));
+        Headers<AsciiString> h2 = newInstance();
+        h2.set(as("name2"), as("value2"));
         assertNotEquals(h1, h2);
         assertNotEquals(h2, h1);
         assertEquals(h1, h1);
@@ -292,22 +291,22 @@ public class DefaultHeadersTest {
 
     @Test(expected = NoSuchElementException.class)
     public void iterateEmptyHeadersShouldThrow() {
-        Iterator<Map.Entry<ByteString, ByteString>> iterator = newInstance().iterator();
+        Iterator<Map.Entry<AsciiString, AsciiString>> iterator = newInstance().iterator();
         assertFalse(iterator.hasNext());
         iterator.next();
     }
 
     @Test
     public void iteratorShouldReturnAllNameValuePairs() {
-        Headers<ByteString> headers1 = newInstance();
-        headers1.add(bs("name1"), bs("value1"), bs("value2"));
-        headers1.add(bs("name2"), bs("value3"));
-        headers1.add(bs("name3"), bs("value4"), bs("value5"), bs("value6"));
-        headers1.add(bs("name1"), bs("value7"), bs("value8"));
+        Headers<AsciiString> headers1 = newInstance();
+        headers1.add(as("name1"), as("value1"), as("value2"));
+        headers1.add(as("name2"), as("value3"));
+        headers1.add(as("name3"), as("value4"), as("value5"), as("value6"));
+        headers1.add(as("name1"), as("value7"), as("value8"));
         assertEquals(8, headers1.size());
 
-        Headers<ByteString> headers2 = newInstance();
-        for (Entry<ByteString, ByteString> entry : headers1) {
+        Headers<AsciiString> headers2 = newInstance();
+        for (Entry<AsciiString, AsciiString> entry : headers1) {
             headers2.add(entry.getKey(), entry.getValue());
         }
 
@@ -316,45 +315,45 @@ public class DefaultHeadersTest {
 
     @Test
     public void iteratorSetValueShouldChangeHeaderValue() {
-        Headers<ByteString> headers = newInstance();
-        headers.add(bs("name1"), bs("value1"), bs("value2"), bs("value3"));
-        headers.add(bs("name2"), bs("value4"));
+        Headers<AsciiString> headers = newInstance();
+        headers.add(as("name1"), as("value1"), as("value2"), as("value3"));
+        headers.add(as("name2"), as("value4"));
         assertEquals(4, headers.size());
 
-        Iterator<Entry<ByteString, ByteString>> iter = headers.iterator();
+        Iterator<Entry<AsciiString, AsciiString>> iter = headers.iterator();
         while (iter.hasNext()) {
-            Entry<ByteString, ByteString> header = iter.next();
-            if (bs("name1").equals(header.getKey()) && bs("value2").equals(header.getValue())) {
-                header.setValue(bs("updatedvalue2"));
-                assertEquals(bs("updatedvalue2"), header.getValue());
+            Entry<AsciiString, AsciiString> header = iter.next();
+            if (as("name1").equals(header.getKey()) && as("value2").equals(header.getValue())) {
+                header.setValue(as("updatedvalue2"));
+                assertEquals(as("updatedvalue2"), header.getValue());
             }
-            if (bs("name1").equals(header.getKey()) && bs("value3").equals(header.getValue())) {
-                header.setValue(bs("updatedvalue3"));
-                assertEquals(bs("updatedvalue3"), header.getValue());
+            if (as("name1").equals(header.getKey()) && as("value3").equals(header.getValue())) {
+                header.setValue(as("updatedvalue3"));
+                assertEquals(as("updatedvalue3"), header.getValue());
             }
         }
 
         assertEquals(4, headers.size());
-        assertTrue(headers.contains(bs("name1"), bs("updatedvalue2")));
-        assertFalse(headers.contains(bs("name1"), bs("value2")));
-        assertTrue(headers.contains(bs("name1"), bs("updatedvalue3")));
-        assertFalse(headers.contains(bs("name1"), bs("value3")));
+        assertTrue(headers.contains(as("name1"), as("updatedvalue2")));
+        assertFalse(headers.contains(as("name1"), as("value2")));
+        assertTrue(headers.contains(as("name1"), as("updatedvalue3")));
+        assertFalse(headers.contains(as("name1"), as("value3")));
     }
 
     @Test
     public void getAllReturnsEmptyListForUnknownName() {
-        Headers<ByteString> headers = newInstance();
-        assertEquals(0, headers.getAll(bs("noname")).size());
+        Headers<AsciiString> headers = newInstance();
+        assertEquals(0, headers.getAll(as("noname")).size());
     }
 
     @Test
     public void setHeadersShouldClearAndOverwrite() {
-        Headers<ByteString> headers1 = newInstance();
-        headers1.add(bs("name"), bs("value"));
+        Headers<AsciiString> headers1 = newInstance();
+        headers1.add(as("name"), as("value"));
 
-        Headers<ByteString> headers2 = newInstance();
-        headers2.add(bs("name"), bs("newvalue"));
-        headers2.add(bs("name1"), bs("value1"));
+        Headers<AsciiString> headers2 = newInstance();
+        headers2.add(as("name"), as("newvalue"));
+        headers2.add(as("name1"), as("value1"));
 
         headers1.set(headers2);
         assertEquals(headers1, headers2);
@@ -362,18 +361,18 @@ public class DefaultHeadersTest {
 
     @Test
     public void setAllHeadersShouldOnlyOverwriteHeaders() {
-        Headers<ByteString> headers1 = newInstance();
-        headers1.add(bs("name"), bs("value"));
-        headers1.add(bs("name1"), bs("value1"));
+        Headers<AsciiString> headers1 = newInstance();
+        headers1.add(as("name"), as("value"));
+        headers1.add(as("name1"), as("value1"));
 
-        Headers<ByteString> headers2 = newInstance();
-        headers2.add(bs("name"), bs("newvalue"));
-        headers2.add(bs("name2"), bs("value2"));
+        Headers<AsciiString> headers2 = newInstance();
+        headers2.add(as("name"), as("newvalue"));
+        headers2.add(as("name2"), as("value2"));
 
-        Headers<ByteString> expected = newInstance();
-        expected.add(bs("name"), bs("newvalue"));
-        expected.add(bs("name1"), bs("value1"));
-        expected.add(bs("name2"), bs("value2"));
+        Headers<AsciiString> expected = newInstance();
+        expected.add(as("name"), as("newvalue"));
+        expected.add(as("name1"), as("value1"));
+        expected.add(as("name2"), as("value2"));
 
         headers1.setAll(headers2);
         assertEquals(headers1, expected);
@@ -381,17 +380,17 @@ public class DefaultHeadersTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void testAddSelf() {
-        Headers<ByteString> headers = newInstance();
+        Headers<AsciiString> headers = newInstance();
         headers.add(headers);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testSetSelf() {
-        Headers<ByteString> headers = newInstance();
+        Headers<AsciiString> headers = newInstance();
         headers.set(headers);
     }
 
-    private ByteString bs(String value) {
-        return new ByteString(value, CharsetUtil.US_ASCII);
+    private AsciiString as(String value) {
+        return new AsciiString(value);
     }
 }

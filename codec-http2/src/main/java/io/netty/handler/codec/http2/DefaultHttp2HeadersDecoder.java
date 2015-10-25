@@ -24,7 +24,7 @@ import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
-import io.netty.util.ByteString;
+import io.netty.util.AsciiString;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -91,7 +91,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
             HeaderListener listener = new HeaderListener() {
                 @Override
                 public void addHeader(byte[] key, byte[] value, boolean sensitive) {
-                    headers.add(new ByteString(key, false), new ByteString(value, false));
+                    headers.add(new AsciiString(key, false), new AsciiString(value, false));
                 }
             };
 

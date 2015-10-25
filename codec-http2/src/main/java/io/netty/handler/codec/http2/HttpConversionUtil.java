@@ -165,7 +165,7 @@ public final class HttpConversionUtil {
      * @return The HTTP/1.x status
      * @throws Http2Exception If there is a problem translating from HTTP/2 to HTTP/1.x
      */
-    public static HttpResponseStatus parseStatus(ByteString status) throws Http2Exception {
+    public static HttpResponseStatus parseStatus(AsciiString status) throws Http2Exception {
         HttpResponseStatus result;
         try {
             result = HttpResponseStatus.parseLine(status);
@@ -262,7 +262,7 @@ public final class HttpConversionUtil {
             HttpVersion httpVersion, boolean isTrailer, boolean isRequest) throws Http2Exception {
         Http2ToHttpHeaderTranslator translator = new Http2ToHttpHeaderTranslator(streamId, outputHeaders, isRequest);
         try {
-            for (Entry<ByteString, ByteString> entry : inputHeaders) {
+            for (Entry<AsciiString, AsciiString> entry : inputHeaders) {
                 translator.translate(entry);
             }
         } catch (Http2Exception ex) {
@@ -433,7 +433,7 @@ public final class HttpConversionUtil {
             translations = request ? REQUEST_HEADER_TRANSLATIONS : RESPONSE_HEADER_TRANSLATIONS;
         }
 
-        public void translate(Entry<ByteString, ByteString> entry) throws Http2Exception {
+        public void translate(Entry<AsciiString, AsciiString> entry) throws Http2Exception {
             final ByteString name = entry.getKey();
             final ByteString value = entry.getValue();
             ByteString translatedName = translations.get(name);
