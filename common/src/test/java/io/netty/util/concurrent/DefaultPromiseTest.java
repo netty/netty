@@ -142,6 +142,38 @@ public class DefaultPromiseTest {
         testListenerNotifyLater(2);
     }
 
+    @Test(timeout = 2000)
+    public void testPromiseListenerAddWhenCompleteFailure() throws Exception {
+        testPromiseListenerAddWhenComplete(new RuntimeException());
+    }
+
+    @Test(timeout = 2000)
+    public void testPromiseListenerAddWhenCompleteSuccess() throws Exception {
+        testPromiseListenerAddWhenComplete(null);
+    }
+
+    private static void testPromiseListenerAddWhenComplete(Throwable cause) throws InterruptedException {
+        final CountDownLatch latch = new CountDownLatch(1);
+        final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
+        promise.addListener(new FutureListener<Void>() {
+            @Override
+            public void operationComplete(Future<Void> future) throws Exception {
+                promise.addListener(new FutureListener<Void>() {
+                    @Override
+                    public void operationComplete(Future<Void> future) throws Exception {
+                        latch.countDown();
+                    }
+                });
+            }
+        });
+        if (cause == null) {
+            promise.setSuccess(null);
+        } else {
+            promise.setFailure(cause);
+        }
+        latch.await();
+    }
+
     private static void testListenerNotifyLater(final int numListenersBefore) throws Exception {
         EventExecutor executor = new TestEventExecutor();
         int expectedCount = numListenersBefore + 2;
