@@ -836,7 +836,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
         @Override
         public void run() {
-            if (listeners == null) {
+            final EventExecutor executor = executor();
+            if (listeners == null || executor == ImmediateEventExecutor.INSTANCE) {
                 for (;;) {
                     GenericFutureListener<?> l = poll();
                     if (l == null) {
@@ -847,7 +848,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             } else {
                 // Reschedule until the initial notification is done to avoid the race condition
                 // where the notification is made in an incorrect order.
-                execute(executor(), this);
+                execute(executor, this);
             }
         }
     }
