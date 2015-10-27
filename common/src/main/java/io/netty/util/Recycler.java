@@ -252,11 +252,11 @@ public abstract class Recycler<T> {
                 int newDstSize = dstSize;
                 for (int i = srcStart; i < srcEnd; i++) {
                     DefaultHandle element = srcElems[i];
-                    if (element.recycleId == 0) {
+                    /*if (element.recycleId == 0) {
                         element.recycleId = element.lastRecycledId;
                     } else if (element.recycleId != element.lastRecycledId) {
                         throw new IllegalStateException("recycled already");
-                    }
+                    }*/
                     element.stack = dst;
                     newDstSize++;
                     element.next = dst.tailItem;
