@@ -20,274 +20,276 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 
-public class EmptyHeaders<T> implements Headers<T> {
+import static io.netty.handler.codec.DefaultHeaders.HASH_CODE_SEED;
+
+public class EmptyHeaders<K, V, T extends Headers<K, V, T>> implements Headers<K, V, T> {
     @Override
-    public T get(T name) {
+    public V get(K name) {
         return null;
     }
 
     @Override
-    public T get(T name, T defaultValue) {
+    public V get(K name, V defaultValue) {
         return null;
     }
 
     @Override
-    public T getAndRemove(T name) {
+    public V getAndRemove(K name) {
         return null;
     }
 
     @Override
-    public T getAndRemove(T name, T defaultValue) {
+    public V getAndRemove(K name, V defaultValue) {
         return null;
     }
 
     @Override
-    public List<T> getAll(T name) {
+    public List<V> getAll(K name) {
         return Collections.emptyList();
     }
 
     @Override
-    public List<T> getAllAndRemove(T name) {
+    public List<V> getAllAndRemove(K name) {
         return Collections.emptyList();
     }
 
     @Override
-    public Boolean getBoolean(T name) {
+    public Boolean getBoolean(K name) {
         return null;
     }
 
     @Override
-    public boolean getBoolean(T name, boolean defaultValue) {
+    public boolean getBoolean(K name, boolean defaultValue) {
         return defaultValue;
     }
 
     @Override
-    public Byte getByte(T name) {
+    public Byte getByte(K name) {
         return null;
     }
 
     @Override
-    public byte getByte(T name, byte defaultValue) {
+    public byte getByte(K name, byte defaultValue) {
         return defaultValue;
     }
 
     @Override
-    public Character getChar(T name) {
+    public Character getChar(K name) {
         return null;
     }
 
     @Override
-    public char getChar(T name, char defaultValue) {
+    public char getChar(K name, char defaultValue) {
         return defaultValue;
     }
 
     @Override
-    public Short getShort(T name) {
+    public Short getShort(K name) {
         return null;
     }
 
     @Override
-    public short getShort(T name, short defaultValue) {
+    public short getShort(K name, short defaultValue) {
         return defaultValue;
     }
 
     @Override
-    public Integer getInt(T name) {
+    public Integer getInt(K name) {
         return null;
     }
 
     @Override
-    public int getInt(T name, int defaultValue) {
+    public int getInt(K name, int defaultValue) {
         return defaultValue;
     }
 
     @Override
-    public Long getLong(T name) {
+    public Long getLong(K name) {
         return null;
     }
 
     @Override
-    public long getLong(T name, long defaultValue) {
+    public long getLong(K name, long defaultValue) {
         return defaultValue;
     }
 
     @Override
-    public Float getFloat(T name) {
+    public Float getFloat(K name) {
         return null;
     }
 
     @Override
-    public float getFloat(T name, float defaultValue) {
+    public float getFloat(K name, float defaultValue) {
         return defaultValue;
     }
 
     @Override
-    public Double getDouble(T name) {
+    public Double getDouble(K name) {
         return null;
     }
 
     @Override
-    public double getDouble(T name, double defaultValue) {
+    public double getDouble(K name, double defaultValue) {
         return defaultValue;
     }
 
     @Override
-    public Long getTimeMillis(T name) {
+    public Long getTimeMillis(K name) {
         return null;
     }
 
     @Override
-    public long getTimeMillis(T name, long defaultValue) {
+    public long getTimeMillis(K name, long defaultValue) {
         return defaultValue;
     }
 
     @Override
-    public Boolean getBooleanAndRemove(T name) {
+    public Boolean getBooleanAndRemove(K name) {
         return null;
     }
 
     @Override
-    public boolean getBooleanAndRemove(T name, boolean defaultValue) {
+    public boolean getBooleanAndRemove(K name, boolean defaultValue) {
         return defaultValue;
     }
 
     @Override
-    public Byte getByteAndRemove(T name) {
+    public Byte getByteAndRemove(K name) {
         return null;
     }
 
     @Override
-    public byte getByteAndRemove(T name, byte defaultValue) {
+    public byte getByteAndRemove(K name, byte defaultValue) {
         return defaultValue;
     }
 
     @Override
-    public Character getCharAndRemove(T name) {
+    public Character getCharAndRemove(K name) {
         return null;
     }
 
     @Override
-    public char getCharAndRemove(T name, char defaultValue) {
+    public char getCharAndRemove(K name, char defaultValue) {
         return defaultValue;
     }
 
     @Override
-    public Short getShortAndRemove(T name) {
+    public Short getShortAndRemove(K name) {
         return null;
     }
 
     @Override
-    public short getShortAndRemove(T name, short defaultValue) {
+    public short getShortAndRemove(K name, short defaultValue) {
         return defaultValue;
     }
 
     @Override
-    public Integer getIntAndRemove(T name) {
+    public Integer getIntAndRemove(K name) {
         return null;
     }
 
     @Override
-    public int getIntAndRemove(T name, int defaultValue) {
+    public int getIntAndRemove(K name, int defaultValue) {
         return defaultValue;
     }
 
     @Override
-    public Long getLongAndRemove(T name) {
+    public Long getLongAndRemove(K name) {
         return null;
     }
 
     @Override
-    public long getLongAndRemove(T name, long defaultValue) {
+    public long getLongAndRemove(K name, long defaultValue) {
         return defaultValue;
     }
 
     @Override
-    public Float getFloatAndRemove(T name) {
+    public Float getFloatAndRemove(K name) {
         return null;
     }
 
     @Override
-    public float getFloatAndRemove(T name, float defaultValue) {
+    public float getFloatAndRemove(K name, float defaultValue) {
         return defaultValue;
     }
 
     @Override
-    public Double getDoubleAndRemove(T name) {
+    public Double getDoubleAndRemove(K name) {
         return null;
     }
 
     @Override
-    public double getDoubleAndRemove(T name, double defaultValue) {
+    public double getDoubleAndRemove(K name, double defaultValue) {
         return defaultValue;
     }
 
     @Override
-    public Long getTimeMillisAndRemove(T name) {
+    public Long getTimeMillisAndRemove(K name) {
         return null;
     }
 
     @Override
-    public long getTimeMillisAndRemove(T name, long defaultValue) {
+    public long getTimeMillisAndRemove(K name, long defaultValue) {
         return defaultValue;
     }
 
     @Override
-    public boolean contains(T name) {
+    public boolean contains(K name) {
         return false;
     }
 
     @Override
-    public boolean contains(T name, T value) {
+    public boolean contains(K name, V value) {
         return false;
     }
 
     @Override
-    public boolean containsObject(T name, Object value) {
+    public boolean containsObject(K name, Object value) {
         return false;
     }
 
     @Override
-    public boolean containsBoolean(T name, boolean value) {
+    public boolean containsBoolean(K name, boolean value) {
         return false;
     }
 
     @Override
-    public boolean containsByte(T name, byte value) {
+    public boolean containsByte(K name, byte value) {
         return false;
     }
 
     @Override
-    public boolean containsChar(T name, char value) {
+    public boolean containsChar(K name, char value) {
         return false;
     }
 
     @Override
-    public boolean containsShort(T name, short value) {
+    public boolean containsShort(K name, short value) {
         return false;
     }
 
     @Override
-    public boolean containsInt(T name, int value) {
+    public boolean containsInt(K name, int value) {
         return false;
     }
 
     @Override
-    public boolean containsLong(T name, long value) {
+    public boolean containsLong(K name, long value) {
         return false;
     }
 
     @Override
-    public boolean containsFloat(T name, float value) {
+    public boolean containsFloat(K name, float value) {
         return false;
     }
 
     @Override
-    public boolean containsDouble(T name, double value) {
+    public boolean containsDouble(K name, double value) {
         return false;
     }
 
     @Override
-    public boolean containsTimeMillis(T name, long value) {
+    public boolean containsTimeMillis(K name, long value) {
         return false;
     }
 
@@ -302,188 +304,188 @@ public class EmptyHeaders<T> implements Headers<T> {
     }
 
     @Override
-    public Set<T> names() {
+    public Set<K> names() {
         return Collections.emptySet();
     }
 
     @Override
-    public Headers<T> add(T name, T value) {
+    public T add(K name, V value) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> add(T name, Iterable<? extends T> values) {
+    public T add(K name, Iterable<? extends V> values) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> add(T name, T... values) {
+    public T add(K name, V... values) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> addObject(T name, Object value) {
+    public T addObject(K name, Object value) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> addObject(T name, Iterable<?> values) {
+    public T addObject(K name, Iterable<?> values) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> addObject(T name, Object... values) {
+    public T addObject(K name, Object... values) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> addBoolean(T name, boolean value) {
+    public T addBoolean(K name, boolean value) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> addByte(T name, byte value) {
+    public T addByte(K name, byte value) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> addChar(T name, char value) {
+    public T addChar(K name, char value) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> addShort(T name, short value) {
+    public T addShort(K name, short value) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> addInt(T name, int value) {
+    public T addInt(K name, int value) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> addLong(T name, long value) {
+    public T addLong(K name, long value) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> addFloat(T name, float value) {
+    public T addFloat(K name, float value) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> addDouble(T name, double value) {
+    public T addDouble(K name, double value) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> addTimeMillis(T name, long value) {
+    public T addTimeMillis(K name, long value) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> add(Headers<? extends T> headers) {
+    public T add(Headers<? extends K, ? extends V, ?> headers) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> set(T name, T value) {
+    public T set(K name, V value) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> set(T name, Iterable<? extends T> values) {
+    public T set(K name, Iterable<? extends V> values) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> set(T name, T... values) {
+    public T set(K name, V... values) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> setObject(T name, Object value) {
+    public T setObject(K name, Object value) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> setObject(T name, Iterable<?> values) {
+    public T setObject(K name, Iterable<?> values) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> setObject(T name, Object... values) {
+    public T setObject(K name, Object... values) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> setBoolean(T name, boolean value) {
+    public T setBoolean(K name, boolean value) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> setByte(T name, byte value) {
+    public T setByte(K name, byte value) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> setChar(T name, char value) {
+    public T setChar(K name, char value) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> setShort(T name, short value) {
+    public T setShort(K name, short value) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> setInt(T name, int value) {
+    public T setInt(K name, int value) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> setLong(T name, long value) {
+    public T setLong(K name, long value) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> setFloat(T name, float value) {
+    public T setFloat(K name, float value) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> setDouble(T name, double value) {
+    public T setDouble(K name, double value) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> setTimeMillis(T name, long value) {
+    public T setTimeMillis(K name, long value) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> set(Headers<? extends T> headers) {
+    public T set(Headers<? extends K, ? extends V, ?> headers) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public Headers<T> setAll(Headers<? extends T> headers) {
+    public T setAll(Headers<? extends K, ? extends V, ?> headers) {
         throw new UnsupportedOperationException("read only");
     }
 
     @Override
-    public boolean remove(T name) {
+    public boolean remove(K name) {
         return false;
     }
 
     @Override
-    public Headers<T> clear() {
-        return this;
+    public T clear() {
+        return thisT();
     }
 
     @Override
-    public Iterator<Entry<T, T>> iterator() {
-        List<Entry<T, T>> empty = Collections.emptyList();
+    public Iterator<Entry<K, V>> iterator() {
+        List<Entry<K, V>> empty = Collections.emptyList();
         return empty.iterator();
     }
 
@@ -493,17 +495,22 @@ public class EmptyHeaders<T> implements Headers<T> {
             return false;
         }
 
-        Headers<?> rhs = (Headers<?>) o;
+        Headers<?, ?, ?> rhs = (Headers<?, ?, ?>) o;
         return isEmpty() && rhs.isEmpty();
     }
 
     @Override
     public int hashCode() {
-        return 1;
+        return HASH_CODE_SEED;
     }
 
     @Override
     public String toString() {
         return new StringBuilder(getClass().getSimpleName()).append('[').append(']').toString();
+    }
+
+    @SuppressWarnings("unchecked")
+    private T thisT() {
+        return (T) this;
     }
 }

@@ -17,7 +17,6 @@ package io.netty.handler.codec.spdy;
 
 import io.netty.handler.codec.CharSequenceValueConverter;
 import io.netty.handler.codec.DefaultHeaders;
-import io.netty.handler.codec.Headers;
 import io.netty.handler.codec.HeadersUtils;
 
 import java.util.Iterator;
@@ -27,7 +26,7 @@ import java.util.Map.Entry;
 import static io.netty.util.AsciiString.CASE_INSENSITIVE_HASHER;
 import static io.netty.util.AsciiString.CASE_SENSITIVE_HASHER;
 
-public class DefaultSpdyHeaders extends DefaultHeaders<CharSequence> implements SpdyHeaders {
+public class DefaultSpdyHeaders extends DefaultHeaders<CharSequence, CharSequence, SpdyHeaders> implements SpdyHeaders {
     private static final NameValidator<CharSequence> SpydNameValidator = new NameValidator<CharSequence>() {
         @Override
         public void validateName(CharSequence name) {
@@ -42,212 +41,8 @@ public class DefaultSpdyHeaders extends DefaultHeaders<CharSequence> implements 
     @SuppressWarnings("unchecked")
     public DefaultSpdyHeaders(boolean validate) {
         super(CASE_INSENSITIVE_HASHER,
-                validate ? HeaderValueConverterAndValidator.INSTANCE : HeaderValueConverter.INSTANCE,
+                validate ? HeaderValueConverterAndValidator.INSTANCE : CharSequenceValueConverter.INSTANCE,
                 validate ? SpydNameValidator : NameValidator.NOT_NULL);
-    }
-
-    @Override
-    public SpdyHeaders add(CharSequence name, CharSequence value) {
-        super.add(name, value);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders add(CharSequence name, Iterable<? extends CharSequence> values) {
-        super.add(name, values);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders add(CharSequence name, CharSequence... values) {
-        super.add(name, values);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders addObject(CharSequence name, Object value) {
-        super.addObject(name, value);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders addObject(CharSequence name, Iterable<?> values) {
-        super.addObject(name, values);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders addObject(CharSequence name, Object... values) {
-        super.addObject(name, values);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders addBoolean(CharSequence name, boolean value) {
-        super.addBoolean(name, value);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders addChar(CharSequence name, char value) {
-        super.addChar(name, value);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders addByte(CharSequence name, byte value) {
-        super.addByte(name, value);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders addShort(CharSequence name, short value) {
-        super.addShort(name, value);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders addInt(CharSequence name, int value) {
-        super.addInt(name, value);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders addLong(CharSequence name, long value) {
-        super.addLong(name, value);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders addFloat(CharSequence name, float value) {
-        super.addFloat(name, value);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders addDouble(CharSequence name, double value) {
-        super.addDouble(name, value);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders addTimeMillis(CharSequence name, long value) {
-        super.addTimeMillis(name, value);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders add(Headers<? extends CharSequence> headers) {
-        super.add(headers);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders set(CharSequence name, CharSequence value) {
-        super.set(name, value);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders set(CharSequence name, Iterable<? extends CharSequence> values) {
-        super.set(name, values);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders set(CharSequence name, CharSequence... values) {
-        super.set(name, values);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders setObject(CharSequence name, Object value) {
-        super.setObject(name, value);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders setObject(CharSequence name, Iterable<?> values) {
-        super.setObject(name, values);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders setObject(CharSequence name, Object... values) {
-        super.setObject(name, values);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders setBoolean(CharSequence name, boolean value) {
-        super.setBoolean(name, value);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders setChar(CharSequence name, char value) {
-        super.setChar(name, value);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders setByte(CharSequence name, byte value) {
-        super.setByte(name, value);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders setShort(CharSequence name, short value) {
-        super.setShort(name, value);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders setInt(CharSequence name, int value) {
-        super.setInt(name, value);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders setLong(CharSequence name, long value) {
-        super.setLong(name, value);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders setFloat(CharSequence name, float value) {
-        super.setFloat(name, value);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders setDouble(CharSequence name, double value) {
-        super.setDouble(name, value);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders setTimeMillis(CharSequence name, long value) {
-        super.setTimeMillis(name, value);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders set(Headers<? extends CharSequence> headers) {
-        super.set(headers);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders setAll(Headers<? extends CharSequence> headers) {
-        super.setAll(headers);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaders clear() {
-        super.clear();
-        return this;
     }
 
     @Override
@@ -276,23 +71,7 @@ public class DefaultSpdyHeaders extends DefaultHeaders<CharSequence> implements 
                 ignoreCase ? CASE_INSENSITIVE_HASHER : CASE_SENSITIVE_HASHER);
     }
 
-    private static class HeaderValueConverter extends CharSequenceValueConverter {
-        public static final HeaderValueConverter INSTANCE = new HeaderValueConverter();
-
-        @Override
-        public CharSequence convertObject(Object value) {
-            final CharSequence seq;
-            if (value instanceof CharSequence) {
-                seq = (CharSequence) value;
-            } else {
-                seq = value.toString();
-            }
-
-            return seq;
-        }
-    }
-
-    private static final class HeaderValueConverterAndValidator extends HeaderValueConverter {
+    private static final class HeaderValueConverterAndValidator extends CharSequenceValueConverter {
         public static final HeaderValueConverterAndValidator INSTANCE = new HeaderValueConverterAndValidator();
 
         @Override

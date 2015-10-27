@@ -40,9 +40,11 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 /**
  * Default implementation of {@link Headers};
  *
- * @param <T> the type of the header name and value.
+ * @param <K> the type of the header name.
+ * @param <V> the type of the header value.
+ * @param <T> the type to use for return values when the intention is to return {@code this} object.
  */
-public class DefaultHeaders<T> implements Headers<T> {
+public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers<K, V, T> {
     /**
      * How big the underlying array is for the hash data structure.
      * <p>
@@ -50,6 +52,7 @@ public class DefaultHeaders<T> implements Headers<T> {
      */
     private static final int ARRAY_SIZE = 1 << 4;
     private static final int HASH_MASK = ARRAY_SIZE - 1;
+    static final int HASH_CODE_SEED = 0xc2b2ae35; // constant borrowed from murmur3
 
     private static int index(int hash) {
         // Fold the upper 16 bits onto the 16 lower bits so more of the hash code is represented
@@ -58,21 +61,21 @@ public class DefaultHeaders<T> implements Headers<T> {
     }
 
     @SuppressWarnings("unchecked")
-    private final HeaderEntry<T>[] entries = new DefaultHeaders.HeaderEntry[ARRAY_SIZE];
-    protected final HeaderEntry<T> head = new HeaderEntry<T>();
+    private final HeaderEntry<K, V>[] entries = new DefaultHeaders.HeaderEntry[ARRAY_SIZE];
+    protected final HeaderEntry<K, V> head = new HeaderEntry<K, V>();
 
-    private final ValueConverter<T> valueConverter;
-    private final NameValidator<T> nameValidator;
-    private final HashingStrategy<T> hashingStrategy;
+    private final ValueConverter<V> valueConverter;
+    private final NameValidator<K> nameValidator;
+    private final HashingStrategy<K> hashingStrategy;
     int size;
 
-    public interface NameValidator<T> {
+    public interface NameValidator<K> {
         /**
          * Verify that {@code name} is valid.
          * @param name The name to validate.
          * @throws RuntimeException if {@code name} is not valid.
          */
-        void validateName(T name);
+        void validateName(K name);
 
         @SuppressWarnings("rawtypes")
         NameValidator NOT_NULL = new NameValidator() {
@@ -84,22 +87,22 @@ public class DefaultHeaders<T> implements Headers<T> {
     }
 
     @SuppressWarnings("unchecked")
-    public DefaultHeaders(ValueConverter<T> valueConverter) {
+    public DefaultHeaders(ValueConverter<V> valueConverter) {
         this(JAVA_HASHER, valueConverter);
     }
 
     @SuppressWarnings("unchecked")
-    public DefaultHeaders(ValueConverter<T> valueConverter, NameValidator<T> nameValidator) {
+    public DefaultHeaders(ValueConverter<V> valueConverter, NameValidator<K> nameValidator) {
         this(JAVA_HASHER, valueConverter, nameValidator);
     }
 
     @SuppressWarnings("unchecked")
-    public DefaultHeaders(HashingStrategy<T> nameHashingStrategy, ValueConverter<T> valueConverter) {
+    public DefaultHeaders(HashingStrategy<K> nameHashingStrategy, ValueConverter<V> valueConverter) {
         this(nameHashingStrategy, valueConverter, NameValidator.NOT_NULL);
     }
 
-    public DefaultHeaders(HashingStrategy<T> nameHashingStrategy,
-            ValueConverter<T> valueConverter, NameValidator<T> nameValidator) {
+    public DefaultHeaders(HashingStrategy<K> nameHashingStrategy,
+            ValueConverter<V> valueConverter, NameValidator<K> nameValidator) {
         this.valueConverter = checkNotNull(valueConverter, "valueConverter");
         this.nameValidator = checkNotNull(nameValidator, "nameValidator");
         this.hashingStrategy = checkNotNull(nameHashingStrategy, "nameHashingStrategy");
@@ -107,13 +110,13 @@ public class DefaultHeaders<T> implements Headers<T> {
     }
 
     @Override
-    public T get(T name) {
+    public V get(K name) {
         checkNotNull(name, "name");
 
         int h = hashingStrategy.hashCode(name);
         int i = index(h);
-        HeaderEntry<T> e = entries[i];
-        T value = null;
+        HeaderEntry<K, V> e = entries[i];
+        V value = null;
         // loop until the first header was found
         while (e != null) {
             if (e.hash == h && hashingStrategy.equals(name, e.key)) {
@@ -126,8 +129,8 @@ public class DefaultHeaders<T> implements Headers<T> {
     }
 
     @Override
-    public T get(T name, T defaultValue) {
-        T value = get(name);
+    public V get(K name, V defaultValue) {
+        V value = get(name);
         if (value == null) {
             return defaultValue;
         }
@@ -135,14 +138,14 @@ public class DefaultHeaders<T> implements Headers<T> {
     }
 
     @Override
-    public T getAndRemove(T name) {
+    public V getAndRemove(K name) {
         int h = hashingStrategy.hashCode(name);
         return remove0(h, index(h), checkNotNull(name, "name"));
     }
 
     @Override
-    public T getAndRemove(T name, T defaultValue) {
-        T value = getAndRemove(name);
+    public V getAndRemove(K name, V defaultValue) {
+        V value = getAndRemove(name);
         if (value == null) {
             return defaultValue;
         }
@@ -150,14 +153,14 @@ public class DefaultHeaders<T> implements Headers<T> {
     }
 
     @Override
-    public List<T> getAll(T name) {
+    public List<V> getAll(K name) {
         checkNotNull(name, "name");
 
-        LinkedList<T> values = new LinkedList<T>();
+        LinkedList<V> values = new LinkedList<V>();
 
         int h = hashingStrategy.hashCode(name);
         int i = index(h);
-        HeaderEntry<T> e = entries[i];
+        HeaderEntry<K, V> e = entries[i];
         while (e != null) {
             if (e.hash == h && hashingStrategy.equals(name, e.key)) {
                 values.addFirst(e.getValue());
@@ -168,79 +171,79 @@ public class DefaultHeaders<T> implements Headers<T> {
     }
 
     @Override
-    public List<T> getAllAndRemove(T name) {
-        List<T> all = getAll(name);
+    public List<V> getAllAndRemove(K name) {
+        List<V> all = getAll(name);
         remove(name);
         return all;
     }
 
     @Override
-    public boolean contains(T name) {
+    public boolean contains(K name) {
         return get(name) != null;
     }
 
     @Override
-    public boolean containsObject(T name, Object value) {
+    public boolean containsObject(K name, Object value) {
         return contains(name, valueConverter.convertObject(checkNotNull(value, "value")));
     }
 
     @Override
-    public boolean containsBoolean(T name, boolean value) {
+    public boolean containsBoolean(K name, boolean value) {
         return contains(name, valueConverter.convertBoolean(value));
     }
 
     @Override
-    public boolean containsByte(T name, byte value) {
+    public boolean containsByte(K name, byte value) {
         return contains(name, valueConverter.convertByte(value));
     }
 
     @Override
-    public boolean containsChar(T name, char value) {
+    public boolean containsChar(K name, char value) {
         return contains(name, valueConverter.convertChar(value));
     }
 
     @Override
-    public boolean containsShort(T name, short value) {
+    public boolean containsShort(K name, short value) {
         return contains(name, valueConverter.convertShort(value));
     }
 
     @Override
-    public boolean containsInt(T name, int value) {
+    public boolean containsInt(K name, int value) {
         return contains(name, valueConverter.convertInt(value));
     }
 
     @Override
-    public boolean containsLong(T name, long value) {
+    public boolean containsLong(K name, long value) {
         return contains(name, valueConverter.convertLong(value));
     }
 
     @Override
-    public boolean containsFloat(T name, float value) {
+    public boolean containsFloat(K name, float value) {
         return contains(name, valueConverter.convertFloat(value));
     }
 
     @Override
-    public boolean containsDouble(T name, double value) {
+    public boolean containsDouble(K name, double value) {
         return contains(name, valueConverter.convertDouble(value));
     }
 
     @Override
-    public boolean containsTimeMillis(T name, long value) {
+    public boolean containsTimeMillis(K name, long value) {
         return contains(name, valueConverter.convertTimeMillis(value));
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public boolean contains(T name, T value) {
+    public boolean contains(K name, V value) {
         return contains(name, value, JAVA_HASHER);
     }
 
-    public final boolean contains(T name, T value, HashingStrategy<? super T> valueHashingStrategy) {
+    public final boolean contains(K name, V value, HashingStrategy<? super V> valueHashingStrategy) {
         checkNotNull(name, "name");
 
         int h = hashingStrategy.hashCode(name);
         int i = index(h);
-        HeaderEntry<T> e = entries[i];
+        HeaderEntry<K, V> e = entries[i];
         while (e != null) {
             if (e.hash == h && hashingStrategy.equals(name, e.key) && valueHashingStrategy.equals(value, e.value)) {
                 return true;
@@ -261,12 +264,12 @@ public class DefaultHeaders<T> implements Headers<T> {
     }
 
     @Override
-    public Set<T> names() {
+    public Set<K> names() {
         if (isEmpty()) {
             return Collections.emptySet();
         }
-        Set<T> names = new LinkedHashSet<T>(size());
-        HeaderEntry<T> e = head.after;
+        Set<K> names = new LinkedHashSet<K>(size());
+        HeaderEntry<K, V> e = head.after;
         while (e != head) {
             names.add(e.getKey());
             e = e.after;
@@ -275,141 +278,141 @@ public class DefaultHeaders<T> implements Headers<T> {
     }
 
     @Override
-    public Headers<T> add(T name, T value) {
+    public T add(K name, V value) {
         nameValidator.validateName(name);
         checkNotNull(value, "value");
         int h = hashingStrategy.hashCode(name);
         int i = index(h);
         add0(h, i, name, value);
-        return this;
+        return thisT();
     }
 
     @Override
-    public Headers<T> add(T name, Iterable<? extends T> values) {
+    public T add(K name, Iterable<? extends V> values) {
         nameValidator.validateName(name);
         int h = hashingStrategy.hashCode(name);
         int i = index(h);
-        for (T v: values) {
+        for (V v: values) {
             add0(h, i, name, v);
         }
-        return this;
+        return thisT();
     }
 
     @Override
-    public Headers<T> add(T name, T... values) {
+    public T add(K name, V... values) {
         nameValidator.validateName(name);
         int h = hashingStrategy.hashCode(name);
         int i = index(h);
-        for (T v: values) {
+        for (V v: values) {
             add0(h, i, name, v);
         }
-        return this;
+        return thisT();
     }
 
     @Override
-    public Headers<T> addObject(T name, Object value) {
+    public T addObject(K name, Object value) {
         return add(name, valueConverter.convertObject(checkNotNull(value, "value")));
     }
 
     @Override
-    public Headers<T> addObject(T name, Iterable<?> values) {
+    public T addObject(K name, Iterable<?> values) {
         checkNotNull(values, "values");
         for (Object value : values) {
             addObject(name, value);
         }
-        return this;
+        return thisT();
     }
 
     @Override
-    public Headers<T> addObject(T name, Object... values) {
+    public T addObject(K name, Object... values) {
         checkNotNull(values, "values");
         for (int i = 0; i < values.length; i++) {
             addObject(name, values[i]);
         }
-        return this;
+        return thisT();
     }
 
     @Override
-    public Headers<T> addInt(T name, int value) {
+    public T addInt(K name, int value) {
         return add(name, valueConverter.convertInt(value));
     }
 
     @Override
-    public Headers<T> addLong(T name, long value) {
+    public T addLong(K name, long value) {
         return add(name, valueConverter.convertLong(value));
     }
 
     @Override
-    public Headers<T> addDouble(T name, double value) {
+    public T addDouble(K name, double value) {
         return add(name, valueConverter.convertDouble(value));
     }
 
     @Override
-    public Headers<T> addTimeMillis(T name, long value) {
+    public T addTimeMillis(K name, long value) {
         return add(name, valueConverter.convertTimeMillis(value));
     }
 
     @Override
-    public Headers<T> addChar(T name, char value) {
+    public T addChar(K name, char value) {
         return add(name, valueConverter.convertChar(value));
     }
 
     @Override
-    public Headers<T> addBoolean(T name, boolean value) {
+    public T addBoolean(K name, boolean value) {
         return add(name, valueConverter.convertBoolean(value));
     }
 
     @Override
-    public Headers<T> addFloat(T name, float value) {
+    public T addFloat(K name, float value) {
         return add(name, valueConverter.convertFloat(value));
     }
 
     @Override
-    public Headers<T> addByte(T name, byte value) {
+    public T addByte(K name, byte value) {
         return add(name, valueConverter.convertByte(value));
     }
 
     @Override
-    public Headers<T> addShort(T name, short value) {
+    public T addShort(K name, short value) {
         return add(name, valueConverter.convertShort(value));
     }
 
     @Override
-    public Headers<T> add(Headers<? extends T> headers) {
+    public T add(Headers<? extends K, ? extends V, ?> headers) {
         checkNotNull(headers, "headers");
         if (headers == this) {
             throw new IllegalArgumentException("can't add to itself.");
         }
         if (headers instanceof DefaultHeaders) {
             @SuppressWarnings("unchecked")
-            DefaultHeaders<T> defaultHeaders = (DefaultHeaders<T>) headers;
-            HeaderEntry<T> e = defaultHeaders.head.after;
+            DefaultHeaders<K, V, T> defaultHeaders = (DefaultHeaders<K, V, T>) headers;
+            HeaderEntry<K, V> e = defaultHeaders.head.after;
             while (e != defaultHeaders.head) {
                 add(e.key, e.value);
                 e = e.after;
             }
-            return this;
+            return thisT();
         } else {
-            for (Entry<? extends T, ? extends T> header : headers) {
+            for (Entry<? extends K, ? extends V> header : headers) {
                 add(header.getKey(), header.getValue());
             }
         }
-        return this;
+        return thisT();
     }
 
     @Override
-    public Headers<T> set(T name, T value) {
+    public T set(K name, V value) {
         nameValidator.validateName(name);
         checkNotNull(value, "value");
         int h = hashingStrategy.hashCode(name);
         int i = index(h);
         remove0(h, i, name);
         add0(h, i, name, value);
-        return this;
+        return thisT();
     }
 
     @Override
-    public Headers<T> set(T name, Iterable<? extends T> values) {
+    public T set(K name, Iterable<? extends V> values) {
         nameValidator.validateName(name);
         checkNotNull(values, "values");
 
@@ -417,18 +420,18 @@ public class DefaultHeaders<T> implements Headers<T> {
         int i = index(h);
 
         remove0(h, i, name);
-        for (T v: values) {
+        for (V v: values) {
             if (v == null) {
                 break;
             }
             add0(h, i, name, v);
         }
 
-        return this;
+        return thisT();
     }
 
     @Override
-    public Headers<T> set(T name, T... values) {
+    public T set(K name, V... values) {
         nameValidator.validateName(name);
         checkNotNull(values, "values");
 
@@ -436,25 +439,25 @@ public class DefaultHeaders<T> implements Headers<T> {
         int i = index(h);
 
         remove0(h, i, name);
-        for (T v: values) {
+        for (V v: values) {
             if (v == null) {
                 break;
             }
             add0(h, i, name, v);
         }
 
-        return this;
+        return thisT();
     }
 
     @Override
-    public Headers<T> setObject(T name, Object value) {
+    public T setObject(K name, Object value) {
         checkNotNull(value, "value");
-        T convertedValue = checkNotNull(valueConverter.convertObject(value), "convertedValue");
+        V convertedValue = checkNotNull(valueConverter.convertObject(value), "convertedValue");
         return set(name, convertedValue);
     }
 
     @Override
-    public Headers<T> setObject(T name, Iterable<?> values) {
+    public T setObject(K name, Iterable<?> values) {
         nameValidator.validateName(name);
         checkNotNull(values, "values");
 
@@ -469,11 +472,11 @@ public class DefaultHeaders<T> implements Headers<T> {
             add0(h, i, name, valueConverter.convertObject(v));
         }
 
-        return this;
+        return thisT();
     }
 
     @Override
-    public Headers<T> setObject(T name, Object... values) {
+    public T setObject(K name, Object... values) {
         nameValidator.validateName(name);
         checkNotNull(values, "values");
 
@@ -488,56 +491,56 @@ public class DefaultHeaders<T> implements Headers<T> {
             add0(h, i, name, valueConverter.convertObject(v));
         }
 
-        return this;
+        return thisT();
     }
 
     @Override
-    public Headers<T> setInt(T name, int value) {
+    public T setInt(K name, int value) {
         return set(name, valueConverter.convertInt(value));
     }
 
     @Override
-    public Headers<T> setLong(T name, long value) {
+    public T setLong(K name, long value) {
         return set(name, valueConverter.convertLong(value));
     }
 
     @Override
-    public Headers<T> setDouble(T name, double value) {
+    public T setDouble(K name, double value) {
         return set(name, valueConverter.convertDouble(value));
     }
 
     @Override
-    public Headers<T> setTimeMillis(T name, long value) {
+    public T setTimeMillis(K name, long value) {
         return set(name, valueConverter.convertTimeMillis(value));
     }
 
     @Override
-    public Headers<T> setFloat(T name, float value) {
+    public T setFloat(K name, float value) {
         return set(name, valueConverter.convertFloat(value));
     }
 
     @Override
-    public Headers<T> setChar(T name, char value) {
+    public T setChar(K name, char value) {
         return set(name, valueConverter.convertChar(value));
     }
 
     @Override
-    public Headers<T> setBoolean(T name, boolean value) {
+    public T setBoolean(K name, boolean value) {
         return set(name, valueConverter.convertBoolean(value));
     }
 
     @Override
-    public Headers<T> setByte(T name, byte value) {
+    public T setByte(K name, byte value) {
         return set(name, valueConverter.convertByte(value));
     }
 
     @Override
-    public Headers<T> setShort(T name, short value) {
+    public T setShort(K name, short value) {
         return set(name, valueConverter.convertShort(value));
     }
 
     @Override
-    public Headers<T> set(Headers<? extends T> headers) {
+    public T set(Headers<? extends K, ? extends V, ?> headers) {
         checkNotNull(headers, "headers");
         if (headers == this) {
             throw new IllegalArgumentException("can't add to itself.");
@@ -545,8 +548,8 @@ public class DefaultHeaders<T> implements Headers<T> {
         clear();
         if (headers instanceof DefaultHeaders) {
             @SuppressWarnings("unchecked")
-            DefaultHeaders<T> defaultHeaders = (DefaultHeaders<T>) headers;
-            HeaderEntry<T> e = defaultHeaders.head.after;
+            DefaultHeaders<K, V, T> defaultHeaders = (DefaultHeaders<K, V, T>) headers;
+            HeaderEntry<K, V> e = defaultHeaders.head.after;
             while (e != defaultHeaders.head) {
                 add(e.key, e.value);
                 e = e.after;
@@ -554,177 +557,177 @@ public class DefaultHeaders<T> implements Headers<T> {
         } else {
             add(headers);
         }
-        return this;
+        return thisT();
     }
 
     @Override
-    public Headers<T> setAll(Headers<? extends T> headers) {
+    public T setAll(Headers<? extends K, ? extends V, ?> headers) {
         checkNotNull(headers, "headers");
         if (headers == this) {
-            return this;
+            return thisT();
         }
-        for (T key : headers.names()) {
+        for (K key : headers.names()) {
             remove(key);
         }
-        for (Entry<? extends T, ? extends T> entry : headers) {
+        for (Entry<? extends K, ? extends V> entry : headers) {
             add(entry.getKey(), entry.getValue());
         }
-        return this;
+        return thisT();
     }
 
     @Override
-    public boolean remove(T name) {
+    public boolean remove(K name) {
         return getAndRemove(name) != null;
     }
 
     @Override
-    public Headers<T> clear() {
+    public T clear() {
         Arrays.fill(entries, null);
         head.before = head.after = head;
         size = 0;
-        return this;
+        return thisT();
     }
 
     @Override
-    public Iterator<Entry<T, T>> iterator() {
+    public Iterator<Entry<K, V>> iterator() {
         return new HeaderIterator();
     }
 
     @Override
-    public Boolean getBoolean(T name) {
-        T v = get(name);
+    public Boolean getBoolean(K name) {
+        V v = get(name);
         return v != null ? valueConverter.convertToBoolean(v) : null;
     }
 
     @Override
-    public boolean getBoolean(T name, boolean defaultValue) {
+    public boolean getBoolean(K name, boolean defaultValue) {
         Boolean v = getBoolean(name);
         return v != null ? v : defaultValue;
     }
 
     @Override
-    public Byte getByte(T name) {
-        T v = get(name);
+    public Byte getByte(K name) {
+        V v = get(name);
         return v != null ? valueConverter.convertToByte(v) : null;
     }
 
     @Override
-    public byte getByte(T name, byte defaultValue) {
+    public byte getByte(K name, byte defaultValue) {
         Byte v = getByte(name);
         return v != null ? v : defaultValue;
     }
 
     @Override
-    public Character getChar(T name) {
-        T v = get(name);
+    public Character getChar(K name) {
+        V v = get(name);
         return v != null ? valueConverter.convertToChar(v) : null;
     }
 
     @Override
-    public char getChar(T name, char defaultValue) {
+    public char getChar(K name, char defaultValue) {
         Character v = getChar(name);
         return v != null ? v : defaultValue;
     }
 
     @Override
-    public Short getShort(T name) {
-        T v = get(name);
+    public Short getShort(K name) {
+        V v = get(name);
         return v != null ? valueConverter.convertToShort(v) : null;
     }
 
     @Override
-    public short getShort(T name, short defaultValue) {
+    public short getShort(K name, short defaultValue) {
         Short v = getShort(name);
         return v != null ? v : defaultValue;
     }
 
     @Override
-    public Integer getInt(T name) {
-        T v = get(name);
+    public Integer getInt(K name) {
+        V v = get(name);
         return v != null ? valueConverter.convertToInt(v) : null;
     }
 
     @Override
-    public int getInt(T name, int defaultValue) {
+    public int getInt(K name, int defaultValue) {
         Integer v = getInt(name);
         return v != null ? v : defaultValue;
     }
 
     @Override
-    public Long getLong(T name) {
-        T v = get(name);
+    public Long getLong(K name) {
+        V v = get(name);
         return v != null ? valueConverter.convertToLong(v) : null;
     }
 
     @Override
-    public long getLong(T name, long defaultValue) {
+    public long getLong(K name, long defaultValue) {
         Long v = getLong(name);
         return v != null ? v : defaultValue;
     }
 
     @Override
-    public Float getFloat(T name) {
-        T v = get(name);
+    public Float getFloat(K name) {
+        V v = get(name);
         return v != null ? valueConverter.convertToFloat(v) : null;
     }
 
     @Override
-    public float getFloat(T name, float defaultValue) {
+    public float getFloat(K name, float defaultValue) {
         Float v = getFloat(name);
         return v != null ? v : defaultValue;
     }
 
     @Override
-    public Double getDouble(T name) {
-        T v = get(name);
+    public Double getDouble(K name) {
+        V v = get(name);
         return v != null ? valueConverter.convertToDouble(v) : null;
     }
 
     @Override
-    public double getDouble(T name, double defaultValue) {
+    public double getDouble(K name, double defaultValue) {
         Double v = getDouble(name);
         return v != null ? v : defaultValue;
     }
 
     @Override
-    public Long getTimeMillis(T name) {
-        T v = get(name);
+    public Long getTimeMillis(K name) {
+        V v = get(name);
         return v != null ? valueConverter.convertToTimeMillis(v) : null;
     }
 
     @Override
-    public long getTimeMillis(T name, long defaultValue) {
+    public long getTimeMillis(K name, long defaultValue) {
         Long v = getTimeMillis(name);
         return v != null ? v : defaultValue;
     }
 
     @Override
-    public Boolean getBooleanAndRemove(T name) {
-        T v = getAndRemove(name);
+    public Boolean getBooleanAndRemove(K name) {
+        V v = getAndRemove(name);
         return v != null ? valueConverter.convertToBoolean(v) : null;
     }
 
     @Override
-    public boolean getBooleanAndRemove(T name, boolean defaultValue) {
+    public boolean getBooleanAndRemove(K name, boolean defaultValue) {
         Boolean v = getBooleanAndRemove(name);
         return v != null ? v : defaultValue;
     }
 
     @Override
-    public Byte getByteAndRemove(T name) {
-        T v = getAndRemove(name);
+    public Byte getByteAndRemove(K name) {
+        V v = getAndRemove(name);
         return v != null ? valueConverter.convertToByte(v) : null;
     }
 
     @Override
-    public byte getByteAndRemove(T name, byte defaultValue) {
+    public byte getByteAndRemove(K name, byte defaultValue) {
         Byte v = getByteAndRemove(name);
         return v != null ? v : defaultValue;
     }
 
     @Override
-    public Character getCharAndRemove(T name) {
-        T v = getAndRemove(name);
+    public Character getCharAndRemove(K name) {
+        V v = getAndRemove(name);
         if (v == null) {
             return null;
         }
@@ -736,79 +739,79 @@ public class DefaultHeaders<T> implements Headers<T> {
     }
 
     @Override
-    public char getCharAndRemove(T name, char defaultValue) {
+    public char getCharAndRemove(K name, char defaultValue) {
         Character v = getCharAndRemove(name);
         return v != null ? v : defaultValue;
     }
 
     @Override
-    public Short getShortAndRemove(T name) {
-        T v = getAndRemove(name);
+    public Short getShortAndRemove(K name) {
+        V v = getAndRemove(name);
         return v != null ? valueConverter.convertToShort(v) : null;
     }
 
     @Override
-    public short getShortAndRemove(T name, short defaultValue) {
+    public short getShortAndRemove(K name, short defaultValue) {
         Short v = getShortAndRemove(name);
         return v != null ? v : defaultValue;
     }
 
     @Override
-    public Integer getIntAndRemove(T name) {
-        T v = getAndRemove(name);
+    public Integer getIntAndRemove(K name) {
+        V v = getAndRemove(name);
         return v != null ? valueConverter.convertToInt(v) : null;
     }
 
     @Override
-    public int getIntAndRemove(T name, int defaultValue) {
+    public int getIntAndRemove(K name, int defaultValue) {
         Integer v = getIntAndRemove(name);
         return v != null ? v : defaultValue;
     }
 
     @Override
-    public Long getLongAndRemove(T name) {
-        T v = getAndRemove(name);
+    public Long getLongAndRemove(K name) {
+        V v = getAndRemove(name);
         return v != null ? valueConverter.convertToLong(v) : null;
     }
 
     @Override
-    public long getLongAndRemove(T name, long defaultValue) {
+    public long getLongAndRemove(K name, long defaultValue) {
         Long v = getLongAndRemove(name);
         return v != null ? v : defaultValue;
     }
 
     @Override
-    public Float getFloatAndRemove(T name) {
-        T v = getAndRemove(name);
+    public Float getFloatAndRemove(K name) {
+        V v = getAndRemove(name);
         return v != null ? valueConverter.convertToFloat(v) : null;
     }
 
     @Override
-    public float getFloatAndRemove(T name, float defaultValue) {
+    public float getFloatAndRemove(K name, float defaultValue) {
         Float v = getFloatAndRemove(name);
         return v != null ? v : defaultValue;
     }
 
     @Override
-    public Double getDoubleAndRemove(T name) {
-        T v = getAndRemove(name);
+    public Double getDoubleAndRemove(K name) {
+        V v = getAndRemove(name);
         return v != null ? valueConverter.convertToDouble(v) : null;
     }
 
     @Override
-    public double getDoubleAndRemove(T name, double defaultValue) {
+    public double getDoubleAndRemove(K name, double defaultValue) {
         Double v = getDoubleAndRemove(name);
         return v != null ? v : defaultValue;
     }
 
     @Override
-    public Long getTimeMillisAndRemove(T name) {
-        T v = getAndRemove(name);
+    public Long getTimeMillisAndRemove(K name) {
+        V v = getAndRemove(name);
         return v != null ? valueConverter.convertToTimeMillis(v) : null;
     }
 
     @Override
-    public long getTimeMillisAndRemove(T name, long defaultValue) {
+    public long getTimeMillisAndRemove(K name, long defaultValue) {
         Long v = getTimeMillisAndRemove(name);
         return v != null ? v : defaultValue;
     }
@@ -820,7 +823,7 @@ public class DefaultHeaders<T> implements Headers<T> {
             return false;
         }
 
-        return equals((Headers<T>) o, JAVA_HASHER);
+        return equals((Headers<K, V, ?>) o, JAVA_HASHER);
     }
 
     @SuppressWarnings("unchecked")
@@ -836,7 +839,7 @@ public class DefaultHeaders<T> implements Headers<T> {
      * @return {@code true} if this object equals {@code h2} given {@code valueHashingStrategy}.
      * {@code false} otherwise.
      */
-    public final boolean equals(Headers<T> h2, HashingStrategy<T> valueHashingStrategy) {
+    public final boolean equals(Headers<K, V, ?> h2, HashingStrategy<V> valueHashingStrategy) {
         if (h2.size() != size()) {
             return false;
         }
@@ -845,9 +848,9 @@ public class DefaultHeaders<T> implements Headers<T> {
             return true;
         }
 
-        for (T name : names()) {
-            List<T> otherValues = h2.getAll(name);
-            List<T> values = getAll(name);
+        for (K name : names()) {
+            List<V> otherValues = h2.getAll(name);
+            List<V> values = getAll(name);
             if (otherValues.size() != values.size()) {
                 return false;
             }
@@ -865,11 +868,11 @@ public class DefaultHeaders<T> implements Headers<T> {
      * individual values.
      * @param valueHashingStrategy Defines how values will be hashed.
      */
-    public final int hashCode(HashingStrategy<T> valueHashingStrategy) {
-        int result = 1;
-        for (T name : names()) {
+    public final int hashCode(HashingStrategy<V> valueHashingStrategy) {
+        int result = HASH_CODE_SEED;
+        for (K name : names()) {
             result = 31 * result + hashingStrategy.hashCode(name);
-            List<T> values = getAll(name);
+            List<V> values = getAll(name);
             for (int i = 0; i < values.size(); ++i) {
                 result = 31 * result + valueHashingStrategy.hashCode(values.get(i));
             }
@@ -881,8 +884,8 @@ public class DefaultHeaders<T> implements Headers<T> {
     public String toString() {
         StringBuilder builder = new StringBuilder(getClass().getSimpleName()).append('[');
         String separator = "";
-        for (T name : names()) {
-            List<T> values = getAll(name);
+        for (K name : names()) {
+            List<V> values = getAll(name);
             for (int i = 0; i < values.size(); ++i) {
                 builder.append(separator);
                 builder.append(name).append(": ").append(values.get(i));
@@ -892,15 +895,15 @@ public class DefaultHeaders<T> implements Headers<T> {
         return builder.append(']').toString();
     }
 
-    protected HeaderEntry<T> newHeaderEntry(int h, T name, T value, HeaderEntry<T> next) {
-        return new HeaderEntry<T>(h, name, value, next, head);
+    protected HeaderEntry<K, V> newHeaderEntry(int h, K name, V value, HeaderEntry<K, V> next) {
+        return new HeaderEntry<K, V>(h, name, value, next, head);
     }
 
-    protected ValueConverter<T> valueConverter() {
+    protected ValueConverter<V> valueConverter() {
         return valueConverter;
     }
 
-    private void add0(int h, int i, T name, T value) {
+    private void add0(int h, int i, K name, V value) {
         // Update the hash table.
         entries[i] = newHeaderEntry(h, name, value, entries[i]);
         ++size;
@@ -909,14 +912,14 @@ public class DefaultHeaders<T> implements Headers<T> {
     /**
      * @return the first value inserted whose hash code equals {@code h} and whose name is equal to {@code name}.
      */
-    private T remove0(int h, int i, T name) {
-        HeaderEntry<T> e = entries[i];
+    private V remove0(int h, int i, K name) {
+        HeaderEntry<K, V> e = entries[i];
         if (e == null) {
             return null;
         }
 
-        T value = null;
-        HeaderEntry<T> next = e.next;
+        V value = null;
+        HeaderEntry<K, V> next = e.next;
         while (next != null) {
             if (next.hash == h && hashingStrategy.equals(name, next.key)) {
                 value = next.value;
@@ -941,6 +944,11 @@ public class DefaultHeaders<T> implements Headers<T> {
         }
 
         return value;
+    }
+
+    @SuppressWarnings("unchecked")
+    private T thisT() {
+        return (T) this;
     }
 
     /**
@@ -1014,8 +1022,8 @@ public class DefaultHeaders<T> implements Headers<T> {
         }
     }
 
-    private final class HeaderIterator implements Iterator<Map.Entry<T, T>> {
-        private HeaderEntry<T> current = head;
+    private final class HeaderIterator implements Iterator<Map.Entry<K, V>> {
+        private HeaderEntry<K, V> current = head;
 
         @Override
         public boolean hasNext() {
@@ -1023,7 +1031,7 @@ public class DefaultHeaders<T> implements Headers<T> {
         }
 
         @Override
-        public Entry<T, T> next() {
+        public Entry<K, V> next() {
             current = current.after;
 
             if (current == head) {
@@ -1039,25 +1047,25 @@ public class DefaultHeaders<T> implements Headers<T> {
         }
     }
 
-    protected static class HeaderEntry<T> implements Map.Entry<T, T> {
+    protected static class HeaderEntry<K, V> implements Map.Entry<K, V> {
         protected final int hash;
-        protected final T key;
-        protected T value;
+        protected final K key;
+        protected V value;
         /**
          * In bucket linked list
          */
-        protected HeaderEntry<T> next;
+        protected HeaderEntry<K, V> next;
         /**
          * Overall insertion order linked list
          */
-        protected HeaderEntry<T> before, after;
+        protected HeaderEntry<K, V> before, after;
 
-        protected HeaderEntry(int hash, T key) {
+        protected HeaderEntry(int hash, K key) {
             this.hash = hash;
             this.key = key;
         }
 
-        HeaderEntry(int hash, T key, T value, HeaderEntry<T> next, HeaderEntry<T> head) {
+        HeaderEntry(int hash, K key, V value, HeaderEntry<K, V> next, HeaderEntry<K, V> head) {
             this.hash = hash;
             this.key = key;
             this.value = value;
@@ -1078,11 +1086,11 @@ public class DefaultHeaders<T> implements Headers<T> {
             after.before = this;
         }
 
-        public final HeaderEntry<T> before() {
+        public final HeaderEntry<K, V> before() {
             return before;
         }
 
-        public final HeaderEntry<T> after() {
+        public final HeaderEntry<K, V> after() {
             return after;
         }
 
@@ -1092,19 +1100,19 @@ public class DefaultHeaders<T> implements Headers<T> {
         }
 
         @Override
-        public final T getKey() {
+        public final K getKey() {
             return key;
         }
 
         @Override
-        public final T getValue() {
+        public final V getValue() {
             return value;
         }
 
         @Override
-        public final T setValue(T value) {
+        public final V setValue(V value) {
             checkNotNull(value, "value");
-            T oldValue = this.value;
+            V oldValue = this.value;
             this.value = value;
             return oldValue;
         }

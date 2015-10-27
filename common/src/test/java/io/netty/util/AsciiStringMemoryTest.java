@@ -25,16 +25,16 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
- * Test for the {@link ByteString} class.
+ * Test the underlying memory methods for the {@link AsciiString} class.
  */
-public class ByteStringTest {
+public class AsciiStringMemoryTest {
     private byte[] a;
     private byte[] b;
     private int aOffset = 22;
     private int bOffset = 53;
     private int length = 100;
-    private ByteString aByteString;
-    private ByteString bByteString;
+    private AsciiString aAsciiString;
+    private AsciiString bAsciiString;
     private Random r = new Random();
 
     @Before
@@ -47,32 +47,32 @@ public class ByteStringTest {
         bOffset = 53;
         length = 100;
         System.arraycopy(a, aOffset, b, bOffset, length);
-        aByteString = new ByteString(a, aOffset, length, false);
-        bByteString = new ByteString(b, bOffset, length, false);
+        aAsciiString = new AsciiString(a, aOffset, length, false);
+        bAsciiString = new AsciiString(b, bOffset, length, false);
     }
 
     @Test
     public void testSharedMemory() {
         ++a[aOffset];
-        ByteString aByteString1 = new ByteString(a, aOffset, length, true);
-        ByteString aByteString2 = new ByteString(a, aOffset, length, false);
-        assertEquals(aByteString, aByteString1);
-        assertEquals(aByteString, aByteString2);
+        AsciiString aAsciiString1 = new AsciiString(a, aOffset, length, true);
+        AsciiString aAsciiString2 = new AsciiString(a, aOffset, length, false);
+        assertEquals(aAsciiString, aAsciiString1);
+        assertEquals(aAsciiString, aAsciiString2);
         for (int i = aOffset; i < length; ++i) {
-            assertEquals(a[i], aByteString.byteAt(i - aOffset));
+            assertEquals(a[i], aAsciiString.byteAt(i - aOffset));
         }
     }
 
     @Test
     public void testNotSharedMemory() {
-        ByteString aByteString1 = new ByteString(a, aOffset, length, true);
+        AsciiString aAsciiString1 = new AsciiString(a, aOffset, length, true);
         ++a[aOffset];
-        assertNotEquals(aByteString, aByteString1);
+        assertNotEquals(aAsciiString, aAsciiString1);
         int i = aOffset;
-        assertNotEquals(a[i], aByteString1.byteAt(i - aOffset));
+        assertNotEquals(a[i], aAsciiString1.byteAt(i - aOffset));
         ++i;
         for (; i < length; ++i) {
-            assertEquals(a[i], aByteString1.byteAt(i - aOffset));
+            assertEquals(a[i], aAsciiString1.byteAt(i - aOffset));
         }
     }
 
@@ -80,69 +80,69 @@ public class ByteStringTest {
     public void forEachTest() throws Exception {
         final AtomicReference<Integer> aCount = new AtomicReference<Integer>(0);
         final AtomicReference<Integer> bCount = new AtomicReference<Integer>(0);
-        aByteString.forEachByte(new ByteProcessor() {
+        aAsciiString.forEachByte(new ByteProcessor() {
             int i;
             @Override
             public boolean process(byte value) throws Exception {
-                assertEquals("failed at index: " + i, value, bByteString.byteAt(i++));
+                assertEquals("failed at index: " + i, value, bAsciiString.byteAt(i++));
                 aCount.set(aCount.get() + 1);
                 return true;
             }
         });
-        bByteString.forEachByte(new ByteProcessor() {
+        bAsciiString.forEachByte(new ByteProcessor() {
             int i;
             @Override
             public boolean process(byte value) throws Exception {
-                assertEquals("failed at index: " + i, value, aByteString.byteAt(i++));
+                assertEquals("failed at index: " + i, value, aAsciiString.byteAt(i++));
                 bCount.set(bCount.get() + 1);
                 return true;
             }
         });
-        assertEquals(aByteString.length(), aCount.get().intValue());
-        assertEquals(bByteString.length(), bCount.get().intValue());
+        assertEquals(aAsciiString.length(), aCount.get().intValue());
+        assertEquals(bAsciiString.length(), bCount.get().intValue());
     }
 
     @Test
     public void forEachDescTest() throws Exception {
         final AtomicReference<Integer> aCount = new AtomicReference<Integer>(0);
         final AtomicReference<Integer> bCount = new AtomicReference<Integer>(0);
-        aByteString.forEachByteDesc(new ByteProcessor() {
+        aAsciiString.forEachByteDesc(new ByteProcessor() {
             int i = 1;
             @Override
             public boolean process(byte value) throws Exception {
-                assertEquals("failed at index: " + i, value, bByteString.byteAt(bByteString.length() - (i++)));
+                assertEquals("failed at index: " + i, value, bAsciiString.byteAt(bAsciiString.length() - (i++)));
                 aCount.set(aCount.get() + 1);
                 return true;
             }
         });
-        bByteString.forEachByteDesc(new ByteProcessor() {
+        bAsciiString.forEachByteDesc(new ByteProcessor() {
             int i = 1;
             @Override
             public boolean process(byte value) throws Exception {
-                assertEquals("failed at index: " + i, value, aByteString.byteAt(aByteString.length() - (i++)));
+                assertEquals("failed at index: " + i, value, aAsciiString.byteAt(aAsciiString.length() - (i++)));
                 bCount.set(bCount.get() + 1);
                 return true;
             }
         });
-        assertEquals(aByteString.length(), aCount.get().intValue());
-        assertEquals(bByteString.length(), bCount.get().intValue());
+        assertEquals(aAsciiString.length(), aCount.get().intValue());
+        assertEquals(bAsciiString.length(), bCount.get().intValue());
     }
 
     @Test
     public void subSequenceTest() {
         final int start = 12;
-        final int end = aByteString.length();
-        ByteString aSubSequence = aByteString.subSequence(start, end, false);
-        ByteString bSubSequence = bByteString.subSequence(start, end, true);
+        final int end = aAsciiString.length();
+        AsciiString aSubSequence = aAsciiString.subSequence(start, end, false);
+        AsciiString bSubSequence = bAsciiString.subSequence(start, end, true);
         assertEquals(aSubSequence, bSubSequence);
         assertEquals(aSubSequence.hashCode(), bSubSequence.hashCode());
     }
 
     @Test
     public void copyTest() {
-        byte[] aCopy = new byte[aByteString.length()];
-        aByteString.copy(0, aCopy, 0, aCopy.length);
-        ByteString aByteStringCopy = new ByteString(aCopy, false);
-        assertEquals(aByteString, aByteStringCopy);
+        byte[] aCopy = new byte[aAsciiString.length()];
+        aAsciiString.copy(0, aCopy, 0, aCopy.length);
+        AsciiString aAsciiStringCopy = new AsciiString(aCopy, false);
+        assertEquals(aAsciiString, aAsciiStringCopy);
     }
 }
