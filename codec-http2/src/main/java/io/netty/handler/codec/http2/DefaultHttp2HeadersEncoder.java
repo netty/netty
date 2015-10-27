@@ -15,23 +15,22 @@
 
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_TABLE_SIZE;
-import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
-import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
-import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
-import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import com.twitter.hpack.Encoder;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
-import io.netty.util.ByteString;
-
+import io.netty.util.AsciiString;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Map.Entry;
 
-import com.twitter.hpack.Encoder;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_TABLE_SIZE;
+import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2HeadersEncoder.Configuration {
     private final Encoder encoder;
@@ -65,7 +64,7 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
                 tableSizeChangeOutput.reset();
             }
 
-            for (Entry<ByteString, ByteString> header : headers) {
+            for (Entry<CharSequence, CharSequence> header : headers) {
                 encodeHeader(header.getKey(), header.getValue(), stream);
             }
         } catch (Http2Exception e) {
@@ -91,11 +90,13 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
         return this;
     }
 
-    private void encodeHeader(ByteString key, ByteString value, OutputStream stream) throws IOException {
-        encoder.encodeHeader(stream,
-                key.isEntireArrayUsed() ? key.array() : new ByteString(key, true).array(),
-                value.isEntireArrayUsed() ? value.array() : new ByteString(value, true).array(),
-                sensitivityDetector.isSensitive(key, value));
+    private byte[] toBytes(CharSequence chars) {
+        AsciiString aString = AsciiString.of(chars);
+        return aString.isEntireArrayUsed() ? aString.array() : aString.toByteArray();
+    }
+
+    private void encodeHeader(CharSequence key, CharSequence value, OutputStream stream) throws IOException {
+        encoder.encodeHeader(stream, toBytes(key), toBytes(value), sensitivityDetector.isSensitive(key, value));
     }
 
     /**

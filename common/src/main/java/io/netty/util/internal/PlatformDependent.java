@@ -87,7 +87,7 @@ public final class PlatformDependent {
     private static final int BIT_MODE = bitMode0();
 
     private static final int ADDRESS_SIZE = addressSize0();
-    private static final boolean NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
+    public static final boolean BIG_ENDIAN_NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
 
     static {
         if (logger.isDebugEnabled()) {

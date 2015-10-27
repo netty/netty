@@ -15,6 +15,15 @@
 
 package io.netty.handler.codec.http2;
 
+import com.twitter.hpack.Decoder;
+import com.twitter.hpack.HeaderListener;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
+import io.netty.util.AsciiString;
+
+import java.io.IOException;
+import java.io.InputStream;
+
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_HEADER_SIZE;
 import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
@@ -22,15 +31,6 @@ import static io.netty.handler.codec.http2.Http2Error.ENHANCE_YOUR_CALM;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufInputStream;
-import io.netty.util.ByteString;
-
-import java.io.IOException;
-import java.io.InputStream;
-
-import com.twitter.hpack.Decoder;
-import com.twitter.hpack.HeaderListener;
 
 public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2HeadersDecoder.Configuration {
     private final int maxHeaderSize;
@@ -91,7 +91,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
             HeaderListener listener = new HeaderListener() {
                 @Override
                 public void addHeader(byte[] key, byte[] value, boolean sensitive) {
-                    headers.add(new ByteString(key, false), new ByteString(value, false));
+                    headers.add(new AsciiString(key, false), new AsciiString(value, false));
                 }
             };
 

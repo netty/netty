@@ -16,7 +16,6 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.util.ByteString;
 
 /**
  * Encodes {@link Http2Headers} into HPACK-encoded headers blocks.
@@ -47,7 +46,7 @@ public interface Http2HeadersEncoder {
          * <a href="http://tools.ietf.org/html/draft-ietf-httpbis-header-compression-12#section-7.1.3">sensitive</a>.
          * {@code false} otherwise.
          */
-        boolean isSensitive(ByteString name, ByteString value);
+        boolean isSensitive(CharSequence name, CharSequence value);
     }
 
     /**
@@ -68,7 +67,7 @@ public interface Http2HeadersEncoder {
      */
     SensitivityDetector NEVER_SENSITIVE = new SensitivityDetector() {
         @Override
-        public boolean isSensitive(ByteString name, ByteString value) {
+        public boolean isSensitive(CharSequence name, CharSequence value) {
             return false;
         }
     };

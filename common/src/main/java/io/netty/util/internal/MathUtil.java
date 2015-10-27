@@ -35,4 +35,16 @@ public final class MathUtil {
         assert value > Integer.MIN_VALUE && value < 0x40000000;
         return 1 << (32 - Integer.numberOfLeadingZeros(value - 1));
     }
+
+    /**
+     * Determine if the requested {@code index} and {@code length} will fit within {@code capacity}.
+     * @param index The starting index.
+     * @param length The length which will be utilized (starting from {@code index}).
+     * @param capacity The capacity that {@code index + length} is allowed to be within.
+     * @return {@code true} if the requested {@code index} and {@code length} will fit within {@code capacity}.
+     * {@code false} if this would result in an index out of bounds exception.
+     */
+    public static boolean isOutOfBounds(int index, int length, int capacity) {
+        return (index | length | (index + length) | (capacity - (index + length))) < 0;
+    }
 }

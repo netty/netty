@@ -14,43 +14,57 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
-import io.netty.handler.codec.ByteStringValueConverter;
+import io.netty.handler.codec.CharSequenceValueConverter;
 import io.netty.handler.codec.DefaultHeaders;
-import io.netty.handler.codec.Headers;
+import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
-import io.netty.util.ByteString;
 import io.netty.util.internal.PlatformDependent;
 
-public class DefaultHttp2Headers extends DefaultHeaders<ByteString> implements Http2Headers {
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.util.AsciiString.CASE_SENSITIVE_HASHER;
+import static io.netty.util.AsciiString.isUpperCase;
+
+public class DefaultHttp2Headers
+        extends DefaultHeaders<CharSequence, CharSequence, Http2Headers> implements Http2Headers {
     private static final ByteProcessor HTTP2_NAME_VALIDATOR_PROCESSOR = new ByteProcessor() {
         @Override
         public boolean process(byte value) throws Exception {
-            return value < 'A' || value > 'Z';
+            return !isUpperCase(value);
         }
     };
-    private static final NameValidator<ByteString> HTTP2_NAME_VALIDATOR = new NameValidator<ByteString>() {
+    private static final NameValidator<CharSequence> HTTP2_NAME_VALIDATOR = new NameValidator<CharSequence>() {
         @Override
-        public void validateName(ByteString name) {
-            final int index;
-            try {
-                index = name.forEachByte(HTTP2_NAME_VALIDATOR_PROCESSOR);
-            } catch (Http2Exception e) {
-                PlatformDependent.throwException(e);
-                return;
-            } catch (Throwable t) {
-                PlatformDependent.throwException(connectionError(PROTOCOL_ERROR, t,
-                        "unexpected error. invalid header name [%s]", name));
-                return;
-            }
+        public void validateName(CharSequence name) {
+            if (name instanceof AsciiString) {
+                final int index;
+                try {
+                    index = ((AsciiString) name).forEachByte(HTTP2_NAME_VALIDATOR_PROCESSOR);
+                } catch (Http2Exception e) {
+                    PlatformDependent.throwException(e);
+                    return;
+                } catch (Throwable t) {
+                    PlatformDependent.throwException(connectionError(PROTOCOL_ERROR, t,
+                            "unexpected error. invalid header name [%s]", name));
+                    return;
+                }
 
-            if (index != -1) {
-                PlatformDependent.throwException(connectionError(PROTOCOL_ERROR, "invalid header name [%s]", name));
+                if (index != -1) {
+                    PlatformDependent.throwException(connectionError(PROTOCOL_ERROR,
+                            "invalid header name [%s]", name));
+                }
+            } else {
+                for (int i = 0; i < name.length(); ++i) {
+                    if (isUpperCase(name.charAt(i))) {
+                        PlatformDependent.throwException(connectionError(PROTOCOL_ERROR,
+                                "invalid header name [%s]", name));
+                    }
+                }
             }
         }
     };
-    private HeaderEntry<ByteString> firstNonPseudo = head;
+
+    private HeaderEntry<CharSequence, CharSequence> firstNonPseudo = head;
 
     /**
      * Create a new instance.
@@ -69,282 +83,83 @@ public class DefaultHttp2Headers extends DefaultHeaders<ByteString> implements H
      */
     @SuppressWarnings("unchecked")
     public DefaultHttp2Headers(boolean validate) {
-        super(ByteStringValueConverter.INSTANCE, validate ? HTTP2_NAME_VALIDATOR : NameValidator.NOT_NULL);
+        // Case sensitive compare is used because it is cheaper, and header validation can be used to catch invalid
+        // headers.
+        super(CASE_SENSITIVE_HASHER,
+              CharSequenceValueConverter.INSTANCE,
+              validate ? HTTP2_NAME_VALIDATOR : NameValidator.NOT_NULL);
     }
 
     @Override
-    public Http2Headers add(ByteString name, ByteString value) {
-        super.add(name, value);
-        return this;
-    }
-
-    @Override
-    public Http2Headers add(ByteString name, Iterable<? extends ByteString> values) {
-        super.add(name, values);
-        return this;
-    }
-
-    @Override
-    public Http2Headers add(ByteString name, ByteString... values) {
-        super.add(name, values);
-        return this;
-    }
-
-    @Override
-    public Http2Headers addObject(ByteString name, Object value) {
-        super.addObject(name, value);
-        return this;
-    }
-
-    @Override
-    public Http2Headers addObject(ByteString name, Iterable<?> values) {
-        super.addObject(name, values);
-        return this;
-    }
-
-    @Override
-    public Http2Headers addObject(ByteString name, Object... values) {
-        super.addObject(name, values);
-        return this;
-    }
-
-    @Override
-    public Http2Headers addBoolean(ByteString name, boolean value) {
-        super.addBoolean(name, value);
-        return this;
-    }
-
-    @Override
-    public Http2Headers addChar(ByteString name, char value) {
-        super.addChar(name, value);
-        return this;
-    }
-
-    @Override
-    public Http2Headers addByte(ByteString name, byte value) {
-        super.addByte(name, value);
-        return this;
-    }
-
-    @Override
-    public Http2Headers addShort(ByteString name, short value) {
-        super.addShort(name, value);
-        return this;
-    }
-
-    @Override
-    public Http2Headers addInt(ByteString name, int value) {
-        super.addInt(name, value);
-        return this;
-    }
-
-    @Override
-    public Http2Headers addLong(ByteString name, long value) {
-        super.addLong(name, value);
-        return this;
-    }
-
-    @Override
-    public Http2Headers addFloat(ByteString name, float value) {
-        super.addFloat(name, value);
-        return this;
-    }
-
-    @Override
-    public Http2Headers addDouble(ByteString name, double value) {
-        super.addDouble(name, value);
-        return this;
-    }
-
-    @Override
-    public Http2Headers addTimeMillis(ByteString name, long value) {
-        super.addTimeMillis(name, value);
-        return this;
-    }
-
-    @Override
-    public Http2Headers add(Headers<? extends ByteString> headers) {
-        super.add(headers);
-        return this;
-    }
-
-    @Override
-    public Http2Headers set(ByteString name, ByteString value) {
-        super.set(name, value);
-        return this;
-    }
-
-    @Override
-    public Http2Headers set(ByteString name, Iterable<? extends ByteString> values) {
-        super.set(name, values);
-        return this;
-    }
-
-    @Override
-    public Http2Headers set(ByteString name, ByteString... values) {
-        super.set(name, values);
-        return this;
-    }
-
-    @Override
-    public Http2Headers setObject(ByteString name, Object value) {
-        super.setObject(name, value);
-        return this;
-    }
-
-    @Override
-    public Http2Headers setObject(ByteString name, Iterable<?> values) {
-        super.setObject(name, values);
-        return this;
-    }
-
-    @Override
-    public Http2Headers setObject(ByteString name, Object... values) {
-        super.setObject(name, values);
-        return this;
-    }
-
-    @Override
-    public Http2Headers setBoolean(ByteString name, boolean value) {
-        super.setBoolean(name, value);
-        return this;
-    }
-
-    @Override
-    public Http2Headers setChar(ByteString name, char value) {
-        super.setChar(name, value);
-        return this;
-    }
-
-    @Override
-    public Http2Headers setByte(ByteString name, byte value) {
-        super.setByte(name, value);
-        return this;
-    }
-
-    @Override
-    public Http2Headers setShort(ByteString name, short value) {
-        super.setShort(name, value);
-        return this;
-    }
-
-    @Override
-    public Http2Headers setInt(ByteString name, int value) {
-        super.setInt(name, value);
-        return this;
-    }
-
-    @Override
-    public Http2Headers setLong(ByteString name, long value) {
-        super.setLong(name, value);
-        return this;
-    }
-
-    @Override
-    public Http2Headers setFloat(ByteString name, float value) {
-        super.setFloat(name, value);
-        return this;
-    }
-
-    @Override
-    public Http2Headers setDouble(ByteString name, double value) {
-        super.setDouble(name, value);
-        return this;
-    }
-
-    @Override
-    public Http2Headers setTimeMillis(ByteString name, long value) {
-        super.setTimeMillis(name, value);
-        return this;
-    }
-
-    @Override
-    public Http2Headers set(Headers<? extends ByteString> headers) {
-        super.set(headers);
-        return this;
-    }
-
-    @Override
-    public Http2Headers setAll(Headers<? extends ByteString> headers) {
-        super.setAll(headers);
-        return this;
-    }
-
-    @Override
-    public Http2Headers clear() {
-        super.clear();
-        return this;
-    }
-
-    @Override
-    public Http2Headers method(ByteString value) {
+    public Http2Headers method(CharSequence value) {
         set(PseudoHeaderName.METHOD.value(), value);
         return this;
     }
 
     @Override
-    public Http2Headers scheme(ByteString value) {
+    public Http2Headers scheme(CharSequence value) {
         set(PseudoHeaderName.SCHEME.value(), value);
         return this;
     }
 
     @Override
-    public Http2Headers authority(ByteString value) {
+    public Http2Headers authority(CharSequence value) {
         set(PseudoHeaderName.AUTHORITY.value(), value);
         return this;
     }
 
     @Override
-    public Http2Headers path(ByteString value) {
+    public Http2Headers path(CharSequence value) {
         set(PseudoHeaderName.PATH.value(), value);
         return this;
     }
 
     @Override
-    public Http2Headers status(ByteString value) {
+    public Http2Headers status(CharSequence value) {
         set(PseudoHeaderName.STATUS.value(), value);
         return this;
     }
 
     @Override
-    public ByteString method() {
+    public CharSequence method() {
         return get(PseudoHeaderName.METHOD.value());
     }
 
     @Override
-    public ByteString scheme() {
+    public CharSequence scheme() {
         return get(PseudoHeaderName.SCHEME.value());
     }
 
     @Override
-    public ByteString authority() {
+    public CharSequence authority() {
         return get(PseudoHeaderName.AUTHORITY.value());
     }
 
     @Override
-    public ByteString path() {
+    public CharSequence path() {
         return get(PseudoHeaderName.PATH.value());
     }
 
     @Override
-    public ByteString status() {
+    public CharSequence status() {
         return get(PseudoHeaderName.STATUS.value());
     }
 
     @Override
-    protected final HeaderEntry<ByteString> newHeaderEntry(int h, ByteString name, ByteString value,
-                                                           HeaderEntry<ByteString> next) {
+    protected final HeaderEntry<CharSequence, CharSequence> newHeaderEntry(int h, CharSequence name, CharSequence value,
+                                                           HeaderEntry<CharSequence, CharSequence> next) {
         return new Http2HeaderEntry(h, name, value, next);
     }
 
-    private final class Http2HeaderEntry extends HeaderEntry<ByteString> {
-        protected Http2HeaderEntry(int hash, ByteString key, ByteString value, HeaderEntry<ByteString> next) {
+    private final class Http2HeaderEntry extends HeaderEntry<CharSequence, CharSequence> {
+        protected Http2HeaderEntry(int hash, CharSequence key, CharSequence value,
+                HeaderEntry<CharSequence, CharSequence> next) {
             super(hash, key);
             this.value = value;
             this.next = next;
 
             // Make sure the pseudo headers fields are first in iteration order
-            if (!key.isEmpty() && key.byteAt(0) == ':') {
+            if (key.length() != 0 && key.charAt(0) == ':') {
                 after = firstNonPseudo;
                 before = firstNonPseudo.before();
             } else {

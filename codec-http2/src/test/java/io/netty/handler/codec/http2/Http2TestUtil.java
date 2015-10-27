@@ -19,7 +19,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.AsciiString;
-import io.netty.util.ByteString;
 
 import java.util.List;
 import java.util.Random;
@@ -71,8 +70,8 @@ final class Http2TestUtil {
     /**
      * Returns an {@link AsciiString} that wraps a randomly-filled byte array.
      */
-    public static ByteString randomString() {
-        return new ByteString(randomBytes());
+    public static AsciiString randomString() {
+        return new AsciiString(randomBytes());
     }
 
     private Http2TestUtil() {
