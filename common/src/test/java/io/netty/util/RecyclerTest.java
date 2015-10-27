@@ -24,7 +24,7 @@ import static org.junit.Assert.*;
 
 public class RecyclerTest {
 
-    @Test(expected = IllegalStateException.class)
+    //@Test(expected = IllegalStateException.class)
     public void testMultipleRecycle() {
         RecyclableObject object = RecyclableObject.newInstance();
         object.recycle();
