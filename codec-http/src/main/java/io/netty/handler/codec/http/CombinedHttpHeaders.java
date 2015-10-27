@@ -36,7 +36,8 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
         super(new CombinedHttpHeadersImpl(CASE_INSENSITIVE_HASHER, valueConverter(validate), nameValidator(validate)));
     }
 
-    private static final class CombinedHttpHeadersImpl extends DefaultHeaders<CharSequence> {
+    private static final class CombinedHttpHeadersImpl
+            extends DefaultHeaders<CharSequence, CharSequence, CombinedHttpHeadersImpl> {
         /**
          * An estimate of the size of a header value.
          */

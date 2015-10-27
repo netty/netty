@@ -18,6 +18,7 @@ package io.netty.handler.codec.http;
 import io.netty.handler.codec.CharSequenceValueConverter;
 import io.netty.handler.codec.DefaultHeaders;
 import io.netty.handler.codec.DefaultHeaders.NameValidator;
+import io.netty.handler.codec.DefaultHeadersImpl;
 import io.netty.handler.codec.HeadersUtils;
 import io.netty.handler.codec.ValueConverter;
 import io.netty.util.AsciiString;
@@ -36,7 +37,6 @@ import java.util.Set;
 
 import static io.netty.util.AsciiString.CASE_INSENSITIVE_HASHER;
 import static io.netty.util.AsciiString.CASE_SENSITIVE_HASHER;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Default implementation of {@link HttpHeaders}.
@@ -46,7 +46,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
     private static final ByteProcessor HEADER_NAME_VALIDATOR = new ByteProcessor() {
         @Override
         public boolean process(byte value) throws Exception {
-            validateChar((char) (value & 0xFF));
+            validateHeaderNameElement(value);
             return true;
         }
     };
@@ -60,16 +60,15 @@ public class DefaultHttpHeaders extends HttpHeaders {
                     PlatformDependent.throwException(e);
                 }
             } else {
-                checkNotNull(name, "name");
                 // Go through each character in the name
                 for (int index = 0; index < name.length(); ++index) {
-                    validateChar(name.charAt(index));
+                    validateHeaderNameElement(name.charAt(index));
                 }
             }
         }
     };
 
-    private final DefaultHeaders<CharSequence> headers;
+    private final DefaultHeaders<CharSequence, CharSequence, ?> headers;
 
     public DefaultHttpHeaders() {
         this(true);
@@ -80,10 +79,12 @@ public class DefaultHttpHeaders extends HttpHeaders {
     }
 
     protected DefaultHttpHeaders(boolean validate, NameValidator<CharSequence> nameValidator) {
-        this(new DefaultHeaders<CharSequence>(CASE_INSENSITIVE_HASHER, valueConverter(validate), nameValidator));
+        this(new DefaultHeadersImpl<CharSequence, CharSequence>(CASE_INSENSITIVE_HASHER,
+                                                                valueConverter(validate),
+                                                                nameValidator));
     }
 
-    protected DefaultHttpHeaders(DefaultHeaders<CharSequence> headers) {
+    protected DefaultHttpHeaders(DefaultHeaders<CharSequence, CharSequence, ?> headers) {
         this.headers = headers;
     }
 
@@ -319,8 +320,9 @@ public class DefaultHttpHeaders extends HttpHeaders {
         return headers.hashCode(CASE_SENSITIVE_HASHER);
     }
 
-    private static void validateChar(char character) {
-        switch (character) {
+    private static void validateHeaderNameElement(byte value) {
+        switch (value) {
+        case 0x00:
         case '\t':
         case '\n':
         case 0x0b:
@@ -333,12 +335,37 @@ public class DefaultHttpHeaders extends HttpHeaders {
         case '=':
             throw new IllegalArgumentException(
                "a header name cannot contain the following prohibited characters: =,;: \\t\\r\\n\\v\\f: " +
-                       character);
+                       value);
         default:
             // Check to see if the character is not an ASCII character, or invalid
-            if (character > 127) {
+            if (value < 0) {
                 throw new IllegalArgumentException("a header name cannot contain non-ASCII character: " +
-                        character);
+                        value);
+            }
+        }
+    }
+
+    private static void validateHeaderNameElement(char value) {
+        switch (value) {
+        case 0x00:
+        case '\t':
+        case '\n':
+        case 0x0b:
+        case '\f':
+        case '\r':
+        case ' ':
+        case ',':
+        case ':':
+        case ';':
+        case '=':
+            throw new IllegalArgumentException(
+               "a header name cannot contain the following prohibited characters: =,;: \\t\\r\\n\\v\\f: " +
+                       value);
+        default:
+            // Check to see if the character is not an ASCII character, or invalid
+            if (value > 127) {
+                throw new IllegalArgumentException("a header name cannot contain non-ASCII character: " +
+                        value);
             }
         }
     }
@@ -357,12 +384,8 @@ public class DefaultHttpHeaders extends HttpHeaders {
 
         @Override
         public CharSequence convertObject(Object value) {
-            checkNotNull(value, "value");
             if (value instanceof CharSequence) {
                 return (CharSequence) value;
-            }
-            if (value instanceof Number) {
-                return value.toString();
             }
             if (value instanceof Date) {
                 return HttpHeaderDateFormat.get().format((Date) value);

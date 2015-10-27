@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License, version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
@@ -12,24 +12,18 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.netty.handler.codec.http2;
+package io.netty.handler.codec;
+
+import io.netty.util.HashingStrategy;
 
 /**
- * Provides common functionality for {@link Http2HeaderTable}
+ * A concrete implementation of {@link DefaultHeaders} that allows for direct instantiation.
+ * @param <K> the type of the header name.
+ * @param <V> the type of the header value.
  */
-class DefaultHttp2HeaderTableListSize {
-    private int maxHeaderListSize = Integer.MAX_VALUE;
-
-    public void maxHeaderListSize(int max) throws Http2Exception {
-        if (max < 0) {
-            // Over 2^31 - 1 (minus in integer) size is set to the maximun value
-            maxHeaderListSize = Integer.MAX_VALUE;
-        } else {
-            maxHeaderListSize = max;
-        }
-    }
-
-    public int maxHeaderListSize() {
-        return maxHeaderListSize;
+public final class DefaultHeadersImpl<K, V> extends DefaultHeaders<K, V, DefaultHeadersImpl<K, V>> {
+    public DefaultHeadersImpl(HashingStrategy<K> nameHashingStrategy,
+            ValueConverter<V> valueConverter, NameValidator<K> nameValidator) {
+        super(nameHashingStrategy, valueConverter, nameValidator);
     }
 }

@@ -23,14 +23,14 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+import static io.netty.util.internal.MathUtil.isOutOfBounds;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.PlatformDependent.BIG_ENDIAN_NATIVE_ORDER;
 
 /**
  * All operations get and set as {@link ByteOrder#BIG_ENDIAN}.
  */
 final class UnsafeByteBufUtil {
-
-    static final boolean BIG_ENDIAN_NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
     private static final boolean UNALIGNED = PlatformDependent.isUnaligned();
 
     static byte getByte(long address) {
@@ -282,7 +282,7 @@ final class UnsafeByteBufUtil {
     static void getBytes(AbstractByteBuf buf, long addr, int index, ByteBuf dst, int dstIndex, int length) {
         buf.checkIndex(index, length);
         checkNotNull(dst, "dst");
-        if (AbstractByteBuf.isInvalid(dstIndex, length, dst.capacity())) {
+        if (isOutOfBounds(dstIndex, length, dst.capacity())) {
             throw new IndexOutOfBoundsException("dstIndex: " + dstIndex);
         }
 
@@ -298,7 +298,7 @@ final class UnsafeByteBufUtil {
     static void getBytes(AbstractByteBuf buf, long addr, int index, byte[] dst, int dstIndex, int length) {
         buf.checkIndex(index, length);
         checkNotNull(dst, "dst");
-        if (AbstractByteBuf.isInvalid(dstIndex, length, dst.length)) {
+        if (isOutOfBounds(dstIndex, length, dst.length)) {
             throw new IndexOutOfBoundsException("dstIndex: " + dstIndex);
         }
         if (length != 0) {
@@ -328,7 +328,7 @@ final class UnsafeByteBufUtil {
     static void setBytes(AbstractByteBuf buf, long addr, int index, ByteBuf src, int srcIndex, int length) {
         buf.checkIndex(index, length);
         checkNotNull(src, "src");
-        if (AbstractByteBuf.isInvalid(srcIndex, length, src.capacity())) {
+        if (isOutOfBounds(srcIndex, length, src.capacity())) {
             throw new IndexOutOfBoundsException("srcIndex: " + srcIndex);
         }
 

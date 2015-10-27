@@ -19,6 +19,7 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.util.AsciiString;
+import static io.netty.util.AsciiString.c2b;
 
 final class HttpHeadersEncoder {
 
@@ -29,8 +30,8 @@ final class HttpHeadersEncoder {
         final int nameLen = name.length();
         final int valueLen = value.length();
         final int entryLen = nameLen + valueLen + 4;
-        int offset = buf.writerIndex();
         buf.ensureWritable(entryLen);
+        int offset = buf.writerIndex();
         writeAscii(buf, offset, name, nameLen);
         offset += nameLen;
         buf.setByte(offset ++, ':');
@@ -44,23 +45,15 @@ final class HttpHeadersEncoder {
 
     private static void writeAscii(ByteBuf buf, int offset, CharSequence value, int valueLen) {
         if (value instanceof AsciiString) {
-            writeAsciiString(buf, offset, (AsciiString) value, valueLen);
+            ByteBufUtil.copy((AsciiString) value, 0, buf, offset, valueLen);
         } else {
             writeCharSequence(buf, offset, value, valueLen);
         }
     }
 
-    private static void writeAsciiString(ByteBuf buf, int offset, AsciiString value, int valueLen) {
-        ByteBufUtil.copy(value, 0, buf, offset, valueLen);
-    }
-
     private static void writeCharSequence(ByteBuf buf, int offset, CharSequence value, int valueLen) {
-        for (int i = 0; i < valueLen; i ++) {
+        for (int i = 0; i < valueLen; ++i) {
             buf.setByte(offset ++, c2b(value.charAt(i)));
         }
-    }
-
-    private static int c2b(char ch) {
-        return ch < 256? (byte) ch : '?';
     }
 }

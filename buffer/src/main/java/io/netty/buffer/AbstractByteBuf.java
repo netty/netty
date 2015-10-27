@@ -33,6 +33,7 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 
+import static io.netty.util.internal.MathUtil.isOutOfBounds;
 
 /**
  * A skeletal implementation of a buffer.
@@ -1110,7 +1111,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     final void checkIndex0(int index, int fieldLength) {
-        if (isInvalid(index, fieldLength, capacity())) {
+        if (isOutOfBounds(index, fieldLength, capacity())) {
             throw new IndexOutOfBoundsException(String.format(
                     "index: %d, length: %d (expected: range(0, %d))", index, fieldLength, capacity()));
         }
@@ -1118,7 +1119,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     protected final void checkSrcIndex(int index, int length, int srcIndex, int srcCapacity) {
         checkIndex(index, length);
-        if (isInvalid(srcIndex, length, srcCapacity)) {
+        if (isOutOfBounds(srcIndex, length, srcCapacity)) {
             throw new IndexOutOfBoundsException(String.format(
                     "srcIndex: %d, length: %d (expected: range(0, %d))", srcIndex, length, srcCapacity));
         }
@@ -1126,14 +1127,10 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     protected final void checkDstIndex(int index, int length, int dstIndex, int dstCapacity) {
         checkIndex(index, length);
-        if (isInvalid(dstIndex, length, dstCapacity)) {
+        if (isOutOfBounds(dstIndex, length, dstCapacity)) {
             throw new IndexOutOfBoundsException(String.format(
                     "dstIndex: %d, length: %d (expected: range(0, %d))", dstIndex, length, dstCapacity));
         }
-    }
-
-    static boolean isInvalid(int index, int length, int capacity) {
-        return (index | length | (index + length) | (capacity - (index + length))) < 0;
     }
 
     /**
