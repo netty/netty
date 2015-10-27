@@ -33,12 +33,12 @@ public final class HeadersUtils {
      * @param name the name of the header to retrieve
      * @return a {@link List} of header values or an empty {@link List} if no values are found.
      */
-    public static <T> List<String> getAllAsString(Headers<T> headers, T name) {
-        final List<T> allNames = headers.getAll(name);
+    public static <K, V> List<String> getAllAsString(Headers<K, V, ?> headers, K name) {
+        final List<V> allNames = headers.getAll(name);
         return new AbstractList<String>() {
             @Override
             public String get(int index) {
-                T value = allNames.get(index);
+                V value = allNames.get(index);
                 return value != null ? value.toString() : null;
             }
 
@@ -55,8 +55,8 @@ public final class HeadersUtils {
      * @param name the name of the header to retrieve
      * @return the first header value if the header is found. {@code null} if there's no such entry.
      */
-    public static <T> String getAsString(Headers<T> headers, T name) {
-        T orig = headers.get(name);
+    public static <K, V> String getAsString(Headers<K, V, ?> headers, K name) {
+        V orig = headers.get(name);
         return orig != null ? orig.toString() : null;
     }
 

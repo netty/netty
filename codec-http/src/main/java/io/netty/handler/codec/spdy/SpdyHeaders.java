@@ -26,7 +26,7 @@ import java.util.Map.Entry;
  * Provides the constants for the standard SPDY HTTP header names and commonly
  * used utility methods that access a {@link SpdyHeadersFrame}.
  */
-public interface SpdyHeaders extends Headers<CharSequence> {
+public interface SpdyHeaders extends Headers<CharSequence, CharSequence, SpdyHeaders> {
 
     /**
      * SPDY HTTP header names
@@ -59,108 +59,6 @@ public interface SpdyHeaders extends Headers<CharSequence> {
 
         private HttpNames() { }
     }
-
-    @Override
-    SpdyHeaders add(CharSequence name, CharSequence value);
-
-    @Override
-    SpdyHeaders add(CharSequence name, Iterable<? extends CharSequence> values);
-
-    @Override
-    SpdyHeaders add(CharSequence name, CharSequence... values);
-
-    @Override
-    SpdyHeaders addObject(CharSequence name, Object value);
-
-    @Override
-    SpdyHeaders addObject(CharSequence name, Iterable<?> values);
-
-    @Override
-    SpdyHeaders addObject(CharSequence name, Object... values);
-
-    @Override
-    SpdyHeaders addBoolean(CharSequence name, boolean value);
-
-    @Override
-    SpdyHeaders addByte(CharSequence name, byte value);
-
-    @Override
-    SpdyHeaders addChar(CharSequence name, char value);
-
-    @Override
-    SpdyHeaders addShort(CharSequence name, short value);
-
-    @Override
-    SpdyHeaders addInt(CharSequence name, int value);
-
-    @Override
-    SpdyHeaders addLong(CharSequence name, long value);
-
-    @Override
-    SpdyHeaders addFloat(CharSequence name, float value);
-
-    @Override
-    SpdyHeaders addDouble(CharSequence name, double value);
-
-    @Override
-    SpdyHeaders addTimeMillis(CharSequence name, long value);
-
-    @Override
-    SpdyHeaders add(Headers<? extends CharSequence> headers);
-
-    @Override
-    SpdyHeaders set(CharSequence name, CharSequence value);
-
-    @Override
-    SpdyHeaders set(CharSequence name, Iterable<? extends CharSequence> values);
-
-    @Override
-    SpdyHeaders set(CharSequence name, CharSequence... values);
-
-    @Override
-    SpdyHeaders setBoolean(CharSequence name, boolean value);
-
-    @Override
-    SpdyHeaders setByte(CharSequence name, byte value);
-
-    @Override
-    SpdyHeaders setChar(CharSequence name, char value);
-
-    @Override
-    SpdyHeaders setShort(CharSequence name, short value);
-
-    @Override
-    SpdyHeaders setInt(CharSequence name, int value);
-
-    @Override
-    SpdyHeaders setLong(CharSequence name, long value);
-
-    @Override
-    SpdyHeaders setFloat(CharSequence name, float value);
-
-    @Override
-    SpdyHeaders setDouble(CharSequence name, double value);
-
-    @Override
-    SpdyHeaders setTimeMillis(CharSequence name, long value);
-
-    @Override
-    SpdyHeaders setObject(CharSequence name, Object value);
-
-    @Override
-    SpdyHeaders setObject(CharSequence name, Iterable<?> values);
-
-    @Override
-    SpdyHeaders setObject(CharSequence name, Object... values);
-
-    @Override
-    SpdyHeaders set(Headers<? extends CharSequence> headers);
-
-    @Override
-    SpdyHeaders setAll(Headers<? extends CharSequence> headers);
-
-    @Override
-    SpdyHeaders clear();
 
     /**
      * {@link Headers#get(Object)} and convert the result to a {@link String}.

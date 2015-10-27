@@ -19,6 +19,8 @@ import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteOrder;
 
+import static io.netty.util.internal.PlatformDependent.BIG_ENDIAN_NATIVE_ORDER;
+
 /**
  * Special {@link SwappedByteBuf} for {@link ByteBuf}s that is using unsafe.
  */
@@ -30,7 +32,7 @@ abstract class AbstractUnsafeSwappedByteBuf extends SwappedByteBuf {
         super(buf);
         assert PlatformDependent.isUnaligned();
         wrapped = buf;
-        nativeByteOrder = UnsafeByteBufUtil.BIG_ENDIAN_NATIVE_ORDER == (order() == ByteOrder.BIG_ENDIAN);
+        nativeByteOrder = BIG_ENDIAN_NATIVE_ORDER == (order() == ByteOrder.BIG_ENDIAN);
     }
 
     @Override

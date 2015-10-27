@@ -15,11 +15,8 @@
  */
 package io.netty.buffer;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
 import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
-import io.netty.util.ByteString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
@@ -40,6 +37,9 @@ import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
 import java.util.Arrays;
 import java.util.Locale;
+
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.MathUtil.isOutOfBounds;
 
 /**
  * A collection of utility methods that is related with handling {@link ByteBuf},
@@ -661,7 +661,7 @@ public final class ByteBufUtil {
      * The copy will start at {@link ByteBuf#readerIndex()} and copy {@link ByteBuf#readableBytes()} bytes.
      */
     public static byte[] getBytes(ByteBuf buf) {
-        return getBytes(buf, checkNotNull(buf, "buf").readerIndex(), buf.readableBytes());
+        return getBytes(buf,  buf.readerIndex(), buf.readableBytes());
     }
 
     /**
@@ -679,7 +679,7 @@ public final class ByteBufUtil {
      * If {@code copy} is false the underlying storage will be shared, if possible.
      */
     public static byte[] getBytes(ByteBuf buf, int start, int length, boolean copy) {
-        if (start < 0 || length > checkNotNull(buf, "buf").capacity() - start) {
+        if (isOutOfBounds(start, length, buf.capacity())) {
             throw new IndexOutOfBoundsException("expected: " + "0 <= start(" + start + ") <= start + length(" + length
                     + ") <= " + "buf.capacity(" + buf.capacity() + ')');
         }
@@ -706,12 +706,10 @@ public final class ByteBufUtil {
      * @param dstIdx the starting offset in the destination byte array.
      * @param length the number of characters to copy.
      */
-    public static void copy(ByteString src, int srcIdx, ByteBuf dst, int dstIdx, int length) {
-        final int thisLen = src.length();
-
-        if (srcIdx < 0 || length > thisLen - srcIdx) {
+    public static void copy(AsciiString src, int srcIdx, ByteBuf dst, int dstIdx, int length) {
+        if (isOutOfBounds(srcIdx, length, src.length())) {
             throw new IndexOutOfBoundsException("expected: " + "0 <= srcIdx(" + srcIdx + ") <= srcIdx + length("
-                            + length + ") <= srcLen(" + thisLen + ')');
+                            + length + ") <= srcLen(" + src.length() + ')');
         }
 
         checkNotNull(dst, "dst").setBytes(dstIdx, src.array(), srcIdx + src.arrayOffset(), length);
@@ -724,12 +722,10 @@ public final class ByteBufUtil {
      * @param dst the destination byte array.
      * @param length the number of characters to copy.
      */
-    public static void copy(ByteString src, int srcIdx, ByteBuf dst, int length) {
-        final int thisLen = src.length();
-
-        if (srcIdx < 0 || length > thisLen - srcIdx) {
+    public static void copy(AsciiString src, int srcIdx, ByteBuf dst, int length) {
+        if (isOutOfBounds(srcIdx, length, src.length())) {
             throw new IndexOutOfBoundsException("expected: " + "0 <= srcIdx(" + srcIdx + ") <= srcIdx + length("
-                            + length + ") <= srcLen(" + thisLen + ')');
+                            + length + ") <= srcLen(" + src.length() + ')');
         }
 
         checkNotNull(dst, "dst").writeBytes(src.array(), srcIdx + src.arrayOffset(), length);
@@ -771,7 +767,7 @@ public final class ByteBufUtil {
      * the given {@code length}.
      */
     public static void appendPrettyHexDump(StringBuilder dump, ByteBuf buf, int offset, int length) {
-        if (offset < 0 || length  > checkNotNull(buf, "buf").capacity() - offset) {
+        if (isOutOfBounds(offset, length, buf.capacity())) {
             throw new IndexOutOfBoundsException(
                     "expected: " + "0 <= offset(" + offset + ") <= offset + length(" + length
                                                 + ") <= " + "buf.capacity(" + buf.capacity() + ')');

@@ -14,6 +14,14 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.compression.ZlibCodecFactory;
+import io.netty.handler.codec.compression.ZlibWrapper;
+
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_ENCODING;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaderValues.DEFLATE;
@@ -24,14 +32,6 @@ import static io.netty.handler.codec.http.HttpHeaderValues.X_GZIP;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.handler.codec.compression.ZlibCodecFactory;
-import io.netty.handler.codec.compression.ZlibWrapper;
-import io.netty.util.ByteString;
 
 /**
  * A HTTP2 frame listener that will decompress data frames according to the {@code content-encoding} header for each
@@ -160,11 +160,11 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
      *         (alternatively, you can throw a {@link Http2Exception} to block unknown encoding).
      * @throws Http2Exception If the specified encoding is not not supported and warrants an exception
      */
-    protected EmbeddedChannel newContentDecompressor(ByteString contentEncoding) throws Http2Exception {
-        if (GZIP.equals(contentEncoding) || X_GZIP.equals(contentEncoding)) {
+    protected EmbeddedChannel newContentDecompressor(CharSequence contentEncoding) throws Http2Exception {
+        if (GZIP.contentEqualsIgnoreCase(contentEncoding) || X_GZIP.contentEqualsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP));
         }
-        if (DEFLATE.equals(contentEncoding) || X_DEFLATE.equals(contentEncoding)) {
+        if (DEFLATE.contentEqualsIgnoreCase(contentEncoding) || X_DEFLATE.contentEqualsIgnoreCase(contentEncoding)) {
             final ZlibWrapper wrapper = strict ? ZlibWrapper.ZLIB : ZlibWrapper.ZLIB_OR_NONE;
             // To be strict, 'deflate' means ZLIB, but some servers were not implemented correctly.
             return new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(wrapper));
@@ -181,7 +181,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
      * @return the expected content encoding of the new content.
      * @throws Http2Exception if the {@code contentEncoding} is not supported and warrants an exception
      */
-    protected ByteString getTargetContentEncoding(@SuppressWarnings("UnusedParameters") ByteString contentEncoding)
+    protected CharSequence getTargetContentEncoding(@SuppressWarnings("UnusedParameters") CharSequence contentEncoding)
                     throws Http2Exception {
         return IDENTITY;
     }
@@ -204,7 +204,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         Http2Decompressor decompressor = decompressor(stream);
         if (decompressor == null && !endOfStream) {
             // Determine the content encoding.
-            ByteString contentEncoding = headers.get(CONTENT_ENCODING);
+            CharSequence contentEncoding = headers.get(CONTENT_ENCODING);
             if (contentEncoding == null) {
                 contentEncoding = IDENTITY;
             }
@@ -214,8 +214,8 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
                 stream.setProperty(propertyKey, decompressor);
                 // Decode the content and remove or replace the existing headers
                 // so that the message looks like a decoded message.
-                ByteString targetContentEncoding = getTargetContentEncoding(contentEncoding);
-                if (IDENTITY.equals(targetContentEncoding)) {
+                CharSequence targetContentEncoding = getTargetContentEncoding(contentEncoding);
+                if (IDENTITY.contentEqualsIgnoreCase(targetContentEncoding)) {
                     headers.remove(CONTENT_ENCODING);
                 } else {
                     headers.set(CONTENT_ENCODING, targetContentEncoding);

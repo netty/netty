@@ -15,6 +15,7 @@
 package io.netty.handler.codec;
 
 import io.netty.handler.codec.DefaultHeaders.HeaderDateFormat;
+import io.netty.util.AsciiString;
 import io.netty.util.internal.PlatformDependent;
 
 import java.text.ParseException;
@@ -65,6 +66,9 @@ public class CharSequenceValueConverter implements ValueConverter<CharSequence> 
 
     @Override
     public boolean convertToBoolean(CharSequence value) {
+        if (value instanceof AsciiString) {
+            return ((AsciiString) value).parseBoolean();
+        }
         return Boolean.parseBoolean(value.toString());
     }
 
@@ -75,14 +79,14 @@ public class CharSequenceValueConverter implements ValueConverter<CharSequence> 
 
     @Override
     public byte convertToByte(CharSequence value) {
+        if (value instanceof AsciiString) {
+            return ((AsciiString) value).byteAt(0);
+        }
         return Byte.valueOf(value.toString());
     }
 
     @Override
     public char convertToChar(CharSequence value) {
-        if (value.length() == 0) {
-            throw new IllegalArgumentException("'value' is empty.");
-        }
         return value.charAt(0);
     }
 
@@ -93,16 +97,25 @@ public class CharSequenceValueConverter implements ValueConverter<CharSequence> 
 
     @Override
     public short convertToShort(CharSequence value) {
+        if (value instanceof AsciiString) {
+            return ((AsciiString) value).parseShort();
+        }
         return Short.valueOf(value.toString());
     }
 
     @Override
     public int convertToInt(CharSequence value) {
+        if (value instanceof AsciiString) {
+            return ((AsciiString) value).parseInt();
+        }
         return Integer.parseInt(value.toString());
     }
 
     @Override
     public long convertToLong(CharSequence value) {
+        if (value instanceof AsciiString) {
+            return ((AsciiString) value).parseLong();
+        }
         return Long.parseLong(value.toString());
     }
 
@@ -117,17 +130,23 @@ public class CharSequenceValueConverter implements ValueConverter<CharSequence> 
             return HeaderDateFormat.get().parse(value.toString());
         } catch (ParseException e) {
             PlatformDependent.throwException(e);
+            return 0;
         }
-        return 0;
     }
 
     @Override
     public float convertToFloat(CharSequence value) {
+        if (value instanceof AsciiString) {
+            return ((AsciiString) value).parseFloat();
+        }
         return Float.valueOf(value.toString());
     }
 
     @Override
     public double convertToDouble(CharSequence value) {
+        if (value instanceof AsciiString) {
+            return ((AsciiString) value).parseDouble();
+        }
         return Double.valueOf(value.toString());
     }
 }

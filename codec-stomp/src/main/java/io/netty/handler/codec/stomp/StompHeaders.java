@@ -26,7 +26,7 @@ import java.util.Map.Entry;
  * The multimap data structure for the STOMP header names and values. It also provides the constants for the standard
  * STOMP header names and values.
  */
-public interface StompHeaders extends Headers<CharSequence> {
+public interface StompHeaders extends Headers<CharSequence, CharSequence, StompHeaders> {
 
     AsciiString ACCEPT_VERSION = new AsciiString("accept-version");
     AsciiString HOST = new AsciiString("host");
@@ -47,108 +47,6 @@ public interface StompHeaders extends Headers<CharSequence> {
     AsciiString MESSAGE = new AsciiString("message");
     AsciiString CONTENT_LENGTH = new AsciiString("content-length");
     AsciiString CONTENT_TYPE = new AsciiString("content-type");
-
-    @Override
-    StompHeaders add(CharSequence name, CharSequence value);
-
-    @Override
-    StompHeaders add(CharSequence name, Iterable<? extends CharSequence> values);
-
-    @Override
-    StompHeaders add(CharSequence name, CharSequence... values);
-
-    @Override
-    StompHeaders addObject(CharSequence name, Object value);
-
-    @Override
-    StompHeaders addObject(CharSequence name, Iterable<?> values);
-
-    @Override
-    StompHeaders addObject(CharSequence name, Object... values);
-
-    @Override
-    StompHeaders addBoolean(CharSequence name, boolean value);
-
-    @Override
-    StompHeaders addByte(CharSequence name, byte value);
-
-    @Override
-    StompHeaders addChar(CharSequence name, char value);
-
-    @Override
-    StompHeaders addShort(CharSequence name, short value);
-
-    @Override
-    StompHeaders addInt(CharSequence name, int value);
-
-    @Override
-    StompHeaders addLong(CharSequence name, long value);
-
-    @Override
-    StompHeaders addFloat(CharSequence name, float value);
-
-    @Override
-    StompHeaders addDouble(CharSequence name, double value);
-
-    @Override
-    StompHeaders addTimeMillis(CharSequence name, long value);
-
-    @Override
-    StompHeaders add(Headers<? extends CharSequence> headers);
-
-    @Override
-    StompHeaders set(CharSequence name, CharSequence value);
-
-    @Override
-    StompHeaders set(CharSequence name, Iterable<? extends CharSequence> values);
-
-    @Override
-    StompHeaders set(CharSequence name, CharSequence... values);
-
-    @Override
-    StompHeaders setObject(CharSequence name, Object value);
-
-    @Override
-    StompHeaders setObject(CharSequence name, Iterable<?> values);
-
-    @Override
-    StompHeaders setObject(CharSequence name, Object... values);
-
-    @Override
-    StompHeaders setBoolean(CharSequence name, boolean value);
-
-    @Override
-    StompHeaders setByte(CharSequence name, byte value);
-
-    @Override
-    StompHeaders setChar(CharSequence name, char value);
-
-    @Override
-    StompHeaders setShort(CharSequence name, short value);
-
-    @Override
-    StompHeaders setInt(CharSequence name, int value);
-
-    @Override
-    StompHeaders setLong(CharSequence name, long value);
-
-    @Override
-    StompHeaders setFloat(CharSequence name, float value);
-
-    @Override
-    StompHeaders setDouble(CharSequence name, double value);
-
-    @Override
-    StompHeaders setTimeMillis(CharSequence name, long value);
-
-    @Override
-    StompHeaders set(Headers<? extends CharSequence> headers);
-
-    @Override
-    StompHeaders setAll(Headers<? extends CharSequence> headers);
-
-    @Override
-    StompHeaders clear();
 
     /**
      * {@link Headers#get(Object)} and convert the result to a {@link String}.

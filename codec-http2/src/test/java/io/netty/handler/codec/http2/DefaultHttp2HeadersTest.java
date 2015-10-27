@@ -17,17 +17,16 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName;
-import io.netty.util.ByteString;
+import io.netty.util.AsciiString;
 import org.junit.Test;
 
-import java.util.HashSet;
 import java.util.Map.Entry;
-import java.util.Set;
 
-import static io.netty.util.ByteString.fromAscii;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static io.netty.util.AsciiString.of;
 
 public class DefaultHttp2HeadersTest {
 
@@ -43,23 +42,26 @@ public class DefaultHttp2HeadersTest {
     public void pseudoHeadersWithRemovePreservesPseudoIterationOrder() {
         Http2Headers headers = newHeaders();
 
-        Set<ByteString> nonPseudoHeaders = new HashSet<ByteString>(headers.size());
-        for (Entry<ByteString, ByteString> entry : headers) {
-            if (entry.getKey().isEmpty() || entry.getKey().byteAt(0) != ':') {
-                nonPseudoHeaders.add(entry.getKey());
+        Http2Headers nonPseudoHeaders = new DefaultHttp2Headers();
+        for (Entry<CharSequence, CharSequence> entry : headers) {
+            if (entry.getKey().length() == 0 || entry.getKey().charAt(0) != ':' &&
+                !nonPseudoHeaders.contains(entry.getKey())) {
+                nonPseudoHeaders.add(entry.getKey(), entry.getValue());
             }
         }
 
+        assertFalse(nonPseudoHeaders.isEmpty());
+
         // Remove all the non-pseudo headers and verify
-        for (ByteString nonPseudoHeader : nonPseudoHeaders) {
-            assertTrue(headers.remove(nonPseudoHeader));
+        for (Entry<CharSequence, CharSequence> nonPseudoHeaderEntry : nonPseudoHeaders) {
+            assertTrue(headers.remove(nonPseudoHeaderEntry.getKey()));
             verifyPseudoHeadersFirst(headers);
             verifyAllPseudoHeadersPresent(headers);
         }
 
         // Add back all non-pseudo headers
-        for (ByteString nonPseudoHeader : nonPseudoHeaders) {
-            headers.add(nonPseudoHeader, fromAscii("goo"));
+        for (Entry<CharSequence, CharSequence> nonPseudoHeaderEntry : nonPseudoHeaders) {
+            headers.add(nonPseudoHeaderEntry.getKey(), of("goo"));
             verifyPseudoHeadersFirst(headers);
             verifyAllPseudoHeadersPresent(headers);
         }
@@ -69,7 +71,7 @@ public class DefaultHttp2HeadersTest {
     public void testHeaderNameValidation() {
         Http2Headers headers = newHeaders();
 
-        headers.add(fromAscii("Foo"), fromAscii("foo"));
+        headers.add(of("Foo"), of("foo"));
     }
 
     private static void verifyAllPseudoHeadersPresent(Http2Headers headers) {
@@ -79,9 +81,9 @@ public class DefaultHttp2HeadersTest {
     }
 
     private static void verifyPseudoHeadersFirst(Http2Headers headers) {
-        ByteString lastNonPseudoName = null;
-        for (Entry<ByteString, ByteString> entry: headers) {
-            if (entry.getKey().isEmpty() || entry.getKey().byteAt(0) != ':') {
+        CharSequence lastNonPseudoName = null;
+        for (Entry<CharSequence, CharSequence> entry: headers) {
+            if (entry.getKey().length() == 0 || entry.getKey().charAt(0) != ':') {
                 lastNonPseudoName = entry.getKey();
             } else if (lastNonPseudoName != null) {
                 fail("All pseudo headers must be fist in iteration. Pseudo header " + entry.getKey() +
@@ -92,14 +94,14 @@ public class DefaultHttp2HeadersTest {
 
     private static Http2Headers newHeaders() {
         Http2Headers headers = new DefaultHttp2Headers();
-        headers.add(fromAscii("name1"), fromAscii("value1"), fromAscii("value2"));
-        headers.method(fromAscii("POST"));
-        headers.add(fromAscii("2name"), fromAscii("value3"));
-        headers.path(fromAscii("/index.html"));
-        headers.status(fromAscii("200"));
-        headers.authority(fromAscii("netty.io"));
-        headers.add(fromAscii("name3"), fromAscii("value4"));
-        headers.scheme(fromAscii("https"));
+        headers.add(of("name1"), of("value1"), of("value2"));
+        headers.method(of("POST"));
+        headers.add(of("2name"), of("value3"));
+        headers.path(of("/index.html"));
+        headers.status(of("200"));
+        headers.authority(of("netty.io"));
+        headers.add(of("name3"), of("value4"));
+        headers.scheme(of("https"));
         return headers;
     }
 }

@@ -19,7 +19,15 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 
-public interface Headers<T> extends Iterable<Entry<T, T>> {
+/**
+ * Common interface for {@link Headers} which represents a mapping of key to value.
+ * Duplicate keys may be allowed by implementations.
+ *
+ * @param <K> the type of the header name.
+ * @param <V> the type of the header value.
+ * @param <T> the type to use for return values when the intention is to return {@code this} object.
+ */
+public interface Headers<K, V, T extends Headers<K, V, T>> extends Iterable<Entry<K, V>> {
     /**
      * Returns the value of a header with the specified name. If there is more than one value for the specified name,
      * the first value in insertion order is returned.
@@ -27,7 +35,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param name the name of the header to retrieve
      * @return the first header value if the header is found. {@code null} if there's no such header
      */
-    T get(T name);
+    V get(K name);
 
     /**
      * Returns the value of a header with the specified name. If there is more than one value for the specified name,
@@ -37,7 +45,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param defaultValue the default value
      * @return the first header value or {@code defaultValue} if there is no such header
      */
-    T get(T name, T defaultValue);
+    V get(K name, V defaultValue);
 
     /**
      * Returns the value of a header with the specified name and removes it from this object. If there is more than
@@ -46,7 +54,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param name the name of the header to retrieve
      * @return the first header value or {@code null} if there is no such header
      */
-    T getAndRemove(T name);
+    V getAndRemove(K name);
 
     /**
      * Returns the value of a header with the specified name and removes it from this object. If there is more than
@@ -56,7 +64,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param defaultValue the default value
      * @return the first header value or {@code defaultValue} if there is no such header
      */
-    T getAndRemove(T name, T defaultValue);
+    V getAndRemove(K name, V defaultValue);
 
     /**
      * Returns all values for the header with the specified name. The returned {@link List} can't be modified.
@@ -64,7 +72,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param name the name of the header to retrieve
      * @return a {@link List} of header values or an empty {@link List} if no values are found.
      */
-    List<T> getAll(T name);
+    List<V> getAll(K name);
 
     /**
      * Returns all values for the header with the specified name and removes them from this object.
@@ -73,7 +81,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param name the name of the header to retrieve
      * @return a {@link List} of header values or an empty {@link List} if no values are found.
      */
-    List<T> getAllAndRemove(T name);
+    List<V> getAllAndRemove(K name);
 
     /**
      * Returns the {@code boolean} value of a header with the specified name. If there is more than one value for the
@@ -83,7 +91,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code boolean} value of the first value in insertion order or {@code null} if there is no such
      *         value or it can't be converted to {@code boolean}.
      */
-    Boolean getBoolean(T name);
+    Boolean getBoolean(K name);
 
     /**
      * Returns the {@code boolean} value of a header with the specified name. If there is more than one value for the
@@ -94,7 +102,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code boolean} value of the first value in insertion order or {@code defaultValue} if there is no
      *         such value or it can't be converted to {@code boolean}.
      */
-    boolean getBoolean(T name, boolean defaultValue);
+    boolean getBoolean(K name, boolean defaultValue);
 
     /**
      * Returns the {@code byte} value of a header with the specified name. If there is more than one value for the
@@ -104,7 +112,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code byte} value of the first value in insertion order or {@code null} if there is no such
      *         value or it can't be converted to {@code byte}.
      */
-    Byte getByte(T name);
+    Byte getByte(K name);
 
     /**
      * Returns the {@code byte} value of a header with the specified name. If there is more than one value for the
@@ -115,7 +123,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code byte} value of the first value in insertion order or {@code defaultValue} if there is no
      *         such value or it can't be converted to {@code byte}.
      */
-    byte getByte(T name, byte defaultValue);
+    byte getByte(K name, byte defaultValue);
 
     /**
      * Returns the {@code char} value of a header with the specified name. If there is more than one value for the
@@ -125,7 +133,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code char} value of the first value in insertion order or {@code null} if there is no such
      *         value or it can't be converted to {@code char}.
      */
-    Character getChar(T name);
+    Character getChar(K name);
 
     /**
      * Returns the {@code char} value of a header with the specified name. If there is more than one value for the
@@ -136,7 +144,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code char} value of the first value in insertion order or {@code defaultValue} if there is no
      *         such value or it can't be converted to {@code char}.
      */
-    char getChar(T name, char defaultValue);
+    char getChar(K name, char defaultValue);
 
     /**
      * Returns the {@code short} value of a header with the specified name. If there is more than one value for the
@@ -146,7 +154,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code short} value of the first value in insertion order or {@code null} if there is no such
      *         value or it can't be converted to {@code short}.
      */
-    Short getShort(T name);
+    Short getShort(K name);
 
     /**
      * Returns the {@code short} value of a header with the specified name. If there is more than one value for the
@@ -157,7 +165,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code short} value of the first value in insertion order or {@code defaultValue} if there is no
      *         such value or it can't be converted to {@code short}.
      */
-    short getShort(T name, short defaultValue);
+    short getShort(K name, short defaultValue);
 
     /**
      * Returns the {@code int} value of a header with the specified name. If there is more than one value for the
@@ -167,7 +175,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code int} value of the first value in insertion order or {@code null} if there is no such
      *         value or it can't be converted to {@code int}.
      */
-    Integer getInt(T name);
+    Integer getInt(K name);
 
     /**
      * Returns the {@code int} value of a header with the specified name. If there is more than one value for the
@@ -178,7 +186,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code int} value of the first value in insertion order or {@code defaultValue} if there is no
      *         such value or it can't be converted to {@code int}.
      */
-    int getInt(T name, int defaultValue);
+    int getInt(K name, int defaultValue);
 
     /**
      * Returns the {@code long} value of a header with the specified name. If there is more than one value for the
@@ -188,7 +196,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code long} value of the first value in insertion order or {@code null} if there is no such
      *         value or it can't be converted to {@code long}.
      */
-    Long getLong(T name);
+    Long getLong(K name);
 
     /**
      * Returns the {@code long} value of a header with the specified name. If there is more than one value for the
@@ -199,7 +207,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code long} value of the first value in insertion order or {@code defaultValue} if there is no
      *         such value or it can't be converted to {@code long}.
      */
-    long getLong(T name, long defaultValue);
+    long getLong(K name, long defaultValue);
 
     /**
      * Returns the {@code float} value of a header with the specified name. If there is more than one value for the
@@ -209,7 +217,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code float} value of the first value in insertion order or {@code null} if there is no such
      *         value or it can't be converted to {@code float}.
      */
-    Float getFloat(T name);
+    Float getFloat(K name);
 
     /**
      * Returns the {@code float} value of a header with the specified name. If there is more than one value for the
@@ -220,7 +228,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code float} value of the first value in insertion order or {@code defaultValue} if there is no
      *         such value or it can't be converted to {@code float}.
      */
-    float getFloat(T name, float defaultValue);
+    float getFloat(K name, float defaultValue);
 
     /**
      * Returns the {@code double} value of a header with the specified name. If there is more than one value for the
@@ -230,7 +238,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code double} value of the first value in insertion order or {@code null} if there is no such
      *         value or it can't be converted to {@code double}.
      */
-    Double getDouble(T name);
+    Double getDouble(K name);
 
     /**
      * Returns the {@code double} value of a header with the specified name. If there is more than one value for the
@@ -241,7 +249,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code double} value of the first value in insertion order or {@code defaultValue} if there is no
      *         such value or it can't be converted to {@code double}.
      */
-    double getDouble(T name, double defaultValue);
+    double getDouble(K name, double defaultValue);
 
     /**
      * Returns the value of a header with the specified name in milliseconds. If there is more than one value for the
@@ -251,7 +259,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the milliseconds value of the first value in insertion order or {@code null} if there is no such
      *         value or it can't be converted to milliseconds.
      */
-    Long getTimeMillis(T name);
+    Long getTimeMillis(K name);
 
     /**
      * Returns the value of a header with the specified name in milliseconds. If there is more than one value for the
@@ -262,7 +270,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the milliseconds value of the first value in insertion order or {@code defaultValue} if there is no such
      *         value or it can't be converted to milliseconds.
      */
-    long getTimeMillis(T name, long defaultValue);
+    long getTimeMillis(K name, long defaultValue);
 
     /**
      * Returns the {@code boolean} value of a header with the specified {@code name} and removes the header from this
@@ -275,7 +283,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code boolean} value of the first value in insertion order or {@code null} if there is no
      *         such value or it can't be converted to {@code boolean}.
      */
-    Boolean getBooleanAndRemove(T name);
+    Boolean getBooleanAndRemove(K name);
 
     /**
      * Returns the {@code boolean} value of a header with the specified {@code name} and removes the header from this
@@ -289,7 +297,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code boolean} value of the first value in insertion order or {@code defaultValue} if there is no
      *         such value or it can't be converted to {@code boolean}.
      */
-    boolean getBooleanAndRemove(T name, boolean defaultValue);
+    boolean getBooleanAndRemove(K name, boolean defaultValue);
 
     /**
      * Returns the {@code byte} value of a header with the specified {@code name} and removes the header from this
@@ -302,7 +310,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code byte} value of the first value in insertion order or {@code null} if there is no
      *         such value or it can't be converted to {@code byte}.
      */
-    Byte getByteAndRemove(T name);
+    Byte getByteAndRemove(K name);
 
     /**
      * Returns the {@code byte} value of a header with the specified {@code name} and removes the header from this
@@ -316,7 +324,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code byte} value of the first value in insertion order or {@code defaultValue} if there is no
      *         such value or it can't be converted to {@code byte}.
      */
-    byte getByteAndRemove(T name, byte defaultValue);
+    byte getByteAndRemove(K name, byte defaultValue);
 
     /**
      * Returns the {@code char} value of a header with the specified {@code name} and removes the header from this
@@ -329,7 +337,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code char} value of the first value in insertion order or {@code null} if there is no
      *         such value or it can't be converted to {@code char}.
      */
-    Character getCharAndRemove(T name);
+    Character getCharAndRemove(K name);
 
     /**
      * Returns the {@code char} value of a header with the specified {@code name} and removes the header from this
@@ -343,7 +351,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code char} value of the first value in insertion order or {@code defaultValue} if there is no
      *         such value or it can't be converted to {@code char}.
      */
-    char getCharAndRemove(T name, char defaultValue);
+    char getCharAndRemove(K name, char defaultValue);
 
     /**
      * Returns the {@code short} value of a header with the specified {@code name} and removes the header from this
@@ -356,7 +364,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code short} value of the first value in insertion order or {@code null} if there is no
      *         such value or it can't be converted to {@code short}.
      */
-    Short getShortAndRemove(T name);
+    Short getShortAndRemove(K name);
 
     /**
      * Returns the {@code short} value of a header with the specified {@code name} and removes the header from this
@@ -370,7 +378,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code short} value of the first value in insertion order or {@code defaultValue} if there is no
      *         such value or it can't be converted to {@code short}.
      */
-    short getShortAndRemove(T name, short defaultValue);
+    short getShortAndRemove(K name, short defaultValue);
 
     /**
      * Returns the {@code int} value of a header with the specified {@code name} and removes the header from this
@@ -383,7 +391,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code int} value of the first value in insertion order or {@code null} if there is no
      *         such value or it can't be converted to {@code int}.
      */
-    Integer getIntAndRemove(T name);
+    Integer getIntAndRemove(K name);
 
     /**
      * Returns the {@code int} value of a header with the specified {@code name} and removes the header from this
@@ -397,7 +405,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code int} value of the first value in insertion order or {@code defaultValue} if there is no
      *         such value or it can't be converted to {@code int}.
      */
-    int getIntAndRemove(T name, int defaultValue);
+    int getIntAndRemove(K name, int defaultValue);
 
     /**
      * Returns the {@code long} value of a header with the specified {@code name} and removes the header from this
@@ -410,7 +418,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code long} value of the first value in insertion order or {@code null} if there is no
      *         such value or it can't be converted to {@code long}.
      */
-    Long getLongAndRemove(T name);
+    Long getLongAndRemove(K name);
 
     /**
      * Returns the {@code long} value of a header with the specified {@code name} and removes the header from this
@@ -424,7 +432,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code long} value of the first value in insertion order or {@code defaultValue} if there is no
      *         such value or it can't be converted to {@code long}.
      */
-    long getLongAndRemove(T name, long defaultValue);
+    long getLongAndRemove(K name, long defaultValue);
 
     /**
      * Returns the {@code float} value of a header with the specified {@code name} and removes the header from this
@@ -437,7 +445,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code float} value of the first value in insertion order or {@code null} if there is no
      *         such value or it can't be converted to {@code float}.
      */
-    Float getFloatAndRemove(T name);
+    Float getFloatAndRemove(K name);
 
     /**
      * Returns the {@code float} value of a header with the specified {@code name} and removes the header from this
@@ -451,7 +459,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code float} value of the first value in insertion order or {@code defaultValue} if there is no
      *         such value or it can't be converted to {@code float}.
      */
-    float getFloatAndRemove(T name, float defaultValue);
+    float getFloatAndRemove(K name, float defaultValue);
 
     /**
      * Returns the {@code double} value of a header with the specified {@code name} and removes the header from this
@@ -464,7 +472,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code double} value of the first value in insertion order or {@code null} if there is no
      *         such value or it can't be converted to {@code double}.
      */
-    Double getDoubleAndRemove(T name);
+    Double getDoubleAndRemove(K name);
 
     /**
      * Returns the {@code double} value of a header with the specified {@code name} and removes the header from this
@@ -478,7 +486,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the {@code double} value of the first value in insertion order or {@code defaultValue} if there is no
      *         such value or it can't be converted to {@code double}.
      */
-    double getDoubleAndRemove(T name, double defaultValue);
+    double getDoubleAndRemove(K name, double defaultValue);
 
     /**
      * Returns the value of a header with the specified {@code name} in milliseconds and removes the header from this
@@ -491,7 +499,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the milliseconds value of the first value in insertion order or {@code null} if there is no such
      *         value or it can't be converted to milliseconds.
      */
-    Long getTimeMillisAndRemove(T name);
+    Long getTimeMillisAndRemove(K name);
 
     /**
      * Returns the value of a header with the specified {@code name} in milliseconds and removes the header from this
@@ -505,14 +513,14 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @return the milliseconds value of the first value in insertion order or {@code defaultValue} if there is no such
      *         value or it can't be converted to milliseconds.
      */
-    long getTimeMillisAndRemove(T name, long defaultValue);
+    long getTimeMillisAndRemove(K name, long defaultValue);
 
     /**
      * Returns {@code true} if a header with the {@code name} exists, {@code false} otherwise.
      *
      * @param name the header name
      */
-    boolean contains(T name);
+    boolean contains(K name);
 
     /**
      * Returns {@code true} if a header with the {@code name} and {@code value} exists, {@code false} otherwise.
@@ -522,7 +530,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param name the header name
      * @param value the header value of the header to find
      */
-    boolean contains(T name, T value);
+    boolean contains(K name, V value);
 
     /**
      * Returns {@code true} if a header with the name and value exists.
@@ -531,7 +539,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value the header value
      * @return {@code true} if it contains it {@code false} otherwise
      */
-    boolean containsObject(T name, Object value);
+    boolean containsObject(K name, Object value);
 
     /**
      * Returns {@code true} if a header with the name and value exists.
@@ -540,7 +548,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value the header value
      * @return {@code true} if it contains it {@code false} otherwise
      */
-    boolean containsBoolean(T name, boolean value);
+    boolean containsBoolean(K name, boolean value);
 
     /**
      * Returns {@code true} if a header with the name and value exists.
@@ -549,7 +557,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value the header value
      * @return {@code true} if it contains it {@code false} otherwise
      */
-    boolean containsByte(T name, byte value);
+    boolean containsByte(K name, byte value);
 
     /**
      * Returns {@code true} if a header with the name and value exists.
@@ -558,7 +566,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value the header value
      * @return {@code true} if it contains it {@code false} otherwise
      */
-    boolean containsChar(T name, char value);
+    boolean containsChar(K name, char value);
 
     /**
      * Returns {@code true} if a header with the name and value exists.
@@ -567,7 +575,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value the header value
      * @return {@code true} if it contains it {@code false} otherwise
      */
-    boolean containsShort(T name, short value);
+    boolean containsShort(K name, short value);
 
     /**
      * Returns {@code true} if a header with the name and value exists.
@@ -576,7 +584,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value the header value
      * @return {@code true} if it contains it {@code false} otherwise
      */
-    boolean containsInt(T name, int value);
+    boolean containsInt(K name, int value);
 
     /**
      * Returns {@code true} if a header with the name and value exists.
@@ -585,7 +593,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value the header value
      * @return {@code true} if it contains it {@code false} otherwise
      */
-    boolean containsLong(T name, long value);
+    boolean containsLong(K name, long value);
 
     /**
      * Returns {@code true} if a header with the name and value exists.
@@ -594,7 +602,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value the header value
      * @return {@code true} if it contains it {@code false} otherwise
      */
-    boolean containsFloat(T name, float value);
+    boolean containsFloat(K name, float value);
 
     /**
      * Returns {@code true} if a header with the name and value exists.
@@ -603,7 +611,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value the header value
      * @return {@code true} if it contains it {@code false} otherwise
      */
-    boolean containsDouble(T name, double value);
+    boolean containsDouble(K name, double value);
 
     /**
      * Returns {@code true} if a header with the name and value exists.
@@ -612,7 +620,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value the header value
      * @return {@code true} if it contains it {@code false} otherwise
      */
-    boolean containsTimeMillis(T name, long value);
+    boolean containsTimeMillis(K name, long value);
 
     /**
      * Returns the number of headers in this object.
@@ -627,7 +635,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
     /**
      * Returns a {@link Set} of all header names in this object. The returned {@link Set} cannot be modified.
      */
-    Set<T> names();
+    Set<K> names();
 
     /**
      * Adds a new header with the specified {@code name} and {@code value}.
@@ -636,7 +644,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value the value of the header
      * @return {@code this}
      */
-    Headers<T> add(T name, T value);
+    T add(K name, V value);
 
     /**
      * Adds new headers with the specified {@code name} and {@code values}. This method is semantically equivalent to
@@ -651,7 +659,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param values the values of the header
      * @return {@code this}
      */
-    Headers<T> add(T name, Iterable<? extends T> values);
+    T add(K name, Iterable<? extends V> values);
 
     /**
      * Adds new headers with the specified {@code name} and {@code values}. This method is semantically equivalent to
@@ -666,7 +674,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param values the values of the header
      * @return {@code this}
      */
-    Headers<T> add(T name, T... values);
+    T add(K name, V... values);
 
     /**
      * Adds a new header. Before the {@code value} is added, it's converted to type {@code T}.
@@ -675,7 +683,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value the value of the header
      * @return {@code this}
      */
-    Headers<T> addObject(T name, Object value);
+    T addObject(K name, Object value);
 
     /**
      * Adds a new header with the specified name and values. This method is equivalent to
@@ -690,7 +698,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param values the value of the header
      * @return {@code this}
      */
-    Headers<T> addObject(T name, Iterable<?> values);
+    T addObject(K name, Iterable<?> values);
 
     /**
      * Adds a new header with the specified name and values. This method is equivalent to
@@ -705,7 +713,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param values the value of the header
      * @return {@code this}
      */
-    Headers<T> addObject(T name, Object... values);
+    T addObject(K name, Object... values);
 
     /**
      * Adds a new header.
@@ -714,7 +722,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value the value of the header
      * @return {@code this}
      */
-    Headers<T> addBoolean(T name, boolean value);
+    T addBoolean(K name, boolean value);
 
     /**
      * Adds a new header.
@@ -723,7 +731,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value the value of the header
      * @return {@code this}
      */
-    Headers<T> addByte(T name, byte value);
+    T addByte(K name, byte value);
 
     /**
      * Adds a new header.
@@ -732,7 +740,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value the value of the header
      * @return {@code this}
      */
-    Headers<T> addChar(T name, char value);
+    T addChar(K name, char value);
 
     /**
      * Adds a new header.
@@ -741,7 +749,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value the value of the header
      * @return {@code this}
      */
-    Headers<T> addShort(T name, short value);
+    T addShort(K name, short value);
 
     /**
      * Adds a new header.
@@ -750,7 +758,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value the value of the header
      * @return {@code this}
      */
-    Headers<T> addInt(T name, int value);
+    T addInt(K name, int value);
 
     /**
      * Adds a new header.
@@ -759,7 +767,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value the value of the header
      * @return {@code this}
      */
-    Headers<T> addLong(T name, long value);
+    T addLong(K name, long value);
 
     /**
      * Adds a new header.
@@ -768,7 +776,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value the value of the header
      * @return {@code this}
      */
-    Headers<T> addFloat(T name, float value);
+    T addFloat(K name, float value);
 
     /**
      * Adds a new header.
@@ -777,7 +785,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value the value of the header
      * @return {@code this}
      */
-    Headers<T> addDouble(T name, double value);
+    T addDouble(K name, double value);
 
     /**
      * Adds a new header.
@@ -786,7 +794,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value the value of the header
      * @return {@code this}
      */
-    Headers<T> addTimeMillis(T name, long value);
+    T addTimeMillis(K name, long value);
 
     /**
      * Adds all header names and values of {@code headers} to this object.
@@ -794,7 +802,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @throws IllegalArgumentException if {@code headers == this}.
      * @return {@code this}
      */
-    Headers<T> add(Headers<? extends T> headers);
+    T add(Headers<? extends K, ? extends V, ?> headers);
 
     /**
      * Sets a header with the specified name and value. Any existing headers with the same name are overwritten.
@@ -803,7 +811,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value the value of the header
      * @return {@code this}
      */
-    Headers<T> set(T name, T value);
+    T set(K name, V value);
 
     /**
      * Sets a new header with the specified name and values. This method is equivalent to
@@ -818,7 +826,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param values the value of the header
      * @return {@code this}
      */
-    Headers<T> set(T name, Iterable<? extends T> values);
+    T set(K name, Iterable<? extends V> values);
 
     /**
      * Sets a header with the specified name and values. Any existing headers with this name are removed. This method
@@ -835,7 +843,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param values the value of the header
      * @return {@code this}
      */
-    Headers<T> set(T name, T... values);
+    T set(K name, V... values);
 
     /**
      * Sets a new header. Any existing headers with this name are removed. Before the {@code value} is add, it's
@@ -847,7 +855,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      *                              {@code null}.
      * @return {@code this}
      */
-    Headers<T> setObject(T name, Object value);
+    T setObject(K name, Object value);
 
     /**
      * Sets a header with the specified name and values. Any existing headers with this name are removed. This method
@@ -864,7 +872,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param values the values of the header
      * @return {@code this}
      */
-    Headers<T> setObject(T name, Iterable<?> values);
+    T setObject(K name, Iterable<?> values);
 
     /**
      * Sets a header with the specified name and values. Any existing headers with this name are removed. This method
@@ -881,7 +889,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param values the values of the header
      * @return {@code this}
      */
-    Headers<T> setObject(T name, Object... values);
+    T setObject(K name, Object... values);
 
     /**
      * Set the {@code name} to {@code value}. This will remove all previous values associated with {@code name}.
@@ -889,7 +897,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value The value
      * @return {@code this}
      */
-    Headers<T> setBoolean(T name, boolean value);
+    T setBoolean(K name, boolean value);
 
     /**
      * Set the {@code name} to {@code value}. This will remove all previous values associated with {@code name}.
@@ -897,7 +905,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value The value
      * @return {@code this}
      */
-    Headers<T> setByte(T name, byte value);
+    T setByte(K name, byte value);
 
     /**
      * Set the {@code name} to {@code value}. This will remove all previous values associated with {@code name}.
@@ -905,7 +913,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value The value
      * @return {@code this}
      */
-    Headers<T> setChar(T name, char value);
+    T setChar(K name, char value);
 
     /**
      * Set the {@code name} to {@code value}. This will remove all previous values associated with {@code name}.
@@ -913,7 +921,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value The value
      * @return {@code this}
      */
-    Headers<T> setShort(T name, short value);
+    T setShort(K name, short value);
 
     /**
      * Set the {@code name} to {@code value}. This will remove all previous values associated with {@code name}.
@@ -921,7 +929,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value The value
      * @return {@code this}
      */
-    Headers<T> setInt(T name, int value);
+    T setInt(K name, int value);
 
     /**
      * Set the {@code name} to {@code value}. This will remove all previous values associated with {@code name}.
@@ -929,7 +937,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value The value
      * @return {@code this}
      */
-    Headers<T> setLong(T name, long value);
+    T setLong(K name, long value);
 
     /**
      * Set the {@code name} to {@code value}. This will remove all previous values associated with {@code name}.
@@ -937,7 +945,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value The value
      * @return {@code this}
      */
-    Headers<T> setFloat(T name, float value);
+    T setFloat(K name, float value);
 
     /**
      * Set the {@code name} to {@code value}. This will remove all previous values associated with {@code name}.
@@ -945,7 +953,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value The value
      * @return {@code this}
      */
-    Headers<T> setDouble(T name, double value);
+    T setDouble(K name, double value);
 
     /**
      * Set the {@code name} to {@code value}. This will remove all previous values associated with {@code name}.
@@ -953,14 +961,14 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param value The value
      * @return {@code this}
      */
-    Headers<T> setTimeMillis(T name, long value);
+    T setTimeMillis(K name, long value);
 
     /**
      * Clears the current header entries and copies all header entries of the specified {@code headers}.
      *
      * @return {@code this}
      */
-    Headers<T> set(Headers<? extends T> headers);
+    T set(Headers<? extends K, ? extends V, ?> headers);
 
     /**
      * Retains all current headers but calls {@link #set(T, T)} for each entry in {@code headers}.
@@ -968,7 +976,7 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param headers The headers used to {@link #set(T, T)} values in this instance
      * @return {@code this}
      */
-    Headers<T> setAll(Headers<? extends T> headers);
+    T setAll(Headers<? extends K, ? extends V, ?> headers);
 
     /**
      * Removes all headers with the specified {@code name}.
@@ -976,15 +984,15 @@ public interface Headers<T> extends Iterable<Entry<T, T>> {
      * @param name the header name
      * @return {@code true} if at least one entry has been removed.
      */
-    boolean remove(T name);
+    boolean remove(K name);
 
     /**
      * Removes all headers. After a call to this method {@link #size()} equals {@code 0}.
      *
      * @return {@code this}
      */
-    Headers<T> clear();
+    T clear();
 
     @Override
-    Iterator<Entry<T, T>> iterator();
+    Iterator<Entry<K, V>> iterator();
 }

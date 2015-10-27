@@ -14,13 +14,6 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_ENCODING;
-import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
-import static io.netty.handler.codec.http.HttpHeaderValues.DEFLATE;
-import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
-import static io.netty.handler.codec.http.HttpHeaderValues.IDENTITY;
-import static io.netty.handler.codec.http.HttpHeaderValues.X_DEFLATE;
-import static io.netty.handler.codec.http.HttpHeaderValues.X_GZIP;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
@@ -31,7 +24,14 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
-import io.netty.util.ByteString;
+
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_ENCODING;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
+import static io.netty.handler.codec.http.HttpHeaderValues.DEFLATE;
+import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
+import static io.netty.handler.codec.http.HttpHeaderValues.IDENTITY;
+import static io.netty.handler.codec.http.HttpHeaderValues.X_DEFLATE;
+import static io.netty.handler.codec.http.HttpHeaderValues.X_GZIP;
 
 /**
  * A decorating HTTP2 encoder that will compress data frames according to the {@code content-encoding} header for each
@@ -195,11 +195,11 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
      * (alternatively, you can throw a {@link Http2Exception} to block unknown encoding).
      * @throws Http2Exception If the specified encoding is not not supported and warrants an exception
      */
-    protected EmbeddedChannel newContentCompressor(ByteString contentEncoding) throws Http2Exception {
-        if (GZIP.equals(contentEncoding) || X_GZIP.equals(contentEncoding)) {
+    protected EmbeddedChannel newContentCompressor(CharSequence contentEncoding) throws Http2Exception {
+        if (GZIP.contentEqualsIgnoreCase(contentEncoding) || X_GZIP.contentEqualsIgnoreCase(contentEncoding)) {
             return newCompressionChannel(ZlibWrapper.GZIP);
         }
-        if (DEFLATE.equals(contentEncoding) || X_DEFLATE.equals(contentEncoding)) {
+        if (DEFLATE.contentEqualsIgnoreCase(contentEncoding) || X_DEFLATE.contentEqualsIgnoreCase(contentEncoding)) {
             return newCompressionChannel(ZlibWrapper.ZLIB);
         }
         // 'identity' or unsupported
@@ -214,7 +214,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
      * @return the expected content encoding of the new content.
      * @throws Http2Exception if the {@code contentEncoding} is not supported and warrants an exception
      */
-    protected ByteString getTargetContentEncoding(ByteString contentEncoding) throws Http2Exception {
+    protected CharSequence getTargetContentEncoding(CharSequence contentEncoding) throws Http2Exception {
         return contentEncoding;
     }
 
@@ -241,14 +241,14 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
             return null;
         }
 
-        ByteString encoding = headers.get(CONTENT_ENCODING);
+        CharSequence encoding = headers.get(CONTENT_ENCODING);
         if (encoding == null) {
             encoding = IDENTITY;
         }
         final EmbeddedChannel compressor = newContentCompressor(encoding);
         if (compressor != null) {
-            ByteString targetContentEncoding = getTargetContentEncoding(encoding);
-            if (IDENTITY.equals(targetContentEncoding)) {
+            CharSequence targetContentEncoding = getTargetContentEncoding(encoding);
+            if (IDENTITY.contentEqualsIgnoreCase(targetContentEncoding)) {
                 headers.remove(CONTENT_ENCODING);
             } else {
                 headers.set(CONTENT_ENCODING, targetContentEncoding);

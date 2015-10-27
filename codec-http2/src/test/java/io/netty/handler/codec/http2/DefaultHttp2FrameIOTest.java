@@ -25,7 +25,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.AsciiString;
-import io.netty.util.ByteString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.EventExecutor;
 import org.junit.After;
@@ -381,7 +380,7 @@ public class DefaultHttp2FrameIOTest {
     }
 
     private Http2Headers headersOfSize(final int minSize) {
-        final ByteString singleByte = new ByteString(new byte[]{0});
+        final AsciiString singleByte = new AsciiString(new byte[]{0}, false);
         DefaultHttp2Headers headers = new DefaultHttp2Headers(false);
         for (int size = 0; size < minSize; size += 2) {
             headers.add(singleByte, singleByte);
