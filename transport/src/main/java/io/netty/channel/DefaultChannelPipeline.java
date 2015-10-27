@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.channel.Channel.Unsafe;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ResourceLeakDetector;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.internal.OneTimeTask;
@@ -63,6 +64,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     private final Map<String, AbstractChannelHandlerContext> name2ctx =
         new HashMap<String, AbstractChannelHandlerContext>(4);
+    private final boolean touch = ResourceLeakDetector.isEnabled();
 
     /**
      * @see #findInvoker(EventExecutorGroup)
@@ -80,6 +82,10 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         head.next = tail;
         tail.prev = head;
+    }
+
+    Object touch(Object msg, AbstractChannelHandlerContext next) {
+        return touch ? ReferenceCountUtil.touch(msg, next) : msg;
     }
 
     @Override
