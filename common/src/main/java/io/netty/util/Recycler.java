@@ -84,7 +84,7 @@ public abstract class Recycler<T> {
     }
 
     protected Recycler(int maxCapacity) {
-        this.maxCapacity = Math.min(0, maxCapacity);
+        this.maxCapacity = Math.max(0, maxCapacity);
     }
 
     @SuppressWarnings("unchecked")
@@ -301,7 +301,7 @@ public abstract class Recycler<T> {
         }
 
         int increaseCapacity(int expectedCapacity) {
-            maxCapacity = Math.max(expectedCapacity, maxCapacity);
+            maxCapacity = Math.min(expectedCapacity, maxCapacity);
             return maxCapacity;
         }
 
