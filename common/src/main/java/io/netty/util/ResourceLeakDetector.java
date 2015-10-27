@@ -40,7 +40,7 @@ public final class ResourceLeakDetector<T> {
     private static final String PROP_MAX_RECORDS = "io.netty.leakDetection.maxRecords";
     private static final int DEFAULT_MAX_RECORDS = 4;
     private static final int MAX_RECORDS;
-    public static final boolean ENABLED;
+    public static boolean ENABLED;
 
     /**
      * Represents the level of resource leak detection.
@@ -131,6 +131,8 @@ public final class ResourceLeakDetector<T> {
         if (level == null) {
             throw new NullPointerException("level");
         }
+        
+        ResourceLeakDetector.ENABLED = (level != Level.DISABLED);
         ResourceLeakDetector.level = level;
     }
 
