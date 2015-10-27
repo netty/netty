@@ -22,7 +22,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.lang.ref.WeakReference;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -117,7 +116,7 @@ public abstract class Recycler<T> {
     }
 
     final int threadLocalCapacity() {
-        return threadLocal.get().elements.length;
+        return threadLocal.get().maxCapacity;
     }
 
     final int threadLocalSize() {
@@ -136,6 +135,7 @@ public abstract class Recycler<T> {
 
         private Stack<?> stack;
         private Object value;
+        private DefaultHandle next;
 
         DefaultHandle(Stack<?> stack) {
             this.stack = stack;
@@ -165,11 +165,11 @@ public abstract class Recycler<T> {
 
     private static final FastThreadLocal<Map<Stack<?>, WeakOrderQueue>> DELAYED_RECYCLED =
             new FastThreadLocal<Map<Stack<?>, WeakOrderQueue>>() {
-        @Override
-        protected Map<Stack<?>, WeakOrderQueue> initialValue() {
-            return new WeakHashMap<Stack<?>, WeakOrderQueue>();
-        }
-    };
+                @Override
+                protected Map<Stack<?>, WeakOrderQueue> initialValue() {
+                    return new WeakHashMap<Stack<?>, WeakOrderQueue>();
+                }
+            };
 
     // a queue that makes only moderate guarantees about visibility: items are seen in the correct order,
     // but we aren't absolutely guaranteed to ever see anything at all, thereby keeping the queue cheap to maintain
@@ -247,14 +247,8 @@ public abstract class Recycler<T> {
             final int dstSize = dst.size;
             final int expectedCapacity = dstSize + srcSize;
 
-            if (expectedCapacity > dst.elements.length) {
-                final int actualCapacity = dst.increaseCapacity(expectedCapacity);
-                srcEnd = Math.min(srcStart + actualCapacity - dstSize, srcEnd);
-            }
-
             if (srcStart != srcEnd) {
                 final DefaultHandle[] srcElems = head.elements;
-                final DefaultHandle[] dstElems = dst.elements;
                 int newDstSize = dstSize;
                 for (int i = srcStart; i < srcEnd; i++) {
                     DefaultHandle element = srcElems[i];
@@ -264,7 +258,10 @@ public abstract class Recycler<T> {
                         throw new IllegalStateException("recycled already");
                     }
                     element.stack = dst;
-                    dstElems[newDstSize ++] = element;
+                    newDstSize++;
+                    element.next = dst.tailItem;
+                    dst.tailItem = element;
+
                     srcElems[i] = null;
                 }
                 dst.size = newDstSize;
@@ -290,52 +287,35 @@ public abstract class Recycler<T> {
         // still recycling all items.
         final Recycler<T> parent;
         final Thread thread;
-        private DefaultHandle<?>[] elements;
-        private final int maxCapacity;
+        private int maxCapacity;
         private int size;
 
         private volatile WeakOrderQueue head;
         private WeakOrderQueue cursor, prev;
+        private DefaultHandle<?> tailItem;
 
         Stack(Recycler<T> parent, Thread thread, int maxCapacity) {
             this.parent = parent;
             this.thread = thread;
             this.maxCapacity = maxCapacity;
-            elements = new DefaultHandle[Math.min(INITIAL_CAPACITY, maxCapacity)];
         }
 
         int increaseCapacity(int expectedCapacity) {
-            int newCapacity = elements.length;
-            int maxCapacity = this.maxCapacity;
-            do {
-                newCapacity <<= 1;
-            } while (newCapacity < expectedCapacity && newCapacity < maxCapacity);
-
-            newCapacity = Math.min(newCapacity, maxCapacity);
-            if (newCapacity != elements.length) {
-                elements = Arrays.copyOf(elements, newCapacity);
-            }
-
-            return newCapacity;
+            maxCapacity = Math.max(expectedCapacity, maxCapacity);
+            return maxCapacity;
         }
 
         @SuppressWarnings({ "unchecked", "rawtypes" })
         DefaultHandle<T> pop() {
-            int size = this.size;
-            if (size == 0) {
+            if (tailItem == null) {
                 if (!scavenge()) {
                     return null;
                 }
-                size = this.size;
             }
-            size --;
-            DefaultHandle ret = elements[size];
-            if (ret.lastRecycledId != ret.recycleId) {
-                throw new IllegalStateException("recycled multiple times");
-            }
-            ret.recycleId = 0;
-            ret.lastRecycledId = 0;
-            this.size = size;
+            DefaultHandle ret = tailItem;
+            tailItem = ret.next;
+            ret.next = null;
+            this.size --;
             return ret;
         }
 
@@ -399,22 +379,14 @@ public abstract class Recycler<T> {
         }
 
         void push(DefaultHandle<?> item) {
-            if ((item.recycleId | item.lastRecycledId) != 0) {
-                throw new IllegalStateException("recycled already");
-            }
-            item.recycleId = item.lastRecycledId = OWN_THREAD_ID;
-
-            int size = this.size;
             if (size >= maxCapacity) {
-                // Hit the maximum capacity - drop the possibly youngest object.
                 return;
             }
-            if (size == elements.length) {
-                elements = Arrays.copyOf(elements, Math.min(size << 1, maxCapacity));
-            }
 
-            elements[size] = item;
-            this.size = size + 1;
+            this.size++;
+
+            item.next = tailItem;
+            tailItem = item;
         }
 
         DefaultHandle<T> newHandle() {
