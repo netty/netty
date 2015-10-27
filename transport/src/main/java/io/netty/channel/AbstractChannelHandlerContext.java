@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandler.Skip;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakHint;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocal;
@@ -355,8 +354,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     @Override
     public ChannelHandlerContext fireChannelRead(Object msg) {
         AbstractChannelHandlerContext next = findContextInbound();
-        ReferenceCountUtil.touch(msg, next);
-        next.invoker().invokeChannelRead(next, msg);
+        next.invoker().invokeChannelRead(next, pipeline.touch(msg, next));
         return this;
     }
 
@@ -463,8 +461,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     @Override
     public ChannelFuture write(Object msg, ChannelPromise promise) {
         AbstractChannelHandlerContext next = findContextOutbound();
-        ReferenceCountUtil.touch(msg, next);
-        next.invoker().invokeWrite(next, msg, promise);
+        next.invoker().invokeWrite(next, pipeline.touch(msg, next), promise);
         return promise;
     }
 
@@ -477,12 +474,10 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     @Override
     public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
-        AbstractChannelHandlerContext next;
-        next = findContextOutbound();
-        ReferenceCountUtil.touch(msg, next);
-        next.invoker().invokeWrite(next, msg, promise);
-        next = findContextOutbound();
-        next.invoker().invokeFlush(next);
+        AbstractChannelHandlerContext next = findContextOutbound();
+        ChannelHandlerInvoker invoker = next.invoker();
+        invoker.invokeWrite(next, pipeline.touch(msg, next) , promise);
+        invoker.invokeFlush(next);
         return promise;
     }
 
