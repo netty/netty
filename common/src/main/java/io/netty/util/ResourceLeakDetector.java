@@ -16,6 +16,7 @@
 
 package io.netty.util;
 
+import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -105,7 +106,8 @@ public final class ResourceLeakDetector<T> {
         }
     }
 
-    private static final int DEFAULT_SAMPLING_INTERVAL = 113;
+    // Should be power of two.
+    private static final int DEFAULT_SAMPLING_INTERVAL = 128;
 
     /**
      * @deprecated Use {@link #setLevel(Level)} instead.
@@ -148,6 +150,7 @@ public final class ResourceLeakDetector<T> {
 
     private final String resourceType;
     private final int samplingInterval;
+    private final int mask;
     private final long maxActive;
     private long active;
     private final AtomicBoolean loggedTooManyActive = new AtomicBoolean();
@@ -178,7 +181,10 @@ public final class ResourceLeakDetector<T> {
         }
 
         this.resourceType = resourceType;
-        this.samplingInterval = samplingInterval;
+        this.samplingInterval = MathUtil.findNextPositivePowerOfTwo(samplingInterval);
+        // samplingInterval is a power of two so we calculate a mask that we can use to
+        // check if we need to do any leak detection or not.
+        mask = this.samplingInterval - 1;
         this.maxActive = maxActive;
 
         head.next = tail;
@@ -198,7 +204,7 @@ public final class ResourceLeakDetector<T> {
         }
 
         if (level.ordinal() < Level.PARANOID.ordinal()) {
-            if (leakCheckCnt ++ % samplingInterval == 0) {
+            if ((leakCheckCnt ++ & mask) == 0) {
                 reportLeak(level);
                 return new DefaultResourceLeak(obj);
             } else {
