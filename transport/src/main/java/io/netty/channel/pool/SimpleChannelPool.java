@@ -19,7 +19,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoop;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
@@ -52,7 +51,7 @@ public class SimpleChannelPool implements ChannelPool {
     private final Deque<Channel> deque = PlatformDependent.newConcurrentDeque();
     private final ChannelPoolHandler handler;
     private final ChannelHealthChecker healthCheck;
-    private final Bootstrap bootstrap;
+    private final ChannelConnector connector;
     private final boolean releaseHealthCheck;
 
     /**
@@ -89,23 +88,30 @@ public class SimpleChannelPool implements ChannelPool {
      */
     public SimpleChannelPool(Bootstrap bootstrap, final ChannelPoolHandler handler, ChannelHealthChecker healthCheck,
                              boolean releaseHealthCheck) {
+        this(new BootstrapChannelConnector(bootstrap), handler, healthCheck, releaseHealthCheck);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param connector          the {@link ChannelConnector} that is used for connections
+     * @param handler            the {@link ChannelPoolHandler} that will be notified for the different pool actions
+     * @param healthCheck        the {@link ChannelHealthChecker} that will be used to check if a {@link Channel} is
+     *                           still healthy when obtain from the {@link ChannelPool}
+     * @param releaseHealthCheck will offercheck channel health before offering back if this parameter set to
+     *                           {@code true}.
+     */
+    public SimpleChannelPool(ChannelConnector connector, final ChannelPoolHandler handler,
+                             ChannelHealthChecker healthCheck, boolean releaseHealthCheck) {
         this.handler = checkNotNull(handler, "handler");
         this.healthCheck = checkNotNull(healthCheck, "healthCheck");
         this.releaseHealthCheck = releaseHealthCheck;
-        // Clone the original Bootstrap as we want to set our own handler
-        this.bootstrap = checkNotNull(bootstrap, "bootstrap").clone();
-        this.bootstrap.handler(new ChannelInitializer<Channel>() {
-            @Override
-            protected void initChannel(Channel ch) throws Exception {
-                assert ch.eventLoop().inEventLoop();
-                handler.channelCreated(ch);
-            }
-        });
+        this.connector = checkNotNull(connector, "connector");
     }
 
     @Override
     public final Future<Channel> acquire() {
-        return acquire(bootstrap.group().next().<Channel>newPromise());
+        return acquire(connector.group().next().<Channel>newPromise());
     }
 
     @Override
@@ -119,20 +125,38 @@ public class SimpleChannelPool implements ChannelPool {
      * @param promise the promise to provide acquire result.
      * @return future for acquiring a channel.
      */
+    @SuppressWarnings("deprecation")
     private Future<Channel> acquireHealthyFromPoolOrNew(final Promise<Channel> promise) {
         try {
             final Channel ch = pollChannel();
             if (ch == null) {
                 // No Channel left in the pool bootstrap a new Channel
-                Bootstrap bs = bootstrap.clone();
-                bs.attr(POOL_KEY, this);
-                ChannelFuture f = connectChannel(bs);
+                final Future<Channel> f;
+                if (connector instanceof BootstrapChannelConnector) {
+                    // This is needed so we still use the connectChannel(...) method if we internally use a
+                    // BootstrapChannelConnector as in this case the user may have override connectChannel(...) before.
+                    final Promise<Channel> p = connector.group().next().newPromise();
+                    connectChannel(((BootstrapChannelConnector) connector).bootstrap.clone())
+                            .addListener(new ChannelFutureListener() {
+                                @Override
+                                public void operationComplete(ChannelFuture future) throws Exception {
+                                    if (future.isSuccess()) {
+                                        p.setSuccess(future.channel());
+                                    } else {
+                                        p.setFailure(future.cause());
+                                    }
+                                }
+                            });
+                    f = p;
+                } else {
+                    f = connector.connect();
+                }
                 if (f.isDone()) {
                     notifyConnect(f, promise);
                 } else {
-                    f.addListener(new ChannelFutureListener() {
+                    f.addListener(new FutureListener<Channel>() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(Future<Channel> future) throws Exception {
                             notifyConnect(future, promise);
                         }
                     });
@@ -156,12 +180,39 @@ public class SimpleChannelPool implements ChannelPool {
         return promise;
     }
 
-    private static void notifyConnect(ChannelFuture future, Promise<Channel> promise) {
+    private void notifyConnect(Future<Channel> future, final Promise<Channel> promise) {
         if (future.isSuccess()) {
-            promise.setSuccess(future.channel());
+            final Channel channel = future.getNow();
+            assert !channel.config().isAutoRead();
+            channel.attr(POOL_KEY).set(this);
+
+            if (channel.eventLoop().inEventLoop()) {
+                notifyChannelCreated(channel, promise);
+            } else {
+                // Must be called in the EventLoop of the Channel so submit to the executor.
+                channel.eventLoop().execute(new OneTimeTask() {
+                    @Override
+                    public void run() {
+                        notifyChannelCreated(channel, promise);
+                    }
+                });
+            }
         } else {
             promise.setFailure(future.cause());
         }
+    }
+
+    private void notifyChannelCreated(Channel channel, Promise<Channel> promise) {
+        assert channel.eventLoop().inEventLoop();
+        try {
+            // Mark as autoRead as after the channelCreated(...) method is called the handlers should have been set up.
+            channel.config().setAutoRead(true);
+            handler.channelCreated(channel);
+        } catch (Throwable cause) {
+            closeAndFail(channel, cause, promise);
+            return;
+        }
+        promise.setSuccess(channel);
     }
 
     private void doHealthCheck(final Channel ch, final Promise<Channel> promise) {
@@ -207,7 +258,10 @@ public class SimpleChannelPool implements ChannelPool {
      * override this.
      * <p>
      * The {@link Bootstrap} that is passed in here is cloned via {@link Bootstrap#clone()}, so it is safe to modify.
+     *
+     * @deprecated use a special {@link ChannelConnector}
      */
+    @Deprecated
     protected ChannelFuture connectChannel(Bootstrap bs) {
         return bs.connect();
     }
