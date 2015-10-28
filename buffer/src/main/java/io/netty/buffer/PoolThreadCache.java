@@ -21,6 +21,7 @@ import io.netty.buffer.PoolArena.SizeClass;
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
 import io.netty.util.ThreadDeathWatcher;
+import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -356,23 +357,9 @@ final class PoolThreadCache {
         private int allocations;
 
         MemoryRegionCache(int size, SizeClass sizeClass) {
-            this.size = powerOfTwo(size);
+            this.size = MathUtil.findNextPositivePowerOfTwo(size);
             queue = PlatformDependent.newFixedMpscQueue(this.size);
             this.sizeClass = sizeClass;
-        }
-
-        private static int powerOfTwo(int res) {
-            if (res <= 2) {
-                return 2;
-            }
-            res--;
-            res |= res >> 1;
-            res |= res >> 2;
-            res |= res >> 4;
-            res |= res >> 8;
-            res |= res >> 16;
-            res++;
-            return res;
         }
 
         /**
