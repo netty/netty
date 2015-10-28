@@ -40,6 +40,7 @@ public final class ResourceLeakDetector<T> {
     private static final String PROP_MAX_RECORDS = "io.netty.leakDetection.maxRecords";
     private static final int DEFAULT_MAX_RECORDS = 4;
     private static final int MAX_RECORDS;
+    public static boolean ENABLED;
 
     /**
      * Represents the level of resource leak detection.
@@ -83,6 +84,7 @@ public final class ResourceLeakDetector<T> {
         }
 
         Level defaultLevel = disabled? Level.DISABLED : DEFAULT_LEVEL;
+        ENABLED = !disabled;
 
         // First read old property name
         String levelStr = SystemPropertyUtil.get(PROP_LEVEL_OLD, defaultLevel.name()).trim().toUpperCase();
@@ -119,7 +121,7 @@ public final class ResourceLeakDetector<T> {
      * Returns {@code true} if resource leak detection is enabled.
      */
     public static boolean isEnabled() {
-        return getLevel().ordinal() > Level.DISABLED.ordinal();
+        return ENABLED;
     }
 
     /**
@@ -129,6 +131,8 @@ public final class ResourceLeakDetector<T> {
         if (level == null) {
             throw new NullPointerException("level");
         }
+        
+        ResourceLeakDetector.ENABLED = (level != Level.DISABLED);
         ResourceLeakDetector.level = level;
     }
 
