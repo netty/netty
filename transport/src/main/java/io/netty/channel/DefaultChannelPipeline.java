@@ -20,6 +20,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
@@ -47,15 +48,13 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelPipeline.class);
 
-    @SuppressWarnings("unchecked")
-    private static final WeakHashMap<Class<?>, String>[] nameCaches =
-            new WeakHashMap[Runtime.getRuntime().availableProcessors()];
-
-    static {
-        for (int i = 0; i < nameCaches.length; i ++) {
-            nameCaches[i] = new WeakHashMap<Class<?>, String>();
+    private static final FastThreadLocal<Map<Class<?>, String>> nameCaches =
+            new FastThreadLocal<Map<Class<?>, String>>() {
+        @Override
+        protected Map<Class<?>, String> initialValue() throws Exception {
+            return new WeakHashMap<Class<?>, String>();
         }
-    }
+    };
 
     final AbstractChannel channel;
 
@@ -366,15 +365,12 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     String generateName(ChannelHandler handler) {
-        WeakHashMap<Class<?>, String> cache = nameCaches[(int) (Thread.currentThread().getId() % nameCaches.length)];
+        Map<Class<?>, String> cache = nameCaches.get();
         Class<?> handlerType = handler.getClass();
-        String name;
-        synchronized (cache) {
-            name = cache.get(handlerType);
-            if (name == null) {
-                name = generateName0(handlerType);
-                cache.put(handlerType, name);
-            }
+        String name = cache.get(handlerType);
+        if (name == null) {
+            name = generateName0(handlerType);
+            cache.put(handlerType, name);
         }
 
         synchronized (this) {
