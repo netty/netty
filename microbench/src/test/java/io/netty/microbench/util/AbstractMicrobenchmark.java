@@ -60,8 +60,8 @@ public class AbstractMicrobenchmark {
         "-XX:MaxDirectMemorySize=768m", "-XX:+AggressiveOpts", "-XX:+UseBiasedLocking",
         "-XX:+UseFastAccessorMethods", "-XX:+UseStringCache", "-XX:+OptimizeStringConcat",
         "-XX:+HeapDumpOnOutOfMemoryError", "-Dio.netty.noResourceLeakDetection",
-        "-Dharness.executor=CUSTOM",
-        "-Dharness.executor.class=io.netty.microbench.util.AbstractMicrobenchmark$HarnessExecutor"
+        "-Djmh.executor=CUSTOM",
+        "-Djmh.executor.class=io.netty.microbench.util.AbstractMicrobenchmark$HarnessExecutor"
     };
 
     static {
