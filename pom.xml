@@ -1196,11 +1196,11 @@
           <archive>
             <manifestEntries>
               <Bundle-ManifestVersion>2</Bundle-ManifestVersion>
-              <Bundle-Name>${name}</Bundle-Name>
-              <Bundle-SymbolicName>${groupId}.${artifactId}.source</Bundle-SymbolicName>
-              <Bundle-Vendor>${organization.name}</Bundle-Vendor>
+              <Bundle-Name>${project.name}</Bundle-Name>
+              <Bundle-SymbolicName>${project.groupId}.${project.artifactId}.source</Bundle-SymbolicName>
+              <Bundle-Vendor>${project.organization.name}</Bundle-Vendor>
               <Bundle-Version>${parsedVersion.osgiVersion}</Bundle-Version>
-              <Eclipse-SourceBundle>${groupId}.${artifactId};version="${parsedVersion.osgiVersion}";roots:="."</Eclipse-SourceBundle>
+              <Eclipse-SourceBundle>${project.groupId}.${project.artifactId};version="${parsedVersion.osgiVersion}";roots:="."</Eclipse-SourceBundle>
             </manifestEntries>
           </archive>
         </configuration>
