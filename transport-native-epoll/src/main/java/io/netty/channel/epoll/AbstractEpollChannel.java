@@ -45,6 +45,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     protected int flags = Native.EPOLLET;
 
     protected volatile boolean active;
+    EpollEventLoop loop;
 
     AbstractEpollChannel(Socket fd, int flag) {
         this(null, fd, flag, false);
@@ -131,7 +132,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     @Override
     protected void doDeregister() throws Exception {
-        ((EpollEventLoop) eventLoop()).remove(this);
+        loop.remove(this);
     }
 
     @Override
@@ -145,7 +146,6 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     final void clearEpollIn() {
         // Only clear if registered with an EventLoop as otherwise
         if (isRegistered()) {
-            final EventLoop loop = eventLoop();
             final AbstractEpollUnsafe unsafe = (AbstractEpollUnsafe) unsafe();
             if (loop.inEventLoop()) {
                 unsafe.clearEpollIn0();
@@ -170,13 +170,13 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     private void modifyEvents() throws IOException {
         if (isOpen() && isRegistered()) {
-            ((EpollEventLoop) eventLoop()).modify(this);
+            loop.modify(this);
         }
     }
 
     @Override
     protected void doRegister() throws Exception {
-        EpollEventLoop loop = (EpollEventLoop) eventLoop();
+        loop = (EpollEventLoop) eventLoop();
         loop.add(this);
     }
 
