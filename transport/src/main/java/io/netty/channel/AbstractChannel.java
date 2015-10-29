@@ -497,6 +497,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 }
                 boolean firstRegistration = neverRegistered;
                 doRegister();
+                if (outboundBuffer != null) {
+                    outboundBuffer.markEntriesUnsafe();
+                }
                 neverRegistered = false;
                 registered = true;
                 safeSetSuccess(promise);

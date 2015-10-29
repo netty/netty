@@ -260,6 +260,22 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract ByteBufAllocator alloc();
 
     /**
+     * Marks this buffer as thread-local which helps to optimize deallocation/release calls.
+     * After calling, the user is responsible to keep the buffer usage only to the same thread is was allocated on.
+     * This applies to derived buffers as well as anything that manipulates refCnt and could cause deallocation
+     * on another thread.
+     *
+     * Expect undefined behaviour when violating these rules!
+     */
+    public ByteBuf local(boolean local) {
+        return this; // no-op
+    }
+
+    public boolean local() {
+        return false;
+    }
+
+    /**
      * Returns the <a href="http://en.wikipedia.org/wiki/Endianness">endianness</a>
      * of this buffer.
      */
@@ -1899,4 +1915,5 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
 
     @Override
     public abstract ByteBuf touch(Object hint);
+
 }

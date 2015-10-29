@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
@@ -33,4 +34,9 @@ public interface EventLoop extends EventExecutor, EventLoopGroup {
      * invoke event handler methods.
      */
     ChannelHandlerInvoker asInvoker();
+
+    /**
+     * Provides thread-local ByteBuf allocator bound to EventLoop's thread or null if not available.
+     */
+    ByteBufAllocator localAllocator();
 }

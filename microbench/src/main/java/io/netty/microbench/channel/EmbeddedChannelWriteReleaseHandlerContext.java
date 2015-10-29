@@ -317,4 +317,9 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext implements Chann
     public ChannelPromise voidPromise() {
         return channel().voidPromise();
     }
+
+    @Override
+    public ByteBufAllocator locAlloc() {
+        return alloc();
+    }
 }

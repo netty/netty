@@ -58,6 +58,7 @@ final class PoolThreadCache {
     private int allocations;
 
     private final Thread thread = Thread.currentThread();
+
     private final Runnable freeTask = new Runnable() {
         @Override
         public void run() {
@@ -65,10 +66,19 @@ final class PoolThreadCache {
         }
     };
 
+    final Recycler.Handle<MemoryRegionCache.Entry> regionCacheHandle =
+            MemoryRegionCache.RECYCLER.stackReference();
+
+    private final PooledByteBufAllocator parent;
+    private final ByteBufAllocator localAlloc;
+
+    private Recycler.Handle<PooledUnsafeDirectByteBuf> unsafeBufRecycler;
+    private Recycler.Handle<PooledDirectByteBuf> bufRecycler;
+
     // TODO: Test if adding padding helps under contention
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
 
-    PoolThreadCache(PoolArena<byte[]> heapArena, PoolArena<ByteBuffer> directArena,
+    PoolThreadCache(PooledByteBufAllocator parent, PoolArena<byte[]> heapArena, PoolArena<ByteBuffer> directArena,
                     int tinyCacheSize, int smallCacheSize, int normalCacheSize,
                     int maxCachedBufferCapacity, int freeSweepAllocationThreshold) {
         if (maxCachedBufferCapacity < 0) {
@@ -82,15 +92,17 @@ final class PoolThreadCache {
         this.freeSweepAllocationThreshold = freeSweepAllocationThreshold;
         this.heapArena = heapArena;
         this.directArena = directArena;
+        this.parent = parent;
+        this.localAlloc = parent.createThreadLocal(this);
         if (directArena != null) {
             tinySubPageDirectCaches = createSubPageCaches(
-                    tinyCacheSize, PoolArena.numTinySubpagePools, SizeClass.Tiny);
+                    this, tinyCacheSize, PoolArena.numTinySubpagePools, SizeClass.Tiny);
             smallSubPageDirectCaches = createSubPageCaches(
-                    smallCacheSize, directArena.numSmallSubpagePools, SizeClass.Small);
+                    this, smallCacheSize, directArena.numSmallSubpagePools, SizeClass.Small);
 
             numShiftsNormalDirect = log2(directArena.pageSize);
             normalDirectCaches = createNormalCaches(
-                    normalCacheSize, maxCachedBufferCapacity, directArena);
+                    this, normalCacheSize, maxCachedBufferCapacity, directArena);
         } else {
             // No directArea is configured so just null out all caches
             tinySubPageDirectCaches = null;
@@ -101,13 +113,13 @@ final class PoolThreadCache {
         if (heapArena != null) {
             // Create the caches for the heap allocations
             tinySubPageHeapCaches = createSubPageCaches(
-                    tinyCacheSize, PoolArena.numTinySubpagePools, SizeClass.Tiny);
+                    this, tinyCacheSize, PoolArena.numTinySubpagePools, SizeClass.Tiny);
             smallSubPageHeapCaches = createSubPageCaches(
-                    smallCacheSize, heapArena.numSmallSubpagePools, SizeClass.Small);
+                    this, smallCacheSize, heapArena.numSmallSubpagePools, SizeClass.Small);
 
             numShiftsNormalHeap = log2(heapArena.pageSize);
             normalHeapCaches = createNormalCaches(
-                    normalCacheSize, maxCachedBufferCapacity, heapArena);
+                    this, normalCacheSize, maxCachedBufferCapacity, heapArena);
         } else {
             // No heapArea is configured so just null out all caches
             tinySubPageHeapCaches = null;
@@ -121,14 +133,34 @@ final class PoolThreadCache {
         ThreadDeathWatcher.watch(thread, freeTask);
     }
 
+    Recycler.Handle<PooledUnsafeDirectByteBuf> unsafeBufRecycler() {
+        if (unsafeBufRecycler == null) {
+            unsafeBufRecycler = PooledUnsafeDirectByteBuf.RECYCLER.stackReference();
+        }
+
+        return unsafeBufRecycler;
+    }
+
+    Recycler.Handle<PooledDirectByteBuf> bufRecycler() {
+        if (bufRecycler == null) {
+            bufRecycler = PooledDirectByteBuf.RECYCLER.stackReference();
+        }
+
+        return bufRecycler;
+    }
+
+    ByteBufAllocator localAlloc() {
+        return localAlloc;
+    }
+
     private static <T> MemoryRegionCache<T>[] createSubPageCaches(
-            int cacheSize, int numCaches, SizeClass sizeClass) {
+            PoolThreadCache parent, int cacheSize, int numCaches, SizeClass sizeClass) {
         if (cacheSize > 0) {
             @SuppressWarnings("unchecked")
             MemoryRegionCache<T>[] cache = new MemoryRegionCache[numCaches];
             for (int i = 0; i < cache.length; i++) {
                 // TODO: maybe use cacheSize / cache.length
-                cache[i] = new SubPageMemoryRegionCache<T>(cacheSize, sizeClass);
+                cache[i] = new SubPageMemoryRegionCache<T>(cacheSize, sizeClass, parent);
             }
             return cache;
         } else {
@@ -137,7 +169,7 @@ final class PoolThreadCache {
     }
 
     private static <T> MemoryRegionCache<T>[] createNormalCaches(
-            int cacheSize, int maxCachedBufferCapacity, PoolArena<T> area) {
+            PoolThreadCache parent, int cacheSize, int maxCachedBufferCapacity, PoolArena<T> area) {
         if (cacheSize > 0) {
             int max = Math.min(area.chunkSize, maxCachedBufferCapacity);
             int arraySize = Math.max(1, log2(max / area.pageSize) + 1);
@@ -145,7 +177,7 @@ final class PoolThreadCache {
             @SuppressWarnings("unchecked")
             MemoryRegionCache<T>[] cache = new MemoryRegionCache[arraySize];
             for (int i = 0; i < cache.length; i++) {
-                cache[i] = new NormalMemoryRegionCache<T>(cacheSize);
+                cache[i] = new NormalMemoryRegionCache<T>(cacheSize, parent);
             }
             return cache;
         } else {
@@ -200,14 +232,16 @@ final class PoolThreadCache {
     /**
      * Add {@link PoolChunk} and {@code handle} to the cache if there is enough room.
      * Returns {@code true} if it fit into the cache {@code false} otherwise.
+     *
+     * @param local whether the call is coming from this cache's thread
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    boolean add(PoolArena<?> area, PoolChunk chunk, long handle, int normCapacity, SizeClass sizeClass) {
+    boolean add(PoolArena<?> area, boolean local, PoolChunk chunk, long handle, int normCapacity, SizeClass sizeClass) {
         MemoryRegionCache<?> cache = cache(area, normCapacity, sizeClass);
         if (cache == null) {
             return false;
         }
-        return cache.add(chunk, handle);
+        return cache.add(local, chunk, handle);
     }
 
     private MemoryRegionCache<?> cache(PoolArena<?> area, int normCapacity, SizeClass sizeClass) {
@@ -260,7 +294,7 @@ final class PoolThreadCache {
         if (cache == null) {
             return 0;
         }
-        return cache.free();
+        return cache.free(false);
     }
 
     void trim() {
@@ -324,14 +358,14 @@ final class PoolThreadCache {
      * Cache used for buffers which are backed by TINY or SMALL size.
      */
     private static final class SubPageMemoryRegionCache<T> extends MemoryRegionCache<T> {
-        SubPageMemoryRegionCache(int size, SizeClass sizeClass) {
-            super(size, sizeClass);
+        SubPageMemoryRegionCache(int size, SizeClass sizeClass, PoolThreadCache parent) {
+            super(size, sizeClass, parent);
         }
 
         @Override
         protected void initBuf(
                 PoolChunk<T> chunk, long handle, PooledByteBuf<T> buf, int reqCapacity) {
-            chunk.initBufWithSubpage(buf, handle, reqCapacity);
+            chunk.initBufWithSubpage(buf, handle, reqCapacity, parent);
         }
     }
 
@@ -339,14 +373,14 @@ final class PoolThreadCache {
      * Cache used for buffers which are backed by NORMAL size.
      */
     private static final class NormalMemoryRegionCache<T> extends MemoryRegionCache<T> {
-        NormalMemoryRegionCache(int size) {
-            super(size, SizeClass.Normal);
+        NormalMemoryRegionCache(int size, PoolThreadCache parent) {
+            super(size, SizeClass.Normal, parent);
         }
 
         @Override
         protected void initBuf(
                 PoolChunk<T> chunk, long handle, PooledByteBuf<T> buf, int reqCapacity) {
-            chunk.initBuf(buf, handle, reqCapacity);
+            chunk.initBuf(buf, handle, reqCapacity, parent);
         }
     }
 
@@ -355,11 +389,13 @@ final class PoolThreadCache {
         private final Queue<Entry<T>> queue;
         private final SizeClass sizeClass;
         private int allocations;
+        PoolThreadCache parent;
 
-        MemoryRegionCache(int size, SizeClass sizeClass) {
+        MemoryRegionCache(int size, SizeClass sizeClass, PoolThreadCache parent) {
             this.size = MathUtil.findNextPositivePowerOfTwo(size);
             queue = PlatformDependent.newFixedMpscQueue(this.size);
             this.sizeClass = sizeClass;
+            this.parent = parent;
         }
 
         /**
@@ -372,12 +408,12 @@ final class PoolThreadCache {
          * Add to cache if not already full.
          */
         @SuppressWarnings("unchecked")
-        public final boolean add(PoolChunk<T> chunk, long handle) {
-            Entry<T> entry = newEntry(chunk, handle);
+        public final boolean add(boolean local, PoolChunk<T> chunk, long handle) {
+            Entry<T> entry = newEntry(local ? parent.regionCacheHandle : RECYCLER.stackReference(), chunk, handle);
             boolean queued = queue.offer(entry);
             if (!queued) {
                 // If it was not possible to cache the chunk, immediately recycle the entry
-                entry.recycle();
+                entry.recycle(parent, local);
             }
 
             return queued;
@@ -392,7 +428,7 @@ final class PoolThreadCache {
                 return false;
             }
             initBuf(entry.chunk, entry.handle, buf, reqCapacity);
-            entry.recycle();
+            entry.recycle(parent, true);
 
             // allocations is not thread-safe which is fine as this is only called from the same thread all time.
             ++ allocations;
@@ -402,16 +438,16 @@ final class PoolThreadCache {
         /**
          * Clear out this cache and free up all previous cached {@link PoolChunk}s and {@code handle}s.
          */
-        public final int free() {
-            return free(Integer.MAX_VALUE);
+        public final int free(boolean local) {
+            return free(local, Integer.MAX_VALUE);
         }
 
-        private int free(int max) {
+        private int free(boolean local, int max) {
             int numFreed = 0;
             for (; numFreed < max; numFreed++) {
                 Entry<T> entry = queue.poll();
                 if (entry != null) {
-                    freeEntry(entry);
+                    freeEntry(local, entry);
                 } else {
                     // all cleared
                     return numFreed;
@@ -429,40 +465,46 @@ final class PoolThreadCache {
 
             // We not even allocated all the number that are
             if (free > 0) {
-                free(free);
+                free(true, free);
             }
         }
 
         @SuppressWarnings({ "unchecked", "rawtypes" })
-        private  void freeEntry(Entry entry) {
+        private  void freeEntry(boolean local, Entry entry) {
             PoolChunk chunk = entry.chunk;
             long handle = entry.handle;
 
             // recycle now so PoolChunk can be GC'ed.
-            entry.recycle();
+            entry.recycle(parent, local);
 
             chunk.arena.freeChunk(chunk, handle, sizeClass);
         }
 
         static final class Entry<T> {
-            final Handle recyclerHandle;
+            final Handle<Entry<T>> recyclerHandle;
             PoolChunk<T> chunk;
             long handle = -1;
 
-            Entry(Handle recyclerHandle) {
+            Entry(Handle<Entry<T>> recyclerHandle) {
                 this.recyclerHandle = recyclerHandle;
             }
 
-            void recycle() {
+            void recycle(PoolThreadCache parent, boolean local) {
                 chunk = null;
                 handle = -1;
-                RECYCLER.recycle(this, recyclerHandle);
+                // always on the same thread unless watchdog is calling free(...)
+
+                if (local) {
+                    recyclerHandle.recycleOnStack(parent.regionCacheHandle, this);
+                } else {
+                    recyclerHandle.recycle(this);
+                }
             }
         }
 
         @SuppressWarnings("rawtypes")
-        private static Entry newEntry(PoolChunk<?> chunk, long handle) {
-            Entry entry = RECYCLER.get();
+        private static Entry newEntry(Recycler.Handle<Entry> rhandle, PoolChunk<?> chunk, long handle) {
+            Entry entry = rhandle.get();
             entry.chunk = chunk;
             entry.handle = handle;
             return entry;

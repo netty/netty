@@ -60,6 +60,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     private int maxCapacity;
 
     private SwappedByteBuf swappedBuf;
+    boolean local; // helps optimize deallocation
 
     protected AbstractByteBuf(int maxCapacity) {
         if (maxCapacity < 0) {
@@ -123,6 +124,17 @@ public abstract class AbstractByteBuf extends ByteBuf {
     public ByteBuf clear() {
         readerIndex = writerIndex = 0;
         return this;
+    }
+
+    @Override
+    public ByteBuf local(boolean local) {
+        this.local = local;
+        return this;
+    }
+
+    @Override
+    public boolean local() {
+        return local;
     }
 
     @Override

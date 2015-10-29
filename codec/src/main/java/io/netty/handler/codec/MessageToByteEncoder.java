@@ -137,9 +137,9 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
     protected ByteBuf allocateBuffer(ChannelHandlerContext ctx, @SuppressWarnings("unused") I msg,
                                boolean preferDirect) throws Exception {
         if (preferDirect) {
-            return ctx.alloc().ioBuffer();
+            return ctx.locAlloc().ioBuffer().local(true);
         } else {
-            return ctx.alloc().heapBuffer();
+            return ctx.locAlloc().heapBuffer();
         }
     }
 

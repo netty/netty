@@ -780,7 +780,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
             }
 
             final ChannelPipeline pipeline = pipeline();
-            final ByteBufAllocator allocator = config.getAllocator();
+            final ByteBufAllocator allocator = loop.localAllocator();
             final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             allocHandle.reset(config);
 

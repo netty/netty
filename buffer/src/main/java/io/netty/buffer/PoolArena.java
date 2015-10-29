@@ -129,7 +129,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     abstract boolean isDirect();
 
     PooledByteBuf<T> allocate(PoolThreadCache cache, int reqCapacity, int maxCapacity) {
-        PooledByteBuf<T> buf = newByteBuf(maxCapacity);
+        PooledByteBuf<T> buf = newByteBuf(cache, maxCapacity);
         allocate(cache, buf, reqCapacity);
         return buf;
     }
@@ -192,7 +192,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                     assert s.doNotDestroy && s.elemSize == normCapacity;
                     long handle = s.allocate();
                     assert handle >= 0;
-                    s.chunk.initBufWithSubpage(buf, handle, reqCapacity);
+                    s.chunk.initBufWithSubpage(buf, handle, reqCapacity, cache);
 
                     if (tiny) {
                         ++allocationsTiny;
@@ -202,7 +202,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                     return;
                 }
             }
-            allocateNormal(buf, reqCapacity, normCapacity);
+            allocateNormal(buf, reqCapacity, normCapacity, cache);
             return;
         }
         if (normCapacity <= chunkSize) {
@@ -210,18 +210,22 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                 // was able to allocate out of the cache so move on
                 return;
             }
-            allocateNormal(buf, reqCapacity, normCapacity);
+            allocateNormal(buf, reqCapacity, normCapacity, cache);
         } else {
             // Huge allocations are never served via the cache so just call allocateHuge
             allocateHuge(buf, reqCapacity);
         }
     }
 
-    private synchronized void allocateNormal(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
+    private synchronized void allocateNormal(PooledByteBuf<T> buf, int reqCapacity, int normCapacity,
+                                             PoolThreadCache cache) {
             ++allocationsNormal;
-        if (q050.allocate(buf, reqCapacity, normCapacity) || q025.allocate(buf, reqCapacity, normCapacity) ||
-            q000.allocate(buf, reqCapacity, normCapacity) || qInit.allocate(buf, reqCapacity, normCapacity) ||
-            q075.allocate(buf, reqCapacity, normCapacity) || q100.allocate(buf, reqCapacity, normCapacity)) {
+        if (q050.allocate(buf, reqCapacity, normCapacity, cache) ||
+                q025.allocate(buf, reqCapacity, normCapacity, cache) ||
+            q000.allocate(buf, reqCapacity, normCapacity, cache) ||
+                qInit.allocate(buf, reqCapacity, normCapacity, cache) ||
+            q075.allocate(buf, reqCapacity, normCapacity, cache) ||
+                q100.allocate(buf, reqCapacity, normCapacity, cache)) {
             return;
         }
 
@@ -229,7 +233,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         PoolChunk<T> c = newChunk(pageSize, maxOrder, pageShifts, chunkSize);
         long handle = c.allocate(normCapacity);
         assert handle > 0;
-        c.initBuf(buf, handle, reqCapacity);
+        c.initBuf(buf, handle, reqCapacity, cache);
         qInit.add(c);
     }
 
@@ -238,13 +242,17 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         buf.initUnpooled(newUnpooledChunk(reqCapacity), reqCapacity);
     }
 
-    void free(PoolChunk<T> chunk, long handle, int normCapacity, PoolThreadCache cache) {
+    void free(PooledByteBuf<T> buf) {
+        free(buf.chunk, buf.local, buf.handle, buf.maxLength, buf.cache);
+    }
+
+    void free(PoolChunk<T> chunk, boolean local, long handle, int normCapacity, PoolThreadCache cache) {
         if (chunk.unpooled) {
             allocationsHuge.decrement();
             destroyChunk(chunk);
         } else {
             SizeClass sizeClass = sizeClass(normCapacity);
-            if (cache != null && cache.add(this, chunk, handle, normCapacity, sizeClass)) {
+            if (cache != null && cache.add(this, local, chunk, handle, normCapacity, sizeClass)) {
                 // cached so not free it.
                 return;
             }
@@ -356,7 +364,8 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         int readerIndex = buf.readerIndex();
         int writerIndex = buf.writerIndex();
 
-        allocate(parent.threadCache(), buf, newCapacity);
+        allocate(buf.local ? buf.cache : parent.threadCache(), buf, newCapacity);
+
         if (newCapacity > oldCapacity) {
             memoryCopy(
                     oldMemory, oldOffset,
@@ -377,7 +386,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         buf.setIndex(readerIndex, writerIndex);
 
         if (freeOldMemory) {
-            free(oldChunk, oldHandle, oldMaxLength, buf.cache);
+            free(oldChunk, buf.local, oldHandle, oldMaxLength, buf.cache);
         }
     }
 
@@ -512,7 +521,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     protected abstract PoolChunk<T> newChunk(int pageSize, int maxOrder, int pageShifts, int chunkSize);
     protected abstract PoolChunk<T> newUnpooledChunk(int capacity);
-    protected abstract PooledByteBuf<T> newByteBuf(int maxCapacity);
+    protected abstract PooledByteBuf<T> newByteBuf(PoolThreadCache cache, int maxCapacity);
     protected abstract void memoryCopy(T src, int srcOffset, T dst, int dstOffset, int length);
     protected abstract void destroyChunk(PoolChunk<T> chunk);
 
@@ -614,7 +623,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         }
 
         @Override
-        protected PooledByteBuf<byte[]> newByteBuf(int maxCapacity) {
+        protected PooledByteBuf<byte[]> newByteBuf(PoolThreadCache cache, int maxCapacity) {
             return HAS_UNSAFE ? PooledUnsafeHeapByteBuf.newUnsafeInstance(maxCapacity)
                     : PooledHeapByteBuf.newInstance(maxCapacity);
         }
@@ -657,11 +666,11 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         }
 
         @Override
-        protected PooledByteBuf<ByteBuffer> newByteBuf(int maxCapacity) {
+        protected PooledByteBuf<ByteBuffer> newByteBuf(PoolThreadCache cache, int maxCapacity) {
             if (HAS_UNSAFE) {
-                return PooledUnsafeDirectByteBuf.newInstance(maxCapacity);
+                return PooledUnsafeDirectByteBuf.newInstance(cache.unsafeBufRecycler(), maxCapacity);
             } else {
-                return PooledDirectByteBuf.newInstance(maxCapacity);
+                return PooledDirectByteBuf.newInstance(cache.bufRecycler(), maxCapacity);
             }
         }
 

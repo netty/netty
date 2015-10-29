@@ -123,7 +123,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
     @Override
     public final ByteBufAllocator alloc() {
-        return chunk.arena.parent;
+        return local ? cache.localAlloc() : chunk.arena.parent;
     }
 
     @Override
@@ -152,13 +152,19 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
             final long handle = this.handle;
             this.handle = -1;
             memory = null;
-            chunk.arena.free(chunk, handle, maxLength, cache);
-            recycle();
+            chunk.arena.free(chunk, local, handle, maxLength, cache);
+            recycle(local);
         }
     }
 
-    private void recycle() {
-        recyclerHandle.recycle(this);
+    private void recycle(boolean local) {
+        this.local = false;
+
+        if (local) {
+            recyclerHandle.recycleSameThread(this);
+        } else {
+            recyclerHandle.recycle(this);
+        }
     }
 
     protected final int idx(int index) {

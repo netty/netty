@@ -450,6 +450,13 @@ public interface ChannelHandlerContext extends AttributeMap {
     ByteBufAllocator alloc();
 
     /**
+     * Returns a thread-local pooled ByteBuf allocator from the EventLoop.
+     * This is an optimized version of alloc() to use inside the event loop.
+     * This will fallback to alloc() when not available.
+     */
+    ByteBufAllocator locAlloc();
+
+    /**
      * Return a new {@link ChannelPromise}.
      */
     ChannelPromise newPromise();
