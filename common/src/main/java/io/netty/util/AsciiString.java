@@ -30,14 +30,14 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.MathUtil.isOutOfBounds;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * A string which has been encoded into a character encoding whose character always takes a single byte, similarly to
  * ASCII. It internally keeps its content in a byte array unlike {@link String}, which uses a character array, for
  * reduced memory footprint and faster data transfer from/to byte-based data structures such as a byte array and
- * {@link ByteBuffer}. It is often used in conjunction with {@link TextHeaders}.
+ * {@link ByteBuffer}. It is often used in conjunction with {@link Headers} that require a {@link CharSequence}.
  * <p>
  * This class was designed to provide an immutable array of bytes, and caches some internal state based upon the value
  * of this array. However underlying access to this byte array is provided via not copying the array on construction or
@@ -47,7 +47,6 @@ import static io.netty.util.internal.MathUtil.isOutOfBounds;
 public final class AsciiString implements CharSequence, Comparable<CharSequence> {
     public static final AsciiString EMPTY_STRING = new AsciiString("");
     private static final char MAX_CHAR_VALUE = 255;
-    private static final int HASH_CODE_PRIME = 31;
 
     /**
      * If this value is modified outside the constructor then call {@link #arrayChanged()}.
@@ -1085,27 +1084,17 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         return res.toArray(new AsciiString[res.size()]);
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Provides a case-insensitive hash code for Ascii like byte strings.
+     */
     @Override
     public int hashCode() {
-        int h = hash;
-        if (h == 0) {
-            final int end = arrayOffset() + length();
-            for (int i = arrayOffset(); i < end; ++i) {
-                // masking with 0x1F reduces the number of overall bits that impact the hash code but makes the hash
-                // code the same regardless of character case (upper case or lower case hash is the same).
-                h = h * HASH_CODE_PRIME + (value[i] & 0x1F);
-            }
-
-            hash = h;
+        if (hash == 0) {
+            hash = PlatformDependent.hashCodeAscii(value, offset, length);
         }
         return hash;
-    }
-
-    /**
-     * Generate a hash code that will be consistent regardless of ASCII character casing.
-     */
-    public int hashCodeCaseInsensitive() {
-        return hashCode();
     }
 
     @Override
@@ -1118,9 +1107,9 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         }
 
         AsciiString other = (AsciiString) obj;
-        return hashCode() == other.hashCode() &&
-               PlatformDependent.equals(array(), arrayOffset(), arrayOffset() + length(),
-                                        other.array(), other.arrayOffset(), other.arrayOffset() + other.length());
+        return length() == other.length() &&
+               hashCode() == other.hashCode() &&
+               PlatformDependent.equals(array(), arrayOffset(), other.array(), other.arrayOffset(), length());
     }
 
     /**
@@ -1336,7 +1325,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             new HashingStrategy<CharSequence>() {
         @Override
         public int hashCode(CharSequence o) {
-            return AsciiString.caseInsensitiveHashCode(o);
+            return AsciiString.hashCode(o);
         }
 
         @Override
@@ -1344,6 +1333,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             return AsciiString.contentEqualsIgnoreCase(a, b);
         }
     };
+
     public static final HashingStrategy<CharSequence> CASE_SENSITIVE_HASHER =
             new HashingStrategy<CharSequence>() {
         @Override
@@ -1368,27 +1358,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
     /**
      * Returns the case-insensitive hash code of the specified string. Note that this method uses the same hashing
      * algorithm with {@link #hashCode()} so that you can put both {@link AsciiString}s and arbitrary
-     * {@link CharSequence}s into the same {@link TextHeaders}.
-     */
-    public static int caseInsensitiveHashCode(CharSequence value) {
-        if (value == null) {
-            return 0;
-        }
-        if (value.getClass() == AsciiString.class) {
-            return ((AsciiString) value).hashCodeCaseInsensitive();
-        }
-
-        int hash = 0;
-        for (int i = 0; i < value.length(); ++i) {
-            hash = hash * HASH_CODE_PRIME + (value.charAt(i) & 0x1F);
-        }
-        return hash;
-    }
-
-    /**
-     * A case-sensitive version of {@link caseInsensitiveHashCode(CharSequence)}.
-     * @param value
-     * @return
+     * {@link CharSequence}s into the same headers.
      */
     public static int hashCode(CharSequence value) {
         if (value == null) {
@@ -1398,11 +1368,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             return ((AsciiString) value).hashCode();
         }
 
-        int hash = 0;
-        for (int i = 0; i < value.length(); ++i) {
-            hash = hash * HASH_CODE_PRIME + (value.charAt(i) & 0x1F);
-        }
-        return hash;
+        return PlatformDependent.hashCodeAscii(value);
     }
 
     /**

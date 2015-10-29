@@ -49,6 +49,11 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static io.netty.util.internal.PlatformDependent0.HASH_CODE_ASCII_SEED;
+import static io.netty.util.internal.PlatformDependent0.hashCodeAsciiCompute;
+import static io.netty.util.internal.PlatformDependent0.hashCodeAsciiSanitize;
+import static io.netty.util.internal.PlatformDependent0.hashCodeAsciiSanitizeAsByte;
+
 /**
  * Utility that detects various properties specific to the current runtime
  * environment, such as Java version and the availability of the
@@ -361,6 +366,88 @@ public final class PlatformDependent {
         return PlatformDependent0.getLong(data, index);
     }
 
+    private static long getLongSafe(byte[] bytes, int offset) {
+        if (BIG_ENDIAN_NATIVE_ORDER) {
+            return (long) bytes[offset] << 56 |
+                    ((long) bytes[offset + 1] & 0xff) << 48 |
+                    ((long) bytes[offset + 2] & 0xff) << 40 |
+                    ((long) bytes[offset + 3] & 0xff) << 32 |
+                    ((long) bytes[offset + 4] & 0xff) << 24 |
+                    ((long) bytes[offset + 5] & 0xff) << 16 |
+                    ((long) bytes[offset + 6] & 0xff) <<  8 |
+                    (long) bytes[offset + 7] & 0xff;
+        }
+        return (long) bytes[offset] & 0xff |
+                ((long) bytes[offset + 1] & 0xff) << 8 |
+                ((long) bytes[offset + 2] & 0xff) << 16 |
+                ((long) bytes[offset + 3] & 0xff) << 24 |
+                ((long) bytes[offset + 4] & 0xff) << 32 |
+                ((long) bytes[offset + 5] & 0xff) << 40 |
+                ((long) bytes[offset + 6] & 0xff) << 48 |
+                ((long) bytes[offset + 7] & 0xff) << 56;
+    }
+
+    private static long getLongFromBytesSafe(CharSequence bytes, int offset) {
+        if (BIG_ENDIAN_NATIVE_ORDER) {
+            return (long) bytes.charAt(offset) << 56 |
+                    ((long) bytes.charAt(offset + 1) & 0xff) << 48 |
+                    ((long) bytes.charAt(offset + 2) & 0xff) << 40 |
+                    ((long) bytes.charAt(offset + 3) & 0xff) << 32 |
+                    ((long) bytes.charAt(offset + 4) & 0xff) << 24 |
+                    ((long) bytes.charAt(offset + 5) & 0xff) << 16 |
+                    ((long) bytes.charAt(offset + 6) & 0xff) <<  8 |
+                    (long) bytes.charAt(offset + 7) & 0xff;
+        }
+        return (long) bytes.charAt(offset) & 0xff |
+                ((long) bytes.charAt(offset + 1) & 0xff) << 8 |
+                ((long) bytes.charAt(offset + 2) & 0xff) << 16 |
+                ((long) bytes.charAt(offset + 3) & 0xff) << 24 |
+                ((long) bytes.charAt(offset + 4) & 0xff) << 32 |
+                ((long) bytes.charAt(offset + 5) & 0xff) << 40 |
+                ((long) bytes.charAt(offset + 6) & 0xff) << 48 |
+                ((long) bytes.charAt(offset + 7) & 0xff) << 56;
+    }
+
+    private static int getIntSafe(byte[] bytes, int offset) {
+        if (BIG_ENDIAN_NATIVE_ORDER) {
+            return bytes[offset] << 24 |
+                    (bytes[offset + 1] & 0xff) << 16 |
+                    (bytes[offset + 2] & 0xff) << 8 |
+                    bytes[offset + 3] & 0xff;
+        }
+        return bytes[offset] & 0xff |
+                (bytes[offset + 1] & 0xff) << 8 |
+                (bytes[offset + 2] & 0xff) << 16 |
+                bytes[offset + 3] << 24;
+    }
+
+    private static int getIntFromBytesSafe(CharSequence bytes, int offset) {
+        if (BIG_ENDIAN_NATIVE_ORDER) {
+            return bytes.charAt(offset) << 24 |
+                    (bytes.charAt(offset + 1) & 0xff) << 16 |
+                    (bytes.charAt(offset + 2) & 0xff) << 8 |
+                    bytes.charAt(offset + 3) & 0xff;
+        }
+        return bytes.charAt(offset) & 0xff |
+                (bytes.charAt(offset + 1) & 0xff) << 8 |
+                (bytes.charAt(offset + 2) & 0xff) << 16 |
+                bytes.charAt(offset + 3) << 24;
+    }
+
+    private static short getShortSafe(byte[] bytes, int offset) {
+        if (BIG_ENDIAN_NATIVE_ORDER) {
+            return (short) (bytes[offset] << 8 | (bytes[offset + 1] & 0xff));
+        }
+        return (short) (bytes[offset] & 0xff | (bytes[offset + 1] << 8));
+    }
+
+    private static short getShortFromBytesSafe(CharSequence bytes, int offset) {
+        if (BIG_ENDIAN_NATIVE_ORDER) {
+            return (short) (bytes.charAt(offset) << 8 | (bytes.charAt(offset + 1) & 0xff));
+        }
+        return (short) (bytes.charAt(offset) & 0xff | (bytes.charAt(offset + 1) << 8));
+    }
+
     public static void putOrderedObject(Object object, long address, Object value) {
         PlatformDependent0.putOrderedObject(object, address, value);
     }
@@ -415,16 +502,51 @@ public final class PlatformDependent {
      *
      * @param bytes1 the first byte array.
      * @param startPos1 the position (inclusive) to start comparing in {@code bytes1}.
-     * @param endPos1 the position (exclusive) to stop comparing in {@code bytes1}.
      * @param bytes2 the second byte array.
      * @param startPos2 the position (inclusive) to start comparing in {@code bytes2}.
-     * @param endPos2 the position (exclusive) to stop comparing in {@code bytes2}.
+     * @param length the amount of bytes to compare. This is assumed to be validated as not going out of bounds
+     * by the caller.
      */
-    public static boolean equals(byte[] bytes1, int startPos1, int endPos1, byte[] bytes2, int startPos2, int endPos2) {
+    public static boolean equals(byte[] bytes1, int startPos1, byte[] bytes2, int startPos2, int length) {
         if (!hasUnsafe() || !PlatformDependent0.unalignedAccess()) {
-            return safeEquals(bytes1, startPos1, endPos1, bytes2, startPos2, endPos2);
+            return equalsSafe(bytes1, startPos1, bytes2, startPos2, length);
         }
-        return PlatformDependent0.equals(bytes1, startPos1, endPos1, bytes2, startPos2, endPos2);
+        return PlatformDependent0.equals(bytes1, startPos1, bytes2, startPos2, length);
+    }
+
+    /**
+     * Calculate a hash code of a byte array assuming ASCII character encoding.
+     * The resulting hash code will be case insensitive.
+     * @param bytes The array which contains the data to hash.
+     * @param startPos What index to start generating a hash code in {@code bytes}
+     * @param length The amount of bytes that should be accounted for in the computation.
+     * @return The hash code of {@code bytes} assuming ASCII character encoding.
+     * The resulting hash code will be case insensitive.
+     */
+    public static int hashCodeAscii(byte[] bytes, int startPos, int length) {
+        if (!hasUnsafe() || !PlatformDependent0.unalignedAccess()) {
+            return hashCodeAsciiSafe(bytes, startPos, length);
+        }
+        return PlatformDependent0.hashCodeAscii(bytes, startPos, length);
+    }
+
+    /**
+     * Calculate a hash code of a byte array assuming ASCII character encoding.
+     * The resulting hash code will be case insensitive.
+     * <p>
+     * This method assumes that {@code bytes} is equivalent to a {@code byte[]} but just using {@link CharSequence}
+     * for storage. The upper most byte of each {@code char} from {@code bytes} is ignored.
+     * @param bytes The array which contains the data to hash (assumed to be equivalent to a {@code byte[]}).
+     * @return The hash code of {@code bytes} assuming ASCII character encoding.
+     * The resulting hash code will be case insensitive.
+     */
+    public static int hashCodeAscii(CharSequence bytes) {
+        char[] array;
+        if (!hasUnsafe() || !PlatformDependent0.unalignedAccess() ||
+                (array = PlatformDependent0.array(bytes)) == null) {
+            return hashCodeAsciiSafe(bytes);
+        }
+        return PlatformDependent0.hashCodeAscii(array);
     }
 
     /**
@@ -939,14 +1061,8 @@ public final class PlatformDependent {
         return PlatformDependent0.addressSize();
     }
 
-    private static boolean safeEquals(byte[] bytes1, int startPos1, int endPos1,
-                                      byte[] bytes2, int startPos2, int endPos2) {
-        final int len1 = endPos1 - startPos1;
-        final int len2 = endPos2 - startPos2;
-        if (len1 != len2) {
-            return false;
-        }
-        final int end = startPos1 + len1;
+    private static boolean equalsSafe(byte[] bytes1, int startPos1, byte[] bytes2, int startPos2, int length) {
+        final int end = startPos1 + length;
         for (int i = startPos1, j = startPos2; i < end; ++i, ++j) {
             if (bytes1[i] != bytes2[j]) {
                 return false;
@@ -955,7 +1071,78 @@ public final class PlatformDependent {
         return true;
     }
 
+    /**
+     * Package private for testing purposes only!
+     */
+    static int hashCodeAsciiSafe(byte[] bytes, int startPos, int length) {
+        int hash = HASH_CODE_ASCII_SEED;
+        final int remainingBytes = length & 7;
+        final int end = startPos + remainingBytes;
+        for (int i = startPos - 8 + length; i >= end; i -= 8) {
+            hash = hashCodeAsciiCompute(getLongSafe(bytes, i), hash);
+        }
+        switch(remainingBytes) {
+        case 7:
+            return ((hash * 31 + Integer.rotateLeft(hashCodeAsciiSanitize(getIntSafe(bytes, startPos + 3)), 13))
+                     * 31 + hashCodeAsciiSanitize(getShortSafe(bytes, startPos + 1)))
+                       * 31 + hashCodeAsciiSanitize(bytes[startPos]);
+        case 6:
+            return (hash * 31 + Integer.rotateLeft(hashCodeAsciiSanitize(getIntSafe(bytes, startPos + 2)), 13))
+                    * 31 + hashCodeAsciiSanitize(getShortSafe(bytes, startPos));
+        case 5:
+            return (hash * 31 + Integer.rotateLeft(hashCodeAsciiSanitize(getIntSafe(bytes, startPos + 1)), 13))
+                    * 31 + hashCodeAsciiSanitize(bytes[startPos]);
+        case 4:
+            return hash * 31 + hashCodeAsciiSanitize(getIntSafe(bytes, startPos));
+        case 3:
+            return (hash * 31 + hashCodeAsciiSanitize(getShortSafe(bytes, startPos + 1)))
+                    * 31 + hashCodeAsciiSanitize(bytes[startPos]);
+        case 2:
+            return hash * 31 + hashCodeAsciiSanitize(getShortSafe(bytes, startPos));
+        case 1:
+            return hash * 31 + hashCodeAsciiSanitize(bytes[startPos]);
+        default:
+            return hash;
+        }
+    }
+
+    /**
+     * Package private for testing purposes only!
+     */
+    static int hashCodeAsciiSafe(CharSequence bytes) {
+        int hash = HASH_CODE_ASCII_SEED;
+        final int remainingBytes = bytes.length() & 7;
+        for (int i = bytes.length() - 8; i >= remainingBytes; i -= 8) {
+            hash = hashCodeAsciiCompute(getLongFromBytesSafe(bytes, i), hash);
+        }
+        switch(remainingBytes) {
+        case 7:
+            return ((hash * 31 + Integer.rotateLeft(hashCodeAsciiSanitize(getIntFromBytesSafe(bytes, 3)), 13))
+                     * 31 + hashCodeAsciiSanitize(getShortFromBytesSafe(bytes, 1)))
+                       * 31 + hashCodeAsciiSanitizeAsByte(bytes.charAt(0));
+        case 6:
+            return (hash * 31 + Integer.rotateLeft(hashCodeAsciiSanitize(getIntFromBytesSafe(bytes, 2)), 13))
+                    * 31 + hashCodeAsciiSanitize(getShortFromBytesSafe(bytes, 0));
+        case 5:
+            return (hash * 31 + Integer.rotateLeft(hashCodeAsciiSanitize(getIntFromBytesSafe(bytes, 1)), 13))
+                    * 31 + hashCodeAsciiSanitizeAsByte(bytes.charAt(0));
+        case 4:
+            return hash * 31 + hashCodeAsciiSanitize(getIntFromBytesSafe(bytes, 0));
+        case 3:
+            return (hash * 31 + hashCodeAsciiSanitize(getShortFromBytesSafe(bytes, 1)))
+                    * 31 + hashCodeAsciiSanitizeAsByte(bytes.charAt(0));
+        case 2:
+            return hash * 31 + hashCodeAsciiSanitize(getShortFromBytesSafe(bytes, 0));
+        case 1:
+            return hash * 31 + hashCodeAsciiSanitizeAsByte(bytes.charAt(0));
+        default:
+            return hash;
+        }
+    }
+
     private static final class AtomicLongCounter extends AtomicLong implements LongCounter {
+        private static final long serialVersionUID = 4074772784610639305L;
+
         @Override
         public void add(long delta) {
             addAndGet(delta);

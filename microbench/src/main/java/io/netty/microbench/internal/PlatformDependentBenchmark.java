@@ -51,7 +51,7 @@ public class PlatformDependentBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     @BenchmarkMode(Mode.Throughput)
     public boolean unsafeBytesEqual() {
-        return PlatformDependent.equals(bytes1, 0, bytes1.length, bytes2, 0, bytes2.length);
+        return PlatformDependent.equals(bytes1, 0, bytes2, 0, bytes1.length);
     }
 
     @Benchmark

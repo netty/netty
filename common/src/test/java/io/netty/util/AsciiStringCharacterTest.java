@@ -22,7 +22,6 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.Random;
 
-import static io.netty.util.AsciiString.caseInsensitiveHashCode;
 import static io.netty.util.AsciiString.contains;
 import static io.netty.util.AsciiString.containsIgnoreCase;
 import static org.junit.Assert.assertArrayEquals;
@@ -97,7 +96,6 @@ public class AsciiStringCharacterTest {
         AsciiString sub1 = ascii.subSequence(start, end, false);
         AsciiString sub2 = ascii.subSequence(start, end, true);
         assertEquals(sub1.hashCode(), sub2.hashCode());
-        assertEquals(sub1.hashCodeCaseInsensitive(), sub2.hashCode());
         assertEquals(sub1, sub2);
         for (int i = start; i < end; ++i) {
             assertEquals(init[i], sub1.byteAt(i - start));
@@ -199,14 +197,14 @@ public class AsciiStringCharacterTest {
         assertEquals(errorString, lowerCaseExpected, lowerCaseAscii.hashCode());
 
         // Test case insensitive hash codes are equal
-        final int expectedCaseInsensative = lowerCaseAscii.hashCodeCaseInsensitive();
-        assertEquals(errorString, expectedCaseInsensative, caseInsensitiveHashCode(upperCaseBuilder));
-        assertEquals(errorString, expectedCaseInsensative, caseInsensitiveHashCode(upperCaseString));
-        assertEquals(errorString, expectedCaseInsensative, caseInsensitiveHashCode(lowerCaseString));
-        assertEquals(errorString, expectedCaseInsensative, caseInsensitiveHashCode(lowerCaseAscii));
-        assertEquals(errorString, expectedCaseInsensative, caseInsensitiveHashCode(upperCaseAscii));
-        assertEquals(errorString, expectedCaseInsensative, lowerCaseAscii.hashCodeCaseInsensitive());
-        assertEquals(errorString, expectedCaseInsensative, upperCaseAscii.hashCodeCaseInsensitive());
+        final int expectedCaseInsensative = lowerCaseAscii.hashCode();
+        assertEquals(errorString, expectedCaseInsensative, AsciiString.hashCode(upperCaseBuilder));
+        assertEquals(errorString, expectedCaseInsensative, AsciiString.hashCode(upperCaseString));
+        assertEquals(errorString, expectedCaseInsensative, AsciiString.hashCode(lowerCaseString));
+        assertEquals(errorString, expectedCaseInsensative, AsciiString.hashCode(lowerCaseAscii));
+        assertEquals(errorString, expectedCaseInsensative, AsciiString.hashCode(upperCaseAscii));
+        assertEquals(errorString, expectedCaseInsensative, lowerCaseAscii.hashCode());
+        assertEquals(errorString, expectedCaseInsensative, upperCaseAscii.hashCode());
 
         // Test that opposite cases are equal
         assertEquals(errorString, lowerCaseAscii.hashCode(), AsciiString.hashCode(upperCaseString));
@@ -222,7 +220,7 @@ public class AsciiStringCharacterTest {
             array[offset + i] = s1.charAt(i);
         }
         CharBuffer buffer = CharBuffer.wrap(array, offset, s1.length());
-        assertEquals(caseInsensitiveHashCode(s1), caseInsensitiveHashCode(buffer));
+        assertEquals(AsciiString.hashCode(s1), AsciiString.hashCode(buffer));
     }
 
     @Test
