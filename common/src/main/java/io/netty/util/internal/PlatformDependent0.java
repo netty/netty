@@ -40,6 +40,10 @@ final class PlatformDependent0 {
     static final Unsafe UNSAFE;
     private static final long ADDRESS_FIELD_OFFSET;
     private static final long BYTE_ARRAY_BASE_OFFSET;
+    private static final long CHAR_ARRAY_BASE_OFFSET;
+    private static final long CHAR_ARRAY_INDEX_SCALE;
+    private static final long STRING_VALUE_FIELD_OFFSET;
+    static final int HASH_CODE_ASCII_SEED = 0xc2b2ae35; // constant borrowed from murmur3
 
     /**
      * Limits the number of bytes to copy per {@link Unsafe#copyMemory(long, long, long)} to allow safepoint polling
@@ -108,11 +112,14 @@ final class PlatformDependent0 {
 
         if (unsafe == null) {
             ADDRESS_FIELD_OFFSET = -1;
-            BYTE_ARRAY_BASE_OFFSET = -1;
+            BYTE_ARRAY_BASE_OFFSET = CHAR_ARRAY_BASE_OFFSET = CHAR_ARRAY_INDEX_SCALE = -1;
             UNALIGNED = false;
+            STRING_VALUE_FIELD_OFFSET = -1;
         } else {
             ADDRESS_FIELD_OFFSET = objectFieldOffset(addressField);
             BYTE_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(byte[].class);
+            CHAR_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(char[].class);
+            CHAR_ARRAY_INDEX_SCALE = UNSAFE.arrayIndexScale(char[].class);
             boolean unaligned;
             try {
                 Class<?> bitsClass = Class.forName("java.nio.Bits", false, ClassLoader.getSystemClassLoader());
@@ -128,6 +135,26 @@ final class PlatformDependent0 {
 
             UNALIGNED = unaligned;
             logger.debug("java.nio.Bits.unaligned: {}", UNALIGNED);
+
+            Field stringValueField = AccessController.doPrivileged(new PrivilegedAction<Field>() {
+                @Override
+                public Field run() {
+                    try {
+                        Field f = String.class.getDeclaredField("value");
+                        f.setAccessible(true);
+                        return f;
+                    } catch (NoSuchFieldException e) {
+                        logger.warn("Failed to find String value array." +
+                                "String hash code optimizations are disabled.", e);
+                    } catch (SecurityException e) {
+                        logger.info("No permissions to get String value array." +
+                                "String hash code optimizations are disabled.", e);
+                    }
+                    return null;
+                }
+            });
+            STRING_VALUE_FIELD_OFFSET = stringValueField == null ?
+                    -1 : UNSAFE.objectFieldOffset(stringValueField);
         }
     }
 
@@ -272,35 +299,188 @@ final class PlatformDependent0 {
         }
     }
 
-    static boolean equals(byte[] bytes1, int startPos1, int endPos1, byte[] bytes2, int startPos2, int endPos2) {
-        final int len1 = endPos1 - startPos1;
-        final int len2 = endPos2 - startPos2;
-        if (len1 != len2) {
-            return false;
-        }
-        if (len1 == 0) {
+    static boolean equals(byte[] bytes1, int startPos1, byte[] bytes2, int startPos2, int length) {
+        if (length == 0) {
             return true;
         }
         final long baseOffset1 = BYTE_ARRAY_BASE_OFFSET + startPos1;
         final long baseOffset2 = BYTE_ARRAY_BASE_OFFSET + startPos2;
-        int remainingBytes = len1 & 7;
-        for (int i = len1 - 8; i >= remainingBytes; i -= 8) {
-            if (UNSAFE.getLong(bytes1, baseOffset1 + i) != UNSAFE.getLong(bytes2, baseOffset2 + i)) {
+        final int remainingBytes = length & 7;
+        final long end = baseOffset1 + remainingBytes;
+        for (long i = baseOffset1 - 8 + length, j = baseOffset2 - 8 + length; i >= end; i -= 8, j -= 8) {
+            if (UNSAFE.getLong(bytes1, i) != UNSAFE.getLong(bytes2, j)) {
                 return false;
             }
         }
-        if (remainingBytes >= 4) {
-            remainingBytes -= 4;
-            if (UNSAFE.getInt(bytes1, baseOffset1 + remainingBytes) !=
-                UNSAFE.getInt(bytes2, baseOffset2 + remainingBytes)) {
-                return false;
+        switch (remainingBytes) {
+        case 7:
+            return UNSAFE.getInt(bytes1, baseOffset1 + 3) == UNSAFE.getInt(bytes2, baseOffset2 + 3) &&
+                   UNSAFE.getChar(bytes1, baseOffset1 + 1) == UNSAFE.getChar(bytes2, baseOffset2 + 1) &&
+                   UNSAFE.getByte(bytes1, baseOffset1) == UNSAFE.getByte(bytes2, baseOffset2);
+        case 6:
+            return UNSAFE.getInt(bytes1, baseOffset1 + 2) == UNSAFE.getInt(bytes2, baseOffset2 + 2) &&
+                   UNSAFE.getChar(bytes1, baseOffset1) == UNSAFE.getChar(bytes2, baseOffset2);
+        case 5:
+            return UNSAFE.getInt(bytes1, baseOffset1 + 1) == UNSAFE.getInt(bytes2, baseOffset2 + 1) &&
+                   UNSAFE.getByte(bytes1, baseOffset1) == UNSAFE.getByte(bytes2, baseOffset2);
+        case 4:
+            return UNSAFE.getInt(bytes1, baseOffset1) == UNSAFE.getInt(bytes2, baseOffset2);
+        case 3:
+            return UNSAFE.getChar(bytes1, baseOffset1 + 1) == UNSAFE.getChar(bytes2, baseOffset2 + 1) &&
+                   UNSAFE.getByte(bytes1, baseOffset1) == UNSAFE.getByte(bytes2, baseOffset2);
+        case 2:
+            return UNSAFE.getChar(bytes1, baseOffset1) == UNSAFE.getChar(bytes2, baseOffset2);
+        case 1:
+            return UNSAFE.getByte(bytes1, baseOffset1) == UNSAFE.getByte(bytes2, baseOffset2);
+        default:
+            return true;
+        }
+    }
+
+    /**
+     * This must remain consistent with {@link #hashCodeAscii(char[])}.
+     */
+    static int hashCodeAscii(byte[] bytes, int startPos, int length) {
+        int hash = HASH_CODE_ASCII_SEED;
+        final long baseOffset = BYTE_ARRAY_BASE_OFFSET + startPos;
+        final int remainingBytes = length & 7;
+        if (length > 7) { // Fast path for small sized inputs. Benchmarking shows this is beneficial.
+            final long end = baseOffset + remainingBytes;
+            for (long i = baseOffset - 8 + length; i >= end; i -= 8) {
+                hash = hashCodeAsciiCompute(UNSAFE.getLong(bytes, i), hash);
             }
         }
-        if (remainingBytes >= 2) {
-            return UNSAFE.getChar(bytes1, baseOffset1) == UNSAFE.getChar(bytes2, baseOffset2) &&
-                   (remainingBytes == 2 || bytes1[startPos1 + 2] == bytes2[startPos2 + 2]);
+        switch(remainingBytes) {
+        case 7:
+            return ((hash * 31 + Integer.rotateLeft(hashCodeAsciiSanitize(UNSAFE.getInt(bytes, baseOffset + 3)), 13))
+                     * 31 + hashCodeAsciiSanitize(UNSAFE.getShort(bytes, baseOffset + 1)))
+                       * 31 + hashCodeAsciiSanitize(UNSAFE.getByte(bytes, baseOffset));
+        case 6:
+            return (hash * 31 + Integer.rotateLeft(hashCodeAsciiSanitize(UNSAFE.getInt(bytes, baseOffset + 2)), 13))
+                    * 31 + hashCodeAsciiSanitize(UNSAFE.getShort(bytes, baseOffset));
+        case 5:
+            return (hash * 31 + Integer.rotateLeft(hashCodeAsciiSanitize(UNSAFE.getInt(bytes, baseOffset + 1)), 13))
+                    * 31 + hashCodeAsciiSanitize(UNSAFE.getByte(bytes, baseOffset));
+        case 4:
+            return hash * 31 + hashCodeAsciiSanitize(UNSAFE.getInt(bytes, baseOffset));
+        case 3:
+            return (hash * 31 + hashCodeAsciiSanitize(UNSAFE.getShort(bytes, baseOffset + 1)))
+                    * 31 + hashCodeAsciiSanitize(UNSAFE.getByte(bytes, baseOffset));
+        case 2:
+            return hash * 31 + hashCodeAsciiSanitize(UNSAFE.getShort(bytes, baseOffset));
+        case 1:
+            return hash * 31 + hashCodeAsciiSanitize(UNSAFE.getByte(bytes, baseOffset));
+        default:
+            return hash;
         }
-        return bytes1[startPos1] == bytes2[startPos2];
+    }
+
+    /**
+     * This method assumes that {@code bytes} is equivalent to a {@code byte[]} but just using {@code char[]}
+     * for storage. The MSB of each {@code char} from {@code bytes} is ignored.
+     * <p>
+     * This must remain consistent with {@link #hashCodeAscii(byte[], int, int)}.
+     */
+    static int hashCodeAscii(char[] bytes) {
+        int hash = HASH_CODE_ASCII_SEED;
+        final int remainingBytes = bytes.length & 7;
+        for (int i = bytes.length - 8; i >= remainingBytes; i -= 8) {
+            hash = hashCodeAsciiComputeFromChar(
+                                  UNSAFE.getLong(bytes, CHAR_ARRAY_BASE_OFFSET + i * CHAR_ARRAY_INDEX_SCALE),
+                                  UNSAFE.getLong(bytes, CHAR_ARRAY_BASE_OFFSET + (i + 4) * CHAR_ARRAY_INDEX_SCALE),
+                                  hash);
+        }
+        switch(remainingBytes) {
+        case 7:
+            return ((hash * 31 + Integer.rotateLeft(hashCodeAsciiSanitizeFromChar(
+                            UNSAFE.getLong(bytes, CHAR_ARRAY_BASE_OFFSET + 3 * CHAR_ARRAY_INDEX_SCALE)), 13))
+                     * 31 + hashCodeAsciiSanitizeFromChar(
+                             UNSAFE.getInt(bytes, CHAR_ARRAY_BASE_OFFSET + CHAR_ARRAY_INDEX_SCALE)))
+                       * 31 + hashCodeAsciiSanitizeFromChar(
+                               UNSAFE.getShort(bytes, CHAR_ARRAY_BASE_OFFSET));
+        case 6:
+            return (hash * 31 + Integer.rotateLeft(hashCodeAsciiSanitizeFromChar(
+                            UNSAFE.getLong(bytes, CHAR_ARRAY_BASE_OFFSET + 2 * CHAR_ARRAY_INDEX_SCALE)), 13))
+                    * 31 + hashCodeAsciiSanitizeFromChar(
+                            UNSAFE.getInt(bytes, CHAR_ARRAY_BASE_OFFSET));
+        case 5:
+            return (hash * 31 + Integer.rotateLeft(hashCodeAsciiSanitizeFromChar(
+                            UNSAFE.getLong(bytes, CHAR_ARRAY_BASE_OFFSET + CHAR_ARRAY_INDEX_SCALE)), 13))
+                    * 31 + hashCodeAsciiSanitizeFromChar(
+                            UNSAFE.getShort(bytes, CHAR_ARRAY_BASE_OFFSET));
+        case 4:
+            return hash * 31 + hashCodeAsciiSanitizeFromChar(
+                            UNSAFE.getLong(bytes, CHAR_ARRAY_BASE_OFFSET));
+        case 3:
+            return (hash * 31 + hashCodeAsciiSanitizeFromChar(
+                            UNSAFE.getInt(bytes, CHAR_ARRAY_BASE_OFFSET + CHAR_ARRAY_INDEX_SCALE)))
+                    * 31 + hashCodeAsciiSanitizeFromChar(
+                            UNSAFE.getShort(bytes, CHAR_ARRAY_BASE_OFFSET));
+        case 2:
+            return hash * 31 + hashCodeAsciiSanitizeFromChar(
+                            UNSAFE.getInt(bytes, CHAR_ARRAY_BASE_OFFSET));
+        case 1:
+            return hash * 31 + hashCodeAsciiSanitizeFromChar(
+                            UNSAFE.getShort(bytes, CHAR_ARRAY_BASE_OFFSET));
+        default:
+            return hash;
+        }
+    }
+
+    static char[] array(CharSequence data) {
+        return (STRING_VALUE_FIELD_OFFSET != -1 && data.getClass() == String.class) ?
+                (char[]) UNSAFE.getObject(data, STRING_VALUE_FIELD_OFFSET) : null;
+    }
+
+    static int hashCodeAsciiCompute(long value, int hash) {
+        // masking with 0x1f reduces the number of overall bits that impact the hash code but makes the hash
+        // code the same regardless of character case (upper case or lower case hash is the same).
+        return (hash * 31 +
+                // High order int
+                (int) ((value & 0x1f1f1f1f00000000L) >>> 32)) * 31 +
+                // Low order int
+                hashCodeAsciiSanitize((int) value);
+    }
+
+    static int hashCodeAsciiComputeFromChar(long high, long low, int hash) {
+        // masking with 0x1f reduces the number of overall bits that impact the hash code but makes the hash
+        // code the same regardless of character case (upper case or lower case hash is the same).
+        return (hash * 31 +
+                // High order int (which is low order for char)
+                hashCodeAsciiSanitizeFromChar(low)) * 31 +
+                // Low order int (which is high order for char)
+                hashCodeAsciiSanitizeFromChar(high);
+    }
+
+    static int hashCodeAsciiSanitize(int value) {
+        return value & 0x1f1f1f1f;
+    }
+
+    private static int hashCodeAsciiSanitizeFromChar(long value) {
+        return (int) (((value & 0x1f000000000000L) >>> 24) |
+                      ((value & 0x1f00000000L) >>> 16) |
+                      ((value & 0x1f0000) >>> 8) |
+                      (value & 0x1f));
+    }
+
+    static int hashCodeAsciiSanitize(short value) {
+        return value & 0x1f1f;
+    }
+
+    private static int hashCodeAsciiSanitizeFromChar(int value) {
+        return ((value & 0x1f0000) >>> 8) | (value & 0x1f);
+    }
+
+    static int hashCodeAsciiSanitizeAsByte(char value) {
+        return value & 0x1f;
+    }
+
+    static int hashCodeAsciiSanitize(byte value) {
+        return value & 0x1f;
+    }
+
+    private static int hashCodeAsciiSanitizeFromChar(short value) {
+        return value & 0x1f;
     }
 
     static <U, W> AtomicReferenceFieldUpdater<U, W> newAtomicReferenceFieldUpdater(
@@ -371,5 +551,4 @@ final class PlatformDependent0 {
 
     private PlatformDependent0() {
     }
-
 }
