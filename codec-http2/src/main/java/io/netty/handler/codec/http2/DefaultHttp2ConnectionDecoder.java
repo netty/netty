@@ -62,9 +62,9 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         this.encoder = checkNotNull(encoder, "encoder");
         this.requestVerifier = checkNotNull(requestVerifier, "requestVerifier");
         if (connection.local().flowController() == null) {
-            connection.local().flowController(
-                    new DefaultHttp2LocalFlowController(connection, encoder.frameWriter()));
+            connection.local().flowController(new DefaultHttp2LocalFlowController(connection));
         }
+        connection.local().flowController().frameWriter(encoder.frameWriter());
     }
 
     @Override

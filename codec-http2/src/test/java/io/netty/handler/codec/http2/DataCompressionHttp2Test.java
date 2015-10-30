@@ -296,8 +296,13 @@ public class DataCompressionHttp2Test {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
+                Http2FrameWriter frameWriter = new DefaultHttp2FrameWriter();
+                serverConnection.remote().flowController(
+                        new DefaultHttp2RemoteFlowController(serverConnection));
+                serverConnection.local().flowController(
+                        new DefaultHttp2LocalFlowController(serverConnection).frameWriter(frameWriter));
                 Http2ConnectionEncoder encoder = new CompressorHttp2ConnectionEncoder(
-                        new DefaultHttp2ConnectionEncoder(serverConnection, new DefaultHttp2FrameWriter()));
+                        new DefaultHttp2ConnectionEncoder(serverConnection, frameWriter));
                 Http2ConnectionDecoder decoder =
                         new DefaultHttp2ConnectionDecoder(serverConnection, encoder, new DefaultHttp2FrameReader());
                 Http2ConnectionHandler connectionHandler = new Http2ConnectionHandler.Builder()
@@ -314,8 +319,14 @@ public class DataCompressionHttp2Test {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
+                Http2FrameWriter frameWriter = new DefaultHttp2FrameWriter();
+                clientConnection.remote().flowController(
+                        new DefaultHttp2RemoteFlowController(clientConnection));
+                clientConnection.local().flowController(
+                        new DefaultHttp2LocalFlowController(clientConnection).frameWriter(frameWriter));
                 clientEncoder = new CompressorHttp2ConnectionEncoder(
-                        new DefaultHttp2ConnectionEncoder(clientConnection, new DefaultHttp2FrameWriter()));
+                        new DefaultHttp2ConnectionEncoder(clientConnection, frameWriter));
+
                 Http2ConnectionDecoder decoder =
                         new DefaultHttp2ConnectionDecoder(clientConnection, clientEncoder,
                                 new DefaultHttp2FrameReader());

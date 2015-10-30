@@ -46,26 +46,41 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     public static final float DEFAULT_WINDOW_UPDATE_RATIO = 0.5f;
 
     private final Http2Connection connection;
-    private final Http2FrameWriter frameWriter;
     private final Http2Connection.PropertyKey stateKey;
+    private Http2FrameWriter frameWriter;
     private ChannelHandlerContext ctx;
     private float windowUpdateRatio;
     private int initialWindowSize = DEFAULT_WINDOW_SIZE;
 
-    public DefaultHttp2LocalFlowController(Http2Connection connection, Http2FrameWriter frameWriter) {
-        this(connection, frameWriter, DEFAULT_WINDOW_UPDATE_RATIO);
+    public DefaultHttp2LocalFlowController(Http2Connection connection) {
+        this(connection, DEFAULT_WINDOW_UPDATE_RATIO, false);
     }
 
+    /**
+     * Constructs a controller with the given settings.
+     *
+     * @param connection the connection state.
+     * @param windowUpdateRatio the window percentage below which to send a {@code WINDOW_UPDATE}.
+     * @param autoRefillConnectionWindow if {@code true}, effectively disables the connection window
+     * in the flow control algorithm as they will always refill automatically without requiring the
+     * application to consume the bytes. When enabled, the maximum bytes you must be prepared to
+     * queue is proportional to {@code maximum number of concurrent streams * the initial window
+     * size per stream}
+     * (<a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_CONCURRENT_STREAMS</a>
+     * <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_INITIAL_WINDOW_SIZE</a>).
+     */
     public DefaultHttp2LocalFlowController(Http2Connection connection,
-            Http2FrameWriter frameWriter, float windowUpdateRatio) {
+                                           float windowUpdateRatio,
+                                           boolean autoRefillConnectionWindow) {
         this.connection = checkNotNull(connection, "connection");
-        this.frameWriter = checkNotNull(frameWriter, "frameWriter");
         windowUpdateRatio(windowUpdateRatio);
 
         // Add a flow state for the connection.
         stateKey = connection.newKey();
-        connection.connectionStream()
-                .setProperty(stateKey, new DefaultState(connection.connectionStream(), initialWindowSize));
+        FlowState connectionState = autoRefillConnectionWindow ?
+                new AutoRefillState(connection.connectionStream(), initialWindowSize) :
+                new DefaultState(connection.connectionStream(), initialWindowSize);
+        connection.connectionStream().setProperty(stateKey, connectionState);
 
         // Register for notification of new streams.
         connection.addListener(new Http2ConnectionAdapter() {
@@ -107,8 +122,14 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     }
 
     @Override
+    public DefaultHttp2LocalFlowController frameWriter(Http2FrameWriter frameWriter) {
+        this.frameWriter = checkNotNull(frameWriter, "frameWriter");
+        return this;
+    }
+
+    @Override
     public void channelHandlerContext(ChannelHandlerContext ctx) {
-        this.ctx = ctx;
+        this.ctx = checkNotNull(ctx, "ctx");
     }
 
     @Override
@@ -270,9 +291,32 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     }
 
     /**
+     * Flow control state that does autorefill of the flow control window when the data is
+     * received.
+     */
+    private final class AutoRefillState extends DefaultState {
+        public AutoRefillState(Http2Stream stream, int initialWindowSize) {
+            super(stream, initialWindowSize);
+        }
+
+        @Override
+        public void receiveFlowControlledFrame(int dataLength) throws Http2Exception {
+            super.receiveFlowControlledFrame(dataLength);
+            // Need to call the super to consume the bytes, since this.consumeBytes does nothing.
+            super.consumeBytes(dataLength);
+        }
+
+        @Override
+        public boolean consumeBytes(int numBytes) throws Http2Exception {
+            // Do nothing, since the bytes are already consumed upon receiving the data.
+            return false;
+        }
+    }
+
+    /**
      * Flow control window state for an individual stream.
      */
-    private final class DefaultState implements FlowState {
+    private class DefaultState implements FlowState {
         private final Http2Stream stream;
 
         /**

@@ -198,8 +198,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             return promise.setFailure(t);
         }
 
-        ChannelFuture future = frameWriter.writePriority(ctx, streamId, streamDependency, weight, exclusive, promise);
-        return future;
+        return frameWriter.writePriority(ctx, streamId, streamDependency, weight, exclusive, promise);
     }
 
     @Override
@@ -222,20 +221,17 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             return promise.setFailure(e);
         }
 
-        ChannelFuture future = frameWriter.writeSettings(ctx, settings, promise);
-        return future;
+        return frameWriter.writeSettings(ctx, settings, promise);
     }
 
     @Override
     public ChannelFuture writeSettingsAck(ChannelHandlerContext ctx, ChannelPromise promise) {
-        ChannelFuture future = frameWriter.writeSettingsAck(ctx, promise);
-        return future;
+        return frameWriter.writeSettingsAck(ctx, promise);
     }
 
     @Override
     public ChannelFuture writePing(ChannelHandlerContext ctx, boolean ack, ByteBuf data, ChannelPromise promise) {
-        ChannelFuture future = frameWriter.writePing(ctx, ack, data, promise);
-        return future;
+        return frameWriter.writePing(ctx, ack, data, promise);
     }
 
     @Override
@@ -253,8 +249,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             return promise.setFailure(e);
         }
 
-        ChannelFuture future = frameWriter.writePushPromise(ctx, streamId, promisedStreamId, headers, padding, promise);
-        return future;
+        return frameWriter.writePushPromise(ctx, streamId, promisedStreamId, headers, padding, promise);
     }
 
     @Override

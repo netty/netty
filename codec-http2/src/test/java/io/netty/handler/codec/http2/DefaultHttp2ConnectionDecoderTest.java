@@ -221,6 +221,7 @@ public class DefaultHttp2ConnectionDecoderTest {
                 verify(localFlow)
                         .receiveFlowControlledFrame(eq((Http2Stream) null), eq(data), eq(padding), eq(true));
                 verify(localFlow).consumeBytes(eq((Http2Stream) null), eq(processedBytes));
+                verify(localFlow).frameWriter(any(Http2FrameWriter.class));
                 verifyNoMoreInteractions(localFlow);
                 verify(listener, never()).onDataRead(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean());
             } finally {
@@ -240,6 +241,7 @@ public class DefaultHttp2ConnectionDecoderTest {
             verify(localFlow)
                     .receiveFlowControlledFrame(eq((Http2Stream) null), eq(data), eq(padding), eq(true));
             verify(localFlow).consumeBytes(eq((Http2Stream) null), eq(processedBytes));
+            verify(localFlow).frameWriter(any(Http2FrameWriter.class));
             verifyNoMoreInteractions(localFlow);
 
             // Verify that the event was absorbed and not propagated to the observer.
