@@ -15,10 +15,12 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.handler.codec.Headers;
 import io.netty.util.internal.StringUtil;
 
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.Map;
 
 import static io.netty.util.internal.StringUtil.COMMA;
 
@@ -61,6 +63,50 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
             };
         }
         return charSequenceEscaper;
+    }
+
+    @Override
+    public HttpHeaders add(Headers<? extends CharSequence, ? extends CharSequence, ?> headers) {
+        // Override the fast-copy mechanism used by DefaultHeaders
+        if (headers == this) {
+            throw new IllegalArgumentException("can't add to itself.");
+        }
+        if (headers instanceof CombinedHttpHeaders) {
+            if (isEmpty()) {
+                // Can use the fast underlying copy
+                addImpl(headers);
+            } else {
+                // Values are already escaped so don't escape again
+                for (Map.Entry<? extends CharSequence, ? extends CharSequence> header : headers) {
+                    addEscapedValue(header.getKey(), header.getValue());
+                }
+            }
+        } else {
+            for (Map.Entry<? extends CharSequence, ? extends CharSequence> header : headers) {
+                add(header.getKey(), header.getValue());
+            }
+        }
+        return this;
+    }
+
+    @Override
+    public HttpHeaders set(Headers<? extends CharSequence, ? extends CharSequence, ?> headers) {
+        if (headers == this) {
+            return this;
+        }
+        clear();
+        return add(headers);
+    }
+
+    @Override
+    public HttpHeaders setAll(Headers<? extends CharSequence, ? extends CharSequence, ?> headers) {
+        if (headers == this) {
+            return this;
+        }
+        for (CharSequence key : headers.names()) {
+            remove(key);
+        }
+        return add(headers);
     }
 
     @Override

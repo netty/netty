@@ -15,12 +15,14 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.handler.codec.DefaultHeaders;
 import io.netty.handler.codec.http.HttpHeadersTestUtils.HeaderValue;
 import org.junit.Test;
 
 import java.util.Collections;
 
 import static io.netty.util.AsciiString.contentEquals;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class CombinedHttpHeadersTest {
@@ -39,6 +41,60 @@ public class CombinedHttpHeadersTest {
         headers.add(HEADER_NAME, HeaderValue.THREE.asArray());
         headers.add(HEADER_NAME, HeaderValue.FIVE.subset(4));
         assertCsvValues(headers, HeaderValue.FIVE);
+    }
+
+    @Test
+    public void addCombinedHeadersWhenEmpty() {
+        final CombinedHttpHeaders headers = newCombinedHttpHeaders();
+        final CombinedHttpHeaders otherHeaders = newCombinedHttpHeaders();
+        otherHeaders.add(HEADER_NAME, "a");
+        otherHeaders.add(HEADER_NAME, "b");
+        headers.add(otherHeaders);
+        assertEquals("a,b", headers.get(HEADER_NAME).toString());
+    }
+
+    @Test
+    public void addCombinedHeadersWhenNotEmpty() {
+        final CombinedHttpHeaders headers = newCombinedHttpHeaders();
+        headers.add(HEADER_NAME, "a");
+        final CombinedHttpHeaders otherHeaders = newCombinedHttpHeaders();
+        otherHeaders.add(HEADER_NAME, "b");
+        otherHeaders.add(HEADER_NAME, "c");
+        headers.add(otherHeaders);
+        assertEquals("a,b,c", headers.get(HEADER_NAME).toString());
+    }
+
+    @Test
+    public void setCombinedHeadersWhenNotEmpty() {
+        final CombinedHttpHeaders headers = newCombinedHttpHeaders();
+        headers.add(HEADER_NAME, "a");
+        final CombinedHttpHeaders otherHeaders = newCombinedHttpHeaders();
+        otherHeaders.add(HEADER_NAME, "b");
+        otherHeaders.add(HEADER_NAME, "c");
+        headers.set(otherHeaders);
+        assertEquals("b,c", headers.get(HEADER_NAME).toString());
+    }
+
+    @Test
+    public void addUncombinedHeaders() {
+        final CombinedHttpHeaders headers = newCombinedHttpHeaders();
+        headers.add(HEADER_NAME, "a");
+        final DefaultHttpHeaders otherHeaders = new DefaultHttpHeaders();
+        otherHeaders.add(HEADER_NAME, "b");
+        otherHeaders.add(HEADER_NAME, "c");
+        headers.add(otherHeaders);
+        assertEquals("a,b,c", headers.get(HEADER_NAME).toString());
+    }
+
+    @Test
+    public void setUncombinedHeaders() {
+        final CombinedHttpHeaders headers = newCombinedHttpHeaders();
+        headers.add(HEADER_NAME, "a");
+        final DefaultHttpHeaders otherHeaders = new DefaultHttpHeaders();
+        otherHeaders.add(HEADER_NAME, "b");
+        otherHeaders.add(HEADER_NAME, "c");
+        headers.set(otherHeaders);
+        assertEquals("b,c", headers.get(HEADER_NAME).toString());
     }
 
     @Test

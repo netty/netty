@@ -153,6 +153,59 @@ public class DefaultHeadersTest {
     }
 
     @Test
+    public void testCopy() throws Exception {
+        TestDefaultHeaders headers = newInstance();
+        headers.addBoolean(of("boolean"), true);
+        headers.addLong(of("long"), Long.MAX_VALUE);
+        headers.addInt(of("int"), Integer.MIN_VALUE);
+        headers.addShort(of("short"), Short.MAX_VALUE);
+        headers.addChar(of("char"), Character.MAX_VALUE);
+        headers.addByte(of("byte"), Byte.MAX_VALUE);
+        headers.addDouble(of("double"), Double.MAX_VALUE);
+        headers.addFloat(of("float"), Float.MAX_VALUE);
+        long millis = System.currentTimeMillis();
+        headers.addTimeMillis(of("millis"), millis);
+        headers.addObject(of("object"), "Hello World");
+        headers.add(of("name"), of("value"));
+
+        headers = newInstance().add(headers);
+
+        assertTrue(headers.containsBoolean(of("boolean"), true));
+        assertFalse(headers.containsBoolean(of("boolean"), false));
+
+        assertTrue(headers.containsLong(of("long"), Long.MAX_VALUE));
+        assertFalse(headers.containsLong(of("long"), Long.MIN_VALUE));
+
+        assertTrue(headers.containsInt(of("int"), Integer.MIN_VALUE));
+        assertFalse(headers.containsInt(of("int"), Integer.MAX_VALUE));
+
+        assertTrue(headers.containsShort(of("short"), Short.MAX_VALUE));
+        assertFalse(headers.containsShort(of("short"), Short.MIN_VALUE));
+
+        assertTrue(headers.containsChar(of("char"), Character.MAX_VALUE));
+        assertFalse(headers.containsChar(of("char"), Character.MIN_VALUE));
+
+        assertTrue(headers.containsByte(of("byte"), Byte.MAX_VALUE));
+        assertFalse(headers.containsLong(of("byte"), Byte.MIN_VALUE));
+
+        assertTrue(headers.containsDouble(of("double"), Double.MAX_VALUE));
+        assertFalse(headers.containsDouble(of("double"), Double.MIN_VALUE));
+
+        assertTrue(headers.containsFloat(of("float"), Float.MAX_VALUE));
+        assertFalse(headers.containsFloat(of("float"), Float.MIN_VALUE));
+
+        assertTrue(headers.containsTimeMillis(of("millis"), millis));
+        // This test doesn't work on midnight, January 1, 1970 UTC
+        assertFalse(headers.containsTimeMillis(of("millis"), 0));
+
+        assertTrue(headers.containsObject(of("object"), "Hello World"));
+        assertFalse(headers.containsObject(of("object"), ""));
+
+        assertTrue(headers.contains(of("name"), of("value")));
+        assertFalse(headers.contains(of("name"), of("value1")));
+    }
+
+    @Test
     public void canMixConvertedAndNormalValues() {
         TestDefaultHeaders headers = newInstance();
         headers.add(of("name"), of("value"));
