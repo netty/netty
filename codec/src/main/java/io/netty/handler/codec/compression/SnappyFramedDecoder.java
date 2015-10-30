@@ -153,7 +153,7 @@ public class SnappyFramedDecoder extends ByteToMessageDecoder {
                     } else {
                         in.skipBytes(4);
                     }
-                    out.add(in.readSlice(chunkLength - 4).retain());
+                    out.add(in.readSlice(chunkLength - 4, true));
                     break;
                 case COMPRESSED_DATA:
                     if (!started) {
