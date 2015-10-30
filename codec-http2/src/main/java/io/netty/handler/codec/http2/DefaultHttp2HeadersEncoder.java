@@ -23,6 +23,7 @@ import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
+import io.netty.util.AsciiString;
 import io.netty.util.ByteString;
 
 
@@ -65,7 +66,7 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
                 tableSizeChangeOutput.reset();
             }
 
-            for (Entry<ByteString, ByteString> header : headers) {
+            for (Entry<AsciiString, AsciiString> header : headers) {
                 encodeHeader(header.getKey(), header.getValue(), stream);
             }
         } catch (Http2Exception e) {
@@ -93,8 +94,8 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
 
     private void encodeHeader(ByteString key, ByteString value, OutputStream stream) throws IOException {
         encoder.encodeHeader(stream,
-                key.isEntireArrayUsed() ? key.array() : new ByteString(key, true).array(),
-                value.isEntireArrayUsed() ? value.array() : new ByteString(value, true).array(),
+                key.isEntireArrayUsed() ? key.array() : new AsciiString(key, true).array(),
+                value.isEntireArrayUsed() ? value.array() : new AsciiString(value, true).array(),
                 sensitivityDetector.isSensitive(key, value));
     }
 

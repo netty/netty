@@ -31,6 +31,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
+import io.netty.util.AsciiString;
 import io.netty.util.ByteString;
 
 /**
@@ -214,7 +215,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
      * @return the expected content encoding of the new content.
      * @throws Http2Exception if the {@code contentEncoding} is not supported and warrants an exception
      */
-    protected ByteString getTargetContentEncoding(ByteString contentEncoding) throws Http2Exception {
+    protected AsciiString getTargetContentEncoding(AsciiString contentEncoding) throws Http2Exception {
         return contentEncoding;
     }
 
@@ -241,13 +242,13 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
             return null;
         }
 
-        ByteString encoding = headers.get(CONTENT_ENCODING);
+        AsciiString encoding = headers.get(CONTENT_ENCODING);
         if (encoding == null) {
             encoding = IDENTITY;
         }
         final EmbeddedChannel compressor = newContentCompressor(encoding);
         if (compressor != null) {
-            ByteString targetContentEncoding = getTargetContentEncoding(encoding);
+            AsciiString targetContentEncoding = getTargetContentEncoding(encoding);
             if (IDENTITY.equals(targetContentEncoding)) {
                 headers.remove(CONTENT_ENCODING);
             } else {

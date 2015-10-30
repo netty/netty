@@ -60,12 +60,13 @@ public class ByteString {
     /**
      * Offset into {@link #value} that all operations should use when acting upon {@link #value}.
      */
-    private final int offset;
+    protected final int offset;
     /**
      * Length in bytes for {@link #value} that we care about. This is independent from {@code value.length}
      * because we may be looking at a subsection of the array.
      */
     private final int length;
+
     /**
      * The hash code is cached after it is first computed. It can be reset with {@link #arrayChanged()}.
      */
@@ -96,15 +97,15 @@ public class ByteString {
     }
 
     /**
-     * Construct a new {@link BinaryString} object from a {@code byte[]} array.
+     * Construct a new {@link ByteString} object from a {@code byte[]} array.
      * @param copy {@code true} then a copy of the memory will be made. {@code false} the underlying memory
      * will be shared.
      */
     public ByteString(byte[] value, int start, int length, boolean copy) {
+        this.length = length;
         if (copy) {
             this.value = Arrays.copyOfRange(value, start, start + length);
             this.offset = 0;
-            this.length = length;
         } else {
             if (start < 0 || start > value.length - length) {
                 throw new IndexOutOfBoundsException("expected: " + "0 <= start(" + start + ") <= start + length(" +
@@ -112,7 +113,6 @@ public class ByteString {
             }
             this.value = value;
             this.offset = start;
-            this.length = length;
         }
     }
 
@@ -166,16 +166,15 @@ public class ByteString {
                             + ") <= " + "value.capacity(" + value.capacity() + ')');
         }
 
+        this.length = length;
         if (value.hasArray()) {
             if (copy) {
                 final int bufferOffset = value.arrayOffset() + start;
                 this.value = Arrays.copyOfRange(value.array(), bufferOffset, bufferOffset + length);
                 offset = 0;
-                this.length = length;
             } else {
                 this.value = value.array();
                 this.offset = start;
-                this.length = length;
             }
         } else {
             this.value = new byte[length];
@@ -183,20 +182,19 @@ public class ByteString {
             value.get(this.value, 0, length);
             value.position(oldPos);
             this.offset = 0;
-            this.length = length;
         }
     }
 
     /**
-     * Create a copy of {@link value} into a {@link ByteString} using the encoding type of {@code charset}.
+     * Create a copy of {@param value} into a {@link ByteString} using the encoding type of {@code charset}.
      */
     public ByteString(char[] value, Charset charset) {
         this(value, charset, 0, checkNotNull(value, "value").length);
     }
 
     /**
-     * Create a copy of {@link value} into a {@link ByteString} using the encoding type of {@code charset}.
-     * The copy will start at index {@code start} and copy {@code length} bytes.
+     * Create a copy of {@param value} into a {@link ByteString} using the encoding type of {@code charset}.
+     * The copy will start at index {@param start} and copy {@param length} chars.
      */
     public ByteString(char[] value, Charset charset, int start, int length) {
         if (start < 0 || length > checkNotNull(value, "value").length - start) {
@@ -204,7 +202,7 @@ public class ByteString {
                     + ") <= " + "length(" + length + ')');
         }
 
-        CharBuffer cbuf = CharBuffer.wrap(value, start, start + length);
+        CharBuffer cbuf = CharBuffer.wrap(value, start, length);
         CharsetEncoder encoder = CharsetUtil.getEncoder(charset);
         ByteBuffer nativeBuffer = ByteBuffer.allocate((int) (encoder.maxBytesPerChar() * length));
         encoder.encode(cbuf, nativeBuffer, true);
@@ -239,14 +237,6 @@ public class ByteString {
         this.value = Arrays.copyOfRange(nativeBuffer.array(), offset, offset + nativeBuffer.position());
         this.offset = 0;
         this.length = this.value.length;
-    }
-
-    /**
-     * Create a new {@link ByteString} assuming ASCII encoding of {@code value}.
-     * @param value value to translate assuming ASCII encoding.
-     */
-    public static final ByteString fromAscii(CharSequence value) {
-        return new ByteString(value, CharsetUtil.US_ASCII);
     }
 
     /**
@@ -479,170 +469,6 @@ public class ByteString {
         }
 
         return factory.newInstance(value, start + offset, end - start, copy);
-    }
-
-    public final int parseAsciiInt() {
-        return parseAsciiInt(0, length(), 10);
-    }
-
-    public final int parseAsciiInt(int radix) {
-        return parseAsciiInt(0, length(), radix);
-    }
-
-    public final int parseAsciiInt(int start, int end) {
-        return parseAsciiInt(start, end, 10);
-    }
-
-    public final int parseAsciiInt(int start, int end, int radix) {
-        if (radix < Character.MIN_RADIX || radix > Character.MAX_RADIX) {
-            throw new NumberFormatException();
-        }
-
-        if (start == end) {
-            throw new NumberFormatException();
-        }
-
-        int i = start;
-        boolean negative = byteAt(i) == '-';
-        if (negative && ++i == end) {
-            throw new NumberFormatException(subSequence(start, end, false).toString());
-        }
-
-        return parseAsciiInt(i, end, radix, negative);
-    }
-
-    private int parseAsciiInt(int start, int end, int radix, boolean negative) {
-        int max = Integer.MIN_VALUE / radix;
-        int result = 0;
-        int currOffset = start;
-        while (currOffset < end) {
-            int digit = Character.digit((char) (value[currOffset++ + offset] & 0xFF), radix);
-            if (digit == -1) {
-                throw new NumberFormatException(subSequence(start, end, false).toString());
-            }
-            if (max > result) {
-                throw new NumberFormatException(subSequence(start, end, false).toString());
-            }
-            int next = result * radix - digit;
-            if (next > result) {
-                throw new NumberFormatException(subSequence(start, end, false).toString());
-            }
-            result = next;
-        }
-        if (!negative) {
-            result = -result;
-            if (result < 0) {
-                throw new NumberFormatException(subSequence(start, end, false).toString());
-            }
-        }
-        return result;
-    }
-
-    public final long parseAsciiLong() {
-        return parseAsciiLong(0, length(), 10);
-    }
-
-    public final long parseAsciiLong(int radix) {
-        return parseAsciiLong(0, length(), radix);
-    }
-
-    public final long parseAsciiLong(int start, int end) {
-        return parseAsciiLong(start, end, 10);
-    }
-
-    public final long parseAsciiLong(int start, int end, int radix) {
-        if (radix < Character.MIN_RADIX || radix > Character.MAX_RADIX) {
-            throw new NumberFormatException();
-        }
-
-        if (start == end) {
-            throw new NumberFormatException();
-        }
-
-        int i = start;
-        boolean negative = byteAt(i) == '-';
-        if (negative && ++i == end) {
-            throw new NumberFormatException(subSequence(start, end, false).toString());
-        }
-
-        return parseAsciiLong(i, end, radix, negative);
-    }
-
-    private long parseAsciiLong(int start, int end, int radix, boolean negative) {
-        long max = Long.MIN_VALUE / radix;
-        long result = 0;
-        int currOffset = start;
-        while (currOffset < end) {
-            int digit = Character.digit((char) (value[currOffset++ + offset] & 0xFF), radix);
-            if (digit == -1) {
-                throw new NumberFormatException(subSequence(start, end, false).toString());
-            }
-            if (max > result) {
-                throw new NumberFormatException(subSequence(start, end, false).toString());
-            }
-            long next = result * radix - digit;
-            if (next > result) {
-                throw new NumberFormatException(subSequence(start, end, false).toString());
-            }
-            result = next;
-        }
-        if (!negative) {
-            result = -result;
-            if (result < 0) {
-                throw new NumberFormatException(subSequence(start, end, false).toString());
-            }
-        }
-        return result;
-    }
-
-    public final char parseChar() {
-        return parseChar(0);
-    }
-
-    public char parseChar(int start) {
-        if (start + 1 >= length()) {
-            throw new IndexOutOfBoundsException("2 bytes required to convert to character. index " +
-                    start + " would go out of bounds.");
-        }
-        final int startWithOffset = start + offset;
-        return (char) (((value[startWithOffset] & 0xFF) << 8) | (value[startWithOffset + 1] & 0xFF));
-    }
-
-    public final short parseAsciiShort() {
-        return parseAsciiShort(0, length(), 10);
-    }
-
-    public final short parseAsciiShort(int radix) {
-        return parseAsciiShort(0, length(), radix);
-    }
-
-    public final short parseAsciiShort(int start, int end) {
-        return parseAsciiShort(start, end, 10);
-    }
-
-    public final short parseAsciiShort(int start, int end, int radix) {
-        int intValue = parseAsciiInt(start, end, radix);
-        short result = (short) intValue;
-        if (result != intValue) {
-            throw new NumberFormatException(subSequence(start, end, false).toString());
-        }
-        return result;
-    }
-
-    public final float parseAsciiFloat() {
-        return parseAsciiFloat(0, length());
-    }
-
-    public final float parseAsciiFloat(int start, int end) {
-        return Float.parseFloat(toString(start, end));
-    }
-
-    public final double parseAsciiDouble() {
-        return parseAsciiDouble(0, length());
-    }
-
-    public final double parseAsciiDouble(int start, int end) {
-        return Double.parseDouble(toString(start, end));
     }
 
     @Override

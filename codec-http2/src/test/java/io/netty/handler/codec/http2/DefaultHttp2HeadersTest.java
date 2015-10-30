@@ -17,6 +17,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName;
+import io.netty.util.AsciiString;
 import io.netty.util.ByteString;
 import org.junit.Test;
 
@@ -24,7 +25,7 @@ import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import static io.netty.util.ByteString.fromAscii;
+import static io.netty.util.AsciiString.fromAscii;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -43,22 +44,22 @@ public class DefaultHttp2HeadersTest {
     public void pseudoHeadersWithRemovePreservesPseudoIterationOrder() {
         Http2Headers headers = newHeaders();
 
-        Set<ByteString> nonPseudoHeaders = new HashSet<ByteString>(headers.size());
-        for (Entry<ByteString, ByteString> entry : headers) {
+        Set<AsciiString> nonPseudoHeaders = new HashSet<AsciiString>(headers.size());
+        for (Entry<AsciiString, AsciiString> entry : headers) {
             if (entry.getKey().isEmpty() || entry.getKey().byteAt(0) != ':') {
                 nonPseudoHeaders.add(entry.getKey());
             }
         }
 
         // Remove all the non-pseudo headers and verify
-        for (ByteString nonPseudoHeader : nonPseudoHeaders) {
+        for (AsciiString nonPseudoHeader : nonPseudoHeaders) {
             assertTrue(headers.remove(nonPseudoHeader));
             verifyPseudoHeadersFirst(headers);
             verifyAllPseudoHeadersPresent(headers);
         }
 
         // Add back all non-pseudo headers
-        for (ByteString nonPseudoHeader : nonPseudoHeaders) {
+        for (AsciiString nonPseudoHeader : nonPseudoHeaders) {
             headers.add(nonPseudoHeader, fromAscii("goo"));
             verifyPseudoHeadersFirst(headers);
             verifyAllPseudoHeadersPresent(headers);
@@ -80,7 +81,7 @@ public class DefaultHttp2HeadersTest {
 
     private static void verifyPseudoHeadersFirst(Http2Headers headers) {
         ByteString lastNonPseudoName = null;
-        for (Entry<ByteString, ByteString> entry: headers) {
+        for (Entry<AsciiString, AsciiString> entry: headers) {
             if (entry.getKey().isEmpty() || entry.getKey().byteAt(0) != ':') {
                 lastNonPseudoName = entry.getKey();
             } else if (lastNonPseudoName != null) {

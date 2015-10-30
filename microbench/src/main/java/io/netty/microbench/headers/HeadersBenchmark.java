@@ -19,8 +19,6 @@ import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.AsciiString;
-import io.netty.util.ByteString;
-import io.netty.util.CharsetUtil;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Level;
@@ -52,8 +50,8 @@ public class HeadersBenchmark extends AbstractMicrobenchmark {
     AsciiString[] httpNames;
     AsciiString[] httpValues;
 
-    ByteString[] http2Names;
-    ByteString[] http2Values;
+    AsciiString[] http2Names;
+    AsciiString[] http2Values;
 
     DefaultHttpHeaders httpHeaders;
     DefaultHttp2Headers http2Headers;
@@ -63,8 +61,8 @@ public class HeadersBenchmark extends AbstractMicrobenchmark {
         Map<String, String> headers = ExampleHeaders.EXAMPLES.get(exampleHeader);
         httpNames = new AsciiString[headers.size()];
         httpValues = new AsciiString[headers.size()];
-        http2Names = new ByteString[headers.size()];
-        http2Values = new ByteString[headers.size()];
+        http2Names = new AsciiString[headers.size()];
+        http2Values = new AsciiString[headers.size()];
         httpHeaders = new DefaultHttpHeaders(false);
         http2Headers = new DefaultHttp2Headers(false);
         int idx = 0;
@@ -73,11 +71,11 @@ public class HeadersBenchmark extends AbstractMicrobenchmark {
             String value = header.getValue();
             httpNames[idx] = new AsciiString(name);
             httpValues[idx] = new AsciiString(value);
-            http2Names[idx] = new ByteString(name, CharsetUtil.US_ASCII);
-            http2Values[idx] = new ByteString(value, CharsetUtil.US_ASCII);
+            http2Names[idx] = new AsciiString(name);
+            http2Values[idx] = new AsciiString(value);
             idx++;
             httpHeaders.add(new AsciiString(name), new AsciiString(value));
-            http2Headers.add(new ByteString(name, CharsetUtil.US_ASCII), new ByteString(value, CharsetUtil.US_ASCII));
+            http2Headers.add(new AsciiString(name), new AsciiString(value));
         }
     }
 
@@ -118,7 +116,7 @@ public class HeadersBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     @BenchmarkMode(Mode.AverageTime)
     public void http2Remove(Blackhole bh) {
-        for (ByteString name : http2Names) {
+        for (AsciiString name : http2Names) {
             bh.consume(http2Headers.remove(name));
         }
     }
@@ -126,7 +124,7 @@ public class HeadersBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     @BenchmarkMode(Mode.AverageTime)
     public void http2Get(Blackhole bh) {
-        for (ByteString name : http2Names) {
+        for (AsciiString name : http2Names) {
             bh.consume(http2Headers.get(name));
         }
     }
@@ -144,7 +142,7 @@ public class HeadersBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     @BenchmarkMode(Mode.AverageTime)
     public void http2Iterate(Blackhole bh) {
-        for (Entry<ByteString, ByteString> entry : http2Headers) {
+        for (Entry<AsciiString, AsciiString> entry : http2Headers) {
             bh.consume(entry);
         }
     }

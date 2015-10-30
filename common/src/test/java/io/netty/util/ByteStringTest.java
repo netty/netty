@@ -17,6 +17,7 @@ package io.netty.util;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertArrayEquals;
 
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
@@ -144,5 +145,11 @@ public class ByteStringTest {
         aByteString.copy(0, aCopy, 0, aCopy.length);
         ByteString aByteStringCopy = new ByteString(aCopy, false);
         assertEquals(aByteString, aByteStringCopy);
+    }
+
+    @Test
+    public void createFromCharArrayTest() {
+        ByteString byteString = new ByteString(new char[]{'a', 'b', 'c'}, CharsetUtil.UTF_8, 1, 2);
+        assertArrayEquals(byteString.toByteArray(), "bc".getBytes());
     }
 }

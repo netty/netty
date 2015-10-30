@@ -142,9 +142,17 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
         }
     }
 
+    /**
+     * Create a new {@link ByteString} assuming ASCII encoding of {@code value}.
+     * @param value value to translate assuming ASCII encoding.
+     */
+    public static AsciiString fromAscii(CharSequence value) {
+        return new AsciiString(value);
+    }
+
     @Override
     public char charAt(int index) {
-        return (char) (byteAt(index) & 0xFF);
+        return b2c(byteAt(index));
     }
 
     @Override
@@ -190,7 +198,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
         int length2 = string.length();
         int minLength = Math.min(length1, length2);
         for (int i = 0, j = arrayOffset(); i < minLength; i++, j++) {
-            result = (char) (value[j] & 0xFF) - string.charAt(i);
+            result = b2c(value[j]) - string.charAt(i);
             if (result != 0) {
                 return result;
             }
@@ -272,7 +280,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
         }
 
         for (int i = arrayOffset(), j = 0; i < length(); ++i, ++j) {
-            if (!equalsIgnoreCase((char) (value[i] & 0xFF), string.charAt(j))) {
+            if (!equalsIgnoreCase(b2c(value[i]), string.charAt(j))) {
                 return false;
             }
         }
@@ -306,7 +314,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
 
         final char[] buffer = new char[length];
         for (int i = 0, j = start + arrayOffset(); i < length; i++, j++) {
-            buffer[i] = (char) (value[j] & 0xFF);
+            buffer[i] = b2c(value[j]);
         }
         return buffer;
     }
@@ -331,7 +339,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
 
         final int dstEnd = dstIdx + length;
         for (int i = dstIdx, j = srcIdx + arrayOffset(); i < dstEnd; i++, j++) {
-            dst[i] = (char) (value[j] & 0xFF);
+            dst[i] = b2c(value[j]);
         }
     }
 
@@ -348,6 +356,165 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
     @Override
     public AsciiString subSequence(int start, int end, boolean copy) {
         return (AsciiString) super.subSequence(start, end, copy, DEFAULT_FACTORY);
+    }
+
+    public int parseAsciiInt() {
+        return parseAsciiInt(0, length(), 10);
+    }
+
+    public int parseAsciiInt(int radix) {
+        return parseAsciiInt(0, length(), radix);
+    }
+
+    public int parseAsciiInt(int start, int end) {
+        return parseAsciiInt(start, end, 10);
+    }
+
+    public int parseAsciiInt(int start, int end, int radix) {
+        if (radix < Character.MIN_RADIX || radix > Character.MAX_RADIX) {
+            throw new NumberFormatException();
+        }
+
+        if (start == end) {
+            throw new NumberFormatException();
+        }
+
+        int i = start;
+        boolean negative = byteAt(i) == '-';
+        if (negative && ++i == end) {
+            throw new NumberFormatException(subSequence(start, end, false).toString());
+        }
+
+        return parseAsciiInt(i, end, radix, negative);
+    }
+
+    private int parseAsciiInt(int start, int end, int radix, boolean negative) {
+        int max = Integer.MIN_VALUE / radix;
+        int result = 0;
+        int currOffset = start;
+        while (currOffset < end) {
+            int digit = Character.digit(b2c(value[currOffset++ + offset]), radix);
+            if (digit == -1) {
+                throw new NumberFormatException(subSequence(start, end, false).toString());
+            }
+            if (max > result) {
+                throw new NumberFormatException(subSequence(start, end, false).toString());
+            }
+            int next = result * radix - digit;
+            if (next > result) {
+                throw new NumberFormatException(subSequence(start, end, false).toString());
+            }
+            result = next;
+        }
+        if (!negative) {
+            result = -result;
+            if (result < 0) {
+                throw new NumberFormatException(subSequence(start, end, false).toString());
+            }
+        }
+        return result;
+    }
+
+    public long parseAsciiLong() {
+        return parseAsciiLong(0, length(), 10);
+    }
+
+    public long parseAsciiLong(int radix) {
+        return parseAsciiLong(0, length(), radix);
+    }
+
+    public long parseAsciiLong(int start, int end) {
+        return parseAsciiLong(start, end, 10);
+    }
+
+    public long parseAsciiLong(int start, int end, int radix) {
+        if (radix < Character.MIN_RADIX || radix > Character.MAX_RADIX) {
+            throw new NumberFormatException();
+        }
+
+        if (start == end) {
+            throw new NumberFormatException();
+        }
+
+        int i = start;
+        boolean negative = byteAt(i) == '-';
+        if (negative && ++i == end) {
+            throw new NumberFormatException(subSequence(start, end, false).toString());
+        }
+
+        return parseAsciiLong(i, end, radix, negative);
+    }
+
+    private long parseAsciiLong(int start, int end, int radix, boolean negative) {
+        long max = Long.MIN_VALUE / radix;
+        long result = 0;
+        int currOffset = start;
+        while (currOffset < end) {
+            int digit = Character.digit(b2c(value[currOffset++ + offset]), radix);
+            if (digit == -1) {
+                throw new NumberFormatException(subSequence(start, end, false).toString());
+            }
+            if (max > result) {
+                throw new NumberFormatException(subSequence(start, end, false).toString());
+            }
+            long next = result * radix - digit;
+            if (next > result) {
+                throw new NumberFormatException(subSequence(start, end, false).toString());
+            }
+            result = next;
+        }
+        if (!negative) {
+            result = -result;
+            if (result < 0) {
+                throw new NumberFormatException(subSequence(start, end, false).toString());
+            }
+        }
+        return result;
+    }
+
+    public short parseAsciiShort() {
+        return parseAsciiShort(0, length(), 10);
+    }
+
+    public short parseAsciiShort(int radix) {
+        return parseAsciiShort(0, length(), radix);
+    }
+
+    public short parseAsciiShort(int start, int end) {
+        return parseAsciiShort(start, end, 10);
+    }
+
+    public short parseAsciiShort(int start, int end, int radix) {
+        int intValue = parseAsciiInt(start, end, radix);
+        short result = (short) intValue;
+        if (result != intValue) {
+            throw new NumberFormatException(subSequence(start, end, false).toString());
+        }
+        return result;
+    }
+
+    public float parseAsciiFloat() {
+        return parseAsciiFloat(0, length());
+    }
+
+    public float parseAsciiFloat(int start, int end) {
+        return Float.parseFloat(toString(start, end));
+    }
+
+    public double parseAsciiDouble() {
+        return parseAsciiDouble(0, length());
+    }
+
+    public double parseAsciiDouble(int start, int end) {
+        return Double.parseDouble(toString(start, end));
+    }
+
+    public char parseChar() {
+        if (value.length >= 1) {
+            return b2c(byteAt(0));
+        } else {
+            throw new IndexOutOfBoundsException("Couldn't parse first char from empty AsciiString");
+        }
     }
 
     /**
@@ -400,7 +567,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
                     return -1; // handles subCount > count || start >= count
                 }
                 int o1 = i, o2 = 0;
-                while (++o2 < subCount && (char) (value[++o1 + arrayOffset()] & 0xFF) == subString.charAt(o2)) {
+                while (++o2 < subCount && b2c(value[++o1 + arrayOffset()]) == subString.charAt(o2)) {
                     // Intentionally empty
                 }
                 if (o2 == subCount) {
@@ -465,7 +632,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
                     return -1;
                 }
                 int o1 = i, o2 = 0;
-                while (++o2 < subCount && (char) (value[++o1 + arrayOffset()] & 0xFF) == subString.charAt(o2)) {
+                while (++o2 < subCount && b2c(value[++o1 + arrayOffset()]) == subString.charAt(o2)) {
                     // Intentionally empty
                 }
                 if (o2 == subCount) {
@@ -510,7 +677,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
 
         final int thatEnd = start + length;
         for (int i = start, j = thisStart + arrayOffset(); i < thatEnd; i++, j++) {
-            if ((char) (value[j] & 0xFF) != string.charAt(i)) {
+            if (b2c(value[j]) != string.charAt(i)) {
                 return false;
             }
         }
@@ -549,7 +716,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
         thisStart += arrayOffset();
         final int thisEnd = thisStart + length;
         while (thisStart < thisEnd) {
-            if (!equalsIgnoreCase((char) (value[thisStart++] & 0xFF), string.charAt(start++))) {
+            if (!equalsIgnoreCase(b2c(value[thisStart++]), string.charAt(start++))) {
                 return false;
             }
         }
@@ -716,7 +883,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
             return false;
         }
         for (int i = arrayOffset(), j = 0; j < a.length(); ++i, ++j) {
-            if ((char) (value[i] & 0xFF) != a.charAt(j)) {
+            if (b2c(value[i]) != a.charAt(j)) {
                 return false;
             }
         }
@@ -800,7 +967,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
         if (h == 0) {
             final int end = arrayOffset() + length();
             for (int i = arrayOffset(); i < end; ++i) {
-                h = h * HASH_CODE_PRIME + toLowerCase((char) (value[i] & 0xFF));
+                h = h * HASH_CODE_PRIME + toLowerCase(b2c(value[i]));
             }
 
             caseInsensitiveHash = h;
@@ -826,7 +993,7 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
     }
 
     /**
-     * A case-sensitive version of {@link caseInsensitiveHashCode(CharSequence)}.
+     * A case-sensitive version of {@link #caseInsensitiveHashCode(CharSequence)}.
      * @param value
      * @return
      */
@@ -1057,5 +1224,14 @@ public final class AsciiString extends ByteString implements CharSequence, Compa
             return '?';
         }
         return (byte) c;
+    }
+
+    /**
+     * Get char by one-byte representation. Normally should be used only in methods for ASCII-encoded strings processing
+     * @param b byte representation of ASCII char
+     * @return corresponding char for code
+     */
+    private static char b2c(byte b) {
+        return (char) (b & 0xFF);
     }
 }

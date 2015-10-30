@@ -31,6 +31,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
+import io.netty.util.AsciiString;
 import io.netty.util.ByteString;
 
 /**
@@ -181,7 +182,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
      * @return the expected content encoding of the new content.
      * @throws Http2Exception if the {@code contentEncoding} is not supported and warrants an exception
      */
-    protected ByteString getTargetContentEncoding(@SuppressWarnings("UnusedParameters") ByteString contentEncoding)
+    protected AsciiString getTargetContentEncoding(@SuppressWarnings("UnusedParameters") ByteString contentEncoding)
                     throws Http2Exception {
         return IDENTITY;
     }
@@ -214,7 +215,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
                 stream.setProperty(propertyKey, decompressor);
                 // Decode the content and remove or replace the existing headers
                 // so that the message looks like a decoded message.
-                ByteString targetContentEncoding = getTargetContentEncoding(contentEncoding);
+                AsciiString targetContentEncoding = getTargetContentEncoding(contentEncoding);
                 if (IDENTITY.equals(targetContentEncoding)) {
                     headers.remove(CONTENT_ENCODING);
                 } else {

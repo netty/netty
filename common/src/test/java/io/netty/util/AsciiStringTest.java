@@ -18,6 +18,7 @@ package io.netty.util;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.UnsupportedEncodingException;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.Random;
@@ -227,5 +228,13 @@ public class AsciiStringTest {
         }
         CharBuffer buffer = CharBuffer.wrap(array, offset, s1.length());
         assertEquals(caseInsensitiveHashCode(s1), caseInsensitiveHashCode(buffer));
+    }
+
+    @Test
+    public void parseChar() throws UnsupportedEncodingException {
+        AsciiString byteString = new AsciiString(new char[]{'a', 'b', 'c'});
+        assertEquals('a', byteString.parseChar());
+        byteString = new AsciiString("babc".getBytes(CharsetUtil.US_ASCII));
+        assertEquals('b', byteString.parseChar());
     }
 }
