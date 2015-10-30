@@ -15,11 +15,12 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.util.AsciiString;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
+
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * The request method of HTTP or its derived protocols, such as
@@ -86,7 +87,7 @@ public class HttpMethod implements Comparable<HttpMethod> {
      */
     public static final HttpMethod CONNECT = new HttpMethod("CONNECT");
 
-    private static final Map<String, HttpMethod> methodMap = new HashMap<String, HttpMethod>();
+    private static final Map<String, HttpMethod> methodMap = new TreeMap<String, HttpMethod>();
 
     static {
         methodMap.put(OPTIONS.toString(), OPTIONS);
