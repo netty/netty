@@ -18,10 +18,12 @@ package io.netty.handler.codec.http;
 import io.netty.handler.codec.DefaultHeaders;
 import io.netty.handler.codec.ValueConverter;
 import io.netty.util.HashingStrategy;
+import io.netty.handler.codec.Headers;
 import io.netty.util.internal.StringUtil;
 
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.Map;
 
 import static io.netty.util.AsciiString.CASE_INSENSITIVE_HASHER;
 import static io.netty.util.internal.StringUtil.COMMA;
@@ -73,6 +75,50 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
                 ValueConverter<CharSequence> valueConverter,
                 io.netty.handler.codec.DefaultHeaders.NameValidator<CharSequence> nameValidator) {
             super(nameHashingStrategy, valueConverter, nameValidator);
+        }
+
+        @Override
+        public CombinedHttpHeadersImpl add(Headers<? extends CharSequence, ? extends CharSequence, ?> headers) {
+            // Override the fast-copy mechanism used by DefaultHeaders
+            if (headers == this) {
+                throw new IllegalArgumentException("can't add to itself.");
+            }
+            if (headers instanceof CombinedHttpHeadersImpl) {
+                if (isEmpty()) {
+                    // Can use the fast underlying copy
+                    addImpl(headers);
+                } else {
+                    // Values are already escaped so don't escape again
+                    for (Map.Entry<? extends CharSequence, ? extends CharSequence> header : headers) {
+                        addEscapedValue(header.getKey(), header.getValue());
+                    }
+                }
+            } else {
+                for (Map.Entry<? extends CharSequence, ? extends CharSequence> header : headers) {
+                    add(header.getKey(), header.getValue());
+                }
+            }
+            return this;
+        }
+
+        @Override
+        public CombinedHttpHeadersImpl set(Headers<? extends CharSequence, ? extends CharSequence, ?> headers) {
+            if (headers == this) {
+                return this;
+            }
+            clear();
+            return add(headers);
+        }
+
+        @Override
+        public CombinedHttpHeadersImpl setAll(Headers<? extends CharSequence, ? extends CharSequence, ?> headers) {
+            if (headers == this) {
+                return this;
+            }
+            for (CharSequence key : headers.names()) {
+                remove(key);
+            }
+            return add(headers);
         }
 
         @Override

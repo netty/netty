@@ -316,7 +316,6 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     @Override
     public T addObject(K name, Iterable<?> values) {
-        checkNotNull(values, "values");
         for (Object value : values) {
             addObject(name, value);
         }
@@ -325,7 +324,6 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     @Override
     public T addObject(K name, Object... values) {
-        checkNotNull(values, "values");
         for (int i = 0; i < values.length; i++) {
             addObject(name, values[i]);
         }
@@ -379,25 +377,39 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     @Override
     public T add(Headers<? extends K, ? extends V, ?> headers) {
-        checkNotNull(headers, "headers");
         if (headers == this) {
             throw new IllegalArgumentException("can't add to itself.");
         }
+        addImpl(headers);
+        return thisT();
+    }
+
+    protected void addImpl(Headers<? extends K, ? extends V, ?> headers) {
         if (headers instanceof DefaultHeaders) {
             @SuppressWarnings("unchecked")
-            DefaultHeaders<K, V, T> defaultHeaders = (DefaultHeaders<K, V, T>) headers;
-            HeaderEntry<K, V> e = defaultHeaders.head.after;
-            while (e != defaultHeaders.head) {
-                add(e.key, e.value);
-                e = e.after;
+            final DefaultHeaders<? extends K, ? extends V, T> defaultHeaders =
+                    (DefaultHeaders<? extends K, ? extends V, T>) headers;
+            HeaderEntry<? extends K, ? extends V> e = defaultHeaders.head.after;
+            if (defaultHeaders.hashingStrategy == hashingStrategy &&
+                    defaultHeaders.nameValidator == nameValidator) {
+                // Fastest copy
+                while (e != defaultHeaders.head) {
+                    add0(e.hash, index(e.hash), e.key, e.value);
+                    e = e.after;
+                }
+            } else {
+                // Fast copy
+                while (e != defaultHeaders.head) {
+                    add(e.key, e.value);
+                    e = e.after;
+                }
             }
-            return thisT();
         } else {
+            // Slow copy
             for (Entry<? extends K, ? extends V> header : headers) {
                 add(header.getKey(), header.getValue());
             }
         }
-        return thisT();
     }
 
     @Override
@@ -459,7 +471,6 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public T setObject(K name, Iterable<?> values) {
         nameValidator.validateName(name);
-        checkNotNull(values, "values");
 
         int h = hashingStrategy.hashCode(name);
         int i = index(h);
@@ -478,7 +489,6 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public T setObject(K name, Object... values) {
         nameValidator.validateName(name);
-        checkNotNull(values, "values");
 
         int h = hashingStrategy.hashCode(name);
         int i = index(h);
@@ -541,36 +551,20 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     @Override
     public T set(Headers<? extends K, ? extends V, ?> headers) {
-        checkNotNull(headers, "headers");
-        if (headers == this) {
-            return thisT();
-        }
-        clear();
-        if (headers instanceof DefaultHeaders) {
-            @SuppressWarnings("unchecked")
-            DefaultHeaders<K, V, T> defaultHeaders = (DefaultHeaders<K, V, T>) headers;
-            HeaderEntry<K, V> e = defaultHeaders.head.after;
-            while (e != defaultHeaders.head) {
-                add(e.key, e.value);
-                e = e.after;
-            }
-        } else {
-            add(headers);
+        if (headers != this) {
+            clear();
+            addImpl(headers);
         }
         return thisT();
     }
 
     @Override
     public T setAll(Headers<? extends K, ? extends V, ?> headers) {
-        checkNotNull(headers, "headers");
-        if (headers == this) {
-            return thisT();
-        }
-        for (K key : headers.names()) {
-            remove(key);
-        }
-        for (Entry<? extends K, ? extends V> entry : headers) {
-            add(entry.getKey(), entry.getValue());
+        if (headers != this) {
+            for (K key : headers.names()) {
+                remove(key);
+            }
+            addImpl(headers);
         }
         return thisT();
     }
