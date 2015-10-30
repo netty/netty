@@ -14,23 +14,6 @@
  */
 package io.netty.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
-import io.netty.handler.codec.http2.Http2Exception.StreamException;
-import io.netty.util.concurrent.ScheduledFuture;
-import io.netty.util.internal.OneTimeTask;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
-
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
 import static io.netty.buffer.ByteBufUtil.hexDump;
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
@@ -47,6 +30,23 @@ import static java.lang.Math.min;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
+import io.netty.handler.codec.http2.Http2Exception.StreamException;
+import io.netty.util.concurrent.ScheduledFuture;
+import io.netty.util.internal.OneTimeTask;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Provides the default implementation for processing inbound frame events and delegates to a
@@ -738,7 +738,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      * @param cause the exception that was caught
      * @param http2Ex the {@link StreamException} that is embedded in the causality chain.
      */
-    protected void onStreamError(ChannelHandlerContext ctx, Throwable cause, StreamException http2Ex) {
+    protected void onStreamError(ChannelHandlerContext ctx, @SuppressWarnings("unused") Throwable cause,
+                                 StreamException http2Ex) {
         resetStream(ctx, http2Ex.streamId(), http2Ex.error().code(), ctx.newPromise());
     }
 

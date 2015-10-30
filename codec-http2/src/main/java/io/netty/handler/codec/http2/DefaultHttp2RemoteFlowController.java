@@ -14,14 +14,6 @@
  */
 package io.netty.handler.codec.http2;
 
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http2.StreamByteDistributor.Writer;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
-
-import java.util.ArrayDeque;
-import java.util.Deque;
-
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
@@ -31,6 +23,14 @@ import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http2.StreamByteDistributor.Writer;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 /**
  * Basic implementation of {@link Http2RemoteFlowController}.
@@ -149,7 +149,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
      */
     @Override
     public void channelHandlerContext(ChannelHandlerContext ctx) throws Http2Exception {
-        this.ctx = ctx;
+        this.ctx = checkNotNull(ctx, "ctx");
 
         // Writing the pending bytes will not check writability change and instead a writability change notification
         // to be provided by an explicit call.
@@ -652,7 +652,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     }
 
     /**
-     * Abstract class which provides common functionality for {@link WritabilityMonitorfoo} implementations.
+     * Abstract class which provides common functionality for writability monitor implementations.
      */
     private abstract class WritabilityMonitor {
         private long totalPendingBytes;
