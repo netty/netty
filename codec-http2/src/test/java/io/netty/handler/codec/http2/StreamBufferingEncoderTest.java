@@ -105,6 +105,8 @@ public class StreamBufferingEncoderTest {
                 .thenAnswer(successAnswer());
 
         connection = new DefaultHttp2Connection(false);
+        connection.remote().flowController(new DefaultHttp2RemoteFlowController(connection));
+        connection.local().flowController(new DefaultHttp2LocalFlowController(connection).frameWriter(writer));
 
         DefaultHttp2ConnectionEncoder defaultEncoder =
                 new DefaultHttp2ConnectionEncoder(connection, writer);

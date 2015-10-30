@@ -19,6 +19,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_INITIAL_WINDOW_SIZ
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Exception;
+import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2LocalFlowController;
 import io.netty.handler.codec.http2.Http2Stream;
 
@@ -67,5 +68,10 @@ public final class NoopHttp2LocalFlowController implements Http2LocalFlowControl
 
     @Override
     public void channelHandlerContext(ChannelHandlerContext ctx) throws Http2Exception {
+    }
+
+    @Override
+    public Http2LocalFlowController frameWriter(Http2FrameWriter frameWriter) {
+        return this;
     }
 }
