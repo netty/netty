@@ -19,6 +19,8 @@ package io.netty.util;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.internal.MpscLinkedQueueNode;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -40,13 +42,21 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class ThreadDeathWatcher {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ThreadDeathWatcher.class);
-    private static final ThreadFactory threadFactory =
-            new DefaultThreadFactory(ThreadDeathWatcher.class, true, Thread.MIN_PRIORITY);
+    private static final ThreadFactory threadFactory;
 
     private static final Queue<Entry> pendingEntries = PlatformDependent.newMpscQueue();
     private static final Watcher watcher = new Watcher();
     private static final AtomicBoolean started = new AtomicBoolean();
     private static volatile Thread watcherThread;
+
+    static {
+        String poolName = "threadDeathWatcher";
+        String serviceThreadPrefix = SystemPropertyUtil.get("io.netty.serviceThreadPrefix");
+        if (!StringUtil.isNullOrEmpty(serviceThreadPrefix)) {
+            poolName = serviceThreadPrefix + poolName;
+        }
+        threadFactory = new DefaultThreadFactory(poolName, true, Thread.MIN_PRIORITY);
+    }
 
     /**
      * Schedules the specified {@code task} to run when the specified {@code thread} dies.
