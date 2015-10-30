@@ -2459,7 +2459,8 @@ public abstract class AbstractByteBufTest {
     public void testSliceRelease() {
         ByteBuf buf = newBuffer(8);
         assertEquals(1, buf.refCnt());
-        assertTrue(buf.slice().release());
+        ByteBuf s1 = buf.slice();
+        assertTrue(s1.release());
         assertEquals(0, buf.refCnt());
     }
 
@@ -2467,8 +2468,32 @@ public abstract class AbstractByteBufTest {
     public void testDuplicateRelease() {
         ByteBuf buf = newBuffer(8);
         assertEquals(1, buf.refCnt());
-        assertTrue(buf.duplicate().release());
+        ByteBuf d1 = buf.duplicate();
+        assertTrue(d1.release());
         assertEquals(0, buf.refCnt());
+    }
+
+    @Test
+    public void testSliceRetainRelease() {
+        ByteBuf buf = newBuffer(8);
+        assertEquals(1, buf.refCnt());
+
+        // This release might or might not deallocate the slice
+        // depending on implementation. eg: if slice has its own
+        // reference count it will get deallocated, otherwise it
+        // will depend on the wrapped buffer ref count.
+        buf.slice(true).release();
+        assertEquals(1, buf.refCnt());
+        assertTrue(buf.release());
+    }
+
+    @Test
+    public void testDuplicateRetainRelease() {
+        ByteBuf buf = newBuffer(8);
+        assertEquals(1, buf.refCnt());
+        buf.duplicate(true).release();
+        assertEquals(1, buf.refCnt());
+        assertTrue(buf.release());
     }
 
     // Test-case trying to reproduce:

@@ -1207,6 +1207,18 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract ByteBuf readSlice(int length);
 
     /**
+     * Returns a new slice of this buffer's sub-region starting at the current
+     * {@code readerIndex} and increases the {@code readerIndex} by the size
+     * of the new slice (= {@code length}).
+     * <p>
+     * If {@code retain} is {@code true} this implementation will call {@link #retain()} and so the
+     * reference count will be increased.
+     */
+    public ByteBuf readSlice(int length, boolean retain) {
+        return retain ? readSlice(length).retain() : readSlice(length);
+    }
+
+    /**
      * Transfers this buffer's data to the specified destination starting at
      * the current {@code readerIndex} until the destination becomes
      * non-writable, and increases the {@code readerIndex} by the number of the
@@ -1673,6 +1685,21 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract ByteBuf slice();
 
     /**
+     * Returns a slice of this buffer's readable bytes. Modifying the content
+     * of the returned buffer or this buffer affects each other's content
+     * while they maintain separate indexes and marks.  This method is
+     * identical to {@code buf.slice(buf.readerIndex(), buf.readableBytes())}.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
+     * <p>
+     * If {@code retain} is {@code true} this implementation will call {@link #retain()} and so the
+     * reference count will be increased.
+     */
+    public ByteBuf slice(boolean retain) {
+        return retain ? slice().retain() : slice();
+    }
+
+    /**
      * Returns a slice of this buffer's sub-region. Modifying the content of
      * the returned buffer or this buffer affects each other's content while
      * they maintain separate indexes and marks.
@@ -1683,6 +1710,20 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * reference count will NOT be increased.
      */
     public abstract ByteBuf slice(int index, int length);
+
+    /**
+     * Returns a slice of this buffer's sub-region. Modifying the content of
+     * the returned buffer or this buffer affects each other's content while
+     * they maintain separate indexes and marks.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
+     * <p>
+     * If {@code retain} is {@code true} this implementation will call {@link #retain()} and so the
+     * reference count will be increased.
+     */
+    public ByteBuf slice(int index, int length, boolean retain) {
+        return retain ? slice(index, length).retain() : slice(index, length);
+    }
 
     /**
      * Returns a buffer which shares the whole region of this buffer.
@@ -1696,6 +1737,21 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * NOT call {@link #retain()} and so the reference count will NOT be increased.
      */
     public abstract ByteBuf duplicate();
+
+    /**
+     * Returns a buffer which shares the whole region of this buffer.
+     * Modifying the content of the returned buffer or this buffer affects
+     * each other's content while they maintain separate indexes and marks.
+     * This method is identical to {@code buf.slice(0, buf.capacity())}.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
+     * <p>
+     * If {@code retain} is {@code true} this implementation will call {@link #retain()} and so the
+     * reference count will be increased.
+     */
+    public ByteBuf duplicate(boolean retain) {
+        return retain ? duplicate().retain() : duplicate();
+    }
 
     /**
      * Returns the maximum number of NIO {@link ByteBuffer}s that consist this buffer.  Note that {@link #nioBuffers()}
