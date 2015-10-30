@@ -817,12 +817,17 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         } else if (result == UNCANCELLABLE) {
             buf.append("(uncancellable)");
         } else if (result instanceof CauseHolder) {
-            buf.append("(failure(")
+            buf.append("(failure: ")
                .append(((CauseHolder) result).cause)
+               .append(')');
+        } else if (result != null) {
+            buf.append("(success: ")
+               .append(result)
                .append(')');
         } else {
             buf.append("(incomplete)");
         }
+
         return buf;
     }
 
