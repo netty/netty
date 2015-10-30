@@ -133,7 +133,7 @@ abstract class DnsNameResolverContext<T> {
             public void operationComplete(Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> future) {
                 queriesInProgress.remove(future);
 
-                if (promise.isDone()) {
+                if (promise.isDone() || future.isCancelled()) {
                     return;
                 }
 
