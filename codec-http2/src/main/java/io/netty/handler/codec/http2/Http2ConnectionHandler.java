@@ -772,7 +772,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      * @param cause the exception that was caught
      * @param http2Ex the {@link StreamException} that is embedded in the causality chain.
      */
-    protected void onStreamError(ChannelHandlerContext ctx, Throwable cause, StreamException http2Ex) {
+    protected void onStreamError(ChannelHandlerContext ctx, @SuppressWarnings("unused") Throwable cause,
+                                 StreamException http2Ex) {
         resetStream(ctx, http2Ex.streamId(), http2Ex.error().code(), ctx.newPromise());
     }
 

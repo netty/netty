@@ -20,6 +20,13 @@ import io.netty.buffer.ByteBuf;
  * A {@link Http2FlowController} for controlling the inbound flow of {@code DATA} frames from the remote endpoint.
  */
 public interface Http2LocalFlowController extends Http2FlowController {
+    /**
+     * Sets the writer to be use for sending {@code WINDOW_UPDATE} frames. This must be called before any flow
+     * controlled data is received.
+     *
+     * @param frameWriter the HTTP/2 frame writer.
+     */
+    Http2LocalFlowController frameWriter(Http2FrameWriter frameWriter);
 
     /**
      * Receives an inbound {@code DATA} frame from the remote endpoint and applies flow control policies to it for both
@@ -29,7 +36,6 @@ public interface Http2LocalFlowController extends Http2FlowController {
      * If {@code stream} is {@code null} or closed, flow control should only be applied to the connection window and the
      * bytes are immediately consumed.
      *
-     * @param ctx the context from the handler where the frame was read.
      * @param stream the subject stream for the received frame. The connection stream object must not be used. If {@code
      * stream} is {@code null} or closed, flow control should only be applied to the connection window and the bytes are
      * immediately consumed.

@@ -295,6 +295,11 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         }
 
         @Override
+        public Http2LocalFlowController frameWriter(Http2FrameWriter frameWriter) {
+            return flowController.frameWriter(frameWriter);
+        }
+
+        @Override
         public void channelHandlerContext(ChannelHandlerContext ctx) throws Http2Exception {
             flowController.channelHandlerContext(ctx);
         }

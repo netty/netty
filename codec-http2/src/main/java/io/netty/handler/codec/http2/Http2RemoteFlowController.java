@@ -90,8 +90,8 @@ public interface Http2RemoteFlowController extends Http2FlowController {
         /**
          * Called to indicate that an error occurred before this object could be completely written.
          * <p>
-         * The {@link Http2RemoteFlowController} will make exactly one call to either {@link #error(Throwable)} or
-         * {@link #writeComplete()}.
+         * The {@link Http2RemoteFlowController} will make exactly one call to either
+         * this method or {@link #writeComplete()}.
          * </p>
          *
          * @param ctx The context to use if any communication needs to occur as a result of the error.
@@ -103,8 +103,8 @@ public interface Http2RemoteFlowController extends Http2FlowController {
         /**
          * Called after this object has been successfully written.
          * <p>
-         * The {@link Http2RemoteFlowController} will make exactly one call to either {@link #error(Throwable)} or
-         * {@link #writeComplete()}.
+         * The {@link Http2RemoteFlowController} will make exactly one call to either
+         * this method or {@link #error(ChannelHandlerContext, Throwable)}.
          * </p>
          */
         void writeComplete();
@@ -116,7 +116,7 @@ public interface Http2RemoteFlowController extends Http2FlowController {
          * the payload is fully written, i.e it's size after the write is 0.
          * <p>
          * When an exception is thrown the {@link Http2RemoteFlowController} will make a call to
-         * {@link #error(Throwable)}.
+         * {@link #error(ChannelHandlerContext, Throwable)}.
          * </p>
          *
          * @param ctx The context to use for writing.
