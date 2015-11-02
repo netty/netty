@@ -462,23 +462,24 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
 
         /**
-         * Peeks at that the next frame in the buffer and verifies that it is a {@code SETTINGS} frame.
+         * Peeks at that the next frame in the buffer and verifies that it is a non-ack {@code SETTINGS} frame.
          *
          * @param in the inbound buffer.
-         * @return {@code} true if the next frame is a {@code SETTINGS} frame, {@code false} if more
+         * @return {@code} true if the next frame is a non-ack {@code SETTINGS} frame, {@code false} if more
          * data is required before we can determine the next frame type.
-         * @throws Http2Exception thrown if the next frame is NOT a {@code SETTINGS} frame.
+         * @throws Http2Exception thrown if the next frame is NOT a non-ack {@code SETTINGS} frame.
          */
         private boolean verifyFirstFrameIsSettings(ByteBuf in) throws Http2Exception {
-            if (in.readableBytes() < 4) {
+            if (in.readableBytes() < 5) {
                 // Need more data before we can see the frame type for the first frame.
                 return false;
             }
 
-            byte frameType = in.getByte(in.readerIndex() + 3);
-            if (frameType != SETTINGS) {
+            short frameType = in.getUnsignedByte(in.readerIndex() + 3);
+            short flags = in.getUnsignedByte(in.readerIndex() + 4);
+            if (frameType != SETTINGS || (flags & Http2Flags.ACK) != 0) {
                 throw connectionError(PROTOCOL_ERROR, "First received frame was not SETTINGS. " +
-                        "Hex dump for first 4 bytes: %s", hexDump(in, in.readerIndex(), 4));
+                        "Hex dump for first 5 bytes: %s", hexDump(in, in.readerIndex(), 5));
             }
             return true;
         }
