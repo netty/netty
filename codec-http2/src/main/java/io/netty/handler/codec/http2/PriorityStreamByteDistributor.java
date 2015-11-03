@@ -346,6 +346,7 @@ public final class PriorityStreamByteDistributor implements StreamByteDistributo
         }
 
         void updateStreamableBytes(int newStreamableBytes, boolean hasFrame) {
+            assert hasFrame || newStreamableBytes == 0;
             this.hasFrame = hasFrame;
 
             int delta = newStreamableBytes - streamableBytes;

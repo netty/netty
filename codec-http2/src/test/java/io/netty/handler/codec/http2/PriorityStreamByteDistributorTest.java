@@ -136,10 +136,10 @@ public class PriorityStreamByteDistributorTest {
 
         doNothing().when(writer).write(same(stream(STREAM_C)), eq(3));
         write(10);
-        verifyWrite(atMost(1), STREAM_A, 1);
-        verifyWrite(atMost(1), STREAM_B, 2);
+        verifyWrite(STREAM_A, 1);
+        verifyWrite(STREAM_B, 2);
         verifyWrite(times(2), STREAM_C, 3);
-        verifyWrite(atMost(1), STREAM_D, 4);
+        verifyWrite(STREAM_D, 4);
     }
 
     /**
