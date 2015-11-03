@@ -26,8 +26,10 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
@@ -47,7 +49,6 @@ import junit.framework.AssertionFailedError;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -709,7 +710,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
         controller.addFlowControlled(stream, flowControlled);
         controller.writePendingBytes();
 
-        verify(flowControlled, times(3)).write(any(ChannelHandlerContext.class), anyInt());
+        verify(flowControlled, atLeastOnce()).write(any(ChannelHandlerContext.class), anyInt());
         verify(flowControlled).error(any(ChannelHandlerContext.class), any(Throwable.class));
         verify(flowControlled, never()).writeComplete();
 
@@ -742,7 +743,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
             fail();
         }
 
-        verify(flowControlled, times(3)).write(any(ChannelHandlerContext.class), anyInt());
+        verify(flowControlled, atLeastOnce()).write(any(ChannelHandlerContext.class), anyInt());
         verify(flowControlled).error(any(ChannelHandlerContext.class), any(Throwable.class));
         verify(flowControlled, never()).writeComplete();
 
@@ -753,7 +754,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
     @Test
     public void flowControlledWriteCompleteThrowsAnException() throws Exception {
         final Http2RemoteFlowController.FlowControlled flowControlled =
-                Mockito.mock(Http2RemoteFlowController.FlowControlled.class);
+                mock(Http2RemoteFlowController.FlowControlled.class);
         final AtomicInteger size = new AtomicInteger(150);
         doAnswer(new Answer<Integer>() {
             @Override
@@ -798,7 +799,7 @@ public class DefaultHttp2RemoteFlowControllerTest {
     @Test
     public void closeStreamInFlowControlledError() throws Exception {
         final Http2RemoteFlowController.FlowControlled flowControlled =
-                Mockito.mock(Http2RemoteFlowController.FlowControlled.class);
+                mock(Http2RemoteFlowController.FlowControlled.class);
         final Http2Stream stream = stream(STREAM_A);
         when(flowControlled.size()).thenReturn(100);
         doThrow(new RuntimeException("write failed"))
@@ -922,25 +923,15 @@ public class DefaultHttp2RemoteFlowControllerTest {
 
     private static Http2RemoteFlowController.FlowControlled mockedFlowControlledThatThrowsOnWrite() throws Exception {
         final Http2RemoteFlowController.FlowControlled flowControlled =
-                Mockito.mock(Http2RemoteFlowController.FlowControlled.class);
+                mock(Http2RemoteFlowController.FlowControlled.class);
         when(flowControlled.size()).thenReturn(100);
         doAnswer(new Answer<Void>() {
             private int invocationCount;
             @Override
-            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
-                switch(invocationCount) {
-                case 0:
-                    when(flowControlled.size()).thenReturn(50);
-                    invocationCount = 1;
-                    return null;
-                case 1:
-                    when(flowControlled.size()).thenReturn(20);
-                    invocationCount = 2;
-                    return null;
-                default:
-                    when(flowControlled.size()).thenReturn(10);
-                    throw new RuntimeException("Write failed");
-                }
+            public Void answer(InvocationOnMock in) throws Throwable {
+                // Write most of the bytes and then fail
+                when(flowControlled.size()).thenReturn(10);
+                throw new RuntimeException("Write failed");
             }
         }).when(flowControlled).write(any(ChannelHandlerContext.class), anyInt());
         return flowControlled;
