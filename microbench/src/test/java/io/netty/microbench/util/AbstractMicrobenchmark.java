@@ -30,7 +30,7 @@ import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.io.File;
-import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -49,8 +49,8 @@ public class AbstractMicrobenchmark {
 
     public static final class HarnessExecutor extends ThreadPoolExecutor {
         public HarnessExecutor(int maxThreads, String prefix) {
-            super(0, maxThreads, 1L, TimeUnit.DAYS, new SynchronousQueue<Runnable>(),
-                  new DefaultThreadFactory(prefix));
+            super(maxThreads, maxThreads, 0, TimeUnit.MILLISECONDS,
+                    new LinkedBlockingQueue<Runnable>(), new DefaultThreadFactory(prefix));
             System.out.println("Using harness executor");
         }
     }
