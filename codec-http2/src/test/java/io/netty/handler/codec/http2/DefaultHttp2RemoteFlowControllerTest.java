@@ -21,6 +21,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
@@ -721,23 +722,24 @@ public class DefaultHttp2RemoteFlowControllerTest {
     public void flowControlledWriteAndErrorThrowAnException() throws Exception {
         final Http2RemoteFlowController.FlowControlled flowControlled = mockedFlowControlledThatThrowsOnWrite();
         final Http2Stream stream = stream(STREAM_A);
+        final RuntimeException fakeException = new RuntimeException("error failed");
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock invocationOnMock) {
-                throw new RuntimeException("error failed");
+                throw fakeException;
             }
         }).when(flowControlled).error(any(ChannelHandlerContext.class), any(Throwable.class));
 
         int windowBefore = window(STREAM_A);
 
-        boolean exceptionThrown = false;
         try {
             controller.addFlowControlled(stream, flowControlled);
             controller.writePendingBytes();
-        } catch (RuntimeException e) {
-            exceptionThrown = true;
-        } finally {
-            assertTrue(exceptionThrown);
+            fail();
+        } catch (Http2Exception e) {
+            assertSame(fakeException, e.getCause());
+        } catch (Throwable t) {
+            fail();
         }
 
         verify(flowControlled, times(3)).write(any(ChannelHandlerContext.class), anyInt());

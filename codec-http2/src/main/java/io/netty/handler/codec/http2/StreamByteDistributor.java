@@ -52,6 +52,9 @@ public interface StreamByteDistributor {
     interface Writer {
         /**
          * Writes the allocated bytes for this stream.
+         * <p>
+         * Any {@link Throwable} thrown from this method is considered a programming error.
+         * A {@code GOAWAY} frame will be sent and the will be connection closed.
          * @param stream the stream for which to perform the write.
          * @param numBytes the number of bytes to write.
          */
@@ -78,6 +81,8 @@ public interface StreamByteDistributor {
      * @param maxBytes the maximum number of bytes to write.
      * @return {@code true} if there are still streamable bytes that have not yet been written,
      * otherwise {@code false}.
+     * @throws Http2Exception If an internal exception occurs and internal connection state would otherwise be
+     * corrupted.
      */
-    boolean distribute(int maxBytes, Writer writer);
+    boolean distribute(int maxBytes, Writer writer) throws Http2Exception;
 }

@@ -738,8 +738,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             }
         }
 
-        protected final boolean initialWindowSize(int newWindowSize, Writer writer)
-                throws Http2Exception {
+        protected final boolean initialWindowSize(int newWindowSize, Writer writer) throws Http2Exception {
             if (newWindowSize < 0) {
                 throw new IllegalArgumentException("Invalid initial window size: " + newWindowSize);
             }

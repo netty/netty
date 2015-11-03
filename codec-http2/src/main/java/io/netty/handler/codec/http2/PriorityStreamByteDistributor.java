@@ -15,11 +15,13 @@
 
 package io.netty.handler.codec.http2;
 
+import java.util.Arrays;
+
+import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
-
-import java.util.Arrays;
 
 /**
  * A {@link StreamByteDistributor} that implements the HTTP/2 priority tree algorithm for allocating
@@ -81,7 +83,7 @@ public final class PriorityStreamByteDistributor implements StreamByteDistributo
     }
 
     @Override
-    public boolean distribute(int maxBytes, Writer writer) {
+    public boolean distribute(int maxBytes, Writer writer) throws Http2Exception {
         checkNotNull(writer, "writer");
         if (maxBytes > 0) {
             allocateBytesForTree(connection.connectionStream(), maxBytes);
@@ -379,46 +381,38 @@ public final class PriorityStreamByteDistributor implements StreamByteDistributo
     /**
      * A connection stream visitor that delegates to the user provided visitor.
      */
-    private class WriteVisitor implements Http2StreamVisitor {
-        Writer writer;
-        RuntimeException error;
+    private final class WriteVisitor implements Http2StreamVisitor {
+        private boolean iterating;
+        private Writer writer;
 
-        void writeAllocatedBytes(Writer writer) {
+        void writeAllocatedBytes(Writer writer) throws Http2Exception {
+            if (iterating) {
+                throw connectionError(INTERNAL_ERROR, "byte distribution re-entry error");
+            }
+            this.writer = writer;
             try {
-                this.writer = writer;
-                try {
-                    connection.forEachActiveStream(this);
-                } catch (Http2Exception e) {
-                    // Should never happen since the visitor doesn't throw.
-                    throw new IllegalStateException(e);
-                }
-
-                // If an error was caught when calling back the visitor, throw it now.
-                if (error != null) {
-                    throw error;
-                }
+                iterating = true;
+                connection.forEachActiveStream(this);
             } finally {
-                error = null;
+                iterating = false;
             }
         }
 
         @Override
-        public boolean visit(Http2Stream stream) {
+        public boolean visit(Http2Stream stream) throws Http2Exception {
             PriorityState state = state(stream);
+            int allocated = state.allocated;
+
+            // Unallocate all bytes for this stream.
+            state.resetAllocated();
+
             try {
-                int allocated = state.allocated;
-
-                // Unallocate all bytes for this stream.
-                state.resetAllocated();
-
                 // Write the allocated bytes.
-                if (error == null) {
-                    writer.write(stream, allocated);
-                }
-            } catch (RuntimeException e) {
-                // Stop calling the visitor, but continue in the loop to reset the allocated for
-                // all remaining states.
-                error = e;
+                writer.write(stream, allocated);
+            } catch (Throwable t) { // catch Throwable in case any unchecked re-throw tricks are used.
+                // Stop calling the visitor and close the connection as exceptions from the writer are not supported.
+                // If we don't close the connection there is risk that our internal state may be corrupted.
+                throw connectionError(INTERNAL_ERROR, t, "byte distribution write error");
             }
 
             // We have to iterate across all streams to ensure that we reset the allocated bytes.
