@@ -315,12 +315,66 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
         @Override
         int writeAllocatedBytes(int allocated) {
+            final int initialAllocated = allocated;
+            int writtenBytes;
+            // In case an exception is thrown we want to remember it and pass it to cancel(Throwable).
+            Throwable cause = null;
+            FlowControlled frame;
             try {
-                // Perform the write.
-                return writeBytes(allocated);
+                assert !writing;
+                writing = true;
+
+                // Write the remainder of frames that we are allowed to
+                boolean writeOccurred = false;
+                while (!cancelled && (frame = peek()) != null) {
+                    int maxBytes = min(allocated, writableWindow());
+                    if (maxBytes <= 0 && frame.size() > 0) {
+                        // The frame still has data, but the amount of allocated bytes has been exhausted.
+                        // Don't write needless empty frames.
+                        break;
+                    }
+                    writeOccurred = true;
+                    int initialFrameSize = frame.size();
+                    try {
+                        frame.write(ctx, max(0, maxBytes));
+                        if (frame.size() == 0) {
+                            // This frame has been fully written, remove this frame and notify it.
+                            // Since we remove this frame first, we're guaranteed that its error
+                            // method will not be called when we call cancel.
+                            pendingWriteQueue.remove();
+                            frame.writeComplete();
+                        }
+                    } finally {
+                        // Decrement allocated by how much was actually written.
+                        allocated -= initialFrameSize - frame.size();
+                    }
+                }
+
+                if (!writeOccurred) {
+                    // Either there was no frame, or the amount of allocated bytes has been exhausted.
+                    return -1;
+                }
+
+            } catch (Throwable t) {
+                // Mark the state as cancelled, we'll clear the pending queue via cancel() below.
+                cancelled = true;
+                cause = t;
             } finally {
-                streamByteDistributor.updateStreamableBytes(this);
+                writing = false;
+                // Make sure we always decrement the flow control windows
+                // by the bytes written.
+                writtenBytes = initialAllocated - allocated;
+
+                decrementPendingBytes(writtenBytes, false);
+                decrementFlowControlWindow(writtenBytes);
+
+                // If a cancellation occurred while writing, call cancel again to
+                // clear and error all of the pending writes.
+                if (cancelled) {
+                    cancel(cause);
+                }
             }
+            return writtenBytes;
         }
 
         @Override
@@ -354,11 +408,13 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
         @Override
         void enqueueFrame(FlowControlled frame) {
-            incrementPendingBytes(frame.size());
             FlowControlled last = pendingWriteQueue.peekLast();
             if (last == null || !last.merge(ctx, frame)) {
                 pendingWriteQueue.offer(frame);
             }
+            // This must be called after adding to the queue in order so that hasFrame() is
+            // updated before updating the stream state.
+            incrementPendingBytes(frame.size(), true);
         }
 
         @Override
@@ -400,89 +456,24 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             streamByteDistributor.updateStreamableBytes(this);
         }
 
-        int writeBytes(int bytes) {
-            if (!hasFrame()) {
-                return -1;
-            }
-            // Check if the first frame is a "writable" frame to get the "-1" return status out of the way
-            FlowControlled frame = peek();
-            int maxBytes = min(bytes, writableWindow());
-            if (maxBytes <= 0 && frame.size() != 0) {
-                // The frame still has data, but the amount of allocated bytes has been exhausted.
-                return -1;
-            }
-            int originalBytes = bytes;
-            bytes -= write(frame, maxBytes);
-
-            // Write the remainder of frames that we are allowed to
-            while (hasFrame()) {
-                frame = peek();
-                maxBytes = min(bytes, writableWindow());
-                if (maxBytes <= 0 && frame.size() != 0) {
-                    // The frame still has data, but the amount of allocated bytes has been exhausted.
-                    break;
-                }
-                bytes -= write(frame, maxBytes);
-            }
-            return originalBytes - bytes;
-        }
-
         /**
-         * Writes the frame and decrements the stream and connection window sizes. If the frame is in the pending
-         * queue, the written bytes are removed from this branch of the priority tree.
+         * Increments the number of pending bytes for this node and optionally updates the
+         * {@link StreamByteDistributor}.
          */
-        private int write(FlowControlled frame, int allowedBytes) {
-            int before = frame.size();
-            int writtenBytes;
-            // In case an exception is thrown we want to remember it and pass it to cancel(Throwable).
-            Throwable cause = null;
-            try {
-                assert !writing;
-
-                // Write the portion of the frame.
-                writing = true;
-                frame.write(ctx, max(0, allowedBytes));
-                if (!cancelled && frame.size() == 0) {
-                    // This frame has been fully written, remove this frame and notify it. Since we remove this frame
-                    // first, we're guaranteed that its error method will not be called when we call cancel.
-                    pendingWriteQueue.remove();
-                    frame.writeComplete();
-                }
-            } catch (Throwable t) {
-                // Mark the state as cancelled, we'll clear the pending queue via cancel() below.
-                cancelled = true;
-                cause = t;
-            } finally {
-                writing = false;
-                // Make sure we always decrement the flow control windows
-                // by the bytes written.
-                writtenBytes = before - frame.size();
-                decrementFlowControlWindow(writtenBytes);
-                decrementPendingBytes(writtenBytes);
-                // If a cancellation occurred while writing, call cancel again to
-                // clear and error all of the pending writes.
-                if (cancelled) {
-                    cancel(cause);
-                }
-            }
-            return writtenBytes;
-        }
-
-        /**
-         * Increments the number of pending bytes for this node and updates the {@link StreamByteDistributor}.
-         */
-        private void incrementPendingBytes(int numBytes) {
+        // TODO(nmittler): consider updating streamable bytes elsewhere.
+        private void incrementPendingBytes(int numBytes, boolean updateStreamableBytes) {
             pendingBytes += numBytes;
-
-            streamByteDistributor.updateStreamableBytes(this);
             monitor.incrementPendingBytes(numBytes);
+            if (updateStreamableBytes) {
+                streamByteDistributor.updateStreamableBytes(this);
+            }
         }
 
         /**
          * If this frame is in the pending queue, decrements the number of pending bytes for the stream.
          */
-        private void decrementPendingBytes(int bytes) {
-            incrementPendingBytes(-bytes);
+        private void decrementPendingBytes(int bytes, boolean updateStreamableBytes) {
+            incrementPendingBytes(-bytes, updateStreamableBytes);
         }
 
         /**
@@ -505,7 +496,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          */
         private void writeError(FlowControlled frame, Http2Exception cause) {
             assert ctx != null;
-            decrementPendingBytes(frame.size());
+            decrementPendingBytes(frame.size(), true);
             frame.error(ctx, cause);
         }
     }

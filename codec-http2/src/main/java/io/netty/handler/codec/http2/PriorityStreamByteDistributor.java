@@ -346,6 +346,9 @@ public final class PriorityStreamByteDistributor implements StreamByteDistributo
         }
 
         void updateStreamableBytes(int newStreamableBytes, boolean hasFrame) {
+            if (!hasFrame && newStreamableBytes > 0) {
+                throw new IllegalArgumentException("Streamable bytes must be zero when !hasFrame.");
+            }
             this.hasFrame = hasFrame;
 
             int delta = newStreamableBytes - streamableBytes;
