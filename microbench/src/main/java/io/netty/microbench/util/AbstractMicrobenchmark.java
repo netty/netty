@@ -18,7 +18,7 @@ package io.netty.microbench.util;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.internal.SystemPropertyUtil;
 
-import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -46,8 +46,8 @@ public class AbstractMicrobenchmark extends AbstractMicrobenchmarkBase {
 
     public static final class HarnessExecutor extends ThreadPoolExecutor {
         public HarnessExecutor(int maxThreads, String prefix) {
-            super(0, maxThreads, 1L, TimeUnit.DAYS, new SynchronousQueue<Runnable>(),
-                  new DefaultThreadFactory(prefix));
+            super(maxThreads, maxThreads, 0, TimeUnit.MILLISECONDS,
+                    new LinkedBlockingQueue<Runnable>(), new DefaultThreadFactory(prefix));
             System.out.println("Using harness executor");
         }
     }
