@@ -1,0 +1,67 @@
+{
+  "force_huffman_on": true,
+  "header_blocks":
+  [
+    {
+      "headers": [
+        { ":path": "/somepath" },
+        { "x-custom": "val" }
+      ],
+      "encoded": [
+        "4487 6107 a4b5 8d33 ff40 86f2 b12d 424f",
+        "4f83 ee3a 3f"
+      ],
+      "dynamic_table": [
+        { "x-custom": "val" },
+        { ":path": "/somepath" }
+      ],
+      "table_size": 89
+    },
+    {
+      "headers": [
+        { ":path": "/somepath" },
+        { "x-custom": "val" },
+        { "x-custom": "val" }
+      ],
+      "encoded": [
+        "bfbe be"
+      ],
+      "dynamic_table": [
+        { "x-custom": "val" },
+        { ":path": "/somepath" }
+      ],
+      "table_size": 89
+    },
+    {
+      "headers": [
+        { ":path": "/somepath" },
+        { "x-custom": "val" },
+        { "foo": "bar" },
+        { "x-custom": "val" }
+      ],
+      "encoded": [
+        "bfbe 4082 94e7 838c 767f bf"
+      ],
+      "dynamic_table": [
+        { "foo": "bar" },
+        { "x-custom": "val" },
+        { ":path": "/somepath" }
+      ],
+      "table_size": 127
+    },
+    {
+      "headers": [
+        { ":path": "/somepath" }
+      ],
+      "encoded": [
+        "c0"
+      ],
+      "dynamic_table": [
+        { "foo": "bar" },
+        { "x-custom": "val" },
+        { ":path": "/somepath" }
+      ],
+      "table_size": 127
+    }
+  ]
+}

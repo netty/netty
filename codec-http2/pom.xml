@@ -40,13 +40,13 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>com.twitter</groupId>
-      <artifactId>hpack</artifactId>
-    </dependency>
-    <dependency>
       <groupId>com.jcraft</groupId>
       <artifactId>jzlib</artifactId>
       <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
     </dependency>
   </dependencies>
 </project>

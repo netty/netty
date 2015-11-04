@@ -1,0 +1,57 @@
+{
+  "max_header_table_size": 128,
+  "force_huffman_off": true,
+  "header_blocks":
+  [
+    {
+      "headers": [
+        { "name1": "val1" },
+        { "name2": "val2" },
+        { "name3": "val3" }
+      ],
+      "encoded": [
+        "4005 6e61 6d65 3104 7661 6c31 4005 6e61",
+        "6d65 3204 7661 6c32 4005 6e61 6d65 3304",
+        "7661 6c33"
+      ],
+      "dynamic_table": [
+        { "name3": "val3" },
+        { "name2": "val2" },
+        { "name1": "val1" }
+      ],
+      "table_size": 123
+    },
+    {
+      "max_header_table_size": 81,
+      "headers": [
+        { "name3": "val3" },
+        { "name2": "val2" }
+      ],
+      "encoded": [
+        "3f32 be40 056e 616d 6532 0476 616c 32"
+      ],
+      "dynamic_table": [
+        { "name2": "val2" }
+      ],
+      "table_size": 41
+    },
+    {
+      "max_header_table_size": 128,
+      "headers": [
+        { "name1": "val1" },
+        { "name2": "val2" },
+        { "name3": "val3" }
+      ],
+      "encoded": [
+        "3f61 4005 6e61 6d65 3104 7661 6c31 bf40",
+        "056e 616d 6533 0476 616c 33"
+      ],
+      "dynamic_table": [
+        { "name3": "val3" },
+        { "name1": "val1" },
+        { "name2": "val2" }
+      ],
+      "table_size": 123
+    }
+  ]
+}

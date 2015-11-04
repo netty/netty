@@ -1,0 +1,58 @@
+{
+  "force_huffman_on": true,
+  "header_blocks":
+  [
+    {
+      "headers": [
+        { ":method": "GET" },
+        { ":scheme": "http" },
+        { ":path": "/" },
+        { ":authority": "www.example.com" }
+      ],
+      "encoded": [
+        "8286 8441 8cf1 e3c2 e5f2 3a6b a0ab 90f4",
+        "ff"
+      ],
+      "dynamic_table": [
+        { ":authority": "www.example.com" }
+      ],
+      "table_size": 57
+    },
+    {
+      "headers": [
+        { ":method": "GET" },
+        { ":scheme": "http" },
+        { ":path": "/" },
+        { ":authority": "www.example.com" },
+        { "cache-control": "no-cache" }
+      ],
+      "encoded": [
+        "8286 84be 5886 a8eb 1064 9cbf"
+      ],
+      "dynamic_table": [
+        { "cache-control": "no-cache" },
+        { ":authority": "www.example.com" }
+      ],
+      "table_size": 110
+    },
+    {
+      "headers": [
+        { ":method": "GET" },
+        { ":scheme": "https" },
+        { ":path": "/index.html" },
+        { ":authority": "www.example.com" },
+        { "custom-key": "custom-value" }
+      ],
+      "encoded": [
+        "8287 85bf 4088 25a8 49e9 5ba9 7d7f 8925",
+        "a849 e95b b8e8 b4bf"
+      ],
+      "dynamic_table": [
+        { "custom-key": "custom-value" },
+        { "cache-control": "no-cache" },
+        { ":authority": "www.example.com" }
+      ],
+      "table_size": 164
+    }
+  ]
+}
