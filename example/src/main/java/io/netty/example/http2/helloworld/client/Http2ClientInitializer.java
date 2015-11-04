@@ -31,6 +31,8 @@ import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2FrameLogger;
 import io.netty.handler.codec.http2.HttpToHttp2ConnectionHandler;
 import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapter;
+import io.netty.handler.ssl.ApplicationProtocolNames;
+import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
 import io.netty.handler.ssl.SslContext;
 
 import static io.netty.handler.logging.LogLevel.INFO;
@@ -89,9 +91,22 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
      */
     private void configureSsl(SocketChannel ch) {
         ChannelPipeline pipeline = ch.pipeline();
-        pipeline.addLast(sslCtx.newHandler(ch.alloc()),
-                         connectionHandler);
-        configureEndOfPipeline(pipeline);
+        pipeline.addLast(sslCtx.newHandler(ch.alloc()));
+        // We must wait for the handshake to finish and the protocol to be negotiated before configuring
+        // the HTTP/2 components of the pipeline.
+        pipeline.addLast(new ApplicationProtocolNegotiationHandler("") {
+            @Override
+            protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
+                if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
+                    ChannelPipeline p = ctx.pipeline();
+                    p.addLast(connectionHandler);
+                    configureEndOfPipeline(p);
+                    return;
+                }
+                ctx.close();
+                throw new IllegalStateException("unknown protocol: " + protocol);
+            }
+        });
     }
 
     /**
