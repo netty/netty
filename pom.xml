@@ -199,7 +199,7 @@
         <jdk>[1.8,)</jdk>
       </activation>
       <properties>
-        <jetty.alpn.version>8.1.4.v20150727</jetty.alpn.version>
+        <jetty.alpn.version>8.1.5.v20150921</jetty.alpn.version>
       </properties>
     </profile>
     <profile>
@@ -561,6 +561,18 @@
       </activation>
       <properties>
         <jetty.alpn.version>8.1.4.v20150727</jetty.alpn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>alpn-8u60</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.8.0_60</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.alpn.version>8.1.5.v20150921</jetty.alpn.version>
       </properties>
     </profile>
     <profile>
