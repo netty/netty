@@ -28,6 +28,9 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.AbstractEventExecutor;
+import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.concurrent.Future;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Test;
@@ -38,6 +41,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -572,6 +577,37 @@ public class DefaultChannelPipelineTest {
         assertSame(exception, error.get());
     }
 
+    @Test
+    public void testChannelUnregistrationWithCustomExecutor() throws Exception {
+        final CountDownLatch channelLatch = new CountDownLatch(1);
+        final CountDownLatch handlerLatch = new CountDownLatch(1);
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        pipeline.addLast(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ch.pipeline().addLast(new WrapperExecutor(),
+                        new ChannelInboundHandlerAdapter() {
+
+                            @Override
+                            public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+                                channelLatch.countDown();
+                            }
+
+                            @Override
+                            public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+                                handlerLatch.countDown();
+                            }
+                        });
+            }
+        });
+        Channel channel = pipeline.channel();
+        group.register(channel);
+        channel.close();
+        channel.deregister();
+        assertTrue(channelLatch.await(2, TimeUnit.SECONDS));
+        assertTrue(handlerLatch.await(2, TimeUnit.SECONDS));
+    }
+
     private static int next(AbstractChannelHandlerContext ctx) {
         AbstractChannelHandlerContext next = ctx.next;
         if (next == null) {
@@ -681,6 +717,66 @@ public class DefaultChannelPipelineTest {
             validate(true, false);
 
             afterRemove = true;
+        }
+    }
+
+    private static final class WrapperExecutor extends AbstractEventExecutor {
+
+        private final ExecutorService wrapped = Executors.newSingleThreadExecutor();
+
+        @Override
+        public boolean isShuttingDown() {
+            return wrapped.isShutdown();
+        }
+
+        @Override
+        public Future<?> shutdownGracefully(long l, long l2, TimeUnit timeUnit) {
+            throw new IllegalStateException();
+        }
+
+        @Override
+        public Future<?> terminationFuture() {
+            throw new IllegalStateException();
+        }
+
+        @Override
+        public void shutdown() {
+            wrapped.shutdown();
+        }
+
+        @Override
+        public List<Runnable> shutdownNow() {
+            return wrapped.shutdownNow();
+        }
+
+        @Override
+        public boolean isShutdown() {
+            return wrapped.isShutdown();
+        }
+
+        @Override
+        public boolean isTerminated() {
+            return wrapped.isTerminated();
+        }
+
+        @Override
+        public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+            return wrapped.awaitTermination(timeout, unit);
+        }
+
+        @Override
+        public EventExecutorGroup parent() {
+            return null;
+        }
+
+        @Override
+        public boolean inEventLoop(Thread thread) {
+            return false;
+        }
+
+        @Override
+        public void execute(Runnable command) {
+            wrapped.execute(command);
         }
     }
 }
