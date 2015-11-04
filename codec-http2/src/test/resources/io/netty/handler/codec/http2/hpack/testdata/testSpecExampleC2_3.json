@@ -1,0 +1,19 @@
+{
+  "sensitive_headers": true,
+  "force_huffman_off": true,
+  "header_blocks":
+  [
+    {
+      "headers": [
+        { "password": "secret" }
+      ],
+      "encoded": [
+        "1008 7061 7373 776f 7264 0673 6563 7265",
+        "74"
+      ],
+      "dynamic_table": [
+      ],
+      "table_size": 0
+    }
+  ]
+}

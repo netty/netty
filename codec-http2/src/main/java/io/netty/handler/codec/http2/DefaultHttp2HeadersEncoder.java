@@ -15,9 +15,9 @@
 
 package io.netty.handler.codec.http2;
 
-import com.twitter.hpack.Encoder;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
+import io.netty.handler.codec.http2.hpack.Encoder;
 import io.netty.util.AsciiString;
 
 import java.io.ByteArrayOutputStream;
