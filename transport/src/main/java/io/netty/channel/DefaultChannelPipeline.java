@@ -752,35 +752,36 @@ final class DefaultChannelPipeline implements ChannelPipeline {
      * See: https://github.com/netty/netty/issues/3156
      */
     private void destroy() {
-        destroyUp(head.next);
+        destroyUp(head.next, false);
     }
 
-    private void destroyUp(AbstractChannelHandlerContext ctx) {
+    private void destroyUp(AbstractChannelHandlerContext ctx, boolean inEventLoop) {
         final Thread currentThread = Thread.currentThread();
         final AbstractChannelHandlerContext tail = this.tail;
         for (;;) {
             if (ctx == tail) {
-                destroyDown(currentThread, tail.prev);
+                destroyDown(currentThread, tail.prev, inEventLoop);
                 break;
             }
 
             final EventExecutor executor = ctx.executor();
-            if (!executor.inEventLoop(currentThread)) {
+            if (!inEventLoop && !executor.inEventLoop(currentThread)) {
                 final AbstractChannelHandlerContext finalCtx = ctx;
                 executor.execute(new OneTimeTask() {
                     @Override
                     public void run() {
-                        destroyUp(finalCtx);
+                        destroyUp(finalCtx, true);
                     }
                 });
                 break;
             }
 
             ctx = ctx.next;
+            inEventLoop = false;
         }
     }
 
-    private void destroyDown(Thread currentThread, AbstractChannelHandlerContext ctx) {
+    private void destroyDown(Thread currentThread, AbstractChannelHandlerContext ctx, boolean inEventLoop) {
         // We have reached at tail; now traverse backwards.
         final AbstractChannelHandlerContext head = this.head;
         for (;;) {
@@ -789,7 +790,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             }
 
             final EventExecutor executor = ctx.executor();
-            if (executor.inEventLoop(currentThread)) {
+            if (inEventLoop || executor.inEventLoop(currentThread)) {
                 synchronized (this) {
                     remove0(ctx);
                 }
@@ -798,13 +799,14 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                 executor.execute(new OneTimeTask() {
                     @Override
                     public void run() {
-                        destroyDown(Thread.currentThread(), finalCtx);
+                        destroyDown(Thread.currentThread(), finalCtx, true);
                     }
                 });
                 break;
             }
 
             ctx = ctx.prev;
+            inEventLoop = false;
         }
     }
 
