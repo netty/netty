@@ -1,0 +1,17 @@
+{
+  "force_huffman_off": true,
+  "header_blocks":
+  [
+    {
+      "headers": [
+        { ":method": "GET" }
+      ],
+      "encoded": [
+        "82"
+      ],
+      "dynamic_table": [
+      ],
+      "table_size": 0
+    }
+  ]
+}

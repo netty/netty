@@ -15,10 +15,10 @@
 
 package io.netty.handler.codec.http2;
 
-import com.twitter.hpack.Decoder;
-import com.twitter.hpack.HeaderListener;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
+import io.netty.handler.codec.http2.hpack.Decoder;
+import io.netty.handler.codec.http2.hpack.HeaderListener;
 import io.netty.util.AsciiString;
 
 import java.io.IOException;

@@ -1,0 +1,58 @@
+{
+  "max_header_table_size": 128,
+  "force_huffman_on": true,
+  "header_blocks":
+  [
+    {
+      "headers": [
+        { ":path": "/somepath" },
+        { "x-custom": "val1" },
+        { "x-custom": "val2" },
+        { "x-custom": "val3" }
+      ],
+      "encoded": [
+        "4487 6107 a4b5 8d33 ff40 86f2 b12d 424f",
+        "4f83 ee3a 037e 83ee 3a05 7e83 ee3a 19"
+      ],
+      "dynamic_table": [
+        { "x-custom": "val3" },
+        { "x-custom": "val2" }
+      ],
+      "table_size": 88
+    },
+    {
+      "headers": [
+        { ":path": "/somepath" },
+        { "x-custom": "val4" },
+        { "x-custom": "val5" },
+        { "x-custom": "val6" }
+      ],
+      "encoded": [
+        "4487 6107 a4b5 8d33 ff7f 0083 ee3a 1a7e",
+        "83ee 3a1b 7e83 ee3a 1c"
+      ],
+      "dynamic_table": [
+        { "x-custom": "val6" },
+        { "x-custom": "val5" }
+      ],
+      "table_size": 88
+    },
+    {
+      "headers": [
+        { ":path": "/somepath" },
+        { "x-custom": "val1" },
+        { "x-custom": "val2" },
+        { "x-custom": "val3" }
+      ],
+      "encoded": [
+        "4487 6107 a4b5 8d33 ff7f 0083 ee3a 037e",
+        "83ee 3a05 7e83 ee3a 19"
+      ],
+      "dynamic_table": [
+        { "x-custom": "val3" },
+        { "x-custom": "val2" }
+      ],
+      "table_size": 88
+    }
+  ]
+}

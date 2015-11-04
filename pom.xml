@@ -672,11 +672,6 @@
 
       <!-- SPDY and HTTP/2 - completely optional -->
       <dependency>
-        <groupId>com.twitter</groupId>
-        <artifactId>hpack</artifactId>
-        <version>v1.0.1</version>
-      </dependency>
-      <dependency>
         <groupId>org.eclipse.jetty.npn</groupId>
         <artifactId>npn-api</artifactId>
         <version>1.1.1.v20141010</version>
@@ -891,6 +886,14 @@
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-compress</artifactId>
         <version>1.9</version>
+        <scope>test</scope>
+      </dependency>
+
+      <!-- Test dependency used by http/2 hpack -->
+      <dependency>
+        <groupId>com.google.code.gson</groupId>
+        <artifactId>gson</artifactId>
+        <version>2.3.1</version>
         <scope>test</scope>
       </dependency>
 
