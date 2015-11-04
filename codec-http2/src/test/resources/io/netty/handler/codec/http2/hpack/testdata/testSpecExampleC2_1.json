@@ -1,0 +1,19 @@
+{
+  "force_huffman_off": true,
+  "header_blocks":
+  [
+    {
+      "headers": [
+        { "custom-key": "custom-header" }
+      ],
+      "encoded": [
+        "400a 6375 7374 6f6d 2d6b 6579 0d63 7573",
+        "746f 6d2d 6865 6164 6572"
+      ],
+      "dynamic_table": [
+        { "custom-key": "custom-header" }
+      ],
+      "table_size": 55
+    }
+  ]
+}
