@@ -22,6 +22,7 @@ import org.junit.Test;
 
 import java.util.Map.Entry;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -72,6 +73,16 @@ public class DefaultHttp2HeadersTest {
         Http2Headers headers = newHeaders();
 
         headers.add(of("Foo"), of("foo"));
+    }
+
+    @Test
+    public void testClearResetsPseudoHeaderDivision() {
+        DefaultHttp2Headers http2Headers = new DefaultHttp2Headers();
+        http2Headers.method("POST");
+        http2Headers.set("some", "value");
+        http2Headers.clear();
+        http2Headers.method("GET");
+        assertEquals(1, http2Headers.names().size());
     }
 
     private static void verifyAllPseudoHeadersPresent(Http2Headers headers) {

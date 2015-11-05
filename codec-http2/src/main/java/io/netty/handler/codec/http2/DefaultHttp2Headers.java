@@ -91,6 +91,12 @@ public class DefaultHttp2Headers
     }
 
     @Override
+    public Http2Headers clear() {
+        this.firstNonPseudo = head;
+        return super.clear();
+    }
+
+    @Override
     public Http2Headers method(CharSequence value) {
         set(PseudoHeaderName.METHOD.value(), value);
         return this;
