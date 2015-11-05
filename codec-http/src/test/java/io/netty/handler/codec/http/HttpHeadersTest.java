@@ -76,9 +76,11 @@ public class HttpHeadersTest {
         headers.add(headers);
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testSetSelf() {
+    @Test
+    public void testSetSelfIsNoOp() {
         HttpHeaders headers = new DefaultHttpHeaders(false);
+        headers.add("name", "value");
         headers.set(headers);
+        assertEquals(1, headers.size());
     }
 }
