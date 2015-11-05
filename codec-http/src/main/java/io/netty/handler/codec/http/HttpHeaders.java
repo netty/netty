@@ -1617,9 +1617,11 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         if (headers == null) {
             throw new NullPointerException("headers");
         }
-        clear();
-        for (Map.Entry<String, String> e: headers) {
-            add(e.getKey(), e.getValue());
+        if (headers != this) {
+            clear();
+            for (Map.Entry<String, String> e : headers) {
+                add(e.getKey(), e.getValue());
+            }
         }
         return this;
     }
