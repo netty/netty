@@ -390,9 +390,11 @@ public class DefaultHeadersTest {
         headers.add(headers);
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testSetSelf() {
+    @Test
+    public void testSetSelfIsNoOp() {
         TestDefaultHeaders headers = newInstance();
+        headers.add("name", "value");
         headers.set(headers);
+        assertEquals(1, headers.size());
     }
 }

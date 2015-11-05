@@ -539,7 +539,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     public T set(Headers<? extends K, ? extends V, ?> headers) {
         checkNotNull(headers, "headers");
         if (headers == this) {
-            throw new IllegalArgumentException("can't add to itself.");
+            return thisT();
         }
         clear();
         if (headers instanceof DefaultHeaders) {
