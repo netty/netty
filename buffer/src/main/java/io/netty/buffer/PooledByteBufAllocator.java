@@ -271,6 +271,55 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         return toLeakAwareBuffer(buf);
     }
 
+    /**
+     *  Default number of heap areanas - System Property: io.netty.allocator.numHeapArenas - default 2 * cores
+     */
+    public static int defaultNumHeapArena() {
+        return DEFAULT_NUM_HEAP_ARENA;
+    }
+
+    /**
+     *  Default numer of direct arenas - System Property: io.netty.allocator.numDirectArenas - default 2 * cores
+     */
+    public static int defaultNumDirectArena() {
+        return DEFAULT_NUM_DIRECT_ARENA;
+    }
+
+    /**
+     * Default buffer page size - System Property: io.netty.allocator.pageSize - default 8192
+     */
+    public static int defaultPageSize() {
+        return DEFAULT_PAGE_SIZE;
+    }
+
+    /**
+     *  Default maximum order - System Property: io.netty.allocator.maxOrder - default 11
+     */
+    public static int defaultMaxOrder() {
+        return DEFAULT_MAX_ORDER;
+    }
+
+    /**
+     *  Default tiny cache size - System Property: io.netty.allocator.tinyCacheSize - default 512
+     */
+    public static int defaultTinyCacheSize() {
+        return DEFAULT_TINY_CACHE_SIZE;
+    }
+
+    /**
+     *  Default small cache size - System Property: io.netty.allocator.smallCacheSize - default 256
+     */
+    public static int defaultSmallCacheSize() {
+        return DEFAULT_SMALL_CACHE_SIZE;
+    }
+
+    /**
+     *  Default normal cache size - System Property: io.netty.allocator.normalCacheSize - default 64
+     */
+    public static int defaultNormalCacheSize() {
+        return DEFAULT_NORMAL_CACHE_SIZE;
+    }
+
     @Override
     public boolean isDirectBufferPooled() {
         return directArenas != null;
