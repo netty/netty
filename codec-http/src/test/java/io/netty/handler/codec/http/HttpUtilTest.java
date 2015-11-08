@@ -15,14 +15,16 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.util.AsciiString;
-
+import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class HttpUtilTest {
 
@@ -51,10 +53,38 @@ public class HttpUtilTest {
     }
 
     @Test
-    public void testEquansIgnoreCase() {
-        assertThat(AsciiString.contentEqualsIgnoreCase(null, null), is(true));
-        assertThat(AsciiString.contentEqualsIgnoreCase(null, "foo"), is(false));
-        assertThat(AsciiString.contentEqualsIgnoreCase("bar", null), is(false));
-        assertThat(AsciiString.contentEqualsIgnoreCase("FoO", "fOo"), is(true));
+    public void testGetCharsetAsRawString() {
+        HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        message.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=\"utf8\"");
+        assertEquals("\"utf8\"", HttpUtil.getCharsetAsString(message));
+
+        message.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html");
+        assertNull(HttpUtil.getCharsetAsString(message));
+    }
+
+    @Test
+    public void testGetCharset() {
+        HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        message.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=utf-8");
+        assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(message));
+
+        message.headers().set(HttpHeaderNames.CONTENT_TYPE, "TEXT/HTML; CHARSET=UTF-8");
+        assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(message));
+    }
+
+    @Test
+    public void testGetCharset_defaultValue() {
+        HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        message.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html");
+        assertEquals(CharsetUtil.ISO_8859_1, HttpUtil.getCharset(message));
+
+        message.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html");
+        assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(message, StandardCharsets.UTF_8));
+
+        message.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=UTFFF");
+        assertEquals(CharsetUtil.ISO_8859_1, HttpUtil.getCharset(message));
+
+        message.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=UTFFF");
+        assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(message, StandardCharsets.UTF_8));
     }
 }
