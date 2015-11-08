@@ -37,7 +37,6 @@ import io.netty.resolver.NameResolver;
 import io.netty.resolver.SimpleNameResolver;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -59,9 +58,8 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReferenceArray;
 
-import static io.netty.util.internal.ObjectUtil.*;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * A DNS-based {@link NameResolver}.
@@ -95,11 +93,9 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
     final DatagramChannel ch;
 
     /**
-     * An array whose index is the ID of a DNS query and whose value is the promise of the corresponsing response. We
-     * don't use {@link IntObjectHashMap} or map-like data structure here because 64k elements are fairly small, which
-     * is only about 512KB.
+     * Manages the {@link DnsQueryContext}s in progress and their query IDs.
      */
-    final AtomicReferenceArray<DnsQueryContext> promises = new AtomicReferenceArray<DnsQueryContext>(65536);
+    final DnsQueryContextManager queryContextManager = new DnsQueryContextManager();
 
     /**
      * Cache for {@link #doResolve(InetSocketAddress, Promise)} and {@link #doResolveAll(InetSocketAddress, Promise)}.
@@ -937,7 +933,7 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
                     logger.debug("{} RECEIVED: [{}: {}], {}", ch, queryId, res.sender(), res);
                 }
 
-                final DnsQueryContext qCtx = promises.get(queryId);
+                final DnsQueryContext qCtx = queryContextManager.get(res.sender(), queryId);
                 if (qCtx == null) {
                     if (logger.isWarnEnabled()) {
                         logger.warn("{} Received a DNS response with an unknown ID: {}", ch, queryId);
