@@ -31,7 +31,6 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -60,9 +59,9 @@ final class DnsQueryContext {
         this.nameServerAddr = nameServerAddr;
         this.question = question;
         this.promise = promise;
-
-        id = allocateId();
         recursionDesired = parent.isRecursionDesired();
+        id = parent.queryContextManager.add(this);
+
         if (parent.isOptResourceEnabled()) {
             optResource = new DefaultDnsRawRecord(
                     StringUtil.EMPTY_STRING, DnsRecordType.OPT, parent.maxPayloadSize(), 0, Unpooled.EMPTY_BUFFER);
@@ -71,25 +70,17 @@ final class DnsQueryContext {
         }
     }
 
-    private int allocateId() {
-        int id = ThreadLocalRandom.current().nextInt(parent.promises.length());
-        final int maxTries = parent.promises.length() << 1;
-        int tries = 0;
-        for (;;) {
-            if (parent.promises.compareAndSet(id, null, this)) {
-                return id;
-            }
+    InetSocketAddress nameServerAddr() {
+        return nameServerAddr;
+    }
 
-            id = id + 1 & 0xFFFF;
-
-            if (++ tries >= maxTries) {
-                throw new IllegalStateException("query ID space exhausted: " + question);
-            }
-        }
+    DnsQuestion question() {
+        return question;
     }
 
     void query() {
-        final DnsQuestion question = this.question;
+        final DnsQuestion question = question();
+        final InetSocketAddress nameServerAddr = nameServerAddr();
         final DatagramDnsQuery query = new DatagramDnsQuery(null, nameServerAddr, id);
         query.setRecursionDesired(recursionDesired);
         query.setRecord(DnsSection.QUESTION, question);
@@ -159,13 +150,13 @@ final class DnsQueryContext {
     }
 
     void finish(AddressedEnvelope<? extends DnsResponse, InetSocketAddress> envelope) {
-        DnsResponse res = envelope.content();
+        final DnsResponse res = envelope.content();
         if (res.count(DnsSection.QUESTION) != 1) {
             logger.warn("Received a DNS response with invalid number of questions: {}", envelope);
             return;
         }
 
-        if (!question.equals(res.recordAt(DnsSection.QUESTION))) {
+        if (!question().equals(res.recordAt(DnsSection.QUESTION))) {
             logger.warn("Received a mismatching DNS response: {}", envelope);
             return;
         }
@@ -174,7 +165,7 @@ final class DnsQueryContext {
     }
 
     private void setSuccess(AddressedEnvelope<? extends DnsResponse, InetSocketAddress> envelope) {
-        parent.promises.set(id, null);
+        parent.queryContextManager.remove(nameServerAddr(), id);
 
         // Cancel the timeout task.
         final ScheduledFuture<?> timeoutFuture = this.timeoutFuture;
@@ -192,7 +183,8 @@ final class DnsQueryContext {
     }
 
     private void setFailure(String message, Throwable cause) {
-        parent.promises.set(id, null);
+        final InetSocketAddress nameServerAddr = nameServerAddr();
+        parent.queryContextManager.remove(nameServerAddr, id);
 
         final StringBuilder buf = new StringBuilder(message.length() + 64);
         buf.append('[')
@@ -203,9 +195,9 @@ final class DnsQueryContext {
 
         final DnsNameResolverException e;
         if (cause != null) {
-            e = new DnsNameResolverException(nameServerAddr, question, buf.toString(), cause);
+            e = new DnsNameResolverException(nameServerAddr, question(), buf.toString(), cause);
         } else {
-            e = new DnsNameResolverException(nameServerAddr, question, buf.toString());
+            e = new DnsNameResolverException(nameServerAddr, question(), buf.toString());
         }
 
         promise.tryFailure(e);
