@@ -16,9 +16,13 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.AsciiString;
+import io.netty.util.CharsetUtil;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.nio.charset.Charset;
+import java.nio.charset.UnsupportedCharsetException;
 import java.util.Iterator;
 import java.util.List;
 
@@ -35,6 +39,7 @@ public final class HttpUtil {
      */
     @Deprecated
     static final EmptyHttpHeaders EMPTY_HEADERS = new EmptyHttpHeaders();
+    private static final AsciiString CHARSET_EQUALS = AsciiString.of(HttpHeaderValues.CHARSET + "=");
 
     private HttpUtil() { }
 
@@ -323,6 +328,57 @@ public final class HttpUtil {
                 m.headers().set(HttpHeaderNames.TRANSFER_ENCODING, values);
             }
         }
+    }
+
+    /**
+     * Fetch charset from message's Content-Type header.
+     *
+     * @return the charset from message's Content-Type header or {@link io.netty.util.CharsetUtil#ISO_8859_1}
+     * if charset is not presented or unparsable
+     */
+    public static Charset getCharset(HttpMessage message) {
+        return getCharset(message, CharsetUtil.ISO_8859_1);
+    }
+
+    /**
+     * Fetch charset from message's Content-Type header.
+     *
+     * @return the charset from message's Content-Type header or {@code defaultCharset}
+     * if charset is not presented or unparsable
+     */
+    public static Charset getCharset(HttpMessage message, Charset defaultCharset) {
+        CharSequence charsetCharSequence = getCharsetAsString(message);
+        if (charsetCharSequence != null) {
+            try {
+                return Charset.forName(charsetCharSequence.toString());
+            } catch (UnsupportedCharsetException unsupportedException) {
+                return defaultCharset;
+            }
+        } else {
+            return defaultCharset;
+        }
+    }
+
+    /**
+     * Fetch charset string from message's Content-Type header.
+     *
+     * A lot of sites/possibly clients have charset="CHARSET", for example charset="utf-8". Or "utf8" instead of "utf-8"
+     * This is not according to standard, but this method provide an ability to catch desired mistakes manually in code
+     *
+     * @return the charset string from message's Content-Type header or {@code null} if charset is not presented
+     */
+    public static CharSequence getCharsetAsString(HttpMessage message) {
+        CharSequence contentTypeValue = message.headers().get(HttpHeaderNames.CONTENT_TYPE);
+        if (contentTypeValue != null) {
+            int indexOfCharset = AsciiString.indexOfIgnoreCaseAscii(contentTypeValue, CHARSET_EQUALS, 0);
+            if (indexOfCharset != AsciiString.INDEX_NOT_FOUND) {
+                int indexOfEncoding = indexOfCharset + CHARSET_EQUALS.length();
+                if (indexOfEncoding < contentTypeValue.length()) {
+                    return contentTypeValue.subSequence(indexOfEncoding, contentTypeValue.length());
+                }
+            }
+        }
+        return null;
     }
 
     static void encodeAscii0(CharSequence seq, ByteBuf buf) {
