@@ -24,9 +24,11 @@ import java.util.Random;
 
 import static io.netty.util.AsciiString.contains;
 import static io.netty.util.AsciiString.containsIgnoreCase;
+import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -230,5 +232,44 @@ public class AsciiStringCharacterTest {
         assertFalse(new AsciiString(new byte[] { 0 }).parseBoolean());
         assertTrue(new AsciiString(new byte[] { 5 }).parseBoolean());
         assertTrue(new AsciiString(new byte[] { 2, 0 }).parseBoolean());
+    }
+
+    @Test
+    public void testEqualsIgnoreCase() {
+        assertThat(AsciiString.contentEqualsIgnoreCase(null, null), is(true));
+        assertThat(AsciiString.contentEqualsIgnoreCase(null, "foo"), is(false));
+        assertThat(AsciiString.contentEqualsIgnoreCase("bar", null), is(false));
+        assertThat(AsciiString.contentEqualsIgnoreCase("FoO", "fOo"), is(true));
+    }
+
+    @Test
+    public void testIndexOfIgnoreCase() {
+        assertEquals(-1, AsciiString.indexOfIgnoreCase(null, "abc", 1));
+        assertEquals(-1, AsciiString.indexOfIgnoreCase("abc", null, 1));
+        assertEquals(0, AsciiString.indexOfIgnoreCase("", "", 0));
+        assertEquals(0, AsciiString.indexOfIgnoreCase("aabaabaa", "A", 0));
+        assertEquals(2, AsciiString.indexOfIgnoreCase("aabaabaa", "B", 0));
+        assertEquals(1, AsciiString.indexOfIgnoreCase("aabaabaa", "AB", 0));
+        assertEquals(5, AsciiString.indexOfIgnoreCase("aabaabaa", "B", 3));
+        assertEquals(-1, AsciiString.indexOfIgnoreCase("aabaabaa", "B", 9));
+        assertEquals(2, AsciiString.indexOfIgnoreCase("aabaabaa", "B", -1));
+        assertEquals(2, AsciiString.indexOfIgnoreCase("aabaabaa", "", 2));
+        assertEquals(-1, AsciiString.indexOfIgnoreCase("abc", "", 9));
+        assertEquals(0, AsciiString.indexOfIgnoreCase("ãabaabaa", "Ã", 0));
+    }
+
+    @Test
+    public void testIndexOfIgnoreCaseAscii() {
+        assertEquals(-1, AsciiString.indexOfIgnoreCaseAscii(null, "abc", 1));
+        assertEquals(-1, AsciiString.indexOfIgnoreCaseAscii("abc", null, 1));
+        assertEquals(0, AsciiString.indexOfIgnoreCaseAscii("", "", 0));
+        assertEquals(0, AsciiString.indexOfIgnoreCaseAscii("aabaabaa", "A", 0));
+        assertEquals(2, AsciiString.indexOfIgnoreCaseAscii("aabaabaa", "B", 0));
+        assertEquals(1, AsciiString.indexOfIgnoreCaseAscii("aabaabaa", "AB", 0));
+        assertEquals(5, AsciiString.indexOfIgnoreCaseAscii("aabaabaa", "B", 3));
+        assertEquals(-1, AsciiString.indexOfIgnoreCaseAscii("aabaabaa", "B", 9));
+        assertEquals(2, AsciiString.indexOfIgnoreCaseAscii("aabaabaa", "B", -1));
+        assertEquals(2, AsciiString.indexOfIgnoreCaseAscii("aabaabaa", "", 2));
+        assertEquals(-1, AsciiString.indexOfIgnoreCaseAscii("abc", "", 9));
     }
 }
