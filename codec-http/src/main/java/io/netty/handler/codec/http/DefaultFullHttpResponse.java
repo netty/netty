@@ -15,9 +15,11 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.IllegalReferenceCountException;
+
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Default implementation of a {@link FullHttpResponse}.
@@ -27,6 +29,10 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
     private final ByteBuf content;
     private final HttpHeaders trailingHeaders;
     private final boolean validateHeaders;
+    /**
+     * Used to cache the value of the hash code and avoid {@link IllegalRefCountException}.
+     */
+    private int hash;
 
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status) {
         this(version, status, Unpooled.buffer(0));
@@ -162,6 +168,40 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
         duplicate.headers().set(headers());
         duplicate.trailingHeaders().set(trailingHeaders());
         return duplicate;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = this.hash;
+        if (hash == 0) {
+            if (content().refCnt() != 0) {
+                try {
+                    hash = 31 + content().hashCode();
+                } catch (IllegalReferenceCountException ignored) {
+                    // Handle race condition between checking refCnt() == 0 and using the object.
+                    hash = 31;
+                }
+            } else {
+                hash = 31;
+            }
+            hash = 31 * hash + trailingHeaders().hashCode();
+            hash = 31 * hash + super.hashCode();
+            this.hash = hash;
+        }
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof DefaultFullHttpResponse)) {
+            return false;
+        }
+
+        DefaultFullHttpResponse other = (DefaultFullHttpResponse) o;
+
+        return super.equals(other) &&
+               content().equals(other.content()) &&
+               trailingHeaders().equals(other.trailingHeaders());
     }
 
     @Override
