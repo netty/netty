@@ -296,7 +296,7 @@ public class HttpContentCompressorTest {
     @Test
     public void test100Continue() throws Exception {
         FullHttpRequest request = newRequest();
-        HttpHeaderUtil.set100ContinueExpected(request, true);
+        HttpUtil.set100ContinueExpected(request, true);
 
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(request);
