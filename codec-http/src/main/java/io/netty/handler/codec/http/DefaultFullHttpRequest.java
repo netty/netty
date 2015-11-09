@@ -17,15 +17,19 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.IllegalReferenceCountException;
 
 /**
  * Default implementation of {@link FullHttpRequest}.
  */
 public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHttpRequest {
-    private static final int HASH_CODE_PRIME = 31;
     private final ByteBuf content;
     private final HttpHeaders trailingHeader;
     private final boolean validateHeaders;
+    /**
+     * Used to cache the value of the hash code and avoid {@link IllegalRefCountException}.
+     */
+    private int hash;
 
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri) {
         this(httpVersion, method, uri, Unpooled.buffer(0));
@@ -163,11 +167,23 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
 
     @Override
     public int hashCode() {
-        int result = 1;
-        result = HASH_CODE_PRIME * result + content().hashCode();
-        result = HASH_CODE_PRIME * result + trailingHeaders().hashCode();
-        result = HASH_CODE_PRIME * result + super.hashCode();
-        return result;
+        int hash = this.hash;
+        if (hash == 0) {
+            if (content().refCnt() != 0) {
+                try {
+                    hash = 31 + content().hashCode();
+                } catch (IllegalReferenceCountException ignored) {
+                    // Handle race condition between checking refCnt() == 0 and using the object.
+                    hash = 31;
+                }
+            } else {
+                hash = 31;
+            }
+            hash = 31 * hash + trailingHeaders().hashCode();
+            hash = 31 * hash + super.hashCode();
+            this.hash = hash;
+        }
+        return hash;
     }
 
     @Override
