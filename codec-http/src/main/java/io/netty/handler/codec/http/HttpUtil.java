@@ -21,6 +21,8 @@ import java.net.URI;
 import java.util.Iterator;
 import java.util.List;
 
+import static io.netty.util.AsciiString.c2b;
+
 /**
  * Utility methods useful in the HTTP context.
  */
@@ -188,7 +190,7 @@ public final class HttpUtil {
      *         a number. Not to exceed the boundaries of integer.
      */
     public static int getContentLength(HttpMessage message, int defaultValue) {
-        return (int) Math.min(Integer.MAX_VALUE, HttpHeaderUtil.getContentLength(message, (long) defaultValue));
+        return (int) Math.min(Integer.MAX_VALUE, HttpUtil.getContentLength(message, (long) defaultValue));
     }
 
     /**
@@ -318,9 +320,5 @@ public final class HttpUtil {
         for (int i = 0 ; i < length; i++) {
             buf.writeByte(c2b(seq.charAt(i)));
         }
-    }
-
-    private static byte c2b(char c) {
-        return c > 255 ? (byte) '?' : (byte) c;
     }
 }

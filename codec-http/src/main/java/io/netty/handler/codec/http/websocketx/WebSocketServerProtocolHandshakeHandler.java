@@ -23,9 +23,9 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderUtil;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.ssl.SslHandler;
 
 import static io.netty.handler.codec.http.HttpMethod.*;
@@ -91,7 +91,7 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelHandlerAdapter {
 
     private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
         ChannelFuture f = ctx.channel().writeAndFlush(res);
-        if (!HttpHeaderUtil.isKeepAlive(req) || res.status().code() != 200) {
+        if (!HttpUtil.isKeepAlive(req) || res.status().code() != 200) {
             f.addListener(ChannelFutureListener.CLOSE);
         }
     }
