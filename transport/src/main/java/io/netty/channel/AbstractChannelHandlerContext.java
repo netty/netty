@@ -80,6 +80,12 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     @Override
+    public ByteBufAllocator locAlloc() {
+        ByteBufAllocator loc = channel().eventLoop().localAllocator();
+        return loc == null ? alloc() : loc;
+    }
+
+    @Override
     public EventExecutor executor() {
         return invoker().executor();
     }

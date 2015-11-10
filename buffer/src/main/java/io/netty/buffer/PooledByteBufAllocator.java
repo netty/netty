@@ -239,7 +239,15 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     @Override
     protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
-        PoolThreadCache cache = threadCache.get();
+        return newHeapBuffer0(threadCache(), initialCapacity, maxCapacity);
+    }
+
+    @Override
+    protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
+        return newDirectBuffer0(threadCache(), initialCapacity, maxCapacity);
+    }
+
+    protected final ByteBuf newHeapBuffer0(PoolThreadCache cache, int initialCapacity, int maxCapacity) {
         PoolArena<byte[]> heapArena = cache.heapArena;
 
         ByteBuf buf;
@@ -252,9 +260,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         return toLeakAwareBuffer(buf);
     }
 
-    @Override
-    protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
-        PoolThreadCache cache = threadCache.get();
+    protected final ByteBuf newDirectBuffer0(PoolThreadCache cache, int initialCapacity, int maxCapacity) {
         PoolArena<ByteBuffer> directArena = cache.directArena;
 
         ByteBuf buf;
@@ -342,6 +348,40 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         threadCache.remove();
     }
 
+    /**
+     * Creates a cached thread-local version in context of current thread.
+     */
+    public ByteBufAllocator createThreadLocal() {
+        return threadCache.get().localAlloc();
+    }
+
+    ByteBufAllocator createThreadLocal(PoolThreadCache cache) {
+        return new ThreadLocalWrapper(cache);
+    }
+
+    final class ThreadLocalWrapper extends AbstractByteBufAllocator {
+        private PoolThreadCache localCache;
+
+        public ThreadLocalWrapper(PoolThreadCache cache) {
+            this.localCache = cache;
+        }
+
+        @Override
+        protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
+            return newHeapBuffer0(localCache, initialCapacity, maxCapacity);
+        }
+
+        @Override
+        protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
+            return newDirectBuffer0(localCache, initialCapacity, maxCapacity);
+        }
+
+        @Override
+        public boolean isDirectBufferPooled() {
+            return PooledByteBufAllocator.this.isDirectBufferPooled();
+        }
+    }
+
     final class PoolThreadLocalCache extends FastThreadLocal<PoolThreadCache> {
         private final AtomicInteger index = new AtomicInteger();
         final AtomicInteger caches = new AtomicInteger();
@@ -364,8 +404,9 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             } else {
                 directArena = null;
             }
+
             return new PoolThreadCache(
-                    heapArena, directArena, tinyCacheSize, smallCacheSize, normalCacheSize,
+                    PooledByteBufAllocator.this, heapArena, directArena, tinyCacheSize, smallCacheSize, normalCacheSize,
                     DEFAULT_MAX_CACHED_BUFFER_CAPACITY, DEFAULT_CACHE_TRIM_INTERVAL);
         }
 

@@ -15,6 +15,7 @@
  */
 package io.netty.channel.embedded;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -240,5 +241,10 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
     @Override
     public void invokeFlush(ChannelHandlerContext ctx) {
         invokeFlushNow(ctx);
+    }
+
+    @Override
+    public ByteBufAllocator localAllocator() {
+        return null;
     }
 }

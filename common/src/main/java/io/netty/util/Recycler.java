@@ -37,10 +37,25 @@ public abstract class Recycler<T> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Recycler.class);
 
     @SuppressWarnings("rawtypes")
-    private static final Handle NOOP_HANDLE = new Handle() {
+    private final Handle NOOP_HANDLE = new Handle() {
         @Override
         public void recycle(Object object) {
             // NOOP
+        }
+
+        @Override
+        public Object get() {
+            return newObject(this);
+        }
+
+        @Override
+        public void recycleSameThread(Object object) {
+            recycle(object);
+        }
+
+        @Override
+        public void recycleOnStack(Handle stack, Object object) {
+            recycle(object);
         }
     };
     private static final AtomicInteger ID_GENERATOR = new AtomicInteger(Integer.MIN_VALUE);
@@ -93,13 +108,7 @@ public abstract class Recycler<T> {
         if (maxCapacity == 0) {
             return newObject((Handle<T>) NOOP_HANDLE);
         }
-        Stack<T> stack = threadLocal.get();
-        DefaultHandle<T> handle = stack.pop();
-        if (handle == null) {
-            handle = stack.newHandle();
-            handle.value = newObject(handle);
-        }
-        return (T) handle.value;
+        return threadLocal.get().get();
     }
 
     public final boolean recycle(T o, Handle<T> handle) {
@@ -107,13 +116,16 @@ public abstract class Recycler<T> {
             return false;
         }
 
-        DefaultHandle<T> h = (DefaultHandle<T>) handle;
-        if (h.stack.parent != this) {
-            return false;
+        handle.recycle(o);
+        return true;
+    }
+
+    public Handle<T> stackReference() {
+        if (maxCapacity == 0) {
+            return NOOP_HANDLE;
         }
 
-        h.recycle(o);
-        return true;
+        return threadLocal.get();
     }
 
     final int threadLocalCapacity() {
@@ -128,6 +140,9 @@ public abstract class Recycler<T> {
 
     public interface Handle<T> {
         void recycle(T object);
+        void recycleSameThread(T object);
+        void recycleOnStack(Handle stack, Object object);
+        T get();
     }
 
     static final class DefaultHandle<T> implements Handle<T> {
@@ -135,10 +150,12 @@ public abstract class Recycler<T> {
         private int recycleId;
 
         private Stack<?> stack;
+        private Recycler<?> rec;
         private Object value;
 
-        DefaultHandle(Stack<?> stack) {
+        DefaultHandle(Recycler rec, Stack<?> stack) {
             this.stack = stack;
+            this.rec = rec;
         }
 
         @Override
@@ -160,6 +177,23 @@ public abstract class Recycler<T> {
                 delayedRecycled.put(stack, queue = new WeakOrderQueue(stack, thread));
             }
             queue.add(this);
+        }
+
+        @Override
+        public void recycleSameThread(Object object) {
+            stack.push(this);
+        }
+
+        @Override
+        public void recycleOnStack(Handle stack, Object object) {
+            this.stack = (Stack<T>) stack;
+            this.stack.push(this);
+        }
+
+        @Override
+        @SuppressWarnings("all")
+        public T get() {
+            return (T) stack.get();
         }
     }
 
@@ -282,7 +316,7 @@ public abstract class Recycler<T> {
         }
     }
 
-    static final class Stack<T> {
+    static final class Stack<T> implements Handle<T> {
 
         // we keep a queue of per-thread queues, which is appended to once only, each time a new thread other
         // than the stack owner recycles: when we run out of items in our stack we iterate this collection
@@ -418,7 +452,33 @@ public abstract class Recycler<T> {
         }
 
         DefaultHandle<T> newHandle() {
-            return new DefaultHandle<T>(this);
+            return new DefaultHandle<T>(parent, this);
+        }
+
+        @Override
+        public void recycle(T object) {
+            throw new UnsupportedOperationException("not supported with this handle");
+        }
+
+        @Override
+        public void recycleSameThread(T object) {
+            throw new UnsupportedOperationException("not supported with this handle");
+        }
+
+        @Override
+        public void recycleOnStack(Handle stack, Object object) {
+            throw new UnsupportedOperationException("not supported with this handle");
+        }
+
+        @Override
+        @SuppressWarnings("all")
+        public T get() {
+            DefaultHandle handle = pop();
+            if (handle == null) {
+                handle = newHandle();
+                handle.value = parent.newObject(handle);
+            }
+            return (T) handle.value;
         }
     }
 }

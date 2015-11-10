@@ -58,6 +58,7 @@ public final class ChannelOutboundBuffer {
     };
 
     private final Channel channel;
+    Recycler.Handle<Entry> entryStack;
 
     // Entry(flushedEntry) --> ... Entry(unflushedEntry) --> ... Entry(tailEntry)
     //
@@ -112,7 +113,11 @@ public final class ChannelOutboundBuffer {
      * the message was written.
      */
     public void addMessage(Object msg, int size, ChannelPromise promise) {
-        Entry entry = Entry.newInstance(msg, size, total(msg), promise);
+        if (entryStack == null) {
+            entryStack = Entry.RECYCLER.stackReference();
+        }
+
+        Entry entry = Entry.newInstance(msg, entryStack, size, total(msg), promise);
         if (tailEntry == null) {
             flushedEntry = null;
             tailEntry = entry;
@@ -194,7 +199,7 @@ public final class ChannelOutboundBuffer {
 
         long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, -size);
         if (notifyWritability && (newWriteBufferSize == 0
-            || newWriteBufferSize <= channel.config().getWriteBufferLowWaterMark())) {
+                || newWriteBufferSize <= channel.config().getWriteBufferLowWaterMark())) {
             setWritable(invokeLater);
         }
     }
@@ -264,7 +269,7 @@ public final class ChannelOutboundBuffer {
         }
 
         // recycle the entry
-        e.recycle();
+        e.recycle(true);
 
         return true;
     }
@@ -275,10 +280,10 @@ public final class ChannelOutboundBuffer {
      * {@code false} to signal that no more messages are ready to be handled.
      */
     public boolean remove(Throwable cause) {
-        return remove0(cause, true);
+        return remove0(cause, true, true);
     }
 
-    private boolean remove0(Throwable cause, boolean notifyWritability) {
+    private boolean remove0(Throwable cause, boolean notifyWritability, boolean unsafe) {
         Entry e = flushedEntry;
         if (e == null) {
             clearNioBuffers();
@@ -300,7 +305,7 @@ public final class ChannelOutboundBuffer {
         }
 
         // recycle the entry
-        e.recycle();
+        e.recycle(!unsafe);
 
         return true;
     }
@@ -618,7 +623,7 @@ public final class ChannelOutboundBuffer {
         try {
             inFail = true;
             for (;;) {
-                if (!remove0(cause, notify)) {
+                if (!remove0(cause, notify, true)) {
                     break;
                 }
             }
@@ -744,6 +749,26 @@ public final class ChannelOutboundBuffer {
         } while (isFlushedEntry(entry));
     }
 
+    /**
+     * Marks old buffer entries as unsafe to recycle when changing event loops.
+     */
+    public void markEntriesUnsafe() throws Exception {
+        entryStack = null;
+        Entry entry = unflushedEntry;
+        if (entry == null) {
+            return;
+        }
+
+        do {
+            entry.unsafe = true;
+            if (entry.msg instanceof ByteBuf) {
+                ByteBuf buf = (ByteBuf) entry.msg;
+                buf.local(false);
+            }
+            entry = entry.next;
+        } while (entry != null);
+    }
+
     private boolean isFlushedEntry(Entry e) {
         return e != null && e != unflushedEntry;
     }
@@ -775,13 +800,15 @@ public final class ChannelOutboundBuffer {
         int pendingSize;
         int count = -1;
         boolean cancelled;
+        boolean unsafe;
 
         private Entry(Handle handle) {
             this.handle = handle;
         }
 
-        static Entry newInstance(Object msg, int size, long total, ChannelPromise promise) {
-            Entry entry = RECYCLER.get();
+        static Entry newInstance(Object msg, Recycler.Handle<Entry> entryStack,
+                                 int size, long total, ChannelPromise promise) {
+            Entry entry = entryStack.get();
             entry.msg = msg;
             entry.pendingSize = size;
             entry.total = total;
@@ -795,6 +822,10 @@ public final class ChannelOutboundBuffer {
                 int pSize = pendingSize;
 
                 // release message and replace with an empty buffer
+                if (msg instanceof ByteBuf) {
+                    ByteBuf buf = (ByteBuf) msg;
+                    buf.local(false);
+                }
                 ReferenceCountUtil.safeRelease(msg);
                 msg = Unpooled.EMPTY_BUFFER;
 
@@ -808,7 +839,7 @@ public final class ChannelOutboundBuffer {
             return 0;
         }
 
-        void recycle() {
+        void clear() {
             next = null;
             bufs = null;
             buf = null;
@@ -819,12 +850,21 @@ public final class ChannelOutboundBuffer {
             pendingSize = 0;
             count = -1;
             cancelled = false;
-            RECYCLER.recycle(this, handle);
+            unsafe = false;
+        }
+
+        void recycle(boolean local) {
+            clear();
+            if (local && !unsafe) {
+                handle.recycleSameThread(this);
+            } else {
+                handle.recycle(this);
+            }
         }
 
         Entry recycleAndGetNext() {
             Entry next = this.next;
-            recycle();
+            recycle(true);
             return next;
         }
     }

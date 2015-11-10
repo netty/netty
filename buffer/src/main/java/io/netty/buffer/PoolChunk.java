@@ -363,24 +363,25 @@ final class PoolChunk<T> implements PoolChunkMetric {
         updateParentsFree(memoryMapIdx);
     }
 
-    void initBuf(PooledByteBuf<T> buf, long handle, int reqCapacity) {
+    void initBuf(PooledByteBuf<T> buf, long handle, int reqCapacity, PoolThreadCache cache) {
         int memoryMapIdx = (int) handle;
         int bitmapIdx = (int) (handle >>> Integer.SIZE);
         if (bitmapIdx == 0) {
             byte val = value(memoryMapIdx);
             assert val == unusable : String.valueOf(val);
             buf.init(this, handle, runOffset(memoryMapIdx), reqCapacity, runLength(memoryMapIdx),
-                     arena.parent.threadCache());
+                     cache);
         } else {
-            initBufWithSubpage(buf, handle, bitmapIdx, reqCapacity);
+            initBufWithSubpage(buf, handle, bitmapIdx, reqCapacity, cache);
         }
     }
 
-    void initBufWithSubpage(PooledByteBuf<T> buf, long handle, int reqCapacity) {
-        initBufWithSubpage(buf, handle, (int) (handle >>> Integer.SIZE), reqCapacity);
+    void initBufWithSubpage(PooledByteBuf<T> buf, long handle, int reqCapacity, PoolThreadCache cache) {
+        initBufWithSubpage(buf, handle, (int) (handle >>> Integer.SIZE), reqCapacity, cache);
     }
 
-    private void initBufWithSubpage(PooledByteBuf<T> buf, long handle, int bitmapIdx, int reqCapacity) {
+    private void initBufWithSubpage(PooledByteBuf<T> buf, long handle, int bitmapIdx, int reqCapacity,
+                                    PoolThreadCache cache) {
         assert bitmapIdx != 0;
 
         int memoryMapIdx = (int) handle;
@@ -392,7 +393,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         buf.init(
             this, handle,
             runOffset(memoryMapIdx) + (bitmapIdx & 0x3FFFFFFF) * subpage.elemSize, reqCapacity, subpage.elemSize,
-            arena.parent.threadCache());
+            cache);
     }
 
     private byte value(int id) {

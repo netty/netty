@@ -137,6 +137,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     private boolean first;
     private int discardAfterReads = 16;
     private int numReads;
+    private boolean bufferLocal;
 
     protected ByteToMessageDecoder() {
         CodecUtil.ensureNotSharable(this);
@@ -160,6 +161,22 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      */
     public boolean isSingleDecode() {
         return singleDecode;
+    }
+
+    /**
+     * Agrees to keep the buffer only in the parent event-loop thread,
+     * helping to optimize deallocation.
+     * Disabled by default due to users possibly calling final release() on other threads.
+
+     * Expect undefined behaviour when violating these rules!
+     * @param local should the internal buffer be local
+     */
+    public void setBufferLocal(boolean local) {
+        this.bufferLocal = local;
+    }
+
+    public boolean isBufferLocal() {
+        return bufferLocal;
     }
 
     /**
@@ -239,8 +256,11 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 if (first) {
                     cumulation = data;
                 } else {
-                    cumulation = cumulator.cumulate(ctx.alloc(), cumulation, data);
+                    data.local(true); // data will never leave this method, only the cumulation
+                    cumulation = cumulator.cumulate(ctx.locAlloc(), cumulation, data);
                 }
+
+                cumulation.local(bufferLocal);
                 callDecode(ctx, cumulation, out);
             } catch (DecoderException e) {
                 throw e;

@@ -15,6 +15,8 @@
  */
 package io.netty.channel.epoll;
 
+import io.netty.buffer.CompositeByteBuf;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SingleThreadEventLoop;
@@ -57,6 +59,26 @@ final class EpollEventLoop extends SingleThreadEventLoop {
 
     private volatile int wakenUp;
     private volatile int ioRatio = 50;
+
+    private final IovArray iovArray = new IovArray();
+
+    /**
+     * Returns a {@link IovArray} which is filled with the flushed messages of {@link ChannelOutboundBuffer}.
+     */
+    IovArray iov(ChannelOutboundBuffer buffer) throws Exception {
+        iovArray.clear();
+        buffer.forEachFlushedMessage(iovArray);
+        return iovArray;
+    }
+
+    /**
+     * Returns a {@link IovArray} which is filled with the {@link CompositeByteBuf}.
+     */
+    IovArray iov(CompositeByteBuf buf) throws Exception {
+        iovArray.clear();
+        iovArray.add(buf);
+        return iovArray;
+    }
 
     EpollEventLoop(EventLoopGroup parent, Executor executor, int maxEvents) {
         super(parent, executor, false);
@@ -375,6 +397,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
         } finally {
             // release native memory
             events.free();
+            iovArray.release();
         }
     }
 }

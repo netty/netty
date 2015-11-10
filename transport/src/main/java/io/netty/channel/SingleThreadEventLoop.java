@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 
 import java.util.concurrent.Executor;
@@ -27,6 +29,7 @@ import java.util.concurrent.ThreadFactory;
 public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor implements EventLoop {
 
     private final ChannelHandlerInvoker invoker = new DefaultChannelHandlerInvoker(this);
+    private ByteBufAllocator localPooledAllocator; // cached thread-local pooled bytebuf allocator
 
     protected SingleThreadEventLoop(EventLoopGroup parent, ThreadFactory threadFactory, boolean addTaskWakesUp) {
         super(parent, threadFactory, addTaskWakesUp);
@@ -34,6 +37,21 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
 
     protected SingleThreadEventLoop(EventLoopGroup parent, Executor executor, boolean addTaskWakesUp) {
         super(parent, executor, addTaskWakesUp);
+    }
+
+    @Override
+    public ByteBufAllocator localAllocator() {
+        // If the default allocator is PooledByteBufAllocator
+        // we use an optimization here that will keep a thread-local version of it.
+        if (localPooledAllocator != null) {
+            return localPooledAllocator;
+        }
+
+        if (ByteBufAllocator.DEFAULT == PooledByteBufAllocator.DEFAULT) {
+            return localPooledAllocator = PooledByteBufAllocator.DEFAULT.createThreadLocal();
+        }
+
+        return null;
     }
 
     @Override
