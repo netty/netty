@@ -189,7 +189,10 @@ public interface ChannelHandler {
 
     /**
      * Gets called if a {@link Throwable} was thrown.
+     *
+     * @deprecated is part of {@link ChannelInboundHandler}
      */
+    @Deprecated
     void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception;
 
     /**
