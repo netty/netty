@@ -49,17 +49,21 @@ public final class Socket extends FileDescriptor {
         super(fd);
     }
 
+    public void shutdown() throws IOException {
+        shutdown(!inputShutdown, !outputShutdown);
+    }
+
     public void shutdown(boolean read, boolean write) throws IOException {
         inputShutdown = read || inputShutdown;
         outputShutdown = write || outputShutdown;
+        shutdown0(read, write);
+    }
+
+    private void shutdown0(boolean read, boolean write) throws IOException {
         int res = shutdown(intValue(), read, write);
         if (res < 0) {
             ioResult("shutdown", res, CONNECTION_NOT_CONNECTED_SHUTDOWN_EXCEPTION);
         }
-    }
-
-    public void shutdown() throws IOException {
-        shutdown(true, true);
     }
 
     public boolean isShutdown() {
