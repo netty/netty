@@ -22,7 +22,6 @@ import io.netty.util.DefaultAttributeMap;
 import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.RecyclableMpscLinkedQueueNode;
@@ -63,7 +62,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
     private volatile Runnable invokeChannelWritableStateChangedTask;
     private volatile Runnable invokeFlushTask;
 
-    AbstractChannelHandlerContext(DefaultChannelPipeline pipeline, EventExecutorGroup group, String name,
+    AbstractChannelHandlerContext(DefaultChannelPipeline pipeline, EventExecutor executor, String name,
                                   boolean inbound, boolean outbound) {
 
         if (name == null) {
@@ -72,20 +71,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
 
         this.pipeline = pipeline;
         this.name = name;
-
-        if (group != null) {
-            // Pin one of the child executors once and remember it so that the same child executor
-            // is used to fire events for the same channel.
-            EventExecutor childExecutor = pipeline.childExecutors.get(group);
-            if (childExecutor == null) {
-                childExecutor = group.next();
-                pipeline.childExecutors.put(group, childExecutor);
-            }
-            executor = childExecutor;
-        } else {
-            executor = null;
-        }
-
+        this.executor = executor;
         this.inbound = inbound;
         this.outbound = outbound;
     }

@@ -59,8 +59,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     final AbstractChannelHandlerContext head;
     final AbstractChannelHandlerContext tail;
 
-    final Map<EventExecutorGroup, EventExecutor> childExecutors =
-            new IdentityHashMap<EventExecutorGroup, EventExecutor>();
+    private Map<EventExecutorGroup, EventExecutor> childExecutors;
 
     public DefaultChannelPipeline(AbstractChannel channel) {
         if (channel == null) {
@@ -73,6 +72,29 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         head.next = tail;
         tail.prev = head;
+    }
+
+    private AbstractChannelHandlerContext newContext(EventExecutorGroup group, String name, ChannelHandler handler) {
+        return new DefaultChannelHandlerContext(this, childExecutor(group), name, handler);
+    }
+
+    private EventExecutor childExecutor(EventExecutorGroup group) {
+        if (group == null) {
+            return null;
+        }
+        Map<EventExecutorGroup, EventExecutor> childExecutors = this.childExecutors;
+        if (childExecutors == null) {
+            // Use size of 4 as most people only use one extra EventExecutor.
+            childExecutors = this.childExecutors = new IdentityHashMap<EventExecutorGroup, EventExecutor>(4);
+        }
+        // Pin one of the child executors once and remember it so that the same child executor
+        // is used to fire events for the same channel.
+        EventExecutor childExecutor = childExecutors.get(group);
+        if (childExecutor == null) {
+            childExecutor = group.next();
+            childExecutors.put(group, childExecutor);
+        }
+        return childExecutor;
     }
 
     @Override
@@ -89,7 +111,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     public ChannelPipeline addFirst(EventExecutorGroup group, final String name, ChannelHandler handler) {
         synchronized (this) {
             checkDuplicateName(name);
-            AbstractChannelHandlerContext newCtx = new DefaultChannelHandlerContext(this, group, name, handler);
+            AbstractChannelHandlerContext newCtx = newContext(group, name, handler);
             addFirst0(newCtx);
         }
 
@@ -117,8 +139,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     public ChannelPipeline addLast(EventExecutorGroup group, final String name, ChannelHandler handler) {
         synchronized (this) {
             checkDuplicateName(name);
-
-            AbstractChannelHandlerContext newCtx = new DefaultChannelHandlerContext(this, group, name, handler);
+            AbstractChannelHandlerContext newCtx = newContext(group, name, handler);
             addLast0(newCtx);
         }
 
@@ -148,7 +169,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         synchronized (this) {
             AbstractChannelHandlerContext ctx = getContextOrDie(baseName);
             checkDuplicateName(name);
-            AbstractChannelHandlerContext newCtx = new DefaultChannelHandlerContext(this, group, name, handler);
+            AbstractChannelHandlerContext newCtx = newContext(group, name, handler);
             addBefore0(ctx, newCtx);
         }
         return this;
@@ -176,8 +197,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         synchronized (this) {
             AbstractChannelHandlerContext ctx = getContextOrDie(baseName);
             checkDuplicateName(name);
-            AbstractChannelHandlerContext newCtx = new DefaultChannelHandlerContext(this, group, name, handler);
-
+            AbstractChannelHandlerContext newCtx = newContext(group, name, handler);
             addAfter0(ctx, newCtx);
         }
 
@@ -379,8 +399,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                 checkDuplicateName(newName);
             }
 
-            final AbstractChannelHandlerContext newCtx =
-                    new DefaultChannelHandlerContext(this, ctx.executor, newName, newHandler);
+            final AbstractChannelHandlerContext newCtx = newContext(ctx.executor, newName, newHandler);
 
             if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
                 replace0(ctx, newCtx);
