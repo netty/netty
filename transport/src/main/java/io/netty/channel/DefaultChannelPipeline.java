@@ -29,7 +29,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -61,8 +60,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     final AbstractChannelHandlerContext head;
     final AbstractChannelHandlerContext tail;
 
-    private final Map<String, AbstractChannelHandlerContext> name2ctx =
-        new HashMap<String, AbstractChannelHandlerContext>(4);
     private final boolean touch = ResourceLeakDetector.isEnabled();
 
     /**
@@ -101,7 +98,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     public ChannelPipeline addFirst(EventExecutorGroup group, String name, ChannelHandler handler) {
         synchronized (this) {
             name = filterName(name, handler);
-            addFirst0(name, new DefaultChannelHandlerContext(this, findInvoker(group), name, handler));
+            addFirst0(new DefaultChannelHandlerContext(this, findInvoker(group), name, handler));
         }
         return this;
     }
@@ -110,12 +107,12 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     public ChannelPipeline addFirst(ChannelHandlerInvoker invoker, String name, ChannelHandler handler) {
         synchronized (this) {
             name = filterName(name, handler);
-            addFirst0(name, new DefaultChannelHandlerContext(this, invoker, name, handler));
+            addFirst0(new DefaultChannelHandlerContext(this, invoker, name, handler));
         }
         return this;
     }
 
-    private void addFirst0(String name, AbstractChannelHandlerContext newCtx) {
+    private void addFirst0(AbstractChannelHandlerContext newCtx) {
         checkMultiplicity(newCtx);
 
         AbstractChannelHandlerContext nextCtx = head.next;
@@ -123,8 +120,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         newCtx.next = nextCtx;
         head.next = newCtx;
         nextCtx.prev = newCtx;
-
-        name2ctx.put(name, newCtx);
 
         callHandlerAdded(newCtx);
     }
@@ -138,7 +133,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     public ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler) {
         synchronized (this) {
             name = filterName(name, handler);
-            addLast0(name, new DefaultChannelHandlerContext(this, findInvoker(group), name, handler));
+            addLast0(new DefaultChannelHandlerContext(this, findInvoker(group), name, handler));
         }
         return this;
     }
@@ -147,12 +142,12 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     public ChannelPipeline addLast(ChannelHandlerInvoker invoker, String name, ChannelHandler handler) {
         synchronized (this) {
             name = filterName(name, handler);
-            addLast0(name, new DefaultChannelHandlerContext(this, invoker, name, handler));
+            addLast0(new DefaultChannelHandlerContext(this, invoker, name, handler));
         }
         return this;
     }
 
-    private void addLast0(final String name, AbstractChannelHandlerContext newCtx) {
+    private void addLast0(AbstractChannelHandlerContext newCtx) {
         checkMultiplicity(newCtx);
 
         AbstractChannelHandlerContext prev = tail.prev;
@@ -160,8 +155,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         newCtx.next = tail;
         prev.next = newCtx;
         tail.prev = newCtx;
-
-        name2ctx.put(name, newCtx);
 
         callHandlerAdded(newCtx);
     }
@@ -176,7 +169,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         synchronized (this) {
             AbstractChannelHandlerContext ctx = getContextOrDie(baseName);
             name = filterName(name, handler);
-            addBefore0(name, ctx, new DefaultChannelHandlerContext(this, findInvoker(group), name, handler));
+            addBefore0(ctx, new DefaultChannelHandlerContext(this, findInvoker(group), name, handler));
         }
         return this;
     }
@@ -187,21 +180,18 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         synchronized (this) {
             AbstractChannelHandlerContext ctx = getContextOrDie(baseName);
             name = filterName(name, handler);
-            addBefore0(name, ctx, new DefaultChannelHandlerContext(this, invoker, name, handler));
+            addBefore0(ctx, new DefaultChannelHandlerContext(this, invoker, name, handler));
         }
         return this;
     }
 
-    private void addBefore0(
-            final String name, AbstractChannelHandlerContext ctx, AbstractChannelHandlerContext newCtx) {
+    private void addBefore0(AbstractChannelHandlerContext ctx, AbstractChannelHandlerContext newCtx) {
         checkMultiplicity(newCtx);
 
         newCtx.prev = ctx.prev;
         newCtx.next = ctx;
         ctx.prev.next = newCtx;
         ctx.prev = newCtx;
-
-        name2ctx.put(name, newCtx);
 
         callHandlerAdded(newCtx);
     }
@@ -216,7 +206,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         synchronized (this) {
             AbstractChannelHandlerContext ctx = getContextOrDie(baseName);
             name = filterName(name, handler);
-            addAfter0(name, ctx, new DefaultChannelHandlerContext(this, findInvoker(group), name, handler));
+            addAfter0(ctx, new DefaultChannelHandlerContext(this, findInvoker(group), name, handler));
         }
         return this;
     }
@@ -228,20 +218,18 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         synchronized (this) {
             AbstractChannelHandlerContext ctx = getContextOrDie(baseName);
             name = filterName(name, handler);
-            addAfter0(name, ctx, new DefaultChannelHandlerContext(this, invoker, name, handler));
+            addAfter0(ctx, new DefaultChannelHandlerContext(this, invoker, name, handler));
         }
         return this;
     }
 
-    private void addAfter0(String name, AbstractChannelHandlerContext ctx, AbstractChannelHandlerContext newCtx) {
+    private void addAfter0(AbstractChannelHandlerContext ctx, AbstractChannelHandlerContext newCtx) {
         checkMultiplicity(newCtx);
 
         newCtx.prev = ctx;
         newCtx.next = ctx.next;
         ctx.next.prev = newCtx;
         ctx.next = newCtx;
-
-        name2ctx.put(name, newCtx);
 
         callHandlerAdded(newCtx);
     }
@@ -376,11 +364,11 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         synchronized (this) {
             // It's not very likely for a user to put more than one handler of the same type, but make sure to avoid
             // any name conflicts.  Note that we don't cache the names generated here.
-            if (name2ctx.containsKey(name)) {
+            if (context0(name) != null) {
                 String baseName = name.substring(0, name.length() - 1); // Strip the trailing '0'.
                 for (int i = 1;; i ++) {
                     String newName = baseName + i;
-                    if (!name2ctx.containsKey(newName)) {
+                    if (context0(newName) == null) {
                         name = newName;
                         break;
                     }
@@ -448,7 +436,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         AbstractChannelHandlerContext next = ctx.next;
         prev.next = next;
         next.prev = prev;
-        name2ctx.remove(ctx.name());
         callHandlerRemoved(ctx);
     }
 
@@ -503,15 +490,14 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                     new DefaultChannelHandlerContext(this, ctx.invoker, newName, newHandler);
 
             if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
-                replace0(ctx, newName, newCtx);
+                replace0(ctx, newCtx);
                 return ctx.handler();
             } else {
-                final String finalNewName = newName;
                 future = newCtx.executor().submit(new Runnable() {
                     @Override
                     public void run() {
                         synchronized (DefaultChannelPipeline.this) {
-                            replace0(ctx, finalNewName, newCtx);
+                            replace0(ctx, newCtx);
                         }
                     }
                 });
@@ -526,8 +512,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         return ctx.handler();
     }
 
-    private void replace0(AbstractChannelHandlerContext oldCtx, String newName,
-                          AbstractChannelHandlerContext newCtx) {
+    private void replace0(AbstractChannelHandlerContext oldCtx, AbstractChannelHandlerContext newCtx) {
         checkMultiplicity(newCtx);
 
         AbstractChannelHandlerContext prev = oldCtx.prev;
@@ -541,11 +526,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         // at the same time (we ensured that in replace().)
         prev.next = newCtx;
         next.prev = newCtx;
-
-        if (!oldCtx.name().equals(newName)) {
-            name2ctx.remove(oldCtx.name());
-        }
-        name2ctx.put(newName, newCtx);
 
         // update the reference to the replacement so forward of buffered content will work correctly
         oldCtx.prev = newCtx;
@@ -724,9 +704,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             throw new NullPointerException("name");
         }
 
-        synchronized (this) {
-            return name2ctx.get(name);
-        }
+        return context0(name);
     }
 
     @Override
@@ -851,8 +829,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
      * Removes all handlers from the pipeline one by one from tail (exclusive) to head (exclusive) to trigger
      * handlerRemoved().
      *
-     * Note that we traverse up the pipeline ({@link #destroyUp(AbstractChannelHandlerContext)})
-     * before traversing down ({@link #destroyDown(Thread, AbstractChannelHandlerContext)}) so that
+     * Note that we traverse up the pipeline ({@link #destroyUp(AbstractChannelHandlerContext, boolean)})
+     * before traversing down ({@link #destroyDown(Thread, AbstractChannelHandlerContext, boolean)}) so that
      * the handlers are removed after all events are handled.
      *
      * See: https://github.com/netty/netty/issues/3156
@@ -1063,11 +1041,22 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             return generateName(handler);
         }
 
-        if (!name2ctx.containsKey(name)) {
+        if (context0(name) == null) {
             return name;
         }
 
         throw new IllegalArgumentException("Duplicate handler name: " + name);
+    }
+
+    private AbstractChannelHandlerContext context0(String name) {
+        AbstractChannelHandlerContext context = head.next;
+        while (context != tail) {
+            if (context.name().equals(name)) {
+                return context;
+            }
+            context = context.next;
+        }
+        return null;
     }
 
     private AbstractChannelHandlerContext getContextOrDie(String name) {
