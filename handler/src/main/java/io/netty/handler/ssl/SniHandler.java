@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.CharsetUtil;
 import io.netty.util.DomainNameMapping;
+import io.netty.util.Mapping;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -40,25 +41,27 @@ public class SniHandler extends ByteToMessageDecoder {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(SniHandler.class);
 
-    private final DomainNameMapping<SslContext> mapping;
+    private final Mapping<String, ? extends SslHandlerFactory> mapping;
 
     private boolean handshaken;
     private volatile String hostname;
-    private volatile SslContext selectedContext;
+    private volatile SslHandlerFactory handlerFactory;
 
     /**
-     * Create a SNI detection handler with configured {@link SslContext}
+     * Create a SNI detection handler with configured {@link SslHandlerFactory}
      * maintained by {@link DomainNameMapping}
      *
-     * @param mapping the mapping of domain name to {@link SslContext}
+     * @param mapping the mapping of domain name to {@link SslHandlerFactory}
+     *
+     * @see SslContext
+     * @see DomainNameMapping
      */
-    @SuppressWarnings("unchecked")
-    public SniHandler(DomainNameMapping<? extends SslContext> mapping) {
+    public SniHandler(Mapping<String, ? extends SslHandlerFactory> mapping) {
         if (mapping == null) {
             throw new NullPointerException("mapping");
         }
 
-        this.mapping = (DomainNameMapping<SslContext>) mapping;
+        this.mapping = mapping;
         handshaken = false;
     }
 
@@ -70,10 +73,20 @@ public class SniHandler extends ByteToMessageDecoder {
     }
 
     /**
-     * @return the selected sslcontext
+     * @return the selected {@link SslHandlerFactory}
      */
+    public SslHandlerFactory sslHandlerFactory() {
+        return handlerFactory;
+    }
+
+    /**
+     * @return the selected {@link SslContext}
+     * @deprecated Use {@link #sslHandlerFactory()}
+     */
+    @Deprecated
     public SslContext sslContext() {
-        return selectedContext;
+        SslHandlerFactory handlerFactory = this.handlerFactory;
+        return handlerFactory != null ? handlerFactory.sslContext() : null;
     }
 
     @Override
@@ -85,12 +98,12 @@ public class SniHandler extends ByteToMessageDecoder {
             }
             this.hostname = hostname;
 
-            // the mapping will return default context when this.hostname is null
-            selectedContext = mapping.map(hostname);
+            // the mapping will return default factory when this.hostname is null
+            handlerFactory = mapping.map(hostname);
         }
 
         if (handshaken) {
-            SslHandler sslHandler = selectedContext.newHandler(ctx.alloc());
+            SslHandler sslHandler = handlerFactory.newHandler(ctx.alloc());
             ctx.pipeline().replace(this, SslHandler.class.getName(), sslHandler);
         }
     }
