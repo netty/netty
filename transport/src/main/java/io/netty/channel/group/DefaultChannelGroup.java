@@ -240,6 +240,11 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
         return write(message, ChannelMatchers.all());
     }
 
+    @Override
+    public ChannelGroupFuture writeVoidPromise(Object message) {
+        return write(message, ChannelMatchers.all());
+    }
+
     // Create a safe duplicate of the message to write it to a channel but not affect other writes.
     // See https://github.com/netty/netty/issues/1461
     private static Object safeDuplicate(Object message) {
@@ -265,6 +270,26 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
         for (Channel c: nonServerChannels.values()) {
             if (matcher.matches(c)) {
                 futures.put(c, c.write(safeDuplicate(message)));
+            }
+        }
+
+        ReferenceCountUtil.release(message);
+        return new DefaultChannelGroupFuture(this, futures, executor);
+    }
+
+    @Override
+    public ChannelGroupFuture writeVoidPromise(Object message, ChannelMatcher matcher) {
+        if (message == null) {
+            throw new NullPointerException("message");
+        }
+        if (matcher == null) {
+            throw new NullPointerException("matcher");
+        }
+
+        Map<Channel, ChannelFuture> futures = new LinkedHashMap<Channel, ChannelFuture>(size());
+        for (Channel c: nonServerChannels.values()) {
+            if (matcher.matches(c)) {
+                futures.put(c, c.write(safeDuplicate(message), c.voidPromise()));
             }
         }
 
