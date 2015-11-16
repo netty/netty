@@ -128,12 +128,22 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    protected void _setShortLE(int index, int value) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
     public ByteBuf setMedium(int index, int value) {
         throw new ReadOnlyBufferException();
     }
 
     @Override
     protected void _setMedium(int index, int value) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
+    protected void _setMediumLE(int index, int value) {
         throw new ReadOnlyBufferException();
     }
 
@@ -148,12 +158,22 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    protected void _setIntLE(int index, int value) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
     public ByteBuf setLong(int index, long value) {
         throw new ReadOnlyBufferException();
     }
 
     @Override
     protected void _setLong(int index, long value) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
+    protected void _setLongLE(int index, long value) {
         throw new ReadOnlyBufferException();
     }
 
@@ -266,6 +286,18 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    protected short _getShortLE(int index) {
+        Component c = findComponent(index);
+        if (index + 2 <= c.endOffset) {
+            return c.buf.getShortLE(index - c.offset);
+        } else if (order() == ByteOrder.BIG_ENDIAN) {
+            return (short) (_getByte(index) & 0xff | (_getByte(index + 1) & 0xff) << 8);
+        } else {
+            return (short) ((_getByte(index) & 0xff) << 8 | _getByte(index + 1) & 0xff);
+        }
+    }
+
+    @Override
     protected int _getUnsignedMedium(int index) {
         Component c = findComponent(index);
         if (index + 3 <= c.endOffset) {
@@ -274,6 +306,18 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
             return (_getShort(index) & 0xffff) << 8 | _getByte(index + 2) & 0xff;
         } else {
             return _getShort(index) & 0xFFFF | (_getByte(index + 2) & 0xFF) << 16;
+        }
+    }
+
+    @Override
+    protected int _getUnsignedMediumLE(int index) {
+        Component c = findComponent(index);
+        if (index + 3 <= c.endOffset) {
+            return c.buf.getUnsignedMediumLE(index - c.offset);
+        } else if (order() == ByteOrder.BIG_ENDIAN) {
+            return _getShortLE(index) & 0xffff | (_getByte(index + 2) & 0xff) << 16;
+        } else {
+            return (_getShortLE(index) & 0xffff) << 8 | _getByte(index + 2) & 0xff;
         }
     }
 
@@ -290,6 +334,18 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    protected int _getIntLE(int index) {
+        Component c = findComponent(index);
+        if (index + 4 <= c.endOffset) {
+            return c.buf.getIntLE(index - c.offset);
+        } else if (order() == ByteOrder.BIG_ENDIAN) {
+            return _getShortLE(index) & 0xFFFF | (_getShortLE(index + 2) & 0xFFFF) << 16;
+        } else {
+            return (_getShortLE(index) & 0xffff) << 16 | _getShortLE(index + 2) & 0xffff;
+        }
+    }
+
+    @Override
     protected long _getLong(int index) {
         Component c = findComponent(index);
         if (index + 8 <= c.endOffset) {
@@ -298,6 +354,18 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
             return (_getInt(index) & 0xffffffffL) << 32 | _getInt(index + 4) & 0xffffffffL;
         } else {
             return _getInt(index) & 0xFFFFFFFFL | (_getInt(index + 4) & 0xFFFFFFFFL) << 32;
+        }
+    }
+
+    @Override
+    protected long _getLongLE(int index) {
+        Component c = findComponent(index);
+        if (index + 8 <= c.endOffset) {
+            return c.buf.getLongLE(index - c.offset);
+        } else if (order() == ByteOrder.BIG_ENDIAN) {
+            return _getIntLE(index) & 0xffffffffL | (_getIntLE(index + 4) & 0xffffffffL) << 32;
+        } else {
+            return (_getIntLE(index) & 0xffffffffL) << 32 | _getIntLE(index + 4) & 0xffffffffL;
         }
     }
 

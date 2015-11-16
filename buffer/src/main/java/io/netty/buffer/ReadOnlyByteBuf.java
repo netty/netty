@@ -142,12 +142,22 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
+    protected void _setShortLE(int index, int value) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
     public ByteBuf setMedium(int index, int value) {
         throw new ReadOnlyBufferException();
     }
 
     @Override
     protected void _setMedium(int index, int value) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
+    protected void _setMediumLE(int index, int value) {
         throw new ReadOnlyBufferException();
     }
 
@@ -162,12 +172,22 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
+    protected void _setIntLE(int index, int value) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
     public ByteBuf setLong(int index, long value) {
         throw new ReadOnlyBufferException();
     }
 
     @Override
     protected void _setLong(int index, long value) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
+    protected void _setLongLE(int index, long value) {
         throw new ReadOnlyBufferException();
     }
 
@@ -248,6 +268,11 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
+    protected short _getShortLE(int index) {
+        return buffer.getShortLE(index);
+    }
+
+    @Override
     public int getUnsignedMedium(int index) {
         return _getUnsignedMedium(index);
     }
@@ -255,6 +280,11 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
     @Override
     protected int _getUnsignedMedium(int index) {
         return buffer.getUnsignedMedium(index);
+    }
+
+    @Override
+    protected int _getUnsignedMediumLE(int index) {
+        return buffer.getUnsignedMediumLE(index);
     }
 
     @Override
@@ -268,6 +298,11 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
+    protected int _getIntLE(int index) {
+        return buffer.getIntLE(index);
+    }
+
+    @Override
     public long getLong(int index) {
         return _getLong(index);
     }
@@ -275,6 +310,11 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
     @Override
     protected long _getLong(int index) {
         return buffer.getLong(index);
+    }
+
+    @Override
+    protected long _getLongLE(int index) {
+        return buffer.getLongLE(index);
     }
 
     @Override

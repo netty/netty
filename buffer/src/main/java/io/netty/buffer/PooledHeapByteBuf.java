@@ -60,8 +60,18 @@ class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
     }
 
     @Override
+    protected short _getShortLE(int index) {
+        return HeapByteBufUtil.getShortLE(memory, idx(index));
+    }
+
+    @Override
     protected int _getUnsignedMedium(int index) {
         return HeapByteBufUtil.getUnsignedMedium(memory, idx(index));
+    }
+
+    @Override
+    protected int _getUnsignedMediumLE(int index) {
+        return HeapByteBufUtil.getUnsignedMediumLE(memory, idx(index));
     }
 
     @Override
@@ -70,8 +80,18 @@ class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
     }
 
     @Override
+    protected int _getIntLE(int index) {
+        return HeapByteBufUtil.getIntLE(memory, idx(index));
+    }
+
+    @Override
     protected long _getLong(int index) {
         return HeapByteBufUtil.getLong(memory, idx(index));
+    }
+
+    @Override
+    protected long _getLongLE(int index) {
+        return HeapByteBufUtil.getLongLE(memory, idx(index));
     }
 
     @Override
@@ -144,8 +164,18 @@ class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
     }
 
     @Override
+    protected void _setShortLE(int index, int value) {
+        HeapByteBufUtil.setShortLE(memory, idx(index), value);
+    }
+
+    @Override
     protected void _setMedium(int index, int   value) {
         HeapByteBufUtil.setMedium(memory, idx(index), value);
+    }
+
+    @Override
+    protected void _setMediumLE(int index, int value) {
+        HeapByteBufUtil.setMediumLE(memory, idx(index), value);
     }
 
     @Override
@@ -154,8 +184,18 @@ class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
     }
 
     @Override
+    protected void _setIntLE(int index, int value) {
+        HeapByteBufUtil.setIntLE(memory, idx(index), value);
+    }
+
+    @Override
     protected void _setLong(int index, long  value) {
         HeapByteBufUtil.setLong(memory, idx(index), value);
+    }
+
+    @Override
+    protected void _setLongLE(int index, long value) {
+        HeapByteBufUtil.setLongLE(memory, idx(index), value);
     }
 
     @Override
