@@ -46,7 +46,6 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
 
     private final boolean inbound;
     private final boolean outbound;
-    private final AbstractChannel channel;
     private final DefaultChannelPipeline pipeline;
     private final String name;
     private boolean removed;
@@ -71,7 +70,6 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
             throw new NullPointerException("name");
         }
 
-        channel = pipeline.channel;
         this.pipeline = pipeline;
         this.name = name;
 
@@ -94,7 +92,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
 
     @Override
     public Channel channel() {
-        return channel;
+        return pipeline.channel();
     }
 
     @Override
@@ -662,7 +660,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
                     }
                 };
             }
-            safeExecute(executor, task, channel.voidPromise(), null);
+            safeExecute(executor, task, channel().voidPromise(), null);
         }
 
         return this;
@@ -837,7 +835,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
 
     @Override
     public ChannelPromise voidPromise() {
-        return channel.voidPromise();
+        return channel().voidPromise();
     }
 
     void setRemoved() {
@@ -965,9 +963,9 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
             task.ctx = ctx;
             task.msg = msg;
             task.promise = promise;
-            task.size = ctx.channel.estimatorHandle().size(msg) + estimateSize(task, CLASS_SIZES.get());
+            task.size = ctx.pipeline.channel.estimatorHandle().size(msg) + estimateSize(task, CLASS_SIZES.get());
 
-            ChannelOutboundBuffer buffer = ctx.channel.unsafe().outboundBuffer();
+            ChannelOutboundBuffer buffer = ctx.channel().unsafe().outboundBuffer();
             // Check for null as it may be set to null if the channel is closed already
             if (buffer != null) {
                 buffer.incrementPendingOutboundBytes(task.size);
@@ -978,7 +976,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
         public final void run() {
             try {
                 if (size > 0) {
-                    ChannelOutboundBuffer buffer = ctx.channel.unsafe().outboundBuffer();
+                    ChannelOutboundBuffer buffer = ctx.channel().unsafe().outboundBuffer();
                     // Check for null as it may be set to null if the channel is closed already
                     if (buffer != null) {
                         buffer.decrementPendingOutboundBytes(size);
