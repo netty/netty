@@ -209,7 +209,6 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     volatile AbstractChannelHandlerContext next;
     volatile AbstractChannelHandlerContext prev;
 
-    private final AbstractChannel channel;
     private final DefaultChannelPipeline pipeline;
     private final String name;
     private boolean removed;
@@ -242,7 +241,6 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             throw new NullPointerException("name");
         }
 
-        channel = pipeline.channel;
         this.pipeline = pipeline;
         this.name = name;
         this.invoker = invoker;
@@ -251,7 +249,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     @Override
     public final Channel channel() {
-        return channel;
+        return pipeline.channel();
     }
 
     @Override
@@ -301,12 +299,12 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     @Override
     public <T> Attribute<T> attr(AttributeKey<T> key) {
-        return channel.attr(key);
+        return channel().attr(key);
     }
 
     @Override
     public <T> boolean hasAttr(AttributeKey<T> key) {
-        return channel.hasAttr(key);
+        return channel().hasAttr(key);
     }
 
     @Override
@@ -528,7 +526,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     @Override
     public ChannelPromise voidPromise() {
-        return channel.voidPromise();
+        return channel().voidPromise();
     }
 
     void setRemoved() {
@@ -547,7 +545,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     @Override
     public String toString() {
-        return StringUtil.simpleClassName(ChannelHandlerContext.class) + '(' + name + ", " + channel + ')';
+        return StringUtil.simpleClassName(ChannelHandlerContext.class) + '(' + name + ", " + channel() + ')';
     }
 
     private final class PausableChannelEventExecutor0 extends PausableChannelEventExecutor {
