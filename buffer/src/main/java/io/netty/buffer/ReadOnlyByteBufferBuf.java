@@ -73,6 +73,11 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    protected short _getShortLE(int index) {
+        return ByteBufUtil.swapShort(buffer.getShort(index));
+    }
+
+    @Override
     public int getUnsignedMedium(int index) {
         ensureAccessible();
         return _getUnsignedMedium(index);
@@ -80,7 +85,16 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected int _getUnsignedMedium(int index) {
-        return (getByte(index) & 0xff) << 16 | (getByte(index + 1) & 0xff) << 8 | getByte(index + 2) & 0xff;
+        return (getByte(index) & 0xff)     << 16 |
+               (getByte(index + 1) & 0xff) << 8  |
+               getByte(index + 2) & 0xff;
+    }
+
+    @Override
+    protected int _getUnsignedMediumLE(int index) {
+        return getByte(index)      & 0xff       |
+               (getByte(index + 1) & 0xff) << 8 |
+               (getByte(index + 2) & 0xff) << 16;
     }
 
     @Override
@@ -95,6 +109,11 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    protected int _getIntLE(int index) {
+        return ByteBufUtil.swapInt(buffer.getInt(index));
+    }
+
+    @Override
     public long getLong(int index) {
         ensureAccessible();
         return _getLong(index);
@@ -103,6 +122,11 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     @Override
     protected long _getLong(int index) {
         return buffer.getLong(index);
+    }
+
+    @Override
+    protected long _getLongLE(int index) {
+        return ByteBufUtil.swapLong(buffer.getLong(index));
     }
 
     @Override
@@ -162,7 +186,17 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    protected void _setShortLE(int index, int value) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
     protected void _setMedium(int index, int value) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
+    protected void _setMediumLE(int index, int value) {
         throw new ReadOnlyBufferException();
     }
 
@@ -172,7 +206,17 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    protected void _setIntLE(int index, int value) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
     protected void _setLong(int index, long value) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
+    protected void _setLongLE(int index, long value) {
         throw new ReadOnlyBufferException();
     }
 

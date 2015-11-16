@@ -224,8 +224,18 @@ class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public short getShortLE(int index) {
+        return buf.getShortLE(index);
+    }
+
+    @Override
     public int getUnsignedShort(int index) {
         return buf.getUnsignedShort(index);
+    }
+
+    @Override
+    public int getUnsignedShortLE(int index) {
+        return buf.getUnsignedShortLE(index);
     }
 
     @Override
@@ -234,8 +244,18 @@ class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public int getMediumLE(int index) {
+        return buf.getMediumLE(index);
+    }
+
+    @Override
     public int getUnsignedMedium(int index) {
         return buf.getUnsignedMedium(index);
+    }
+
+    @Override
+    public int getUnsignedMediumLE(int index) {
+        return buf.getUnsignedMediumLE(index);
     }
 
     @Override
@@ -244,13 +264,28 @@ class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public int getIntLE(int index) {
+        return buf.getIntLE(index);
+    }
+
+    @Override
     public long getUnsignedInt(int index) {
         return buf.getUnsignedInt(index);
     }
 
     @Override
+    public long getUnsignedIntLE(int index) {
+        return buf.getUnsignedIntLE(index);
+    }
+
+    @Override
     public long getLong(int index) {
         return buf.getLong(index);
+    }
+
+    @Override
+    public long getLongLE(int index) {
+        return buf.getLongLE(index);
     }
 
     @Override
@@ -334,8 +369,20 @@ class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf setShortLE(int index, int value) {
+        buf.setShortLE(index, value);
+        return this;
+    }
+
+    @Override
     public ByteBuf setMedium(int index, int value) {
         buf.setMedium(index, value);
+        return this;
+    }
+
+    @Override
+    public ByteBuf setMediumLE(int index, int value) {
+        buf.setMediumLE(index, value);
         return this;
     }
 
@@ -346,8 +393,20 @@ class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf setIntLE(int index, int value) {
+        buf.setIntLE(index, value);
+        return this;
+    }
+
+    @Override
     public ByteBuf setLong(int index, long value) {
         buf.setLong(index, value);
+        return this;
+    }
+
+    @Override
+    public ByteBuf setLongLE(int index, long value) {
+        buf.setLongLE(index, value);
         return this;
     }
 
@@ -442,8 +501,18 @@ class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public short readShortLE() {
+        return buf.readShortLE();
+    }
+
+    @Override
     public int readUnsignedShort() {
         return buf.readUnsignedShort();
+    }
+
+    @Override
+    public int readUnsignedShortLE() {
+        return buf.readUnsignedShortLE();
     }
 
     @Override
@@ -452,8 +521,18 @@ class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public int readMediumLE() {
+        return buf.readMediumLE();
+    }
+
+    @Override
     public int readUnsignedMedium() {
         return buf.readUnsignedMedium();
+    }
+
+    @Override
+    public int readUnsignedMediumLE() {
+        return buf.readUnsignedMediumLE();
     }
 
     @Override
@@ -462,13 +541,28 @@ class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public int readIntLE() {
+        return buf.readIntLE();
+    }
+
+    @Override
     public long readUnsignedInt() {
         return buf.readUnsignedInt();
     }
 
     @Override
+    public long readUnsignedIntLE() {
+        return buf.readUnsignedIntLE();
+    }
+
+    @Override
     public long readLong() {
         return buf.readLong();
+    }
+
+    @Override
+    public long readLongLE() {
+        return buf.readLongLE();
     }
 
     @Override
@@ -568,8 +662,20 @@ class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf writeShortLE(int value) {
+        buf.writeShortLE(value);
+        return this;
+    }
+
+    @Override
     public ByteBuf writeMedium(int value) {
         buf.writeMedium(value);
+        return this;
+    }
+
+    @Override
+    public ByteBuf writeMediumLE(int value) {
+        buf.writeMediumLE(value);
         return this;
     }
 
@@ -580,8 +686,20 @@ class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf writeIntLE(int value) {
+        buf.writeIntLE(value);
+        return this;
+    }
+
+    @Override
     public ByteBuf writeLong(long value) {
         buf.writeLong(value);
+        return this;
+    }
+
+    @Override
+    public ByteBuf writeLongLE(long value) {
+        buf.writeLongLE(value);
         return this;
     }
 

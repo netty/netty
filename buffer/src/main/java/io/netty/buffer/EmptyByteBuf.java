@@ -254,7 +254,17 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     @Override
+    public short getShortLE(int index) {
+        throw new IndexOutOfBoundsException();
+    }
+
+    @Override
     public int getUnsignedShort(int index) {
+        throw new IndexOutOfBoundsException();
+    }
+
+    @Override
+    public int getUnsignedShortLE(int index) {
         throw new IndexOutOfBoundsException();
     }
 
@@ -264,7 +274,17 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     @Override
+    public int getMediumLE(int index) {
+        throw new IndexOutOfBoundsException();
+    }
+
+    @Override
     public int getUnsignedMedium(int index) {
+        throw new IndexOutOfBoundsException();
+    }
+
+    @Override
+    public int getUnsignedMediumLE(int index) {
         throw new IndexOutOfBoundsException();
     }
 
@@ -274,12 +294,27 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     @Override
+    public int getIntLE(int index) {
+        throw new IndexOutOfBoundsException();
+    }
+
+    @Override
     public long getUnsignedInt(int index) {
         throw new IndexOutOfBoundsException();
     }
 
     @Override
+    public long getUnsignedIntLE(int index) {
+        throw new IndexOutOfBoundsException();
+    }
+
+    @Override
     public long getLong(int index) {
+        throw new IndexOutOfBoundsException();
+    }
+
+    @Override
+    public long getLongLE(int index) {
         throw new IndexOutOfBoundsException();
     }
 
@@ -355,7 +390,17 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf setShortLE(int index, int value) {
+        throw new IndexOutOfBoundsException();
+    }
+
+    @Override
     public ByteBuf setMedium(int index, int value) {
+        throw new IndexOutOfBoundsException();
+    }
+
+    @Override
+    public ByteBuf setMediumLE(int index, int value) {
         throw new IndexOutOfBoundsException();
     }
 
@@ -365,7 +410,17 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf setIntLE(int index, int value) {
+        throw new IndexOutOfBoundsException();
+    }
+
+    @Override
     public ByteBuf setLong(int index, long value) {
+        throw new IndexOutOfBoundsException();
+    }
+
+    @Override
+    public ByteBuf setLongLE(int index, long value) {
         throw new IndexOutOfBoundsException();
     }
 
@@ -452,7 +507,17 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     @Override
+    public short readShortLE() {
+        throw new IndexOutOfBoundsException();
+    }
+
+    @Override
     public int readUnsignedShort() {
+        throw new IndexOutOfBoundsException();
+    }
+
+    @Override
+    public int readUnsignedShortLE() {
         throw new IndexOutOfBoundsException();
     }
 
@@ -462,7 +527,17 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     @Override
+    public int readMediumLE() {
+        throw new IndexOutOfBoundsException();
+    }
+
+    @Override
     public int readUnsignedMedium() {
+        throw new IndexOutOfBoundsException();
+    }
+
+    @Override
+    public int readUnsignedMediumLE() {
         throw new IndexOutOfBoundsException();
     }
 
@@ -472,12 +547,27 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     @Override
+    public int readIntLE() {
+        throw new IndexOutOfBoundsException();
+    }
+
+    @Override
     public long readUnsignedInt() {
         throw new IndexOutOfBoundsException();
     }
 
     @Override
+    public long readUnsignedIntLE() {
+        throw new IndexOutOfBoundsException();
+    }
+
+    @Override
     public long readLong() {
+        throw new IndexOutOfBoundsException();
+    }
+
+    @Override
+    public long readLongLE() {
         throw new IndexOutOfBoundsException();
     }
 
@@ -568,7 +658,17 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf writeShortLE(int value) {
+        throw new IndexOutOfBoundsException();
+    }
+
+    @Override
     public ByteBuf writeMedium(int value) {
+        throw new IndexOutOfBoundsException();
+    }
+
+    @Override
+    public ByteBuf writeMediumLE(int value) {
         throw new IndexOutOfBoundsException();
     }
 
@@ -578,7 +678,17 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf writeIntLE(int value) {
+        throw new IndexOutOfBoundsException();
+    }
+
+    @Override
     public ByteBuf writeLong(long value) {
+        throw new IndexOutOfBoundsException();
+    }
+
+    @Override
+    public ByteBuf writeLongLE(long value) {
         throw new IndexOutOfBoundsException();
     }
 

@@ -262,6 +262,9 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     /**
      * Returns the <a href="http://en.wikipedia.org/wiki/Endianness">endianness</a>
      * of this buffer.
+     *
+     * @deprecated use the Little Endian accessors, e.g. {@code getShortLE}, {@code getIntLE}
+     * instead of creating a buffer with swapped {@code endianness}.
      */
     public abstract ByteOrder order();
 
@@ -272,6 +275,9 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * specified {@code endianness} is identical to this buffer's byte order, this method can
      * return {@code this}.  This method does not modify {@code readerIndex} or {@code writerIndex}
      * of this buffer.
+     *
+     * @deprecated use the Little Endian accessors, e.g. {@code getShortLE}, {@code getIntLE}
+     * instead of creating a buffer with swapped {@code endianness}.
      */
     public abstract ByteBuf order(ByteOrder endianness);
 
@@ -558,6 +564,17 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract short getShort(int index);
 
     /**
+     * Gets a 16-bit short integer at the specified absolute {@code index} in
+     * this buffer in Little Endian Byte Order. This method does not modify
+     * {@code readerIndex} or {@code writerIndex} of this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 2} is greater than {@code this.capacity}
+     */
+    public abstract short getShortLE(int index);
+
+    /**
      * Gets an unsigned 16-bit short integer at the specified absolute
      * {@code index} in this buffer.  This method does not modify
      * {@code readerIndex} or {@code writerIndex} of this buffer.
@@ -567,6 +584,18 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      *         {@code index + 2} is greater than {@code this.capacity}
      */
     public abstract int getUnsignedShort(int index);
+
+    /**
+     * Gets an unsigned 16-bit short integer at the specified absolute
+     * {@code index} in this buffer in Little Endian Byte Order.
+     * This method does not modify {@code readerIndex} or
+     * {@code writerIndex} of this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 2} is greater than {@code this.capacity}
+     */
+    public abstract int getUnsignedShortLE(int index);
 
     /**
      * Gets a 24-bit medium integer at the specified absolute {@code index} in
@@ -580,6 +609,17 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract int   getMedium(int index);
 
     /**
+     * Gets a 24-bit medium integer at the specified absolute {@code index} in
+     * this buffer in the Little Endian Byte Order. This method does not
+     * modify {@code readerIndex} or {@code writerIndex} of this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 3} is greater than {@code this.capacity}
+     */
+    public abstract int getMediumLE(int index);
+
+    /**
      * Gets an unsigned 24-bit medium integer at the specified absolute
      * {@code index} in this buffer.  This method does not modify
      * {@code readerIndex} or {@code writerIndex} of this buffer.
@@ -589,6 +629,18 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      *         {@code index + 3} is greater than {@code this.capacity}
      */
     public abstract int   getUnsignedMedium(int index);
+
+    /**
+     * Gets an unsigned 24-bit medium integer at the specified absolute
+     * {@code index} in this buffer in Little Endian Byte Order.
+     * This method does not modify {@code readerIndex} or
+     * {@code writerIndex} of this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 3} is greater than {@code this.capacity}
+     */
+    public abstract int   getUnsignedMediumLE(int index);
 
     /**
      * Gets a 32-bit integer at the specified absolute {@code index} in
@@ -602,6 +654,17 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract int   getInt(int index);
 
     /**
+     * Gets a 32-bit integer at the specified absolute {@code index} in
+     * this buffer with Little Endian Byte Order. This method does not
+     * modify {@code readerIndex} or {@code writerIndex} of this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 4} is greater than {@code this.capacity}
+     */
+    public abstract int   getIntLE(int index);
+
+    /**
      * Gets an unsigned 32-bit integer at the specified absolute {@code index}
      * in this buffer.  This method does not modify {@code readerIndex} or
      * {@code writerIndex} of this buffer.
@@ -613,6 +676,17 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract long  getUnsignedInt(int index);
 
     /**
+     * Gets an unsigned 32-bit integer at the specified absolute {@code index}
+     * in this buffer in Little Endian Byte Order. This method does not
+     * modify {@code readerIndex} or {@code writerIndex} of this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 4} is greater than {@code this.capacity}
+     */
+    public abstract long  getUnsignedIntLE(int index);
+
+    /**
      * Gets a 64-bit long integer at the specified absolute {@code index} in
      * this buffer.  This method does not modify {@code readerIndex} or
      * {@code writerIndex} of this buffer.
@@ -622,6 +696,17 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      *         {@code index + 8} is greater than {@code this.capacity}
      */
     public abstract long  getLong(int index);
+
+    /**
+     * Gets a 64-bit long integer at the specified absolute {@code index} in
+     * this buffer in Little Endian Byte Order. This method does not
+     * modify {@code readerIndex} or {@code writerIndex} of this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 8} is greater than {@code this.capacity}
+     */
+    public abstract long  getLongLE(int index);
 
     /**
      * Gets a 2-byte UTF-16 character at the specified absolute
@@ -833,6 +918,19 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract ByteBuf setShort(int index, int value);
 
     /**
+     * Sets the specified 16-bit short integer at the specified absolute
+     * {@code index} in this buffer with the Little Endian Byte Order.
+     * The 16 high-order bits of the specified value are ignored.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 2} is greater than {@code this.capacity}
+     */
+    public abstract ByteBuf setShortLE(int index, int value);
+
+    /**
      * Sets the specified 24-bit medium integer at the specified absolute
      * {@code index} in this buffer.  Please note that the most significant
      * byte is ignored in the specified value.
@@ -844,6 +942,20 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      *         {@code index + 3} is greater than {@code this.capacity}
      */
     public abstract ByteBuf setMedium(int index, int   value);
+
+    /**
+     * Sets the specified 24-bit medium integer at the specified absolute
+     * {@code index} in this buffer in the Little Endian Byte Order.
+     * Please note that the most significant byte is ignored in the
+     * specified value.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 3} is greater than {@code this.capacity}
+     */
+    public abstract ByteBuf setMediumLE(int index, int   value);
 
     /**
      * Sets the specified 32-bit integer at the specified absolute
@@ -858,6 +970,19 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract ByteBuf setInt(int index, int   value);
 
     /**
+     * Sets the specified 32-bit integer at the specified absolute
+     * {@code index} in this buffer with Little Endian byte order
+     * .
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 4} is greater than {@code this.capacity}
+     */
+    public abstract ByteBuf setIntLE(int index, int value);
+
+    /**
      * Sets the specified 64-bit long integer at the specified absolute
      * {@code index} in this buffer.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
@@ -868,6 +993,18 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      *         {@code index + 8} is greater than {@code this.capacity}
      */
     public abstract ByteBuf setLong(int index, long  value);
+
+    /**
+     * Sets the specified 64-bit long integer at the specified absolute
+     * {@code index} in this buffer in Little Endian Byte Order.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 8} is greater than {@code this.capacity}
+     */
+    public abstract ByteBuf setLongLE(int index, long  value);
 
     /**
      * Sets the specified 2-byte UTF-16 character at the specified absolute
@@ -1094,6 +1231,16 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract short readShort();
 
     /**
+     * Gets a 16-bit short integer at the current {@code readerIndex}
+     * in the Little Endian Byte Order and increases the {@code readerIndex}
+     * by {@code 2} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.readableBytes} is less than {@code 2}
+     */
+    public abstract short readShortLE();
+
+    /**
      * Gets an unsigned 16-bit short integer at the current {@code readerIndex}
      * and increases the {@code readerIndex} by {@code 2} in this buffer.
      *
@@ -1101,6 +1248,16 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      *         if {@code this.readableBytes} is less than {@code 2}
      */
     public abstract int   readUnsignedShort();
+
+    /**
+     * Gets an unsigned 16-bit short integer at the current {@code readerIndex}
+     * in the Little Endian Byte Order and increases the {@code readerIndex}
+     * by {@code 2} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.readableBytes} is less than {@code 2}
+     */
+    public abstract int   readUnsignedShortLE();
 
     /**
      * Gets a 24-bit medium integer at the current {@code readerIndex}
@@ -1112,6 +1269,16 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract int   readMedium();
 
     /**
+     * Gets a 24-bit medium integer at the current {@code readerIndex}
+     * in the Little Endian Byte Order and increases the
+     * {@code readerIndex} by {@code 3} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.readableBytes} is less than {@code 3}
+     */
+    public abstract int   readMediumLE();
+
+    /**
      * Gets an unsigned 24-bit medium integer at the current {@code readerIndex}
      * and increases the {@code readerIndex} by {@code 3} in this buffer.
      *
@@ -1119,6 +1286,16 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      *         if {@code this.readableBytes} is less than {@code 3}
      */
     public abstract int   readUnsignedMedium();
+
+    /**
+     * Gets an unsigned 24-bit medium integer at the current {@code readerIndex}
+     * in the Little Endian Byte Order and increases the {@code readerIndex}
+     * by {@code 3} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.readableBytes} is less than {@code 3}
+     */
+    public abstract int   readUnsignedMediumLE();
 
     /**
      * Gets a 32-bit integer at the current {@code readerIndex}
@@ -1130,6 +1307,16 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract int   readInt();
 
     /**
+     * Gets a 32-bit integer at the current {@code readerIndex}
+     * in the Little Endian Byte Order and increases the {@code readerIndex}
+     * by {@code 4} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.readableBytes} is less than {@code 4}
+     */
+    public abstract int   readIntLE();
+
+    /**
      * Gets an unsigned 32-bit integer at the current {@code readerIndex}
      * and increases the {@code readerIndex} by {@code 4} in this buffer.
      *
@@ -1139,6 +1326,16 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract long  readUnsignedInt();
 
     /**
+     * Gets an unsigned 32-bit integer at the current {@code readerIndex}
+     * in the Little Endian Byte Order and increases the {@code readerIndex}
+     * by {@code 4} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.readableBytes} is less than {@code 4}
+     */
+    public abstract long  readUnsignedIntLE();
+
+    /**
      * Gets a 64-bit integer at the current {@code readerIndex}
      * and increases the {@code readerIndex} by {@code 8} in this buffer.
      *
@@ -1146,6 +1343,16 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      *         if {@code this.readableBytes} is less than {@code 8}
      */
     public abstract long  readLong();
+
+    /**
+     * Gets a 64-bit integer at the current {@code readerIndex}
+     * in the Little Endian Byte Order and increases the {@code readerIndex}
+     * by {@code 8} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.readableBytes} is less than {@code 8}
+     */
+    public abstract long  readLongLE();
 
     /**
      * Gets a 2-byte UTF-16 character at the current {@code readerIndex}
@@ -1358,6 +1565,17 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract ByteBuf writeShort(int value);
 
     /**
+     * Sets the specified 16-bit short integer in the Little Endian Byte
+     * Order at the current {@code writerIndex} and increases the
+     * {@code writerIndex} by {@code 2} in this buffer.
+     * The 16 high-order bits of the specified value are ignored.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.writableBytes} is less than {@code 2}
+     */
+    public abstract ByteBuf writeShortLE(int value);
+
+    /**
      * Sets the specified 24-bit medium integer at the current
      * {@code writerIndex} and increases the {@code writerIndex} by {@code 3}
      * in this buffer.
@@ -1366,6 +1584,17 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      *         if {@code this.writableBytes} is less than {@code 3}
      */
     public abstract ByteBuf writeMedium(int   value);
+
+    /**
+     * Sets the specified 24-bit medium integer at the current
+     * {@code writerIndex} in the Little Endian Byte Order and
+     * increases the {@code writerIndex} by {@code 3} in this
+     * buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.writableBytes} is less than {@code 3}
+     */
+    public abstract ByteBuf writeMediumLE(int   value);
 
     /**
      * Sets the specified 32-bit integer at the current {@code writerIndex}
@@ -1377,6 +1606,16 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract ByteBuf writeInt(int   value);
 
     /**
+     * Sets the specified 32-bit integer at the current {@code writerIndex}
+     * in the Little Endian Byte Order and increases the {@code writerIndex}
+     * by {@code 4} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.writableBytes} is less than {@code 4}
+     */
+    public abstract ByteBuf writeIntLE(int   value);
+
+    /**
      * Sets the specified 64-bit long integer at the current
      * {@code writerIndex} and increases the {@code writerIndex} by {@code 8}
      * in this buffer.
@@ -1385,6 +1624,17 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      *         if {@code this.writableBytes} is less than {@code 8}
      */
     public abstract ByteBuf writeLong(long  value);
+
+    /**
+     * Sets the specified 64-bit long integer at the current
+     * {@code writerIndex} in the Little Endian Byte Order and
+     * increases the {@code writerIndex} by {@code 8}
+     * in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.writableBytes} is less than {@code 8}
+     */
+    public abstract ByteBuf writeLongLE(long  value);
 
     /**
      * Sets the specified 2-byte UTF-16 character at the current
