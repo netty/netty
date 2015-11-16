@@ -246,9 +246,21 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     }
 
     @Override
+    public int getIntLE(int index) {
+        checkIndex(index, 4);
+        return buffer.getIntLE(index);
+    }
+
+    @Override
     public long getUnsignedInt(int index) {
         checkIndex(index, 4);
         return buffer.getUnsignedInt(index);
+    }
+
+    @Override
+    public long getUnsignedIntLE(int index) {
+        checkIndex(index, 4);
+        return buffer.getUnsignedIntLE(index);
     }
 
     @Override
@@ -258,9 +270,21 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     }
 
     @Override
+    public long getLongLE(int index) {
+        checkIndex(index, 8);
+        return buffer.getLongLE(index);
+    }
+
+    @Override
     public int getMedium(int index) {
         checkIndex(index, 3);
         return buffer.getMedium(index);
+    }
+
+    @Override
+    public int getMediumLE(int index) {
+        checkIndex(index, 3);
+        return buffer.getMediumLE(index);
     }
 
     @Override
@@ -270,15 +294,33 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     }
 
     @Override
+    public int getUnsignedMediumLE(int index) {
+        checkIndex(index, 3);
+        return buffer.getUnsignedMediumLE(index);
+    }
+
+    @Override
     public short getShort(int index) {
         checkIndex(index, 2);
         return buffer.getShort(index);
     }
 
     @Override
+    public short getShortLE(int index) {
+        checkIndex(index, 2);
+        return buffer.getShortLE(index);
+    }
+
+    @Override
     public int getUnsignedShort(int index) {
         checkIndex(index, 2);
         return buffer.getUnsignedShort(index);
+    }
+
+    @Override
+    public int getUnsignedShortLE(int index) {
+        checkIndex(index, 2);
+        return buffer.getUnsignedShortLE(index);
     }
 
     @Override
@@ -551,9 +593,21 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     }
 
     @Override
+    public int readIntLE() {
+        checkReadableBytes(4);
+        return buffer.readIntLE();
+    }
+
+    @Override
     public long readUnsignedInt() {
         checkReadableBytes(4);
         return buffer.readUnsignedInt();
+    }
+
+    @Override
+    public long readUnsignedIntLE() {
+        checkReadableBytes(4);
+        return buffer.readUnsignedIntLE();
     }
 
     @Override
@@ -563,9 +617,21 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     }
 
     @Override
+    public long readLongLE() {
+        checkReadableBytes(8);
+        return buffer.readLongLE();
+    }
+
+    @Override
     public int readMedium() {
         checkReadableBytes(3);
         return buffer.readMedium();
+    }
+
+    @Override
+    public int readMediumLE() {
+        checkReadableBytes(3);
+        return buffer.readMediumLE();
     }
 
     @Override
@@ -575,15 +641,33 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     }
 
     @Override
+    public int readUnsignedMediumLE() {
+        checkReadableBytes(3);
+        return buffer.readUnsignedMediumLE();
+    }
+
+    @Override
     public short readShort() {
         checkReadableBytes(2);
         return buffer.readShort();
     }
 
     @Override
+    public short readShortLE() {
+        checkReadableBytes(2);
+        return buffer.readShortLE();
+    }
+
+    @Override
     public int readUnsignedShort() {
         checkReadableBytes(2);
         return buffer.readUnsignedShort();
+    }
+
+    @Override
+    public int readUnsignedShortLE() {
+        checkReadableBytes(2);
+        return buffer.readUnsignedShortLE();
     }
 
     @Override
@@ -695,7 +779,19 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf setIntLE(int index, int value) {
+        reject();
+        return this;
+    }
+
+    @Override
     public ByteBuf setLong(int index, long value) {
+        reject();
+        return this;
+    }
+
+    @Override
+    public ByteBuf setLongLE(int index, long value) {
         reject();
         return this;
     }
@@ -707,7 +803,19 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf setMediumLE(int index, int value) {
+        reject();
+        return this;
+    }
+
+    @Override
     public ByteBuf setShort(int index, int value) {
+        reject();
+        return this;
+    }
+
+    @Override
+    public ByteBuf setShortLE(int index, int value) {
         reject();
         return this;
     }
@@ -894,13 +1002,31 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf writeIntLE(int value) {
+        reject();
+        return this;
+    }
+
+    @Override
     public ByteBuf writeLong(long value) {
         reject();
         return this;
     }
 
     @Override
+    public ByteBuf writeLongLE(long value) {
+        reject();
+        return this;
+    }
+
+    @Override
     public ByteBuf writeMedium(int value) {
+        reject();
+        return this;
+    }
+
+    @Override
+    public ByteBuf writeMediumLE(int value) {
         reject();
         return this;
     }
@@ -924,6 +1050,12 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeShort(int value) {
+        reject();
+        return this;
+    }
+
+    @Override
+    public ByteBuf writeShortLE(int value) {
         reject();
         return this;
     }

@@ -233,6 +233,11 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    protected short _getShortLE(int index) {
+        return ByteBufUtil.swapShort(buffer.getShort(index));
+    }
+
+    @Override
     public int getUnsignedMedium(int index) {
         ensureAccessible();
         return _getUnsignedMedium(index);
@@ -240,7 +245,16 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected int _getUnsignedMedium(int index) {
-        return (getByte(index) & 0xff) << 16 | (getByte(index + 1) & 0xff) << 8 | getByte(index + 2) & 0xff;
+        return (getByte(index) & 0xff)     << 16 |
+               (getByte(index + 1) & 0xff) << 8  |
+               getByte(index + 2) & 0xff;
+    }
+
+    @Override
+    protected int _getUnsignedMediumLE(int index) {
+        return getByte(index) & 0xff             |
+               (getByte(index + 1) & 0xff) << 8  |
+               (getByte(index + 2) & 0xff) << 16;
     }
 
     @Override
@@ -255,6 +269,11 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    protected int _getIntLE(int index) {
+        return ByteBufUtil.swapInt(buffer.getInt(index));
+    }
+
+    @Override
     public long getLong(int index) {
         ensureAccessible();
         return _getLong(index);
@@ -263,6 +282,11 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     protected long _getLong(int index) {
         return buffer.getLong(index);
+    }
+
+    @Override
+    protected long _getLongLE(int index) {
+        return ByteBufUtil.swapLong(buffer.getLong(index));
     }
 
     @Override
@@ -366,6 +390,11 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    protected void _setShortLE(int index, int value) {
+        buffer.putShort(index, ByteBufUtil.swapShort((short) value));
+    }
+
+    @Override
     public ByteBuf setMedium(int index, int value) {
         ensureAccessible();
         _setMedium(index, value);
@@ -377,6 +406,13 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
         setByte(index, (byte) (value >>> 16));
         setByte(index + 1, (byte) (value >>> 8));
         setByte(index + 2, (byte) value);
+    }
+
+    @Override
+    protected void _setMediumLE(int index, int value) {
+        setByte(index, (byte) value);
+        setByte(index + 1, (byte) (value >>> 8));
+        setByte(index + 2, (byte) (value >>> 16));
     }
 
     @Override
@@ -392,6 +428,11 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    protected void _setIntLE(int index, int value) {
+        buffer.putInt(index, ByteBufUtil.swapInt(value));
+    }
+
+    @Override
     public ByteBuf setLong(int index, long value) {
         ensureAccessible();
         _setLong(index, value);
@@ -401,6 +442,11 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     protected void _setLong(int index, long value) {
         buffer.putLong(index, value);
+    }
+
+    @Override
+    protected void _setLongLE(int index, long value) {
+        buffer.putLong(index, ByteBufUtil.swapLong(value));
     }
 
     @Override

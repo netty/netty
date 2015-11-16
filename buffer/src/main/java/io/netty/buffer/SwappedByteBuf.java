@@ -28,6 +28,9 @@ import java.nio.charset.Charset;
 
 /**
  * Wrapper which swap the {@link ByteOrder} of a {@link ByteBuf}.
+ *
+ * @deprecated use the Little Endian accessors, e.g. {@code getShortLE}, {@code getIntLE}
+ * instead.
  */
 public class SwappedByteBuf extends ByteBuf {
 
@@ -230,8 +233,18 @@ public class SwappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public short getShortLE(int index) {
+        return buf.getShort(index);
+    }
+
+    @Override
     public int getUnsignedShort(int index) {
         return getShort(index) & 0xFFFF;
+    }
+
+    @Override
+    public int getUnsignedShortLE(int index) {
+        return getShortLE(index) & 0xFFFF;
     }
 
     @Override
@@ -240,8 +253,18 @@ public class SwappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public int getMediumLE(int index) {
+        return buf.getMedium(index);
+    }
+
+    @Override
     public int getUnsignedMedium(int index) {
         return getMedium(index) & 0xFFFFFF;
+    }
+
+    @Override
+    public int getUnsignedMediumLE(int index) {
+        return getMediumLE(index) & 0xFFFFFF;
     }
 
     @Override
@@ -250,13 +273,28 @@ public class SwappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public int getIntLE(int index) {
+        return buf.getInt(index);
+    }
+
+    @Override
     public long getUnsignedInt(int index) {
         return getInt(index) & 0xFFFFFFFFL;
     }
 
     @Override
+    public long getUnsignedIntLE(int index) {
+        return getIntLE(index) & 0xFFFFFFFFL;
+    }
+
+    @Override
     public long getLong(int index) {
         return ByteBufUtil.swapLong(buf.getLong(index));
+    }
+
+    @Override
+    public long getLongLE(int index) {
+        return buf.getLong(index);
     }
 
     @Override
@@ -340,8 +378,20 @@ public class SwappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf setShortLE(int index, int value) {
+        buf.setShort(index, (short) value);
+        return this;
+    }
+
+    @Override
     public ByteBuf setMedium(int index, int value) {
         buf.setMedium(index, ByteBufUtil.swapMedium(value));
+        return this;
+    }
+
+    @Override
+    public ByteBuf setMediumLE(int index, int value) {
+        buf.setMedium(index, value);
         return this;
     }
 
@@ -352,8 +402,20 @@ public class SwappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf setIntLE(int index, int value) {
+        buf.setInt(index, value);
+        return this;
+    }
+
+    @Override
     public ByteBuf setLong(int index, long value) {
         buf.setLong(index, ByteBufUtil.swapLong(value));
+        return this;
+    }
+
+    @Override
+    public ByteBuf setLongLE(int index, long value) {
+        buf.setLong(index, value);
         return this;
     }
 
@@ -448,8 +510,18 @@ public class SwappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public short readShortLE() {
+        return buf.readShort();
+    }
+
+    @Override
     public int readUnsignedShort() {
         return readShort() & 0xFFFF;
+    }
+
+    @Override
+    public int readUnsignedShortLE() {
+        return readShortLE() & 0xFFFF;
     }
 
     @Override
@@ -458,8 +530,18 @@ public class SwappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public int readMediumLE() {
+        return buf.readMedium();
+    }
+
+    @Override
     public int readUnsignedMedium() {
         return readMedium() & 0xFFFFFF;
+    }
+
+    @Override
+    public int readUnsignedMediumLE() {
+        return readMediumLE() & 0xFFFFFF;
     }
 
     @Override
@@ -468,13 +550,28 @@ public class SwappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public int readIntLE() {
+        return buf.readInt();
+    }
+
+    @Override
     public long readUnsignedInt() {
         return readInt() & 0xFFFFFFFFL;
     }
 
     @Override
+    public long readUnsignedIntLE() {
+        return readIntLE() & 0xFFFFFFFFL;
+    }
+
+    @Override
     public long readLong() {
         return ByteBufUtil.swapLong(buf.readLong());
+    }
+
+    @Override
+    public long readLongLE() {
+        return buf.readLong();
     }
 
     @Override
@@ -574,8 +671,20 @@ public class SwappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf writeShortLE(int value) {
+        buf.writeShort((short) value);
+        return this;
+    }
+
+    @Override
     public ByteBuf writeMedium(int value) {
         buf.writeMedium(ByteBufUtil.swapMedium(value));
+        return this;
+    }
+
+    @Override
+    public ByteBuf writeMediumLE(int value) {
+        buf.writeMedium(value);
         return this;
     }
 
@@ -586,8 +695,20 @@ public class SwappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf writeIntLE(int value) {
+        buf.writeInt(value);
+        return this;
+    }
+
+    @Override
     public ByteBuf writeLong(long value) {
         buf.writeLong(ByteBufUtil.swapLong(value));
+        return this;
+    }
+
+    @Override
+    public ByteBuf writeLongLE(long value) {
+        buf.writeLong(value);
         return this;
     }
 

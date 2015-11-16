@@ -224,8 +224,18 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
     }
 
     @Override
+    protected short _getShortLE(int index) {
+        return UnsafeByteBufUtil.getShortLE(addr(index));
+    }
+
+    @Override
     protected int _getUnsignedMedium(int index) {
         return UnsafeByteBufUtil.getUnsignedMedium(addr(index));
+    }
+
+    @Override
+    protected int _getUnsignedMediumLE(int index) {
+        return UnsafeByteBufUtil.getUnsignedMediumLE(addr(index));
     }
 
     @Override
@@ -234,8 +244,18 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
     }
 
     @Override
+    protected int _getIntLE(int index) {
+        return UnsafeByteBufUtil.getIntLE(addr(index));
+    }
+
+    @Override
     protected long _getLong(int index) {
         return UnsafeByteBufUtil.getLong(addr(index));
+    }
+
+    @Override
+    protected long _getLongLE(int index) {
+        return UnsafeByteBufUtil.getLongLE(addr(index));
     }
 
     @Override
@@ -276,8 +296,18 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
     }
 
     @Override
+    protected void _setShortLE(int index, int value) {
+        UnsafeByteBufUtil.setShortLE(addr(index), value);
+    }
+
+    @Override
     protected void _setMedium(int index, int value) {
         UnsafeByteBufUtil.setMedium(addr(index), value);
+    }
+
+    @Override
+    protected void _setMediumLE(int index, int value) {
+        UnsafeByteBufUtil.setMediumLE(addr(index), value);
     }
 
     @Override
@@ -286,8 +316,18 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
     }
 
     @Override
+    protected void _setIntLE(int index, int value) {
+        UnsafeByteBufUtil.setIntLE(addr(index), value);
+    }
+
+    @Override
     protected void _setLong(int index, long value) {
         UnsafeByteBufUtil.setLong(addr(index), value);
+    }
+
+    @Override
+    protected void _setLongLE(int index, long value) {
+        UnsafeByteBufUtil.setLongLE(addr(index), value);
     }
 
     @Override

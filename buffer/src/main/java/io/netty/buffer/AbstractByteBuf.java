@@ -349,8 +349,21 @@ public abstract class AbstractByteBuf extends ByteBuf {
     protected abstract short _getShort(int index);
 
     @Override
+    public short getShortLE(int index) {
+        checkIndex(index, 2);
+        return _getShortLE(index);
+    }
+
+    protected abstract short _getShortLE(int index);
+
+    @Override
     public int getUnsignedShort(int index) {
         return getShort(index) & 0xFFFF;
+    }
+
+    @Override
+    public int getUnsignedShortLE(int index) {
+        return getShortLE(index) & 0xFFFF;
     }
 
     @Override
@@ -362,8 +375,25 @@ public abstract class AbstractByteBuf extends ByteBuf {
     protected abstract int _getUnsignedMedium(int index);
 
     @Override
+    public int getUnsignedMediumLE(int index) {
+        checkIndex(index, 3);
+        return _getUnsignedMediumLE(index);
+    }
+
+    protected abstract int _getUnsignedMediumLE(int index);
+
+    @Override
     public int getMedium(int index) {
         int value = getUnsignedMedium(index);
+        if ((value & 0x800000) != 0) {
+            value |= 0xff000000;
+        }
+        return value;
+    }
+
+    @Override
+    public int getMediumLE(int index) {
+        int value = getUnsignedMediumLE(index);
         if ((value & 0x800000) != 0) {
             value |= 0xff000000;
         }
@@ -379,8 +409,21 @@ public abstract class AbstractByteBuf extends ByteBuf {
     protected abstract int _getInt(int index);
 
     @Override
+    public int getIntLE(int index) {
+        checkIndex(index, 4);
+        return _getIntLE(index);
+    }
+
+    protected abstract int _getIntLE(int index);
+
+    @Override
     public long getUnsignedInt(int index) {
         return getInt(index) & 0xFFFFFFFFL;
+    }
+
+    @Override
+    public long getUnsignedIntLE(int index) {
+        return getIntLE(index) & 0xFFFFFFFFL;
     }
 
     @Override
@@ -390,6 +433,14 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     protected abstract long _getLong(int index);
+
+    @Override
+    public long getLongLE(int index) {
+        checkIndex(index, 8);
+        return _getLongLE(index);
+    }
+
+    protected abstract long _getLongLE(int index);
 
     @Override
     public char getChar(int index) {
@@ -450,6 +501,15 @@ public abstract class AbstractByteBuf extends ByteBuf {
     protected abstract void _setShort(int index, int value);
 
     @Override
+    public ByteBuf setShortLE(int index, int value) {
+        checkIndex(index, 2);
+        _setShortLE(index, value);
+        return this;
+    }
+
+    protected abstract void _setShortLE(int index, int value);
+
+    @Override
     public ByteBuf setChar(int index, int value) {
         setShort(index, value);
         return this;
@@ -465,6 +525,15 @@ public abstract class AbstractByteBuf extends ByteBuf {
     protected abstract void _setMedium(int index, int value);
 
     @Override
+    public ByteBuf setMediumLE(int index, int value) {
+        checkIndex(index, 3);
+        _setMediumLE(index, value);
+        return this;
+    }
+
+    protected abstract void _setMediumLE(int index, int value);
+
+    @Override
     public ByteBuf setInt(int index, int value) {
         checkIndex(index, 4);
         _setInt(index, value);
@@ -472,6 +541,15 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     protected abstract void _setInt(int index, int value);
+
+    @Override
+    public ByteBuf setIntLE(int index, int value) {
+        checkIndex(index, 4);
+        _setIntLE(index, value);
+        return this;
+    }
+
+    protected abstract void _setIntLE(int index, int value);
 
     @Override
     public ByteBuf setFloat(int index, float value) {
@@ -487,6 +565,15 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     protected abstract void _setLong(int index, long value);
+
+    @Override
+    public ByteBuf setLongLE(int index, long value) {
+        checkIndex(index, 8);
+        _setLongLE(index, value);
+        return this;
+    }
+
+    protected abstract void _setLongLE(int index, long value);
 
     @Override
     public ByteBuf setDouble(int index, double value) {
@@ -583,13 +670,35 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     @Override
+    public short readShortLE() {
+        checkReadableBytes0(2);
+        short v = _getShortLE(readerIndex);
+        readerIndex += 2;
+        return v;
+    }
+
+    @Override
     public int readUnsignedShort() {
         return readShort() & 0xFFFF;
     }
 
     @Override
+    public int readUnsignedShortLE() {
+        return readShortLE() & 0xFFFF;
+    }
+
+    @Override
     public int readMedium() {
         int value = readUnsignedMedium();
+        if ((value & 0x800000) != 0) {
+            value |= 0xff000000;
+        }
+        return value;
+    }
+
+    @Override
+    public int readMediumLE() {
+        int value = readUnsignedMediumLE();
         if ((value & 0x800000) != 0) {
             value |= 0xff000000;
         }
@@ -605,9 +714,25 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     @Override
+    public int readUnsignedMediumLE() {
+        checkReadableBytes0(3);
+        int v = _getUnsignedMediumLE(readerIndex);
+        readerIndex += 3;
+        return v;
+    }
+
+    @Override
     public int readInt() {
         checkReadableBytes0(4);
         int v = _getInt(readerIndex);
+        readerIndex += 4;
+        return v;
+    }
+
+    @Override
+    public int readIntLE() {
+        checkReadableBytes0(4);
+        int v = _getIntLE(readerIndex);
         readerIndex += 4;
         return v;
     }
@@ -618,9 +743,22 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     @Override
+    public long readUnsignedIntLE() {
+        return readIntLE() & 0xFFFFFFFFL;
+    }
+
+    @Override
     public long readLong() {
         checkReadableBytes0(8);
         long v = _getLong(readerIndex);
+        readerIndex += 8;
+        return v;
+    }
+
+    @Override
+    public long readLongLE() {
+        checkReadableBytes0(8);
+        long v = _getLongLE(readerIndex);
         readerIndex += 8;
         return v;
     }
@@ -757,10 +895,28 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf writeShortLE(int value) {
+        ensureAccessible();
+        ensureWritable0(2);
+        _setShortLE(writerIndex, value);
+        writerIndex += 2;
+        return this;
+    }
+
+    @Override
     public ByteBuf writeMedium(int value) {
         ensureAccessible();
         ensureWritable0(3);
         _setMedium(writerIndex, value);
+        writerIndex += 3;
+        return this;
+    }
+
+    @Override
+    public ByteBuf writeMediumLE(int value) {
+        ensureAccessible();
+        ensureWritable0(3);
+        _setMediumLE(writerIndex, value);
         writerIndex += 3;
         return this;
     }
@@ -775,10 +931,28 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf writeIntLE(int value) {
+        ensureAccessible();
+        ensureWritable0(4);
+        _setIntLE(writerIndex, value);
+        writerIndex += 4;
+        return this;
+    }
+
+    @Override
     public ByteBuf writeLong(long value) {
         ensureAccessible();
         ensureWritable0(8);
         _setLong(writerIndex, value);
+        writerIndex += 8;
+        return this;
+    }
+
+    @Override
+    public ByteBuf writeLongLE(long value) {
+        ensureAccessible();
+        ensureWritable0(8);
+        _setLongLE(writerIndex, value);
         writerIndex += 8;
         return this;
     }

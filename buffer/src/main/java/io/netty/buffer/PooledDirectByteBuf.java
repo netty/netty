@@ -66,9 +66,24 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     }
 
     @Override
+    protected short _getShortLE(int index) {
+        return ByteBufUtil.swapShort(_getShort(index));
+    }
+
+    @Override
     protected int _getUnsignedMedium(int index) {
         index = idx(index);
-        return (memory.get(index) & 0xff) << 16 | (memory.get(index + 1) & 0xff) << 8 | memory.get(index + 2) & 0xff;
+        return (memory.get(index) & 0xff)     << 16 |
+               (memory.get(index + 1) & 0xff) << 8  |
+               memory.get(index + 2) & 0xff;
+    }
+
+    @Override
+    protected int _getUnsignedMediumLE(int index) {
+        index = idx(index);
+        return memory.get(index)      & 0xff        |
+               (memory.get(index + 1) & 0xff) << 8  |
+               (memory.get(index + 2) & 0xff) << 16;
     }
 
     @Override
@@ -77,8 +92,18 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     }
 
     @Override
+    protected int _getIntLE(int index) {
+        return ByteBufUtil.swapInt(_getInt(index));
+    }
+
+    @Override
     protected long _getLong(int index) {
         return memory.getLong(idx(index));
+    }
+
+    @Override
+    protected long _getLongLE(int index) {
+        return ByteBufUtil.swapLong(_getLong(index));
     }
 
     @Override
@@ -227,6 +252,11 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     }
 
     @Override
+    protected void _setShortLE(int index, int value) {
+        _setShort(index, ByteBufUtil.swapShort((short) value));
+    }
+
+    @Override
     protected void _setMedium(int index, int value) {
         index = idx(index);
         memory.put(index, (byte) (value >>> 16));
@@ -235,13 +265,31 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     }
 
     @Override
+    protected void _setMediumLE(int index, int value) {
+        index = idx(index);
+        memory.put(index, (byte) value);
+        memory.put(index + 1, (byte) (value >>> 8));
+        memory.put(index + 2, (byte) (value >>> 16));
+    }
+
+    @Override
     protected void _setInt(int index, int value) {
         memory.putInt(idx(index), value);
     }
 
     @Override
+    protected void _setIntLE(int index, int value) {
+        _setInt(index, ByteBufUtil.swapInt(value));
+    }
+
+    @Override
     protected void _setLong(int index, long value) {
         memory.putLong(idx(index), value);
+    }
+
+    @Override
+    protected void _setLongLE(int index, long value) {
+        _setLong(index, ByteBufUtil.swapLong(value));
     }
 
     @Override
