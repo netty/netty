@@ -362,11 +362,21 @@ final class UnsafeByteBufUtil {
             // Copy from direct memory
             long srcAddress = PlatformDependent.directBufferAddress(src);
             PlatformDependent.copyMemory(srcAddress + src.position(), addr, src.remaining());
-        } else {
+            src.position(src.position() + length);
+        } else if (src.hasArray()) {
             // Copy from array
             PlatformDependent.copyMemory(src.array(), src.arrayOffset() + src.position(), addr, length);
+            src.position(src.position() + length);
+        } else {
+            ByteBuf tmpBuf = buf.alloc().heapBuffer(length);
+            try {
+                byte[] tmp = tmpBuf.array();
+                src.get(tmp, tmpBuf.arrayOffset(), length); // moves the src position too
+                PlatformDependent.copyMemory(tmp, 0, addr, length);
+            } finally {
+                tmpBuf.release();
+            }
         }
-        src.position(src.position() + length);
     }
 
     static void getBytes(AbstractByteBuf buf, long addr, int index, OutputStream out, int length) throws IOException {
