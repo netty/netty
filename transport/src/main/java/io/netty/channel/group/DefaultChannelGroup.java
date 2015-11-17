@@ -240,6 +240,11 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
         return write(message, ChannelMatchers.all());
     }
 
+    @Override
+    public ChannelGroupFuture writeVoidPromise(Object message) {
+        return writeVoidPromise(message, ChannelMatchers.all());
+    }
+
     // Create a safe duplicate of the message to write it to a channel but not affect other writes.
     // See https://github.com/netty/netty/issues/1461
     private static Object safeDuplicate(Object message) {
@@ -273,6 +278,26 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     }
 
     @Override
+    public ChannelGroupFuture writeVoidPromise(Object message, ChannelMatcher matcher) {
+        if (message == null) {
+            throw new NullPointerException("message");
+        }
+        if (matcher == null) {
+            throw new NullPointerException("matcher");
+        }
+
+        Map<Channel, ChannelFuture> futures = new LinkedHashMap<Channel, ChannelFuture>(size());
+        for (Channel c: nonServerChannels.values()) {
+            if (matcher.matches(c)) {
+                futures.put(c, c.write(safeDuplicate(message), c.voidPromise()));
+            }
+        }
+
+        ReferenceCountUtil.release(message);
+        return new DefaultChannelGroupFuture(this, futures, executor);
+    }
+
+    @Override
     public ChannelGroup flush() {
         return flush(ChannelMatchers.all());
     }
@@ -285,6 +310,11 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     @Override
     public ChannelGroupFuture writeAndFlush(Object message) {
         return writeAndFlush(message, ChannelMatchers.all());
+    }
+
+    @Override
+    public ChannelGroupFuture writeAndFlushVoidPromise(Object message) {
+        return writeAndFlushVoidPromise(message, ChannelMatchers.all());
     }
 
     @Override
@@ -392,6 +422,25 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
         for (Channel c: nonServerChannels.values()) {
             if (matcher.matches(c)) {
                 futures.put(c, c.writeAndFlush(safeDuplicate(message)));
+            }
+        }
+
+        ReferenceCountUtil.release(message);
+
+        return new DefaultChannelGroupFuture(this, futures, executor);
+    }
+
+    @Override
+    public ChannelGroupFuture writeAndFlushVoidPromise(Object message, ChannelMatcher matcher) {
+        if (message == null) {
+            throw new NullPointerException("message");
+        }
+
+        Map<Channel, ChannelFuture> futures = new LinkedHashMap<Channel, ChannelFuture>(size());
+
+        for (Channel c: nonServerChannels.values()) {
+            if (matcher.matches(c)) {
+                futures.put(c, c.writeAndFlush(safeDuplicate(message), c.voidPromise()));
             }
         }
 

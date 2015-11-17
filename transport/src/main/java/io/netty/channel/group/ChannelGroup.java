@@ -121,6 +121,20 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
 
     /**
      * Writes the specified {@code message} to all {@link Channel}s in this
+     * group. If the specified {@code message} is an instance of
+     * {@link ByteBuf}, it is automatically
+     * {@linkplain ByteBuf#duplicate() duplicated} to avoid a race
+     * condition. The same is true for {@link ByteBufHolder}. Please note that this operation is asynchronous as
+     * {@link Channel#write(Object)} is. This method will reduce Object Allocation and thus reduce GC use this method
+     * if you are not interested in {@link io.netty.channel.ChannelFuture}. This method will write and use
+     * {@link io.netty.channel.VoidChannelPromise} for each channel that is written to.
+     *
+     * @return itself
+     */
+    ChannelGroupFuture writeVoidPromise(Object message);
+
+    /**
+     * Writes the specified {@code message} to all {@link Channel}s in this
      * group that match the given {@link ChannelMatcher}. If the specified {@code message} is an instance of
      * {@link ByteBuf}, it is automatically
      * {@linkplain ByteBuf#duplicate() duplicated} to avoid a race
@@ -131,6 +145,21 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
      *         the operation is done for all channels
      */
     ChannelGroupFuture write(Object message, ChannelMatcher matcher);
+
+    /**
+     * Writes the specified {@code message} to all {@link Channel}s in this
+     * group that match the given {@link ChannelMatcher}. If the specified {@code message} is an instance of
+     * {@link ByteBuf}, it is automatically
+     * {@linkplain ByteBuf#duplicate() duplicated} to avoid a race
+     * condition. The same is true for {@link ByteBufHolder}. Please note that this operation is asynchronous as
+     * {@link Channel#write(Object)} is. This method will reduce Object Allocation and thus reduce GC use this method
+     * if you are not interested in {@link io.netty.channel.ChannelFuture}. This method will write and use
+     * {@link io.netty.channel.VoidChannelPromise} for each channel that is written to.
+     *
+     * @return the {@link ChannelGroupFuture} instance that notifies when
+     *         the operation is done for all channels
+     */
+    ChannelGroupFuture writeVoidPromise(Object message, ChannelMatcher matcher);
 
     /**
      * Flush all {@link Channel}s in this
@@ -164,6 +193,11 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
     ChannelGroupFuture writeAndFlush(Object message);
 
     /**
+     * Shortcut for calling {@link #writeVoidPromise(Object)} and {@link #flush()}.
+     */
+    ChannelGroupFuture writeAndFlushVoidPromise(Object message);
+
+    /**
      * @deprecated Use {@link #writeAndFlush(Object)} instead.
      */
     @Deprecated
@@ -174,6 +208,12 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
      * {@link Channel}s that match the {@link ChannelMatcher}.
      */
     ChannelGroupFuture writeAndFlush(Object message, ChannelMatcher matcher);
+
+    /**
+     * Shortcut for calling {@link #writeVoidPromise(Object)} and {@link #flush()} and only act on
+     * {@link Channel}s that match the {@link ChannelMatcher}.
+     */
+    ChannelGroupFuture writeAndFlushVoidPromise(Object message, ChannelMatcher matcher);
 
     /**
      * @deprecated Use {@link #writeAndFlush(Object, ChannelMatcher)} instead.
