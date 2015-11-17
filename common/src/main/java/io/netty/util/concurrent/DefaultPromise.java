@@ -18,6 +18,7 @@ package io.netty.util.concurrent;
 import io.netty.util.Signal;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.InternalThreadLocalMap;
+import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -27,7 +28,7 @@ import java.util.ArrayDeque;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
 
-import static java.util.concurrent.TimeUnit.*;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
@@ -576,7 +577,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
         if (listeners instanceof DefaultFutureListeners) {
             final DefaultFutureListeners dfl = (DefaultFutureListeners) listeners;
-            execute(executor, new Runnable() {
+            execute(executor, new OneTimeTask() {
                 @Override
                 public void run() {
                     notifyListeners0(DefaultPromise.this, dfl);
@@ -586,7 +587,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         } else {
             final GenericFutureListener<? extends Future<V>> l =
                     (GenericFutureListener<? extends Future<V>>) listeners;
-            execute(executor, new Runnable() {
+            execute(executor, new OneTimeTask() {
                 @Override
                 public void run() {
                     notifyListener0(DefaultPromise.this, l);
@@ -612,7 +613,9 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private void notifyLateListener(final GenericFutureListener<?> l) {
         final EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            if (listeners == null && lateListeners == null) {
+            // Execute immediately if late listeners is empty. This allows subsequent late listeners
+            // that are added after completion to be notified immediately and preserver order.
+            if (listeners == null && (lateListeners == null || lateListeners.isEmpty())) {
                 final InternalThreadLocalMap threadLocals = InternalThreadLocalMap.get();
                 final int stackDepth = threadLocals.futureListenerStackDepth();
                 if (stackDepth < MAX_LISTENER_STACK_DEPTH) {
@@ -658,7 +661,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             }
         }
 
-        execute(eventExecutor, new Runnable() {
+        execute(eventExecutor, new OneTimeTask() {
             @Override
             public void run() {
                 notifyListener0(future, l);
@@ -752,7 +755,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             if (listeners instanceof GenericProgressiveFutureListener[]) {
                 final GenericProgressiveFutureListener<?>[] array =
                         (GenericProgressiveFutureListener<?>[]) listeners;
-                execute(executor, new Runnable() {
+                execute(executor, new OneTimeTask() {
                     @Override
                     public void run() {
                         notifyProgressiveListeners0(self, array, progress, total);
@@ -761,7 +764,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             } else {
                 final GenericProgressiveFutureListener<ProgressiveFuture<V>> l =
                         (GenericProgressiveFutureListener<ProgressiveFuture<V>>) listeners;
-                execute(executor, new Runnable() {
+                execute(executor, new OneTimeTask() {
                     @Override
                     public void run() {
                         notifyProgressiveListener0(self, l, progress, total);
