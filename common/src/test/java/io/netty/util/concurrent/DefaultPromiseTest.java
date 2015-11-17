@@ -22,9 +22,13 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 @SuppressWarnings("unchecked")
 public class DefaultPromiseTest {
@@ -83,54 +87,56 @@ public class DefaultPromiseTest {
     @Test
     public void testListenerNotifyOrder() throws Exception {
         EventExecutor executor = new TestEventExecutor();
-        final BlockingQueue<FutureListener<Void>> listeners = new LinkedBlockingQueue<FutureListener<Void>>();
-        int runs = 100000;
+        try {
+            final BlockingQueue<FutureListener<Void>> listeners = new LinkedBlockingQueue<FutureListener<Void>>();
+            int runs = 100000;
 
-        for (int i = 0; i < runs; i++) {
-            final Promise<Void> promise = new DefaultPromise<Void>(executor);
-            final FutureListener<Void> listener1 = new FutureListener<Void>() {
-                @Override
-                public void operationComplete(Future<Void> future) throws Exception {
-                    listeners.add(this);
-                }
-            };
-            final FutureListener<Void> listener2 = new FutureListener<Void>() {
-                @Override
-                public void operationComplete(Future<Void> future) throws Exception {
-                    listeners.add(this);
-                }
-            };
-            final FutureListener<Void> listener4 = new FutureListener<Void>() {
-                @Override
-                public void operationComplete(Future<Void> future) throws Exception {
-                    listeners.add(this);
-                }
-            };
-            final FutureListener<Void> listener3 = new FutureListener<Void>() {
-                @Override
-                public void operationComplete(Future<Void> future) throws Exception {
-                    // Ensure listener4 is notified *after* this method returns to maintain the order.
-                    future.addListener(listener4);
-                    listeners.add(this);
-                }
-            };
+            for (int i = 0; i < runs; i++) {
+                final Promise<Void> promise = new DefaultPromise<Void>(executor);
+                final FutureListener<Void> listener1 = new FutureListener<Void>() {
+                    @Override
+                    public void operationComplete(Future<Void> future) throws Exception {
+                        listeners.add(this);
+                    }
+                };
+                final FutureListener<Void> listener2 = new FutureListener<Void>() {
+                    @Override
+                    public void operationComplete(Future<Void> future) throws Exception {
+                        listeners.add(this);
+                    }
+                };
+                final FutureListener<Void> listener4 = new FutureListener<Void>() {
+                    @Override
+                    public void operationComplete(Future<Void> future) throws Exception {
+                        listeners.add(this);
+                    }
+                };
+                final FutureListener<Void> listener3 = new FutureListener<Void>() {
+                    @Override
+                    public void operationComplete(Future<Void> future) throws Exception {
+                        listeners.add(this);
+                        future.addListener(listener4);
+                    }
+                };
 
-            GlobalEventExecutor.INSTANCE.execute(new Runnable() {
-                @Override
-                public void run() {
-                    promise.setSuccess(null);
-                }
-            });
+                GlobalEventExecutor.INSTANCE.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        promise.setSuccess(null);
+                    }
+                });
 
-            promise.addListener(listener1).addListener(listener2).addListener(listener3);
+                promise.addListener(listener1).addListener(listener2).addListener(listener3);
 
-            assertSame("Fail during run " + i + " / " + runs, listener1, listeners.take());
-            assertSame("Fail during run " + i + " / " + runs, listener2, listeners.take());
-            assertSame("Fail during run " + i + " / " + runs, listener3, listeners.take());
-            assertSame("Fail during run " + i + " / " + runs, listener4, listeners.take());
-            assertTrue("Fail during run " + i + " / " + runs, listeners.isEmpty());
+                assertSame("Fail 1 during run " + i + " / " + runs, listener1, listeners.take());
+                assertSame("Fail 2 during run " + i + " / " + runs, listener2, listeners.take());
+                assertSame("Fail 3 during run " + i + " / " + runs, listener3, listeners.take());
+                assertSame("Fail 4 during run " + i + " / " + runs, listener4, listeners.take());
+                assertTrue("Fail during run " + i + " / " + runs, listeners.isEmpty());
+            }
+        } finally {
+            executor.shutdownGracefully(0, 0, TimeUnit.SECONDS).sync();
         }
-        executor.shutdownGracefully().sync();
     }
 
     @Test
@@ -144,12 +150,109 @@ public class DefaultPromiseTest {
 
     @Test(timeout = 2000)
     public void testPromiseListenerAddWhenCompleteFailure() throws Exception {
-        testPromiseListenerAddWhenComplete(new RuntimeException());
+        testPromiseListenerAddWhenComplete(fakeException());
     }
 
     @Test(timeout = 2000)
     public void testPromiseListenerAddWhenCompleteSuccess() throws Exception {
         testPromiseListenerAddWhenComplete(null);
+    }
+
+    @Test(timeout = 2000)
+    public void testLateListenerIsOrderedCorrectlySuccess() throws InterruptedException {
+        final EventExecutor executor = new TestEventExecutor();
+        try {
+            testLateListenerIsOrderedCorrectly(null);
+        } finally {
+            executor.shutdownGracefully(0, 0, TimeUnit.SECONDS).sync();
+        }
+    }
+
+    @Test(timeout = 2000)
+    public void testLateListenerIsOrderedCorrectlyFailure() throws InterruptedException {
+        final EventExecutor executor = new TestEventExecutor();
+        try {
+            testLateListenerIsOrderedCorrectly(fakeException());
+        } finally {
+            executor.shutdownGracefully(0, 0, TimeUnit.SECONDS).sync();
+        }
+    }
+
+    /**
+     * This test is mean to simulate the following sequence of events, which all take place on the I/O thread:
+     * <ol>
+     * <li>A write is done</li>
+     * <li>The write operation completes, and the promise state is changed to done</li>
+     * <li>A listener is added to the return from the write. The {@link FutureListener#operationComplete()} updates
+     * state which must be invoked before the response to the previous write is read.</li>
+     * <li>The write operation</li>
+     * </ol>
+     */
+    private static void testLateListenerIsOrderedCorrectly(Throwable cause) throws InterruptedException {
+        final EventExecutor executor = new TestEventExecutor();
+        try {
+            final AtomicInteger state = new AtomicInteger();
+            final CountDownLatch latch1 = new CountDownLatch(1);
+            final CountDownLatch latch2 = new CountDownLatch(2);
+            final Promise<Void> promise = new DefaultPromise<Void>(executor);
+
+            // Add a listener before completion so "lateListener" is used next time we add a listener.
+            promise.addListener(new FutureListener<Void>() {
+                @Override
+                public void operationComplete(Future<Void> future) throws Exception {
+                    assertTrue(state.compareAndSet(0, 1));
+                }
+            });
+
+            // Simulate write operation completing, which will execute listeners in another thread.
+            if (cause == null) {
+                promise.setSuccess(null);
+            } else {
+                promise.setFailure(cause);
+            }
+
+            // Add a "late listener"
+            promise.addListener(new FutureListener<Void>() {
+                @Override
+                public void operationComplete(Future<Void> future) throws Exception {
+                    assertTrue(state.compareAndSet(1, 2));
+                    latch1.countDown();
+                }
+            });
+
+            // Wait for the listeners and late listeners to be completed.
+            latch1.await();
+            assertEquals(2, state.get());
+
+            // This is the important listener. A late listener that is added after all late listeners
+            // have completed, and needs to update state before a read operation (on the same executor).
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    promise.addListener(new FutureListener<Void>() {
+                        @Override
+                        public void operationComplete(Future<Void> future) throws Exception {
+                            assertTrue(state.compareAndSet(2, 3));
+                            latch2.countDown();
+                        }
+                    });
+                }
+            });
+
+            // Simulate a read operation being queued up in the executor.
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    // This is the key, we depend upon the state being set in the next listener.
+                    assertEquals(3, state.get());
+                    latch2.countDown();
+                }
+            });
+
+            latch2.await();
+        } finally {
+            executor.shutdownGracefully(0, 0, TimeUnit.SECONDS).sync();
+        }
     }
 
     private static void testPromiseListenerAddWhenComplete(Throwable cause) throws InterruptedException {
@@ -226,5 +329,9 @@ public class DefaultPromiseTest {
                 scheduleExecution();
             }
         }
+    }
+
+    private static RuntimeException fakeException() {
+        return new RuntimeException("fake exception");
     }
 }
