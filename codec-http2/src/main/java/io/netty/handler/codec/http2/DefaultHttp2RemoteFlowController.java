@@ -460,7 +460,6 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          * Increments the number of pending bytes for this node and optionally updates the
          * {@link StreamByteDistributor}.
          */
-        // TODO(nmittler): consider updating streamable bytes elsewhere.
         private void incrementPendingBytes(int numBytes, boolean updateStreamableBytes) {
             pendingBytes += numBytes;
             monitor.incrementPendingBytes(numBytes);
