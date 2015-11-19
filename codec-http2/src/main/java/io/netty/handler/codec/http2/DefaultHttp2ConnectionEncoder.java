@@ -18,6 +18,8 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGH
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.lang.Math.min;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -83,12 +85,12 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
         Long maxConcurrentStreams = settings.maxConcurrentStreams();
         if (maxConcurrentStreams != null) {
-            connection.local().maxActiveStreams((int) Math.min(maxConcurrentStreams, Integer.MAX_VALUE));
+            connection.local().maxActiveStreams((int) min(maxConcurrentStreams, Integer.MAX_VALUE));
         }
 
         Long headerTableSize = settings.headerTableSize();
         if (headerTableSize != null) {
-            outboundHeaderTable.maxHeaderTableSize((int) Math.min(headerTableSize, Integer.MAX_VALUE));
+            outboundHeaderTable.maxHeaderTableSize((int) min(headerTableSize, Integer.MAX_VALUE));
         }
 
         Integer maxHeaderListSize = settings.maxHeaderListSize();
@@ -333,24 +335,24 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
         @Override
         public void write(ChannelHandlerContext ctx, int allowedBytes) {
-            if (!endOfStream && (queue.readableBytes() == 0 || allowedBytes == 0)) {
+            int queuedData = queue.readableBytes();
+            if (!endOfStream && (queuedData == 0 || allowedBytes == 0)) {
                 // Nothing to write and we don't have to force a write because of EOS.
                 return;
             }
-            int maxFrameSize = frameWriter().configuration().frameSizePolicy().maxFrameSize();
-            do {
-                int allowedFrameSize = Math.min(maxFrameSize, allowedBytes);
-                int writeableData = Math.min(queue.readableBytes(), allowedFrameSize);
-                ChannelPromise writePromise = ctx.newPromise();
-                writePromise.addListener(this);
-                ByteBuf toWrite = queue.remove(writeableData, writePromise);
 
-                int writeablePadding = Math.min(allowedFrameSize - writeableData, padding);
-                padding -= writeablePadding;
-                allowedBytes -= writeableData + writeablePadding;
-                frameWriter().writeData(ctx, stream.id(), toWrite, writeablePadding,
-                        endOfStream && size() == 0, writePromise);
-            } while (size() > 0 && allowedBytes > 0);
+            // Determine how much data to write.
+            int writeableData = min(queuedData, allowedBytes);
+            ChannelPromise writePromise = ctx.newPromise().addListener(this);
+            ByteBuf toWrite = queue.remove(writeableData, writePromise);
+
+            // Determine how much padding to write.
+            int writeablePadding = min(allowedBytes - writeableData, padding);
+            padding -= writeablePadding;
+
+            // Write the frame(s).
+            frameWriter().writeData(ctx, stream.id(), toWrite, writeablePadding,
+                    endOfStream && size() == 0, writePromise);
         }
 
         @Override
