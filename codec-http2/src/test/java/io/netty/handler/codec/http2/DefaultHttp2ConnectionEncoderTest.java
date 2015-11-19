@@ -124,9 +124,6 @@ public class DefaultHttp2ConnectionEncoderTest {
     private Http2FrameWriter.Configuration writerConfig;
 
     @Mock
-    private Http2FrameSizePolicy frameSizePolicy;
-
-    @Mock
     private Http2LifecycleManager lifecycleManager;
 
     private ArgumentCaptor<Http2RemoteFlowController.FlowControlled> payloadCaptor;
@@ -166,8 +163,6 @@ public class DefaultHttp2ConnectionEncoderTest {
         when(connection.remote()).thenReturn(remote);
         when(remote.flowController()).thenReturn(remoteFlow);
         when(writer.configuration()).thenReturn(writerConfig);
-        when(writerConfig.frameSizePolicy()).thenReturn(frameSizePolicy);
-        when(frameSizePolicy.maxFrameSize()).thenReturn(64);
         when(local.createIdleStream(eq(STREAM_ID))).thenReturn(stream);
         when(local.reservePushStream(eq(PUSH_STREAM_ID), eq(stream))).thenReturn(pushStream);
         when(remote.createIdleStream(eq(STREAM_ID))).thenReturn(stream);
@@ -286,81 +281,16 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
-    public void dataLargerThanMaxFrameSizeShouldBeSplit() throws Exception {
-        when(frameSizePolicy.maxFrameSize()).thenReturn(3);
-        final ByteBuf data = dummyData();
-        encoder.writeData(ctx, STREAM_ID, data, 0, true, promise);
-        assertEquals(payloadCaptor.getValue().size(), 8);
-        payloadCaptor.getValue().write(ctx, 8);
-        // writer was called 3 times
-        assertEquals(3, writtenData.size());
-        assertEquals("abc", writtenData.get(0));
-        assertEquals("def", writtenData.get(1));
-        assertEquals("gh", writtenData.get(2));
-        assertEquals(0, data.refCnt());
-    }
-
-    @Test
-    public void paddingSplitOverFrame() throws Exception {
-        when(frameSizePolicy.maxFrameSize()).thenReturn(5);
-        final ByteBuf data = dummyData();
-        encoder.writeData(ctx, STREAM_ID, data, 5, true, promise);
-        assertEquals(payloadCaptor.getValue().size(), 13);
-        payloadCaptor.getValue().write(ctx, 13);
-        // writer was called 3 times
-        assertEquals(3, writtenData.size());
-        assertEquals("abcde", writtenData.get(0));
-        assertEquals(0, (int) writtenPadding.get(0));
-        assertEquals("fgh", writtenData.get(1));
-        assertEquals(2, (int) writtenPadding.get(1));
-        assertEquals("", writtenData.get(2));
-        assertEquals(3, (int) writtenPadding.get(2));
-        assertEquals(0, data.refCnt());
-    }
-
-    @Test
-    public void frameShouldSplitPadding() throws Exception {
-        when(frameSizePolicy.maxFrameSize()).thenReturn(5);
-        ByteBuf data = dummyData();
-        encoder.writeData(ctx, STREAM_ID, data, 10, true, promise);
-        assertEquals(payloadCaptor.getValue().size(), 18);
-        payloadCaptor.getValue().write(ctx, 18);
-        // writer was called 4 times
-        assertEquals(4, writtenData.size());
-        assertEquals("abcde", writtenData.get(0));
-        assertEquals(0, (int) writtenPadding.get(0));
-        assertEquals("fgh", writtenData.get(1));
-        assertEquals(2, (int) writtenPadding.get(1));
-        assertEquals("", writtenData.get(2));
-        assertEquals(5, (int) writtenPadding.get(2));
-        assertEquals("", writtenData.get(3));
-        assertEquals(3, (int) writtenPadding.get(3));
-        assertEquals(0, data.refCnt());
-    }
-
-    @Test
-    public void emptyFrameShouldSplitPadding() throws Exception {
+    public void emptyFrameShouldWritePadding() throws Exception {
         ByteBuf data = Unpooled.buffer(0);
-        assertSplitPaddingOnEmptyBuffer(data);
-        assertEquals(0, data.refCnt());
-    }
-
-    @Test
-    public void singletonEmptyBufferShouldSplitPadding() throws Exception {
-        assertSplitPaddingOnEmptyBuffer(Unpooled.EMPTY_BUFFER);
-    }
-
-    private void assertSplitPaddingOnEmptyBuffer(ByteBuf data) throws Exception {
-        when(frameSizePolicy.maxFrameSize()).thenReturn(5);
         encoder.writeData(ctx, STREAM_ID, data, 10, true, promise);
         assertEquals(payloadCaptor.getValue().size(), 10);
         payloadCaptor.getValue().write(ctx, 10);
         // writer was called 2 times
-        assertEquals(2, writtenData.size());
+        assertEquals(1, writtenData.size());
         assertEquals("", writtenData.get(0));
-        assertEquals(5, (int) writtenPadding.get(0));
-        assertEquals("", writtenData.get(1));
-        assertEquals(5, (int) writtenPadding.get(1));
+        assertEquals(10, (int) writtenPadding.get(0));
+        assertEquals(0, data.refCnt());
     }
 
     @Test
