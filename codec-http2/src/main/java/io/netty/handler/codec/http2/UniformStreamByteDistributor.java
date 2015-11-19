@@ -187,11 +187,11 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
 
                 if (!previouslyOnMainQueue) {
                     // Add to the head the first time it's on the main queue.
+                    previouslyOnMainQueue = true;
                     queue.addFirst(this);
                 } else {
                     queue.addLast(this);
                 }
-                previouslyOnMainQueue = true;
             }
         }
 
