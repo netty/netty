@@ -78,7 +78,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
     /**
      * Create a new instance.
      * @param validateHeaders {@code true} to validate headers. {@code false} to not validate headers.
-     * @see #DefaultHttp2HeadersDecoder(boolean)
      */
     public DefaultHttp2FrameReader(boolean validateHeaders) {
         this(new DefaultHttp2HeadersDecoder(validateHeaders));

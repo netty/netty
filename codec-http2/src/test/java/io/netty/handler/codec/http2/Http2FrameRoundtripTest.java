@@ -15,391 +15,474 @@
 
 package io.netty.handler.codec.http2;
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.bootstrap.ServerBootstrap;
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_HEADER_SIZE;
+import static io.netty.handler.codec.http2.Http2TestUtil.randomString;
+import static io.netty.util.CharsetUtil.UTF_8;
+import static java.lang.Math.min;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyShort;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Matchers.isA;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.EmptyByteBuf;
+import io.netty.buffer.ReadOnlyByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultEventLoopGroup;
-import io.netty.channel.local.LocalAddress;
-import io.netty.channel.local.LocalChannel;
-import io.netty.channel.local.LocalServerChannel;
-import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
+import io.netty.channel.DefaultChannelPromise;
 import io.netty.util.AsciiString;
-import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.EventExecutor;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import static io.netty.handler.codec.http2.Http2TestUtil.randomString;
-import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
-import static io.netty.util.CharsetUtil.UTF_8;
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 
 /**
  * Tests encoding/decoding each HTTP2 frame type.
  */
 public class Http2FrameRoundtripTest {
+    private static final byte[] MESSAGE = "hello world".getBytes(UTF_8);
+    private static final int STREAM_ID = 0x7FFFFFFF;
+    private static final int WINDOW_UPDATE = 0x7FFFFFFF;
+    private static final long ERROR_CODE = 0xFFFFFFFFL;
 
     @Mock
-    private Http2FrameListener serverListener;
+    private Http2FrameListener listener;
 
-    private Http2FrameWriter frameWriter;
-    private ServerBootstrap sb;
-    private Bootstrap cb;
-    private Channel serverChannel;
-    private Channel clientChannel;
-    private CountDownLatch requestLatch;
-    private Http2TestUtil.FrameAdapter serverAdapter;
+    @Mock
+    private ChannelHandlerContext ctx;
+
+    @Mock
+    private EventExecutor executor;
+
+    @Mock
+    private Channel channel;
+
+    @Mock
+    private ByteBufAllocator alloc;
+
+    private Http2FrameWriter writer;
+    private Http2FrameReader reader;
+    private List<ByteBuf> needReleasing = new LinkedList<ByteBuf>();
 
     @Before
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
+
+        when(ctx.alloc()).thenReturn(alloc);
+        when(ctx.executor()).thenReturn(executor);
+        when(ctx.channel()).thenReturn(channel);
+        doAnswer(new Answer<ByteBuf>() {
+            @Override
+            public ByteBuf answer(InvocationOnMock in) throws Throwable {
+                return Unpooled.buffer();
+            }
+        }).when(alloc).buffer();
+        doAnswer(new Answer<ByteBuf>() {
+            @Override
+            public ByteBuf answer(InvocationOnMock in) throws Throwable {
+                return Unpooled.buffer((Integer) in.getArguments()[0]);
+            }
+        }).when(alloc).buffer(anyInt());
+        doAnswer(new Answer<ChannelPromise>() {
+            @Override
+            public ChannelPromise answer(InvocationOnMock invocation) throws Throwable {
+                return new DefaultChannelPromise(channel);
+            }
+        }).when(ctx).newPromise();
+
+        writer = new DefaultHttp2FrameWriter();
+        reader = new DefaultHttp2FrameReader(false);
     }
 
     @After
-    public void teardown() throws Exception {
-        if (clientChannel != null) {
-            clientChannel.close().sync();
-            clientChannel = null;
+    public void teardown() {
+        try {
+            // Release all of the buffers.
+            for (ByteBuf buf : needReleasing) {
+                buf.release();
+            }
+            // Now verify that all of the reference counts are zero.
+            for (ByteBuf buf : needReleasing) {
+                int expectedFinalRefCount = 0;
+                if (buf instanceof ReadOnlyByteBuf || buf instanceof EmptyByteBuf) {
+                    // Special case for when we're writing slices of the padding buffer.
+                    expectedFinalRefCount = 1;
+                }
+                assertEquals(expectedFinalRefCount, buf.refCnt());
+            }
+        } finally {
+            needReleasing.clear();
         }
-        if (serverChannel != null) {
-            serverChannel.close().sync();
-            serverChannel = null;
-        }
-        Future<?> serverGroup = sb.group().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
-        Future<?> serverChildGroup = sb.childGroup().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
-        Future<?> clientGroup = cb.group().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
-        serverGroup.sync();
-        serverChildGroup.sync();
-        clientGroup.sync();
-        serverAdapter = null;
     }
 
     @Test
-    public void dataFrameShouldMatch() throws Exception {
-        final String text = "hello world";
-        final ByteBuf data = Unpooled.copiedBuffer(text, UTF_8);
-        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<String>());
-        doAnswer(new Answer<Void>() {
-            @Override
-            public Void answer(InvocationOnMock in) throws Throwable {
-                receivedBuffers.add(((ByteBuf) in.getArguments()[2]).toString(UTF_8));
-                return null;
-            }
-        }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
-                any(ByteBuf.class), eq(100), eq(true));
-        try {
-            bootstrapEnv(1);
-            runInChannel(clientChannel, new Http2Runnable() {
-                @Override
-                public void run() {
-                    frameWriter.writeData(ctx(), 0x7FFFFFFF, data.slice().retain(), 100, true, newPromise());
-                    ctx().flush();
-                }
-            });
-            awaitRequests();
-            verify(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
-                    any(ByteBuf.class), eq(100), eq(true));
-            assertEquals(1, receivedBuffers.size());
-            assertEquals(text, receivedBuffers.get(0));
-        } finally {
-            data.release();
+    public void emptyDataShouldMatch() throws Exception {
+        final ByteBuf data = EMPTY_BUFFER;
+        writer.writeData(ctx, STREAM_ID, data.slice(), 0, false, ctx.newPromise());
+        readFrames();
+        verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(0), eq(false));
+    }
+
+    @Test
+    public void dataShouldMatch() throws Exception {
+        final ByteBuf data = data(10);
+        writer.writeData(ctx, STREAM_ID, data.slice(), 0, false, ctx.newPromise());
+        readFrames();
+        verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(0), eq(false));
+    }
+
+    @Test
+    public void dataWithPaddingShouldMatch() throws Exception {
+        final ByteBuf data = data(10);
+        writer.writeData(ctx, STREAM_ID, data.slice(), 0xFF, true, ctx.newPromise());
+        readFrames();
+        verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(0xFF), eq(true));
+    }
+
+    @Test
+    public void largeDataFrameShouldMatch() throws Exception {
+        // Create a large message to force chunking.
+        final ByteBuf originalData = data(1024 * 1024);
+        final int originalPadding = 100;
+        final boolean endOfStream = true;
+
+        writer.writeData(ctx, STREAM_ID, originalData.slice(), originalPadding,
+                endOfStream, ctx.newPromise());
+        readFrames();
+
+        // Verify that at least one frame was sent with eos=false and exactly one with eos=true.
+        verify(listener, atLeastOnce()).onDataRead(eq(ctx), eq(STREAM_ID), any(ByteBuf.class),
+                anyInt(), eq(false));
+        verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), any(ByteBuf.class),
+                anyInt(), eq(true));
+
+        // Capture the read data and padding.
+        ArgumentCaptor<ByteBuf> dataCaptor = ArgumentCaptor.forClass(ByteBuf.class);
+        ArgumentCaptor<Integer> paddingCaptor = ArgumentCaptor.forClass(Integer.class);
+        verify(listener, atLeastOnce()).onDataRead(eq(ctx), eq(STREAM_ID), dataCaptor.capture(),
+                paddingCaptor.capture(), anyBoolean());
+
+        // Make sure the data matches the original.
+        for (ByteBuf chunk : dataCaptor.getAllValues()) {
+            ByteBuf originalChunk = originalData.readSlice(chunk.readableBytes());
+            assertEquals(originalChunk, chunk);
         }
+        assertFalse(originalData.isReadable());
+
+        // Make sure the padding matches the original.
+        int totalReadPadding = 0;
+        for (int framePadding : paddingCaptor.getAllValues()) {
+            totalReadPadding += framePadding;
+        }
+        assertEquals(originalPadding, totalReadPadding);
+    }
+
+    @Test
+    public void emptyHeadersShouldMatch() throws Exception {
+        final Http2Headers headers = EmptyHttp2Headers.INSTANCE;
+        writer.writeHeaders(ctx, STREAM_ID, headers, 0, true, ctx.newPromise());
+        readFrames();
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(0), eq(true));
+    }
+
+    @Test
+    public void emptyHeadersWithPaddingShouldMatch() throws Exception {
+        final Http2Headers headers = EmptyHttp2Headers.INSTANCE;
+        writer.writeHeaders(ctx, STREAM_ID, headers, 0xFF, true, ctx.newPromise());
+        readFrames();
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(0xFF), eq(true));
+    }
+
+    @Test
+    public void binaryHeadersWithoutPriorityShouldMatch() throws Exception {
+        final Http2Headers headers = binaryHeaders();
+        writer.writeHeaders(ctx, STREAM_ID, headers, 0, true, ctx.newPromise());
+        readFrames();
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(0), eq(true));
     }
 
     @Test
     public void headersFrameWithoutPriorityShouldMatch() throws Exception {
         final Http2Headers headers = headers();
-        bootstrapEnv(1);
-        runInChannel(clientChannel, new Http2Runnable() {
-            @Override
-            public void run() {
-                frameWriter.writeHeaders(ctx(), 0x7FFFFFFF, headers, 0, true, newPromise());
-                ctx().flush();
-            }
-        });
-        awaitRequests();
-        verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
-                eq(headers), eq(0), eq(true));
+        writer.writeHeaders(ctx, STREAM_ID, headers, 0, true, ctx.newPromise());
+        readFrames();
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(0), eq(true));
     }
 
     @Test
     public void headersFrameWithPriorityShouldMatch() throws Exception {
         final Http2Headers headers = headers();
-        bootstrapEnv(1);
-        runInChannel(clientChannel, new Http2Runnable() {
-            @Override
-            public void run() {
-                frameWriter.writeHeaders(ctx(), 0x7FFFFFFF, headers, 4, (short) 255,
-                        true, 0, true, newPromise());
-                ctx().flush();
-            }
-        });
-        awaitRequests();
-        verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
-                eq(headers), eq(4), eq((short) 255), eq(true), eq(0), eq(true));
+        writer.writeHeaders(ctx, STREAM_ID, headers, 4, (short) 255, true, 0, true, ctx.newPromise());
+        readFrames();
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(4), eq((short) 255),
+                eq(true), eq(0), eq(true));
     }
 
     @Test
-    public void goAwayFrameShouldMatch() throws Exception {
-        final String text = "test";
-        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
-        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<String>());
-        doAnswer(new Answer<Void>() {
-            @Override
-            public Void answer(InvocationOnMock in) throws Throwable {
-                receivedBuffers.add(((ByteBuf) in.getArguments()[3]).toString(UTF_8));
-                return null;
-            }
-        }).when(serverListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
-                eq(0xFFFFFFFFL), eq(data));
-        bootstrapEnv(1);
+    public void headersWithPaddingWithoutPriorityShouldMatch() throws Exception {
+        final Http2Headers headers = headers();
+        writer.writeHeaders(ctx, STREAM_ID, headers, 0xFF, true, ctx.newPromise());
+        readFrames();
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(0xFF), eq(true));
+    }
+
+    @Test
+    public void headersWithPaddingWithPriorityShouldMatch() throws Exception {
+        final Http2Headers headers = headers();
+        writer.writeHeaders(ctx, STREAM_ID, headers, 2, (short) 3, true, 0xFF, true, ctx.newPromise());
+        readFrames();
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(2), eq((short) 3), eq(true),
+                eq(0xFF), eq(true));
+    }
+
+    @Test
+    public void continuedHeadersShouldMatch() throws Exception {
+        final Http2Headers headers = largeHeaders();
+        writer.writeHeaders(ctx, STREAM_ID, headers, 2, (short) 3, true, 0, true, ctx.newPromise());
+        readFrames();
+        verify(listener)
+                .onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(2), eq((short) 3), eq(true), eq(0), eq(true));
+    }
+
+    @Test
+    public void continuedHeadersWithPaddingShouldMatch() throws Exception {
+        final Http2Headers headers = largeHeaders();
+        writer.writeHeaders(ctx, STREAM_ID, headers, 2, (short) 3, true, 0xFF, true, ctx.newPromise());
+        readFrames();
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(2), eq((short) 3), eq(true),
+                eq(0xFF), eq(true));
+    }
+
+    @Test
+    public void headersThatAreTooBigShouldFail() throws Exception {
+        final Http2Headers headers = headersOfSize(DEFAULT_MAX_HEADER_SIZE + 1);
+        writer.writeHeaders(ctx, STREAM_ID, headers, 2, (short) 3, true, 0xFF, true, ctx.newPromise());
         try {
-            runInChannel(clientChannel, new Http2Runnable() {
-                @Override
-                public void run() {
-                    frameWriter.writeGoAway(ctx(), 0x7FFFFFFF, 0xFFFFFFFFL, data.duplicate().retain(), newPromise());
-                    ctx().flush();
-                }
-            });
-            awaitRequests();
-            verify(serverListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
-                    eq(0xFFFFFFFFL), any(ByteBuf.class));
-            assertEquals(1, receivedBuffers.size());
-            assertEquals(text, receivedBuffers.get(0));
-        } finally {
-            data.release();
+            readFrames();
+            fail();
+        } catch (Http2Exception e) {
+            verify(listener, never()).onHeadersRead(any(ChannelHandlerContext.class), anyInt(),
+                    any(Http2Headers.class), anyInt(), anyShort(), anyBoolean(), anyInt(),
+                    anyBoolean());
         }
     }
 
     @Test
-    public void pingFrameShouldMatch() throws Exception {
-        String text = "01234567";
-        final ByteBuf data = Unpooled.copiedBuffer(text, UTF_8);
-        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<String>());
-        doAnswer(new Answer<Void>() {
-            @Override
-            public Void answer(InvocationOnMock in) throws Throwable {
-                receivedBuffers.add(((ByteBuf) in.getArguments()[1]).toString(UTF_8));
-                return null;
-            }
-        }).when(serverListener).onPingAckRead(any(ChannelHandlerContext.class), eq(data));
-        try {
-            bootstrapEnv(1);
-            runInChannel(clientChannel, new Http2Runnable() {
-                @Override
-                public void run() {
-                    frameWriter.writePing(ctx(), true, data.duplicate().retain(), newPromise());
-                    ctx().flush();
-                }
-            });
-            awaitRequests();
-            verify(serverListener).onPingAckRead(any(ChannelHandlerContext.class), any(ByteBuf.class));
-            assertEquals(1, receivedBuffers.size());
-            for (String receivedData : receivedBuffers) {
-                assertEquals(text, receivedData);
-            }
-        } finally {
-            data.release();
-        }
-    }
-
-    @Test
-    public void priorityFrameShouldMatch() throws Exception {
-        bootstrapEnv(1);
-        runInChannel(clientChannel, new Http2Runnable() {
-            @Override
-            public void run() {
-                frameWriter.writePriority(ctx(), 0x7FFFFFFF, 1, (short) 1, true, newPromise());
-                ctx().flush();
-            }
-        });
-        awaitRequests();
-        verify(serverListener).onPriorityRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
-                eq(1), eq((short) 1), eq(true));
+    public void emptyPushPromiseShouldMatch() throws Exception {
+        final Http2Headers headers = EmptyHttp2Headers.INSTANCE;
+        writer.writePushPromise(ctx, STREAM_ID, 2, headers, 0, ctx.newPromise());
+        readFrames();
+        verify(listener).onPushPromiseRead(eq(ctx), eq(STREAM_ID), eq(2), eq(headers), eq(0));
     }
 
     @Test
     public void pushPromiseFrameShouldMatch() throws Exception {
         final Http2Headers headers = headers();
-        bootstrapEnv(1);
-        runInChannel(clientChannel, new Http2Runnable() {
-            @Override
-            public void run() {
-                frameWriter.writePushPromise(ctx(), 0x7FFFFFFF, 1, headers, 5, newPromise());
-                ctx().flush();
-            }
-        });
-        awaitRequests();
-        verify(serverListener).onPushPromiseRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
-                eq(1), eq(headers), eq(5));
+        writer.writePushPromise(ctx, STREAM_ID, 1, headers, 5, ctx.newPromise());
+        readFrames();
+        verify(listener).onPushPromiseRead(eq(ctx), eq(STREAM_ID), eq(1), eq(headers), eq(5));
+    }
+
+    @Test
+    public void pushPromiseWithPaddingShouldMatch() throws Exception {
+        final Http2Headers headers = headers();
+        writer.writePushPromise(ctx, STREAM_ID, 2, headers, 0xFF, ctx.newPromise());
+        readFrames();
+        verify(listener).onPushPromiseRead(eq(ctx), eq(STREAM_ID), eq(2), eq(headers), eq(0xFF));
+    }
+
+    @Test
+    public void continuedPushPromiseShouldMatch() throws Exception {
+        final Http2Headers headers = largeHeaders();
+        writer.writePushPromise(ctx, STREAM_ID, 2, headers, 0, ctx.newPromise());
+        readFrames();
+        verify(listener).onPushPromiseRead(eq(ctx), eq(STREAM_ID), eq(2), eq(headers), eq(0));
+    }
+
+    @Test
+    public void continuedPushPromiseWithPaddingShouldMatch() throws Exception {
+        final Http2Headers headers = largeHeaders();
+        writer.writePushPromise(ctx, STREAM_ID, 2, headers, 0xFF, ctx.newPromise());
+        readFrames();
+        verify(listener).onPushPromiseRead(eq(ctx), eq(STREAM_ID), eq(2), eq(headers), eq(0xFF));
+    }
+
+    @Test
+    public void goAwayFrameShouldMatch() throws Exception {
+        final String text = "test";
+        final ByteBuf data = buf(text.getBytes());
+
+        writer.writeGoAway(ctx, STREAM_ID, ERROR_CODE, data.slice(), ctx.newPromise());
+        readFrames();
+
+        ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
+        verify(listener).onGoAwayRead(eq(ctx), eq(STREAM_ID), eq(ERROR_CODE), captor.capture());
+        assertEquals(data, captor.getValue());
+    }
+
+    @Test
+    public void pingFrameShouldMatch() throws Exception {
+        final ByteBuf data = buf("01234567".getBytes(UTF_8));
+
+        writer.writePing(ctx, false, data.slice(), ctx.newPromise());
+        readFrames();
+
+        ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
+        verify(listener).onPingRead(eq(ctx), captor.capture());
+        assertEquals(data, captor.getValue());
+    }
+
+    @Test
+    public void pingAckFrameShouldMatch() throws Exception {
+        final ByteBuf data = buf("01234567".getBytes(UTF_8));
+
+        writer.writePing(ctx, true, data.slice(), ctx.newPromise());
+        readFrames();
+
+        ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
+        verify(listener).onPingAckRead(eq(ctx), captor.capture());
+        assertEquals(data, captor.getValue());
+    }
+
+    @Test
+    public void priorityFrameShouldMatch() throws Exception {
+        writer.writePriority(ctx, STREAM_ID, 1, (short) 1, true, ctx.newPromise());
+        readFrames();
+        verify(listener).onPriorityRead(eq(ctx), eq(STREAM_ID), eq(1), eq((short) 1), eq(true));
     }
 
     @Test
     public void rstStreamFrameShouldMatch() throws Exception {
-        bootstrapEnv(1);
-        runInChannel(clientChannel, new Http2Runnable() {
-            @Override
-            public void run() {
-                frameWriter.writeRstStream(ctx(), 0x7FFFFFFF, 0xFFFFFFFFL, newPromise());
-                ctx().flush();
-            }
-        });
-        awaitRequests();
-        verify(serverListener).onRstStreamRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
-                eq(0xFFFFFFFFL));
+        writer.writeRstStream(ctx, STREAM_ID, ERROR_CODE, ctx.newPromise());
+        readFrames();
+        verify(listener).onRstStreamRead(eq(ctx), eq(STREAM_ID), eq(ERROR_CODE));
     }
 
     @Test
-    public void settingsFrameShouldMatch() throws Exception {
-        bootstrapEnv(1);
+    public void emptySettingsFrameShouldMatch() throws Exception {
         final Http2Settings settings = new Http2Settings();
-        settings.initialWindowSize(10);
-        settings.maxConcurrentStreams(1000);
+        writer.writeSettings(ctx, settings, ctx.newPromise());
+        readFrames();
+        verify(listener).onSettingsRead(eq(ctx), eq(settings));
+    }
+
+    @Test
+    public void settingsShouldStripShouldMatch() throws Exception {
+        final Http2Settings settings = new Http2Settings();
+        settings.pushEnabled(true);
         settings.headerTableSize(4096);
-        runInChannel(clientChannel, new Http2Runnable() {
-            @Override
-            public void run() {
-                frameWriter.writeSettings(ctx(), settings, newPromise());
-                ctx().flush();
-            }
-        });
-        awaitRequests();
-        verify(serverListener).onSettingsRead(any(ChannelHandlerContext.class), eq(settings));
+        settings.initialWindowSize(123);
+        settings.maxConcurrentStreams(456);
+
+        writer.writeSettings(ctx, settings, ctx.newPromise());
+        readFrames();
+        verify(listener).onSettingsRead(eq(ctx), eq(settings));
+    }
+
+    @Test
+    public void settingsAckShouldMatch() throws Exception {
+        writer.writeSettingsAck(ctx, ctx.newPromise());
+        readFrames();
+        verify(listener).onSettingsAckRead(eq(ctx));
     }
 
     @Test
     public void windowUpdateFrameShouldMatch() throws Exception {
-        bootstrapEnv(1);
-        runInChannel(clientChannel, new Http2Runnable() {
-            @Override
-            public void run() {
-                frameWriter.writeWindowUpdate(ctx(), 0x7FFFFFFF, 0x7FFFFFFF, newPromise());
-                ctx().flush();
-            }
-        });
-        awaitRequests();
-        verify(serverListener).onWindowUpdateRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
-                eq(0x7FFFFFFF));
+        writer.writeWindowUpdate(ctx, STREAM_ID, WINDOW_UPDATE, ctx.newPromise());
+        readFrames();
+        verify(listener).onWindowUpdateRead(eq(ctx), eq(STREAM_ID), eq(WINDOW_UPDATE));
     }
 
-    @Test
-    public void stressTest() throws Exception {
-        final Http2Headers headers = headers();
-        final String text = "hello world";
-        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
-        final int numStreams = 10000;
-        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<String>(numStreams));
-        doAnswer(new Answer<Void>() {
-            @Override
-            public Void answer(InvocationOnMock in) throws Throwable {
-                receivedBuffers.add(((ByteBuf) in.getArguments()[2]).toString(UTF_8));
-                return null;
-            }
-        }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), anyInt(), eq(data), eq(0), eq(true));
-        try {
-            final int expectedFrames = numStreams * 2;
-            bootstrapEnv(expectedFrames);
-            runInChannel(clientChannel, new Http2Runnable() {
-                @Override
-                public void run() {
-                    for (int i = 1; i < numStreams + 1; ++i) {
-                        frameWriter.writeHeaders(ctx(), i, headers, 0, (short) 16, false, 0, false, newPromise());
-                        frameWriter.writeData(ctx(), i, data.duplicate().retain(), 0, true, newPromise());
-                        ctx().flush();
-                    }
-                }
-            });
-            awaitRequests(60);
-            verify(serverListener, times(numStreams)).onDataRead(any(ChannelHandlerContext.class), anyInt(),
-                    any(ByteBuf.class), eq(0), eq(true));
-            assertEquals(numStreams, receivedBuffers.size());
-            for (String receivedData : receivedBuffers) {
-                assertEquals(text, receivedData);
-            }
-        } finally {
-            data.release();
+    private void readFrames() throws Http2Exception {
+        // Now read all of the written frames.
+        ByteBuf write = captureWrites();
+        reader.readFrame(ctx, write, listener);
+    }
+
+    private ByteBuf data(int size) {
+        byte[] data = new byte[size];
+        for (int ix = 0; ix < data.length;) {
+            int length = min(MESSAGE.length, data.length - ix);
+            System.arraycopy(MESSAGE, 0, data, ix, length);
+            ix += length;
         }
+        return buf(data);
     }
 
-    private void awaitRequests(long seconds) throws InterruptedException {
-        assertTrue(requestLatch.await(seconds, SECONDS));
+    private ByteBuf buf(byte[] bytes) {
+        return Unpooled.wrappedBuffer(bytes);
     }
 
-    private void awaitRequests() throws InterruptedException {
-        awaitRequests(5);
+    private <T extends ByteBuf> T releaseLater(T buf) {
+        needReleasing.add(buf);
+        return buf;
     }
 
-    private void bootstrapEnv(int requestCountDown) throws Exception {
-        requestLatch = new CountDownLatch(requestCountDown);
-        frameWriter = new DefaultHttp2FrameWriter();
-
-        sb = new ServerBootstrap();
-        cb = new Bootstrap();
-
-        sb.group(new DefaultEventLoopGroup());
-        sb.channel(LocalServerChannel.class);
-        sb.childHandler(new ChannelInitializer<Channel>() {
-            @Override
-            protected void initChannel(Channel ch) throws Exception {
-                ChannelPipeline p = ch.pipeline();
-                serverAdapter = new Http2TestUtil.FrameAdapter(serverListener, requestLatch);
-                p.addLast(serverAdapter);
-            }
-        });
-
-        cb.group(new DefaultEventLoopGroup());
-        cb.channel(LocalChannel.class);
-        cb.handler(new ChannelInitializer<Channel>() {
-            @Override
-            protected void initChannel(Channel ch) throws Exception {
-                ChannelPipeline p = ch.pipeline();
-                p.addLast(new Http2TestUtil.FrameAdapter(null, null));
-            }
-        });
-
-        serverChannel = sb.bind(new LocalAddress("Http2FrameRoundtripTest")).sync().channel();
-
-        ChannelFuture ccf = cb.connect(serverChannel.localAddress());
-        assertTrue(ccf.awaitUninterruptibly().isSuccess());
-        clientChannel = ccf.channel();
-    }
-
-    private ChannelHandlerContext ctx() {
-        return clientChannel.pipeline().firstContext();
-    }
-
-    private ChannelPromise newPromise() {
-        return ctx().newPromise();
+    private ByteBuf captureWrites() {
+        ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
+        verify(ctx, atLeastOnce()).write(captor.capture(), isA(ChannelPromise.class));
+        CompositeByteBuf composite = releaseLater(Unpooled.compositeBuffer());
+        for (ByteBuf buf : captor.getAllValues()) {
+            buf = releaseLater(buf.retain());
+            composite.addComponent(buf);
+            composite.writerIndex(composite.writerIndex() + buf.readableBytes());
+        }
+        return composite;
     }
 
     private static Http2Headers headers() {
-        return new DefaultHttp2Headers(false).method(new AsciiString("GET")).scheme(new AsciiString("https"))
-                .authority(new AsciiString("example.org")).path(new AsciiString("/some/path/resource2"))
+        return new DefaultHttp2Headers(false).method(AsciiString.of("GET")).scheme(AsciiString.of("https"))
+                .authority(AsciiString.of("example.org")).path(AsciiString.of("/some/path/resource2"))
                 .add(randomString(), randomString());
+    }
+
+    private static Http2Headers largeHeaders() {
+        DefaultHttp2Headers headers = new DefaultHttp2Headers(false);
+        for (int i = 0; i < 100; ++i) {
+            String key = "this-is-a-test-header-key-" + i;
+            String value = "this-is-a-test-header-value-" + i;
+            headers.add(AsciiString.of(key), AsciiString.of(value));
+        }
+        return headers;
+    }
+
+    private Http2Headers headersOfSize(final int minSize) {
+        final AsciiString singleByte = new AsciiString(new byte[]{0}, false);
+        DefaultHttp2Headers headers = new DefaultHttp2Headers(false);
+        for (int size = 0; size < minSize; size += 2) {
+            headers.add(singleByte, singleByte);
+        }
+        return headers;
+    }
+
+    private static Http2Headers binaryHeaders() {
+        DefaultHttp2Headers headers = new DefaultHttp2Headers(false);
+        for (int ix = 0; ix < 10; ++ix) {
+            headers.add(randomString(), randomString());
+        }
+        return headers;
     }
 }
