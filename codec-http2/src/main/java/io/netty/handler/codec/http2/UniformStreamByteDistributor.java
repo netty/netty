@@ -139,7 +139,7 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
         final Http2Stream stream;
         int streamableBytes;
         boolean enqueued;
-        boolean wasEnqueued;
+        boolean previouslyOnMainQueue;
 
         State(Http2Stream stream) {
             this.stream = stream;
@@ -178,17 +178,20 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
 
         void addToQueue() {
             if (!enqueued) {
+                enqueued = true;
                 if (streamableBytes == 0) {
                     // Add empty frames to the empty frame queue.
                     getOrCreateEmptyFrameQueue().addLast(this);
-                } else if (!wasEnqueued) {
-                    // Add to the head of the list the first time this stream is enqueued.
+                    return;
+                }
+
+                if (!previouslyOnMainQueue) {
+                    // Add to the head the first time it's on the main queue.
                     queue.addFirst(this);
                 } else {
                     queue.addLast(this);
                 }
-                enqueued = true;
-                wasEnqueued = true;
+                previouslyOnMainQueue = true;
             }
         }
 
