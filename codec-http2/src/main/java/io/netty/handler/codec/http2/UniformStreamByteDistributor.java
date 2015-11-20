@@ -34,7 +34,6 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
 
     private final Http2Connection.PropertyKey stateKey;
     private final Deque<State> queue = new ArrayDeque<State>(4);
-    private Deque<State> emptyFrameQueue;
 
     /**
      * The minimum number of bytes that we will attempt to allocate to a stream. This is to
@@ -88,34 +87,24 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
     public boolean distribute(int maxBytes, Writer writer) throws Http2Exception {
         checkNotNull(writer, "writer");
 
-        // First, write out any empty frames.
-        if (emptyFrameQueue != null) {
-            while (!emptyFrameQueue.isEmpty()) {
-                State state = emptyFrameQueue.remove();
-                state.enqueued = false;
-                if (state.streamableBytes > 0) {
-                    // Bytes have been added since it was queued. Add it to the regular queue.
-                    state.addToQueue();
-                } else {
-                    // Still an empty frame, just write it.
-                    state.write(0, writer);
-                }
-            }
-        }
-
         final int size = queue.size();
-        if (size == 0 || maxBytes <= 0) {
+        if (size == 0) {
             return totalStreamableBytes > 0;
         }
 
         final int chunkSize = max(minAllocationChunk, maxBytes / size);
 
-        // Write until the queue is empty or we've exhausted maxBytes. We need to check queue.isEmpty()
-        // here since the Writer could call updateStreamableBytes, which may alter the queue.
+        State state = queue.pollFirst();
         do {
-            // Remove the head of the queue.
-            State state = queue.remove();
             state.enqueued = false;
+            if (state.streamableBytes > 0 && maxBytes == 0) {
+                // Stop at the first state that can't send. Add this state back to the head of
+                // the queue. Note that empty frames at the head of the queue will always be
+                // written.
+                queue.addFirst(state);
+                state.enqueued = true;
+                break;
+            }
 
             // Allocate as much data as we can for this stream.
             int chunk = min(chunkSize, min(maxBytes, state.streamableBytes));
@@ -123,7 +112,7 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
 
             // Write the allocated bytes and enqueue as necessary.
             state.write(chunk, writer);
-        } while (maxBytes > 0 && !queue.isEmpty());
+        } while ((state = queue.pollFirst()) != null);
 
         return totalStreamableBytes > 0;
     }
@@ -139,7 +128,6 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
         final Http2Stream stream;
         int streamableBytes;
         boolean enqueued;
-        boolean previouslyOnMainQueue;
 
         State(Http2Stream stream) {
             this.stream = stream;
@@ -179,28 +167,14 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
         void addToQueue() {
             if (!enqueued) {
                 enqueued = true;
-                if (streamableBytes == 0) {
-                    // Add empty frames to the empty frame queue.
-                    getOrCreateEmptyFrameQueue().addLast(this);
-                    return;
-                }
-
-                if (!previouslyOnMainQueue) {
-                    // Add to the head the first time it's on the main queue.
-                    previouslyOnMainQueue = true;
-                    queue.addFirst(this);
-                } else {
-                    queue.addLast(this);
-                }
+                queue.addLast(this);
             }
         }
 
         void removeFromQueue() {
             if (enqueued) {
                 enqueued = false;
-                if (emptyFrameQueue != null && !emptyFrameQueue.remove(this)) {
-                    queue.remove(this);
-                }
+                queue.remove(this);
             }
         }
 
@@ -210,13 +184,6 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
 
             // Clear the streamable bytes.
             updateStreamableBytes(0, false);
-        }
-
-        private Deque<State> getOrCreateEmptyFrameQueue() {
-            if (emptyFrameQueue == null) {
-                emptyFrameQueue = new ArrayDeque<State>(2);
-            }
-            return emptyFrameQueue;
         }
     }
 }
