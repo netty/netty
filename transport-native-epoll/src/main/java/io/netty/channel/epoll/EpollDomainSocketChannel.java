@@ -23,6 +23,7 @@ import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.DomainSocketChannel;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.Socket;
+import io.netty.util.internal.OneTimeTask;
 
 import java.net.SocketAddress;
 
