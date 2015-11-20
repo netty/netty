@@ -650,7 +650,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
                     // Schedule connect timeout.
                     int connectTimeoutMillis = config().getConnectTimeoutMillis();
                     if (connectTimeoutMillis > 0) {
-                        connectTimeoutFuture = eventLoop().schedule(new Runnable() {
+                        connectTimeoutFuture = eventLoop().schedule(new OneTimeTask() {
                             @Override
                             public void run() {
                                 ChannelPromise connectPromise = AbstractEpollStreamChannel.this.connectPromise;
@@ -859,7 +859,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
                 if (!closed) {
                     // trigger a read again as there may be something left to read and because of epoll ET we
                     // will not get notified again until we read everything from the socket
-                    eventLoop().execute(new Runnable() {
+                    eventLoop().execute(new OneTimeTask() {
                         @Override
                         public void run() {
                             epollInReady();
