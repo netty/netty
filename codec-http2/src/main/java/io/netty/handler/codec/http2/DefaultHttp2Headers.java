@@ -90,6 +90,23 @@ public class DefaultHttp2Headers
               validate ? HTTP2_NAME_VALIDATOR : NameValidator.NOT_NULL);
     }
 
+    /**
+     * Create a new instance.
+     * @param validate {@code true} to validate header names according to
+     * <a href="https://tools.ietf.org/html/rfc7540">rfc7540</a>. {@code false} to not validate header names.
+     * @param arraySizeHint A hint as to how large the hash data structure should be.
+     * The next positive power of two will be used. An upper bound may be enforced.
+     */
+    @SuppressWarnings("unchecked")
+    public DefaultHttp2Headers(boolean validate, int arraySizeHint) {
+        // Case sensitive compare is used because it is cheaper, and header validation can be used to catch invalid
+        // headers.
+        super(CASE_SENSITIVE_HASHER,
+              CharSequenceValueConverter.INSTANCE,
+              validate ? HTTP2_NAME_VALIDATOR : NameValidator.NOT_NULL,
+              arraySizeHint);
+    }
+
     @Override
     public Http2Headers clear() {
         this.firstNonPseudo = head;
