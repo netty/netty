@@ -206,7 +206,7 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
                 throw connectionError(PROTOCOL_ERROR, "Priority Frame recieved for unknown stream id %d", streamId);
             }
 
-            Http2Headers http2Headers = new DefaultHttp2Headers();
+            Http2Headers http2Headers = new DefaultHttp2Headers(validateHttpHeaders, httpHeaders.size());
             initializePseudoHeaders(http2Headers);
             addHttpHeadersToHttp2Headers(httpHeaders, http2Headers);
             msg = newMessage(streamId, http2Headers, validateHttpHeaders);

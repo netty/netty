@@ -33,10 +33,18 @@ import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 
 public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2HeadersDecoder.Configuration {
+    private static final float HEADERS_COUNT_WEIGHT_NEW = 1 / 5;
+    private static final float HEADERS_COUNT_WEIGHT_HISTORICAL = 1 - HEADERS_COUNT_WEIGHT_NEW;
+
     private final int maxHeaderSize;
     private final Decoder decoder;
     private final Http2HeaderTable headerTable;
     private final boolean validateHeaders;
+    /**
+     * Used to calculate an exponential moving average of header sizes to get an estimate of how large the data
+     * structure for storing headers should be.
+     */
+    private float headerArraySizeAccumulator = 8;
 
     public DefaultHttp2HeadersDecoder() {
         this(true);
@@ -44,10 +52,6 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
 
     public DefaultHttp2HeadersDecoder(boolean validateHeaders) {
         this(DEFAULT_MAX_HEADER_SIZE, DEFAULT_HEADER_TABLE_SIZE, validateHeaders);
-    }
-
-    public DefaultHttp2HeadersDecoder(int maxHeaderSize, int maxHeaderTableSize) {
-        this(maxHeaderSize, maxHeaderTableSize, true);
     }
 
     public DefaultHttp2HeadersDecoder(int maxHeaderSize, int maxHeaderTableSize, boolean validateHeaders) {
@@ -87,7 +91,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
     public Http2Headers decodeHeaders(ByteBuf headerBlock) throws Http2Exception {
         InputStream in = new ByteBufInputStream(headerBlock);
         try {
-            final Http2Headers headers = new DefaultHttp2Headers(validateHeaders);
+            final Http2Headers headers = new DefaultHttp2Headers(validateHeaders, (int) headerArraySizeAccumulator);
             HeaderListener listener = new HeaderListener() {
                 @Override
                 public void addHeader(byte[] key, byte[] value, boolean sensitive) {
@@ -105,6 +109,8 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
                         headers.size(), headerTable.maxHeaderListSize());
             }
 
+            headerArraySizeAccumulator =  HEADERS_COUNT_WEIGHT_NEW * headers.size() +
+                                          HEADERS_COUNT_WEIGHT_HISTORICAL * headerArraySizeAccumulator;
             return headers;
         } catch (IOException e) {
             throw connectionError(COMPRESSION_ERROR, e, e.getMessage());

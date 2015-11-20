@@ -16,6 +16,7 @@ package io.netty.handler.codec;
 
 import io.netty.util.HashingStrategy;
 import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.internal.SystemPropertyUtil;
 
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -34,7 +35,10 @@ import java.util.Set;
 import java.util.TimeZone;
 
 import static io.netty.util.HashingStrategy.JAVA_HASHER;
+import static io.netty.util.internal.MathUtil.findNextPositivePowerOfTwo;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.lang.Math.min;
+import static java.lang.Math.max;
 
 /**
  * Default implementation of {@link Headers};
@@ -45,24 +49,20 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  */
 public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers<K, V, T> {
     /**
-     * How big the underlying array is for the hash data structure.
-     * <p>
-     * This should be a power of 2 so the {@link #index(int)} method can full address the memory.
+     * Enforce an upper bound of 128 because {@link #hashMask} is a byte.
+     * The max possible value of {@link #hashMask} is one less than this value.
      */
-    private static final int ARRAY_SIZE = 1 << 4;
-    private static final int HASH_MASK = ARRAY_SIZE - 1;
-    static final int HASH_CODE_SEED = 0xc2b2ae35; // constant borrowed from murmur3
+    private static final int ARRAY_SIZE_HINT_MAX = min(128,
+                            max(1, SystemPropertyUtil.getInt("io.netty.DefaultHeaders.arraySizeHintMax", 16)));
+    /**
+     * Constant used to seed the hash code generation. Could be anything but this was borrowed from murmur3.
+     */
+    static final int HASH_CODE_SEED = 0xc2b2ae35;
 
-    private static int index(int hash) {
-        // Fold the upper 16 bits onto the 16 lower bits so more of the hash code is represented
-        // when translating to an index.
-        return ((hash >>> 16) ^ hash) & HASH_MASK;
-    }
+    private final HeaderEntry<K, V>[] entries;
+    protected final HeaderEntry<K, V> head;
 
-    @SuppressWarnings("unchecked")
-    private final HeaderEntry<K, V>[] entries = new DefaultHeaders.HeaderEntry[ARRAY_SIZE];
-    protected final HeaderEntry<K, V> head = new HeaderEntry<K, V>();
-
+    private final byte hashMask;
     private final ValueConverter<V> valueConverter;
     private final NameValidator<K> nameValidator;
     private final HashingStrategy<K> hashingStrategy;
@@ -102,10 +102,26 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     public DefaultHeaders(HashingStrategy<K> nameHashingStrategy,
             ValueConverter<V> valueConverter, NameValidator<K> nameValidator) {
+        this(nameHashingStrategy, valueConverter, nameValidator, 16);
+    }
+
+    /**
+     * Create a new instance.
+     * @param nameHashingStrategy Used to hash and equality compare names.
+     * @param valueConverter Used to convert values to/from native types.
+     * @param nameValidator Used to validate name elements.
+     * @param arraySizeHint A hint as to how large the hash data structure should be.
+     * The next positive power of two will be used. An upper bound may be enforced.
+     */
+    @SuppressWarnings("unchecked")
+    public DefaultHeaders(HashingStrategy<K> nameHashingStrategy,
+            ValueConverter<V> valueConverter, NameValidator<K> nameValidator, int arraySizeHint) {
         this.valueConverter = checkNotNull(valueConverter, "valueConverter");
         this.nameValidator = checkNotNull(nameValidator, "nameValidator");
         this.hashingStrategy = checkNotNull(nameHashingStrategy, "nameHashingStrategy");
-        head.before = head.after = head;
+        entries = new DefaultHeaders.HeaderEntry[findNextPositivePowerOfTwo(min(arraySizeHint, ARRAY_SIZE_HINT_MAX))];
+        hashMask = (byte) (entries.length - 1);
+        head = new HeaderEntry<K, V>();
     }
 
     @Override
@@ -892,6 +908,10 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         return valueConverter;
     }
 
+    private int index(int hash) {
+        return hash & hashMask;
+    }
+
     private void add0(int h, int i, K name, V value) {
         // Update the hash table.
         entries[i] = newHeaderEntry(h, name, value, entries[i]);
@@ -1068,6 +1088,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         HeaderEntry() {
             hash = -1;
             key = null;
+            before = after = this;
         }
 
         protected final void pointNeighborsToThis() {
