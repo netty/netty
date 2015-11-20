@@ -24,6 +24,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.internal.OneTimeTask;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -112,7 +113,7 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
 
     private void scheduleTimeout(final ChannelHandlerContext ctx, final ChannelPromise future) {
         // Schedule a timeout.
-        final ScheduledFuture<?> sf = ctx.executor().schedule(new Runnable() {
+        final ScheduledFuture<?> sf = ctx.executor().schedule(new OneTimeTask() {
             @Override
             public void run() {
                 // Was not written yet so issue a write timeout

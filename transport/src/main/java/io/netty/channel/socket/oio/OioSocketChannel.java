@@ -25,6 +25,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.oio.OioByteStreamChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -152,7 +153,7 @@ public class OioSocketChannel extends OioByteStreamChannel
                 future.setFailure(t);
             }
         } else {
-            loop.execute(new Runnable() {
+            loop.execute(new OneTimeTask() {
                 @Override
                 public void run() {
                     shutdownOutput(future);

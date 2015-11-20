@@ -411,7 +411,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                 remove0(ctx);
                 return ctx;
             } else {
-               future = ctx.executor().submit(new Runnable() {
+               future = ctx.executor().submit(new OneTimeTask() {
                    @Override
                    public void run() {
                        synchronized (DefaultChannelPipeline.this) {
@@ -493,7 +493,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                 replace0(ctx, newCtx);
                 return ctx.handler();
             } else {
-                future = newCtx.executor().submit(new Runnable() {
+                future = newCtx.executor().submit(new OneTimeTask() {
                     @Override
                     public void run() {
                         synchronized (DefaultChannelPipeline.this) {
@@ -553,7 +553,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     private void callHandlerAdded(final AbstractChannelHandlerContext ctx) {
         if (ctx.channel().isRegistered() && !ctx.executor().inEventLoop()) {
-            ctx.executor().execute(new Runnable() {
+            ctx.executor().execute(new OneTimeTask() {
                 @Override
                 public void run() {
                     callHandlerAdded0(ctx);
@@ -592,7 +592,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     private void callHandlerRemoved(final AbstractChannelHandlerContext ctx) {
         if (ctx.channel().isRegistered() && !ctx.executor().inEventLoop()) {
-            ctx.executor().execute(new Runnable() {
+            ctx.executor().execute(new OneTimeTask() {
                 @Override
                 public void run() {
                     callHandlerRemoved0(ctx);

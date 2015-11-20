@@ -34,6 +34,7 @@ import io.netty.channel.sctp.SctpChannelConfig;
 import io.netty.channel.sctp.SctpMessage;
 import io.netty.channel.sctp.SctpNotificationHandler;
 import io.netty.channel.sctp.SctpServerChannel;
+import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -416,7 +417,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                 promise.setFailure(t);
             }
         } else {
-            eventLoop().execute(new Runnable() {
+            eventLoop().execute(new OneTimeTask() {
                 @Override
                 public void run() {
                     bindAddress(localAddress, promise);
@@ -441,7 +442,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                 promise.setFailure(t);
             }
         } else {
-            eventLoop().execute(new Runnable() {
+            eventLoop().execute(new OneTimeTask() {
                 @Override
                 public void run() {
                     unbindAddress(localAddress, promise);
