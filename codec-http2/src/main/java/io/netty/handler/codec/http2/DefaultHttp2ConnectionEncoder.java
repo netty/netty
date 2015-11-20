@@ -32,6 +32,7 @@ import java.util.ArrayDeque;
  * Default implementation of {@link Http2ConnectionEncoder}.
  */
 public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
+    private final Http2Connection.PropertyKey dataSentKey;
     private final Http2FrameWriter frameWriter;
     private final Http2Connection connection;
     private Http2LifecycleManager lifecycleManager;
@@ -45,6 +46,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         if (connection.remote().flowController() == null) {
             connection.remote().flowController(new DefaultHttp2RemoteFlowController(connection));
         }
+        dataSentKey = connection.newKey();
     }
 
     @Override
@@ -129,6 +131,9 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             return promise.setFailure(e);
         }
 
+        // Indicate that data has been sent on this stream.
+        stream.setProperty(dataSentKey, Boolean.TRUE);
+
         // Hand control of the frame to the flow controller.
         flowController().addFlowControlled(stream,
                 new FlowControlledData(stream, data, padding, endOfStream, promise));
@@ -165,10 +170,18 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                 }
             }
 
-            // Pass headers to the flow-controller so it can maintain their sequence relative to DATA frames.
-            flowController().addFlowControlled(stream,
-                    new FlowControlledHeaders(stream, headers, streamDependency, weight, exclusive, padding,
-                            endOfStream, promise));
+            if (stream.getProperty(dataSentKey) != null) {
+                // Pass headers to the flow-controller so it can maintain their sequence relative to DATA frames.
+                flowController().addFlowControlled(stream, new FlowControlledHeaders(stream, headers,
+                        streamDependency, weight, exclusive, padding, endOfStream, promise));
+            } else {
+                // Sending headers frame before any DATA frames, just write it now.
+                frameWriter().writeHeaders(ctx, stream.id(), headers, streamDependency, weight, exclusive,
+                        padding, endOfStream, promise);
+                if (endOfStream) {
+                    lifecycleManager.closeStreamLocal(stream, promise);
+                }
+            }
             return promise;
         } catch (Http2NoMoreStreamIdsException e) {
             lifecycleManager.onError(ctx, e);
@@ -355,7 +368,8 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
         @Override
         public boolean merge(ChannelHandlerContext ctx, Http2RemoteFlowController.FlowControlled next) {
-            if (FlowControlledData.class != next.getClass()) {
+            if (FlowControlledData.class != next.getClass() ||
+                    Integer.MAX_VALUE - next.size() < size()) {
                 return false;
             }
             FlowControlledData nextData = (FlowControlledData) next;
@@ -432,6 +446,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             if (padding < 0) {
                 throw new IllegalArgumentException("padding must be >= 0");
             }
+
             this.padding = padding;
             this.endOfStream = endOfStream;
             this.stream = stream;
