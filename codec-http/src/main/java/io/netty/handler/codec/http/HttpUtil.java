@@ -32,6 +32,7 @@ import static io.netty.util.AsciiString.c2b;
  */
 public final class HttpUtil {
     private static final AsciiString CHARSET_EQUALS = AsciiString.of(HttpHeaderValues.CHARSET + "=");
+    private static final AsciiString SEMICOLON = AsciiString.of(";");
 
     private HttpUtil() { }
 
@@ -351,12 +352,13 @@ public final class HttpUtil {
     }
 
     /**
-     * Fetch charset string from message's Content-Type header.
+     * Fetch arbitrary charset from message's Content-Type header as an arbitrary char sequence.
      *
      * A lot of sites/possibly clients have charset="CHARSET", for example charset="utf-8". Or "utf8" instead of "utf-8"
      * This is not according to standard, but this method provide an ability to catch desired mistakes manually in code
      *
-     * @return the charset string from message's Content-Type header or {@code null} if charset is not presented
+     * @return the {@code CharSequence} with charset from message's Content-Type header
+     * or {@code null} if charset is not presented
      */
     public static CharSequence getCharsetAsString(HttpMessage message) {
         CharSequence contentTypeValue = message.headers().get(HttpHeaderNames.CONTENT_TYPE);
@@ -367,6 +369,29 @@ public final class HttpUtil {
                 if (indexOfEncoding < contentTypeValue.length()) {
                     return contentTypeValue.subSequence(indexOfEncoding, contentTypeValue.length());
                 }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Fetch MIME type part from message's Content-Type header as an arbitrary char sequence.
+     *
+     * @return the MIME type {@code CharSequence} from message's Content-Type header
+     * or {@code null} if content-type header or MIME type is not presented
+     * <p/>
+     * "content-type: text/html; charset=utf-8" - "text/html" will be returned <br/>
+     * "content-type: text/html" - "text/html" will be returned <br/>
+     * "content-type: " or no header - {@code null} we be returned
+     */
+    public static CharSequence getMimeType(HttpMessage message) {
+        CharSequence contentTypeValue = message.headers().get(HttpHeaderNames.CONTENT_TYPE);
+        if (contentTypeValue != null) {
+            int indexOfSemicolon = AsciiString.indexOfIgnoreCaseAscii(contentTypeValue, SEMICOLON, 0);
+            if (indexOfSemicolon != AsciiString.INDEX_NOT_FOUND) {
+                return contentTypeValue.subSequence(0, indexOfSemicolon);
+            } else {
+                return contentTypeValue.length() > 0 ? contentTypeValue : null;
             }
         }
         return null;
