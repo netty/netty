@@ -131,13 +131,11 @@ public class UniformStreamByteDistributorTest {
         setPriority(STREAM_C, STREAM_A, (short) 100, false);
         setPriority(STREAM_D, STREAM_A, (short) 100, false);
 
-        // Update in reverse order. This will yield a queue in the order A, B, C, D. This
-        // is due to the fact that when a stream is enqueued the first time, it is added to the
-        // head of the queue.
-        updateStream(STREAM_D, CHUNK_SIZE, true);
-        updateStream(STREAM_C, CHUNK_SIZE, true);
-        updateStream(STREAM_B, CHUNK_SIZE, true);
+        // Update the streams.
         updateStream(STREAM_A, CHUNK_SIZE, true);
+        updateStream(STREAM_B, CHUNK_SIZE, true);
+        updateStream(STREAM_C, CHUNK_SIZE, true);
+        updateStream(STREAM_D, CHUNK_SIZE, true);
 
         // Only write 3 * chunkSize, so that we'll only write to the first 3 streams.
         int written = 3 * CHUNK_SIZE;
@@ -174,16 +172,16 @@ public class UniformStreamByteDistributorTest {
     }
 
     @Test
-    public void emptyFrameIsWritten() throws Http2Exception {
-        updateStream(STREAM_B, 0, true);
+    public void emptyFrameAtHeadIsWritten() throws Http2Exception {
         updateStream(STREAM_A, 10, true);
+        updateStream(STREAM_B, 0, true);
+        updateStream(STREAM_C, 0, true);
+        updateStream(STREAM_D, 10, true);
 
-        assertFalse(write(10));
+        assertTrue(write(10));
         verifyWrite(STREAM_A, 10);
         verifyWrite(STREAM_B, 0);
-        verifyNoMoreInteractions(writer);
-
-        write(10);
+        verifyWrite(STREAM_C, 0);
         verifyNoMoreInteractions(writer);
     }
 
