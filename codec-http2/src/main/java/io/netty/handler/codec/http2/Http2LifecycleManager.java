@@ -27,17 +27,17 @@ public interface Http2LifecycleManager {
 
     /**
      * Closes the local side of the {@code stream}. Depending on the {@code stream} state this may result in
-     * {@code stream} being closed. See {@link closeStream(Http2Stream, ChannelFuture)}.
+     * {@code stream} being closed. See {@link #closeStream(Http2Stream, ChannelFuture)}.
      * @param stream the stream to be half closed.
-     * @param future See {@link closeStream(Http2Stream, ChannelFuture)}.
+     * @param future See {@link #closeStream(Http2Stream, ChannelFuture)}.
      */
     void closeStreamLocal(Http2Stream stream, ChannelFuture future);
 
     /**
      * Closes the remote side of the {@code stream}. Depending on the {@code stream} state this may result in
-     * {@code stream} being closed. See {@link closeStream(Http2Stream, ChannelFuture)}.
+     * {@code stream} being closed. See {@link #closeStream(Http2Stream, ChannelFuture)}.
      * @param stream the stream to be half closed.
-     * @param future See {@link closeStream(Http2Stream, ChannelFuture)}.
+     * @param future See {@link #closeStream(Http2Stream, ChannelFuture)}.
      */
     void closeStreamRemote(Http2Stream stream, ChannelFuture future);
 

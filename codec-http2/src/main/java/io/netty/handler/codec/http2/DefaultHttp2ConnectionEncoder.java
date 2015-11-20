@@ -409,7 +409,8 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             }
             promise.addListener(this);
 
-            frameWriter().writeHeaders(ctx, stream.id(), headers, streamDependency, weight, exclusive,
+            stream.headerSent();
+            frameWriter.writeHeaders(ctx, stream.id(), headers, streamDependency, weight, exclusive,
                     padding, endOfStream, promise);
         }
 

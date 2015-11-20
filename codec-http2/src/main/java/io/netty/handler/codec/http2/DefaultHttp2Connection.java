@@ -296,6 +296,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         private int totalChildWeights;
         private int prioritizableForTree = 1;
         private boolean resetSent;
+        private boolean headerSent;
 
         DefaultStream(int id, State state) {
             this.id = id;
@@ -320,6 +321,17 @@ public class DefaultHttp2Connection implements Http2Connection {
         @Override
         public Http2Stream resetSent() {
             resetSent = true;
+            return this;
+        }
+
+        @Override
+        public boolean isHeaderSent() {
+            return headerSent;
+        }
+
+        @Override
+        public Http2Stream headerSent() {
+            headerSent = true;
             return this;
         }
 
@@ -432,6 +444,9 @@ public class DefaultHttp2Connection implements Http2Connection {
         @Override
         public Http2Stream open(boolean halfClosed) throws Http2Exception {
             state = activeState(id, state, isLocal(), halfClosed);
+            if (!createdBy().canOpenStream()) {
+                throw connectionError(PROTOCOL_ERROR, "Maximum active streams violated for this endpoint.");
+            }
             activate();
             return this;
         }
@@ -548,17 +563,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             children = new IntObjectHashMap<DefaultStream>(INITIAL_CHILDREN_MAP_SIZE);
         }
 
-        @Override
-        public final boolean remoteSideOpen() {
-            return state == HALF_CLOSED_LOCAL || state == OPEN || state == RESERVED_REMOTE;
-        }
-
-        @Override
-        public final boolean localSideOpen() {
-            return state == HALF_CLOSED_REMOTE || state == OPEN || state == RESERVED_LOCAL;
-        }
-
-        final DefaultEndpoint<? extends Http2FlowController> createdBy() {
+        DefaultEndpoint<? extends Http2FlowController> createdBy() {
             return localEndpoint.isValidStreamId(id) ? localEndpoint : remoteEndpoint;
         }
 
@@ -793,7 +798,22 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
+        DefaultEndpoint<? extends Http2FlowController> createdBy() {
+            return null;
+        }
+
+        @Override
         public Http2Stream resetSent() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean isHeaderSent() {
+            return false;
+        }
+
+        @Override
+        public Http2Stream headerSent() {
             throw new UnsupportedOperationException();
         }
 
@@ -869,12 +889,17 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public boolean canCreateStream() {
-            return nextStreamId() > 0 && numActiveStreams + 1 <= maxActiveStreams;
+        public boolean isExhausted() {
+            return nextStreamId() <= 0;
+        }
+
+        @Override
+        public boolean canOpenStream() {
+            return numActiveStreams + 1 <= maxActiveStreams;
         }
 
         private DefaultStream createStream(int streamId, State state) throws Http2Exception {
-            checkNewStreamAllowed(streamId);
+            checkNewStreamAllowed(streamId, state);
 
             // Create and initialize the stream.
             DefaultStream stream = new DefaultStream(streamId, state);
@@ -900,6 +925,11 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
+        public boolean created(Http2Stream stream) {
+            return stream instanceof DefaultStream && ((DefaultStream) stream).createdBy() == this;
+        }
+
+        @Override
         public boolean isServer() {
             return server;
         }
@@ -909,16 +939,17 @@ public class DefaultHttp2Connection implements Http2Connection {
             if (parent == null) {
                 throw connectionError(PROTOCOL_ERROR, "Parent stream missing");
             }
-            if (isLocal() ? !parent.localSideOpen() : !parent.remoteSideOpen()) {
+            if (isLocal() ? !parent.state().localSideOpen() : !parent.state().remoteSideOpen()) {
                 throw connectionError(PROTOCOL_ERROR, "Stream %d is not open for sending push promise", parent.id());
             }
             if (!opposite().allowPushTo()) {
                 throw connectionError(PROTOCOL_ERROR, "Server push not allowed to opposite endpoint.");
             }
-            checkNewStreamAllowed(streamId);
+            State state = isLocal() ? RESERVED_LOCAL : RESERVED_REMOTE;
+            checkNewStreamAllowed(streamId, state);
 
             // Create and initialize the stream.
-            DefaultStream stream = new DefaultStream(streamId, isLocal() ? RESERVED_LOCAL : RESERVED_REMOTE);
+            DefaultStream stream = new DefaultStream(streamId, state);
 
             // Update the next and last stream IDs.
             nextStreamId = streamId + 2;
@@ -1005,7 +1036,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             return isLocal() ? remoteEndpoint : localEndpoint;
         }
 
-        private void checkNewStreamAllowed(int streamId) throws Http2Exception {
+        private void checkNewStreamAllowed(int streamId, State state) throws Http2Exception {
             if (goAwayReceived() && streamId > localEndpoint.lastStreamKnownByPeer()) {
                 throw connectionError(PROTOCOL_ERROR, "Cannot create stream %d since this endpoint has received a " +
                                                       "GOAWAY frame with last stream id %d.", streamId,
@@ -1024,8 +1055,11 @@ public class DefaultHttp2Connection implements Http2Connection {
                 throw closedStreamError(PROTOCOL_ERROR, "Request stream %d is behind the next expected stream %d",
                         streamId, nextStreamId);
             }
-            if (!canCreateStream()) {
-                throw connectionError(REFUSED_STREAM, "Maximum streams exceeded for this endpoint.");
+            if (isExhausted()) {
+                throw connectionError(REFUSED_STREAM, "Stream IDs are exhausted for this endpoint.");
+            }
+            if ((state.localSideOpen() || state.remoteSideOpen()) && !canOpenStream()) {
+                throw connectionError(REFUSED_STREAM, "Maximum active streams violated for this endpoint.");
             }
         }
 
