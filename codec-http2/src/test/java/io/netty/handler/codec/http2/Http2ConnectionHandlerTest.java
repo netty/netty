@@ -316,11 +316,11 @@ public class Http2ConnectionHandlerTest {
         when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
                 anyLong(), any(ChannelPromise.class))).thenReturn(future);
         when(stream.state()).thenReturn(CLOSED);
+        when(stream.isHeaderSent()).thenReturn(true);
         // The stream is "closed" but is still known about by the connection (connection().stream(..)
         // will return the stream). We should still write a RST_STREAM frame in this scenario.
         handler.resetStream(ctx, STREAM_ID, STREAM_CLOSED.code(), promise);
-        verify(frameWriter).writeRstStream(eq(ctx), eq(STREAM_ID), anyLong(),
-                any(ChannelPromise.class));
+        verify(frameWriter).writeRstStream(eq(ctx), eq(STREAM_ID), anyLong(), any(ChannelPromise.class));
     }
 
     @SuppressWarnings("unchecked")

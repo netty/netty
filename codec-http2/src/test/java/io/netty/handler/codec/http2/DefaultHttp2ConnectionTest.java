@@ -33,28 +33,32 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http2.Http2Connection.Endpoint;
 import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.util.internal.PlatformDependent;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
-
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+
 /**
  * Tests for {@link DefaultHttp2Connection}.
  */
 public class DefaultHttp2ConnectionTest {
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
 
     private DefaultHttp2Connection server;
     private DefaultHttp2Connection client;
@@ -208,9 +212,20 @@ public class DefaultHttp2ConnectionTest {
     }
 
     @Test(expected = Http2Exception.class)
-    public void maxAllowedStreamsExceededShouldThrow() throws Http2Exception {
+    public void createShouldThrowWhenMaxAllowedStreamsExceeded() throws Http2Exception {
         server.local().maxActiveStreams(0);
         server.local().createStream(2, true);
+    }
+
+    @Test
+    public void createIdleShouldSucceedWhenMaxAllowedStreamsExceeded() throws Http2Exception {
+        server.local().maxActiveStreams(0);
+        Http2Stream stream = server.local().createIdleStream(2);
+
+        // Opening should fail, however.
+        thrown.expect(Http2Exception.class);
+        thrown.expectMessage("Maximum active streams violated for this endpoint.");
+        stream.open(false);
     }
 
     @Test(expected = Http2Exception.class)
