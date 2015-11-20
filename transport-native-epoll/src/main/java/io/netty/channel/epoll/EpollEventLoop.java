@@ -55,7 +55,6 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     private final IntObjectMap<AbstractEpollChannel> channels = new IntObjectHashMap<AbstractEpollChannel>(4096);
     private final boolean allowGrowing;
     private final EpollEventArray events;
-    private final IovArray iovArray = new IovArray();
 
     private volatile int wakenUp;
     private volatile int ioRatio = 50;
@@ -99,14 +98,6 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                 }
             }
         }
-    }
-
-    /**
-     * Return a cleared {@link IovArray} that can be used for writes in this {@link EventLoop}.
-     */
-    IovArray cleanArray() {
-        iovArray.clear();
-        return iovArray;
     }
 
     @Override
@@ -385,7 +376,6 @@ final class EpollEventLoop extends SingleThreadEventLoop {
             }
         } finally {
             // release native memory
-            iovArray.release();
             events.free();
         }
     }
