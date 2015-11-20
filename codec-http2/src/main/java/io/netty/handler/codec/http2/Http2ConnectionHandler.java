@@ -24,6 +24,7 @@ import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.isStreamError;
 import static io.netty.handler.codec.http2.Http2FrameTypes.SETTINGS;
+import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.min;
@@ -756,7 +757,14 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             return promise.setSuccess();
         }
 
-        ChannelFuture future = frameWriter().writeRstStream(ctx, streamId, errorCode, promise);
+        final ChannelFuture future;
+        if (stream.state() == IDLE || (connection().local().created(stream) && !stream.isHeaderSent())) {
+            // The other endpoint doesn't know about the stream yet, so we can't actually send
+            // the RST_STREAM frame. The HTTP/2 spec also disallows sending RST_STREAM for IDLE streams.
+            future = promise.setSuccess();
+        } else {
+            future = frameWriter().writeRstStream(ctx, streamId, errorCode, promise);
+        }
 
         // Synchronously set the resetSent flag to prevent any subsequent calls
         // from resulting in multiple reset frames being sent.
