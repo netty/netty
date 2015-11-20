@@ -18,6 +18,7 @@ package io.netty.handler.traffic;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.internal.OneTimeTask;
 
 import java.util.ArrayDeque;
 import java.util.concurrent.TimeUnit;
@@ -192,7 +193,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
             checkWriteSuspend(ctx, delay, queueSize);
         }
         final long futureNow = newToSend.relativeTimeAction;
-        ctx.executor().schedule(new Runnable() {
+        ctx.executor().schedule(new OneTimeTask() {
             @Override
             public void run() {
                 sendAllValid(ctx, futureNow);

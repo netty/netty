@@ -20,6 +20,7 @@ import gnu.io.CommPortIdentifier;
 import gnu.io.SerialPort;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.oio.OioByteStreamChannel;
+import io.netty.util.internal.OneTimeTask;
 
 import java.net.SocketAddress;
 import java.util.concurrent.TimeUnit;
@@ -143,7 +144,7 @@ public class RxtxChannel extends OioByteStreamChannel {
 
                 int waitTime = config().getOption(WAIT_TIME);
                 if (waitTime > 0) {
-                    eventLoop().schedule(new Runnable() {
+                    eventLoop().schedule(new OneTimeTask() {
                         @Override
                         public void run() {
                             try {
