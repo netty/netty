@@ -158,20 +158,33 @@ public interface Http2Connection {
         boolean mayHaveCreatedStream(int streamId);
 
         /**
-         * Indicates whether or not this endpoint is currently allowed to create new streams. This will be
-         * be false if {@link #numActiveStreams()} + 1 >= {@link #maxActiveStreams()} or if the stream IDs
-         * for this endpoint have been exhausted (i.e. {@link #nextStreamId()} < 0).
+         * Indicates whether or not this endpoint created the given stream.
          */
-        boolean canCreateStream();
+        boolean created(Http2Stream stream);
+
+        /**
+         * Indicates whether or not the stream IDs for this endpoint have been exhausted
+         * (i.e. {@link #nextStreamId()} < 0). If {@code true}, any attempt to create new streams
+         * on this endpoint will fail.
+         */
+        boolean isExhausted();
+
+        /**
+         * Indicates whether or a stream created by this endpoint can be opened without violating
+         * {@link #maxActiveStreams()}.
+         */
+        boolean canOpenStream();
 
         /**
          * Creates a stream initiated by this endpoint. This could fail for the following reasons:
          * <ul>
          * <li>The requested stream ID is not the next sequential ID for this endpoint.</li>
          * <li>The stream already exists.</li>
-         * <li>{@link #canCreateStream()} is {@code false}.</li>
          * <li>The connection is marked as going away.</li>
          * </ul>
+         * <p>
+         * Note that IDLE streams can always be created so long as there are stream IDs available.
+         * The {@link #numActiveStreams()} will be enforced upon attempting to open the stream.
          * <p>
          * If the stream is intended to initialized to {@link Http2Stream.State#OPEN} then use
          * {@link #createStream(int, boolean)} otherwise optimizations in {@link Listener}s may not work
@@ -186,7 +199,8 @@ public interface Http2Connection {
          * <ul>
          * <li>The requested stream ID is not the next sequential ID for this endpoint.</li>
          * <li>The stream already exists.</li>
-         * <li>{@link #canCreateStream()} is {@code false}.</li>
+         * <li>{@link #isExhausted()} is {@code true}</li>
+         * <li>{@link #canOpenStream()} is {@code false}.</li>
          * <li>The connection is marked as going away.</li>
          * </ul>
          * <p>

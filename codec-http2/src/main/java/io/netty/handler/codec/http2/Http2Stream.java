@@ -24,13 +24,37 @@ public interface Http2Stream {
      * The allowed states of an HTTP2 stream.
      */
     enum State {
-        IDLE,
-        RESERVED_LOCAL,
-        RESERVED_REMOTE,
-        OPEN,
-        HALF_CLOSED_LOCAL,
-        HALF_CLOSED_REMOTE,
-        CLOSED
+        IDLE(false, false),
+        RESERVED_LOCAL(false, false),
+        RESERVED_REMOTE(false, false),
+        OPEN(true, true),
+        HALF_CLOSED_LOCAL(false, true),
+        HALF_CLOSED_REMOTE(true, false),
+        CLOSED(false, false);
+
+        private final boolean localSideOpen;
+        private final boolean remoteSideOpen;
+
+        State(boolean localSideOpen, boolean remoteSideOpen) {
+            this.localSideOpen = localSideOpen;
+            this.remoteSideOpen = remoteSideOpen;
+        }
+
+        /**
+         * Indicates whether the local side of this stream is open (i.e. the state is either
+         * {@link State#OPEN} or {@link State#HALF_CLOSED_REMOTE}).
+         */
+        public boolean localSideOpen() {
+            return localSideOpen;
+        }
+
+        /**
+         * Indicates whether the remote side of this stream is open (i.e. the state is either
+         * {@link State#OPEN} or {@link State#HALF_CLOSED_LOCAL}).
+         */
+        public boolean remoteSideOpen() {
+            return remoteSideOpen;
+        }
     }
 
     /**
@@ -87,16 +111,16 @@ public interface Http2Stream {
     Http2Stream resetSent();
 
     /**
-     * Indicates whether the remote side of this stream is open (i.e. the state is either
-     * {@link State#OPEN} or {@link State#HALF_CLOSED_LOCAL}).
+     * Indicates whether or not at least one {@code HEADERS} frame has been sent from the local endpoint
+     * for this stream.
      */
-    boolean remoteSideOpen();
+    boolean isHeaderSent();
 
     /**
-     * Indicates whether the local side of this stream is open (i.e. the state is either
-     * {@link State#OPEN} or {@link State#HALF_CLOSED_REMOTE}).
+     * Sets the flag indicating that a {@code HEADERS} frame has been sent from the local endpoint
+     * for this stream. This does not affect the stream state.
      */
-    boolean localSideOpen();
+    Http2Stream headerSent();
 
     /**
      * Associates the application-defined data with this stream.
