@@ -24,6 +24,7 @@ import io.netty.util.Recycler.Handle;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.InternalThreadLocalMap;
+import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -629,7 +630,7 @@ public final class ChannelOutboundBuffer {
 
     void close(final ClosedChannelException cause) {
         if (inFail) {
-            channel.eventLoop().execute(new Runnable() {
+            channel.eventLoop().execute(new OneTimeTask() {
                 @Override
                 public void run() {
                     close(cause);

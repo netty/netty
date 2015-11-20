@@ -366,10 +366,10 @@ public class SslHandler extends ByteToMessageDecoder {
      */
     public ChannelFuture close(final ChannelPromise future) {
         final ChannelHandlerContext ctx = this.ctx;
-        ctx.executor().execute(new Runnable() {
+        ctx.executor().execute(new OneTimeTask() {
             @Override
             public void run() {
-                SslHandler.this.outboundClosed = true;
+                outboundClosed = true;
                 engine.closeOutbound();
                 try {
                     write(ctx, Unpooled.EMPTY_BUFFER, future);
@@ -1322,7 +1322,7 @@ public class SslHandler extends ByteToMessageDecoder {
             return;
         }
 
-        final ScheduledFuture<?> timeoutFuture = ctx.executor().schedule(new Runnable() {
+        final ScheduledFuture<?> timeoutFuture = ctx.executor().schedule(new OneTimeTask() {
             @Override
             public void run() {
                 if (p.isDone()) {
@@ -1364,7 +1364,7 @@ public class SslHandler extends ByteToMessageDecoder {
         final ScheduledFuture<?> timeoutFuture;
         if (closeNotifyTimeoutMillis > 0) {
             // Force-close the connection if close_notify is not fully sent in time.
-            timeoutFuture = ctx.executor().schedule(new Runnable() {
+            timeoutFuture = ctx.executor().schedule(new OneTimeTask() {
                 @Override
                 public void run() {
                     logger.warn("{} Last write attempt timed out; force-closing the connection.", ctx.channel());

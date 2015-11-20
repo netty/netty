@@ -644,7 +644,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
                     // Schedule connect timeout.
                     int connectTimeoutMillis = config().getConnectTimeoutMillis();
                     if (connectTimeoutMillis > 0) {
-                        connectTimeoutFuture = eventLoop().schedule(new Runnable() {
+                        connectTimeoutFuture = eventLoop().schedule(new OneTimeTask() {
                             @Override
                             public void run() {
                                 ChannelPromise connectPromise = AbstractEpollStreamChannel.this.connectPromise;
