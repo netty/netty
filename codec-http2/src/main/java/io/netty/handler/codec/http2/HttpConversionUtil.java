@@ -289,8 +289,8 @@ public final class HttpConversionUtil {
      * {@link ExtensionHeaderNames#PATH} is ignored and instead extracted from the {@code Request-Line}.
      */
     public static Http2Headers toHttp2Headers(HttpMessage in, boolean validateHeaders) throws Exception {
-        final Http2Headers out = new DefaultHttp2Headers(validateHeaders);
         HttpHeaders inHeaders = in.headers();
+        final Http2Headers out = new DefaultHttp2Headers(validateHeaders, inHeaders.size());
         if (in instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) in;
             URI requestTargetUri = URI.create(request.uri());
@@ -309,7 +309,8 @@ public final class HttpConversionUtil {
         }
 
         // Add the HTTP headers which have not been consumed above
-        return out.add(toHttp2Headers(inHeaders, validateHeaders));
+        toHttp2Headers(inHeaders, out);
+        return out;
     }
 
     public static Http2Headers toHttp2Headers(HttpHeaders inHeaders, boolean validateHeaders) throws Exception {
@@ -317,8 +318,12 @@ public final class HttpConversionUtil {
             return EmptyHttp2Headers.INSTANCE;
         }
 
-        final Http2Headers out = new DefaultHttp2Headers(validateHeaders);
+        final Http2Headers out = new DefaultHttp2Headers(validateHeaders, inHeaders.size());
+        toHttp2Headers(inHeaders, out);
+        return out;
+    }
 
+    public static void toHttp2Headers(HttpHeaders inHeaders, Http2Headers out) throws Exception {
         Iterator<Entry<CharSequence, CharSequence>> iter = inHeaders.iteratorCharSequence();
         while (iter.hasNext()) {
             Entry<CharSequence, CharSequence> entry = iter.next();
@@ -331,7 +336,6 @@ public final class HttpConversionUtil {
                 }
             }
         }
-        return out;
     }
 
     /**
