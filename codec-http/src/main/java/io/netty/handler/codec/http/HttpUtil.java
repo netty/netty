@@ -32,7 +32,6 @@ import static io.netty.util.AsciiString.c2b;
  */
 public final class HttpUtil {
     private static final AsciiString CHARSET_EQUALS = AsciiString.of(HttpHeaderValues.CHARSET + "=");
-    private static final AsciiString SEMICOLON = AsciiString.of(";");
 
     private HttpUtil() { }
 
@@ -387,7 +386,7 @@ public final class HttpUtil {
     public static CharSequence getMimeType(HttpMessage message) {
         CharSequence contentTypeValue = message.headers().get(HttpHeaderNames.CONTENT_TYPE);
         if (contentTypeValue != null) {
-            int indexOfSemicolon = AsciiString.indexOfIgnoreCaseAscii(contentTypeValue, SEMICOLON, 0);
+            int indexOfSemicolon = AsciiString.indexOf(contentTypeValue, ';', 0);
             if (indexOfSemicolon != AsciiString.INDEX_NOT_FOUND) {
                 return contentTypeValue.subSequence(0, indexOfSemicolon);
             } else {
