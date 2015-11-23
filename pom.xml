@@ -199,7 +199,7 @@
         <jdk>[1.8,)</jdk>
       </activation>
       <properties>
-        <jetty.alpn.version>8.1.5.v20150921</jetty.alpn.version>
+        <jetty.alpn.version>8.1.6.v20151105</jetty.alpn.version>
       </properties>
     </profile>
     <profile>
@@ -576,6 +576,18 @@
       </properties>
     </profile>
     <profile>
+      <id>alpn-8u65</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.8.0_65</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.alpn.version>8.1.6.v20151105</jetty.alpn.version>
+      </properties>
+    </profile>
+    <profile>
       <!--
       This profile exists because either ALPN or NPN can exits on the class path at once, but not both.
       The JDK version is typically used to distinguish which should be used but there is some overlap
@@ -685,6 +697,7 @@
         <groupId>org.eclipse.jetty.alpn</groupId>
         <artifactId>alpn-api</artifactId>
         <version>1.1.2.v20150522</version>
+        <scope>provided</scope> <!-- Provided by alpn-boot -->
       </dependency>
       <dependency>
         <groupId>org.mortbay.jetty.alpn</groupId>
