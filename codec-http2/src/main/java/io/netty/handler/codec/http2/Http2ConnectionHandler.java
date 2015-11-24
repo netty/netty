@@ -92,6 +92,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         private Http2Settings initialSettings = new Http2Settings();
         private Http2FrameListener frameListener;
         private Http2FrameLogger frameLogger;
+        private Http2HeadersEncoder.SensitivityDetector headersSensativityDetector =
+                Http2HeadersEncoder.NEVER_SENSITIVE;
         private boolean validateHeaders = true;
         private boolean server = true;
         private boolean encoderEnforceMaxConcurrentStreams;
@@ -170,6 +172,14 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
 
         /**
+         * Set the {@link Http2HeadersEncoder.SensitivityDetector} that will be used.
+         */
+        public B headersSensativityDetector(Http2HeadersEncoder.SensitivityDetector headersSensativityDetector) {
+            this.headersSensativityDetector = checkNotNull(headersSensativityDetector, "headersSensativityDetector");
+            return thisB();
+        }
+
+        /**
          * Create a new {@link Http2Connection} and build a new instance.
          */
         public final T build() {
@@ -184,7 +194,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
          */
         public final T build(Http2Connection connection) {
             Http2FrameReader reader = new DefaultHttp2FrameReader(validateHeaders);
-            Http2FrameWriter writer = new DefaultHttp2FrameWriter();
+            Http2FrameWriter writer = new DefaultHttp2FrameWriter(headersSensativityDetector);
             if (frameLogger != null) {
                 reader = new Http2InboundFrameLogger(reader, frameLogger);
                 writer = new Http2OutboundFrameLogger(writer, frameLogger);
@@ -208,9 +218,13 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
          * Build a new instance with an existing {@link Http2ConnectionDecoder} and {@link Http2ConnectionEncoder}.
          * <p>
          * Methods that will be ignored due to objects already being created:
-         * <ul><li>{@link #server(boolean)}</li><li>
-         * {@link #frameLogger(Http2FrameLogger)}</li><li>{@link #encoderEnforceMaxConcurrentStreams(boolean)}</li><li>
-         * {@link #encoderEnforceMaxConcurrentStreams(boolean)} (int)}</li></ul>
+         * <ul>
+         *   <li>{@link #server(boolean)}</li>
+         *   <li>{@link #frameLogger(Http2FrameLogger)}</li>
+         *   <li>{@link #encoderEnforceMaxConcurrentStreams(boolean)}</li>
+         *   <li>{@link #encoderEnforceMaxConcurrentStreams(boolean)} (int)}</li>
+         *   <li>{@link #headersSensativityDetector(Http2HeadersEncoder.SensitivityDetector)}</li>
+         * </ul>
          */
         public final T build(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder) {
             final T handler;
