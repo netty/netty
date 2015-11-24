@@ -63,12 +63,22 @@ public interface Http2HeadersEncoder {
     Configuration configuration();
 
     /**
-     * Always return {@code false} for {@link SensitivityDetector#isSensitive(ByteString, ByteString)}.
+     * Always return {@code false} for {@link SensitivityDetector#isSensitive(CharSequence, CharSequence)}.
      */
     SensitivityDetector NEVER_SENSITIVE = new SensitivityDetector() {
         @Override
         public boolean isSensitive(CharSequence name, CharSequence value) {
             return false;
+        }
+    };
+
+    /**
+     * Always return {@code true} for {@link SensitivityDetector#isSensitive(CharSequence, CharSequence)}.
+     */
+    SensitivityDetector ALWAYS_SENSITIVE = new SensitivityDetector() {
+        @Override
+        public boolean isSensitive(CharSequence name, CharSequence value) {
+            return true;
         }
     };
 }
