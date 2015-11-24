@@ -36,6 +36,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
@@ -335,8 +336,14 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     private final class NioSocketChannelUnsafe extends NioByteUnsafe {
         @Override
         protected Executor closeExecutor() {
-            if (javaChannel().isOpen() && config().getSoLinger() > 0) {
-                return GlobalEventExecutor.INSTANCE;
+            try {
+                if (javaChannel().isOpen() && config().getSoLinger() > 0) {
+                    return GlobalEventExecutor.INSTANCE;
+                }
+            } catch (Throwable ignore) {
+                // Ignore the error as the underlying channel may be closed in the meantime and so
+                // getSoLinger() may produce an exception. In this case we just return null.
+                // See https://github.com/netty/netty/issues/4449
             }
             return null;
         }
