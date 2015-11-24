@@ -197,7 +197,7 @@ public class Http2FrameRoundtripTest {
         for (int framePadding : paddingCaptor.getAllValues()) {
             totalReadPadding += framePadding;
         }
-        assertEquals(originalPadding, totalReadPadding);
+        assertEquals(originalPadding * paddingCaptor.getAllValues().size(), totalReadPadding);
     }
 
     @Test
