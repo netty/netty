@@ -219,10 +219,16 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
     private final class EpollSocketChannelUnsafe extends EpollStreamUnsafe {
         @Override
         protected Executor closeExecutor() {
-            // Check isOpen() first as otherwise it will throw a RuntimeException
-            // when call getSoLinger() as the fd is not valid anymore.
-            if (isOpen() && config().getSoLinger() > 0) {
-                return GlobalEventExecutor.INSTANCE;
+            try {
+                // Check isOpen() first as otherwise it will throw a RuntimeException
+                // when call getSoLinger() as the fd is not valid anymore.
+                if (isOpen() && config().getSoLinger() > 0) {
+                    return GlobalEventExecutor.INSTANCE;
+                }
+            } catch (Throwable ignore) {
+                // Ignore the error as the underlying channel may be closed in the meantime and so
+                // getSoLinger() may produce an exception. In this case we just return null.
+                // See https://github.com/netty/netty/issues/4449
             }
             return null;
         }
