@@ -55,8 +55,8 @@ public class ChannelOption<T> extends UniqueName {
     /**
      * @deprecated From version 5.0, {@link Channel} will not be closed on write failure.
      *
-     * {@code true} if and only if the {@link Channel} is closed automatically and immediately on write failure.
-     * The default is {@code false}.
+     * If {@code true} then the {@link Channel} is closed automatically and immediately on write failure.
+     * The default value is {@code true}.
      */
     @Deprecated
     public static final ChannelOption<Boolean> AUTO_CLOSE = valueOf("AUTO_CLOSE");
