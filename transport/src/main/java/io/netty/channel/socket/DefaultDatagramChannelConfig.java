@@ -43,8 +43,6 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultDatagramChannelConfig.class);
 
-    private static final RecvByteBufAllocator DEFAULT_RCVBUF_ALLOCATOR = new FixedRecvByteBufAllocator(2048);
-
     private final DatagramSocket javaSocket;
     private volatile boolean activeOnOpen;
 
@@ -52,12 +50,11 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
      * Creates a new instance.
      */
     public DefaultDatagramChannelConfig(DatagramChannel channel, DatagramSocket javaSocket) {
-        super(channel);
+        super(channel, new FixedRecvByteBufAllocator(2048));
         if (javaSocket == null) {
             throw new NullPointerException("javaSocket");
         }
         this.javaSocket = javaSocket;
-        setRecvByteBufAllocator(DEFAULT_RCVBUF_ALLOCATOR);
     }
 
     @Override
