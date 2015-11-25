@@ -20,7 +20,6 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ImmediateEventExecutor;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.MockitoAnnotations;
@@ -67,12 +66,6 @@ public class CoalescingBufferQueueTest {
         mouse = Unpooled.wrappedBuffer("mouse".getBytes(CharsetUtil.US_ASCII));
     }
 
-    @After
-    public void tearDown() {
-        ReferenceCountUtil.safeRelease(cat);
-        ReferenceCountUtil.safeRelease(mouse);
-    }
-
     @Test
     public void testAggregateWithFullRead() {
         writeQueue.add(cat, catPromise);
@@ -84,9 +77,11 @@ public class CoalescingBufferQueueTest {
         assertQueueSize(0, true);
         assertFalse(catPromise.isSuccess());
         assertFalse(mouseDone);
-        aggregatePromise.trySuccess();
+        aggregatePromise.setSuccess();
         assertTrue(catPromise.isSuccess());
         assertTrue(mouseSuccess);
+        assertEquals(0, cat.refCnt());
+        assertEquals(0, mouse.refCnt());
     }
 
     @Test
@@ -98,6 +93,8 @@ public class CoalescingBufferQueueTest {
         assertQueueSize(4, false);
         assertEquals("ouse", dequeue(4, newPromise()));
         assertQueueSize(0, true);
+        assertEquals(0, cat.refCnt());
+        assertEquals(0, mouse.refCnt());
     }
 
     @Test
@@ -109,7 +106,7 @@ public class CoalescingBufferQueueTest {
         assertQueueSize(4, false);
         assertFalse(catPromise.isSuccess());
         assertFalse(mouseDone);
-        aggregatePromise.trySuccess();
+        aggregatePromise.setSuccess();
         assertTrue(catPromise.isSuccess());
         assertFalse(mouseDone);
 
@@ -117,29 +114,40 @@ public class CoalescingBufferQueueTest {
         assertEquals("ouse", dequeue(Integer.MAX_VALUE, aggregatePromise));
         assertQueueSize(0, true);
         assertFalse(mouseDone);
-        aggregatePromise.trySuccess();
+        aggregatePromise.setSuccess();
         assertTrue(mouseSuccess);
+        assertEquals(0, cat.refCnt());
+        assertEquals(0, mouse.refCnt());
     }
 
     @Test
     public void testReadExactAddedBufferSizeReturnsOriginal() {
         writeQueue.add(cat, catPromise);
         writeQueue.add(mouse, mouseListener);
+
         DefaultChannelPromise aggregatePromise = newPromise();
         assertSame(cat, writeQueue.remove(3, aggregatePromise));
         assertFalse(catPromise.isSuccess());
-        aggregatePromise.trySuccess();
+        aggregatePromise.setSuccess();
         assertTrue(catPromise.isSuccess());
+        assertEquals(1, cat.refCnt());
+        cat.release();
 
         aggregatePromise = newPromise();
         assertSame(mouse, writeQueue.remove(5, aggregatePromise));
         assertFalse(mouseDone);
-        aggregatePromise.trySuccess();
+        aggregatePromise.setSuccess();
         assertTrue(mouseSuccess);
+        assertEquals(1, mouse.refCnt());
+        mouse.release();
     }
 
     @Test
     public void testReadEmptyQueueReturnsEmptyBuffer() {
+        // Not used in this test.
+        cat.release();
+        mouse.release();
+
         assertQueueSize(0, true);
         DefaultChannelPromise aggregatePromise = newPromise();
         assertEquals("", dequeue(Integer.MAX_VALUE, aggregatePromise));
@@ -173,7 +181,7 @@ public class CoalescingBufferQueueTest {
         assertQueueSize(0, true);
         assertFalse(catPromise.isSuccess());
         assertFalse(emptyPromise.isSuccess());
-        aggregatePromise.trySuccess();
+        aggregatePromise.setSuccess();
         assertTrue(catPromise.isSuccess());
         assertTrue(emptyPromise.isSuccess());
         assertEquals(0, cat.refCnt());
@@ -192,9 +200,11 @@ public class CoalescingBufferQueueTest {
         assertQueueSize(0, true);
         assertFalse(catPromise.isSuccess());
         assertFalse(mouseDone);
-        aggregatePromise.trySuccess();
+        aggregatePromise.setSuccess();
         assertTrue(catPromise.isSuccess());
         assertTrue(mouseSuccess);
+        assertEquals(0, cat.refCnt());
+        assertEquals(0, mouse.refCnt());
     }
 
     private DefaultChannelPromise newPromise() {
