@@ -99,7 +99,7 @@ public class AbstractChannelTest {
     }
 
     private static class TestChannel extends AbstractChannel {
-
+        private static final ChannelMetadata TEST_METADATA = new ChannelMetadata(false);
         private class TestUnsafe extends AbstractUnsafe {
 
             @Override
@@ -127,7 +127,7 @@ public class AbstractChannelTest {
 
         @Override
         public ChannelMetadata metadata() {
-            return null;
+            return TEST_METADATA;
         }
 
         @Override
