@@ -33,13 +33,12 @@ import static io.netty.channel.ChannelOption.RCVBUF_ALLOCATOR;
 import static io.netty.channel.ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK;
 import static io.netty.channel.ChannelOption.WRITE_BUFFER_LOW_WATER_MARK;
 import static io.netty.channel.ChannelOption.WRITE_SPIN_COUNT;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * The default {@link SocketChannelConfig} implementation.
  */
 public class DefaultChannelConfig implements ChannelConfig {
-
-    private static final RecvByteBufAllocator DEFAULT_RCVBUF_ALLOCATOR = AdaptiveRecvByteBufAllocator.DEFAULT;
     private static final MessageSizeEstimator DEFAULT_MSG_SIZE_ESTIMATOR = DefaultMessageSizeEstimator.DEFAULT;
 
     private static final int DEFAULT_CONNECT_TIMEOUT = 30000;
@@ -58,7 +57,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     protected final Channel channel;
 
     private volatile ByteBufAllocator allocator = ByteBufAllocator.DEFAULT;
-    private volatile RecvByteBufAllocator rcvBufAllocator = DEFAULT_RCVBUF_ALLOCATOR;
+    private volatile RecvByteBufAllocator rcvBufAllocator;
     private volatile MessageSizeEstimator msgSizeEstimator = DEFAULT_MSG_SIZE_ESTIMATOR;
 
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
@@ -68,9 +67,11 @@ public class DefaultChannelConfig implements ChannelConfig {
     private volatile int writeBufferLowWaterMark = 32 * 1024;
 
     public DefaultChannelConfig(Channel channel) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
+        this(channel, new AdaptiveRecvByteBufAllocator());
+    }
+
+    protected DefaultChannelConfig(Channel channel, RecvByteBufAllocator allocator) {
+        setRecvByteBufAllocator(allocator, channel.metadata());
         this.channel = channel;
     }
 
@@ -271,40 +272,26 @@ public class DefaultChannelConfig implements ChannelConfig {
         return (T) rcvBufAllocator;
     }
 
-    /**
-     * {@inheritDoc}
-     * <p>
-     * This method enforces the {@link ChannelMetadata#minMaxMessagesPerRead()}. If these predetermined limits
-     * are not appropriate for your use case consider extending the channel and overriding {@link Channel#metadata()},
-     * or use {@link #setRecvByteBufAllocator(RecvByteBufAllocator, ChannelMetadata)}.
-     */
     @Override
     public ChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-        return setRecvByteBufAllocator(allocator, channel.metadata());
+        rcvBufAllocator = checkNotNull(allocator, "allocator");
+        return this;
     }
 
     /**
      * Set the {@link RecvByteBufAllocator} which is used for the channel to allocate receive buffers.
      * @param allocator the allocator to set.
-     * @param metadata Used to determine the {@link ChannelMetadata#minMaxMessagesPerRead()} if {@code allocator}
+     * @param metadata Used to set the {@link ChannelMetadata#defaultMaxMessagesPerRead()} if {@code allocator}
      * is of type {@link MaxMessagesRecvByteBufAllocator}.
      * @return this
      */
-    public ChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator, ChannelMetadata metadata) {
-        if (allocator == null) {
+    private void setRecvByteBufAllocator(RecvByteBufAllocator allocator, ChannelMetadata metadata) {
+        if (allocator instanceof MaxMessagesRecvByteBufAllocator) {
+            ((MaxMessagesRecvByteBufAllocator) allocator).maxMessagesPerRead(metadata.defaultMaxMessagesPerRead());
+        } else if (allocator == null) {
             throw new NullPointerException("allocator");
         }
-        if (allocator instanceof MaxMessagesRecvByteBufAllocator) {
-            if (metadata == null) {
-                throw new NullPointerException("metadata");
-            }
-            MaxMessagesRecvByteBufAllocator maxMsgAllocator = (MaxMessagesRecvByteBufAllocator) allocator;
-            if (maxMsgAllocator.maxMessagesPerRead() < metadata.minMaxMessagesPerRead()) {
-                maxMsgAllocator.maxMessagesPerRead(metadata.minMaxMessagesPerRead());
-            }
-        }
         rcvBufAllocator = allocator;
-        return this;
     }
 
     @Override

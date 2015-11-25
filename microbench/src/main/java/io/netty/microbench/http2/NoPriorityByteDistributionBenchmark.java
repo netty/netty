@@ -501,6 +501,7 @@ public class NoPriorityByteDistributionBenchmark extends AbstractMicrobenchmark 
     }
 
     private static class TestChannel extends AbstractChannel {
+        private static final ChannelMetadata TEST_METADATA = new ChannelMetadata(false);
         private DefaultChannelConfig config = new DefaultChannelConfig(this);
 
         private class TestUnsafe extends AbstractUnsafe {
@@ -542,7 +543,7 @@ public class NoPriorityByteDistributionBenchmark extends AbstractMicrobenchmark 
 
         @Override
         public ChannelMetadata metadata() {
-            return null;
+            return TEST_METADATA;
         }
 
         @Override
