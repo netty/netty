@@ -23,7 +23,7 @@ import java.net.SocketAddress;
 public final class ChannelMetadata {
 
     private final boolean hasDisconnect;
-    private final int minMaxMessagesPerRead;
+    private final int defaultMaxMessagesPerRead;
 
     /**
      * Create a new instance
@@ -42,15 +42,16 @@ public final class ChannelMetadata {
      * @param hasDisconnect     {@code true} if and only if the channel has the {@code disconnect()} operation
      *                          that allows a user to disconnect and then call {@link Channel#connect(SocketAddress)}
      *                                      again, such as UDP/IP.
-     * @param minMaxMessagesPerRead If a {@link MaxMessagesRecvByteBufAllocator} is in use, then this is the minimum
-     * value enforced for {@link MaxMessagesRecvByteBufAllocator#maxMessagesPerRead()}. Must be {@code > 0}.
+     * @param defaultMaxMessagesPerRead If a {@link MaxMessagesRecvByteBufAllocator} is in use, then this value will be
+     * set for {@link MaxMessagesRecvByteBufAllocator#maxMessagesPerRead()}. Must be {@code > 0}.
      */
-    public ChannelMetadata(boolean hasDisconnect, int minMaxMessagesPerRead) {
-        if (minMaxMessagesPerRead <= 0) {
-            throw new IllegalArgumentException("minMaxMessagesPerRead: " + minMaxMessagesPerRead + " (expected > 0)");
+    public ChannelMetadata(boolean hasDisconnect, int defaultMaxMessagesPerRead) {
+        if (defaultMaxMessagesPerRead <= 0) {
+            throw new IllegalArgumentException("defaultMaxMessagesPerRead: " + defaultMaxMessagesPerRead +
+                                               " (expected > 0)");
         }
         this.hasDisconnect = hasDisconnect;
-        this.minMaxMessagesPerRead = minMaxMessagesPerRead;
+        this.defaultMaxMessagesPerRead = defaultMaxMessagesPerRead;
     }
 
     /**
@@ -63,10 +64,10 @@ public final class ChannelMetadata {
     }
 
     /**
-     * If a {@link MaxMessagesRecvByteBufAllocator} is in use, then this is the minimum value enforced for
+     * If a {@link MaxMessagesRecvByteBufAllocator} is in use, then this is the default value for
      * {@link MaxMessagesRecvByteBufAllocator#maxMessagesPerRead()}.
      */
-    public int minMaxMessagesPerRead() {
-        return minMaxMessagesPerRead;
+    public int defaultMaxMessagesPerRead() {
+        return defaultMaxMessagesPerRead;
     }
 }
