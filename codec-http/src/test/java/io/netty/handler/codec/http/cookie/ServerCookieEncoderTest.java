@@ -15,17 +15,20 @@
  */
 package io.netty.handler.codec.http.cookie;
 
-import org.junit.Test;
-
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import io.netty.handler.codec.http.HttpHeaderDateFormat;
 
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.junit.Assert.*;
+import org.junit.Test;
 
 public class ServerCookieEncoderTest {
 
@@ -59,5 +62,30 @@ public class ServerCookieEncoderTest {
         assertNull(encodedCookie1);
         assertNotNull(encodedCookie2);
         assertTrue(encodedCookie2.isEmpty());
+    }
+
+    @Test
+    public void testEncodingMultipleCookiesStrict() {
+        List<String> result = new ArrayList<String>();
+        result.add("cookie2=value2");
+        result.add("cookie1=value3");
+        Cookie cookie1 = new DefaultCookie("cookie1", "value1");
+        Cookie cookie2 = new DefaultCookie("cookie2", "value2");
+        Cookie cookie3 = new DefaultCookie("cookie1", "value3");
+        List<String> encodedCookies = ServerCookieEncoder.STRICT.encode(cookie1, cookie2, cookie3);
+        assertEquals(result, encodedCookies);
+    }
+
+    @Test
+    public void testEncodingMultipleCookiesLax() {
+        List<String> result = new ArrayList<String>();
+        result.add("cookie1=value1");
+        result.add("cookie2=value2");
+        result.add("cookie1=value3");
+        Cookie cookie1 = new DefaultCookie("cookie1", "value1");
+        Cookie cookie2 = new DefaultCookie("cookie2", "value2");
+        Cookie cookie3 = new DefaultCookie("cookie1", "value3");
+        List<String> encodedCookies = ServerCookieEncoder.LAX.encode(cookie1, cookie2, cookie3);
+        assertEquals(result, encodedCookies);
     }
 }
