@@ -125,14 +125,7 @@ public class WebSocketClientHandshaker07 extends WebSocketClientHandshaker {
     protected FullHttpRequest newHandshakeRequest() {
         // Get path
         URI wsURL = uri();
-        String path = wsURL.getPath();
-        if (wsURL.getQuery() != null && !wsURL.getQuery().isEmpty()) {
-            path = wsURL.getPath() + '?' + wsURL.getQuery();
-        }
-
-        if (path == null || path.isEmpty()) {
-            path = "/";
-        }
+        String path = rawPath(wsURL);
 
         // Get 16 bit nonce and base 64 encode it
         byte[] nonce = WebSocketUtil.randomBytes(16);
