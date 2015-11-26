@@ -753,7 +753,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
         /**
          * Finish the connect
          */
-        private boolean doFinishConnect() throws Exception {
+        boolean doFinishConnect() throws Exception {
             if (fd().finishConnect()) {
                 clearFlag(Native.EPOLLOUT);
                 return true;
