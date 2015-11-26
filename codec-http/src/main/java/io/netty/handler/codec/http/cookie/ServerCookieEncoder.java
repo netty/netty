@@ -115,21 +115,45 @@ public final class ServerCookieEncoder extends CookieEncoder {
     }
 
     /**
-     * Batch encodes cookies into Set-Cookie header values.
+     * Sort cookies into decreasing order of path length, breaking ties by sorting into
+     * increasing chronological order of creation time, as recommended by RFC 6265. This
+     * handles path and timestamp masking in situations where some older clients take the
+     * first cookie with a matching name.
+     */
+    private static final Comparator<Cookie> COOKIE_COMPARATOR = new Comparator<Cookie>() {
+        @Override
+        public int compare(Cookie c1, Cookie c2) {
+            String path1 = c1.path();
+            String path2 = c2.path();
+            // Cookies with unspecified path default to the path of the request. We don't
+            // know the request path here, but we assume that the length of an unspecified
+            // path is longer than any specified path, because setting cookies with a path
+            // longer than the request path is of limited use.
+            int len1 = path1 == null ? -1 : path1.length();
+            int len2 = path2 == null ? -1 : path2.length();
+            int assumedLen1 = len1 == -1 ? len2 + 1 : len1;
+            int assumedLen2 = len2 == -1 ? len1 + 1 : len2;
+            int diff = assumedLen2 - assumedLen1;
+            if (diff != 0) {
+                return diff;
+            }
+            // Rely on Java's sort stability to retain creation order in cases where
+            // cookies have same path length 
+            return -1;
+        }
+    };
+
+    /**
+     * Sorts the passed list of cookies in-place into the order recommended in RFC 6265,
+     * then batch encodes the list into Set-Cookie header values.
      *
      * @param cookies a bunch of cookies
      * @return the corresponding bunch of Set-Cookie headers
      */
-    public List<String> encode(Cookie... cookies) {
-        if (checkNotNull(cookies, "cookies").length == 0) {
-            return Collections.emptyList();
-        }
-
-        List<String> encoded = new ArrayList<String>(cookies.length);
+    private List<String> sortAndEncode(ArrayList<? extends Cookie> cookies) {
+        Collections.sort(cookies, COOKIE_COMPARATOR);
+        List<String> encoded = new ArrayList<String>(cookies.size());
         for (Cookie c : cookies) {
-            if (c == null) {
-                break;
-            }
             encoded.add(encode(c));
         }
         return encoded;
@@ -141,19 +165,19 @@ public final class ServerCookieEncoder extends CookieEncoder {
      * @param cookies a bunch of cookies
      * @return the corresponding bunch of Set-Cookie headers
      */
-    public List<String> encode(Collection<? extends Cookie> cookies) {
-        if (checkNotNull(cookies, "cookies").isEmpty()) {
+    public List<String> encode(Cookie... cookies) {
+        if (checkNotNull(cookies, "cookies").length == 0) {
             return Collections.emptyList();
         }
 
-        List<String> encoded = new ArrayList<String>(cookies.size());
+        ArrayList<Cookie> cookiesList = new ArrayList<Cookie>(cookies.length);
         for (Cookie c : cookies) {
             if (c == null) {
                 break;
             }
-            encoded.add(encode(c));
+            cookiesList.add(c);
         }
-        return encoded;
+        return sortAndEncode(cookiesList);
     }
 
     /**
@@ -167,13 +191,13 @@ public final class ServerCookieEncoder extends CookieEncoder {
             return Collections.emptyList();
         }
 
-        List<String> encoded = new ArrayList<String>();
+        ArrayList<Cookie> cookiesList = new ArrayList<Cookie>();
         for (Cookie c : cookies) {
             if (c == null) {
                 break;
             }
-            encoded.add(encode(c));
+            cookiesList.add(c);
         }
-        return encoded;
+        return sortAndEncode(cookiesList);
     }
 }
