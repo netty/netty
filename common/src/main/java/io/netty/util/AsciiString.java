@@ -727,14 +727,12 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             start = 0;
         }
 
-        final int thisLen = length();
-
         if (ch > MAX_CHAR_VALUE) {
             return -1;
         }
         ByteProcessor IndexOfVisitor = new IndexOfProcessor((byte) ch);
         try {
-            return forEachByte(start, thisLen - start, IndexOfVisitor);
+            return forEachByte(start, length() - start, IndexOfVisitor);
         } catch (Exception e) {
             PlatformDependent.throwException(e);
             return -1;
@@ -1780,7 +1778,6 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @return the index where the search char was found,
      * -1 if char {@code searchChar} is not found or {@code cs == null}
      */
-    //-----------------------------------------------------------------------
     public static int indexOf(final CharSequence cs, final char searchChar, int start) {
         if (cs instanceof String) {
             return ((String) cs).indexOf(searchChar, start);
