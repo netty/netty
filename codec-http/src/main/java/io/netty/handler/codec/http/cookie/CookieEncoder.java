@@ -24,7 +24,7 @@ import static io.netty.handler.codec.http.cookie.CookieUtil.unwrapValue;
  */
 public abstract class CookieEncoder {
 
-    private final boolean strict;
+    protected final boolean strict;
 
     protected CookieEncoder(boolean strict) {
         this.strict = strict;
