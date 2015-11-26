@@ -16,7 +16,6 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 
 /**
  * Uncompresses an input {@link ByteBuf} encoded with Snappy compression into an
@@ -410,19 +409,19 @@ class Snappy {
             if (in.readableBytes() < 2) {
                 return NOT_ENOUGH_INPUT;
             }
-            length = ByteBufUtil.swapShort(in.readShort());
+            length = in.readShortLE();
             break;
         case 62:
             if (in.readableBytes() < 3) {
                 return NOT_ENOUGH_INPUT;
             }
-            length = ByteBufUtil.swapMedium(in.readUnsignedMedium());
+            length = in.readUnsignedMediumLE();
             break;
         case 64:
             if (in.readableBytes() < 4) {
                 return NOT_ENOUGH_INPUT;
             }
-            length = ByteBufUtil.swapInt(in.readInt());
+            length = in.readIntLE();
             break;
         default:
             length = tag >> 2 & 0x3F;
@@ -502,7 +501,7 @@ class Snappy {
 
         int initialIndex = out.writerIndex();
         int length = 1 + (tag >> 2 & 0x03f);
-        int offset = ByteBufUtil.swapShort(in.readShort());
+        int offset = in.readShortLE();
 
         validateOffset(offset, writtenSoFar);
 
@@ -546,7 +545,7 @@ class Snappy {
 
         int initialIndex = out.writerIndex();
         int length = 1 + (tag >> 2 & 0x03F);
-        int offset = ByteBufUtil.swapInt(in.readInt());
+        int offset = in.readIntLE();
 
         validateOffset(offset, writtenSoFar);
 
