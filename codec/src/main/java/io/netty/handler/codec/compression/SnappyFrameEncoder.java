@@ -16,7 +16,6 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 
@@ -99,7 +98,7 @@ public class SnappyFrameEncoder extends MessageToByteEncoder<ByteBuf> {
         if (chunkLength >>> 24 != 0) {
             throw new CompressionException("compressed data too large: " + chunkLength);
         }
-        out.setMedium(lengthIdx, ByteBufUtil.swapMedium(chunkLength));
+        out.setMediumLE(lengthIdx, chunkLength);
     }
 
     /**
@@ -109,7 +108,7 @@ public class SnappyFrameEncoder extends MessageToByteEncoder<ByteBuf> {
      * @param chunkLength The length to write
      */
     private static void writeChunkLength(ByteBuf out, int chunkLength) {
-        out.writeMedium(ByteBufUtil.swapMedium(chunkLength));
+        out.writeMediumLE(chunkLength);
     }
 
     /**
@@ -119,6 +118,6 @@ public class SnappyFrameEncoder extends MessageToByteEncoder<ByteBuf> {
      * @param out The output buffer to write the checksum to
      */
     private static void calculateAndWriteChecksum(ByteBuf slice, ByteBuf out) {
-        out.writeInt(ByteBufUtil.swapInt(calculateChecksum(slice)));
+        out.writeIntLE(calculateChecksum(slice));
     }
 }
