@@ -34,7 +34,7 @@ public class SniHandlerTest {
         File keyFile = new File(SniHandlerTest.class.getResource("test_encrypted.pem").getFile());
         File crtFile = new File(SniHandlerTest.class.getResource("test.crt").getFile());
 
-        return new JdkSslServerContext(crtFile, keyFile, "12345");
+        return SslContextBuilder.forServer(crtFile, keyFile, "12345").build();
     }
 
     @Test

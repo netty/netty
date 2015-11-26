@@ -180,13 +180,22 @@ public abstract class SSLEngineTest {
             File servertTrustCrtFile, File serverKeyFile, File serverCrtFile, String serverKeyPassword,
             File clientTrustCrtFile, File clientKeyFile, File clientCrtFile, String clientKeyPassword)
             throws InterruptedException, SSLException {
-        serverSslCtx = SslContext.newServerContext(sslProvider(), servertTrustCrtFile, null,
-                                                   serverCrtFile, serverKeyFile, serverKeyPassword, null,
-                                                   null, IdentityCipherSuiteFilter.INSTANCE, null, 0, 0);
-        clientSslCtx = SslContext.newClientContext(sslProvider(), clientTrustCrtFile, null,
-                                                   clientCrtFile, clientKeyFile, clientKeyPassword, null,
-                                                   null, IdentityCipherSuiteFilter.INSTANCE,
-                                                   null, 0, 0);
+        serverSslCtx = SslContextBuilder.forServer(serverCrtFile, serverKeyFile, serverKeyPassword)
+                .sslProvider(sslProvider())
+                .trustManager(servertTrustCrtFile)
+                .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
+                .sessionCacheSize(0)
+                .sessionTimeout(0)
+                .build();
+
+        clientSslCtx = SslContextBuilder.forClient()
+                .sslProvider(sslProvider())
+                .trustManager(clientTrustCrtFile)
+                .keyManager(clientCrtFile, clientKeyFile, clientKeyPassword)
+                .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
+                .sessionCacheSize(0)
+                .sessionTimeout(0)
+                .build();
 
         serverConnectedChannel = null;
         sb = new ServerBootstrap();
