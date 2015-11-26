@@ -25,10 +25,12 @@ import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.Socket;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.internal.OneTimeTask;
+import io.netty.util.internal.PlatformDependent;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
@@ -46,6 +48,8 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
 
     private volatile InetSocketAddress local;
     private volatile InetSocketAddress remote;
+    private InetSocketAddress requestedRemote;
+
     private volatile Collection<InetAddress> tcpMd5SigAddresses = Collections.emptyList();
 
     EpollSocketChannel(Channel parent, Socket fd, InetSocketAddress remote) {
@@ -124,14 +128,6 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
 
     @Override
     protected SocketAddress remoteAddress0() {
-        if (remote == null) {
-            // Remote address not know, try to get it now.
-            InetSocketAddress address = fd().remoteAddress();
-            if (address != null) {
-                remote = address;
-            }
-            return address;
-        }
         return remote;
     }
 
@@ -198,22 +194,45 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
         return new EpollSocketChannelUnsafe();
     }
 
+    private static InetSocketAddress computeRemoteAddr(InetSocketAddress remoteAddr, InetSocketAddress osRemoteAddr) {
+        if (osRemoteAddr != null) {
+            if (PlatformDependent.javaVersion() >= 7) {
+                try {
+                    // Only try to construct a new InetSocketAddress if we using java >= 7 as getHostString() does not
+                    // exists in earlier releases and so the retrieval of the hostname could block the EventLoop if a
+                    // reverse lookup would be needed.
+                    return new InetSocketAddress(InetAddress.getByAddress(remoteAddr.getHostString(),
+                            osRemoteAddr.getAddress().getAddress()),
+                            osRemoteAddr.getPort());
+                } catch (UnknownHostException ignore) {
+                    // Should never happen but fallback to osRemoteAddr anyway.
+                }
+            }
+            return osRemoteAddr;
+        }
+        return remoteAddr;
+    }
+
     @Override
     protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         if (localAddress != null) {
             checkResolvable((InetSocketAddress) localAddress);
         }
-        checkResolvable((InetSocketAddress) remoteAddress);
-        boolean connected = super.doConnect(remoteAddress, localAddress);
-        if (connected) {
-            remote = (InetSocketAddress) remoteAddress;
-            return true;
-        }
         // We always need to set the localAddress even if not connected yet
         //
         // See https://github.com/netty/netty/issues/3463
         local = fd().localAddress();
-        return connected;
+
+        InetSocketAddress remoteAddr = (InetSocketAddress) remoteAddress;
+        checkResolvable(remoteAddr);
+        if (super.doConnect(remoteAddress, localAddress)) {
+            remote = computeRemoteAddr(remoteAddr, fd().remoteAddress());
+            return true;
+        }
+
+        // Store for later usage in doFinishConnect()
+        requestedRemote = remoteAddr;
+        return false;
     }
 
     private final class EpollSocketChannelUnsafe extends EpollStreamUnsafe {
@@ -225,6 +244,16 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
                 return GlobalEventExecutor.INSTANCE;
             }
             return null;
+        }
+
+        @Override
+        boolean doFinishConnect() throws Exception {
+            if (super.doFinishConnect()) {
+                remote = computeRemoteAddr(requestedRemote, fd().remoteAddress());
+                requestedRemote = null;
+                return true;
+            }
+            return false;
         }
     }
 
