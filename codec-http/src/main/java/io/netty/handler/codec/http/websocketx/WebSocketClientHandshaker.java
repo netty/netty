@@ -405,4 +405,17 @@ public abstract class WebSocketClientHandshaker {
         }
         return channel.writeAndFlush(frame, promise);
     }
+
+    /**
+     * Return the constructed raw path for the give {@link URI}.
+     */
+    static String rawPath(URI wsURL) {
+        String path = wsURL.getRawPath();
+        String query = wsURL.getQuery();
+        if (query != null && !query.isEmpty()) {
+            path = path + '?' + query;
+        }
+
+        return path == null || path.isEmpty() ? "/" : path;
+    }
 }
