@@ -902,17 +902,6 @@ public abstract class SslContext {
         return ks;
     }
 
-    static KeyStore buildKeyStore(File certChainFile, File keyFile, String keyPassword)
-            throws KeyStoreException, NoSuchAlgorithmException,
-                   CertificateException, NoSuchPaddingException, InvalidKeySpecException,
-                   InvalidAlgorithmParameterException, KeyException, IOException {
-        KeyStore ks = KeyStore.getInstance("JKS");
-        ks.load(null, null);
-        ks.setKeyEntry("key", toPrivateKey(keyFile, keyPassword),
-                       keyPassword == null ? null : keyPassword.toCharArray(), toX509Certificates(certChainFile));
-        return ks;
-    }
-
     static PrivateKey toPrivateKey(File keyFile, String keyPassword) throws NoSuchAlgorithmException,
                                                                 NoSuchPaddingException, InvalidKeySpecException,
                                                                 InvalidAlgorithmParameterException,
