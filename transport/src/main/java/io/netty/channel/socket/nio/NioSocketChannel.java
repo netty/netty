@@ -36,7 +36,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
-import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
@@ -151,7 +150,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     @Override
     public ChannelFuture shutdownOutput(final ChannelPromise promise) {
-        Executor closeExecutor = ((NioSocketChannelUnsafe) unsafe()).closeExecutor();
+        Executor closeExecutor = ((NioSocketChannelUnsafe) unsafe()).prepareToClose();
         if (closeExecutor != null) {
             closeExecutor.execute(new OneTimeTask() {
                 @Override
@@ -335,9 +334,14 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     private final class NioSocketChannelUnsafe extends NioByteUnsafe {
         @Override
-        protected Executor closeExecutor() {
+        protected Executor prepareToClose() {
             try {
                 if (javaChannel().isOpen() && config().getSoLinger() > 0) {
+                    // We need to cancel this key of the channel so we may not end up in a eventloop spin
+                    // because we try to read or write until the actual close happens which may be later due
+                    // SO_LINGER handling.
+                    // See https://github.com/netty/netty/issues/4449
+                    doDeregister();
                     return GlobalEventExecutor.INSTANCE;
                 }
             } catch (Throwable ignore) {
