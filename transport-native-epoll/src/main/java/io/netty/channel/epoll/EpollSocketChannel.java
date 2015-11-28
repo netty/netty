@@ -164,7 +164,7 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
 
     @Override
     public ChannelFuture shutdownOutput(final ChannelPromise promise) {
-        Executor closeExecutor = ((EpollSocketChannelUnsafe) unsafe()).closeExecutor();
+        Executor closeExecutor = ((EpollSocketChannelUnsafe) unsafe()).prepareToClose();
         if (closeExecutor != null) {
             closeExecutor.execute(new OneTimeTask() {
                 @Override
@@ -218,11 +218,16 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
 
     private final class EpollSocketChannelUnsafe extends EpollStreamUnsafe {
         @Override
-        protected Executor closeExecutor() {
+        protected Executor prepareToClose() {
             try {
                 // Check isOpen() first as otherwise it will throw a RuntimeException
                 // when call getSoLinger() as the fd is not valid anymore.
                 if (isOpen() && config().getSoLinger() > 0) {
+                    // We need to cancel this key of the channel so we may not end up in a eventloop spin
+                    // because we try to read or write until the actual close happens which may be later due
+                    // SO_LINGER handling.
+                    // See https://github.com/netty/netty/issues/4449
+                    ((EpollEventLoop) eventLoop()).remove(EpollSocketChannel.this);
                     return GlobalEventExecutor.INSTANCE;
                 }
             } catch (Throwable ignore) {
