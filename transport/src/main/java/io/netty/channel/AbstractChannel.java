@@ -615,7 +615,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             final boolean wasActive = isActive();
             this.outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
-            Executor closeExecutor = closeExecutor();
+            Executor closeExecutor = prepareToClose();
             if (closeExecutor != null) {
                 closeExecutor.execute(new OneTimeTask() {
                     @Override
@@ -916,11 +916,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         /**
-         * @return {@link Executor} to execute {@link #doClose()} or {@code null} if it should be done in the
-         * {@link EventLoop}.
-         +
+         * Prepares to close the {@link Channel}. If this method returns an {@link Executor}, the
+         * caller must call the {@link Executor#execute(Runnable)} method with a task that calls
+         * {@link #doClose()} on the returned {@link Executor}. If this method returns {@code null},
+         * {@link #doClose()} must be called from the caller thread. (i.e. {@link EventLoop})
          */
-        protected Executor closeExecutor() {
+        protected Executor prepareToClose() {
             return null;
         }
     }
