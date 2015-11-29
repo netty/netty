@@ -223,7 +223,7 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator {
             builder.append(part);
             builder.append(',');
         }
-        builder.append(HttpHeaderNames.UPGRADE);
+        builder.append(HttpHeaderValues.UPGRADE);
         request.headers().set(HttpHeaderNames.CONNECTION, builder.toString());
     }
 }
