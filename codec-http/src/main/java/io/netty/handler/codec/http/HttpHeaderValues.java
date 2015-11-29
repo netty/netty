@@ -193,9 +193,9 @@ public final class HttpHeaderValues {
      */
     public static final AsciiString TRAILERS = new AsciiString("trailers");
     /**
-     * {@code "Upgrade"}
+     * {@code "upgrade"}
      */
-    public static final AsciiString UPGRADE = new AsciiString("Upgrade");
+    public static final AsciiString UPGRADE = new AsciiString("upgrade");
     /**
      * {@code "websocket"}
      */
