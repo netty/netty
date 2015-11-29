@@ -19,7 +19,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerAppender;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.PrematureChannelClosureException;
+import io.netty.util.internal.OneTimeTask;
 
 import java.util.ArrayDeque;
 import java.util.List;
@@ -93,8 +95,15 @@ public final class HttpClientCodec extends ChannelHandlerAppender implements
      */
     @Override
     public void upgradeFrom(ChannelHandlerContext ctx) {
-        ctx.pipeline().remove(Decoder.class);
-        ctx.pipeline().remove(Encoder.class);
+        final ChannelPipeline p = ctx.pipeline();
+        // Remove the decoder later so that the decoder can enter the 'UPGRADED' state and forward the remaining data.
+        ctx.executor().execute(new OneTimeTask() {
+            @Override
+            public void run() {
+                p.remove(decoder());
+            }
+        });
+        p.remove(encoder());
     }
 
     /**
