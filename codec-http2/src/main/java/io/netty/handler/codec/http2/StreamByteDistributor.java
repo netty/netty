@@ -44,6 +44,13 @@ public interface StreamByteDistributor {
          * Indicates whether or not there are frames pending for this stream.
          */
         boolean hasFrame();
+
+        /**
+         * Determine if a write operation is allowed for this stream. This will typically take into account the
+         * stream's flow controller being non-negative.
+         * @return {@code true} if a write is allowed on this stream. {@code false} otherwise.
+         */
+        boolean isWriteAllowed();
     }
 
     /**

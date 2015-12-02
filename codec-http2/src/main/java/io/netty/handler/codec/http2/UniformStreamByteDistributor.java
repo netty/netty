@@ -43,8 +43,6 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
     private long totalStreamableBytes;
 
     public UniformStreamByteDistributor(Http2Connection connection) {
-        checkNotNull(connection, "connection");
-
         // Add a state for the connection.
         stateKey = connection.newKey();
         Http2Stream connectionStream = connection.connectionStream();
