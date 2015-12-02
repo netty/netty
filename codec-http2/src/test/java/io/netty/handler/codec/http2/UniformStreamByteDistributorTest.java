@@ -190,6 +190,11 @@ public class UniformStreamByteDistributorTest {
     }
 
     private void updateStream(final int streamId, final int streamableBytes, final boolean hasFrame) {
+        updateStream(streamId, streamableBytes, hasFrame, hasFrame);
+    }
+
+    private void updateStream(final int streamId, final int streamableBytes, final boolean hasFrame,
+            final boolean isWriteAllowed) {
         final Http2Stream stream = stream(streamId);
         distributor.updateStreamableBytes(new StreamByteDistributor.StreamState() {
             @Override
@@ -205,6 +210,11 @@ public class UniformStreamByteDistributorTest {
             @Override
             public boolean hasFrame() {
                 return hasFrame;
+            }
+
+            @Override
+            public boolean isWriteAllowed() {
+                return isWriteAllowed;
             }
         });
     }

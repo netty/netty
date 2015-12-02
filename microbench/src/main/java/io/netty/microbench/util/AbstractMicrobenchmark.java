@@ -52,11 +52,30 @@ public class AbstractMicrobenchmark extends AbstractMicrobenchmarkBase {
         }
     }
 
-    @Override
-    protected String[] jvmArgs() {
-        return JVM_ARGS;
+    private final boolean disableAssertions;
+    private String[] jvmArgsWithNoAssertions;
+
+    public AbstractMicrobenchmark() {
+        this(false);
     }
 
+    public AbstractMicrobenchmark(boolean disableAssertions) {
+        this.disableAssertions = disableAssertions;
+    }
+
+    @Override
+    protected String[] jvmArgs() {
+        if (!disableAssertions) {
+            return JVM_ARGS;
+        }
+
+        if (jvmArgsWithNoAssertions == null) {
+            jvmArgsWithNoAssertions = removeAssertions(JVM_ARGS);
+        }
+        return jvmArgsWithNoAssertions;
+    }
+
+    @Override
     protected ChainedOptionsBuilder newOptionsBuilder() throws Exception {
         ChainedOptionsBuilder runnerOptions = super.newOptionsBuilder();
         if (getForks() > 0) {

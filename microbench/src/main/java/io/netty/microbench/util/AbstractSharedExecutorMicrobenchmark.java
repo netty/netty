@@ -38,8 +38,8 @@ public class AbstractSharedExecutorMicrobenchmark extends AbstractMicrobenchmark
 
     static {
         final String[] customArgs = {
-        "-Xms2g", "-Xmx2g", "-XX:MaxDirectMemorySize=2g", "-Dharness.executor=CUSTOM",
-    "-Dharness.executor.class=AbstractSharedExecutorMicrobenchmark$DelegateHarnessExecutor" };
+        "-Xms2g", "-Xmx2g", "-XX:MaxDirectMemorySize=2g", "-Djmh.executor=CUSTOM",
+        "-Djmh.executor.class=io.netty.microbench.util.AbstractSharedExecutorMicrobenchmark$DelegateHarnessExecutor" };
 
         JVM_ARGS = new String[BASE_JVM_ARGS.length + customArgs.length];
         System.arraycopy(BASE_JVM_ARGS, 0, JVM_ARGS, 0, BASE_JVM_ARGS.length);
