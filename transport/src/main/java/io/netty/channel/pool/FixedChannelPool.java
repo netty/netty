@@ -35,7 +35,7 @@ import java.util.concurrent.TimeoutException;
  * {@link ChannelPool} implementation that takes another {@link ChannelPool} implementation and enforce a maximum
  * number of concurrent connections.
  */
-public final class FixedChannelPool extends SimpleChannelPool {
+public class FixedChannelPool extends SimpleChannelPool {
     private static final IllegalStateException FULL_EXCEPTION =
             new IllegalStateException("Too many outstanding acquire operations");
     private static final TimeoutException TIMEOUT_EXCEPTION =
