@@ -656,6 +656,11 @@ public class PriorityStreamByteDistributorTest {
             public boolean hasFrame() {
                 return hasFrame;
             }
+
+            @Override
+            public boolean isWriteAllowed() {
+                return hasFrame;
+            }
         });
     }
 

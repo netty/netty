@@ -604,6 +604,11 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             this.markedWritable = isWritable;
         }
 
+        @Override
+        public final boolean isWriteAllowed() {
+            return windowSize() >= 0;
+        }
+
         abstract int windowSize();
 
         abstract int initialWindowSize();

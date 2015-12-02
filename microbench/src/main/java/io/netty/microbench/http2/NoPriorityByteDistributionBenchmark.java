@@ -14,54 +14,44 @@
  */
 package io.netty.microbench.http2;
 
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.AbstractChannel;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandler;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelMetadata;
-import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelProgressivePromise;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultChannelConfig;
-import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http2.DefaultHttp2Connection;
 import io.netty.handler.codec.http2.DefaultHttp2RemoteFlowController;
 import io.netty.handler.codec.http2.Http2Connection;
+import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2Exception;
+import io.netty.handler.codec.http2.Http2FrameAdapter;
 import io.netty.handler.codec.http2.Http2RemoteFlowController;
 import io.netty.handler.codec.http2.Http2Stream;
 import io.netty.handler.codec.http2.Http2StreamVisitor;
 import io.netty.handler.codec.http2.PriorityStreamByteDistributor;
 import io.netty.handler.codec.http2.StreamByteDistributor;
 import io.netty.handler.codec.http2.UniformStreamByteDistributor;
+import io.netty.handler.codec.http2.WeightedFairQueueByteDistributor;
+import io.netty.microbench.channel.EmbeddedChannelWriteReleaseHandlerContext;
 import io.netty.microbench.util.AbstractMicrobenchmark;
-import io.netty.util.Attribute;
-import io.netty.util.AttributeKey;
-import io.netty.util.concurrent.EventExecutor;
+
 import org.openjdk.jmh.annotations.AuxCounters;
 import org.openjdk.jmh.annotations.Benchmark;
-import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
-
-import java.net.SocketAddress;
+import org.openjdk.jmh.annotations.TearDown;
+import org.openjdk.jmh.annotations.Threads;
 
 /**
  * Benchmark to compare stream byte distribution algorithms when priorities are identical for
  * all streams.
  */
-@Fork(1)
+@Threads(1)
 @State(Scope.Benchmark)
 public class NoPriorityByteDistributionBenchmark extends AbstractMicrobenchmark {
     public enum Algorithm {
         PRIORITY,
+        WFQ,
         UNIFORM
     }
 
@@ -75,14 +65,16 @@ public class NoPriorityByteDistributionBenchmark extends AbstractMicrobenchmark 
     private Algorithm algorithm;
 
     private Http2Connection connection;
-
     private Http2Connection.PropertyKey dataRefresherKey;
-
     private Http2RemoteFlowController controller;
-
     private StreamByteDistributor distributor;
-
     private AdditionalCounters counters;
+    private Http2ConnectionHandler handler;
+    private ChannelHandlerContext ctx;
+
+    public NoPriorityByteDistributionBenchmark() {
+        super(true);
+    }
 
     /**
      * Additional counters for a single iteration.
@@ -90,11 +82,11 @@ public class NoPriorityByteDistributionBenchmark extends AbstractMicrobenchmark 
     @AuxCounters
     @State(Scope.Thread)
     public static class AdditionalCounters {
-        private int minWriteSize;
-        private int maxWriteSize;
-        private long totalBytes;
-        private long numWrites;
-        private int invocations;
+        int minWriteSize;
+        int maxWriteSize;
+        long totalBytes;
+        long numWrites;
+        int invocations;
 
         public int minWriteSize() {
             return minWriteSize;
@@ -121,8 +113,13 @@ public class NoPriorityByteDistributionBenchmark extends AbstractMicrobenchmark 
         }
     };
 
+    @TearDown(Level.Trial)
+    public void tearDownTrial() throws Exception {
+        ctx.close();
+    }
+
     @Setup(Level.Trial)
-    public void setupTrial() throws Http2Exception {
+    public void setupTrial() throws Exception {
         connection = new DefaultHttp2Connection(false);
         dataRefresherKey = connection.newKey();
 
@@ -131,12 +128,28 @@ public class NoPriorityByteDistributionBenchmark extends AbstractMicrobenchmark 
             case PRIORITY:
                 distributor = new PriorityStreamByteDistributor(connection);
                 break;
+            case WFQ:
+                distributor = new WeightedFairQueueByteDistributor(connection);
+                break;
             case UNIFORM:
                 distributor = new UniformStreamByteDistributor(connection);
                 break;
         }
         controller = new DefaultHttp2RemoteFlowController(connection, new ByteCounter(distributor));
-        controller.channelHandlerContext(new TestContext());
+        connection.remote().flowController(controller);
+        handler = new Http2ConnectionHandler.Builder()
+            .encoderEnforceMaxConcurrentStreams(false).validateHeaders(false)
+            .frameListener(new Http2FrameAdapter())
+            .build(connection);
+        ctx = new EmbeddedChannelWriteReleaseHandlerContext(
+                                            PooledByteBufAllocator.DEFAULT, handler) {
+            @Override
+            protected void handleException(Throwable t) {
+                handleUnexpectedException(t);
+            }
+        };
+        handler.handlerAdded(ctx);
+        handler.channelActive(ctx);
 
         // Create the streams, each initialized with MAX_INT bytes.
         for (int i = 0; i < numStreams; ++i) {
@@ -281,298 +294,5 @@ public class NoPriorityByteDistributionBenchmark extends AbstractMicrobenchmark 
                 delegate.write(stream, numBytes);
             }
         }
-    }
-
-    private static class TestContext implements ChannelHandlerContext {
-
-        private Channel channel = new TestChannel();
-
-        @Override
-        public Channel channel() {
-            return channel;
-        }
-
-        @Override
-        public EventExecutor executor() {
-            return channel.eventLoop();
-        }
-
-        @Override
-        public String name() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelHandler handler() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean isRemoved() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelRegistered() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelUnregistered() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelActive() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelInactive() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelHandlerContext fireExceptionCaught(Throwable cause) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelHandlerContext fireUserEventTriggered(Object event) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelRead(Object msg) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelReadComplete() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelWritabilityChanged() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture bind(SocketAddress localAddress) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture connect(SocketAddress remoteAddress) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture disconnect() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture close() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture deregister() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress,
-                                     ChannelPromise promise) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture disconnect(ChannelPromise promise) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture close(ChannelPromise promise) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture deregister(ChannelPromise promise) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelHandlerContext read() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture write(Object msg) {
-            return channel.newSucceededFuture();
-        }
-
-        @Override
-        public ChannelFuture write(Object msg, ChannelPromise promise) {
-            return promise;
-        }
-
-        @Override
-        public ChannelHandlerContext flush() {
-            return this;
-        }
-
-        @Override
-        public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
-            return promise;
-        }
-
-        @Override
-        public ChannelFuture writeAndFlush(Object msg) {
-            return null;
-        }
-
-        @Override
-        public ChannelPipeline pipeline() {
-            return channel.pipeline();
-        }
-
-        @Override
-        public ByteBufAllocator alloc() {
-            return channel.alloc();
-        }
-
-        @Override
-        public ChannelPromise newPromise() {
-            return channel.newPromise();
-        }
-
-        @Override
-        public ChannelProgressivePromise newProgressivePromise() {
-            return channel.newProgressivePromise();
-        }
-
-        @Override
-        public ChannelFuture newSucceededFuture() {
-            return channel.newSucceededFuture();
-        }
-
-        @Override
-        public ChannelFuture newFailedFuture(Throwable cause) {
-            return channel.newFailedFuture(cause);
-        }
-
-        @Override
-        public ChannelPromise voidPromise() {
-            return channel.voidPromise();
-        }
-
-        @Override
-        public <T> Attribute<T> attr(AttributeKey<T> key) {
-            return channel.attr(key);
-        }
-
-        @Override
-        public <T> boolean hasAttr(AttributeKey<T> key) {
-            return channel.hasAttr(key);
-        }
-    }
-
-    private static class TestChannel extends AbstractChannel {
-        private static final ChannelMetadata TEST_METADATA = new ChannelMetadata(false);
-        private DefaultChannelConfig config = new DefaultChannelConfig(this);
-
-        private class TestUnsafe extends AbstractUnsafe {
-            @Override
-            public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-            }
-        }
-
-        public TestChannel() {
-            super(null);
-            config.setWriteBufferHighWaterMark(Integer.MAX_VALUE);
-            config.setWriteBufferLowWaterMark(Integer.MAX_VALUE);
-        }
-
-        @Override
-        public long bytesBeforeUnwritable() {
-            return Long.MAX_VALUE;
-        }
-
-        @Override
-        public boolean isWritable() {
-            return true;
-        }
-
-        @Override
-        public ChannelConfig config() {
-            return new DefaultChannelConfig(this);
-        }
-
-        @Override
-        public boolean isOpen() {
-            return true;
-        }
-
-        @Override
-        public boolean isActive() {
-            return true;
-        }
-
-        @Override
-        public ChannelMetadata metadata() {
-            return TEST_METADATA;
-        }
-
-        @Override
-        protected AbstractUnsafe newUnsafe() {
-            return new TestUnsafe();
-        }
-
-        @Override
-        protected boolean isCompatible(EventLoop loop) {
-            return true;
-        }
-
-        @Override
-        protected SocketAddress localAddress0() {
-            return null;
-        }
-
-        @Override
-        protected SocketAddress remoteAddress0() {
-            return null;
-        }
-
-        @Override
-        protected void doBind(SocketAddress localAddress) throws Exception { }
-
-        @Override
-        protected void doDisconnect() throws Exception { }
-
-        @Override
-        protected void doClose() throws Exception { }
-
-        @Override
-        protected void doBeginRead() throws Exception { }
-
-        @Override
-        protected void doWrite(ChannelOutboundBuffer in) throws Exception { }
     }
 }

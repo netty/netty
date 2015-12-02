@@ -47,4 +47,22 @@ public final class MathUtil {
     public static boolean isOutOfBounds(int index, int length, int capacity) {
         return (index | length | (index + length) | (capacity - (index + length))) < 0;
     }
+
+    /**
+     * Compare to {@code long} values.
+     * @param x the first {@code long} to compare.
+     * @param y the second {@code long} to compare.
+     * @return
+     * <ul>
+     * <li>0 if {@code x == y}</li>
+     * <li>{@code > 0} if {@code x > y}</li>
+     * <li>{@code < 0} if {@code x < y}</li>
+     * </ul>
+     */
+    public static int compare(long x, long y) {
+        if (PlatformDependent.javaVersion() < 7) {
+            return (x < y) ? -1 : (x > y) ? 1 : 0;
+        }
+        return Long.compare(x, y);
+    }
 }
