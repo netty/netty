@@ -158,6 +158,75 @@ public class InboundHttp2ToHttpAdapterTest {
     }
 
     @Test
+    public void clientRequestSingleHeaderCookieSplitIntoMultipleEntries() throws Exception {
+        boostrapEnv(1, 1, 1);
+        final FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+                "/some/path/resource2", true);
+        try {
+            HttpHeaders httpHeaders = request.headers();
+            httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "https");
+            httpHeaders.set(HttpHeaderNames.HOST, "example.org");
+            httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+            httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
+            httpHeaders.set(HttpHeaderNames.COOKIE, "a=b; c=d; e=f");
+            final Http2Headers http2Headers = new DefaultHttp2Headers().method(new AsciiString("GET")).
+                    scheme(new AsciiString("https")).authority(new AsciiString("example.org"))
+                    .path(new AsciiString("/some/path/resource2"))
+                    .add(HttpHeaderNames.COOKIE, "a=b")
+                    .add(HttpHeaderNames.COOKIE, "c=d")
+                    .add(HttpHeaderNames.COOKIE, "e=f");
+            runInChannel(clientChannel, new Http2Runnable() {
+                @Override
+                public void run() {
+                    frameWriter.writeHeaders(ctxClient(), 3, http2Headers, 0, true, newPromiseClient());
+                    ctxClient().flush();
+                }
+            });
+            awaitRequests();
+            ArgumentCaptor<FullHttpMessage> requestCaptor = ArgumentCaptor.forClass(FullHttpMessage.class);
+            verify(serverListener).messageReceived(requestCaptor.capture());
+            capturedRequests = requestCaptor.getAllValues();
+            assertEquals(request, capturedRequests.get(0));
+        } finally {
+            request.release();
+        }
+    }
+
+    @Test
+    public void clientRequestSingleHeaderCookieSplitIntoMultipleEntries2() throws Exception {
+        boostrapEnv(1, 1, 1);
+        final FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+                "/some/path/resource2", true);
+        try {
+            HttpHeaders httpHeaders = request.headers();
+            httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "https");
+            httpHeaders.set(HttpHeaderNames.HOST, "example.org");
+            httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+            httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
+            httpHeaders.set(HttpHeaderNames.COOKIE, "a=b; c=d; e=f");
+            final Http2Headers http2Headers = new DefaultHttp2Headers().method(new AsciiString("GET")).
+                    scheme(new AsciiString("https")).authority(new AsciiString("example.org"))
+                    .path(new AsciiString("/some/path/resource2"))
+                    .add(HttpHeaderNames.COOKIE, "a=b; c=d")
+                    .add(HttpHeaderNames.COOKIE, "e=f");
+            runInChannel(clientChannel, new Http2Runnable() {
+                @Override
+                public void run() {
+                    frameWriter.writeHeaders(ctxClient(), 3, http2Headers, 0, true, newPromiseClient());
+                    ctxClient().flush();
+                }
+            });
+            awaitRequests();
+            ArgumentCaptor<FullHttpMessage> requestCaptor = ArgumentCaptor.forClass(FullHttpMessage.class);
+            verify(serverListener).messageReceived(requestCaptor.capture());
+            capturedRequests = requestCaptor.getAllValues();
+            assertEquals(request, capturedRequests.get(0));
+        } finally {
+            request.release();
+        }
+    }
+
+    @Test
     public void clientRequestSingleHeaderNonAsciiShouldThrow() throws Exception {
         boostrapEnv(1, 1, 1);
         final Http2Headers http2Headers = new DefaultHttp2Headers()

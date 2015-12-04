@@ -141,6 +141,27 @@ public class HttpToHttp2ConnectionHandlerTest {
     }
 
     @Test
+    public void testMultipleCookieEntriesAreCombined() throws Exception {
+        bootstrapEnv(2, 1, 0);
+        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET,
+                "http://my-user_name@www.example.org:5555/example");
+        final HttpHeaders httpHeaders = request.headers();
+        httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        httpHeaders.set(HttpHeaderNames.HOST, "my-user_name@www.example.org:5555");
+        httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
+        httpHeaders.set(HttpHeaderNames.COOKIE, "a=b; c=d; e=f");
+        final Http2Headers http2Headers =
+                new DefaultHttp2Headers().method(new AsciiString("GET")).path(new AsciiString("/example"))
+                .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("http"))
+                .add(HttpHeaderNames.COOKIE, "a=b")
+                .add(HttpHeaderNames.COOKIE, "c=d")
+                .add(HttpHeaderNames.COOKIE, "e=f");
+
+        ChannelPromise writePromise = newPromise();
+        verifyHeadersOnly(http2Headers, writePromise, clientChannel.writeAndFlush(request, writePromise));
+    }
+
+    @Test
     public void testOriginFormRequestTargetHandled() throws Exception {
         bootstrapEnv(2, 1, 0);
         final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/where?q=now&f=then#section1");
