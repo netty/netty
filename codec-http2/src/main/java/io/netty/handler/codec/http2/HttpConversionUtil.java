@@ -14,6 +14,18 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http.HttpScheme.HTTP;
+import static io.netty.handler.codec.http.HttpScheme.HTTPS;
+import static io.netty.handler.codec.http.HttpUtil.isAsteriskForm;
+import static io.netty.handler.codec.http.HttpUtil.isOriginForm;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.handler.codec.http2.Http2Exception.streamError;
+import static io.netty.util.AsciiString.EMPTY_STRING;
+import static io.netty.util.ByteProcessor.FIND_SEMI_COLON;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.StringUtil.isNullOrEmpty;
+import static io.netty.util.internal.StringUtil.length;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpMessage;
@@ -34,18 +46,6 @@ import io.netty.util.AsciiString;
 import java.net.URI;
 import java.util.Iterator;
 import java.util.Map.Entry;
-
-import static io.netty.handler.codec.http.HttpScheme.HTTP;
-import static io.netty.handler.codec.http.HttpScheme.HTTPS;
-import static io.netty.handler.codec.http.HttpUtil.isAsteriskForm;
-import static io.netty.handler.codec.http.HttpUtil.isOriginForm;
-import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
-import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static io.netty.handler.codec.http2.Http2Exception.streamError;
-import static io.netty.util.AsciiString.EMPTY_STRING;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import static io.netty.util.internal.StringUtil.isNullOrEmpty;
-import static io.netty.util.internal.StringUtil.length;
 
 /**
  * Provides utility methods and constants for the HTTP/2 to HTTP conversion
@@ -330,9 +330,33 @@ public final class HttpConversionUtil {
             final AsciiString aName = AsciiString.of(entry.getKey()).toLowerCase();
             if (!HTTP_TO_HTTP2_HEADER_BLACKLIST.contains(aName)) {
                 // https://tools.ietf.org/html/rfc7540#section-8.1.2.2 makes a special exception for TE
-                if (!aName.contentEqualsIgnoreCase(HttpHeaderNames.TE) ||
-                    AsciiString.contentEqualsIgnoreCase(entry.getValue(), HttpHeaderValues.TRAILERS)) {
-                    out.add(aName, AsciiString.of(entry.getValue()));
+                if (aName.contentEqualsIgnoreCase(HttpHeaderNames.TE) &&
+                    !AsciiString.contentEqualsIgnoreCase(entry.getValue(), HttpHeaderValues.TRAILERS)) {
+                    throw new IllegalArgumentException("Invalid value for " + HttpHeaderNames.TE + ": " +
+                                                        entry.getValue());
+                }
+                if (aName.contentEqualsIgnoreCase(HttpHeaderNames.COOKIE)) {
+                    AsciiString value = AsciiString.of(entry.getValue());
+                    // split up cookies to allow for better compression
+                    // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
+                    int index = value.forEachByte(FIND_SEMI_COLON);
+                    if (index != -1) {
+                        int start = 0;
+                        do {
+                            out.add(HttpHeaderNames.COOKIE, value.subSequence(start, index, false));
+                            // skip 2 characters "; " (see https://tools.ietf.org/html/rfc6265#section-4.2.1)
+                            start = index + 2;
+                        } while (start < value.length() &&
+                                (index = value.forEachByte(start, value.length() - start, FIND_SEMI_COLON)) != -1);
+                        if (start >= value.length()) {
+                            throw new IllegalArgumentException("cookie value is of unexpected format: " + value);
+                        }
+                        out.add(HttpHeaderNames.COOKIE, value.subSequence(start, value.length(), false));
+                    } else {
+                        out.add(HttpHeaderNames.COOKIE, value);
+                    }
+                } else {
+                    out.add(aName, entry.getValue());
                 }
             }
         }
@@ -449,7 +473,15 @@ public final class HttpConversionUtil {
                     throw streamError(streamId, PROTOCOL_ERROR,
                             "Invalid HTTP/2 header '%s' encountered in translation to HTTP/1.x", name);
                 }
-                output.add(AsciiString.of(name), AsciiString.of(value));
+                if (HttpHeaderNames.COOKIE.equals(name)) {
+                    // combine the cookie values into 1 header entry.
+                    // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
+                    String existingCookie = output.get(HttpHeaderNames.COOKIE);
+                    output.set(HttpHeaderNames.COOKIE,
+                               (existingCookie != null) ? (existingCookie + "; " + value) : value);
+                } else {
+                    output.add(name, value);
+                }
             }
         }
     }

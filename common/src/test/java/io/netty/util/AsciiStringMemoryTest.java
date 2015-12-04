@@ -17,6 +17,7 @@ package io.netty.util;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import io.netty.util.ByteProcessor.IndexOfProcessor;
 
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
@@ -103,6 +104,18 @@ public class AsciiStringMemoryTest {
     }
 
     @Test
+    public void forEachWithIndexEndTest() throws Exception {
+        assertNotEquals(-1, aAsciiString.forEachByte(aAsciiString.length() - 1,
+                1, new IndexOfProcessor(aAsciiString.byteAt(aAsciiString.length() - 1))));
+    }
+
+    @Test
+    public void forEachWithIndexBeginTest() throws Exception {
+        assertNotEquals(-1, aAsciiString.forEachByte(0,
+                1, new IndexOfProcessor(aAsciiString.byteAt(0))));
+    }
+
+    @Test
     public void forEachDescTest() throws Exception {
         final AtomicReference<Integer> aCount = new AtomicReference<Integer>(0);
         final AtomicReference<Integer> bCount = new AtomicReference<Integer>(0);
@@ -126,6 +139,18 @@ public class AsciiStringMemoryTest {
         });
         assertEquals(aAsciiString.length(), aCount.get().intValue());
         assertEquals(bAsciiString.length(), bCount.get().intValue());
+    }
+
+    @Test
+    public void forEachDescWithIndexEndTest() throws Exception {
+        assertNotEquals(-1, bAsciiString.forEachByteDesc(bAsciiString.length() - 1,
+                1, new IndexOfProcessor(bAsciiString.byteAt(bAsciiString.length() - 1))));
+    }
+
+    @Test
+    public void forEachDescWithIndexBeginTest() throws Exception {
+        assertNotEquals(-1, bAsciiString.forEachByteDesc(0,
+                1, new IndexOfProcessor(bAsciiString.byteAt(0))));
     }
 
     @Test
