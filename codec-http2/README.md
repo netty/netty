@@ -12,7 +12,7 @@ This is currently the recommended approach for doing TLS with Netty.
 1. **Speed**: In local testing, we've seen performance improvements of 3x over the JDK. GCM, which is used by the only cipher suite required by the [HTTP/2 RFC](https://tools.ietf.org/html/rfc7540#section-9.2.2), is 10-500x faster.
 2. **Ciphers**: OpenSSL has its own ciphers and is not dependent on the limitations of the JDK. This allows supporting GCM on Java 7.
 3. **ALPN to NPN Fallback**: OpenSSL can support ALPN and NPN simultaneously. The JDK implementation by Netty only supports either ALPN or NPN at any given time and [NPN is only supported in JDK 7](https://wiki.eclipse.org/Jetty/Feature/NPN).
-4. **Version Independence**: does not require using a different library version depending on the JDK update. This is a limitation of the JDK ALPN and NPN implementation used by Netty.
+4. **Java Version Independence**: does not require using a different library version depending on the JDK update. This is a limitation of the JDK ALPN and NPN implementation used by Netty.
 
 ### Requirements for using OpenSSL
 
