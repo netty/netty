@@ -276,7 +276,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
     }
 
     private int forEachByte0(int index, int length, ByteProcessor visitor) throws Exception {
-        final int len = offset + length;
+        final int len = offset + index + length;
         for (int i = offset + index; i < len; ++i) {
             if (!visitor.process(value[i])) {
                 return i - offset;
