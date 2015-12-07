@@ -100,6 +100,7 @@ abstract class DnsNameResolverContext<T> {
     }
 
     void resolve() {
+        InetSocketAddress nameServerAddrToTry = nameServerAddrs.next();
         for (InternetProtocolFamily f: resolveAddressTypes) {
             final DnsRecordType type;
             switch (f) {
@@ -113,7 +114,7 @@ abstract class DnsNameResolverContext<T> {
                 throw new Error();
             }
 
-            query(nameServerAddrs.next(), new DefaultDnsQuestion(hostname, type));
+            query(nameServerAddrToTry, new DefaultDnsQuestion(hostname, type));
         }
     }
 
