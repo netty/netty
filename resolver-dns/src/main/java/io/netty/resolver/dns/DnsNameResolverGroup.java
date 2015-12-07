@@ -27,12 +27,12 @@ import io.netty.util.internal.StringUtil;
 
 import java.net.InetSocketAddress;
 
-import static io.netty.resolver.dns.DnsNameResolver.*;
+import static io.netty.resolver.dns.DnsNameResolver.ANY_LOCAL_ADDR;
 
 /**
  * A {@link NameResolverGroup} of {@link DnsNameResolver}s.
  */
-public final class DnsNameResolverGroup extends NameResolverGroup<InetSocketAddress> {
+public class DnsNameResolverGroup extends NameResolverGroup<InetSocketAddress> {
 
     private final ChannelFactory<? extends DatagramChannel> channelFactory;
     private final InetSocketAddress localAddress;
@@ -63,13 +63,25 @@ public final class DnsNameResolverGroup extends NameResolverGroup<InetSocketAddr
     }
 
     @Override
-    protected NameResolver<InetSocketAddress> newResolver(EventExecutor executor) throws Exception {
+    protected final NameResolver<InetSocketAddress> newResolver(EventExecutor executor) throws Exception {
         if (!(executor instanceof EventLoop)) {
             throw new IllegalStateException(
                     "unsupported executor type: " + StringUtil.simpleClassName(executor) +
                     " (expected: " + StringUtil.simpleClassName(EventLoop.class));
         }
 
-        return new DnsNameResolver((EventLoop) executor, channelFactory, localAddress, nameServerAddresses);
+        return newResolver((EventLoop) executor, channelFactory, localAddress, nameServerAddresses);
+    }
+
+    /**
+     * Creates a new {@link DnsNameResolver}. Override this method to create an alternative {@link DnsNameResolver}
+     * implementation or override the default configuration.
+     */
+    protected DnsNameResolver newResolver(
+            EventLoop eventLoop, ChannelFactory<? extends DatagramChannel> channelFactory,
+            InetSocketAddress localAddress, DnsServerAddresses nameServerAddresses) throws Exception {
+
+        return new DnsNameResolver(
+                eventLoop, channelFactory, localAddress, nameServerAddresses);
     }
 }
