@@ -19,10 +19,13 @@ package io.netty.util.concurrent;
 import org.junit.Test;
 
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -33,6 +36,21 @@ import static org.junit.Assert.assertTrue;
 
 @SuppressWarnings("unchecked")
 public class DefaultPromiseTest {
+
+    @Test(expected = CancellationException.class)
+    public void testCancellationExceptionIsThrownWhenBlockingGet() throws InterruptedException, ExecutionException {
+        final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
+        promise.cancel(false);
+        promise.get();
+    }
+
+    @Test(expected = CancellationException.class)
+    public void testCancellationExceptionIsThrownWhenBlockingGetWithTimeout() throws InterruptedException,
+            ExecutionException, TimeoutException {
+        final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
+        promise.cancel(false);
+        promise.get(1, TimeUnit.SECONDS);
+    }
 
     @Test
     public void testNoStackOverflowErrorWithImmediateEventExecutorA() throws Exception {
