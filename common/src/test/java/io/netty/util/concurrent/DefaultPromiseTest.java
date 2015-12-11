@@ -178,22 +178,12 @@ public class DefaultPromiseTest {
 
     @Test(timeout = 2000)
     public void testLateListenerIsOrderedCorrectlySuccess() throws InterruptedException {
-        final EventExecutor executor = new TestEventExecutor();
-        try {
-            testLateListenerIsOrderedCorrectly(null);
-        } finally {
-            executor.shutdownGracefully(0, 0, TimeUnit.SECONDS).sync();
-        }
+        testLateListenerIsOrderedCorrectly(null);
     }
 
     @Test(timeout = 2000)
     public void testLateListenerIsOrderedCorrectlyFailure() throws InterruptedException {
-        final EventExecutor executor = new TestEventExecutor();
-        try {
-            testLateListenerIsOrderedCorrectly(fakeException());
-        } finally {
-            executor.shutdownGracefully(0, 0, TimeUnit.SECONDS).sync();
-        }
+        testLateListenerIsOrderedCorrectly(fakeException());
     }
 
     /**
