@@ -31,7 +31,7 @@ public abstract class WebSocketClientHandshakerTest {
         WebSocketClientHandshaker handshaker = newHandshaker(uri);
         FullHttpRequest request = handshaker.newHandshakeRequest();
         try {
-            assertEquals("/path%20with%20ws", request.getUri());
+            assertEquals("/path%20with%20ws", request.uri());
         } finally {
             request.release();
         }
