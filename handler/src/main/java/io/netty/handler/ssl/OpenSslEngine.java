@@ -518,7 +518,7 @@ public final class OpenSslEngine extends SSLEngine {
                         break;
                     default:
                         // Everything else is considered as error
-                        shutdownWithError("SSL_write");
+                        throw shutdownWithError("SSL_write");
                     }
                 }
 
@@ -540,24 +540,15 @@ public final class OpenSslEngine extends SSLEngine {
         return newResult(bytesConsumed, bytesProduced, status);
     }
 
-    private void checkPendingHandshakeException() throws SSLHandshakeException {
-        if (handshakeException != null) {
-            SSLHandshakeException exception = handshakeException;
-            handshakeException = null;
-            shutdown();
-            throw exception;
-        }
-    }
-
     /**
      * Log the error, shutdown the engine and throw an exception.
      */
-    private void shutdownWithError(String operations) throws SSLException {
+    private SSLException shutdownWithError(String operations) {
         String err = SSL.getLastError();
-        shutdownWithError(operations, err);
+        return shutdownWithError(operations, err);
     }
 
-    private void shutdownWithError(String operation, String err) throws SSLException {
+    private SSLException shutdownWithError(String operation, String err) {
         if (logger.isDebugEnabled()) {
             logger.debug("{} failed: OpenSSL error: {}", operation, err);
         }
@@ -565,9 +556,9 @@ public final class OpenSslEngine extends SSLEngine {
         // There was an internal error -- shutdown
         shutdown();
         if (handshakeState == HandshakeState.FINISHED) {
-            throw new SSLException(err);
+            return new SSLException(err);
         }
-        throw new SSLHandshakeException(err);
+        return new SSLHandshakeException(err);
     }
 
     public synchronized SSLEngineResult unwrap(
@@ -725,8 +716,7 @@ public final class OpenSslEngine extends SSLEngine {
                         // break to the outer loop
                         return newResult(bytesConsumed, bytesProduced, status);
                     default:
-                        // Everything else is considered as error so shutdown and throw an exceptions
-                        shutdownWithError("SSL_read");
+                        return sslReadErrorResult(SSL.getLastErrorNumber(), bytesConsumed, bytesProduced);
                     }
                 }
             }
@@ -737,7 +727,7 @@ public final class OpenSslEngine extends SSLEngine {
                 // We do not check SSL_get_error as we are not interested in any error that is not fatal.
                 int err = SSL.getLastErrorNumber();
                 if (OpenSsl.isError(err)) {
-                    shutdownWithError("SSL_read", SSL.getErrorString(err));
+                    return sslReadErrorResult(err, bytesConsumed, bytesProduced);
                 }
             }
         }
@@ -754,6 +744,22 @@ public final class OpenSslEngine extends SSLEngine {
         }
 
         return newResult(bytesConsumed, bytesProduced, status);
+    }
+
+    private SSLEngineResult sslReadErrorResult(int err, int bytesConsumed, int bytesProduced) throws SSLException {
+        // Check if we have a pending handshakeException and if so see if we need to consume all pending data from the
+        // BIO first or can just shutdown and throw it now.
+        // This is needed so we ensure close_notify etc is correctly send to the remote peer.
+        // See https://github.com/netty/netty/issues/3900
+        if (SSL.pendingWrittenBytesInBIO(networkBIO) > 0) {
+            if (handshakeException == null && handshakeState != HandshakeState.FINISHED) {
+                // we seems to have data left that needs to be transfered and so the user needs
+                // call wrap(...). Store the error so we can pick it up later.
+                handshakeException = new SSLHandshakeException(SSL.getLastError());
+            }
+            return new SSLEngineResult(OK, NEED_WRAP, bytesConsumed, bytesProduced);
+        }
+        throw shutdownWithError("SSL_read", SSL.getErrorString(err));
     }
 
     private int pendingAppData() {
@@ -1128,7 +1134,7 @@ public final class OpenSslEngine extends SSLEngine {
                 // https://github.com/apache/httpd/blob/2.4.16/modules/ssl/ssl_engine_kernel.c#L812
                 // http://h71000.www7.hp.com/doc/83final/ba554_90007/ch04s03.html
                 if (SSL.renegotiate(ssl) != 1 || SSL.doHandshake(ssl) != 1) {
-                    shutdownWithError("renegotiation failed");
+                    throw shutdownWithError("renegotiation failed");
                 }
 
                 SSL.setState(ssl, SSL.SSL_ST_ACCEPT);
@@ -1158,9 +1164,34 @@ public final class OpenSslEngine extends SSLEngine {
             return FINISHED;
         }
         checkEngineClosed();
+
+        // Check if we have a pending handshakeException and if so see if we need to consume all pending data from the
+        // BIO first or can just shutdown and throw it now.
+        // This is needed so we ensure close_notify etc is correctly send to the remote peer.
+        // See https://github.com/netty/netty/issues/3900
+        SSLHandshakeException exception = handshakeException;
+        if (exception != null) {
+            if (SSL.pendingWrittenBytesInBIO(networkBIO) > 0) {
+                // There is something pending, we need to consume it first via a WRAP so we not loose anything.
+                return NEED_WRAP;
+            }
+            // No more data left to send to the remote peer, so null out the exception field, shutdown and throw
+            // the exception.
+            handshakeException = null;
+            shutdown();
+            throw exception;
+        }
+
         int code = SSL.doHandshake(ssl);
         if (code <= 0) {
-            checkPendingHandshakeException();
+            // Check if we have a pending exception that was created during the handshake and if so throw it after
+            // shutdown the connection.
+            if (handshakeException != null) {
+                exception = handshakeException;
+                handshakeException = null;
+                shutdown();
+                throw exception;
+            }
 
             int sslError = SSL.getError(ssl, code);
 
@@ -1170,13 +1201,11 @@ public final class OpenSslEngine extends SSLEngine {
                 return pendingStatus(SSL.pendingWrittenBytesInBIO(networkBIO));
             default:
                 // Everything else is considered as error
-                shutdownWithError("SSL_do_handshake");
+                throw shutdownWithError("SSL_do_handshake");
             }
         }
-
         // if SSL_do_handshake returns > 0 or sslError == SSL.SSL_ERROR_NAME it means the handshake was finished.
         session.handshakeFinished();
-
         return FINISHED;
     }
 
