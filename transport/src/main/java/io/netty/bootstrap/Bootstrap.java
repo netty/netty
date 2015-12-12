@@ -23,9 +23,10 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.resolver.DefaultNameResolverGroup;
+import io.netty.resolver.AddressResolver;
+import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.NameResolver;
-import io.netty.resolver.NameResolverGroup;
+import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
@@ -50,10 +51,11 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Bootstrap.class);
 
-    private static final NameResolverGroup<?> DEFAULT_RESOLVER = DefaultNameResolverGroup.INSTANCE;
+    private static final AddressResolverGroup<?> DEFAULT_RESOLVER = DefaultAddressResolverGroup.INSTANCE;
 
     @SuppressWarnings("unchecked")
-    private volatile NameResolverGroup<SocketAddress> resolver = (NameResolverGroup<SocketAddress>) DEFAULT_RESOLVER;
+    private volatile AddressResolverGroup<SocketAddress> resolver =
+            (AddressResolverGroup<SocketAddress>) DEFAULT_RESOLVER;
     private volatile SocketAddress remoteAddress;
 
     public Bootstrap() { }
@@ -68,11 +70,11 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
      * Sets the {@link NameResolver} which will resolve the address of the unresolved named address.
      */
     @SuppressWarnings("unchecked")
-    public Bootstrap resolver(NameResolverGroup<?> resolver) {
+    public Bootstrap resolver(AddressResolverGroup<?> resolver) {
         if (resolver == null) {
             throw new NullPointerException("resolver");
         }
-        this.resolver = (NameResolverGroup<SocketAddress>) resolver;
+        this.resolver = (AddressResolverGroup<SocketAddress>) resolver;
         return this;
     }
 
@@ -162,7 +164,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
 
         final Channel channel = regFuture.channel();
         final EventLoop eventLoop = channel.eventLoop();
-        final NameResolver<SocketAddress> resolver = this.resolver.getResolver(eventLoop);
+        final AddressResolver<SocketAddress> resolver = this.resolver.getResolver(eventLoop);
 
         if (!resolver.isSupported(remoteAddress) || resolver.isResolved(remoteAddress)) {
             // Resolver has no idea about what to do with the specified remote address or it's resolved already.
