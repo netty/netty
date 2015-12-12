@@ -102,6 +102,18 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
         super.testWriteZeroAfterRelease();
     }
 
+    @Test(expected = IndexOutOfBoundsException.class)
+    @Override
+    public void testGetReadOnlyDirectDst() {
+        super.testGetReadOnlyDirectDst();
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    @Override
+    public void testGetReadOnlyHeapDst() {
+        super.testGetReadOnlyHeapDst();
+    }
+
     @Test
     @Override
     public void testLittleEndianWithExpand() {
