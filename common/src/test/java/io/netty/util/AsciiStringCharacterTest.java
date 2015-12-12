@@ -240,6 +240,16 @@ public class AsciiStringCharacterTest {
         assertThat(AsciiString.contentEqualsIgnoreCase(null, "foo"), is(false));
         assertThat(AsciiString.contentEqualsIgnoreCase("bar", null), is(false));
         assertThat(AsciiString.contentEqualsIgnoreCase("FoO", "fOo"), is(true));
+
+        // Test variations (Ascii + String, Ascii + Ascii, String + Ascii)
+        assertThat(AsciiString.contentEqualsIgnoreCase(new AsciiString("FoO"), "fOo"), is(true));
+        assertThat(AsciiString.contentEqualsIgnoreCase(new AsciiString("FoO"), new AsciiString("fOo")), is(true));
+        assertThat(AsciiString.contentEqualsIgnoreCase("FoO", new AsciiString("fOo")), is(true));
+
+        // Test variations (Ascii + String, Ascii + Ascii, String + Ascii)
+        assertThat(AsciiString.contentEqualsIgnoreCase(new AsciiString("FoO"), "bAr"), is(false));
+        assertThat(AsciiString.contentEqualsIgnoreCase(new AsciiString("FoO"), new AsciiString("bAr")), is(false));
+        assertThat(AsciiString.contentEqualsIgnoreCase("FoO", new AsciiString("bAr")), is(false));
     }
 
     @Test
