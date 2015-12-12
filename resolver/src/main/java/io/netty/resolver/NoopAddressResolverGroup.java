@@ -18,19 +18,19 @@ package io.netty.resolver;
 
 import io.netty.util.concurrent.EventExecutor;
 
-import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
 /**
- * A {@link NameResolverGroup} of {@link DefaultNameResolver}s.
+ * A {@link AddressResolverGroup} of {@link NoopAddressResolver}s.
  */
-public final class DefaultNameResolverGroup extends NameResolverGroup<InetSocketAddress> {
+public final class NoopAddressResolverGroup extends AddressResolverGroup<SocketAddress> {
 
-    public static final DefaultNameResolverGroup INSTANCE = new DefaultNameResolverGroup();
+    public static final NoopAddressResolverGroup INSTANCE = new NoopAddressResolverGroup();
 
-    private DefaultNameResolverGroup() { }
+    private NoopAddressResolverGroup() { }
 
     @Override
-    protected NameResolver<InetSocketAddress> newResolver(EventExecutor executor) throws Exception {
-        return new DefaultNameResolver(executor);
+    protected AddressResolver<SocketAddress> newResolver(EventExecutor executor) throws Exception {
+        return new NoopAddressResolver(executor);
     }
 }

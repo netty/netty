@@ -31,25 +31,25 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * Creates and manages {@link NameResolver}s so that each {@link EventExecutor} has its own resolver instance.
  */
-public abstract class NameResolverGroup<T extends SocketAddress> implements Closeable {
+public abstract class AddressResolverGroup<T extends SocketAddress> implements Closeable {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(NameResolverGroup.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(AddressResolverGroup.class);
 
     /**
      * Note that we do not use a {@link ConcurrentMap} here because it is usually expensive to instantiate a resolver.
      */
-    private final Map<EventExecutor, NameResolver<T>> resolvers =
-            new IdentityHashMap<EventExecutor, NameResolver<T>>();
+    private final Map<EventExecutor, AddressResolver<T>> resolvers =
+            new IdentityHashMap<EventExecutor, AddressResolver<T>>();
 
-    protected NameResolverGroup() { }
+    protected AddressResolverGroup() { }
 
     /**
-     * Returns the {@link NameResolver} associated with the specified {@link EventExecutor}.  If there's no associated
+     * Returns the {@link AddressResolver} associated with the specified {@link EventExecutor}. If there's no associated
      * resolved found, this method creates and returns a new resolver instance created by
      * {@link #newResolver(EventExecutor)} so that the new resolver is reused on another
      * {@link #getResolver(EventExecutor)} call with the same {@link EventExecutor}.
      */
-    public NameResolver<T> getResolver(final EventExecutor executor) {
+    public AddressResolver<T> getResolver(final EventExecutor executor) {
         if (executor == null) {
             throw new NullPointerException("executor");
         }
@@ -58,11 +58,11 @@ public abstract class NameResolverGroup<T extends SocketAddress> implements Clos
             throw new IllegalStateException("executor not accepting a task");
         }
 
-        NameResolver<T> r;
+        AddressResolver<T> r;
         synchronized (resolvers) {
             r = resolvers.get(executor);
             if (r == null) {
-                final NameResolver<T> newResolver;
+                final AddressResolver<T> newResolver;
                 try {
                     newResolver = newResolver(executor);
                 } catch (Exception e) {
@@ -86,9 +86,9 @@ public abstract class NameResolverGroup<T extends SocketAddress> implements Clos
     }
 
     /**
-     * Invoked by {@link #getResolver(EventExecutor)} to create a new {@link NameResolver}.
+     * Invoked by {@link #getResolver(EventExecutor)} to create a new {@link AddressResolver}.
      */
-    protected abstract NameResolver<T> newResolver(EventExecutor executor) throws Exception;
+    protected abstract AddressResolver<T> newResolver(EventExecutor executor) throws Exception;
 
     /**
      * Closes all {@link NameResolver}s created by this group.
@@ -96,13 +96,13 @@ public abstract class NameResolverGroup<T extends SocketAddress> implements Clos
     @Override
     @SuppressWarnings({ "unchecked", "SuspiciousToArrayCall" })
     public void close() {
-        final NameResolver<T>[] rArray;
+        final AddressResolver<T>[] rArray;
         synchronized (resolvers) {
-            rArray = (NameResolver<T>[]) resolvers.values().toArray(new NameResolver[resolvers.size()]);
+            rArray = (AddressResolver<T>[]) resolvers.values().toArray(new AddressResolver[resolvers.size()]);
             resolvers.clear();
         }
 
-        for (NameResolver<T> r: rArray) {
+        for (AddressResolver<T> r: rArray) {
             try {
                 r.close();
             } catch (Throwable t) {

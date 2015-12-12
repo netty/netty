@@ -20,8 +20,8 @@ import io.netty.channel.ChannelFactory;
 import io.netty.channel.EventLoop;
 import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.channel.socket.DatagramChannel;
-import io.netty.resolver.NameResolver;
-import io.netty.resolver.NameResolverGroup;
+import io.netty.resolver.AddressResolver;
+import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.StringUtil;
 
@@ -30,31 +30,31 @@ import java.net.InetSocketAddress;
 import static io.netty.resolver.dns.DnsNameResolver.ANY_LOCAL_ADDR;
 
 /**
- * A {@link NameResolverGroup} of {@link DnsNameResolver}s.
+ * A {@link AddressResolverGroup} of {@link DnsNameResolver}s.
  */
-public class DnsNameResolverGroup extends NameResolverGroup<InetSocketAddress> {
+public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddress> {
 
     private final ChannelFactory<? extends DatagramChannel> channelFactory;
     private final InetSocketAddress localAddress;
     private final DnsServerAddresses nameServerAddresses;
 
-    public DnsNameResolverGroup(
+    public DnsAddressResolverGroup(
             Class<? extends DatagramChannel> channelType, DnsServerAddresses nameServerAddresses) {
         this(channelType, ANY_LOCAL_ADDR, nameServerAddresses);
     }
 
-    public DnsNameResolverGroup(
+    public DnsAddressResolverGroup(
             Class<? extends DatagramChannel> channelType,
             InetSocketAddress localAddress, DnsServerAddresses nameServerAddresses) {
         this(new ReflectiveChannelFactory<DatagramChannel>(channelType), localAddress, nameServerAddresses);
     }
 
-    public DnsNameResolverGroup(
+    public DnsAddressResolverGroup(
             ChannelFactory<? extends DatagramChannel> channelFactory, DnsServerAddresses nameServerAddresses) {
         this(channelFactory, ANY_LOCAL_ADDR, nameServerAddresses);
     }
 
-    public DnsNameResolverGroup(
+    public DnsAddressResolverGroup(
             ChannelFactory<? extends DatagramChannel> channelFactory,
             InetSocketAddress localAddress, DnsServerAddresses nameServerAddresses) {
         this.channelFactory = channelFactory;
@@ -63,7 +63,7 @@ public class DnsNameResolverGroup extends NameResolverGroup<InetSocketAddress> {
     }
 
     @Override
-    protected final NameResolver<InetSocketAddress> newResolver(EventExecutor executor) throws Exception {
+    protected final AddressResolver<InetSocketAddress> newResolver(EventExecutor executor) throws Exception {
         if (!(executor instanceof EventLoop)) {
             throw new IllegalStateException(
                     "unsupported executor type: " + StringUtil.simpleClassName(executor) +
@@ -77,11 +77,11 @@ public class DnsNameResolverGroup extends NameResolverGroup<InetSocketAddress> {
      * Creates a new {@link DnsNameResolver}. Override this method to create an alternative {@link DnsNameResolver}
      * implementation or override the default configuration.
      */
-    protected DnsNameResolver newResolver(
+    protected AddressResolver<InetSocketAddress> newResolver(
             EventLoop eventLoop, ChannelFactory<? extends DatagramChannel> channelFactory,
             InetSocketAddress localAddress, DnsServerAddresses nameServerAddresses) throws Exception {
 
-        return new DnsNameResolver(
-                eventLoop, channelFactory, localAddress, nameServerAddresses);
+        return new DnsNameResolver(eventLoop, channelFactory, localAddress, nameServerAddresses)
+                .asAddressResolver();
     }
 }
