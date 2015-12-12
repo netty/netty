@@ -30,9 +30,9 @@ import io.netty.channel.ServerChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
-import io.netty.resolver.NameResolver;
-import io.netty.resolver.NameResolverGroup;
-import io.netty.resolver.SimpleNameResolver;
+import io.netty.resolver.AddressResolver;
+import io.netty.resolver.AddressResolverGroup;
+import io.netty.resolver.AbstractAddressResolver;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -221,7 +221,7 @@ public class BootstrapTest {
         final Bootstrap bootstrapA = new Bootstrap();
         bootstrapA.group(groupA);
         bootstrapA.channel(LocalChannel.class);
-        bootstrapA.resolver(new TestNameResolverGroup(true));
+        bootstrapA.resolver(new TestAddressResolverGroup(true));
         bootstrapA.handler(dummyHandler);
 
         final ServerBootstrap bootstrapB = new ServerBootstrap();
@@ -240,7 +240,7 @@ public class BootstrapTest {
         final Bootstrap bootstrapA = new Bootstrap();
         bootstrapA.group(groupA);
         bootstrapA.channel(LocalChannel.class);
-        bootstrapA.resolver(new TestNameResolverGroup(false));
+        bootstrapA.resolver(new TestAddressResolverGroup(false));
         bootstrapA.handler(dummyHandler);
 
         final ServerBootstrap bootstrapB = new ServerBootstrap();
@@ -282,17 +282,17 @@ public class BootstrapTest {
     @Sharable
     private static final class DummyHandler extends ChannelHandlerAdapter { }
 
-    private static final class TestNameResolverGroup extends NameResolverGroup<SocketAddress> {
+    private static final class TestAddressResolverGroup extends AddressResolverGroup<SocketAddress> {
 
         private final boolean success;
 
-        TestNameResolverGroup(boolean success) {
+        TestAddressResolverGroup(boolean success) {
             this.success = success;
         }
 
         @Override
-        protected NameResolver<SocketAddress> newResolver(EventExecutor executor) throws Exception {
-            return new SimpleNameResolver<SocketAddress>(executor) {
+        protected AddressResolver<SocketAddress> newResolver(EventExecutor executor) throws Exception {
+            return new AbstractAddressResolver<SocketAddress>(executor) {
 
                 @Override
                 protected boolean doIsResolved(SocketAddress address) {

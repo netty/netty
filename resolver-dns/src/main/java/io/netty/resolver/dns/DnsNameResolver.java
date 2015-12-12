@@ -33,8 +33,7 @@ import io.netty.handler.codec.dns.DatagramDnsResponse;
 import io.netty.handler.codec.dns.DatagramDnsResponseDecoder;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsResponse;
-import io.netty.resolver.NameResolver;
-import io.netty.resolver.SimpleNameResolver;
+import io.netty.resolver.InetNameResolver;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.FastThreadLocal;
@@ -42,14 +41,12 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.IDN;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -62,9 +59,9 @@ import java.util.concurrent.TimeUnit;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
- * A DNS-based {@link NameResolver}.
+ * A DNS-based {@link InetNameResolver}.
  */
-public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
+public class DnsNameResolver extends InetNameResolver {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsNameResolver.class);
 
@@ -74,7 +71,7 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
 
     static {
         // Note that we did not use SystemPropertyUtil.getBoolean() here to emulate the behavior of JDK.
-        if ("true".equalsIgnoreCase(SystemPropertyUtil.get("java.net.preferIPv6Addresses"))) {
+        if (Boolean.getBoolean("java.net.preferIPv6Addresses")) {
             DEFAULT_RESOLVE_ADDRESS_TYPES[0] = InternetProtocolFamily.IPv6;
             DEFAULT_RESOLVE_ADDRESS_TYPES[1] = InternetProtocolFamily.IPv4;
             logger.debug("-Djava.net.preferIPv6Addresses: true");
@@ -98,7 +95,7 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
     final DnsQueryContextManager queryContextManager = new DnsQueryContextManager();
 
     /**
-     * Cache for {@link #doResolve(InetSocketAddress, Promise)} and {@link #doResolveAll(InetSocketAddress, Promise)}.
+     * Cache for {@link #doResolve(String, Promise)} and {@link #doResolveAll(String, Promise)}.
      */
     final ConcurrentMap<String, List<DnsCacheEntry>> resolveCache = PlatformDependent.newConcurrentHashMap();
 
@@ -329,7 +326,7 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
     }
 
     /**
-     * Returns the list of the protocol families of the address resolved by {@link #resolve(SocketAddress)}
+     * Returns the list of the protocol families of the address resolved by {@link #resolve(String)}
      * in the order of preference.
      * The default value depends on the value of the system property {@code "java.net.preferIPv6Addresses"}.
      *
@@ -344,7 +341,7 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
     }
 
     /**
-     * Sets the list of the protocol families of the address resolved by {@link #resolve(SocketAddress)}.
+     * Sets the list of the protocol families of the address resolved by {@link #resolve(String)}.
      * Usually, both {@link InternetProtocolFamily#IPv4} and {@link InternetProtocolFamily#IPv6} are specified in the
      * order of preference.  To enforce the resolve to retrieve the address of a specific protocol family, specify
      * only a single {@link InternetProtocolFamily}.
@@ -382,7 +379,7 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
     }
 
     /**
-     * Sets the list of the protocol families of the address resolved by {@link #resolve(SocketAddress)}.
+     * Sets the list of the protocol families of the address resolved by {@link #resolve(String)}.
      * Usually, both {@link InternetProtocolFamily#IPv4} and {@link InternetProtocolFamily#IPv6} are specified in the
      * order of preference.  To enforce the resolve to retrieve the address of a specific protocol family, specify
      * only a single {@link InternetProtocolFamily}.
@@ -594,28 +591,22 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
     }
 
     @Override
-    protected boolean doIsResolved(InetSocketAddress address) {
-        return !address.isUnresolved();
-    }
-
-    @Override
-    protected void doResolve(InetSocketAddress unresolvedAddress, Promise<InetSocketAddress> promise) throws Exception {
-        final byte[] bytes = NetUtil.createByteArrayFromIpAddressString(unresolvedAddress.getHostName());
+    protected void doResolve(String inetHost, Promise<InetAddress> promise) throws Exception {
+        final byte[] bytes = NetUtil.createByteArrayFromIpAddressString(inetHost);
         if (bytes != null) {
-            // The unresolvedAddress was created via a String that contains an ipaddress.
-            promise.setSuccess(new InetSocketAddress(InetAddress.getByAddress(bytes), unresolvedAddress.getPort()));
+            // The inetHost is actually an ipaddress.
+            promise.setSuccess(InetAddress.getByAddress(bytes));
             return;
         }
 
-        final String hostname = hostname(unresolvedAddress);
-        final int port = unresolvedAddress.getPort();
+        final String hostname = hostname(inetHost);
 
-        if (!doResolveCached(hostname, port, promise)) {
-            doResolveUncached(hostname, port, promise);
+        if (!doResolveCached(hostname, promise)) {
+            doResolveUncached(hostname, promise);
         }
     }
 
-    private boolean doResolveCached(String hostname, int port, Promise<InetSocketAddress> promise) {
+    private boolean doResolveCached(String hostname, Promise<InetAddress> promise) {
         final List<DnsCacheEntry> cachedEntries = resolveCache.get(hostname);
         if (cachedEntries == null) {
             return false;
@@ -644,7 +635,7 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
         }
 
         if (address != null) {
-            setSuccess(promise, new InetSocketAddress(address, port));
+            setSuccess(promise, address);
         } else if (cause != null) {
             if (!promise.tryFailure(cause)) {
                 logger.warn("Failed to notify failure to a promise: {}", promise, cause);
@@ -656,15 +647,15 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
         return true;
     }
 
-    private static void setSuccess(Promise<InetSocketAddress> promise, InetSocketAddress result) {
+    private static void setSuccess(Promise<InetAddress> promise, InetAddress result) {
         if (!promise.trySuccess(result)) {
             logger.warn("Failed to notify success ({}) to a promise: {}", result, promise);
         }
     }
 
-    private void doResolveUncached(String hostname, final int port, Promise<InetSocketAddress> promise) {
-        final DnsNameResolverContext<InetSocketAddress> ctx =
-                new DnsNameResolverContext<InetSocketAddress>(this, hostname, promise) {
+    private void doResolveUncached(String hostname, Promise<InetAddress> promise) {
+        final DnsNameResolverContext<InetAddress> ctx =
+                new DnsNameResolverContext<InetAddress>(this, hostname, promise) {
                     @Override
                     protected boolean finishResolve(
                             Class<? extends InetAddress> addressType, List<DnsCacheEntry> resolvedEntries) {
@@ -673,7 +664,7 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
                         for (int i = 0; i < numEntries; i++) {
                             final InetAddress a = resolvedEntries.get(i).address();
                             if (addressType.isInstance(a)) {
-                                setSuccess(promise(), new InetSocketAddress(a, port));
+                                setSuccess(promise(), a);
                                 return true;
                             }
                         }
@@ -685,32 +676,29 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
     }
 
     @Override
-    protected void doResolveAll(
-            InetSocketAddress unresolvedAddress, Promise<List<InetSocketAddress>> promise) throws Exception {
+    protected void doResolveAll(String inetHost, Promise<List<InetAddress>> promise) throws Exception {
 
-        final byte[] bytes = NetUtil.createByteArrayFromIpAddressString(unresolvedAddress.getHostName());
+        final byte[] bytes = NetUtil.createByteArrayFromIpAddressString(inetHost);
         if (bytes != null) {
             // The unresolvedAddress was created via a String that contains an ipaddress.
-            promise.setSuccess(Collections.singletonList(
-                    new InetSocketAddress(InetAddress.getByAddress(bytes), unresolvedAddress.getPort())));
+            promise.setSuccess(Collections.singletonList(InetAddress.getByAddress(bytes)));
             return;
         }
 
-        final String hostname = hostname(unresolvedAddress);
-        final int port = unresolvedAddress.getPort();
+        final String hostname = hostname(inetHost);
 
-        if (!doResolveAllCached(hostname, port, promise)) {
-            doResolveAllUncached(hostname, port, promise);
+        if (!doResolveAllCached(hostname, promise)) {
+            doResolveAllUncached(hostname, promise);
         }
     }
 
-    private boolean doResolveAllCached(String hostname, int port, Promise<List<InetSocketAddress>> promise) {
+    private boolean doResolveAllCached(String hostname, Promise<List<InetAddress>> promise) {
         final List<DnsCacheEntry> cachedEntries = resolveCache.get(hostname);
         if (cachedEntries == null) {
             return false;
         }
 
-        List<InetSocketAddress> result = null;
+        List<InetAddress> result = null;
         Throwable cause = null;
         synchronized (cachedEntries) {
             final int numEntries = cachedEntries.size();
@@ -724,9 +712,9 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
                         final DnsCacheEntry e = cachedEntries.get(i);
                         if (f.addressType().isInstance(e.address())) {
                             if (result == null) {
-                                result = new ArrayList<InetSocketAddress>(numEntries);
+                                result = new ArrayList<InetAddress>(numEntries);
                             }
-                            result.add(new InetSocketAddress(e.address(), port));
+                            result.add(e.address());
                         }
                     }
                 }
@@ -744,23 +732,22 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
         return true;
     }
 
-    private void doResolveAllUncached(final String hostname, final int port,
-                                      final Promise<List<InetSocketAddress>> promise) {
-        final DnsNameResolverContext<List<InetSocketAddress>> ctx =
-                new DnsNameResolverContext<List<InetSocketAddress>>(this, hostname, promise) {
+    private void doResolveAllUncached(final String hostname, final Promise<List<InetAddress>> promise) {
+        final DnsNameResolverContext<List<InetAddress>> ctx =
+                new DnsNameResolverContext<List<InetAddress>>(this, hostname, promise) {
                     @Override
                     protected boolean finishResolve(
                             Class<? extends InetAddress> addressType, List<DnsCacheEntry> resolvedEntries) {
 
-                        List<InetSocketAddress> result = null;
+                        List<InetAddress> result = null;
                         final int numEntries = resolvedEntries.size();
                         for (int i = 0; i < numEntries; i++) {
                             final InetAddress a = resolvedEntries.get(i).address();
                             if (addressType.isInstance(a)) {
                                 if (result == null) {
-                                    result = new ArrayList<InetSocketAddress>(numEntries);
+                                    result = new ArrayList<InetAddress>(numEntries);
                                 }
-                                result.add(new InetSocketAddress(a, port));
+                                result.add(a);
                             }
                         }
 
@@ -775,16 +762,8 @@ public class DnsNameResolver extends SimpleNameResolver<InetSocketAddress> {
         ctx.resolve();
     }
 
-    private static String hostname(InetSocketAddress addr) {
-        // InetSocketAddress.getHostString() is available since Java 7.
-        final String hostname;
-        if (PlatformDependent.javaVersion() < 7) {
-            hostname = addr.getHostName();
-        } else {
-            hostname = addr.getHostString();
-        }
-
-        return IDN.toASCII(hostname);
+    private static String hostname(String inetHost) {
+        return IDN.toASCII(inetHost);
     }
 
     void cache(String hostname, InetAddress address, long originalTtl) {

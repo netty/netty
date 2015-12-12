@@ -24,12 +24,12 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * A {@link NameResolver} that does not perform any resolution but always reports successful resolution.
+ * A {@link AddressResolver} that does not perform any resolution but always reports successful resolution.
  * This resolver is useful when name resolution is performed by a handler in a pipeline, such as a proxy handler.
  */
-public class NoopNameResolver extends SimpleNameResolver<SocketAddress> {
+public class NoopAddressResolver extends AbstractAddressResolver<SocketAddress> {
 
-    public NoopNameResolver(EventExecutor executor) {
+    public NoopAddressResolver(EventExecutor executor) {
         super(executor);
     }
 

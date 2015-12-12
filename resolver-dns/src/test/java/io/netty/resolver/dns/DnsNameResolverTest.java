@@ -320,7 +320,7 @@ public class DnsNameResolverTest {
                 InetAddress actual = resultB.get(e.getKey());
                 if (!actual.equals(expected)) {
                     // Print the content of the cache when test failure is expected.
-                    System.err.println("Cache for " + e.getKey() + ": " + resolver.resolveAll(e.getKey(), 0).getNow());
+                    System.err.println("Cache for " + e.getKey() + ": " + resolver.resolveAll(e.getKey()).getNow());
                 }
                 assertThat(actual, is(expected));
             }
@@ -347,8 +347,8 @@ public class DnsNameResolverTest {
 
         final Map<String, InetAddress> results = new HashMap<String, InetAddress>();
         try {
-            final Map<InetSocketAddress, Future<InetSocketAddress>> futures =
-                    new LinkedHashMap<InetSocketAddress, Future<InetSocketAddress>>();
+            final Map<String, Future<InetAddress>> futures =
+                    new LinkedHashMap<String, Future<InetAddress>>();
 
             for (String name : DOMAINS) {
                 if (excludedDomains.contains(name)) {
@@ -358,19 +358,17 @@ public class DnsNameResolverTest {
                 resolve(futures, name);
             }
 
-            for (Entry<InetSocketAddress, Future<InetSocketAddress>> e : futures.entrySet()) {
-                InetSocketAddress unresolved = e.getKey();
-                InetSocketAddress resolved = e.getValue().sync().getNow();
+            for (Entry<String, Future<InetAddress>> e : futures.entrySet()) {
+                String unresolved = e.getKey();
+                InetAddress resolved = e.getValue().sync().getNow();
 
-                logger.info("{}: {}", unresolved.getHostString(), resolved.getAddress().getHostAddress());
+                logger.info("{}: {}", unresolved, resolved.getHostAddress());
 
-                assertThat(resolved.isUnresolved(), is(false));
-                assertThat(resolved.getHostString(), is(unresolved.getHostString()));
-                assertThat(resolved.getPort(), is(unresolved.getPort()));
+                assertThat(resolved.getHostName(), is(unresolved));
 
                 boolean typeMatches = false;
                 for (InternetProtocolFamily f: famililies) {
-                    Class<?> resolvedType = resolved.getAddress().getClass();
+                    Class<?> resolvedType = resolved.getClass();
                     if (f.addressType().isAssignableFrom(resolvedType)) {
                         typeMatches = true;
                     }
@@ -378,7 +376,7 @@ public class DnsNameResolverTest {
 
                 assertThat(typeMatches, is(true));
 
-                results.put(resolved.getHostString(), resolved.getAddress());
+                results.put(resolved.getHostName(), resolved);
             }
         } finally {
             resolver.setResolveAddressTypes(oldResolveAddressTypes);
@@ -477,7 +475,7 @@ public class DnsNameResolverTest {
 
     private static UnknownHostException resolveNonExistentDomain() {
         try {
-            resolver.resolve("non-existent.netty.io", 0).sync();
+            resolver.resolve("non-existent.netty.io").sync();
             fail();
             return null;
         } catch (Exception e) {
@@ -488,20 +486,14 @@ public class DnsNameResolverTest {
 
     @Test
     public void testResolveIp() {
-        InetSocketAddress unresolved =
-                InetSocketAddress.createUnresolved("10.0.0.1", ThreadLocalRandom.current().nextInt(65536));
-
-        InetSocketAddress address = resolver.resolve(unresolved).syncUninterruptibly().getNow();
+        InetAddress address = resolver.resolve("10.0.0.1").syncUninterruptibly().getNow();
 
         assertEquals("10.0.0.1", address.getHostName());
     }
 
-    private static void resolve(
-            Map<InetSocketAddress, Future<InetSocketAddress>> futures, String hostname) {
-        InetSocketAddress unresolved =
-                InetSocketAddress.createUnresolved(hostname, ThreadLocalRandom.current().nextInt(65536));
+    private static void resolve(Map<String, Future<InetAddress>> futures, String hostname) {
 
-        futures.put(unresolved, resolver.resolve(unresolved));
+        futures.put(hostname, resolver.resolve(hostname));
     }
 
     private static void queryMx(

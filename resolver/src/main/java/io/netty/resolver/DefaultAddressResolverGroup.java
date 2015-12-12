@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -18,19 +18,19 @@ package io.netty.resolver;
 
 import io.netty.util.concurrent.EventExecutor;
 
-import java.net.SocketAddress;
+import java.net.InetSocketAddress;
 
 /**
- * A {@link NameResolverGroup} of {@link NoopNameResolver}s.
+ * A {@link AddressResolverGroup} of {@link DefaultNameResolver}s.
  */
-public final class NoopNameResolverGroup extends NameResolverGroup<SocketAddress> {
+public final class DefaultAddressResolverGroup extends AddressResolverGroup<InetSocketAddress> {
 
-    public static final NoopNameResolverGroup INSTANCE = new NoopNameResolverGroup();
+    public static final DefaultAddressResolverGroup INSTANCE = new DefaultAddressResolverGroup();
 
-    private NoopNameResolverGroup() { }
+    private DefaultAddressResolverGroup() { }
 
     @Override
-    protected NameResolver<SocketAddress> newResolver(EventExecutor executor) throws Exception {
-        return new NoopNameResolver(executor);
+    protected AddressResolver<InetSocketAddress> newResolver(EventExecutor executor) throws Exception {
+        return new DefaultNameResolver(executor).asAddressResolver();
     }
 }
