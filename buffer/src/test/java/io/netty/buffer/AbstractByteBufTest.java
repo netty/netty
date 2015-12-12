@@ -29,6 +29,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ReadOnlyBufferException;
 import java.nio.channels.Channels;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
@@ -2864,6 +2865,33 @@ public abstract class AbstractByteBufTest {
         ByteBuffer[] nioBuffers = buffer.nioBuffers();
         assertEquals(1, nioBuffers.length);
         assertFalse(nioBuffers[0].hasRemaining());
+    }
+
+    @Test
+    public void testGetReadOnlyDirectDst() {
+        testGetReadOnlyDst(true);
+    }
+
+    @Test
+    public void testGetReadOnlyHeapDst() {
+        testGetReadOnlyDst(false);
+    }
+
+    private void testGetReadOnlyDst(boolean direct) {
+        byte[] bytes = { 'a', 'b', 'c', 'd' };
+
+        ByteBuf buffer = releaseLater(newBuffer(bytes.length));
+        buffer.writeBytes(bytes);
+
+        ByteBuffer dst = direct ? ByteBuffer.allocateDirect(bytes.length) : ByteBuffer.allocate(bytes.length);
+        ByteBuffer readOnlyDst = dst.asReadOnlyBuffer();
+        try {
+            buffer.getBytes(0, readOnlyDst);
+            fail();
+        } catch (ReadOnlyBufferException e) {
+            // expected
+        }
+        assertEquals(0, readOnlyDst.position());
     }
 
     private void testRefCnt0(final boolean parameter) throws Exception {
