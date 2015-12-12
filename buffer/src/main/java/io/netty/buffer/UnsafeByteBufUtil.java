@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.ReadOnlyBufferException;
 
 import static io.netty.util.internal.MathUtil.isOutOfBounds;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -514,15 +515,21 @@ final class UnsafeByteBufUtil {
         }
 
         if (dst.isDirect()) {
+            if (dst.isReadOnly()) {
+                // We need to check if dst is ready-only so we not write something in it by using Unsafe.
+                throw new ReadOnlyBufferException();
+            }
             // Copy to direct memory
             long dstAddress = PlatformDependent.directBufferAddress(dst);
             PlatformDependent.copyMemory(addr, dstAddress + dst.position(), bytesToCopy);
-        } else {
+            dst.position(dst.position() + bytesToCopy);
+        } else if (dst.hasArray()) {
             // Copy to array
             PlatformDependent.copyMemory(addr, dst.array(), dst.arrayOffset() + dst.position(), bytesToCopy);
+            dst.position(dst.position() + bytesToCopy);
+        } else  {
+            dst.put(buf.nioBuffer());
         }
-
-        dst.position(dst.position() + bytesToCopy);
     }
 
     static void setBytes(AbstractByteBuf buf, long addr, int index, ByteBuf src, int srcIndex, int length) {
