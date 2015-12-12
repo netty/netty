@@ -530,7 +530,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         if (string.getClass() == AsciiString.class) {
             AsciiString rhs = (AsciiString) string;
             for (int i = arrayOffset(), j = rhs.arrayOffset(); i < length(); ++i, ++j) {
-                if (!equalsIgnoreCase(value[i], value[j])) {
+                if (!equalsIgnoreCase(value[i], rhs.value[j])) {
                     return false;
                 }
             }
