@@ -37,7 +37,8 @@ public abstract class InetNameResolver extends SimpleNameResolver<InetAddress> {
     }
 
     /**
-     * Creates a new {@link AddressResolver} that will use this name resolver underneath.
+     * Return a {@link AddressResolver} that will use this name resolver underneath.
+     * It's cached internally, so the same instance is always returned.
      */
     public AddressResolver<InetSocketAddress> asAddressResolver() {
         AddressResolver<InetSocketAddress> result = addressResolver;
