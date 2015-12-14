@@ -58,7 +58,6 @@ import org.apache.mina.filter.codec.ProtocolEncoder;
 import org.apache.mina.filter.codec.ProtocolEncoderOutput;
 import org.apache.mina.transport.socket.DatagramAcceptor;
 import org.apache.mina.transport.socket.DatagramSessionConfig;
-import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -265,15 +264,23 @@ public class DnsNameResolverTest {
 
     private static final TestDnsServer dnsServer = new TestDnsServer();
     private static final EventLoopGroup group = new NioEventLoopGroup(1);
-    private static DnsNameResolver resolver;
+
+    private DnsNameResolverBuilder newResolver() {
+        return new DnsNameResolverBuilder(group.next())
+                .channelType(NioDatagramChannel.class)
+                .nameServerAddresses(DnsServerAddresses.singleton(dnsServer.localAddress()))
+                .maxQueriesPerResolve(1)
+                .optResourceEnabled(false);
+    }
+
+    private DnsNameResolverBuilder newResolver(InternetProtocolFamily... resolvedAddressTypes) {
+        return newResolver()
+                .resolvedAddressTypes(resolvedAddressTypes);
+    }
 
     @BeforeClass
     public static void init() throws Exception {
         dnsServer.start();
-        resolver = new DnsNameResolver(group.next(), NioDatagramChannel.class,
-                                       DnsServerAddresses.singleton(dnsServer.localAddress()));
-        resolver.setMaxQueriesPerResolve(1);
-        resolver.setOptResourceEnabled(false);
     }
     @AfterClass
     public static void destroy() {
@@ -281,37 +288,40 @@ public class DnsNameResolverTest {
         group.shutdownGracefully();
     }
 
-    @After
-    public void reset() throws Exception {
-        resolver.clearCache();
-    }
-
     @Test
     public void testResolveAorAAAA() throws Exception {
-        testResolve0(EXCLUSIONS_RESOLVE_A, InternetProtocolFamily.IPv4, InternetProtocolFamily.IPv6);
+        DnsNameResolver resolver = newResolver(InternetProtocolFamily.IPv4, InternetProtocolFamily.IPv6).build();
+        try {
+            testResolve0(resolver, EXCLUSIONS_RESOLVE_A);
+        } finally {
+            resolver.close();
+        }
     }
 
     @Test
     public void testResolveAAAAorA() throws Exception {
-        testResolve0(EXCLUSIONS_RESOLVE_A, InternetProtocolFamily.IPv6, InternetProtocolFamily.IPv4);
+        DnsNameResolver resolver = newResolver(InternetProtocolFamily.IPv6, InternetProtocolFamily.IPv4).build();
+        try {
+            testResolve0(resolver, EXCLUSIONS_RESOLVE_A);
+        } finally {
+            resolver.close();
+        }
     }
 
     @Test
     public void  testResolveA() throws Exception {
-        final int oldMinTtl = resolver.minTtl();
-        final int oldMaxTtl = resolver.maxTtl();
-
-        // Cache for eternity.
-        resolver.setTtl(Integer.MAX_VALUE, Integer.MAX_VALUE);
-
+        DnsNameResolver resolver = newResolver(InternetProtocolFamily.IPv4)
+                // Cache for eternity
+                .ttl(Integer.MAX_VALUE, Integer.MAX_VALUE)
+                .build();
         try {
-            final Map<String, InetAddress> resultA = testResolve0(EXCLUSIONS_RESOLVE_A, InternetProtocolFamily.IPv4);
+            final Map<String, InetAddress> resultA = testResolve0(resolver, EXCLUSIONS_RESOLVE_A);
 
             // Now, try to resolve again to see if it's cached.
             // This test works because the DNS servers usually randomizes the order of the records in a response.
             // If cached, the resolved addresses must be always same, because we reuse the same response.
 
-            final Map<String, InetAddress> resultB = testResolve0(EXCLUSIONS_RESOLVE_A, InternetProtocolFamily.IPv4);
+            final Map<String, InetAddress> resultB = testResolve0(resolver, EXCLUSIONS_RESOLVE_A);
 
             // Ensure the result from the cache is identical from the uncached one.
             assertThat(resultB.size(), is(resultA.size()));
@@ -325,61 +335,56 @@ public class DnsNameResolverTest {
                 assertThat(actual, is(expected));
             }
         } finally {
-            // Restore the TTL configuration.
-            resolver.setTtl(oldMinTtl, oldMaxTtl);
+            resolver.close();
         }
     }
 
     @Test
     public void testResolveAAAA() throws Exception {
-        testResolve0(EXCLUSIONS_RESOLVE_AAAA, InternetProtocolFamily.IPv6);
+        DnsNameResolver resolver = newResolver(InternetProtocolFamily.IPv6).build();
+        try {
+            testResolve0(resolver, EXCLUSIONS_RESOLVE_AAAA);
+        } finally {
+            resolver.close();
+        }
     }
 
-    private static Map<String, InetAddress> testResolve0(
-            Set<String> excludedDomains, InternetProtocolFamily... famililies) throws InterruptedException {
-
-        final List<InternetProtocolFamily> oldResolveAddressTypes = resolver.resolveAddressTypes();
+    private Map<String, InetAddress> testResolve0(DnsNameResolver resolver, Set<String> excludedDomains)
+            throws InterruptedException {
 
         assertThat(resolver.isRecursionDesired(), is(true));
-        assertThat(oldResolveAddressTypes.size(), is(InternetProtocolFamily.values().length));
-
-        resolver.setResolveAddressTypes(famililies);
 
         final Map<String, InetAddress> results = new HashMap<String, InetAddress>();
-        try {
-            final Map<String, Future<InetAddress>> futures =
-                    new LinkedHashMap<String, Future<InetAddress>>();
+        final Map<String, Future<InetAddress>> futures =
+                new LinkedHashMap<String, Future<InetAddress>>();
 
-            for (String name : DOMAINS) {
-                if (excludedDomains.contains(name)) {
-                    continue;
-                }
-
-                resolve(futures, name);
+        for (String name : DOMAINS) {
+            if (excludedDomains.contains(name)) {
+                continue;
             }
 
-            for (Entry<String, Future<InetAddress>> e : futures.entrySet()) {
-                String unresolved = e.getKey();
-                InetAddress resolved = e.getValue().sync().getNow();
+            resolve(resolver, futures, name);
+        }
 
-                logger.info("{}: {}", unresolved, resolved.getHostAddress());
+        for (Entry<String, Future<InetAddress>> e : futures.entrySet()) {
+            String unresolved = e.getKey();
+            InetAddress resolved = e.getValue().sync().getNow();
 
-                assertThat(resolved.getHostName(), is(unresolved));
+            logger.info("{}: {}", unresolved, resolved.getHostAddress());
 
-                boolean typeMatches = false;
-                for (InternetProtocolFamily f: famililies) {
-                    Class<?> resolvedType = resolved.getClass();
-                    if (f.addressType().isAssignableFrom(resolvedType)) {
-                        typeMatches = true;
-                    }
+            assertThat(resolved.getHostName(), is(unresolved));
+
+            boolean typeMatches = false;
+            for (InternetProtocolFamily f: resolver.resolvedAddressTypes()) {
+                Class<?> resolvedType = resolved.getClass();
+                if (f.addressType().isAssignableFrom(resolvedType)) {
+                    typeMatches = true;
                 }
-
-                assertThat(typeMatches, is(true));
-
-                results.put(resolved.getHostName(), resolved);
             }
-        } finally {
-            resolver.setResolveAddressTypes(oldResolveAddressTypes);
+
+            assertThat(typeMatches, is(true));
+
+            results.put(resolved.getHostName(), resolved);
         }
 
         return results;
@@ -387,61 +392,65 @@ public class DnsNameResolverTest {
 
     @Test
     public void testQueryMx() throws Exception {
-        assertThat(resolver.isRecursionDesired(), is(true));
+        DnsNameResolver resolver = newResolver().build();
+        try {
+            assertThat(resolver.isRecursionDesired(), is(true));
 
-        Map<String, Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>> futures =
-                new LinkedHashMap<String, Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>>();
-        for (String name: DOMAINS) {
-            if (EXCLUSIONS_QUERY_MX.contains(name)) {
-                continue;
-            }
-
-            queryMx(futures, name);
-        }
-
-        for (Entry<String, Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>> e: futures.entrySet()) {
-            String hostname = e.getKey();
-            Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f = e.getValue().awaitUninterruptibly();
-
-            DnsResponse response = f.getNow().content();
-            assertThat(response.code(), is(DnsResponseCode.NOERROR));
-
-            final int answerCount = response.count(DnsSection.ANSWER);
-            final List<DnsRecord> mxList = new ArrayList<DnsRecord>(answerCount);
-            for (int i = 0; i < answerCount; i ++) {
-                final DnsRecord r = response.recordAt(DnsSection.ANSWER, i);
-                if (r.type() == DnsRecordType.MX) {
-                    mxList.add(r);
+            Map<String, Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>> futures =
+                    new LinkedHashMap<String, Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>>();
+            for (String name: DOMAINS) {
+                if (EXCLUSIONS_QUERY_MX.contains(name)) {
+                    continue;
                 }
+
+                queryMx(resolver, futures, name);
             }
 
-            assertThat(mxList.size(), is(greaterThan(0)));
-            StringBuilder buf = new StringBuilder();
-            for (DnsRecord r: mxList) {
-                ByteBuf recordContent = ((ByteBufHolder) r).content();
+            for (Entry<String, Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>> e: futures.entrySet()) {
+                String hostname = e.getKey();
+                Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f = e.getValue().awaitUninterruptibly();
 
-                buf.append(StringUtil.NEWLINE);
-                buf.append('\t');
-                buf.append(r.name());
-                buf.append(' ');
-                buf.append(r.type().name());
-                buf.append(' ');
-                buf.append(recordContent.readUnsignedShort());
-                buf.append(' ');
-                buf.append(DnsNameResolverContext.decodeDomainName(recordContent));
+                DnsResponse response = f.getNow().content();
+                assertThat(response.code(), is(DnsResponseCode.NOERROR));
+
+                final int answerCount = response.count(DnsSection.ANSWER);
+                final List<DnsRecord> mxList = new ArrayList<DnsRecord>(answerCount);
+                for (int i = 0; i < answerCount; i ++) {
+                    final DnsRecord r = response.recordAt(DnsSection.ANSWER, i);
+                    if (r.type() == DnsRecordType.MX) {
+                        mxList.add(r);
+                    }
+                }
+
+                assertThat(mxList.size(), is(greaterThan(0)));
+                StringBuilder buf = new StringBuilder();
+                for (DnsRecord r: mxList) {
+                    ByteBuf recordContent = ((ByteBufHolder) r).content();
+
+                    buf.append(StringUtil.NEWLINE);
+                    buf.append('\t');
+                    buf.append(r.name());
+                    buf.append(' ');
+                    buf.append(r.type().name());
+                    buf.append(' ');
+                    buf.append(recordContent.readUnsignedShort());
+                    buf.append(' ');
+                    buf.append(DnsNameResolverContext.decodeDomainName(recordContent));
+                }
+
+                logger.info("{} has the following MX records:{}", hostname, buf);
+                response.release();
             }
-
-            logger.info("{} has the following MX records:{}", hostname, buf);
-            response.release();
+        } finally {
+            resolver.close();
         }
     }
 
     @Test
     public void testNegativeTtl() throws Exception {
-        final int oldNegativeTtl = resolver.negativeTtl();
-        resolver.setNegativeTtl(10);
+        final DnsNameResolver resolver = newResolver().negativeTtl(10).build();
         try {
-            resolveNonExistentDomain();
+            resolveNonExistentDomain(resolver);
 
             final int size = 10000;
             final List<UnknownHostException> exceptions = new ArrayList<UnknownHostException>();
@@ -451,7 +460,7 @@ public class DnsNameResolverTest {
                 @Override
                 public void run() {
                     for (int i = 0; i < size; i++) {
-                        exceptions.add(resolveNonExistentDomain());
+                        exceptions.add(resolveNonExistentDomain(resolver));
                         if (isInterrupted()) {
                             break;
                         }
@@ -469,11 +478,11 @@ public class DnsNameResolverTest {
 
             assertThat(exceptions, hasSize(size));
         } finally {
-            resolver.setNegativeTtl(oldNegativeTtl);
+            resolver.close();
         }
     }
 
-    private static UnknownHostException resolveNonExistentDomain() {
+    private UnknownHostException resolveNonExistentDomain(DnsNameResolver resolver) {
         try {
             resolver.resolve("non-existent.netty.io").sync();
             fail();
@@ -486,17 +495,23 @@ public class DnsNameResolverTest {
 
     @Test
     public void testResolveIp() {
-        InetAddress address = resolver.resolve("10.0.0.1").syncUninterruptibly().getNow();
+        DnsNameResolver resolver = newResolver().build();
+        try {
+            InetAddress address = resolver.resolve("10.0.0.1").syncUninterruptibly().getNow();
 
-        assertEquals("10.0.0.1", address.getHostName());
+            assertEquals("10.0.0.1", address.getHostName());
+        } finally {
+            resolver.close();
+        }
     }
 
-    private static void resolve(Map<String, Future<InetAddress>> futures, String hostname) {
+    private void resolve(DnsNameResolver resolver, Map<String, Future<InetAddress>> futures, String hostname) {
 
         futures.put(hostname, resolver.resolve(hostname));
     }
 
     private static void queryMx(
+            DnsNameResolver resolver,
             Map<String, Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>> futures,
             String hostname) throws Exception {
         futures.put(hostname, resolver.query(new DefaultDnsQuestion(hostname, DnsRecordType.MX)));

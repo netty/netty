@@ -25,7 +25,6 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FixedRecvByteBufAllocator;
-import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.handler.codec.dns.DatagramDnsQueryEncoder;
@@ -33,6 +32,7 @@ import io.netty.handler.codec.dns.DatagramDnsResponse;
 import io.netty.handler.codec.dns.DatagramDnsResponseDecoder;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsResponse;
+import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.InetNameResolver;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -56,7 +56,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * A DNS-based {@link InetNameResolver}.
@@ -67,7 +67,7 @@ public class DnsNameResolver extends InetNameResolver {
 
     static final InetSocketAddress ANY_LOCAL_ADDR = new InetSocketAddress(0);
 
-    private static final InternetProtocolFamily[] DEFAULT_RESOLVE_ADDRESS_TYPES = new InternetProtocolFamily[2];
+    static final InternetProtocolFamily[] DEFAULT_RESOLVE_ADDRESS_TYPES = new InternetProtocolFamily[2];
 
     static {
         // Note that we did not use SystemPropertyUtil.getBoolean() here to emulate the behavior of JDK.
@@ -97,7 +97,7 @@ public class DnsNameResolver extends InetNameResolver {
     /**
      * Cache for {@link #doResolve(String, Promise)} and {@link #doResolveAll(String, Promise)}.
      */
-    final ConcurrentMap<String, List<DnsCacheEntry>> resolveCache = PlatformDependent.newConcurrentHashMap();
+    private final ConcurrentMap<String, List<DnsCacheEntry>> resolveCache = PlatformDependent.newConcurrentHashMap();
 
     private final FastThreadLocal<DnsServerAddressStream> nameServerAddrStream =
             new FastThreadLocal<DnsServerAddressStream>() {
@@ -107,68 +107,18 @@ public class DnsNameResolver extends InetNameResolver {
                 }
             };
 
-    private final DnsResponseHandler responseHandler = new DnsResponseHandler();
-
-    private volatile long queryTimeoutMillis = 5000;
-
+    private final long queryTimeoutMillis;
     // The default TTL values here respect the TTL returned by the DNS server and do not cache the negative response.
-    private volatile int minTtl;
-    private volatile int maxTtl = Integer.MAX_VALUE;
-    private volatile int negativeTtl;
-    private volatile int maxQueriesPerResolve = 3;
-    private volatile boolean traceEnabled = true;
-
-    private volatile InternetProtocolFamily[] resolveAddressTypes = DEFAULT_RESOLVE_ADDRESS_TYPES;
-    private volatile boolean recursionDesired = true;
-
-    private volatile int maxPayloadSize;
-    private volatile boolean optResourceEnabled = true;
-
-    /**
-     * Creates a new DNS-based name resolver that communicates with the specified list of DNS servers.
-     *
-     * @param eventLoop the {@link EventLoop} which will perform the communication with the DNS servers
-     * @param channelType the type of the {@link DatagramChannel} to create
-     * @param nameServerAddresses the addresses of the DNS server. For each DNS query, a new stream is created from
-     *                            this to determine which DNS server should be contacted for the next retry in case
-     *                            of failure.
-     */
-    public DnsNameResolver(
-            EventLoop eventLoop, Class<? extends DatagramChannel> channelType,
-            DnsServerAddresses nameServerAddresses) {
-        this(eventLoop, channelType, ANY_LOCAL_ADDR, nameServerAddresses);
-    }
-
-    /**
-     * Creates a new DNS-based name resolver that communicates with the specified list of DNS servers.
-     *
-     * @param eventLoop the {@link EventLoop} which will perform the communication with the DNS servers
-     * @param channelType the type of the {@link DatagramChannel} to create
-     * @param localAddress the local address of the {@link DatagramChannel}
-     * @param nameServerAddresses the addresses of the DNS server. For each DNS query, a new stream is created from
-     *                            this to determine which DNS server should be contacted for the next retry in case
-     *                            of failure.
-     */
-    public DnsNameResolver(
-            EventLoop eventLoop, Class<? extends DatagramChannel> channelType,
-            InetSocketAddress localAddress, DnsServerAddresses nameServerAddresses) {
-        this(eventLoop, new ReflectiveChannelFactory<DatagramChannel>(channelType), localAddress, nameServerAddresses);
-    }
-
-    /**
-     * Creates a new DNS-based name resolver that communicates with the specified list of DNS servers.
-     *
-     * @param eventLoop the {@link EventLoop} which will perform the communication with the DNS servers
-     * @param channelFactory the {@link ChannelFactory} that will create a {@link DatagramChannel}
-     * @param nameServerAddresses the addresses of the DNS server. For each DNS query, a new stream is created from
-     *                            this to determine which DNS server should be contacted for the next retry in case
-     *                            of failure.
-     */
-    public DnsNameResolver(
-            EventLoop eventLoop, ChannelFactory<? extends DatagramChannel> channelFactory,
-            DnsServerAddresses nameServerAddresses) {
-        this(eventLoop, channelFactory, ANY_LOCAL_ADDR, nameServerAddresses);
-    }
+    private final int minTtl;
+    private final int maxTtl;
+    private final int negativeTtl;
+    private final int maxQueriesPerResolve;
+    private final boolean traceEnabled;
+    private final InternetProtocolFamily[] resolvedAddressTypes;
+    private final boolean recursionDesired;
+    private final int maxPayloadSize;
+    private final boolean optResourceEnabled;
+    private final HostsFileEntriesResolver hostsFileEntriesResolver;
 
     /**
      * Creates a new DNS-based name resolver that communicates with the specified list of DNS servers.
@@ -179,22 +129,58 @@ public class DnsNameResolver extends InetNameResolver {
      * @param nameServerAddresses the addresses of the DNS server. For each DNS query, a new stream is created from
      *                            this to determine which DNS server should be contacted for the next retry in case
      *                            of failure.
+     * @param minTtl the minimum TTL of cached DNS records
+     * @param maxTtl the maximum TTL of cached DNS records
+     * @param negativeTtl the TTL for failed cached queries
+     * @param queryTimeoutMillis timeout of each DNS query in millis
+     * @param resolvedAddressTypes list of the protocol families
+     * @param recursionDesired if recursion desired flag must be set
+     * @param maxQueriesPerResolve the maximum allowed number of DNS queries for a given name resolution
+     * @param traceEnabled if trace is enabled
+     * @param maxPayloadSize the capacity of the datagram packet buffer
+     * @param optResourceEnabled if automatic inclusion of a optional records is enabled
+     * @param hostsFileEntriesResolver the {@link HostsFileEntriesResolver} used to check for local aliases
      */
     public DnsNameResolver(
-            EventLoop eventLoop, ChannelFactory<? extends DatagramChannel> channelFactory,
-            InetSocketAddress localAddress, DnsServerAddresses nameServerAddresses) {
+            EventLoop eventLoop,
+            ChannelFactory<? extends DatagramChannel> channelFactory,
+            InetSocketAddress localAddress,
+            DnsServerAddresses nameServerAddresses,
+            int minTtl,
+            int maxTtl,
+            int negativeTtl,
+            long queryTimeoutMillis,
+            InternetProtocolFamily[] resolvedAddressTypes,
+            boolean recursionDesired,
+            int maxQueriesPerResolve,
+            boolean traceEnabled,
+            int maxPayloadSize,
+            boolean optResourceEnabled,
+            HostsFileEntriesResolver hostsFileEntriesResolver) {
 
         super(eventLoop);
-
         checkNotNull(channelFactory, "channelFactory");
-        checkNotNull(nameServerAddresses, "nameServerAddresses");
         checkNotNull(localAddress, "localAddress");
+        this.nameServerAddresses = checkNotNull(nameServerAddresses, "nameServerAddresses");
+        this.minTtl = checkPositiveOrZero(minTtl, "minTtl");
+        this.maxTtl = checkPositiveOrZero(maxTtl, "maxTtl");
+        if (minTtl > maxTtl) {
+            throw new IllegalArgumentException(
+                    "minTtl: " + minTtl + ", maxTtl: " + maxTtl + " (expected: 0 <= minTtl <= maxTtl)");
+        }
+        this.negativeTtl = checkPositiveOrZero(negativeTtl, "negativeTtl");
+        this.queryTimeoutMillis = checkPositive(queryTimeoutMillis, "queryTimeoutMillis");
+        this.resolvedAddressTypes = checkNonEmpty(resolvedAddressTypes, "resolvedAddressTypes");
+        this.recursionDesired = recursionDesired;
+        this.maxQueriesPerResolve = checkPositive(maxQueriesPerResolve, "maxQueriesPerResolve");
+        this.traceEnabled = traceEnabled;
+        this.maxPayloadSize = checkPositive(maxPayloadSize, "maxPayloadSize");
+        this.optResourceEnabled = optResourceEnabled;
+        this.hostsFileEntriesResolver = checkNotNull(hostsFileEntriesResolver, "hostsFileEntriesResolver");
 
-        this.nameServerAddresses = nameServerAddresses;
         bindFuture = newChannel(channelFactory, localAddress);
         ch = (DatagramChannel) bindFuture.channel();
-
-        setMaxPayloadSize(4096);
+        ch.config().setRecvByteBufAllocator(new FixedRecvByteBufAllocator(maxPayloadSize));
     }
 
     private ChannelFuture newChannel(
@@ -203,6 +189,7 @@ public class DnsNameResolver extends InetNameResolver {
         Bootstrap b = new Bootstrap();
         b.group(executor());
         b.channelFactory(channelFactory);
+        final DnsResponseHandler responseHandler = new DnsResponseHandler();
         b.handler(new ChannelInitializer<DatagramChannel>() {
             @Override
             protected void initChannel(DatagramChannel ch) throws Exception {
@@ -225,7 +212,6 @@ public class DnsNameResolver extends InetNameResolver {
      * Returns the minimum TTL of the cached DNS resource records (in seconds).
      *
      * @see #maxTtl()
-     * @see #setTtl(int, int)
      */
     public int minTtl() {
         return minTtl;
@@ -235,234 +221,54 @@ public class DnsNameResolver extends InetNameResolver {
      * Returns the maximum TTL of the cached DNS resource records (in seconds).
      *
      * @see #minTtl()
-     * @see #setTtl(int, int)
      */
     public int maxTtl() {
         return maxTtl;
     }
 
     /**
-     * Sets the minimum and maximum TTL of the cached DNS resource records (in seconds). If the TTL of the DNS resource
-     * record returned by the DNS server is less than the minimum TTL or greater than the maximum TTL, this resolver
-     * will ignore the TTL from the DNS server and use the minimum TTL or the maximum TTL instead respectively.
-     * The default value is {@code 0} and {@link Integer#MAX_VALUE}, which practically tells this resolver to respect
-     * the TTL from the DNS server.
-     *
-     * @return {@code this}
-     *
-     * @see #minTtl()
-     * @see #maxTtl()
-     */
-    public DnsNameResolver setTtl(int minTtl, int maxTtl) {
-        if (minTtl < 0) {
-            throw new IllegalArgumentException("minTtl: " + minTtl + " (expected: >= 0)");
-        }
-        if (maxTtl < 0) {
-            throw new IllegalArgumentException("maxTtl: " + maxTtl + " (expected: >= 0)");
-        }
-        if (minTtl > maxTtl) {
-            throw new IllegalArgumentException(
-                    "minTtl: " + minTtl + ", maxTtl: " + maxTtl + " (expected: 0 <= minTtl <= maxTtl)");
-        }
-
-        this.maxTtl = maxTtl;
-        this.minTtl = minTtl;
-
-        return this;
-    }
-
-    /**
      * Returns the TTL of the cache for the failed DNS queries (in seconds).  The default value is {@code 0}, which
      * disables the cache for negative results.
-     *
-     * @see #setNegativeTtl(int)
      */
     public int negativeTtl() {
         return negativeTtl;
     }
 
     /**
-     * Sets the TTL of the cache for the failed DNS queries (in seconds).
-     *
-     * @return {@code this}
-     *
-     * @see #negativeTtl()
-     */
-    public DnsNameResolver setNegativeTtl(int negativeTtl) {
-        if (negativeTtl < 0) {
-            throw new IllegalArgumentException("negativeTtl: " + negativeTtl + " (expected: >= 0)");
-        }
-
-        this.negativeTtl = negativeTtl;
-
-        return this;
-    }
-
-    /**
      * Returns the timeout of each DNS query performed by this resolver (in milliseconds).
      * The default value is 5 seconds.
-     *
-     * @see #setQueryTimeoutMillis(long)
      */
     public long queryTimeoutMillis() {
         return queryTimeoutMillis;
     }
 
     /**
-     * Sets the timeout of each DNS query performed by this resolver (in milliseconds).
-     *
-     * @return {@code this}
-     *
-     * @see #queryTimeoutMillis()
-     */
-    public DnsNameResolver setQueryTimeoutMillis(long queryTimeoutMillis) {
-        if (queryTimeoutMillis < 0) {
-            throw new IllegalArgumentException("queryTimeoutMillis: " + queryTimeoutMillis + " (expected: >= 0)");
-        }
-
-        this.queryTimeoutMillis = queryTimeoutMillis;
-
-        return this;
-    }
-
-    /**
      * Returns the list of the protocol families of the address resolved by {@link #resolve(String)}
      * in the order of preference.
      * The default value depends on the value of the system property {@code "java.net.preferIPv6Addresses"}.
-     *
-     * @see #setResolveAddressTypes(InternetProtocolFamily...)
      */
-    public List<InternetProtocolFamily> resolveAddressTypes() {
-        return Arrays.asList(resolveAddressTypes);
+    public List<InternetProtocolFamily> resolvedAddressTypes() {
+        return Arrays.asList(resolvedAddressTypes);
     }
 
     InternetProtocolFamily[] resolveAddressTypesUnsafe() {
-        return resolveAddressTypes;
-    }
-
-    /**
-     * Sets the list of the protocol families of the address resolved by {@link #resolve(String)}.
-     * Usually, both {@link InternetProtocolFamily#IPv4} and {@link InternetProtocolFamily#IPv6} are specified in the
-     * order of preference.  To enforce the resolve to retrieve the address of a specific protocol family, specify
-     * only a single {@link InternetProtocolFamily}.
-     *
-     * @return {@code this}
-     *
-     * @see #resolveAddressTypes()
-     */
-    public DnsNameResolver setResolveAddressTypes(InternetProtocolFamily... resolveAddressTypes) {
-        checkNotNull(resolveAddressTypes, "resolveAddressTypes");
-
-        final List<InternetProtocolFamily> list =
-                new ArrayList<InternetProtocolFamily>(InternetProtocolFamily.values().length);
-
-        for (InternetProtocolFamily f: resolveAddressTypes) {
-            if (f == null) {
-                break;
-            }
-
-            // Avoid duplicate entries.
-            if (list.contains(f)) {
-                continue;
-            }
-
-            list.add(f);
-        }
-
-        if (list.isEmpty()) {
-            throw new IllegalArgumentException("no protocol family specified");
-        }
-
-        this.resolveAddressTypes = list.toArray(new InternetProtocolFamily[list.size()]);
-
-        return this;
-    }
-
-    /**
-     * Sets the list of the protocol families of the address resolved by {@link #resolve(String)}.
-     * Usually, both {@link InternetProtocolFamily#IPv4} and {@link InternetProtocolFamily#IPv6} are specified in the
-     * order of preference.  To enforce the resolve to retrieve the address of a specific protocol family, specify
-     * only a single {@link InternetProtocolFamily}.
-     *
-     * @return {@code this}
-     *
-     * @see #resolveAddressTypes()
-     */
-    public DnsNameResolver setResolveAddressTypes(Iterable<InternetProtocolFamily> resolveAddressTypes) {
-        checkNotNull(resolveAddressTypes, "resolveAddressTypes");
-
-        final List<InternetProtocolFamily> list =
-                new ArrayList<InternetProtocolFamily>(InternetProtocolFamily.values().length);
-
-        for (InternetProtocolFamily f: resolveAddressTypes) {
-            if (f == null) {
-                break;
-            }
-
-            // Avoid duplicate entries.
-            if (list.contains(f)) {
-                continue;
-            }
-
-            list.add(f);
-        }
-
-        if (list.isEmpty()) {
-            throw new IllegalArgumentException("no protocol family specified");
-        }
-
-        this.resolveAddressTypes = list.toArray(new InternetProtocolFamily[list.size()]);
-
-        return this;
+        return resolvedAddressTypes;
     }
 
     /**
      * Returns {@code true} if and only if this resolver sends a DNS query with the RD (recursion desired) flag set.
      * The default value is {@code true}.
-     *
-     * @see #setRecursionDesired(boolean)
      */
     public boolean isRecursionDesired() {
         return recursionDesired;
     }
 
     /**
-     * Sets if this resolver has to send a DNS query with the RD (recursion desired) flag set.
-     *
-     * @return {@code this}
-     *
-     * @see #isRecursionDesired()
-     */
-    public DnsNameResolver setRecursionDesired(boolean recursionDesired) {
-        this.recursionDesired = recursionDesired;
-        return this;
-    }
-
-    /**
      * Returns the maximum allowed number of DNS queries to send when resolving a host name.
      * The default value is {@code 8}.
-     *
-     * @see #setMaxQueriesPerResolve(int)
      */
     public int maxQueriesPerResolve() {
         return maxQueriesPerResolve;
-    }
-
-    /**
-     * Sets the maximum allowed number of DNS queries to send when resolving a host name.
-     *
-     * @return {@code this}
-     *
-     * @see #maxQueriesPerResolve()
-     */
-    public DnsNameResolver setMaxQueriesPerResolve(int maxQueriesPerResolve) {
-        if (maxQueriesPerResolve <= 0) {
-            throw new IllegalArgumentException("maxQueriesPerResolve: " + maxQueriesPerResolve + " (expected: > 0)");
-        }
-
-        this.maxQueriesPerResolve = maxQueriesPerResolve;
-
-        return this;
     }
 
     /**
@@ -474,54 +280,10 @@ public class DnsNameResolver extends InetNameResolver {
     }
 
     /**
-     * Sets if this resolver should generate the detailed trace information in an exception message so that
-     * it is easier to understand the cause of resolution failure.
-     */
-    public DnsNameResolver setTraceEnabled(boolean traceEnabled) {
-        this.traceEnabled = traceEnabled;
-        return this;
-    }
-
-    /**
      * Returns the capacity of the datagram packet buffer (in bytes).  The default value is {@code 4096} bytes.
-     *
-     * @see #setMaxPayloadSize(int)
      */
     public int maxPayloadSize() {
         return maxPayloadSize;
-    }
-
-    /**
-     * Sets the capacity of the datagram packet buffer (in bytes).  The default value is {@code 4096} bytes.
-     *
-     * @return {@code this}
-     *
-     * @see #maxPayloadSize()
-     */
-    public DnsNameResolver setMaxPayloadSize(int maxPayloadSize) {
-        if (maxPayloadSize <= 0) {
-            throw new IllegalArgumentException("maxPayloadSize: " + maxPayloadSize + " (expected: > 0)");
-        }
-
-        if (this.maxPayloadSize == maxPayloadSize) {
-            // Same value; no need to instantiate DnsClass and RecvByteBufAllocator again.
-            return this;
-        }
-
-        this.maxPayloadSize = maxPayloadSize;
-        ch.config().setRecvByteBufAllocator(new FixedRecvByteBufAllocator(maxPayloadSize));
-
-        return this;
-    }
-
-    /**
-     * Enable the automatic inclusion of a optional records that tries to give the remote DNS server a hint about how
-     * much data the resolver can read per response. Some DNSServer may not support this and so fail to answer
-     * queries. If you find problems you may want to disable this.
-     */
-    public DnsNameResolver setOptResourceEnabled(boolean optResourceEnabled) {
-        this.optResourceEnabled = optResourceEnabled;
-        return this;
     }
 
     /**
@@ -530,6 +292,14 @@ public class DnsNameResolver extends InetNameResolver {
      */
     public boolean isOptResourceEnabled() {
         return optResourceEnabled;
+    }
+
+    /**
+     * Returns the component that tries to resolve hostnames against the hosts file prior to asking to
+     * remotes DNS servers.
+     */
+    public HostsFileEntriesResolver hostsFileEntriesResolver() {
+        return hostsFileEntriesResolver;
     }
 
     /**
@@ -590,6 +360,10 @@ public class DnsNameResolver extends InetNameResolver {
         return (EventLoop) super.executor();
     }
 
+    private InetAddress resolveHostsFileEntry(String hostname) {
+        return hostsFileEntriesResolver != null ? hostsFileEntriesResolver.address(hostname) : null;
+    }
+
     @Override
     protected void doResolve(String inetHost, Promise<InetAddress> promise) throws Exception {
         final byte[] bytes = NetUtil.createByteArrayFromIpAddressString(inetHost);
@@ -600,6 +374,12 @@ public class DnsNameResolver extends InetNameResolver {
         }
 
         final String hostname = hostname(inetHost);
+
+        InetAddress hostsFileEntry = resolveHostsFileEntry(hostname);
+        if (hostsFileEntry != null) {
+            promise.setSuccess(hostsFileEntry);
+            return;
+        }
 
         if (!doResolveCached(hostname, promise)) {
             doResolveUncached(hostname, promise);
@@ -622,7 +402,7 @@ public class DnsNameResolver extends InetNameResolver {
                 cause = cachedEntries.get(0).cause();
             } else {
                 // Find the first entry with the preferred address type.
-                for (InternetProtocolFamily f : resolveAddressTypes) {
+                for (InternetProtocolFamily f : resolvedAddressTypes) {
                     for (int i = 0; i < numEntries; i++) {
                         final DnsCacheEntry e = cachedEntries.get(i);
                         if (f.addressType().isInstance(e.address())) {
@@ -687,6 +467,12 @@ public class DnsNameResolver extends InetNameResolver {
 
         final String hostname = hostname(inetHost);
 
+        InetAddress hostsFileEntry = resolveHostsFileEntry(hostname);
+        if (hostsFileEntry != null) {
+            promise.setSuccess(Collections.singletonList(hostsFileEntry));
+            return;
+        }
+
         if (!doResolveAllCached(hostname, promise)) {
             doResolveAllUncached(hostname, promise);
         }
@@ -707,7 +493,7 @@ public class DnsNameResolver extends InetNameResolver {
             if (cachedEntries.get(0).cause() != null) {
                 cause = cachedEntries.get(0).cause();
             } else {
-                for (InternetProtocolFamily f : resolveAddressTypes) {
+                for (InternetProtocolFamily f : resolvedAddressTypes) {
                     for (int i = 0; i < numEntries; i++) {
                         final DnsCacheEntry e = cachedEntries.get(i);
                         if (f.addressType().isInstance(e.address())) {

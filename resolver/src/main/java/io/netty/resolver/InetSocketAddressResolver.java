@@ -17,7 +17,7 @@ package io.netty.resolver;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 
 import java.net.InetAddress;
@@ -53,7 +53,7 @@ public class InetSocketAddressResolver extends AbstractAddressResolver<InetSocke
         // Note that InetSocketAddress.getHostName() will never incur a reverse lookup here,
         // because an unresolved address always has a host name.
         nameResolver.resolve(unresolvedAddress.getHostName())
-                .addListener(new GenericFutureListener<Future<InetAddress>>() {
+                .addListener(new FutureListener<InetAddress>() {
                     @Override
                     public void operationComplete(Future<InetAddress> future) throws Exception {
                         if (future.isSuccess()) {
@@ -71,7 +71,7 @@ public class InetSocketAddressResolver extends AbstractAddressResolver<InetSocke
         // Note that InetSocketAddress.getHostName() will never incur a reverse lookup here,
         // because an unresolved address always has a host name.
         nameResolver.resolveAll(unresolvedAddress.getHostName())
-                .addListener(new GenericFutureListener<Future<List<InetAddress>>>() {
+                .addListener(new FutureListener<List<InetAddress>>() {
                     @Override
                     public void operationComplete(Future<List<InetAddress>> future) throws Exception {
                         if (future.isSuccess()) {

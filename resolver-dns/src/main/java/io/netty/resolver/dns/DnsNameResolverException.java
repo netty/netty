@@ -31,11 +31,6 @@ public final class DnsNameResolverException extends RuntimeException {
     private final InetSocketAddress remoteAddress;
     private final DnsQuestion question;
 
-    public DnsNameResolverException(InetSocketAddress remoteAddress, DnsQuestion question) {
-        this.remoteAddress = validateRemoteAddress(remoteAddress);
-        this.question = validateQuestion(question);
-    }
-
     public DnsNameResolverException(InetSocketAddress remoteAddress, DnsQuestion question, String message) {
         super(message);
         this.remoteAddress = validateRemoteAddress(remoteAddress);
@@ -49,18 +44,19 @@ public final class DnsNameResolverException extends RuntimeException {
         this.question = validateQuestion(question);
     }
 
-    public DnsNameResolverException(InetSocketAddress remoteAddress, DnsQuestion question, Throwable cause) {
-        super(cause);
-        this.remoteAddress = validateRemoteAddress(remoteAddress);
-        this.question = validateQuestion(question);
-    }
-
     private static InetSocketAddress validateRemoteAddress(InetSocketAddress remoteAddress) {
         return ObjectUtil.checkNotNull(remoteAddress, "remoteAddress");
     }
 
     private static DnsQuestion validateQuestion(DnsQuestion question) {
         return ObjectUtil.checkNotNull(question, "question");
+    }
+
+    /**
+     * Returns the {@link InetSocketAddress} of the DNS query that has failed.
+     */
+    public InetSocketAddress remoteAddress() {
+        return remoteAddress;
     }
 
     /**
