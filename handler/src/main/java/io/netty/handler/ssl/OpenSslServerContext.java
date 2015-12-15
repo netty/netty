@@ -295,6 +295,7 @@ public final class OpenSslServerContext extends OpenSslContext {
                 ClientAuth.NONE);
         OpenSsl.ensureAvailability();
 
+        checkKeyManagerFactory(keyManagerFactory);
         checkNotNull(keyCertChainFile, "keyCertChainFile");
         if (!keyCertChainFile.isFile()) {
             throw new IllegalArgumentException("keyCertChainFile is not a file: " + keyCertChainFile);
@@ -394,6 +395,7 @@ public final class OpenSslServerContext extends OpenSslContext {
                 clientAuth);
         OpenSsl.ensureAvailability();
 
+        checkKeyManagerFactory(keyManagerFactory);
         checkNotNull(keyCertChain, "keyCertChainFile");
         checkNotNull(key, "keyFile");
 
@@ -501,5 +503,12 @@ public final class OpenSslServerContext extends OpenSslContext {
     @Override
     public OpenSslServerSessionContext sessionContext() {
         return sessionContext;
+    }
+
+    private static void checkKeyManagerFactory(KeyManagerFactory keyManagerFactory) {
+        if (keyManagerFactory != null) {
+            throw new IllegalArgumentException(
+                    "KeyManagerFactory is currently not supported with OpenSslServerContext");
+        }
     }
 }
