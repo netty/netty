@@ -202,7 +202,7 @@ public final class OpenSslEngine extends SSLEngine {
                   boolean clientMode, OpenSslSessionContext sessionContext,
                   OpenSslApplicationProtocolNegotiator apn, OpenSslEngineMap engineMap,
                   boolean rejectRemoteInitiatedRenegation, String peerHost, int peerPort,
-                  java.security.cert.Certificate[] localCerts,
+                  Certificate[] localCerts,
                   ClientAuth clientAuth) {
         super(peerHost, peerPort);
         OpenSsl.ensureAvailability();
@@ -212,7 +212,6 @@ public final class OpenSslEngine extends SSLEngine {
 
         this.alloc = checkNotNull(alloc, "alloc");
         this.apn = checkNotNull(apn, "apn");
-        this.clientAuth = clientMode ? ClientAuth.NONE : checkNotNull(clientAuth, "clientAuth");
         ssl = SSL.newSSL(sslCtx, !clientMode);
         session = new OpenSslSession(sessionContext);
         networkBIO = SSL.makeNetworkBIO(ssl);
@@ -220,6 +219,10 @@ public final class OpenSslEngine extends SSLEngine {
         this.engineMap = engineMap;
         this.rejectRemoteInitiatedRenegation = rejectRemoteInitiatedRenegation;
         this.localCerts = localCerts;
+
+        // Set the client auth mode, this needs to be done via setClientAuth(...) method so we actually call the
+        // needed JNI methods.
+        setClientAuth(clientMode ? ClientAuth.NONE : checkNotNull(clientAuth, "clientAuth"));
     }
 
     @Override
