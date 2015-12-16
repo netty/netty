@@ -82,6 +82,50 @@ public class StringUtilTest {
         assertEquals("bar:bar2", substringAfter("foo:bar:bar2", ':'));
     }
 
+    @Test
+    public void commonSuffixOfLengthTest() {
+        // negative length suffixes are never common
+        checkNotCommonSuffix("abc", "abc", -1);
+
+        // null has no suffix
+        checkNotCommonSuffix("abc", null, 0);
+        checkNotCommonSuffix(null, null, 0);
+
+        // any non-null string has 0-length suffix
+        checkCommonSuffix("abc", "xx", 0);
+
+        checkCommonSuffix("abc", "abc", 0);
+        checkCommonSuffix("abc", "abc", 1);
+        checkCommonSuffix("abc", "abc", 2);
+        checkCommonSuffix("abc", "abc", 3);
+        checkNotCommonSuffix("abc", "abc", 4);
+
+        checkCommonSuffix("abcd", "cd", 1);
+        checkCommonSuffix("abcd", "cd", 2);
+        checkNotCommonSuffix("abcd", "cd", 3);
+
+        checkCommonSuffix("abcd", "axcd", 1);
+        checkCommonSuffix("abcd", "axcd", 2);
+        checkNotCommonSuffix("abcd", "axcd", 3);
+
+        checkNotCommonSuffix("abcx", "abcy", 1);
+    }
+
+    private static void checkNotCommonSuffix(String s, String p, int len) {
+        assertFalse(checkCommonSuffixSymmetric(s, p, len));
+    }
+
+    private static void checkCommonSuffix(String s, String p, int len) {
+        assertTrue(checkCommonSuffixSymmetric(s, p, len));
+    }
+
+    private static boolean checkCommonSuffixSymmetric(String s, String p, int len) {
+        boolean sp = commonSuffixOfLength(s, p, len);
+        boolean ps = commonSuffixOfLength(p, s, len);
+        assertEquals(sp, ps);
+        return sp;
+    }
+
     @Test (expected = NullPointerException.class)
     public void escapeCsvNull() {
         StringUtil.escapeCsv(null);

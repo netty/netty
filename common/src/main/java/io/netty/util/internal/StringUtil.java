@@ -187,6 +187,18 @@ public final class StringUtil {
     }
 
     /**
+     * Checks if two strings have the same suffix of specified length
+     *
+     * @param s            string
+     * @param p            string
+     * @param len length of the common suffix
+     * @return true if both s and p are not null and both have the same suffix. Otherwise - false
+     */
+    public static boolean commonSuffixOfLength(String s, String p, int len) {
+        return s != null && p != null && len >= 0 && s.regionMatches(s.length() - len, p, p.length() - len, len);
+    }
+
+    /**
      * Converts the specified byte value into a 2-digit hexadecimal integer.
      */
     public static String byteToHexStringPadded(int value) {
