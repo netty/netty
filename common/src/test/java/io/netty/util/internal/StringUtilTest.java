@@ -83,6 +83,245 @@ public class StringUtilTest {
     }
 
     @Test
+    public void commonSuffixOfLengthTest() {
+        // negative length suffixes are never common
+        checkNotCommonSuffix("abc", "abc", -1);
+
+        // null has no suffix
+        checkNotCommonSuffix("abc", null, 0);
+        checkNotCommonSuffix(null, null, 0);
+
+        // any non-null string has 0-length suffix
+        checkCommonSuffix("abc", "xx", 0);
+
+        checkCommonSuffix("abc", "abc", 0);
+        checkCommonSuffix("abc", "abc", 1);
+        checkCommonSuffix("abc", "abc", 2);
+        checkCommonSuffix("abc", "abc", 3);
+        checkNotCommonSuffix("abc", "abc", 4);
+
+        checkCommonSuffix("abcd", "cd", 1);
+        checkCommonSuffix("abcd", "cd", 2);
+        checkNotCommonSuffix("abcd", "cd", 3);
+
+        checkCommonSuffix("abcd", "axcd", 1);
+        checkCommonSuffix("abcd", "axcd", 2);
+        checkNotCommonSuffix("abcd", "axcd", 3);
+
+        checkNotCommonSuffix("abcx", "abcy", 1);
+    }
+
+    private static void checkNotCommonSuffix(String s, String p, int len) {
+        assertFalse(checkCommonSuffixSymmetric(s, p, len));
+    }
+
+    private static void checkCommonSuffix(String s, String p, int len) {
+        assertTrue(checkCommonSuffixSymmetric(s, p, len));
+    }
+
+    private static boolean checkCommonSuffixSymmetric(String s, String p, int len) {
+        boolean sp = commonSuffixOfLength(s, p, len);
+        boolean ps = commonSuffixOfLength(p, s, len);
+        assertEquals(sp, ps);
+        return sp;
+    }
+
+    @Test (expected = NullPointerException.class)
+    public void escapeCsvNull() {
+        StringUtil.escapeCsv(null);
+    }
+
+    @Test
+    public void escapeCsvEmpty() {
+        CharSequence value = "";
+        CharSequence expected = value;
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvUnquoted() {
+        CharSequence value = "something";
+        CharSequence expected = value;
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvAlreadyQuoted() {
+        CharSequence value = "\"something\"";
+        CharSequence expected = "\"something\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithQuote() {
+        CharSequence value = "s\"";
+        CharSequence expected = "\"s\"\"\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithQuoteInMiddle() {
+        CharSequence value = "some text\"and more text";
+        CharSequence expected = "\"some text\"\"and more text\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithQuoteInMiddleAlreadyQuoted() {
+        CharSequence value = "\"some text\"and more text\"";
+        CharSequence expected = "\"some text\"\"and more text\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithQuotedWords() {
+        CharSequence value = "\"foo\"\"goo\"";
+        CharSequence expected = "\"foo\"\"goo\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithAlreadyEscapedQuote() {
+        CharSequence value = "foo\"\"goo";
+        CharSequence expected = "foo\"\"goo";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvEndingWithQuote() {
+        CharSequence value = "some\"";
+        CharSequence expected = "\"some\"\"\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithSingleQuote() {
+        CharSequence value = "\"";
+        CharSequence expected = "\"\"\"\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithSingleQuoteAndCharacter() {
+        CharSequence value = "\"f";
+        CharSequence expected = "\"\"\"f\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvAlreadyEscapedQuote() {
+        CharSequence value = "\"some\"\"";
+        CharSequence expected = "\"some\"\"\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvQuoted() {
+        CharSequence value = "\"foo,goo\"";
+        CharSequence expected = value;
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithLineFeed() {
+        CharSequence value = "some text\n more text";
+        CharSequence expected = "\"some text\n more text\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithSingleLineFeedCharacter() {
+        CharSequence value = "\n";
+        CharSequence expected = "\"\n\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithMultipleLineFeedCharacter() {
+        CharSequence value = "\n\n";
+        CharSequence expected = "\"\n\n\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithQuotedAndLineFeedCharacter() {
+        CharSequence value = " \" \n ";
+        CharSequence expected = "\" \"\" \n \"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithLineFeedAtEnd() {
+        CharSequence value = "testing\n";
+        CharSequence expected = "\"testing\n\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithComma() {
+        CharSequence value = "test,ing";
+        CharSequence expected = "\"test,ing\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithSingleComma() {
+        CharSequence value = ",";
+        CharSequence expected = "\",\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithSingleCarriageReturn() {
+        CharSequence value = "\r";
+        CharSequence expected = "\"\r\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithMultipleCarriageReturn() {
+        CharSequence value = "\r\r";
+        CharSequence expected = "\"\r\r\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithCarriageReturn() {
+        CharSequence value = "some text\r more text";
+        CharSequence expected = "\"some text\r more text\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithQuotedAndCarriageReturnCharacter() {
+        CharSequence value = "\"\r";
+        CharSequence expected = "\"\"\"\r\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithCarriageReturnAtEnd() {
+        CharSequence value = "testing\r";
+        CharSequence expected = "\"testing\r\"";
+        escapeCsv(value, expected);
+    }
+
+    @Test
+    public void escapeCsvWithCRLFCharacter() {
+        CharSequence value = "\r\n";
+        CharSequence expected = "\"\r\n\"";
+        escapeCsv(value, expected);
+    }
+
+    private static void escapeCsv(CharSequence value, CharSequence expected) {
+        CharSequence escapedValue = value;
+        for (int i = 0; i < 10; ++i) {
+            escapedValue = StringUtil.escapeCsv(escapedValue);
+            assertEquals(expected, escapedValue.toString());
+        }
+    }
+
+    @Test
     public void testSimpleClassName() throws Exception {
         testSimpleClassName(String.class);
     }
