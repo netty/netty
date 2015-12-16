@@ -30,6 +30,7 @@ import io.netty.handler.codec.http2.Http2ClientUpgradeCodec;
 import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2FrameLogger;
 import io.netty.handler.codec.http2.HttpToHttp2ConnectionHandler;
+import io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder;
 import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapter;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
@@ -57,14 +58,15 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
     @Override
     public void initChannel(SocketChannel ch) throws Exception {
         final Http2Connection connection = new DefaultHttp2Connection(false);
-        connectionHandler = new HttpToHttp2ConnectionHandler.Builder()
+        connectionHandler = new HttpToHttp2ConnectionHandlerBuilder()
                 .frameListener(new DelegatingDecompressorFrameListener(connection,
                         new InboundHttp2ToHttpAdapter.Builder(connection)
                             .maxContentLength(maxContentLength)
                             .propagateSettings(true)
                             .build()))
                 .frameLogger(logger)
-                .build(connection);
+                .connection(connection)
+                .build();
         responseHandler = new HttpResponseHandler();
         settingsHandler = new Http2SettingsHandler(ch.newPromise());
         if (sslCtx != null) {

@@ -14,12 +14,6 @@
  */
 package io.netty.microbench.http2;
 
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_UPPER_BOUND;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.SECONDS;
-
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -55,6 +49,7 @@ import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
+import io.netty.handler.codec.http2.Http2ConnectionHandlerBuilder;
 import io.netty.handler.codec.http2.Http2FrameAdapter;
 import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2Headers;
@@ -64,12 +59,6 @@ import io.netty.microbench.channel.EmbeddedChannelWriteReleaseHandlerContext;
 import io.netty.microbench.util.AbstractSharedExecutorMicrobenchmark;
 import io.netty.util.AsciiString;
 import io.netty.util.concurrent.Future;
-
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.util.Random;
-import java.util.concurrent.CountDownLatch;
-
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;
@@ -77,6 +66,17 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
+
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.util.Random;
+import java.util.concurrent.CountDownLatch;
+
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_UPPER_BOUND;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 @State(Scope.Benchmark)
 public class Http2FrameWriterBenchmark extends AbstractSharedExecutorMicrobenchmark {
@@ -263,9 +263,10 @@ public class Http2FrameWriterBenchmark extends AbstractSharedExecutorMicrobenchm
                 Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, environment.writer());
                 Http2ConnectionDecoder decoder =
                         new DefaultHttp2ConnectionDecoder(connection, encoder, new DefaultHttp2FrameReader());
-                Http2ConnectionHandler connectionHandler = new Http2ConnectionHandler.Builder()
-                            .encoderEnforceMaxConcurrentStreams(false)
-                            .frameListener(new Http2FrameAdapter()).build(decoder, encoder);
+                Http2ConnectionHandler connectionHandler = new Http2ConnectionHandlerBuilder()
+                        .encoderEnforceMaxConcurrentStreams(false)
+                        .frameListener(new Http2FrameAdapter())
+                        .codec(decoder, encoder).build();
                 p.addLast(connectionHandler);
                 environment.context(p.lastContext());
                 // Must wait for context to be set.
@@ -293,9 +294,10 @@ public class Http2FrameWriterBenchmark extends AbstractSharedExecutorMicrobenchm
         Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, env.writer());
         Http2ConnectionDecoder decoder =
                 new DefaultHttp2ConnectionDecoder(connection, encoder, new DefaultHttp2FrameReader());
-        Http2ConnectionHandler connectionHandler = new Http2ConnectionHandler.Builder()
-                    .encoderEnforceMaxConcurrentStreams(false)
-                    .frameListener(new Http2FrameAdapter()).build(decoder, encoder);
+        Http2ConnectionHandler connectionHandler = new Http2ConnectionHandlerBuilder()
+                .encoderEnforceMaxConcurrentStreams(false)
+                .frameListener(new Http2FrameAdapter())
+                .codec(decoder, encoder).build();
         env.context(new EmbeddedChannelWriteReleaseHandlerContext(alloc, connectionHandler) {
             @Override
             protected void handleException(Throwable t) {
