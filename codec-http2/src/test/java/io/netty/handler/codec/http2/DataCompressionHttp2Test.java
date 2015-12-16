@@ -305,9 +305,9 @@ public class DataCompressionHttp2Test {
                         new DefaultHttp2ConnectionEncoder(serverConnection, frameWriter));
                 Http2ConnectionDecoder decoder =
                         new DefaultHttp2ConnectionDecoder(serverConnection, encoder, new DefaultHttp2FrameReader());
-                Http2ConnectionHandler connectionHandler = new Http2ConnectionHandler.Builder()
+                Http2ConnectionHandler connectionHandler = new Http2ConnectionHandlerBuilder()
                         .frameListener(new DelegatingDecompressorFrameListener(serverConnection, serverListener))
-                        .build(decoder, encoder);
+                        .codec(decoder, encoder).build();
                 p.addLast(connectionHandler);
                 serverChannelLatch.countDown();
             }
@@ -330,11 +330,11 @@ public class DataCompressionHttp2Test {
                 Http2ConnectionDecoder decoder =
                         new DefaultHttp2ConnectionDecoder(clientConnection, clientEncoder,
                                 new DefaultHttp2FrameReader());
-                clientHandler = new Http2ConnectionHandler.Builder()
+                clientHandler = new Http2ConnectionHandlerBuilder()
                         .frameListener(new DelegatingDecompressorFrameListener(clientConnection, clientListener))
                         // By default tests don't wait for server to gracefully shutdown streams
                         .gracefulShutdownTimeoutMillis(0)
-                        .build(decoder, clientEncoder);
+                        .codec(decoder, clientEncoder).build();
                 p.addLast(clientHandler);
             }
         });

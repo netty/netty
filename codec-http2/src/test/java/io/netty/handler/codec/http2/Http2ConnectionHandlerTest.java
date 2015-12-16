@@ -24,7 +24,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
-import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.GenericFutureListener;
 import org.junit.After;
@@ -180,7 +179,7 @@ public class Http2ConnectionHandlerTest {
     }
 
     private Http2ConnectionHandler newHandler() throws Exception {
-        Http2ConnectionHandler handler = new Http2ConnectionHandler.Builder().build(decoder, encoder);
+        Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder().codec(decoder, encoder).build();
         handler.handlerAdded(ctx);
         return handler;
     }
@@ -426,11 +425,11 @@ public class Http2ConnectionHandlerTest {
         verify(ctx, times(1)).flush();
     }
 
-    private ByteBuf dummyData() {
-        return Unpooled.buffer().writeBytes("abcdefgh".getBytes(CharsetUtil.UTF_8));
+    private static ByteBuf dummyData() {
+        return Unpooled.buffer().writeBytes("abcdefgh".getBytes(UTF_8));
     }
 
-    private ByteBuf addSettingsHeader(ByteBuf buf) {
+    private static ByteBuf addSettingsHeader(ByteBuf buf) {
         buf.writeMedium(Http2CodecUtil.SETTING_ENTRY_LENGTH);
         buf.writeByte(Http2FrameTypes.SETTINGS);
         buf.writeByte(0);
