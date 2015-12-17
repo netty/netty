@@ -30,6 +30,8 @@ import static io.netty.buffer.Unpooled.directBuffer;
 import static io.netty.buffer.Unpooled.unmodifiableBuffer;
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.util.CharsetUtil.UTF_8;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 
 /**
  * Constants and utility method used for encoding/decoding HTTP2 frames.
@@ -187,6 +189,13 @@ public final class Http2CodecUtil {
             Http2Flags flags, int streamId) {
         out.ensureWritable(FRAME_HEADER_LENGTH + payloadLength);
         writeFrameHeaderInternal(out, payloadLength, type, flags, streamId);
+    }
+
+    /**
+     * Calculate the amount of bytes that can be sent by {@code state}. The lower bound is {@code 0}.
+     */
+    public static int streamableBytes(StreamByteDistributor.StreamState state) {
+        return max(0, min(state.pendingBytes(), state.windowSize()));
     }
 
     static void writeFrameHeaderInternal(ByteBuf out, int payloadLength, byte type,

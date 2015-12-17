@@ -17,6 +17,7 @@ package io.netty.handler.codec.http2;
 
 import java.util.Arrays;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.streamableBytes;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -78,7 +79,7 @@ public final class PriorityStreamByteDistributor implements StreamByteDistributo
 
     @Override
     public void updateStreamableBytes(StreamState streamState) {
-        state(streamState.stream()).updateStreamableBytes(streamState.streamableBytes(),
+        state(streamState.stream()).updateStreamableBytes(streamableBytes(streamState),
                 streamState.hasFrame());
     }
 

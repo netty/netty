@@ -32,13 +32,12 @@ public interface StreamByteDistributor {
         Http2Stream stream();
 
         /**
-         * Returns the number of pending bytes for this node that will fit within the stream flow
-         * control window. This is used for the priority algorithm to determine the aggregate number
-         * of bytes that can be written at each node. Each node only takes into account its stream
-         * window so that when a change occurs to the connection window, these values need not
-         * change (i.e. no tree traversal is required).
+         * Get the amount of bytes this stream has pending to send. The actual amount written must not exceed
+         * {@link #windowSize()}!
+         * @return The amount of bytes this stream has pending to send.
+         * @see {@link #io.netty.handler.codec.http2.Http2CodecUtil.streamableBytes(StreamState)}
          */
-        int streamableBytes();
+        int pendingBytes();
 
         /**
          * Indicates whether or not there are frames pending for this stream.
@@ -46,11 +45,15 @@ public interface StreamByteDistributor {
         boolean hasFrame();
 
         /**
-         * Determine if a write operation is allowed for this stream. This will typically take into account the
-         * stream's flow controller being non-negative.
-         * @return {@code true} if a write is allowed on this stream. {@code false} otherwise.
+         * The size (in bytes) of the stream's flow control window. The amount written must not exceed this amount!
+         * <p>A {@link StreamByteDistributor} needs to know the stream's window size in order to avoid allocating bytes
+         * if the window size is negative. The window size being {@code 0} may also be significant to determine when if
+         * an stream has been given a chance to write an empty frame, and also enables optimizations like not writing
+         * empty frames in some situations (don't write headers until data can also be written).
+         * @return the size of the stream's flow control window.
+         * @see {@link #io.netty.handler.codec.http2.Http2CodecUtil.streamableBytes(StreamState)}
          */
-        boolean isWriteAllowed();
+        int windowSize();
     }
 
     /**
