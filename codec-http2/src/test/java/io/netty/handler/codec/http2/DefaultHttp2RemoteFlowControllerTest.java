@@ -926,7 +926,6 @@ public class DefaultHttp2RemoteFlowControllerTest {
                 mock(Http2RemoteFlowController.FlowControlled.class);
         when(flowControlled.size()).thenReturn(100);
         doAnswer(new Answer<Void>() {
-            private int invocationCount;
             @Override
             public Void answer(InvocationOnMock in) throws Throwable {
                 // Write most of the bytes and then fail

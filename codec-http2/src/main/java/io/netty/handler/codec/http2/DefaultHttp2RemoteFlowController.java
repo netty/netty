@@ -60,7 +60,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     }
 
     public DefaultHttp2RemoteFlowController(Http2Connection connection, final Listener listener) {
-        this(connection, new PriorityStreamByteDistributor(connection), listener);
+        this(connection, new WeightedFairQueueByteDistributor(connection), listener);
     }
 
     public DefaultHttp2RemoteFlowController(Http2Connection connection,

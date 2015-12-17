@@ -170,11 +170,6 @@ public interface Http2Stream {
     short weight();
 
     /**
-     * The total of the weights of all children of this stream.
-     */
-    int totalChildWeights();
-
-    /**
      * The parent (i.e. the node in the priority tree on which this node depends), or {@code null}
      * if this is the root node (i.e. the connection, itself).
      */
