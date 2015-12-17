@@ -293,7 +293,6 @@ public class DefaultHttp2Connection implements Http2Connection {
         private short weight = DEFAULT_PRIORITY_WEIGHT;
         private DefaultStream parent;
         private IntObjectMap<DefaultStream> children = IntCollections.emptyMap();
-        private int totalChildWeights;
         private int prioritizableForTree = 1;
         private boolean resetSent;
         private boolean headerSent;
@@ -358,11 +357,6 @@ public class DefaultHttp2Connection implements Http2Connection {
         @Override
         public final short weight() {
             return weight;
-        }
-
-        @Override
-        public final int totalChildWeights() {
-            return totalChildWeights;
         }
 
         @Override
@@ -573,10 +567,6 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         final void weight(short weight) {
             if (weight != this.weight) {
-                if (parent != null) {
-                    int delta = weight - this.weight;
-                    parent.totalChildWeights += delta;
-                }
                 final short oldWeight = this.weight;
                 this.weight = weight;
                 for (int i = 0; i < listeners.size(); i++) {
@@ -601,10 +591,8 @@ public class DefaultHttp2Connection implements Http2Connection {
             // It will either be added directly in this method, or after this method is called...but it will be added.
             initChildren();
             if (streamToRetain == null) {
-                totalChildWeights = 0;
                 prioritizableForTree = isPrioritizable() ? 1 : 0;
             } else {
-                totalChildWeights = streamToRetain.weight();
                 // prioritizableForTree does not change because it is assumed all children node will still be
                 // descendants through an exclusive priority tree operation.
                 children.put(streamToRetain.id(), streamToRetain);
@@ -628,7 +616,6 @@ public class DefaultHttp2Connection implements Http2Connection {
                 // may not be successful and may return null. This is because when an exclusive dependency is processed
                 // the children are removed in a previous recursive call but the child's parent link is updated here.
                 if (oldParent != null && oldParent.children.remove(child.id()) != null) {
-                    oldParent.totalChildWeights -= child.weight();
                     if (!child.isDescendantOf(oldParent)) {
                         oldParent.decrementPrioritizableForTree(child.prioritizableForTree());
                         if (oldParent.prioritizableForTree() == 0) {
@@ -647,7 +634,6 @@ public class DefaultHttp2Connection implements Http2Connection {
 
                 final Http2Stream oldChild = children.put(child.id(), child);
                 assert oldChild == null : "A stream with the same stream ID was already in the child map.";
-                totalChildWeights += child.weight();
                 incrementPrioritizableForTree(child.prioritizableForTree(), oldParent);
             }
 
@@ -669,7 +655,6 @@ public class DefaultHttp2Connection implements Http2Connection {
                 events.add(new ParentChangedEvent(child, child.parent()));
                 notifyParentChanging(child, null);
                 child.parent = null;
-                totalChildWeights -= child.weight();
                 decrementPrioritizableForTree(child.prioritizableForTree());
 
                 // Move up any grand children to be directly dependent on this node.

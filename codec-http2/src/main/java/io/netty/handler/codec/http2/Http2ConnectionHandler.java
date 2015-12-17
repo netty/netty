@@ -49,7 +49,6 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.min;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Provides the default implementation for processing inbound frame events and delegates to a
