@@ -404,6 +404,12 @@ public interface Channel extends AttributeMap, Comparable<Channel> {
      * {@link ChannelOutboundHandler#read(ChannelHandlerContext)}
      * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
+     * <p>
+     * This may only be called after the channel is registered with the event loop, that is, when
+     * {@link #isRegistered()} returns true. This event can be received by adding a listener to the future returned by
+     * {@link EventLoopGroup#register(Channel)}. Alternatively, if {@link #isRegistered()} returns false when a
+     * {@link ChannelHandler} receives {@link ChannelHandler#handlerAdded(ChannelHandlerContext)}, the handler can call
+     * it when it receives {@link ChannelInboundHandler#channelRegistered(ChannelHandlerContext)}.
      */
     Channel read();
 
