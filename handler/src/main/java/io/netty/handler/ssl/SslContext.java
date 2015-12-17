@@ -760,7 +760,10 @@ public abstract class SslContext {
         return apn;
     }
 
-    SslContext() { }
+    /**
+     * Creates a new instance.
+     */
+    protected SslContext() { }
 
     /**
      * Returns {@code true} if and only if this context is for server-side.
