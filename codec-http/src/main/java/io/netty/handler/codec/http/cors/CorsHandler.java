@@ -30,6 +30,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import static io.netty.handler.codec.http.HttpMethod.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.util.ReferenceCountUtil.*;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Handles <a href="http://www.w3.org/TR/cors/">Cross Origin Resource Sharing</a> (CORS) requests.
@@ -45,8 +46,11 @@ public class CorsHandler extends ChannelDuplexHandler {
 
     private HttpRequest request;
 
+    /**
+     * Creates a new instance with the specified {@link CorsConfig}.
+     */
     public CorsHandler(final CorsConfig config) {
-        this.config = config;
+        this.config = checkNotNull(config, "config");
     }
 
     @Override
@@ -57,7 +61,7 @@ public class CorsHandler extends ChannelDuplexHandler {
                 handlePreflight(ctx, request);
                 return;
             }
-            if (config.isShortCurcuit() && !validateOrigin()) {
+            if (config.isShortCircuit() && !validateOrigin()) {
                 forbidden(ctx, request);
                 return;
             }
@@ -109,7 +113,7 @@ public class CorsHandler extends ChannelDuplexHandler {
                 setVaryHeader(response);
                 return true;
             }
-            logger.debug("Request origin [" + origin + "] was not among the configured origins " + config.origins());
+            logger.debug("Request origin [{}]] was not among the configured origins [{}]", origin, config.origins());
         }
         return false;
     }
@@ -194,16 +198,9 @@ public class CorsHandler extends ChannelDuplexHandler {
         ctx.writeAndFlush(msg, promise);
     }
 
-    @Override
-    public void exceptionCaught(final ChannelHandlerContext ctx, final Throwable cause) throws Exception {
-        logger.error("Caught error in CorsHandler", cause);
-        ctx.fireExceptionCaught(cause);
-    }
-
     private static void forbidden(final ChannelHandlerContext ctx, final HttpRequest request) {
         ctx.writeAndFlush(new DefaultFullHttpResponse(request.protocolVersion(), FORBIDDEN))
                 .addListener(ChannelFutureListener.CLOSE);
         release(request);
     }
 }
-
