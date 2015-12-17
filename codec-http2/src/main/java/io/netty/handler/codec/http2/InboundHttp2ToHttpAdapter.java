@@ -14,21 +14,21 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
-import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
-import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpStatusClass;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+
+import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * This adapter provides just header/data events from the HTTP message flow defined
@@ -67,81 +67,17 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
     protected final IntObjectMap<FullHttpMessage> messageMap;
     private final boolean propagateSettings;
 
-    public static class Builder {
+    protected InboundHttp2ToHttpAdapter(Http2Connection connection, int maxContentLength,
+                                        boolean validateHttpHeaders, boolean propagateSettings) {
 
-        private final Http2Connection connection;
-        private int maxContentLength;
-        private boolean validateHttpHeaders;
-        private boolean propagateSettings;
-
-        /**
-         * Creates a new {@link InboundHttp2ToHttpAdapter} builder for the specified {@link Http2Connection}.
-         *
-         * @param connection The object which will provide connection notification events for the current connection
-         */
-        public Builder(Http2Connection connection) {
-            this.connection = connection;
+        checkNotNull(connection, "connection");
+        if (maxContentLength <= 0) {
+            throw new IllegalArgumentException("maxContentLength: " + maxContentLength + " (expected: > 0)");
         }
-
-        /**
-         * Specifies the maximum length of the message content.
-         *
-         * @param maxContentLength the maximum length of the message content. If the length of the message content
-         *        exceeds this value, a {@link TooLongFrameException} will be raised
-         * @return {@link Builder} the builder for the {@link InboundHttp2ToHttpAdapter}
-         */
-        public Builder maxContentLength(int maxContentLength) {
-            this.maxContentLength = maxContentLength;
-            return this;
-        }
-
-        /**
-         * Specifies whether validation of HTTP headers should be performed.
-         *
-         * @param validate
-         * <ul>
-         * <li>{@code true} to validate HTTP headers in the http-codec</li>
-         * <li>{@code false} not to validate HTTP headers in the http-codec</li>
-         * </ul>
-         * @return {@link Builder} the builder for the {@link InboundHttp2ToHttpAdapter}
-         */
-        public Builder validateHttpHeaders(boolean validate) {
-            validateHttpHeaders = validate;
-            return this;
-        }
-
-        /**
-         * Specifies whether a read settings frame should be propagated alone the channel pipeline.
-         *
-         * @param propagate if {@code true} read settings will be passed along the pipeline. This can be useful
-         *                     to clients that need hold off sending data until they have received the settings.
-         * @return {@link Builder} the builder for the {@link InboundHttp2ToHttpAdapter}
-         */
-        public Builder propagateSettings(boolean propagate) {
-            propagateSettings = propagate;
-            return this;
-        }
-
-        /**
-         * Builds/creates a new {@link InboundHttp2ToHttpAdapter} instance using this builders current settings.
-         */
-        public InboundHttp2ToHttpAdapter build() {
-            InboundHttp2ToHttpAdapter instance = new InboundHttp2ToHttpAdapter(this);
-            connection.addListener(instance);
-            return instance;
-        }
-    }
-
-    protected InboundHttp2ToHttpAdapter(Builder builder) {
-        checkNotNull(builder.connection, "connection");
-        if (builder.maxContentLength <= 0) {
-            throw new IllegalArgumentException("maxContentLength must be a positive integer: "
-                    + builder.maxContentLength);
-        }
-        connection = builder.connection;
-        maxContentLength = builder.maxContentLength;
-        validateHttpHeaders = builder.validateHttpHeaders;
-        propagateSettings = builder.propagateSettings;
+        this.connection = connection;
+        this.maxContentLength = maxContentLength;
+        this.validateHttpHeaders = validateHttpHeaders;
+        this.propagateSettings = propagateSettings;
         sendDetector = DEFAULT_SEND_DETECTOR;
         messageMap = new IntObjectHashMap<FullHttpMessage>();
     }
@@ -264,7 +200,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
                     throws Http2Exception {
         FullHttpMessage msg = messageMap.get(streamId);
         if (msg == null) {
-            throw connectionError(PROTOCOL_ERROR, "Data Frame recieved for unknown stream id %d", streamId);
+            throw connectionError(PROTOCOL_ERROR, "Data Frame received for unknown stream id %d", streamId);
         }
 
         ByteBuf content = msg.content();
@@ -316,7 +252,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         // A push promise should not be allowed to add headers to an existing stream
         FullHttpMessage msg = processHeadersBegin(ctx, promisedStreamId, headers, false, false, false);
         if (msg == null) {
-            throw connectionError(PROTOCOL_ERROR, "Push Promise Frame recieved for pre-existing stream id %d",
+            throw connectionError(PROTOCOL_ERROR, "Push Promise Frame received for pre-existing stream id %d",
                             promisedStreamId);
         }
 
