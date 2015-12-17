@@ -43,27 +43,11 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
             HttpConversionUtil.OUT_OF_MESSAGE_SEQUENCE_RETURN_CODE.toString());
     private final IntObjectMap<HttpHeaders> outOfMessageFlowHeaders;
 
-    public static final class Builder extends InboundHttp2ToHttpAdapter.Builder {
+    InboundHttp2ToHttpPriorityAdapter(Http2Connection connection, int maxContentLength,
+                                      boolean validateHttpHeaders,
+                                      boolean propagateSettings) {
 
-        /**
-         * Creates a new {@link InboundHttp2ToHttpPriorityAdapter} builder for the specified {@link Http2Connection}.
-         *
-         * @param connection The object which will provide connection notification events for the current connection
-         */
-        public Builder(Http2Connection connection) {
-            super(connection);
-        }
-
-        @Override
-        public InboundHttp2ToHttpPriorityAdapter build() {
-            final InboundHttp2ToHttpPriorityAdapter instance = new InboundHttp2ToHttpPriorityAdapter(this);
-            instance.connection.addListener(instance);
-            return instance;
-        }
-    }
-
-    InboundHttp2ToHttpPriorityAdapter(Builder builder) {
-        super(builder);
+        super(connection, maxContentLength, validateHttpHeaders, propagateSettings);
         outOfMessageFlowHeaders = new IntObjectHashMap<HttpHeaders>();
     }
 
