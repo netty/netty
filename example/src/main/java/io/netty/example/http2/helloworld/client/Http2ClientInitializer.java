@@ -31,7 +31,7 @@ import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2FrameLogger;
 import io.netty.handler.codec.http2.HttpToHttp2ConnectionHandler;
 import io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder;
-import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapter;
+import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapterBuilder;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
 import io.netty.handler.ssl.SslContext;
@@ -59,11 +59,12 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
     public void initChannel(SocketChannel ch) throws Exception {
         final Http2Connection connection = new DefaultHttp2Connection(false);
         connectionHandler = new HttpToHttp2ConnectionHandlerBuilder()
-                .frameListener(new DelegatingDecompressorFrameListener(connection,
-                        new InboundHttp2ToHttpAdapter.Builder(connection)
-                            .maxContentLength(maxContentLength)
-                            .propagateSettings(true)
-                            .build()))
+                .frameListener(new DelegatingDecompressorFrameListener(
+                        connection,
+                        new InboundHttp2ToHttpAdapterBuilder(connection)
+                                .maxContentLength(maxContentLength)
+                                .propagateSettings(true)
+                                .build()))
                 .frameLogger(logger)
                 .connection(connection)
                 .build();

@@ -728,7 +728,7 @@ public class InboundHttp2ToHttpAdapterTest {
 
                 p.addLast(new HttpAdapterFrameAdapter(
                         connection,
-                        new InboundHttp2ToHttpPriorityAdapter.Builder(connection)
+                        new InboundHttp2ToHttpPriorityAdapterBuilder(connection)
                                 .maxContentLength(maxContentLength)
                                 .validateHttpHeaders(true)
                                 .propagateSettings(true)
@@ -766,7 +766,7 @@ public class InboundHttp2ToHttpAdapterTest {
 
                 p.addLast(new HttpAdapterFrameAdapter(
                         connection,
-                        new InboundHttp2ToHttpPriorityAdapter.Builder(connection)
+                        new InboundHttp2ToHttpPriorityAdapterBuilder(connection)
                                 .maxContentLength(maxContentLength)
                                 .build(),
                         new CountDownLatch(10)));
