@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.CharsetUtil;
 import io.netty.util.DomainNameMapping;
+import io.netty.util.Mapping;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -40,26 +41,36 @@ public class SniHandler extends ByteToMessageDecoder {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(SniHandler.class);
 
-    private final DomainNameMapping<SslContext> mapping;
+    private final Mapping<Object, SslContext> mapping;
 
     private boolean handshaken;
     private volatile String hostname;
     private volatile SslContext selectedContext;
 
     /**
-     * Create a SNI detection handler with configured {@link SslContext}
-     * maintained by {@link DomainNameMapping}
+     * Creates a SNI detection handler with configured {@link SslContext}
+     * maintained by {@link Mapping}
      *
      * @param mapping the mapping of domain name to {@link SslContext}
      */
     @SuppressWarnings("unchecked")
-    public SniHandler(DomainNameMapping<? extends SslContext> mapping) {
+    public SniHandler(Mapping<? super String, ? extends SslContext> mapping) {
         if (mapping == null) {
             throw new NullPointerException("mapping");
         }
 
-        this.mapping = (DomainNameMapping<SslContext>) mapping;
+        this.mapping = (Mapping<Object, SslContext>) mapping;
         handshaken = false;
+    }
+
+    /**
+     * Creates a SNI detection handler with configured {@link SslContext}
+     * maintained by {@link DomainNameMapping}
+     *
+     * @param mapping the mapping of domain name to {@link SslContext}
+     */
+    public SniHandler(DomainNameMapping<? extends SslContext> mapping) {
+        this((Mapping<String, ? extends SslContext>) mapping);
     }
 
     /**
@@ -70,7 +81,7 @@ public class SniHandler extends ByteToMessageDecoder {
     }
 
     /**
-     * @return the selected sslcontext
+     * @return the selected {@link SslContext}
      */
     public SslContext sslContext() {
         return selectedContext;
