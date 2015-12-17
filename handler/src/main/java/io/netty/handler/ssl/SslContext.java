@@ -25,14 +25,14 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.KeyManagerFactory;
 import javax.crypto.Cipher;
 import javax.crypto.EncryptedPrivateKeyInfo;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
@@ -40,6 +40,7 @@ import javax.net.ssl.SSLSessionContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.security.auth.x500.X500Principal;
+
 import java.io.File;
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
@@ -79,7 +80,7 @@ import java.util.List;
  * ...
  * </pre>
  */
-public abstract class SslContext {
+public abstract class SslContext implements SslHandlerFactory {
     static final CertificateFactory X509_CERT_FACTORY;
     static {
         try {
@@ -824,23 +825,18 @@ public abstract class SslContext {
      */
     public abstract SSLSessionContext sessionContext();
 
-    /**
-     * Creates a new {@link SslHandler}.
-     *
-     * @return a new {@link SslHandler}
-     */
+    @Deprecated
+    @Override
+    public final SslContext sslContext() {
+        return this;
+    }
+
+    @Override
     public final SslHandler newHandler(ByteBufAllocator alloc) {
         return newHandler(newEngine(alloc));
     }
 
-    /**
-     * Creates a new {@link SslHandler} with advisory peer information.
-     *
-     * @param peerHost the non-authoritative name of the host
-     * @param peerPort the non-authoritative port
-     *
-     * @return a new {@link SslHandler}
-     */
+    @Override
     public final SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort) {
         return newHandler(newEngine(alloc, peerHost, peerPort));
     }
