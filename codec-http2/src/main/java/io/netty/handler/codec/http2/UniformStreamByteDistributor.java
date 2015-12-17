@@ -14,14 +14,15 @@
  */
 package io.netty.handler.codec.http2;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+
+import static io.netty.handler.codec.http2.Http2CodecUtil.streamableBytes;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
-
-import java.util.ArrayDeque;
-import java.util.Deque;
 
 /**
  * A {@link StreamByteDistributor} that ignores stream priority and uniformly allocates bytes to all
@@ -77,8 +78,9 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
 
     @Override
     public void updateStreamableBytes(StreamState streamState) {
-        State state = state(streamState.stream());
-        state.updateStreamableBytes(streamState.streamableBytes(), streamState.hasFrame());
+        state(streamState.stream()).updateStreamableBytes(streamableBytes(streamState),
+                                                          streamState.hasFrame(),
+                                                          streamState.windowSize());
     }
 
     @Override
@@ -120,18 +122,26 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
     }
 
     /**
+     * For testing only!
+     */
+    int streamableBytes0(Http2Stream stream) {
+        return state(stream).streamableBytes;
+    }
+
+    /**
      * The remote flow control state for a single stream.
      */
     private final class State {
         final Http2Stream stream;
         int streamableBytes;
         boolean enqueued;
+        boolean writing;
 
         State(Http2Stream stream) {
             this.stream = stream;
         }
 
-        void updateStreamableBytes(int newStreamableBytes, boolean hasFrame) {
+        void updateStreamableBytes(int newStreamableBytes, boolean hasFrame, int windowSize) {
             assert hasFrame || newStreamableBytes == 0;
 
             int delta = newStreamableBytes - streamableBytes;
@@ -139,7 +149,11 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
                 streamableBytes = newStreamableBytes;
                 totalStreamableBytes += delta;
             }
-            if (hasFrame) {
+            // We should queue this state if there is a frame. We don't want to queue this frame if the window
+            // size is <= 0 and we are writing this state. The rational being we already gave this state the chance to
+            // write, and if there were empty frames the expectation is they would have been sent. At this point there
+            // must be a call to updateStreamableBytes for this state to be able to write again.
+            if (hasFrame && (!writing || windowSize > 0)) {
                 // It's not in the queue but has data to send, add it.
                 addToQueue();
             }
@@ -150,15 +164,14 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
          * assuming all of the bytes will be written.
          */
         void write(int numBytes, Writer writer) throws Http2Exception {
-            // Update the streamable bytes, assuming that all the bytes will be written.
-            int newStreamableBytes = streamableBytes - numBytes;
-            updateStreamableBytes(newStreamableBytes, newStreamableBytes > 0);
-
+            writing = true;
             try {
                 // Write the allocated bytes.
                 writer.write(stream, numBytes);
             } catch (Throwable t) {
                 throw connectionError(INTERNAL_ERROR, t, "byte distribution write error");
+            } finally {
+                writing = false;
             }
         }
 
@@ -181,7 +194,7 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
             removeFromQueue();
 
             // Clear the streamable bytes.
-            updateStreamableBytes(0, false);
+            updateStreamableBytes(0, false, 0);
         }
     }
 }

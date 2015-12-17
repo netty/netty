@@ -82,7 +82,7 @@ public class WeightedFairQueueByteDistributorTest {
             public Void answer(InvocationOnMock in) throws Throwable {
                 Http2Stream stream = in.getArgumentAt(0, Http2Stream.class);
                 int numBytes = in.getArgumentAt(1, Integer.class);
-                int streamableBytes = distributor.streamableBytes(stream) - numBytes;
+                int streamableBytes = distributor.streamableBytes0(stream) - numBytes;
                 updateStream(stream.id(), streamableBytes, streamableBytes > 0);
                 return null;
             }
@@ -913,7 +913,7 @@ public class WeightedFairQueueByteDistributorTest {
         updateStream(streamId, streamableBytes, hasFrame, hasFrame);
     }
 
-    private void updateStream(final int streamId, final int streamableBytes, final boolean hasFrame,
+    private void updateStream(final int streamId, final int pendingBytes, final boolean hasFrame,
             final boolean isWriteAllowed) {
         final Http2Stream stream = stream(streamId);
         distributor.updateStreamableBytes(new StreamByteDistributor.StreamState() {
@@ -923,8 +923,8 @@ public class WeightedFairQueueByteDistributorTest {
             }
 
             @Override
-            public int streamableBytes() {
-                return streamableBytes;
+            public int pendingBytes() {
+                return pendingBytes;
             }
 
             @Override
@@ -933,8 +933,8 @@ public class WeightedFairQueueByteDistributorTest {
             }
 
             @Override
-            public boolean isWriteAllowed() {
-                return isWriteAllowed;
+            public int windowSize() {
+                return isWriteAllowed ? pendingBytes : -1;
             }
         });
     }

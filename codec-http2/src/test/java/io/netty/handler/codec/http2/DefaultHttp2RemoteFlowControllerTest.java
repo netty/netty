@@ -58,7 +58,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Tests for {@link DefaultHttp2RemoteFlowController}.
  */
-public class DefaultHttp2RemoteFlowControllerTest {
+public abstract class DefaultHttp2RemoteFlowControllerTest {
     private static final int STREAM_A = 1;
     private static final int STREAM_B = 3;
     private static final int STREAM_C = 5;
@@ -114,9 +114,11 @@ public class DefaultHttp2RemoteFlowControllerTest {
         reset(listener);
     }
 
+    protected abstract StreamByteDistributor newDistributor(Http2Connection connection);
+
     private void initConnectionAndController() throws Http2Exception {
         connection = new DefaultHttp2Connection(false);
-        controller = new DefaultHttp2RemoteFlowController(connection, listener);
+        controller = new DefaultHttp2RemoteFlowController(connection, newDistributor(connection), listener);
         connection.remote().flowController(controller);
 
         connection.local().createStream(STREAM_A, false);
@@ -926,7 +928,6 @@ public class DefaultHttp2RemoteFlowControllerTest {
                 mock(Http2RemoteFlowController.FlowControlled.class);
         when(flowControlled.size()).thenReturn(100);
         doAnswer(new Answer<Void>() {
-            private int invocationCount;
             @Override
             public Void answer(InvocationOnMock in) throws Throwable {
                 // Write most of the bytes and then fail
