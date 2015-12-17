@@ -21,6 +21,7 @@ import io.netty.util.internal.PriorityQueueNode;
 import java.util.Queue;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
+import static io.netty.handler.codec.http2.Http2CodecUtil.streamableBytes;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -104,8 +105,8 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
 
     @Override
     public void updateStreamableBytes(StreamState state) {
-        state(state.stream()).updateStreamableBytes(state.streamableBytes(),
-                                                    state.hasFrame() && state.isWriteAllowed());
+        state(state.stream()).updateStreamableBytes(streamableBytes(state),
+                                                    state.hasFrame() && state.windowSize() >= 0);
     }
 
     @Override
@@ -204,7 +205,7 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
     /**
      * For testing only!
      */
-    int streamableBytes(Http2Stream stream) {
+    int streamableBytes0(Http2Stream stream) {
         return state(stream).streamableBytes;
     }
 

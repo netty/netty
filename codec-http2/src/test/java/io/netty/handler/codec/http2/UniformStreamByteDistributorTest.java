@@ -21,9 +21,12 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.same;
 import static org.mockito.Mockito.atMost;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.reset;
@@ -35,6 +38,8 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.mockito.verification.VerificationMode;
 
 /**
@@ -61,12 +66,33 @@ public class UniformStreamByteDistributorTest {
         connection = new DefaultHttp2Connection(false);
         distributor = new UniformStreamByteDistributor(connection);
 
+        // Assume we always write all the allocated bytes.
+        resetWriter();
+
         connection.local().createStream(STREAM_A, false);
         connection.local().createStream(STREAM_B, false);
         Http2Stream streamC = connection.local().createStream(STREAM_C, false);
         Http2Stream streamD = connection.local().createStream(STREAM_D, false);
         streamC.setPriority(STREAM_A, DEFAULT_PRIORITY_WEIGHT, false);
         streamD.setPriority(STREAM_A, DEFAULT_PRIORITY_WEIGHT, false);
+    }
+
+    private Answer<Void> writeAnswer() {
+        return new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock in) throws Throwable {
+                Http2Stream stream = in.getArgumentAt(0, Http2Stream.class);
+                int numBytes = in.getArgumentAt(1, Integer.class);
+                int streamableBytes = distributor.streamableBytes0(stream) - numBytes;
+                updateStream(stream.id(), streamableBytes, streamableBytes > 0);
+                return null;
+            }
+        };
+    }
+
+    private void resetWriter() {
+        reset(writer);
+        doAnswer(writeAnswer()).when(writer).write(any(Http2Stream.class), anyInt());
     }
 
     @Test
@@ -145,7 +171,7 @@ public class UniformStreamByteDistributorTest {
         assertEquals(CHUNK_SIZE, captureWrite(STREAM_C));
         verifyNoMoreInteractions(writer);
 
-        reset(writer);
+        resetWriter();
 
         // Now write again and verify that the last stream is written to.
         assertFalse(write(CHUNK_SIZE));
@@ -163,7 +189,7 @@ public class UniformStreamByteDistributorTest {
         assertEquals(CHUNK_SIZE, captureWrite(STREAM_A));
         verifyNoMoreInteractions(writer);
 
-        reset(writer);
+        resetWriter();
 
         // Now write the rest of the data.
         assertFalse(write(CHUNK_SIZE));
@@ -193,7 +219,7 @@ public class UniformStreamByteDistributorTest {
         updateStream(streamId, streamableBytes, hasFrame, hasFrame);
     }
 
-    private void updateStream(final int streamId, final int streamableBytes, final boolean hasFrame,
+    private void updateStream(final int streamId, final int pendingBytes, final boolean hasFrame,
             final boolean isWriteAllowed) {
         final Http2Stream stream = stream(streamId);
         distributor.updateStreamableBytes(new StreamByteDistributor.StreamState() {
@@ -203,8 +229,8 @@ public class UniformStreamByteDistributorTest {
             }
 
             @Override
-            public int streamableBytes() {
-                return streamableBytes;
+            public int pendingBytes() {
+                return pendingBytes;
             }
 
             @Override
@@ -213,8 +239,8 @@ public class UniformStreamByteDistributorTest {
             }
 
             @Override
-            public boolean isWriteAllowed() {
-                return isWriteAllowed;
+            public int windowSize() {
+                return isWriteAllowed ? pendingBytes : -1;
             }
         });
     }

@@ -299,7 +299,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
 
         @Override
-        int windowSize() {
+        public int windowSize() {
             return window;
         }
 
@@ -389,11 +389,6 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             return window;
         }
 
-        @Override
-        public int streamableBytes() {
-            return max(0, min(pendingBytes, window));
-        }
-
         /**
          * Returns the maximum writable window (minimum of the stream and connection windows).
          */
@@ -402,7 +397,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
 
         @Override
-        int pendingBytes() {
+        public int pendingBytes() {
             return pendingBytes;
         }
 
@@ -514,7 +509,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
 
         @Override
-        int windowSize() {
+        public int windowSize() {
             return 0;
         }
 
@@ -524,12 +519,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
 
         @Override
-        public int streamableBytes() {
-            return 0;
-        }
-
-        @Override
-        int pendingBytes() {
+        public int pendingBytes() {
             return 0;
         }
 
@@ -604,13 +594,6 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             this.markedWritable = isWritable;
         }
 
-        @Override
-        public final boolean isWriteAllowed() {
-            return windowSize() >= 0;
-        }
-
-        abstract int windowSize();
-
         abstract int initialWindowSize();
 
         /**
@@ -619,11 +602,6 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          * @return the number of bytes written for a stream or {@code -1} if no write occurred.
          */
         abstract int writeAllocatedBytes(int allocated);
-
-        /**
-         * Get the number of bytes pending to be written.
-         */
-        abstract int pendingBytes();
 
         /**
          * Any operations that may be pending are cleared and the status of these operations is failed.
@@ -651,20 +629,11 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
      */
     private abstract class WritabilityMonitor {
         private long totalPendingBytes;
+        private final Writer writer;
 
-        /**
-         * Increment all windows by {@code newWindowSize} amount, and write data if streams change from not writable
-         * to writable.
-         * @param newWindowSize The new window size.
-         * @throws Http2Exception If an overflow occurs or an exception on write occurs.
-         */
-        public abstract void initialWindowSize(int newWindowSize) throws Http2Exception;
-
-        /**
-         * Attempt to allocate bytes to streams which have frames queued.
-         * @throws Http2Exception If a write occurs and an exception happens in the write operation.
-         */
-        public abstract void writePendingBytes() throws Http2Exception;
+        protected WritabilityMonitor(Writer writer) {
+            this.writer = writer;
+        }
 
         /**
          * Called when the writability of the underlying channel changes.
@@ -719,7 +688,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             return isWritableConnection() && state.windowSize() - state.pendingBytes() > 0;
         }
 
-        protected final void writePendingBytes(Writer writer) throws Http2Exception {
+        protected final void writePendingBytes() throws Http2Exception {
             int bytesToWrite = writableBytes();
 
             // Make sure we always write at least once, regardless if we have bytesToWrite or not.
@@ -733,7 +702,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             }
         }
 
-        protected final boolean initialWindowSize(int newWindowSize, Writer writer) throws Http2Exception {
+        protected void initialWindowSize(int newWindowSize) throws Http2Exception {
             if (newWindowSize < 0) {
                 throw new IllegalArgumentException("Invalid initial window size: " + newWindowSize);
             }
@@ -750,10 +719,8 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
             if (delta > 0) {
                 // The window size increased, send any pending frames for all streams.
-                writePendingBytes(writer);
-                return false;
+                writePendingBytes();
             }
-            return true;
         }
 
         protected final boolean isWritableConnection() {
@@ -765,21 +732,13 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
      * Provides no notification or tracking of writablity changes.
      */
     private final class DefaultWritabilityMonitor extends WritabilityMonitor {
-        private final Writer writer = new StreamByteDistributor.Writer() {
-            @Override
-            public void write(Http2Stream stream, int numBytes) {
-                state(stream).writeAllocatedBytes(numBytes);
-            }
-        };
-
-        @Override
-        public void writePendingBytes() throws Http2Exception {
-            writePendingBytes(writer);
-        }
-
-        @Override
-        public void initialWindowSize(int newWindowSize) throws Http2Exception {
-            initialWindowSize(newWindowSize, writer);
+        DefaultWritabilityMonitor() {
+            super(new StreamByteDistributor.Writer() {
+                @Override
+                public void write(Http2Stream stream, int numBytes) {
+                    state(stream).writeAllocatedBytes(numBytes);
+                }
+            });
         }
     }
 
@@ -803,30 +762,19 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                 return true;
             }
         };
-        private final Writer initialWindowSizeWriter = new StreamByteDistributor.Writer() {
-            @Override
-            public void write(Http2Stream stream, int numBytes) {
-                AbstractState state = state(stream);
-                writeAllocatedBytes(state, numBytes);
-                if (isWritable(state) != state.markWritability()) {
-                    notifyWritabilityChanged(state);
+
+        ListenerWritabilityMonitor(final Listener listener) {
+            super(new StreamByteDistributor.Writer() {
+                @Override
+                public void write(Http2Stream stream, int numBytes) {
+                    AbstractState state = state(stream);
+                    int written = state.writeAllocatedBytes(numBytes);
+                    if (written != -1) {
+                        listener.streamWritten(state.stream(), written);
+                    }
                 }
-            }
-        };
-        private final Writer writeAllocatedBytesWriter = new StreamByteDistributor.Writer() {
-            @Override
-            public void write(Http2Stream stream, int numBytes) {
-                writeAllocatedBytes(state(stream), numBytes);
-            }
-        };
-
-        ListenerWritabilityMonitor(Listener listener) {
+            });
             this.listener = listener;
-        }
-
-        @Override
-        public void writePendingBytes() throws Http2Exception {
-            writePendingBytes(writeAllocatedBytesWriter);
         }
 
         @Override
@@ -842,13 +790,12 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
 
         @Override
-        public void initialWindowSize(int newWindowSize) throws Http2Exception {
-            if (initialWindowSize(newWindowSize, initialWindowSizeWriter)) {
-                if (isWritableConnection()) {
-                    // If the write operation does not occur we still need to check all streams because they
-                    // may have transitioned from writable to not writable.
-                    checkAllWritabilityChanged();
-                }
+        protected void initialWindowSize(int newWindowSize) throws Http2Exception {
+            super.initialWindowSize(newWindowSize);
+            if (isWritableConnection()) {
+                // If the write operation does not occur we still need to check all streams because they
+                // may have transitioned from writable to not writable.
+                checkAllWritabilityChanged();
             }
         }
 
@@ -896,13 +843,6 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             // Make sure we mark that we have notified as a result of this change.
             connectionState.markWritability(isWritableConnection());
             connection.forEachActiveStream(checkStreamWritabilityVisitor);
-        }
-
-        private void writeAllocatedBytes(AbstractState state, int numBytes) {
-            int written = state.writeAllocatedBytes(numBytes);
-            if (written != -1) {
-                listener.streamWritten(state.stream(), written);
-            }
         }
     }
 }

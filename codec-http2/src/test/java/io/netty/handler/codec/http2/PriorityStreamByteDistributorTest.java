@@ -639,7 +639,7 @@ public class PriorityStreamByteDistributorTest {
         return connection.stream(streamId);
     }
 
-    private void updateStream(final int streamId, final int streamableBytes, final boolean hasFrame) {
+    private void updateStream(final int streamId, final int pendingBytes, final boolean hasFrame) {
         final Http2Stream stream = stream(streamId);
         distributor.updateStreamableBytes(new StreamByteDistributor.StreamState() {
             @Override
@@ -648,8 +648,8 @@ public class PriorityStreamByteDistributorTest {
             }
 
             @Override
-            public int streamableBytes() {
-                return streamableBytes;
+            public int pendingBytes() {
+                return pendingBytes;
             }
 
             @Override
@@ -658,8 +658,8 @@ public class PriorityStreamByteDistributorTest {
             }
 
             @Override
-            public boolean isWriteAllowed() {
-                return hasFrame;
+            public int windowSize() {
+                return pendingBytes;
             }
         });
     }
