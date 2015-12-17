@@ -105,6 +105,11 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
                     new WebSocketServerProtocolHandshakeHandler(websocketPath, subprotocols,
                             allowExtensions, maxFramePayloadLength, allowMaskMismatch));
         }
+        if (cp.get(Utf8FrameValidator.class) == null) {
+            // Add the UFT8 checking before this one.
+            ctx.pipeline().addBefore(ctx.name(), Utf8FrameValidator.class.getName(),
+                    new Utf8FrameValidator());
+        }
     }
 
     @Override
