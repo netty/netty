@@ -97,10 +97,13 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
         State state = queue.pollFirst();
         do {
             state.enqueued = false;
-            if (state.streamableBytes > 0 && maxBytes == 0) {
-                // Stop at the first state that can't send. Add this state back to the head of
-                // the queue. Note that empty frames at the head of the queue will always be
-                // written.
+            if (state.windowNegative) {
+                continue;
+            }
+            if (maxBytes == 0 && state.streamableBytes > 0) {
+                // Stop at the first state that can't send. Add this state back to the head of the queue. Note
+                // that empty frames at the head of the queue will always be written, assuming the stream window
+                // is not negative.
                 queue.addFirst(state);
                 state.enqueued = true;
                 break;
@@ -134,6 +137,7 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
     private final class State {
         final Http2Stream stream;
         int streamableBytes;
+        boolean windowNegative;
         boolean enqueued;
         boolean writing;
 
@@ -149,12 +153,15 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
                 streamableBytes = newStreamableBytes;
                 totalStreamableBytes += delta;
             }
-            // We should queue this state if there is a frame. We don't want to queue this frame if the window
-            // size is <= 0 and we are writing this state. The rational being we already gave this state the chance to
-            // write, and if there were empty frames the expectation is they would have been sent. At this point there
-            // must be a call to updateStreamableBytes for this state to be able to write again.
-            if (hasFrame && (!writing || windowSize > 0)) {
-                // It's not in the queue but has data to send, add it.
+            // In addition to only enqueuing state when they have frames we enforce the following restrictions:
+            // 1. If the window has gone negative. We never want to queue a state. However we also don't want to
+            //    Immediately remove the item if it is already queued because removal from dequeue is O(n). So
+            //    we allow it to stay queued and rely on the distribution loop to remove this state.
+            // 2. If the window is zero we only want to queue if we are not writing. If we are writing that means
+            //    we gave the state a chance to write zero length frames. We wait until updateStreamableBytes is
+            //    called again before this state is allowed to write.
+            windowNegative = windowSize < 0;
+            if (hasFrame && (windowSize > 0 || (windowSize == 0 && !writing))) {
                 addToQueue();
             }
         }

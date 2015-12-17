@@ -211,6 +211,19 @@ public class UniformStreamByteDistributorTest {
         verifyNoMoreInteractions(writer);
     }
 
+    @Test
+    public void streamWindowExhaustedDoesNotWrite() throws Http2Exception {
+        updateStream(STREAM_A, 0, true, false);
+        updateStream(STREAM_B, 0, true);
+        updateStream(STREAM_C, 0, true);
+        updateStream(STREAM_D, 0, true, false);
+
+        assertFalse(write(10));
+        verifyWrite(STREAM_B, 0);
+        verifyWrite(STREAM_C, 0);
+        verifyNoMoreInteractions(writer);
+    }
+
     private Http2Stream stream(int streamId) {
         return connection.stream(streamId);
     }
