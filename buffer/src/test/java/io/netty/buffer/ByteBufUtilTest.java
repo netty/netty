@@ -15,19 +15,17 @@
  */
 package io.netty.buffer;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-
-import java.util.Random;
-
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.nio.charset.Charset;
+import java.util.Random;
+
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class ByteBufUtilTest {
     @Test
@@ -127,6 +125,21 @@ public class ByteBufUtilTest {
         buf.writeBytes(usAscii.getBytes(CharsetUtil.UTF_8));
         ByteBuf buf2 = ReferenceCountUtil.releaseLater(Unpooled.buffer(16));
         ByteBufUtil.writeUtf8(buf2, usAscii);
+
+        Assert.assertEquals(buf, buf2);
+    }
+
+    @Test
+    public void testWriteUtf8Surrogates() {
+        // leading surrogate + trailing surrogate
+        String surrogateString = new StringBuilder(2)
+                                .append('\uD800')
+                                .append('\uDC00')
+                                .toString();
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(16));
+        buf.writeBytes(surrogateString.getBytes(CharsetUtil.UTF_8));
+        ByteBuf buf2 = ReferenceCountUtil.releaseLater(Unpooled.buffer(16));
+        ByteBufUtil.writeUtf8(buf2, surrogateString);
 
         Assert.assertEquals(buf, buf2);
     }
