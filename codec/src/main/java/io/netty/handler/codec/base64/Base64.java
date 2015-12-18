@@ -20,7 +20,7 @@
 package io.netty.handler.codec.base64;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBufAllocator;
 
 /**
  * Utility class for {@link ByteBuf} that encodes and decodes to and from
@@ -104,6 +104,11 @@ public final class Base64 {
 
     public static ByteBuf encode(
             ByteBuf src, int off, int len, boolean breakLines, Base64Dialect dialect) {
+        return encode(src, off, len, breakLines, dialect, src.alloc());
+    }
+
+    public static ByteBuf encode(
+            ByteBuf src, int off, int len, boolean breakLines, Base64Dialect dialect, ByteBufAllocator allocator) {
 
         if (src == null) {
             throw new NullPointerException("src");
@@ -113,7 +118,7 @@ public final class Base64 {
         }
 
         int len43 = len * 4 / 3;
-        ByteBuf dest = Unpooled.buffer(
+        ByteBuf dest = allocator.buffer(
                 len43 +
                         (len % 3 > 0 ? 4 : 0) + // Account for padding
                         (breakLines ? len43 / MAX_LINE_LENGTH : 0)).order(src.order()); // New lines
@@ -210,6 +215,11 @@ public final class Base64 {
 
     public static ByteBuf decode(
             ByteBuf src, int off, int len, Base64Dialect dialect) {
+        return decode(src, off, len, dialect, src.alloc());
+    }
+
+    public static ByteBuf decode(
+            ByteBuf src, int off, int len, Base64Dialect dialect, ByteBufAllocator allocator) {
 
         if (src == null) {
             throw new NullPointerException("src");
@@ -221,7 +231,7 @@ public final class Base64 {
         byte[] DECODABET = decodabet(dialect);
 
         int len34 = len * 3 / 4;
-        ByteBuf dest = src.alloc().buffer(len34).order(src.order()); // Upper limit on size of output
+        ByteBuf dest = allocator.buffer(len34).order(src.order()); // Upper limit on size of output
         int outBuffPosn = 0;
 
         byte[] b4 = new byte[4];
