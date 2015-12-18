@@ -205,7 +205,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
     @Override
     public void listener(Listener listener) {
-        monitor = listener == null ? new DefaultWritabilityMonitor() : new ListenerWritabilityMonitor(listener);
+        monitor = listener == null ? new WritabilityMonitor() : new ListenerWritabilityMonitor(listener);
     }
 
     @Override
@@ -627,13 +627,14 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     /**
      * Abstract class which provides common functionality for writability monitor implementations.
      */
-    private abstract class WritabilityMonitor {
+    private class WritabilityMonitor {
         private long totalPendingBytes;
-        private final Writer writer;
-
-        protected WritabilityMonitor(Writer writer) {
-            this.writer = writer;
-        }
+        private final Writer writer = new StreamByteDistributor.Writer() {
+            @Override
+            public void write(Http2Stream stream, int numBytes) {
+                state(stream).writeAllocatedBytes(numBytes);
+            }
+        };
 
         /**
          * Called when the writability of the underlying channel changes.
@@ -729,20 +730,6 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     }
 
     /**
-     * Provides no notification or tracking of writablity changes.
-     */
-    private final class DefaultWritabilityMonitor extends WritabilityMonitor {
-        DefaultWritabilityMonitor() {
-            super(new StreamByteDistributor.Writer() {
-                @Override
-                public void write(Http2Stream stream, int numBytes) {
-                    state(stream).writeAllocatedBytes(numBytes);
-                }
-            });
-        }
-    }
-
-    /**
      * Writability of a {@code stream} is calculated using the following:
      * <pre>
      * Connection Window - Total Queued Bytes > 0 &&
@@ -763,17 +750,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             }
         };
 
-        ListenerWritabilityMonitor(final Listener listener) {
-            super(new StreamByteDistributor.Writer() {
-                @Override
-                public void write(Http2Stream stream, int numBytes) {
-                    AbstractState state = state(stream);
-                    int written = state.writeAllocatedBytes(numBytes);
-                    if (written != -1) {
-                        listener.streamWritten(state.stream(), written);
-                    }
-                }
-            });
+        ListenerWritabilityMonitor(Listener listener) {
             this.listener = listener;
         }
 

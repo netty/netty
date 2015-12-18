@@ -170,7 +170,6 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         verifyZeroInteractions(listener);
         controller.writePendingBytes();
         data.assertFullyWritten();
-        verify(listener, times(1)).streamWritten(stream(STREAM_A), 5);
         verifyZeroInteractions(listener);
     }
 
@@ -181,7 +180,6 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         data.assertNotWritten();
         controller.writePendingBytes();
         data.assertFullyWritten();
-        verify(listener, times(1)).streamWritten(stream(STREAM_A), 0);
         verifyZeroInteractions(listener);
     }
 
@@ -210,7 +208,6 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         controller.writePendingBytes();
         data1.assertFullyWritten();
         data2.assertNotWritten();
-        verify(listener, times(1)).streamWritten(stream(STREAM_A), 15);
         verify(listener, times(1)).writabilityChanged(stream(STREAM_A));
         assertFalse(controller.isWritable(stream(STREAM_A)));
     }
@@ -267,7 +264,6 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         controller.writePendingBytes();
         // Verify that a partial frame of 5 remains to be sent
         data.assertPartiallyWritten(5);
-        verify(listener, times(1)).streamWritten(stream(STREAM_A), 5);
         verify(listener, times(1)).writabilityChanged(stream(STREAM_A));
         assertFalse(controller.isWritable(stream(STREAM_A)));
         verifyNoMoreInteractions(listener);
@@ -286,7 +282,6 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         controller.writePendingBytes();
         data.assertPartiallyWritten(10);
         moreData.assertNotWritten();
-        verify(listener, times(1)).streamWritten(stream(STREAM_A), 10);
         verify(listener, times(1)).writabilityChanged(stream(STREAM_A));
         assertFalse(controller.isWritable(stream(STREAM_A)));
         reset(listener);
@@ -302,7 +297,6 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
 
         data.assertFullyWritten();
         moreData.assertPartiallyWritten(5);
-        verify(listener, times(1)).streamWritten(stream(STREAM_A), 15);
         verify(listener, never()).writabilityChanged(stream(STREAM_A));
         assertFalse(controller.isWritable(stream(STREAM_A)));
 
@@ -331,7 +325,6 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         // Verify that the entire frame was sent.
         controller.initialWindowSize(10);
         data.assertFullyWritten();
-        verify(listener, times(1)).streamWritten(stream(STREAM_A), 10);
         assertWritabilityChanged(0, false);
     }
 
@@ -356,7 +349,6 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         dataA.assertPartiallyWritten(8);
         assertEquals(65527, window(STREAM_A));
         assertEquals(0, window(CONNECTION_STREAM_ID));
-        verify(listener, times(1)).streamWritten(stream(STREAM_A), 8);
         assertWritabilityChanged(0, false);
         reset(listener);
 
@@ -376,11 +368,9 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         // Verify the rest of A is written.
         dataA.assertFullyWritten();
         assertEquals(65525, window(STREAM_A));
-        verify(listener, times(1)).streamWritten(stream(STREAM_A), 2);
 
         dataB.assertFullyWritten();
         assertEquals(65525, window(STREAM_B));
-        verify(listener, times(1)).streamWritten(stream(STREAM_B), 10);
         verifyNoMoreInteractions(listener);
     }
 
@@ -399,7 +389,6 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         sendData(STREAM_A, data1);
         controller.writePendingBytes();
         data1.assertFullyWritten();
-        verify(listener, times(1)).streamWritten(stream(STREAM_A), 20);
         assertTrue(window(CONNECTION_STREAM_ID) > 0);
         verify(listener, times(1)).writabilityChanged(stream(STREAM_A));
         verify(listener, never()).writabilityChanged(stream(STREAM_B));
@@ -513,8 +502,6 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
 
         data.assertFullyWritten();
         data2.assertFullyWritten();
-
-        verify(listener, times(1)).streamWritten(stream(STREAM_A), 10);
     }
 
     @Test
@@ -540,7 +527,6 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         assertTrue(controller.isWritable(stream(STREAM_D)));
 
         data.assertPartiallyWritten(5);
-        verify(listener, times(1)).streamWritten(stream(STREAM_A), 5);
     }
 
     @Test
@@ -565,7 +551,6 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
 
         controller.writePendingBytes();
         data.assertFullyWritten();
-        verify(listener, times(1)).streamWritten(stream(STREAM_A), 10);
         assertWritabilityChanged(0, false);
         assertEquals(0, window(CONNECTION_STREAM_ID));
         assertEquals(DEFAULT_WINDOW_SIZE - 10, window(STREAM_A));
@@ -594,7 +579,6 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
 
         controller.writePendingBytes();
         data.assertPartiallyWritten(5);
-        verify(listener, times(1)).streamWritten(stream(STREAM_A), 5);
         assertWritabilityChanged(0, false);
         assertEquals(0, window(CONNECTION_STREAM_ID));
         assertEquals(DEFAULT_WINDOW_SIZE - 5, window(STREAM_A));
@@ -637,7 +621,6 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         data.assertNotWritten();
         controller.writePendingBytes();
         data.assertFullyWritten();
-        verify(listener, times(1)).streamWritten(stream(STREAM_A), 10);
         verify(listener, never()).writabilityChanged(stream(STREAM_A));
         verify(listener, never()).writabilityChanged(stream(STREAM_B));
         verify(listener, never()).writabilityChanged(stream(STREAM_C));
@@ -687,7 +670,6 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         data.assertNotWritten();
         controller.writePendingBytes();
         data.assertPartiallyWritten(5);
-        verify(listener, times(1)).streamWritten(stream(STREAM_A), 5);
         assertEquals(DEFAULT_WINDOW_SIZE - 5, window(CONNECTION_STREAM_ID));
         assertEquals(0, window(STREAM_A));
         assertEquals(DEFAULT_WINDOW_SIZE, window(STREAM_B));
@@ -717,7 +699,6 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         verify(flowControlled, never()).writeComplete();
 
         assertEquals(90, windowBefore - window(STREAM_A));
-        verify(listener, times(1)).streamWritten(stream(STREAM_A), 90);
         assertWritabilityChanged(0, true);
     }
 
@@ -794,7 +775,6 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         verify(flowControlled).writeComplete();
 
         assertEquals(150, windowBefore - window(STREAM_A));
-        verify(listener, times(1)).streamWritten(stream(STREAM_A), 150);
         assertWritabilityChanged(0, true);
     }
 
@@ -820,7 +800,6 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         verify(flowControlled).write(any(ChannelHandlerContext.class), anyInt());
         verify(flowControlled).error(any(ChannelHandlerContext.class), any(Throwable.class));
         verify(flowControlled, never()).writeComplete();
-        verify(listener, times(1)).streamWritten(stream(STREAM_A), 0);
         verify(listener, times(1)).writabilityChanged(stream(STREAM_A));
         verify(listener, never()).writabilityChanged(stream(STREAM_B));
         verify(listener, never()).writabilityChanged(stream(STREAM_C));
