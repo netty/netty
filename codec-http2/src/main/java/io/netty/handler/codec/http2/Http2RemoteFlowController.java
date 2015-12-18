@@ -138,18 +138,6 @@ public interface Http2RemoteFlowController extends Http2FlowController {
      * Listener to the number of flow-controlled bytes written per stream.
      */
     interface Listener {
-
-        /**
-         * Report the number of {@code writtenBytes} for a {@code stream}. Called after the
-         * flow-controller has flushed bytes for the given stream.
-         * <p>
-         * This method should not throw. Any thrown exceptions are considered a programming error and are ignored.
-         * @param stream that had bytes written.
-         * @param writtenBytes the number of bytes written for a stream, can be 0 in the case of an
-         *                     empty DATA frame.
-         */
-        void streamWritten(Http2Stream stream, int writtenBytes);
-
         /**
          * Notification that {@link Http2RemoteFlowController#isWritable(Http2Stream)} has changed for {@code stream}.
          * <p>
