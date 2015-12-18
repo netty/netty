@@ -94,8 +94,7 @@ import java.nio.channels.Channels;
  *   // from 1.
  *   {@code @Override}
  *   public void channelRead({@link ChannelHandlerContext} ctx, Object msg) {
- *     {@link Attribute}&lt;{@link Integer}&gt; attr = ctx.getAttr(counter);
- *     Integer a = ctx.getAttr(counter).get();
+ *     Integer a = ctx.attr(counter).get();
  *
  *     if (a == null) {
  *       a = 1;
@@ -152,7 +151,7 @@ public interface ChannelHandlerContext extends AttributeMap {
     ChannelHandler handler();
 
     /**
-     * Return {@code true} if the {@link ChannelHandler} which belongs to this {@link ChannelHandler} was removed
+     * Return {@code true} if the {@link ChannelHandler} which belongs to this context was removed
      * from the {@link ChannelPipeline}. Note that this method is only meant to be called from with in the
      * {@link EventLoop}.
      */
