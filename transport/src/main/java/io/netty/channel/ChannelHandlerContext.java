@@ -18,7 +18,6 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.AttributeMap;
 import io.netty.util.concurrent.EventExecutor;
@@ -93,9 +92,8 @@ import java.nio.channels.Channels;
  *   // This handler will receive a sequence of increasing integers starting
  *   // from 1.
  *   {@code @Override}
- *   public void channelRead({@link ChannelHandlerContext} ctx, {@link Integer} integer) {
- *     {@link Attribute}&lt;{@link Integer}&gt; attr = ctx.getAttr(counter);
- *     Integer a = ctx.getAttr(counter).get();
+ *   public void channelRead({@link ChannelHandlerContext} ctx, Object msg) {
+ *     Integer a = ctx.attr(counter).get();
  *
  *     if (a == null) {
  *       a = 1;
@@ -155,7 +153,7 @@ public interface ChannelHandlerContext
     ChannelHandler handler();
 
     /**
-     * Return {@code true} if the {@link ChannelHandler} which belongs to this {@link ChannelHandler} was removed
+     * Return {@code true} if the {@link ChannelHandler} which belongs to this context was removed
      * from the {@link ChannelPipeline}. Note that this method is only meant to be called from with in the
      * {@link EventLoop}.
      */
