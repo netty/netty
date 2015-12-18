@@ -20,6 +20,7 @@ import io.netty.handler.codec.http2.DefaultHttp2Connection;
 import io.netty.handler.codec.http2.DefaultHttp2RemoteFlowController;
 import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
+import io.netty.handler.codec.http2.Http2ConnectionHandlerBuilder;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2FrameAdapter;
 import io.netty.handler.codec.http2.Http2RemoteFlowController;
@@ -69,7 +70,6 @@ public class NoPriorityByteDistributionBenchmark extends AbstractMicrobenchmark 
     private Http2RemoteFlowController controller;
     private StreamByteDistributor distributor;
     private AdditionalCounters counters;
-    private Http2ConnectionHandler handler;
     private ChannelHandlerContext ctx;
 
     public NoPriorityByteDistributionBenchmark() {
@@ -137,10 +137,11 @@ public class NoPriorityByteDistributionBenchmark extends AbstractMicrobenchmark 
         }
         controller = new DefaultHttp2RemoteFlowController(connection, new ByteCounter(distributor));
         connection.remote().flowController(controller);
-        handler = new Http2ConnectionHandler.Builder()
+        Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder()
             .encoderEnforceMaxConcurrentStreams(false).validateHeaders(false)
             .frameListener(new Http2FrameAdapter())
-            .build(connection);
+            .connection(connection)
+            .build();
         ctx = new EmbeddedChannelWriteReleaseHandlerContext(
                                             PooledByteBufAllocator.DEFAULT, handler) {
             @Override
