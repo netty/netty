@@ -19,6 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.FastThreadLocal;
+
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -27,6 +29,32 @@ import java.security.NoSuchAlgorithmException;
  */
 final class WebSocketUtil {
 
+    private static final FastThreadLocal<MessageDigest> MD5 = new FastThreadLocal<MessageDigest>() {
+        @Override
+        protected MessageDigest initialValue() throws Exception {
+            try {
+                //Try to get a MessageDigest that uses MD5
+                return MessageDigest.getInstance("MD5");
+            } catch (NoSuchAlgorithmException e) {
+                //This shouldn't happen! How old is the computer?
+                throw new InternalError("MD5 not supported on this platform - Outdated?");
+            }
+        }
+    };
+
+    private static final FastThreadLocal<MessageDigest> SHA1 = new FastThreadLocal<MessageDigest>() {
+        @Override
+        protected MessageDigest initialValue() throws Exception {
+            try {
+                //Try to get a MessageDigest that uses SHA1
+                return MessageDigest.getInstance("SHA1");
+            } catch (NoSuchAlgorithmException e) {
+                //This shouldn't happen! How old is the computer?
+                throw new InternalError("SHA-1 not supported on this platform - Outdated?");
+            }
+        }
+    };
+
     /**
      * Performs a MD5 hash on the specified data
      *
@@ -34,15 +62,8 @@ final class WebSocketUtil {
      * @return The hashed data
      */
     static byte[] md5(byte[] data) {
-        try {
-            //Try to get a MessageDigest that uses MD5
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            //Hash the data
-            return md.digest(data);
-        } catch (NoSuchAlgorithmException e) {
-            //This shouldn't happen! How old is the computer?
-            throw new InternalError("MD5 not supported on this platform - Outdated?");
-        }
+        // TODO(normanmaurer): Create md5 method that not need MessageDigest.
+        return MD5.get().digest(data);
     }
 
     /**
@@ -52,15 +73,8 @@ final class WebSocketUtil {
      * @return The hashed data
      */
     static byte[] sha1(byte[] data) {
-        try {
-            //Attempt to get a MessageDigest that uses SHA1
-            MessageDigest md = MessageDigest.getInstance("SHA1");
-            //Hash the data
-            return md.digest(data);
-        } catch (NoSuchAlgorithmException e) {
-            //Alright, you might have an old system.
-            throw new InternalError("SHA-1 is not supported on this platform - Outdated?");
-        }
+        // TODO(normanmaurer): Create sha1 method that not need MessageDigest.
+        return SHA1.get().digest(data);
     }
 
     /**
