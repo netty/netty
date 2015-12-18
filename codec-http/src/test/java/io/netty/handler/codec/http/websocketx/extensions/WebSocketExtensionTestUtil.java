@@ -17,14 +17,14 @@ package io.netty.handler.codec.http.websocketx.extensions;
 
 import java.util.List;
 
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import org.easymock.EasyMock;
 import org.easymock.IArgumentMatcher;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpResponse;
-import io.netty.handler.codec.http.HttpHeaders.Names;
-import io.netty.handler.codec.http.HttpHeaders.Values;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
@@ -39,12 +39,12 @@ public final class WebSocketExtensionTestUtil {
         HttpRequest req = ReferenceCountUtil.releaseLater(new DefaultHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.GET, "/chat"));
 
-        req.headers().set(Names.HOST, "server.example.com");
-        req.headers().set(Names.UPGRADE, Values.WEBSOCKET.toString().toLowerCase());
-        req.headers().set(Names.CONNECTION, "Upgrade");
-        req.headers().set(Names.ORIGIN, "http://example.com");
+        req.headers().set(HttpHeaderNames.HOST, "server.example.com");
+        req.headers().set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET.toString().toLowerCase());
+        req.headers().set(HttpHeaderNames.CONNECTION, "Upgrade");
+        req.headers().set(HttpHeaderNames.ORIGIN, "http://example.com");
         if (ext != null) {
-            req.headers().set(Names.SEC_WEBSOCKET_EXTENSIONS, ext);
+            req.headers().set(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS, ext);
         }
 
         return req;
@@ -54,12 +54,12 @@ public final class WebSocketExtensionTestUtil {
         HttpResponse res = ReferenceCountUtil.releaseLater(new DefaultHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS));
 
-        res.headers().set(Names.HOST, "server.example.com");
-        res.headers().set(Names.UPGRADE, Values.WEBSOCKET.toString().toLowerCase());
-        res.headers().set(Names.CONNECTION, "Upgrade");
-        res.headers().set(Names.ORIGIN, "http://example.com");
+        res.headers().set(HttpHeaderNames.HOST, "server.example.com");
+        res.headers().set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET.toString().toLowerCase());
+        res.headers().set(HttpHeaderNames.CONNECTION, "Upgrade");
+        res.headers().set(HttpHeaderNames.ORIGIN, "http://example.com");
         if (ext != null) {
-            res.headers().set(Names.SEC_WEBSOCKET_EXTENSIONS, ext);
+            res.headers().set(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS, ext);
         }
 
         return res;
