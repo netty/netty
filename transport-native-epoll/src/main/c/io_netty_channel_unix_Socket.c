@@ -662,6 +662,14 @@ JNIEXPORT void JNICALL Java_io_netty_channel_unix_Socket_setSoLinger(JNIEnv* env
     netty_unix_socket_setOption(env, fd, SOL_SOCKET, SO_LINGER, &solinger, sizeof(solinger));
 }
 
+JNIEXPORT jint JNICALL Java_io_netty_channel_unix_Socket_isKeepAlive(JNIEnv* env, jclass clazz, jint fd) {
+    int optval;
+    if (netty_unix_socket_getOption(env, fd, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1) {
+        return -1;
+    }
+    return optval;
+}
+
 JNIEXPORT jint JNICALL Java_io_netty_channel_unix_Socket_isTcpNoDelay(JNIEnv* env, jclass clazz, jint fd) {
     int optval;
     if (netty_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) == -1) {
