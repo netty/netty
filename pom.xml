@@ -1092,9 +1092,6 @@
             <ignore>java.security.AlgorithmConstraints</ignore>
 
             <ignore>java.util.concurrent.ConcurrentLinkedDeque</ignore>
-
-            <!-- Used in internal utilities (protected by conditional) -->
-            <ignore>java.lang.Long</ignore>
           </ignores>
         </configuration>
         <executions>

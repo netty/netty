@@ -15,7 +15,6 @@
  */
 package io.netty.util.internal;
 
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Formatter;
@@ -389,6 +388,17 @@ public final class StringUtil {
      */
     public static boolean isNullOrEmpty(String s) {
         return s == null || s.isEmpty();
+    }
+
+    /**
+     * Determine if {@code c} lies within the range of values defined for
+     * <a href="http://unicode.org/glossary/#surrogate_code_point">Surrogate Code Point</a>.
+     * @param c the character to check.
+     * @return {@code true} if {@code c} lies within the range of values defined for
+     * <a href="http://unicode.org/glossary/#surrogate_code_point">Surrogate Code Point</a>. {@code false} otherwise.
+     */
+    public static boolean isSurrogate(char c) {
+        return c >= '\uD800' && c <= '\uDFFF';
     }
 
     private static boolean isDoubleQuote(char c) {
