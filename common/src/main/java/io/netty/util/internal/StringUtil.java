@@ -387,6 +387,17 @@ public final class StringUtil {
         return s == null || s.isEmpty();
     }
 
+    /**
+     * Determine if {@code c} lies within the range of values defined for
+     * <a href="http://unicode.org/glossary/#surrogate_code_point">Surrogate Code Point</a>.
+     * @param c the character to check.
+     * @return {@code true} if {@code c} lies within the range of values defined for
+     * <a href="http://unicode.org/glossary/#surrogate_code_point">Surrogate Code Point</a>. {@code false} otherwise.
+     */
+    public static boolean isSurrogate(char c) {
+        return c >= '\uD800' && c <= '\uDFFF';
+    }
+
     private static boolean isDoubleQuote(char c) {
         return c == DOUBLE_QUOTE;
     }

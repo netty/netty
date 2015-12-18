@@ -60,6 +60,21 @@ public class ByteBufUtilTest {
     }
 
     @Test
+    public void testWriteUtf8Surrogates() {
+        // leading surrogate + trailing surrogate
+        String surrogateString = new StringBuilder(2)
+                                .append('\uD800')
+                                .append('\uDC00')
+                                .toString();
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(16));
+        buf.writeBytes(surrogateString.getBytes(CharsetUtil.UTF_8));
+        ByteBuf buf2 = ReferenceCountUtil.releaseLater(Unpooled.buffer(16));
+        ByteBufUtil.writeUtf8(buf2, surrogateString);
+
+        Assert.assertEquals(buf, buf2);
+    }
+
+    @Test
     public void testWriteUtf8Wrapped() {
         String usAscii = "Some UTF-8 like äÄ∏ŒŒ";
         ByteBuf buf = Unpooled.unreleasableBuffer(ReferenceCountUtil.releaseLater(Unpooled.buffer(16)));
