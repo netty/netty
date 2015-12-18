@@ -121,11 +121,15 @@ public final class Base64 {
         int e = 0;
         int len2 = len - 2;
         int lineLength = 0;
-        for (; d < len2; d += 3, e += 4) {
+        for (; d < len2; e += 4) {
             encode3to4(src, d + off, 3, dest, e, dialect);
 
             lineLength += 4;
-            if (breakLines && lineLength == MAX_LINE_LENGTH) {
+            d += 3;
+
+            if (breakLines && lineLength == MAX_LINE_LENGTH
+                    // Only add NEW_LINE if we not ended directly on the MAX_LINE_LENGTH
+                    && d < len2) {
                 dest.setByte(e + 4, NEW_LINE);
                 e ++;
                 lineLength = 0;
