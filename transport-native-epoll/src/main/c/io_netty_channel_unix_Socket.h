@@ -51,6 +51,7 @@ void Java_io_netty_channel_unix_Socket_setSoLinger(JNIEnv* env, jclass clazz, ji
 jint Java_io_netty_channel_unix_Socket_isTcpNoDelay(JNIEnv* env, jclass clazz, jint fd);
 jint Java_io_netty_channel_unix_Socket_getReceiveBufferSize(JNIEnv* env, jclass clazz, jint fd);
 jint Java_io_netty_channel_unix_Socket_getSendBufferSize(JNIEnv* env, jclass clazz, jint fd);
+jint Java_io_netty_channel_unix_Socket_isKeepAlive(JNIEnv* env, jclass clazz, jint fd);
 jint Java_io_netty_channel_unix_Socket_isTcpCork(JNIEnv* env, jclass clazz, jint fd);
 jint Java_io_netty_channel_unix_Socket_getSoLinger(JNIEnv* env, jclass clazz, jint fd);
 jint Java_io_netty_channel_unix_Socket_getSoError(JNIEnv* env, jclass clazz, jint fd);
