@@ -15,37 +15,30 @@
  */
 package io.netty.channel;
 
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
 
 /**
- * A {@link ChannelHandler} that appends the specified {@link ChannelHandler}s right next to itself.
- * By default, it removes itself from the {@link ChannelPipeline} once the specified {@link ChannelHandler}s
- * are added. Optionally, you can keep it in the {@link ChannelPipeline} by specifying a {@code boolean}
- * parameter at construction time.
+ * A {@link ChannelHandler} that appends the specified {@link ChannelHandler}s right after itself.
+ * By default, it does <strong>NOT</strong> remove itself from the {@link ChannelPipeline} once the specified
+ * {@link ChannelHandler}s are added. Optionally, you can remove it from the {@link ChannelPipeline} by specifying
+ * a {@code boolean} parameter at construction time.
  */
 public class ChannelHandlerAppender extends ChannelInboundHandlerAdapter {
-
-    private static final class Entry {
-        final String name;
-        final ChannelHandler handler;
-
-        Entry(String name, ChannelHandler handler) {
-            this.name = name;
-            this.handler = handler;
-        }
-    }
+    final List<Map.Entry<String, ChannelHandler>> handlers = new ArrayList<Map.Entry<String, ChannelHandler>>();
 
     private final boolean selfRemoval;
-    private final List<Entry> handlers = new ArrayList<Entry>();
-    private boolean added;
+    private volatile boolean added;
 
     /**
      * Creates a new uninitialized instance. A class that extends this handler must invoke
      * {@link #add(ChannelHandler...)} before adding this handler into a {@link ChannelPipeline}.
      */
     protected ChannelHandlerAppender() {
-        this(true);
+        this(false);
     }
 
     /**
@@ -63,14 +56,14 @@ public class ChannelHandlerAppender extends ChannelInboundHandlerAdapter {
      * Creates a new instance that appends the specified {@link ChannelHandler}s right next to itself.
      */
     public ChannelHandlerAppender(Iterable<? extends ChannelHandler> handlers) {
-        this(true, handlers);
+        this(false, handlers);
     }
 
     /**
      * Creates a new instance that appends the specified {@link ChannelHandler}s right next to itself.
      */
     public ChannelHandlerAppender(ChannelHandler... handlers) {
-        this(true, handlers);
+        this(false, handlers);
     }
 
     /**
@@ -112,7 +105,7 @@ public class ChannelHandlerAppender extends ChannelInboundHandlerAdapter {
             throw new IllegalStateException("added to the pipeline already");
         }
 
-        handlers.add(new Entry(name, handler));
+        handlers.add(new AbstractMap.SimpleImmutableEntry<String, ChannelHandler>(name, handler));
         return this;
     }
 
@@ -173,33 +166,76 @@ public class ChannelHandlerAppender extends ChannelInboundHandlerAdapter {
      */
     @SuppressWarnings("unchecked")
     protected final <T extends ChannelHandler> T handlerAt(int index) {
-        return (T) handlers.get(index).handler;
+        return (T) handlers.get(index).getValue();
     }
 
+    /**
+     * Return the numbers of appended handlers.
+     */
+    final int numHandlers() {
+        return handlers.size();
+    }
+
+    @SuppressWarnings("unchecked")
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+    public final void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         added = true;
 
         AbstractChannelHandlerContext dctx = (AbstractChannelHandlerContext) ctx;
         DefaultChannelPipeline pipeline = (DefaultChannelPipeline) dctx.pipeline();
-        String name = dctx.name();
         try {
-            for (Entry e: handlers) {
-                String oldName = name;
-                if (e.name == null) {
-                    name = pipeline.generateName(e.handler);
-                } else {
-                    name = e.name;
-                }
-
-                // Note that we do not use dctx.invoker() because it raises an IllegalStateExxception
-                // if the Channel is not registered yet.
-                pipeline.addAfter(dctx.invoker, oldName, name, e.handler);
-            }
+            pipeline.appendHandlers(this);
         } finally {
             if (selfRemoval) {
                 pipeline.remove(this);
             }
         }
+        handlerAdded0(ctx);
     }
+
+    @Override
+    public final void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        if (!selfRemoval) {
+            removeAppendHandlers(ctx.pipeline());
+        }
+        handlerRemoved0(ctx);
+    }
+
+    /**
+     * Remove all added {@link ChannelHandler} and itself (if needed) from the {@link ChannelPipeline}.
+     */
+    protected final void remove(ChannelHandlerContext ctx) {
+        ChannelPipeline pipeline = ctx.pipeline();
+        removeAppendHandlers(pipeline);
+        if (!selfRemoval) {
+            pipeline.remove(this);
+        }
+    }
+
+    private void removeAppendHandlers(ChannelPipeline pipeline) {
+        for (int i = 0; i < handlers.size(); i++) {
+            Map.Entry<String, ChannelHandler> h = handlers.get(i);
+            ChannelHandler handler = h.getValue();
+            ChannelHandlerContext hCtx = pipeline.context(handler);
+            if (hCtx != null) {
+                try {
+                    pipeline.remove(h.getValue());
+                } catch (NoSuchElementException ignore) {
+                    // A user may have removed the handler in the meantime so just ignore this if it happens.
+                }
+            }
+        }
+    }
+
+    /**
+     * Called after the {@link ChannelHandlerAdapter} was added to the pipeline. At this point all handlers provided
+     * in {@link #add(ChannelHandler...)} have been added to the pipeline.
+     */
+    protected void handlerAdded0(@SuppressWarnings("unused") ChannelHandlerContext ctx) throws Exception { }
+
+    /**
+     * Called after the {@link ChannelHandlerAdapter} was removed from the pipeline. At this point all handlers
+     * provided in {@link #add(ChannelHandler...)} have been removed from the pipeline.
+     */
+    protected void handlerRemoved0(@SuppressWarnings("unused") ChannelHandlerContext ctx) throws Exception { }
 }

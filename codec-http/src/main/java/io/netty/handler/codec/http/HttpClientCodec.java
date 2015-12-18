@@ -100,6 +100,7 @@ public final class HttpClientCodec extends ChannelHandlerAppender implements Htt
             @Override
             public void run() {
                 p.remove(decoder());
+                p.remove(HttpClientCodec.this);
             }
         });
         p.remove(encoder());

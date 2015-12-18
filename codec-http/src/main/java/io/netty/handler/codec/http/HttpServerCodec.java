@@ -41,7 +41,8 @@ public final class HttpServerCodec extends ChannelHandlerAppender implements
      * Creates a new instance with the specified decoder options.
      */
     public HttpServerCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
-        super(new HttpRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize), new HttpResponseEncoder());
+        super(new HttpRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize),
+              new HttpResponseEncoder());
     }
 
     /**
@@ -49,7 +50,7 @@ public final class HttpServerCodec extends ChannelHandlerAppender implements
      */
     public HttpServerCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders) {
         super(new HttpRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders),
-                new HttpResponseEncoder());
+              new HttpResponseEncoder());
     }
 
     /**
@@ -58,8 +59,7 @@ public final class HttpServerCodec extends ChannelHandlerAppender implements
      */
     @Override
     public void upgradeFrom(ChannelHandlerContext ctx) {
-        ctx.pipeline().remove(HttpRequestDecoder.class);
-        ctx.pipeline().remove(HttpResponseEncoder.class);
+        remove(ctx);
     }
 
     /**
