@@ -38,9 +38,10 @@ import java.nio.charset.CoderResult;
 import java.util.Arrays;
 import java.util.Locale;
 
-import static io.netty.util.internal.StringUtil.NEWLINE;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.MathUtil.isOutOfBounds;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.StringUtil.NEWLINE;
+import static io.netty.util.internal.StringUtil.isSurrogate;
 
 /**
  * A collection of utility methods that is related with handling {@link ByteBuf},
@@ -397,6 +398,31 @@ public final class ByteBufUtil {
             } else if (c < 0x800) {
                 buffer._setByte(writerIndex++, (byte) (0xc0 | (c >> 6)));
                 buffer._setByte(writerIndex++, (byte) (0x80 | (c & 0x3f)));
+            } else if (isSurrogate(c)) {
+                if (!Character.isHighSurrogate(c)) {
+                    throw new IllegalArgumentException("Invalid encoding. " +
+                            "Expected high (leading) surrogate at index " + i + " but got " + c);
+                }
+                final char c2;
+                try {
+                    // Surrogate Pair consumes 2 characters. Optimistically try to get the next character to avoid
+                    // duplicate bounds checking with charAt. If an IndexOutOfBoundsException is thrown we will
+                    // re-throw a more informative exception describing the problem.
+                    c2 = seq.charAt(++i);
+                } catch (IndexOutOfBoundsException e) {
+                    throw new IllegalArgumentException("Underflow. " +
+                            "Expected low (trailing) surrogate at index " + i + " but no more characters found.", e);
+                }
+                if (!Character.isLowSurrogate(c2)) {
+                    throw new IllegalArgumentException("Invalid encoding. " +
+                            "Expected low (trailing) surrogate at index " + i + " but got " + c2);
+                }
+                int codePoint = Character.toCodePoint(c, c2);
+                // See http://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
+                buffer._setByte(writerIndex++, (byte) (0xf0 | (codePoint >> 18)));
+                buffer._setByte(writerIndex++, (byte) (0x80 | ((codePoint >> 12) & 0x3f)));
+                buffer._setByte(writerIndex++, (byte) (0x80 | ((codePoint >> 6) & 0x3f)));
+                buffer._setByte(writerIndex++, (byte) (0x80 | (codePoint & 0x3f)));
             } else {
                 buffer._setByte(writerIndex++, (byte) (0xe0 | (c >> 12)));
                 buffer._setByte(writerIndex++, (byte) (0x80 | ((c >> 6) & 0x3f)));
