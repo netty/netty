@@ -17,7 +17,6 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToByteEncoder;
 
 import static io.netty.handler.codec.compression.Snappy.*;
 
@@ -26,7 +25,7 @@ import static io.netty.handler.codec.compression.Snappy.*;
  *
  * See <a href="https://github.com/google/snappy/blob/master/framing_format.txt">Snappy framing format</a>.
  */
-public class SnappyFrameEncoder extends MessageToByteEncoder<ByteBuf> {
+public class SnappyFrameEncoder extends AbstractCompressionEncoder {
     /**
      * The minimum amount that we'll consider actually attempting to compress.
      * This value is preamble + the minimum length our Snappy service will
@@ -44,6 +43,10 @@ public class SnappyFrameEncoder extends MessageToByteEncoder<ByteBuf> {
 
     private final Snappy snappy = new Snappy();
     private boolean started;
+
+    public SnappyFrameEncoder() {
+        super(CompressionFormat.SNAPPY);
+    }
 
     @Override
     protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {

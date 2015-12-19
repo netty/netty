@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2017 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,18 +16,17 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelInboundHandler;
 
 /**
- * Compresses a {@link ByteBuf} using the deflate algorithm.
+ * Decompresses a {@link ByteBuf} using one of compression algorithms.
+ * <p/>
+ * Note that stream may be corrupted if you remove current handler from a pipeline.
  */
-public abstract class ZlibEncoder extends AbstractClosableCompressionEncoder {
+public interface CompressionDecoder extends ChannelInboundHandler {
 
-    protected ZlibEncoder(CompressionFormat format) {
-        super(format, false);
-        if (format == CompressionFormat.ZLIB_OR_NONE) {
-            throw new IllegalArgumentException(
-                    "format '" + CompressionFormat.ZLIB_OR_NONE + "' is not " +
-                    "allowed for compression.");
-        }
-    }
+    /**
+     * Returns a format of current compression algorithm.
+     */
+    CompressionFormat format();
 }

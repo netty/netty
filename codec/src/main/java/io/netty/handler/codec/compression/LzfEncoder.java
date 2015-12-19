@@ -21,7 +21,6 @@ import com.ning.compress.lzf.LZFEncoder;
 import com.ning.compress.lzf.util.ChunkEncoderFactory;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToByteEncoder;
 
 import static com.ning.compress.lzf.LZFChunk.*;
 
@@ -31,7 +30,7 @@ import static com.ning.compress.lzf.LZFChunk.*;
  * See original <a href="http://oldhome.schmorp.de/marc/liblzf.html">LZF package</a>
  * and <a href="https://github.com/ning/compress/wiki/LZFFormat">LZF format</a> for full description.
  */
-public class LzfEncoder extends MessageToByteEncoder<ByteBuf> {
+public class LzfEncoder extends AbstractCompressionEncoder {
     /**
      * Minimum block size ready for compression. Blocks with length
      * less than {@link #MIN_BLOCK_TO_COMPRESS} will write as uncompressed.
@@ -96,7 +95,7 @@ public class LzfEncoder extends MessageToByteEncoder<ByteBuf> {
      *        than maximum chunk size (64k), to optimize encoding hash tables.
      */
     public LzfEncoder(boolean safeInstance, int totalLength) {
-        super(false);
+        super(CompressionFormat.LZF, false);
         if (totalLength < MIN_BLOCK_TO_COMPRESS || totalLength > MAX_CHUNK_LEN) {
             throw new IllegalArgumentException("totalLength: " + totalLength +
                     " (expected: " + MIN_BLOCK_TO_COMPRESS + '-' + MAX_CHUNK_LEN + ')');

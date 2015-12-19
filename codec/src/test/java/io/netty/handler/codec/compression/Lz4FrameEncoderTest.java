@@ -114,7 +114,7 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
     }
 
     @Test
-    public void testAllocateDirectBuffer() {
+    public void testAllocateDirectBuffer() throws Exception {
         final int blockSize = 100;
         testAllocateBuffer(blockSize, blockSize - 13, true);
         testAllocateBuffer(blockSize, blockSize * 5, true);
@@ -122,14 +122,14 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
     }
 
     @Test
-    public void testAllocateHeapBuffer() {
+    public void testAllocateHeapBuffer() throws Exception {
         final int blockSize = 100;
         testAllocateBuffer(blockSize, blockSize - 13, false);
         testAllocateBuffer(blockSize, blockSize * 5, false);
         testAllocateBuffer(blockSize, NONALLOCATABLE_SIZE, false);
     }
 
-    private void testAllocateBuffer(int blockSize, int bufSize, boolean preferDirect) {
+    private void testAllocateBuffer(int blockSize, int bufSize, boolean preferDirect) throws Exception {
         // allocate the input buffer to an arbitrary size less than the blockSize
         ByteBuf in = ByteBufAllocator.DEFAULT.buffer(bufSize, bufSize);
         in.writerIndex(in.capacity());
@@ -157,8 +157,8 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
         }
     }
 
-    @Test (expected = EncoderException.class)
-    public void testAllocateDirectBufferExceedMaxEncodeSize() {
+    @Test(expected = EncoderException.class)
+    public void testAllocateDirectBufferExceedMaxEncodeSize() throws Exception {
         final int maxEncodeSize = 1024;
         Lz4FrameEncoder encoder = newEncoder(Lz4Constants.DEFAULT_BLOCK_SIZE, maxEncodeSize);
         int inputBufferSize = maxEncodeSize * 10;
@@ -171,7 +171,7 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
         }
     }
 
-    private Lz4FrameEncoder newEncoder(int blockSize, int maxEncodeSize) {
+    private Lz4FrameEncoder newEncoder(int blockSize, int maxEncodeSize) throws Exception {
         Checksum checksum = XXHashFactory.fastestInstance().newStreamingHash32(DEFAULT_SEED).asChecksum();
         Lz4FrameEncoder encoder = new Lz4FrameEncoder(LZ4Factory.fastestInstance(), true,
                                                       blockSize,
@@ -186,8 +186,8 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
      * {@link Lz4FrameEncoder#allocateBuffer(ChannelHandlerContext, ByteBuf, boolean)}, but this is safest way
      * of testing the overflow conditions as allocating the huge buffers fails in many CI environments.
      */
-    @Test (expected = EncoderException.class)
-    public void testAllocateOnHeapBufferOverflowsOutputSize() {
+    @Test(expected = EncoderException.class)
+    public void testAllocateOnHeapBufferOverflowsOutputSize() throws Exception {
         final int maxEncodeSize = Integer.MAX_VALUE;
         Lz4FrameEncoder encoder = newEncoder(Lz4Constants.DEFAULT_BLOCK_SIZE, maxEncodeSize);
         when(buffer.readableBytes()).thenReturn(maxEncodeSize);
@@ -213,7 +213,7 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
     }
 
     @Test
-    public void testAllocatingAroundBlockSize() {
+    public void testAllocatingAroundBlockSize() throws Exception {
         int blockSize = 100;
         Lz4FrameEncoder encoder = newEncoder(blockSize, Lz4FrameEncoder.DEFAULT_MAX_ENCODE_SIZE);
         EmbeddedChannel channel = new EmbeddedChannel(encoder);

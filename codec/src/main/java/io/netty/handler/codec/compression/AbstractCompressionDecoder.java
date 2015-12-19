@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2017 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,19 +15,22 @@
  */
 package io.netty.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.util.internal.ObjectUtil;
 
 /**
- * Compresses a {@link ByteBuf} using the deflate algorithm.
+ * A skeletal {@link CompressionDecoder} implementation.
  */
-public abstract class ZlibEncoder extends AbstractClosableCompressionEncoder {
+public abstract class AbstractCompressionDecoder extends ByteToMessageDecoder implements CompressionDecoder {
 
-    protected ZlibEncoder(CompressionFormat format) {
-        super(format, false);
-        if (format == CompressionFormat.ZLIB_OR_NONE) {
-            throw new IllegalArgumentException(
-                    "format '" + CompressionFormat.ZLIB_OR_NONE + "' is not " +
-                    "allowed for compression.");
-        }
+    private final CompressionFormat format;
+
+    protected AbstractCompressionDecoder(CompressionFormat format) {
+        this.format = ObjectUtil.checkNotNull(format, "format");
+    }
+
+    @Override
+    public final CompressionFormat format() {
+        return format;
     }
 }

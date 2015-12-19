@@ -17,14 +17,13 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.util.List;
 
 import static io.netty.handler.codec.compression.Snappy.validateChecksum;
 
 /**
- * Uncompresses a {@link ByteBuf} encoded with the Snappy framing format.
+ * Decompresses a {@link ByteBuf} encoded with the Snappy framing format.
  *
  * See <a href="https://github.com/google/snappy/blob/master/framing_format.txt">Snappy framing format</a>.
  *
@@ -34,7 +33,7 @@ import static io.netty.handler.codec.compression.Snappy.validateChecksum;
  * use the {@link #SnappyFrameDecoder(boolean)} constructor with the argument
  * set to {@code true}.
  */
-public class SnappyFrameDecoder extends ByteToMessageDecoder {
+public class SnappyFrameDecoder extends AbstractCompressionDecoder {
 
     private enum ChunkType {
         STREAM_IDENTIFIER,
@@ -72,6 +71,7 @@ public class SnappyFrameDecoder extends ByteToMessageDecoder {
      *        {@link DecompressionException} will be thrown
      */
     public SnappyFrameDecoder(boolean validateChecksums) {
+        super(CompressionFormat.SNAPPY);
         this.validateChecksums = validateChecksums;
     }
 

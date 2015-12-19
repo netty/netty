@@ -13,20 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.handler.codec.EncoderException;
-import io.netty.handler.codec.MessageToByteEncoder;
-import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.ObjectUtil;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Exception;
@@ -34,23 +28,10 @@ import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.xxhash.XXHashFactory;
 
 import java.nio.ByteBuffer;
-import java.util.concurrent.TimeUnit;
 import java.util.zip.Checksum;
 
-import static io.netty.handler.codec.compression.Lz4Constants.BLOCK_TYPE_COMPRESSED;
-import static io.netty.handler.codec.compression.Lz4Constants.BLOCK_TYPE_NON_COMPRESSED;
-import static io.netty.handler.codec.compression.Lz4Constants.CHECKSUM_OFFSET;
-import static io.netty.handler.codec.compression.Lz4Constants.COMPRESSED_LENGTH_OFFSET;
-import static io.netty.handler.codec.compression.Lz4Constants.COMPRESSION_LEVEL_BASE;
-import static io.netty.handler.codec.compression.Lz4Constants.DECOMPRESSED_LENGTH_OFFSET;
-import static io.netty.handler.codec.compression.Lz4Constants.DEFAULT_BLOCK_SIZE;
-import static io.netty.handler.codec.compression.Lz4Constants.DEFAULT_SEED;
-import static io.netty.handler.codec.compression.Lz4Constants.HEADER_LENGTH;
-import static io.netty.handler.codec.compression.Lz4Constants.MAGIC_NUMBER;
-import static io.netty.handler.codec.compression.Lz4Constants.MAX_BLOCK_SIZE;
-import static io.netty.handler.codec.compression.Lz4Constants.MIN_BLOCK_SIZE;
-import static io.netty.handler.codec.compression.Lz4Constants.TOKEN_OFFSET;
-import static io.netty.util.internal.ThrowableUtil.unknownStackTrace;
+import static io.netty.handler.codec.compression.Lz4Constants.*;
+import static io.netty.util.internal.ThrowableUtil.*;
 
 /**
  * Compresses a {@link ByteBuf} using the LZ4 format.
@@ -68,10 +49,11 @@ import static io.netty.util.internal.ThrowableUtil.unknownStackTrace;
  *  *       *       *    length   *     length    *           *     *      block      *
  *  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *     * * * * * * * * * *
  */
-public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
+public class Lz4FrameEncoder extends AbstractClosableCompressionEncoder {
     private static final EncoderException ENCODE_FINSHED_EXCEPTION = unknownStackTrace(new EncoderException(
                     new IllegalStateException("encode finished and not enough space to write remaining data")),
                     Lz4FrameEncoder.class, "encode");
+
     static final int DEFAULT_MAX_ENCODE_SIZE = Integer.MAX_VALUE;
 
     private final int blockSize;
@@ -105,11 +87,6 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
      * Indicates if the compressed stream has been finished.
      */
     private volatile boolean finished;
-
-    /**
-     * Used to interact with its {@link ChannelPipeline} and other handlers.
-     */
-    private volatile ChannelHandlerContext ctx;
 
     /**
      * Creates the fastest LZ4 encoder with default block size (64 KB)
@@ -149,21 +126,22 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
         this(factory, highCompressor, blockSize, checksum, DEFAULT_MAX_ENCODE_SIZE);
     }
 
-        /**
-         * Creates a new customizable LZ4 encoder.
-         *
-         * @param factory         user customizable {@link LZ4Factory} instance
-         *                        which may be JNI bindings to the original C implementation, a pure Java implementation
-         *                        or a Java implementation that uses the {@link sun.misc.Unsafe}
-         * @param highCompressor  if {@code true} codec will use compressor which requires more memory
-         *                        and is slower but compresses more efficiently
-         * @param blockSize       the maximum number of bytes to try to compress at once,
-         *                        must be >= 64 and <= 32 M
-         * @param checksum        the {@link Checksum} instance to use to check data for integrity
-         * @param maxEncodeSize   the maximum size for an encode (compressed) buffer
-         */
+    /**
+     * Creates a new customizable LZ4 encoder.
+     *
+     * @param factory         user customizable {@link LZ4Factory} instance
+     *                        which may be JNI bindings to the original C implementation, a pure Java implementation
+     *                        or a Java implementation that uses the {@link sun.misc.Unsafe}
+     * @param highCompressor  if {@code true} codec will use compressor which requires more memory
+     *                        and is slower but compresses more efficiently
+     * @param blockSize       the maximum number of bytes to try to compress at once,
+     *                        must be >= 64 and <= 32 M
+     * @param checksum        the {@link Checksum} instance to use to check data for integrity
+     * @param maxEncodeSize   the maximum size for an encode (compressed) buffer
+     */
     public Lz4FrameEncoder(LZ4Factory factory, boolean highCompressor, int blockSize,
                            Checksum checksum, int maxEncodeSize) {
+        super(CompressionFormat.LZ4);
         if (factory == null) {
             throw new NullPointerException("factory");
         }
@@ -314,7 +292,8 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
         ctx.flush();
     }
 
-    private ChannelFuture finishEncode(final ChannelHandlerContext ctx, ChannelPromise promise) {
+    @Override
+    protected final ChannelFuture finishEncode(final ChannelHandlerContext ctx, ChannelPromise promise) {
         if (finished) {
             promise.setSuccess();
             return promise;
@@ -340,73 +319,14 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
     /**
      * Returns {@code true} if and only if the compressed stream has been finished.
      */
+    @Override
     public boolean isClosed() {
         return finished;
     }
 
-    /**
-     * Close this {@link Lz4FrameEncoder} and so finish the encoding.
-     *
-     * The returned {@link ChannelFuture} will be notified once the operation completes.
-     */
-    public ChannelFuture close() {
-        return close(ctx().newPromise());
-    }
-
-    /**
-     * Close this {@link Lz4FrameEncoder} and so finish the encoding.
-     * The given {@link ChannelFuture} will be notified once the operation
-     * completes and will also be returned.
-     */
-    public ChannelFuture close(final ChannelPromise promise) {
-        ChannelHandlerContext ctx = ctx();
-        EventExecutor executor = ctx.executor();
-        if (executor.inEventLoop()) {
-            return finishEncode(ctx, promise);
-        } else {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    ChannelFuture f = finishEncode(ctx(), promise);
-                    f.addListener(new ChannelPromiseNotifier(promise));
-                }
-            });
-            return promise;
-        }
-    }
-
     @Override
-    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
-        ChannelFuture f = finishEncode(ctx, ctx.newPromise());
-        f.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture f) throws Exception {
-                ctx.close(promise);
-            }
-        });
-
-        if (!f.isDone()) {
-            // Ensure the channel is closed even if the write operation completes in time.
-            ctx.executor().schedule(new Runnable() {
-                @Override
-                public void run() {
-                    ctx.close(promise);
-                }
-            }, 10, TimeUnit.SECONDS); // FIXME: Magic number
-        }
-    }
-
-    private ChannelHandlerContext ctx() {
-        ChannelHandlerContext ctx = this.ctx;
-        if (ctx == null) {
-            throw new IllegalStateException("not added to a pipeline");
-        }
-        return ctx;
-    }
-
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) {
-        this.ctx = ctx;
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        super.handlerAdded(ctx);
         // Ensure we use a heap based ByteBuf.
         buffer = Unpooled.wrappedBuffer(new byte[blockSize]);
         buffer.clear();
@@ -421,6 +341,7 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
         }
     }
 
+    // used only for tests
     final ByteBuf getBackingBuffer() {
         return buffer;
     }
