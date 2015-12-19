@@ -15,24 +15,30 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.AbstractReadableObject;
+import io.netty.buffer.ReadableObject;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.RandomAccessFile;
+import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
+import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.WritableByteChannel;
 
 /**
  * Default {@link FileRegion} implementation which transfer data from a {@link FileChannel} or {@link File}.
  *
- * Be aware that the {@link FileChannel} will be automatically closed once {@link #refCnt()} returns
- * {@code 0}.
+ * Be aware that the {@link FileChannel} will be automatically closed once {@link #refCnt()} returns {@code 0}.
  */
-public class DefaultFileRegion extends AbstractReferenceCounted implements FileRegion {
+public class DefaultFileRegion extends AbstractReadableObject implements FileRegion, ReadableObject {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultFileRegion.class);
     private final File f;
@@ -44,11 +50,15 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
     /**
      * Create a new instance
      *
-     * @param file      the {@link FileChannel} which should be transfered
-     * @param position  the position from which the transfer should start
-     * @param count     the number of bytes to transfer
+     * @param file
+     *            the {@link FileChannel} which should be transfered
+     * @param position
+     *            the position from which the transfer should start
+     * @param count
+     *            the number of bytes to transfer
      */
     public DefaultFileRegion(FileChannel file, long position, long count) {
+        super(0);
         if (file == null) {
             throw new NullPointerException("file");
         }
@@ -65,14 +75,18 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
     }
 
     /**
-     * Create a new instance using the given {@link File}. The {@link File} will be opened lazily or
-     * explicitly via {@link #open()}.
+     * Create a new instance using the given {@link File}. The {@link File} will be opened lazily or explicitly via
+     * {@link #open()}.
      *
-     * @param f         the {@link File} which should be transfered
-     * @param position  the position from which the transfer should start
-     * @param count     the number of bytes to transfer
+     * @param f
+     *            the {@link File} which should be transfered
+     * @param position
+     *            the position from which the transfer should start
+     * @param count
+     *            the number of bytes to transfer
      */
     public DefaultFileRegion(File f, long position, long count) {
+        super(0);
         if (f == null) {
             throw new NullPointerException("f");
         }
@@ -123,9 +137,8 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
     public long transferTo(WritableByteChannel target, long position) throws IOException {
         long count = this.count - position;
         if (count < 0 || position < 0) {
-            throw new IllegalArgumentException(
-                    "position out of range: " + position +
-                    " (expected: 0 - " + (this.count - 1) + ')');
+            throw new IllegalArgumentException("position out of range: " + position + " (expected: 0 - "
+                    + (this.count - 1) + ')');
         }
         if (count == 0) {
             return 0L;
@@ -143,8 +156,20 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
         return written;
     }
 
-    @Override
-    protected void deallocate() {
+    private final AbstractReferenceCounted refCnt = new AbstractReferenceCounted() {
+
+        @Override
+        public ReferenceCounted touch(Object hint) {
+            return DefaultFileRegion.this;
+        }
+
+        @Override
+        protected void deallocate() {
+            close();
+        }
+    };
+
+    private void close() {
         FileChannel file = this.file;
 
         if (file == null) {
@@ -163,23 +188,78 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
 
     @Override
     public FileRegion retain() {
-        super.retain();
+        refCnt.retain();
         return this;
     }
 
     @Override
     public FileRegion retain(int increment) {
-        super.retain(increment);
+        refCnt.retain(increment);
         return this;
     }
 
     @Override
     public FileRegion touch() {
+        refCnt.touch();
         return this;
     }
 
     @Override
     public FileRegion touch(Object hint) {
+        refCnt.touch(hint);
         return this;
+    }
+
+    @Override
+    public int refCnt() {
+        return refCnt.refCnt();
+    }
+
+    @Override
+    public boolean release() {
+        return refCnt.release();
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        return refCnt.release(decrement);
+    }
+
+    @Override
+    public long objectReaderLimit() {
+        return count();
+    }
+
+    @Override
+    public ReadableObject unwrapObject() {
+        return null;
+    }
+
+    @Override
+    protected long getObjectBytes0(SingleReadableObjectWriter out, long pos, long length) throws IOException {
+        return out.write(this, pos, length);
+    }
+
+    @Override
+    protected long getObjectBytes0(GatheringByteChannel out, long pos, long length) throws IOException {
+        open();
+        return file.transferTo(this.position + pos, length, out);
+    }
+
+    @Override
+    protected ReadableObject getObjectBytes0(OutputStream out, long pos, long length) throws IOException {
+        WritableByteChannel channel = Channels.newChannel(out);
+        open();
+        for (long totalWritten = 0L;;) {
+            long written = file.transferTo(this.position + pos + totalWritten, length - totalWritten, channel);
+            if (written == -1) {
+                throw new EOFException();
+            }
+            totalWritten += written;
+
+            if (written == length) {
+                return this;
+            }
+        }
     }
 }

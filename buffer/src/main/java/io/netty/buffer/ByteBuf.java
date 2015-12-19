@@ -230,8 +230,7 @@ import java.nio.charset.UnsupportedCharsetException;
  * Please refer to {@link ByteBufInputStream} and
  * {@link ByteBufOutputStream}.
  */
-@SuppressWarnings("ClassMayBeInterface")
-public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
+public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, ReadableObject {
 
     /**
      * Returns the number of bytes (octets) this buffer can contain.
@@ -2149,4 +2148,109 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
 
     @Override
     public abstract ByteBuf touch(Object hint);
+
+    // below are all implementations of ReadableObject methods.
+    private void checkOverflow(long v) {
+        if (v > Integer.MAX_VALUE) {
+            throw new IndexOutOfBoundsException("value " + v + " overflow");
+        }
+    }
+
+    @Override
+    public long objectReaderPosition() {
+        return readerIndex();
+    }
+
+    @Override
+    public ByteBuf objectReaderPosition(long readerPosition) {
+        checkOverflow(readerPosition);
+        return readerIndex((int) readerPosition);
+    }
+
+    @Override
+    public long objectReaderLimit() {
+        return writerIndex();
+    }
+
+    @Override
+    public boolean isObjectReadable() {
+        return isReadable();
+    }
+
+    @Override
+    public boolean isObjectReadable(long size) {
+        return size <= Integer.MAX_VALUE && isReadable((int) size);
+    }
+
+    @Override
+    public long objectReadableBytes() {
+        return readableBytes();
+    }
+
+    @Override
+    public ByteBuf skipObjectBytes(long length) {
+        checkOverflow(length);
+        return skipBytes((int) length);
+    }
+
+    @Override
+    public ByteBuf sliceObject() {
+        return slice();
+    }
+
+    @Override
+    public ByteBuf sliceObject(long position, long length) {
+        checkOverflow(position);
+        checkOverflow(length);
+        return slice((int) position, (int) length);
+    }
+
+    @Override
+    public ByteBuf readObjectSlice(long length) {
+        checkOverflow(length);
+        return readSlice((int) length);
+    }
+
+    @Override
+    public ByteBuf unwrapObject() {
+        return unwrap();
+    }
+
+    @Override
+    public long getObjectBytes(GatheringByteChannel out, long pos, long length) throws IOException {
+        checkOverflow(pos);
+        checkOverflow(length);
+        return getBytes((int) pos, out, (int) length);
+    }
+
+    @Override
+    public long readObjectBytes(GatheringByteChannel out, long length) throws IOException {
+        checkOverflow(length);
+        return readBytes(out, (int) length);
+    }
+
+    @Override
+    public ReadableObject getObjectBytes(OutputStream out, long pos, long length) throws IOException {
+        checkOverflow(pos);
+        checkOverflow(length);
+        return getBytes((int) pos, out, (int) length);
+    }
+
+    @Override
+    public ReadableObject readObjectBytes(OutputStream out, long length) throws IOException {
+        checkOverflow(length);
+        return readBytes(out, (int) length);
+    }
+
+    @Override
+    public long getObjectBytes(SingleReadableObjectWriter out, long pos, long length) throws IOException {
+        return out.write(this, pos, length);
+    }
+
+    @Override
+    public long readObjectBytes(SingleReadableObjectWriter out, long length) throws IOException {
+        long readBytes = getObjectBytes(out, readerIndex(), length);
+        readerIndex(readerIndex() + (int) readBytes);
+        return readBytes;
+    }
 }

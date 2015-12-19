@@ -19,6 +19,7 @@ import com.barchart.udt.TypeUDT;
 import com.barchart.udt.nio.SocketChannelUDT;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ReadableObject;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
@@ -152,6 +153,11 @@ public class NioUdtByteConnectorChannel extends AbstractNioByteChannel implement
     @Override
     protected long doWriteFileRegion(FileRegion region) throws Exception {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected long doWrite(ReadableObject obj) throws Exception {
+        return obj.readObjectBytes(javaChannel(), obj.objectReadableBytes());
     }
 
     @Override

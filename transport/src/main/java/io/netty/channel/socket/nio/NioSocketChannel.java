@@ -16,6 +16,7 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ReadableObject;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
@@ -254,6 +255,11 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     protected long doWriteFileRegion(FileRegion region) throws Exception {
         final long position = region.transfered();
         return region.transferTo(javaChannel(), position);
+    }
+
+    @Override
+    protected long doWrite(ReadableObject obj) throws Exception {
+        return obj.readObjectBytes(javaChannel(), obj.objectReadableBytes());
     }
 
     @Override

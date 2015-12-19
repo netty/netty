@@ -15,14 +15,19 @@
 */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.AbstractReadableObject;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ReadableObject;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.FileRegion;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
+
 import org.junit.Test;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.WritableByteChannel;
 
 import static org.hamcrest.Matchers.*;
@@ -64,7 +69,11 @@ public class HttpResponseEncoderTest {
         assertFalse(channel.finish());
     }
 
-    private static class DummyLongFileRegion implements FileRegion {
+    private static class DummyLongFileRegion extends AbstractReadableObject implements FileRegion {
+
+        protected DummyLongFileRegion() {
+            super(0);
+        }
 
         @Override
         public long position() {
@@ -119,6 +128,31 @@ public class HttpResponseEncoderTest {
         @Override
         public boolean release(int decrement) {
             return false;
+        }
+
+        @Override
+        public long objectReaderLimit() {
+            return count();
+        }
+
+        @Override
+        public ReadableObject unwrapObject() {
+            return null;
+        }
+
+        @Override
+        protected long getObjectBytes0(GatheringByteChannel out, long pos, long length) throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        protected ReadableObject getObjectBytes0(OutputStream out, long pos, long length) throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        protected long getObjectBytes0(SingleReadableObjectWriter out, long pos, long length) throws IOException {
+            throw new UnsupportedOperationException();
         }
     }
 

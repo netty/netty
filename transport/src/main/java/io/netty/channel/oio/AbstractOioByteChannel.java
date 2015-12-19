@@ -17,6 +17,7 @@ package io.netty.channel.oio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ReadableObject;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelMetadata;
@@ -196,25 +197,19 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                 // nothing left to write
                 break;
             }
-            if (msg instanceof ByteBuf) {
-                ByteBuf buf = (ByteBuf) msg;
-                int readableBytes = buf.readableBytes();
+            if (msg instanceof ReadableObject) {
+                ReadableObject obj = (ReadableObject) msg;
+                long readableBytes = obj.objectReadableBytes();
                 while (readableBytes > 0) {
-                    doWriteBytes(buf);
-                    int newReadableBytes = buf.readableBytes();
+                    doWrite(obj);
+                    long newReadableBytes = obj.objectReadableBytes();
                     in.progress(readableBytes - newReadableBytes);
                     readableBytes = newReadableBytes;
                 }
                 in.remove();
-            } else if (msg instanceof FileRegion) {
-                FileRegion region = (FileRegion) msg;
-                long transfered = region.transfered();
-                doWriteFileRegion(region);
-                in.progress(region.transfered() - transfered);
-                in.remove();
             } else {
-                in.remove(new UnsupportedOperationException(
-                        "unsupported message type: " + StringUtil.simpleClassName(msg)));
+                in.remove(new UnsupportedOperationException("unsupported message type: "
+                        + StringUtil.simpleClassName(msg)));
             }
         }
     }
@@ -259,4 +254,13 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
      * @throws Exception    is thrown if an error occurred
      */
     protected abstract void doWriteFileRegion(FileRegion region) throws Exception;
+
+    /**
+     * Write the data which is hold by the {@link ReadableObject} to the underlying Socket.
+     *
+     * @param obj
+     *            the {@link ReadableObject} which holds the data to transfer
+     * @throws Exception
+     */
+    protected abstract void doWrite(ReadableObject obj) throws Exception;
 }

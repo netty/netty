@@ -16,6 +16,7 @@
 package io.netty.channel.oio;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ReadableObject;
 import io.netty.channel.Channel;
 import io.netty.channel.FileRegion;
 import io.netty.channel.RecvByteBufAllocator;
@@ -141,6 +142,15 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
                 return;
             }
         }
+    }
+
+    @Override
+    protected void doWrite(ReadableObject obj) throws Exception {
+        OutputStream os = this.os;
+        if (os == null) {
+            throw new NotYetConnectedException();
+        }
+        obj.readObjectBytes(os, obj.objectReadableBytes());
     }
 
     private static void checkEOF(FileRegion region) throws IOException {
