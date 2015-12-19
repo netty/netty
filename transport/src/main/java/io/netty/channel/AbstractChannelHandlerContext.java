@@ -31,7 +31,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     private final boolean inbound;
     private final boolean outbound;
-    private final DefaultChannelPipeline pipeline;
+    private final ChannelPipeline pipeline;
     private final String name;
     private boolean removed;
 
@@ -47,7 +47,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     volatile Runnable invokeFlushTask;
 
     AbstractChannelHandlerContext(
-            DefaultChannelPipeline pipeline, ChannelHandlerInvoker invoker,
+            ChannelPipeline pipeline, ChannelHandlerInvoker invoker,
             String name, boolean inbound, boolean outbound) {
 
         if (name == null) {

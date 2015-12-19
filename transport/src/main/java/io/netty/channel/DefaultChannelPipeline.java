@@ -80,7 +80,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         tail.prev = head;
     }
 
-    Object touch(Object msg, AbstractChannelHandlerContext next) {
+    @Override
+    public Object touch(Object msg, ChannelHandlerContext next) {
         return touch ? ReferenceCountUtil.touch(msg, next) : msg;
     }
 
