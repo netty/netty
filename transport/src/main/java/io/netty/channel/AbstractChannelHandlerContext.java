@@ -18,6 +18,8 @@ package io.netty.channel;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakHint;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.StringUtil;
@@ -25,6 +27,8 @@ import io.netty.util.internal.StringUtil;
 import java.net.SocketAddress;
 
 abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, ResourceLeakHint {
+
+    private final boolean touch = ResourceLeakDetector.isEnabled();
 
     volatile AbstractChannelHandlerContext next;
     volatile AbstractChannelHandlerContext prev;
@@ -150,7 +154,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     @Override
     public ChannelHandlerContext fireChannelRead(Object msg) {
         AbstractChannelHandlerContext next = findContextInbound();
-        next.invoker().invokeChannelRead(next, pipeline.touch(msg, next));
+        next.invoker().invokeChannelRead(next, touch(msg, next));
         return this;
     }
 
@@ -257,7 +261,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     @Override
     public ChannelFuture write(Object msg, ChannelPromise promise) {
         AbstractChannelHandlerContext next = findContextOutbound();
-        next.invoker().invokeWrite(next, pipeline.touch(msg, next), promise);
+        next.invoker().invokeWrite(next, touch(msg, next), promise);
         return promise;
     }
 
@@ -272,7 +276,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
         AbstractChannelHandlerContext next = findContextOutbound();
         ChannelHandlerInvoker invoker = next.invoker();
-        invoker.invokeWrite(next, pipeline.touch(msg, next) , promise);
+        invoker.invokeWrite(next, touch(msg, next) , promise);
         invoker.invokeFlush(next);
         return promise;
     }
@@ -320,6 +324,10 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             ctx = ctx.prev;
         } while (!ctx.outbound);
         return ctx;
+    }
+
+    private Object touch(Object msg, ChannelHandlerContext next) {
+        return touch ? ReferenceCountUtil.touch(msg, next) : msg;
     }
 
     @Override

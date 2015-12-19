@@ -60,7 +60,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     final AbstractChannelHandlerContext head;
     final AbstractChannelHandlerContext tail;
 
-    private final boolean touch = ResourceLeakDetector.isEnabled();
 
     /**
      * @see #findInvoker(EventExecutorGroup)
@@ -78,11 +77,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         head.next = tail;
         tail.prev = head;
-    }
-
-    @Override
-    public Object touch(Object msg, ChannelHandlerContext next) {
-        return touch ? ReferenceCountUtil.touch(msg, next) : msg;
     }
 
     @Override

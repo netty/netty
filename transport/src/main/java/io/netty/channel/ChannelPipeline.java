@@ -957,13 +957,4 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
      * Shortcut for call {@link #write(Object)} and {@link #flush()}.
      */
     ChannelFuture writeAndFlush(Object msg);
-
-    /**
-     *
-     * touch the msg.
-     *
-     * Note that this method is only meant to be called from with in the
-     * {@link ChannelHandlerContext}.
-     */
-    Object touch(Object msg, ChannelHandlerContext next);
 }
