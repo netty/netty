@@ -20,7 +20,7 @@ final class DefaultChannelHandlerContext extends AbstractChannelHandlerContext {
     private final ChannelHandler handler;
 
     DefaultChannelHandlerContext(
-            DefaultChannelPipeline pipeline, ChannelHandlerInvoker invoker, String name, ChannelHandler handler) {
+            ChannelPipeline pipeline, ChannelHandlerInvoker invoker, String name, ChannelHandler handler) {
         super(pipeline, invoker, name, isInbound(handler), isOutbound(handler));
         if (handler == null) {
             throw new NullPointerException("handler");
