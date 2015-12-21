@@ -618,16 +618,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         private void fireChannelInactiveAndDeregister(final boolean wasActive) {
-            if (wasActive && !isActive()) {
-                invokeLater(new OneTimeTask() {
-                    @Override
-                    public void run() {
-                        pipeline.fireChannelInactive();
-                    }
-                });
-            }
-
-            deregister(voidPromise());
+            deregister(voidPromise(), wasActive && !isActive());
         }
 
         @Override
@@ -641,6 +632,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final void deregister(final ChannelPromise promise) {
+           deregister(promise, false);
+        }
+
+        private void deregister(final ChannelPromise promise, final boolean fireChannelInactive) {
             if (!promise.setUncancellable()) {
                 return;
             }
@@ -650,27 +645,38 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
-            try {
-                doDeregister();
-            } catch (Throwable t) {
-                logger.warn("Unexpected exception occurred while deregistering a channel.", t);
-            } finally {
-                if (registered) {
-                    registered = false;
-                    invokeLater(new OneTimeTask() {
-                        @Override
-                        public void run() {
+            // As a user may call deregister() from within any method while doing processing in the ChannelPipeline,
+            // we need to ensure we do the actual deregister operation later. This is needed as for example,
+            // we may be in the ByteToMessageDecoder.callDecode(...) method and so still try to do processing in
+            // the old EventLoop while the user already registered the Channel to a new EventLoop. Without delay,
+            // the deregister operation this could lead to have a handler invoked by different EventLoop and so
+            // threads.
+            //
+            // See:
+            // https://github.com/netty/netty/issues/4435
+            invokeLater(new OneTimeTask() {
+                @Override
+                public void run() {
+                    try {
+                        doDeregister();
+                    } catch (Throwable t) {
+                        logger.warn("Unexpected exception occurred while deregistering a channel.", t);
+                    } finally {
+                        if (fireChannelInactive) {
+                            pipeline.fireChannelInactive();
+                        }
+                        // Some transports like local and AIO does not allow the deregistration of
+                        // an open channel.  Their doDeregister() calls close(). Consequently,
+                        // close() calls deregister() again - no need to fire channelUnregistered, so check
+                        // if it was registered.
+                        if (registered) {
+                            registered = false;
                             pipeline.fireChannelUnregistered();
                         }
-                    });
-                    safeSetSuccess(promise);
-                } else {
-                    // Some transports like local and AIO does not allow the deregistration of
-                    // an open channel.  Their doDeregister() calls close().  Consequently,
-                    // close() calls deregister() again - no need to fire channelUnregistered.
-                    safeSetSuccess(promise);
+                        safeSetSuccess(promise);
+                    }
                 }
-            }
+            });
         }
 
         @Override
