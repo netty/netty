@@ -185,10 +185,18 @@ public class OioSctpChannel extends AbstractOioMessageChannel
             return readMessages;
         }
 
+        // We must clear the selectedKeys because the Selector will never do it. If we do not clear it, the selectionKey
+        // will always be returned even if there is no data can be read which causes performance issue. And in some
+        // implementation of Selector, the select method may return 0 if the selectionKey which is ready for process has
+        // already been in the selectedKeys and cause the keysSelected above to be false even if we actually have
+        // something to read.
+        readSelector.selectedKeys().clear();
+
         RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
         if (allocHandle == null) {
             this.allocHandle = allocHandle = config().getRecvByteBufAllocator().newHandle();
         }
+
         ByteBuf buffer = allocHandle.allocate(config().getAllocator());
         boolean free = true;
 
