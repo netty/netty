@@ -660,7 +660,7 @@ public interface ChannelPipeline
     ChannelPipeline fireChannelRead(Object msg);
 
     /**
-     * Triggers an {@link ChannelInboundHandler#channelWritabilityChanged(ChannelHandlerContext)}
+     * Triggers an {@link ChannelInboundHandler#channelReadComplete(ChannelHandlerContext)}
      * event to the next {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
      */
     ChannelPipeline fireChannelReadComplete();
