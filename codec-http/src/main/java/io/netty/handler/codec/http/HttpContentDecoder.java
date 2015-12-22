@@ -101,7 +101,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
 
             // set new content encoding,
             CharSequence targetContentEncoding = getTargetContentEncoding(contentEncoding);
-            if (HttpHeaderValues.IDENTITY.equals(targetContentEncoding)) {
+            if (HttpHeaderValues.IDENTITY.contentEquals(targetContentEncoding)) {
                 // Do NOT set the 'Content-Encoding' header if the target encoding is 'identity'
                 // as per: http://tools.ietf.org/html/rfc2616#section-14.11
                 headers.remove(HttpHeaderNames.CONTENT_ENCODING);
