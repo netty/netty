@@ -26,7 +26,6 @@ import io.netty.handler.codec.http2.Http2FrameAdapter;
 import io.netty.handler.codec.http2.Http2RemoteFlowController;
 import io.netty.handler.codec.http2.Http2Stream;
 import io.netty.handler.codec.http2.Http2StreamVisitor;
-import io.netty.handler.codec.http2.PriorityStreamByteDistributor;
 import io.netty.handler.codec.http2.StreamByteDistributor;
 import io.netty.handler.codec.http2.UniformStreamByteDistributor;
 import io.netty.handler.codec.http2.WeightedFairQueueByteDistributor;
@@ -51,7 +50,6 @@ import org.openjdk.jmh.annotations.Threads;
 @State(Scope.Benchmark)
 public class NoPriorityByteDistributionBenchmark extends AbstractMicrobenchmark {
     public enum Algorithm {
-        PRIORITY,
         WFQ,
         UNIFORM
     }
@@ -125,9 +123,6 @@ public class NoPriorityByteDistributionBenchmark extends AbstractMicrobenchmark 
 
         // Create the flow controller
         switch (algorithm) {
-            case PRIORITY:
-                distributor = new PriorityStreamByteDistributor(connection);
-                break;
             case WFQ:
                 distributor = new WeightedFairQueueByteDistributor(connection);
                 break;
