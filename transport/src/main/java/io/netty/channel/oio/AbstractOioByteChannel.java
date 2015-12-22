@@ -208,9 +208,9 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                 in.remove();
             } else if (msg instanceof FileRegion) {
                 FileRegion region = (FileRegion) msg;
-                long transfered = region.transfered();
+                long transferIndex = region.transferIndex();
                 doWriteFileRegion(region);
-                in.progress(region.transfered() - transfered);
+                in.progress(region.transferIndex() - transferIndex);
                 in.remove();
             } else {
                 in.remove(new UnsupportedOperationException(

@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -32,7 +33,7 @@ import java.nio.channels.WritableByteChannel;
  * Be aware that the {@link FileChannel} will be automatically closed once {@link #refCnt()} returns
  * {@code 0}.
  */
-public class DefaultFileRegion extends AbstractReferenceCounted implements FileRegion {
+public class DefaultFileRegion extends AbstractFileRegion implements FileRegion {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultFileRegion.class);
     private final File f;
@@ -143,8 +144,20 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
         return written;
     }
 
-    @Override
-    protected void deallocate() {
+    private final AbstractReferenceCounted refCnt = new AbstractReferenceCounted() {
+
+        @Override
+        public ReferenceCounted touch(Object hint) {
+            return DefaultFileRegion.this;
+        }
+
+        @Override
+        protected void deallocate() {
+            close();
+        }
+    };
+
+    private void close() {
         FileChannel file = this.file;
 
         if (file == null) {
@@ -162,24 +175,55 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
     }
 
     @Override
-    public FileRegion retain() {
-        super.retain();
+    public int refCnt() {
+        return refCnt.refCnt();
+    }
+
+    @Override
+    public boolean release() {
+        return refCnt.release();
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        return refCnt.release(decrement);
+    }
+
+    @Override
+    public DefaultFileRegion retain() {
+        refCnt.retain();
         return this;
     }
 
     @Override
-    public FileRegion retain(int increment) {
-        super.retain(increment);
+    public DefaultFileRegion retain(int increment) {
+        refCnt.retain(increment);
         return this;
     }
 
     @Override
-    public FileRegion touch() {
+    public DefaultFileRegion touch() {
+        refCnt.touch();
         return this;
     }
 
     @Override
-    public FileRegion touch(Object hint) {
+    public DefaultFileRegion touch(Object hint) {
+        refCnt.touch(hint);
         return this;
+    }
+
+    @Override
+    public FileRegion unwrap() {
+        return null;
+    }
+
+    @Override
+    public FileChannel channel() throws IOException {
+        if (refCnt() == 0) {
+            throw new IllegalReferenceCountException(0);
+        }
+        open();
+        return file;
     }
 }
