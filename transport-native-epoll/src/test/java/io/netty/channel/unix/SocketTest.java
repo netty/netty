@@ -44,80 +44,56 @@ public class SocketTest {
 
     @Test
     public void testKeepAlive() throws Exception {
-        Socket socket = Socket.newSocketStream();
-        try {
-            assertFalse(socket.isKeepAlive());
-            socket.setKeepAlive(true);
-            assertTrue(socket.isKeepAlive());
-        } finally {
-            socket.close();
-        }
+        assertFalse(socket.isKeepAlive());
+        socket.setKeepAlive(true);
+        assertTrue(socket.isKeepAlive());
     }
 
     @Test
     public void testTcpCork() throws Exception {
-        Socket socket = Socket.newSocketStream();
-        try {
-            assertFalse(socket.isTcpCork());
-            socket.setTcpCork(true);
-            assertTrue(socket.isTcpCork());
-        } finally {
-            socket.close();
-        }
+        assertFalse(socket.isTcpCork());
+        socket.setTcpCork(true);
+        assertTrue(socket.isTcpCork());
     }
 
     @Test
     public void testTcpNoDelay() throws Exception {
-        Socket socket = Socket.newSocketStream();
-        try {
-            assertFalse(socket.isTcpNoDelay());
-            socket.setTcpNoDelay(true);
-            assertTrue(socket.isTcpNoDelay());
-        } finally {
-            socket.close();
-        }
+        assertFalse(socket.isTcpNoDelay());
+        socket.setTcpNoDelay(true);
+        assertTrue(socket.isTcpNoDelay());
     }
 
     @Test
     public void testReceivedBufferSize() throws Exception {
-        Socket socket = Socket.newSocketStream();
-        try {
-            int size = socket.getReceiveBufferSize();
-            int newSize = 65535;
-            assertTrue(size > 0);
-            socket.setReceiveBufferSize(newSize);
-            // Linux usually set it to double what is specified
-            assertTrue(newSize <= socket.getReceiveBufferSize());
-        } finally {
-            socket.close();
-        }
+        int size = socket.getReceiveBufferSize();
+        int newSize = 65535;
+        assertTrue(size > 0);
+        socket.setReceiveBufferSize(newSize);
+        // Linux usually set it to double what is specified
+        assertTrue(newSize <= socket.getReceiveBufferSize());
     }
 
     @Test
     public void testSendBufferSize() throws Exception {
-        Socket socket = Socket.newSocketStream();
-        try {
-            int size = socket.getSendBufferSize();
-            int newSize = 65535;
-            assertTrue(size > 0);
-            socket.setSendBufferSize(newSize);
-            // Linux usually set it to double what is specified
-            assertTrue(newSize <= socket.getSendBufferSize());
-        } finally {
-            socket.close();
-        }
+        int size = socket.getSendBufferSize();
+        int newSize = 65535;
+        assertTrue(size > 0);
+        socket.setSendBufferSize(newSize);
+        // Linux usually set it to double what is specified
+        assertTrue(newSize <= socket.getSendBufferSize());
     }
 
     @Test
     public void testSoLinger() throws Exception {
+        assertEquals(-1, socket.getSoLinger());
+        socket.setSoLinger(10);
+        assertEquals(10, socket.getSoLinger());
+    }
+
+    @Test
+    public void testDoubleCloseDoesNotThrow() throws IOException {
         Socket socket = Socket.newSocketStream();
-        try {
-            assertEquals(-1, socket.getSoLinger());
-            socket.setSoLinger(10);
-            assertEquals(10, socket.getSoLinger());
-        } finally {
-            socket.close();
-        }
+        socket.close();
+        socket.close();
     }
 }
-
