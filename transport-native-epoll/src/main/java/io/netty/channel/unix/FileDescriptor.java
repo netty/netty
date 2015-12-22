@@ -15,9 +15,12 @@
  */
 package io.netty.channel.unix;
 
+import io.netty.util.internal.PlatformDependent;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.channel.unix.Errors.CONNECTION_RESET_EXCEPTION_READ;
 import static io.netty.channel.unix.Errors.CONNECTION_RESET_EXCEPTION_WRITE;
@@ -31,8 +34,18 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * {@link FileDescriptor} for it.
  */
 public class FileDescriptor {
+    private static final AtomicIntegerFieldUpdater<FileDescriptor> openUpdater;
+    static {
+        AtomicIntegerFieldUpdater<FileDescriptor> updater
+                = PlatformDependent.newAtomicIntegerFieldUpdater(FileDescriptor.class, "open");
+        if (updater == null) {
+            updater = AtomicIntegerFieldUpdater.newUpdater(FileDescriptor.class, "open");
+        }
+        openUpdater = updater;
+    }
+
     private final int fd;
-    private volatile boolean open = true;
+    private volatile int open = 1;
 
     public FileDescriptor(int fd) {
         if (fd < 0) {
@@ -52,10 +65,11 @@ public class FileDescriptor {
      * Close the file descriptor.
      */
     public void close() throws IOException {
-        open = false;
-        int res = close(fd);
-        if (res < 0) {
-            throw newIOException("close", res);
+        if (openUpdater.compareAndSet(this, 1, 0)) {
+            int res = close(fd);
+            if (res < 0) {
+                throw newIOException("close", res);
+            }
         }
     }
 
@@ -63,7 +77,7 @@ public class FileDescriptor {
      * Returns {@code true} if the file descriptor is open.
      */
     public boolean isOpen() {
-        return open;
+        return open == 1;
     }
 
     public final int write(ByteBuffer buf, int pos, int limit) throws IOException {
