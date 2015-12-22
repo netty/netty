@@ -45,7 +45,7 @@ jint Java_io_netty_channel_epoll_Native_epollCtlDel0(JNIEnv* env, jclass clazz, 
 jint Java_io_netty_channel_epoll_Native_sendmmsg(JNIEnv* env, jclass clazz, jint fd, jobjectArray packets, jint offset, jint len);
 jint Java_io_netty_channel_epoll_Native_recvFd0(JNIEnv* env, jclass clazz, jint fd);
 jint Java_io_netty_channel_epoll_Native_sendFd0(JNIEnv* env, jclass clazz, jint socketFd, jint fd);
-jlong Java_io_netty_channel_epoll_Native_sendfile0(JNIEnv* env, jclass clazz, jint fd, jobject fileRegion, jlong base_off, jlong off, jlong len);
+jlong Java_io_netty_channel_epoll_Native_sendfile0(JNIEnv* env, jclass clazz, jint fd, jobject fileChannel, jlong base_off, jlong off, jlong len);
 
 void Java_io_netty_channel_epoll_Native_setReuseAddress(JNIEnv* env, jclass clazz, jint fd, jint optval);
 void Java_io_netty_channel_epoll_Native_setReusePort(JNIEnv* env, jclass clazz, jint fd, jint optval);

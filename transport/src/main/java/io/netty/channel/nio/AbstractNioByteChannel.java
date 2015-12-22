@@ -175,7 +175,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 if (writeSpinCount == -1) {
                     writeSpinCount = config().getWriteSpinCount();
                 }
-                for (int i = writeSpinCount - 1; i >= 0; i --) {
+                for (int i = writeSpinCount - 1; i >= 0; i--) {
                     int localFlushedAmount = doWriteBytes(buf);
                     if (localFlushedAmount == 0) {
                         setOpWrite = true;
@@ -199,30 +199,32 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 }
             } else if (msg instanceof FileRegion) {
                 FileRegion region = (FileRegion) msg;
-                boolean done = region.transfered() >= region.count();
-
-                if (!done) {
-                    long flushedAmount = 0;
-                    if (writeSpinCount == -1) {
-                        writeSpinCount = config().getWriteSpinCount();
-                    }
-
-                    for (int i = writeSpinCount - 1; i >= 0; i--) {
-                        long localFlushedAmount = doWriteFileRegion(region);
-                        if (localFlushedAmount == 0) {
-                            setOpWrite = true;
-                            break;
-                        }
-
-                        flushedAmount += localFlushedAmount;
-                        if (region.transfered() >= region.count()) {
-                            done = true;
-                            break;
-                        }
-                    }
-
-                    in.progress(flushedAmount);
+                long transferableBytes = region.transferableBytes();
+                if (transferableBytes == 0) {
+                    in.remove();
+                    continue;
                 }
+
+                boolean done = false;
+                long flushedAmount = 0;
+                if (writeSpinCount == -1) {
+                    writeSpinCount = config().getWriteSpinCount();
+                }
+                for (int i = writeSpinCount - 1; i >= 0; i--) {
+                    long localFlushedAmount = doWriteFileRegion(region);
+                    if (localFlushedAmount == 0) {
+                        setOpWrite = true;
+                        break;
+                    }
+
+                    flushedAmount += localFlushedAmount;
+                    if (!region.isTransferable()) {
+                        done = true;
+                        break;
+                    }
+                }
+
+                in.progress(flushedAmount);
 
                 if (done) {
                     in.remove();

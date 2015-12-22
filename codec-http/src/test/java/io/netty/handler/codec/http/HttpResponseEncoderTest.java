@@ -17,12 +17,15 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.AbstractFileRegion;
 import io.netty.channel.FileRegion;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
+
 import org.junit.Test;
 
 import java.io.IOException;
+import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 
 import static org.hamcrest.Matchers.*;
@@ -64,7 +67,7 @@ public class HttpResponseEncoderTest {
         assertFalse(channel.finish());
     }
 
-    private static class DummyLongFileRegion implements FileRegion {
+    private static class DummyLongFileRegion extends AbstractFileRegion {
 
         @Override
         public long position() {
@@ -83,6 +86,11 @@ public class HttpResponseEncoderTest {
 
         @Override
         public long transferTo(WritableByteChannel target, long position) throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public long transferBytesTo(WritableByteChannel target, long position, long length) throws IOException {
             throw new UnsupportedOperationException();
         }
 
@@ -119,6 +127,16 @@ public class HttpResponseEncoderTest {
         @Override
         public boolean release(int decrement) {
             return false;
+        }
+
+        @Override
+        public FileRegion unwrap() {
+            return null;
+        }
+
+        @Override
+        public FileChannel channel() throws IOException {
+            return null;
         }
     }
 
