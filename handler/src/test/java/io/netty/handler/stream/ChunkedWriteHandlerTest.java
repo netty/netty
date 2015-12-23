@@ -16,6 +16,7 @@
 package io.netty.handler.stream;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -31,8 +32,10 @@ import java.io.IOException;
 import java.nio.channels.Channels;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static io.netty.util.ReferenceCountUtil.*;
-import static org.junit.Assert.*;
+import static io.netty.util.ReferenceCountUtil.releaseLater;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class ChunkedWriteHandlerTest {
     private static final byte[] BYTES = new byte[1024 * 64];
@@ -116,8 +119,14 @@ public class ChunkedWriteHandlerTest {
                 // NOOP
             }
 
+            @Deprecated
             @Override
             public ByteBuf readChunk(ChannelHandlerContext ctx) throws Exception {
+                return readChunk(ctx.alloc());
+            }
+
+            @Override
+            public ByteBuf readChunk(ByteBufAllocator allocator) throws Exception {
                 if (done) {
                     return null;
                 }
@@ -173,8 +182,14 @@ public class ChunkedWriteHandlerTest {
                 // NOOP
             }
 
+            @Deprecated
             @Override
             public Object readChunk(ChannelHandlerContext ctx) throws Exception {
+                return readChunk(ctx.alloc());
+            }
+
+            @Override
+            public Object readChunk(ByteBufAllocator ctx) throws Exception {
                 if (done) {
                     return false;
                 }
