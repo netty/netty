@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.SlicedByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -31,8 +32,11 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 
-import static io.netty.handler.codec.http.HttpHeaderNames.*;
-import static org.junit.Assert.*;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_DISPOSITION;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TRANSFER_ENCODING;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
+import static org.junit.Assert.assertEquals;
 
 /** {@link HttpPostRequestEncoder} test case. */
 public class HttpPostRequestEncoderTest {
@@ -220,7 +224,7 @@ public class HttpPostRequestEncoderTest {
         encoder.addBodyFileUpload("myfile", file1, "application/x-zip-compressed", false);
         encoder.finalizeRequest();
         while (! encoder.isEndOfInput()) {
-            HttpContent httpContent = encoder.readChunk(null);
+            HttpContent httpContent = encoder.readChunk((ByteBufAllocator) null);
             if (httpContent.content() instanceof SlicedByteBuf) {
                 assertEquals(2, httpContent.content().refCnt());
             } else {

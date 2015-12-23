@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.stream.ChunkedInput;
 
@@ -81,8 +82,14 @@ public class HttpChunkedInput implements ChunkedInput<HttpContent> {
         input.close();
     }
 
+    @Deprecated
     @Override
     public HttpContent readChunk(ChannelHandlerContext ctx) throws Exception {
+        return readChunk(ctx.alloc());
+    }
+
+    @Override
+    public HttpContent readChunk(ByteBufAllocator allocator) throws Exception {
         if (input.isEndOfInput()) {
             if (sentLastChunk) {
                 return null;
@@ -92,7 +99,7 @@ public class HttpChunkedInput implements ChunkedInput<HttpContent> {
                 return lastHttpContent;
             }
         } else {
-            ByteBuf buf = input.readChunk(ctx);
+            ByteBuf buf = input.readChunk(allocator);
             return new DefaultHttpContent(buf);
         }
     }
