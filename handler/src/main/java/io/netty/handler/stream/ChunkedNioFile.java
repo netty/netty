@@ -16,6 +16,7 @@
 package io.netty.handler.stream;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
 
@@ -141,15 +142,21 @@ public class ChunkedNioFile implements ChunkedInput<ByteBuf> {
         in.close();
     }
 
+    @Deprecated
     @Override
     public ByteBuf readChunk(ChannelHandlerContext ctx) throws Exception {
+        return readChunk(ctx.alloc());
+    }
+
+    @Override
+    public ByteBuf readChunk(ByteBufAllocator allocator) throws Exception {
         long offset = this.offset;
         if (offset >= endOffset) {
             return null;
         }
 
         int chunkSize = (int) Math.min(this.chunkSize, endOffset - offset);
-        ByteBuf buffer = ctx.alloc().buffer(chunkSize);
+        ByteBuf buffer = allocator.buffer(chunkSize);
         boolean release = true;
         try {
             int readBytes = 0;

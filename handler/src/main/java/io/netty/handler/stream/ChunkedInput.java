@@ -16,6 +16,7 @@
 package io.netty.handler.stream;
 
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 
 /**
@@ -35,17 +36,35 @@ public interface ChunkedInput<B> {
     void close() throws Exception;
 
     /**
-     * Fetches a chunked data from the stream. Once this method returns the last chunk
+     * @deprecated Use {@link #readChunk(ByteBufAllocator)}.
+     *
+     * <p>Fetches a chunked data from the stream. Once this method returns the last chunk
      * and thus the stream has reached at its end, any subsequent {@link #isEndOfInput()}
      * call must return {@code true}.
      *
+     * @param ctx The context which provides a {@link ByteBufAllocator} if buffer allocation is necessary.
      * @return the fetched chunk.
      *         {@code null} if there is no data left in the stream.
      *         Please note that {@code null} does not necessarily mean that the
      *         stream has reached at its end.  In a slow stream, the next chunk
      *         might be unavailable just momentarily.
      */
+    @Deprecated
     B readChunk(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * Fetches a chunked data from the stream. Once this method returns the last chunk
+     * and thus the stream has reached at its end, any subsequent {@link #isEndOfInput()}
+     * call must return {@code true}.
+     *
+     * @param a {@link ByteBufAllocator} if buffer allocation is necessary.
+     * @return the fetched chunk.
+     *         {@code null} if there is no data left in the stream.
+     *         Please note that {@code null} does not necessarily mean that the
+     *         stream has reached at its end.  In a slow stream, the next chunk
+     *         might be unavailable just momentarily.
+     */
+    B readChunk(ByteBufAllocator allocator) throws Exception;
 
     /**
      * Returns the length of the input.

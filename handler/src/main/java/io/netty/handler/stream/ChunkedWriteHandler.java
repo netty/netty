@@ -15,6 +15,7 @@
  */
 package io.netty.handler.stream;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
@@ -203,6 +204,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
         }
 
         boolean flushed = false;
+        ByteBufAllocator allocator = ctx.alloc();
         while (channel.isWritable()) {
             if (currentWrite == null) {
                 currentWrite = queue.poll();
@@ -220,7 +222,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                 boolean suspend;
                 Object message = null;
                 try {
-                    message = chunks.readChunk(ctx);
+                    message = chunks.readChunk(allocator);
                     endOfInput = chunks.isEndOfInput();
 
                     if (message == null) {
