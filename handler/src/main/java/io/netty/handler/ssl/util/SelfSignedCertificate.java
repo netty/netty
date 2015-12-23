@@ -162,11 +162,20 @@ public final class SelfSignedCertificate {
         certificate = new File(paths[0]);
         privateKey = new File(paths[1]);
         key = keypair.getPrivate();
+        FileInputStream certificateInput = null;
         try {
-            cert = (X509Certificate) CertificateFactory.getInstance("X509").generateCertificate(
-                    new FileInputStream(certificate));
+            certificateInput = new FileInputStream(certificate);
+            cert = (X509Certificate) CertificateFactory.getInstance("X509").generateCertificate(certificateInput);
         } catch (Exception e) {
             throw new CertificateEncodingException(e);
+        } finally {
+            if (certificateInput != null) {
+                try {
+                    certificateInput.close();
+                } catch (IOException e) {
+                    logger.warn("Failed to close a file: " + certificate, e);
+                }
+            }
         }
     }
 
