@@ -1135,7 +1135,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-     * @deprecated Use {@link AsciiString#equalsIgnoreCase(CharSequence, CharSequence)} instead.
+     * @deprecated Use {@link AsciiString#contentEqualsIgnoreCase(CharSequence, CharSequence)} instead.
      */
     @Deprecated
     public static boolean equalsIgnoreCase(CharSequence name1, CharSequence name2) {

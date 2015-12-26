@@ -134,7 +134,7 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
 
     /**
      * Sets the amount of bytes that will be allocated to each stream. Defaults to 1KiB.
-     * @param minAllocationChunk the amount of bytes that will be allocated to each stream. Must be > 0.
+     * @param allocationQuantum the amount of bytes that will be allocated to each stream. Must be > 0.
      */
     public void allocationQuantum(int allocationQuantum) {
         if (allocationQuantum <= 0) {

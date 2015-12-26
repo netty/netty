@@ -35,7 +35,7 @@ public interface StreamByteDistributor {
          * Get the amount of bytes this stream has pending to send. The actual amount written must not exceed
          * {@link #windowSize()}!
          * @return The amount of bytes this stream has pending to send.
-         * @see {@link #io.netty.handler.codec.http2.Http2CodecUtil.streamableBytes(StreamState)}
+         * @see {@link io.netty.handler.codec.http2.Http2CodecUtil#streamableBytes(StreamState)}
          */
         int pendingBytes();
 
@@ -51,7 +51,7 @@ public interface StreamByteDistributor {
          * an stream has been given a chance to write an empty frame, and also enables optimizations like not writing
          * empty frames in some situations (don't write headers until data can also be written).
          * @return the size of the stream's flow control window.
-         * @see {@link #io.netty.handler.codec.http2.Http2CodecUtil.streamableBytes(StreamState)}
+         * @see {@link io.netty.handler.codec.http2.Http2CodecUtil#streamableBytes(StreamState)}
          */
         int windowSize();
     }

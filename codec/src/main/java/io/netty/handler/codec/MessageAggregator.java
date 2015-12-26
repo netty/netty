@@ -346,7 +346,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
 
     /**
      * Determine if the channel should be closed after the result of {@link #newContinueResponse(Object)} is written.
-     * @param The return value from {@link #newContinueResponse(Object)}.
+     * @param msg The return value from {@link #newContinueResponse(Object)}.
      * @return {@code true} if the channel should be closed after the result of {@link #newContinueResponse(Object)}
      * is written. {@code false} otherwise.
      */
@@ -356,7 +356,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
      * Determine if all objects for the current request/response should be ignored or not.
      * Messages will stop being ignored the next time {@link #isContentMessage(Object)} returns {@code true}.
      *
-     * @param The return value from {@link #newContinueResponse(Object)}.
+     * @param msg The return value from {@link #newContinueResponse(Object)}.
      * @return {@code true} if all objects for the current request/response should be ignored or not.
      * {@code false} otherwise.
      */

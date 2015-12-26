@@ -24,7 +24,7 @@ import io.netty.util.ByteProcessor;
 public interface ByteBufProcessor extends ByteProcessor {
 
     /**
-     * @deprecated Use {@link ByteProcessor#FIND_NULL}.
+     * @deprecated Use {@link ByteProcessor#FIND_NUL}.
      */
     ByteBufProcessor FIND_NUL = new ByteBufProcessor() {
         @Override

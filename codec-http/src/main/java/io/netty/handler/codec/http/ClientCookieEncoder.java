@@ -50,7 +50,7 @@ public final class ClientCookieEncoder {
     /**
      * Encodes the specified cookie into a Cookie header value.
      *
-     * @param specified the cookie
+     * @param cookie the specified cookie
      * @return a Rfc6265 style Cookie header value
      */
     @Deprecated
