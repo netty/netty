@@ -18,17 +18,6 @@ package io.netty.handler.ssl;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeNoException;
-import io.netty.bootstrap.Bootstrap;
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectorFactory;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
@@ -36,16 +25,12 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBeh
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.util.NetUtil;
 
-import java.net.InetSocketAddress;
-import java.security.cert.CertificateException;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 
 import org.junit.Test;
@@ -66,7 +51,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
             }
             ApplicationProtocolConfig apn = failingNegotiator(Protocol.NPN,
                     PREFERRED_APPLICATION_LEVEL_PROTOCOL);
-            mySetup(apn);
+            setupHandlers(apn);
             runTest();
         } catch (SkipTestException e) {
             // NPN availability is dependent on the java version. If NPN is not available because of
@@ -88,7 +73,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
                     PREFERRED_APPLICATION_LEVEL_PROTOCOL);
             ApplicationProtocolConfig serverApn = acceptingNegotiator(Protocol.NPN,
                     APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE);
-            mySetup(serverApn, clientApn);
+            setupHandlers(serverApn, clientApn);
             runTest(null);
         } catch (SkipTestException e) {
             // ALPN availability is dependent on the java version. If ALPN is not available because of
@@ -110,7 +95,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
                     PREFERRED_APPLICATION_LEVEL_PROTOCOL);
             ApplicationProtocolConfig serverApn = acceptingNegotiator(Protocol.NPN,
                     APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE);
-            mySetup(serverApn, clientApn);
+            setupHandlers(serverApn, clientApn);
             assertTrue(clientLatch.await(2, TimeUnit.SECONDS));
             assertTrue(clientException instanceof SSLHandshakeException);
         } catch (SkipTestException e) {
@@ -133,7 +118,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
                     PREFERRED_APPLICATION_LEVEL_PROTOCOL);
             ApplicationProtocolConfig serverApn = failingNegotiator(Protocol.NPN,
                     APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE);
-            mySetup(serverApn, clientApn);
+            setupHandlers(serverApn, clientApn);
             assertTrue(serverLatch.await(2, TimeUnit.SECONDS));
             assertTrue(serverException instanceof SSLHandshakeException);
         } catch (SkipTestException e) {
@@ -154,7 +139,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
             }
             ApplicationProtocolConfig apn = failingNegotiator(Protocol.ALPN,
                     PREFERRED_APPLICATION_LEVEL_PROTOCOL);
-            mySetup(apn);
+            setupHandlers(apn);
             runTest();
         } catch (SkipTestException e) {
             // ALPN availability is dependent on the java version. If ALPN is not available because of
@@ -176,7 +161,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
                     PREFERRED_APPLICATION_LEVEL_PROTOCOL);
             ApplicationProtocolConfig serverApn = acceptingNegotiator(Protocol.ALPN,
                     APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE);
-            mySetup(serverApn, clientApn);
+            setupHandlers(serverApn, clientApn);
             runTest(null);
         } catch (SkipTestException e) {
             // ALPN availability is dependent on the java version. If ALPN is not available because of
@@ -198,7 +183,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
                     PREFERRED_APPLICATION_LEVEL_PROTOCOL);
             ApplicationProtocolConfig serverApn = failingNegotiator(Protocol.ALPN,
                     APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE);
-            mySetup(serverApn, clientApn);
+            setupHandlers(serverApn, clientApn);
             assertTrue(serverLatch.await(2, TimeUnit.SECONDS));
             assertTrue(serverException instanceof SSLHandshakeException);
         } catch (SkipTestException e) {
@@ -223,7 +208,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
                 FALLBACK_APPLICATION_LEVEL_PROTOCOL, PREFERRED_APPLICATION_LEVEL_PROTOCOL);
             ApplicationProtocolConfig serverApn = failingNegotiator(Protocol.ALPN,
                 PREFERRED_APPLICATION_LEVEL_PROTOCOL, FALLBACK_APPLICATION_LEVEL_PROTOCOL);
-            mySetup(serverApn, clientApn);
+            setupHandlers(serverApn, clientApn);
             assertNull(serverException);
             runTest(PREFERRED_APPLICATION_LEVEL_PROTOCOL);
         } catch (SkipTestException e) {
@@ -268,7 +253,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
             SslContext clientSslCtx = new JdkSslClientContext(null, InsecureTrustManagerFactory.INSTANCE, null,
                     IdentityCipherSuiteFilter.INSTANCE, clientApn, 0, 0);
 
-            mySetup(serverSslCtx, clientSslCtx);
+            setupHandlers(serverSslCtx, clientSslCtx);
             assertTrue(clientLatch.await(2, TimeUnit.SECONDS));
             assertTrue(clientException instanceof SSLHandshakeException);
         } catch (SkipTestException e) {
@@ -276,96 +261,6 @@ public class JdkSslEngineTest extends SSLEngineTest {
             // java version incompatibility don't fail the test, but instead just skip the test
             assumeNoException(e);
         }
-    }
-
-    private void mySetup(ApplicationProtocolConfig apn) throws InterruptedException, SSLException,
-            CertificateException {
-        mySetup(apn, apn);
-    }
-
-    private void mySetup(ApplicationProtocolConfig serverApn, ApplicationProtocolConfig clientApn)
-            throws InterruptedException, SSLException, CertificateException {
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
-
-        mySetup(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey(), null)
-                        .sslProvider(sslProvider())
-                        .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
-                        .applicationProtocolConfig(serverApn)
-                        .sessionCacheSize(0)
-                        .sessionTimeout(0)
-                        .build(),
-
-                SslContextBuilder.forClient()
-                        .sslProvider(sslProvider())
-                        .applicationProtocolConfig(clientApn)
-                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                        .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
-                        .sessionCacheSize(0)
-                        .sessionTimeout(0)
-                        .build());
-    }
-
-    private void mySetup(SslContext serverCtx, SslContext clientCtx)
-      throws InterruptedException, SSLException, CertificateException {
-
-        serverSslCtx = serverCtx;
-        clientSslCtx = clientCtx;
-
-        serverConnectedChannel = null;
-        sb = new ServerBootstrap();
-        cb = new Bootstrap();
-
-        sb.group(new NioEventLoopGroup(), new NioEventLoopGroup());
-        sb.channel(NioServerSocketChannel.class);
-        sb.childHandler(new ChannelInitializer<Channel>() {
-            @Override
-            protected void initChannel(Channel ch) throws Exception {
-                ChannelPipeline p = ch.pipeline();
-                p.addLast(serverSslCtx.newHandler(ch.alloc()));
-                p.addLast(new MessageDelegatorChannelHandler(serverReceiver, serverLatch));
-                p.addLast(new ChannelHandlerAdapter() {
-                    @Override
-                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                        if (cause.getCause() instanceof SSLHandshakeException) {
-                            serverException = cause.getCause();
-                            serverLatch.countDown();
-                        } else {
-                            ctx.fireExceptionCaught(cause);
-                        }
-                    }
-                });
-                serverConnectedChannel = ch;
-            }
-        });
-
-        cb.group(new NioEventLoopGroup());
-        cb.channel(NioSocketChannel.class);
-        cb.handler(new ChannelInitializer<Channel>() {
-            @Override
-            protected void initChannel(Channel ch) throws Exception {
-                ChannelPipeline p = ch.pipeline();
-                p.addLast(clientSslCtx.newHandler(ch.alloc()));
-                p.addLast(new MessageDelegatorChannelHandler(clientReceiver, clientLatch));
-                p.addLast(new ChannelHandlerAdapter() {
-                    @Override
-                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                        if (cause.getCause() instanceof SSLHandshakeException) {
-                            clientException = cause.getCause();
-                            clientLatch.countDown();
-                        } else {
-                            ctx.fireExceptionCaught(cause);
-                        }
-                    }
-                });
-            }
-        });
-
-        serverChannel = sb.bind(new InetSocketAddress(0)).sync().channel();
-        int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
-
-        ChannelFuture ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
-        assertTrue(ccf.awaitUninterruptibly().isSuccess());
-        clientChannel = ccf.channel();
     }
 
     private void runTest() throws Exception {

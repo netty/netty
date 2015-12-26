@@ -15,9 +15,49 @@
  */
 package io.netty.handler.ssl;
 
+import org.junit.Test;
+
+import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
+import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
+import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
+
+import static org.junit.Assert.assertNull;
 import static org.junit.Assume.assumeTrue;
 
 public class OpenSslEngineTest extends SSLEngineTest {
+    private static final String PREFERRED_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http2";
+    private static final String FALLBACK_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http1_1";
+
+    @Test
+    public void testNpn() throws Exception {
+        assumeTrue(OpenSsl.isAvailable());
+        ApplicationProtocolConfig apn = acceptingNegotiator(Protocol.NPN,
+                PREFERRED_APPLICATION_LEVEL_PROTOCOL);
+        setupHandlers(apn);
+        runTest(PREFERRED_APPLICATION_LEVEL_PROTOCOL);
+    }
+
+    @Test
+    public void testAlpn() throws Exception {
+        assumeTrue(OpenSsl.isAvailable());
+        ApplicationProtocolConfig apn = acceptingNegotiator(Protocol.ALPN,
+                PREFERRED_APPLICATION_LEVEL_PROTOCOL);
+        setupHandlers(apn);
+        runTest(PREFERRED_APPLICATION_LEVEL_PROTOCOL);
+    }
+
+    @Test
+    public void testAlpnCompatibleProtocolsDifferentClientOrder() throws Exception {
+        assumeTrue(OpenSsl.isAvailable());
+        ApplicationProtocolConfig clientApn = acceptingNegotiator(Protocol.ALPN,
+                FALLBACK_APPLICATION_LEVEL_PROTOCOL, PREFERRED_APPLICATION_LEVEL_PROTOCOL);
+        ApplicationProtocolConfig serverApn = acceptingNegotiator(Protocol.ALPN,
+                PREFERRED_APPLICATION_LEVEL_PROTOCOL, FALLBACK_APPLICATION_LEVEL_PROTOCOL);
+        setupHandlers(serverApn, clientApn);
+        assertNull(serverException);
+        runTest(PREFERRED_APPLICATION_LEVEL_PROTOCOL);
+    }
+
     @Override
     public void testMutualAuthSameCerts() throws Exception {
         assumeTrue(OpenSsl.isAvailable());
@@ -57,5 +97,13 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @Override
     protected SslProvider sslProvider() {
         return SslProvider.OPENSSL;
+    }
+
+    private static ApplicationProtocolConfig acceptingNegotiator(Protocol protocol,
+            String... supportedProtocols) {
+        return new ApplicationProtocolConfig(protocol,
+                SelectorFailureBehavior.NO_ADVERTISE,
+                SelectedListenerFailureBehavior.ACCEPT,
+                supportedProtocols);
     }
 }
