@@ -278,7 +278,6 @@ public final class DnsNameResolverBuilder {
     /**
      * @param hostsFileEntriesResolver the {@link HostsFileEntriesResolver} used to first check
      *                                 if the hostname is locally aliased.
-     * @param hostsFileEntriesResolver the {@link HostsFileEntriesResolver}
      * @return {@code this}
      */
     public DnsNameResolverBuilder hostsFileEntriesResolver(HostsFileEntriesResolver hostsFileEntriesResolver) {

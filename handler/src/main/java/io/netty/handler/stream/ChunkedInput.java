@@ -57,7 +57,7 @@ public interface ChunkedInput<B> {
      * and thus the stream has reached at its end, any subsequent {@link #isEndOfInput()}
      * call must return {@code true}.
      *
-     * @param a {@link ByteBufAllocator} if buffer allocation is necessary.
+     * @param allocator {@link ByteBufAllocator} if buffer allocation is necessary.
      * @return the fetched chunk.
      *         {@code null} if there is no data left in the stream.
      *         Please note that {@code null} does not necessarily mean that the

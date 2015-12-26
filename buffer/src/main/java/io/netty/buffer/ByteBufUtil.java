@@ -590,7 +590,7 @@ public final class ByteBufUtil {
     }
 
     /**
-     * Create a copy of the underlying storage from {@link value} into a byte array.
+     * Create a copy of the underlying storage from {@code buf} into a byte array.
      * The copy will start at {@link ByteBuf#readerIndex()} and copy {@link ByteBuf#readableBytes()} bytes.
      */
     public static byte[] getBytes(ByteBuf buf) {
@@ -598,7 +598,7 @@ public final class ByteBufUtil {
     }
 
     /**
-     * Create a copy of the underlying storage from {@link buf} into a byte array.
+     * Create a copy of the underlying storage from {@code buf} into a byte array.
      * The copy will start at {@code start} and copy {@code length} bytes.
      */
     public static byte[] getBytes(ByteBuf buf, int start, int length) {
@@ -606,7 +606,7 @@ public final class ByteBufUtil {
     }
 
     /**
-     * Return an array of the underlying storage from {@link buf} into a byte array.
+     * Return an array of the underlying storage from {@code buf} into a byte array.
      * The copy will start at {@code start} and copy {@code length} bytes.
      * If {@code copy} is true a copy will be made of the memory.
      * If {@code copy} is false the underlying storage will be shared, if possible.

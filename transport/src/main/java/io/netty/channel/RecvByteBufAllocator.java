@@ -91,8 +91,6 @@ public interface RecvByteBufAllocator {
 
         /**
          * Determine if the current read loop should should continue.
-         * @param totalMessages The total number of messages read so far by this read loop.
-         * @param lastReadBytes The number of bytes read from the previous read operation.
          * @return {@code true} if the read loop should continue reading. {@code false} if the read loop is complete.
          */
         boolean continueReading();
