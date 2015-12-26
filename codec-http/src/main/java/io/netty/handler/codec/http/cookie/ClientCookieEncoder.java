@@ -81,8 +81,7 @@ public final class ClientCookieEncoder extends CookieEncoder {
     /**
      * Encodes the specified cookie into a Cookie header value.
      *
-     * @param specified
-     *            the cookie
+     * @param cookie the specified cookie
      * @return a Rfc6265 style Cookie header value
      */
     public String encode(Cookie cookie) {

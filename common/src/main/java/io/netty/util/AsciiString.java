@@ -108,7 +108,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
     }
 
     /**
-     * Create a copy of the underlying storage from {@link value}.
+     * Create a copy of the underlying storage from {@code value}.
      * The copy will start at {@link ByteBuffer#position()} and copy {@link ByteBuffer#remaining()} bytes.
      */
     public AsciiString(ByteBuffer value) {
@@ -116,7 +116,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
     }
 
     /**
-     * Initialize a instance based upon the underlying storage from {@link value}.
+     * Initialize an instance based upon the underlying storage from {@code value}.
      * There is a potential to share the underlying array storage if {@link ByteBuffer#hasArray()} is {@code true}.
      * if {@code copy} is {@code true} a copy will be made of the memory.
      * if {@code copy} is {@code false} the underlying storage will be shared, if possible.
@@ -126,7 +126,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
     }
 
     /**
-     * Initialize a {@link ByteString} based upon the underlying storage from {@link value}.
+     * Initialize an {@link AsciiString} based upon the underlying storage from {@code value}.
      * There is a potential to share the underlying array storage if {@link ByteBuffer#hasArray()} is {@code true}.
      * if {@code copy} is {@code true} a copy will be made of the memory.
      * if {@code copy} is {@code false} the underlying storage will be shared, if possible.
@@ -182,14 +182,14 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
     }
 
     /**
-     * Create a copy of {@link value} into this instance using the encoding type of {@code charset}.
+     * Create a copy of {@code value} into this instance using the encoding type of {@code charset}.
      */
     public AsciiString(char[] value, Charset charset) {
         this(value, charset, 0, value.length);
     }
 
     /**
-     * Create a copy of {@link value} into a this instance using the encoding type of {@code charset}.
+     * Create a copy of {@code value} into a this instance using the encoding type of {@code charset}.
      * The copy will start at index {@code start} and copy {@code length} bytes.
      */
     public AsciiString(char[] value, Charset charset, int start, int length) {
@@ -229,14 +229,14 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
     }
 
     /**
-     * Create a copy of {@link value} into this instance using the encoding type of {@code charset}.
+     * Create a copy of {@code value} into this instance using the encoding type of {@code charset}.
      */
     public AsciiString(CharSequence value, Charset charset) {
         this(value, charset, 0, value.length());
     }
 
     /**
-     * Create a copy of {@link value} into this instance using the encoding type of {@code charset}.
+     * Create a copy of {@code value} into this instance using the encoding type of {@code charset}.
      * The copy will start at index {@code start} and copy {@code length} bytes.
      */
     public AsciiString(CharSequence value, Charset charset, int start, int length) {
@@ -349,7 +349,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
     }
 
     /**
-     * During normal use cases the {@link ByteString} should be immutable, but if the underlying array is shared,
+     * During normal use cases the {@link AsciiString} should be immutable, but if the underlying array is shared,
      * and changes then this needs to be called.
      */
     public void arrayChanged() {
@@ -1137,7 +1137,6 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
 
     /**
      * Translates the [{@code start}, {@code end}) range of this byte string to a {@link String}.
-     * @see {@link #toString(int, int)}
      */
     public String toString(int start, int end) {
         int length = end - start;
