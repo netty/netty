@@ -15,6 +15,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.ReferenceCountUtil;
@@ -141,7 +142,7 @@ public final class CoalescingBufferQueue {
     /**
      * Compose the current buffer with another.
      */
-    private ByteBuf compose(ByteBuf current, ByteBuf next) {
+    static ByteBuf compose(ByteBufAllocator alloc, int maxNumComponents, ByteBuf current, ByteBuf next) {
         if (current == null) {
             return next;
         }
@@ -151,12 +152,16 @@ public final class CoalescingBufferQueue {
             composite.writerIndex(composite.writerIndex() + next.readableBytes());
             return composite;
         }
-        // Create a composite buffer to accumulate this pair and potentially all the buffers
-        // in the queue. Using +2 as we have already dequeued current and next.
-        CompositeByteBuf composite = channel.alloc().compositeBuffer(bufAndListenerPairs.size() + 2);
+        // Create a composite buffer to accumulate this pair and potentially all the buffers in the queue.
+        CompositeByteBuf composite = alloc.compositeBuffer();
         composite.addComponent(current);
         composite.addComponent(next);
         return composite.writerIndex(current.readableBytes() + next.readableBytes());
+    }
+
+    private ByteBuf compose(ByteBuf current, ByteBuf next) {
+        // Using +2 as we have already dequeued current and next.
+        return compose(channel.alloc(), bufAndListenerPairs.size() / 2 + 2, current, next);
     }
 
     /**
