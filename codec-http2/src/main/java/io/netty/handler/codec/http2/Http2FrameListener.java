@@ -35,7 +35,7 @@ public interface Http2FrameListener {
      * {@code WINDOW_UPDATE}). Returning a value equal to the length of {@code data} + {@code padding} will effectively
      * opt-out of application-level flow control for this frame. Returning a value less than the length of {@code data}
      * + {@code padding} will defer the returning of the processed bytes, which the application must later return via
-     * {@link Http2LocalFlowController#consumeBytes(ChannelHandlerContext, Http2Stream, int)}. The returned value must
+     * {@link Http2LocalFlowController#consumeBytes(Http2Stream, int)}. The returned value must
      * be >= {@code 0} and <= {@code data.readableBytes()} + {@code padding}.
      */
     int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,

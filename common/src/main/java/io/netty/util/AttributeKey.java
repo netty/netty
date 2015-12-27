@@ -47,8 +47,8 @@ public final class AttributeKey<T> extends AbstractConstant<AttributeKey<T>> {
     }
 
     /**
-     * Creates a new {@link AttributeKey} for the given {@param name} or fail with an
-     * {@link IllegalArgumentException} if a {@link AttributeKey} for the given {@param name} exists.
+     * Creates a new {@link AttributeKey} for the given {@code name} or fail with an
+     * {@link IllegalArgumentException} if a {@link AttributeKey} for the given {@code name} exists.
      */
     @SuppressWarnings("unchecked")
     public static <T> AttributeKey<T> newInstance(String name) {

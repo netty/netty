@@ -58,8 +58,8 @@ public interface MaxBytesRecvByteBufAllocator extends RecvByteBufAllocator {
     /**
      * Sets the maximum number of bytes to read for a read loop and per individual read operation.
      * If this value is greater than 1, an event loop might attempt to read multiple times to procure bytes.
-     * @param maxBytesPerRead {@see #setMaxBytesPerRead(int)}
-     * @param maxBytesPerIndividualRead {@see #setMaxBytesPerIndividualRead(int)}
+     * @param maxBytesPerRead see {@link #maxBytesPerRead(int)}
+     * @param maxBytesPerIndividualRead see {@link #maxBytesPerIndividualRead(int)}
      */
     MaxBytesRecvByteBufAllocator maxBytesPerReadPair(int maxBytesPerRead, int maxBytesPerIndividualRead);
 }

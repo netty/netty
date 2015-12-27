@@ -79,8 +79,8 @@ public abstract class ConstantPool<T extends Constant<T>> {
     }
 
     /**
-     * Creates a new {@link Constant} for the given {@param name} or fail with an
-     * {@link IllegalArgumentException} if a {@link Constant} for the given {@param name} exists.
+     * Creates a new {@link Constant} for the given {@code name} or fail with an
+     * {@link IllegalArgumentException} if a {@link Constant} for the given {@code name} exists.
      */
     @SuppressWarnings("unchecked")
     public T newInstance(String name) {

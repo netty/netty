@@ -59,7 +59,7 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
      *
      * @param timeout Value of time to wait for each response
      * @param unit Units associated with {@code timeout}
-     * @see HttpResponseHandler#put(int, io.netty.channel.ChannelPromise)
+     * @see HttpResponseHandler#put(int, io.netty.channel.ChannelFuture, io.netty.channel.ChannelPromise)
      */
     public void awaitResponses(long timeout, TimeUnit unit) {
         Iterator<Entry<Integer, Entry<ChannelFuture, ChannelPromise>>> itr = streamidPromiseMap.entrySet().iterator();
