@@ -24,7 +24,7 @@ import java.nio.channels.UnsupportedAddressTypeException;
 import java.util.List;
 
 /**
- * Resolves a possibility unresolved {@link {@link SocketAddress}}.
+ * Resolves a possibility unresolved {@link SocketAddress}.
  */
 public interface AddressResolver<T extends SocketAddress> extends Closeable {
 

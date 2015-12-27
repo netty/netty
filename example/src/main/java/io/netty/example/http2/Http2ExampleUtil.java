@@ -29,7 +29,7 @@ import java.util.List;
 public final class Http2ExampleUtil {
 
     /**
-     * Response header sent in response to the http->http2 cleartext upgrade request.
+     * Response header sent in response to the http-&gt;http2 cleartext upgrade request.
      */
     public static final String UPGRADE_RESPONSE_HEADER = "http-to-http2-upgrade";
 

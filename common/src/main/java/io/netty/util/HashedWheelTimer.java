@@ -127,7 +127,7 @@ public class HashedWheelTimer implements Timer {
      * @param tickDuration   the duration between tick
      * @param unit           the time unit of the {@code tickDuration}
      * @throws NullPointerException     if {@code unit} is {@code null}
-     * @throws IllegalArgumentException if {@code tickDuration} is <= 0
+     * @throws IllegalArgumentException if {@code tickDuration} is &lt;= 0
      */
     public HashedWheelTimer(long tickDuration, TimeUnit unit) {
         this(Executors.defaultThreadFactory(), tickDuration, unit);
@@ -141,7 +141,7 @@ public class HashedWheelTimer implements Timer {
      * @param unit           the time unit of the {@code tickDuration}
      * @param ticksPerWheel  the size of the wheel
      * @throws NullPointerException     if {@code unit} is {@code null}
-     * @throws IllegalArgumentException if either of {@code tickDuration} and {@code ticksPerWheel} is <= 0
+     * @throws IllegalArgumentException if either of {@code tickDuration} and {@code ticksPerWheel} is &lt;= 0
      */
     public HashedWheelTimer(long tickDuration, TimeUnit unit, int ticksPerWheel) {
         this(Executors.defaultThreadFactory(), tickDuration, unit, ticksPerWheel);
@@ -169,7 +169,7 @@ public class HashedWheelTimer implements Timer {
      * @param tickDuration   the duration between tick
      * @param unit           the time unit of the {@code tickDuration}
      * @throws NullPointerException     if either of {@code threadFactory} and {@code unit} is {@code null}
-     * @throws IllegalArgumentException if {@code tickDuration} is <= 0
+     * @throws IllegalArgumentException if {@code tickDuration} is &lt;= 0
      */
     public HashedWheelTimer(
             ThreadFactory threadFactory, long tickDuration, TimeUnit unit) {
@@ -186,7 +186,7 @@ public class HashedWheelTimer implements Timer {
      * @param unit           the time unit of the {@code tickDuration}
      * @param ticksPerWheel  the size of the wheel
      * @throws NullPointerException     if either of {@code threadFactory} and {@code unit} is {@code null}
-     * @throws IllegalArgumentException if either of {@code tickDuration} and {@code ticksPerWheel} is <= 0
+     * @throws IllegalArgumentException if either of {@code tickDuration} and {@code ticksPerWheel} is &lt;= 0
      */
     public HashedWheelTimer(
             ThreadFactory threadFactory,

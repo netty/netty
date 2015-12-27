@@ -71,7 +71,7 @@ public class AbstractSharedExecutorMicrobenchmark extends AbstractMicrobenchmark
          * Set the executor (in the form of an {@link EventLoop}) which JMH will use.
          * <p>
          * This must be called before JMH requires an executor to execute objects.
-         * @param eventLoop Used as an executor by JMH to run benchmarks.
+         * @param service Used as an executor by JMH to run benchmarks.
          */
         public static void executor(EventLoop service) {
             executor = service;

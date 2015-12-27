@@ -40,7 +40,7 @@ import java.util.Queue;
  *     <li>{@link #poll()} and {@link #remove()}</li>
  *     <li>{@link #element()}, {@link #peek()}</li>
  *     <li>{@link #remove(Object)}, {@link #removeAll(Collection)}, and {@link #retainAll(Collection)}</li>
- *     <li>{@link #clear()}</li> {@link #}
+ *     <li>{@link #clear()}</li>
  *     <li>{@link #iterator()}</li>
  *     <li>{@link #toArray()} and {@link #toArray(Object[])}</li>
  *     <li>{@link #contains(Object)} and {@link #containsAll(Collection)}</li>
