@@ -26,7 +26,7 @@ import io.netty.handler.codec.http.HttpObjectDecoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 
 /**
- * Decodes {@link ByteBuf}s into RTSP messages represented in
+ * Decodes {@link io.netty.buffer.ByteBuf}s into RTSP messages represented in
  * {@link HttpMessage}s.
  * <p>
  * <h3>Parameters that prevents excessive memory consumption</h3>
@@ -39,18 +39,18 @@ import io.netty.handler.codec.http.HttpResponseStatus;
  * <td>The maximum length of the initial line
  *     (e.g. {@code "SETUP / RTSP/1.0"} or {@code "RTSP/1.0 200 OK"})
  *     If the length of the initial line exceeds this value, a
- *     {@link TooLongFrameException} will be raised.</td>
+ *     {@link io.netty.handler.codec.TooLongFrameException} will be raised.</td>
  * </tr>
  * <tr>
  * <td>{@code maxHeaderSize}</td>
  * <td>The maximum length of all headers. If the sum of the length of each
- *     header exceeds this value, a {@link TooLongFrameException} will be
+ *     header exceeds this value, a {@link io.netty.handler.codec.TooLongFrameException} will be
  *     raised.</td>
  * </tr>
  * <tr>
  * <td>{@code maxContentLength}</td>
  * <td>The maximum length of the content.  If the content length exceeds this
- *     value, a {@link TooLongFrameException} will be raised.</td>
+ *     value, a {@link io.netty.handler.codec.TooLongFrameException} will be raised.</td>
  * </tr>
  * </table>
  */

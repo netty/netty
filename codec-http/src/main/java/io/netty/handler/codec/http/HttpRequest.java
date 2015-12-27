@@ -27,7 +27,7 @@ package io.netty.handler.codec.http;
  * separately via {@link io.netty.handler.codec.http.cookie.ServerCookieDecoder},
  * {@link io.netty.handler.codec.http.cookie.ClientCookieDecoder},
  * {@link io.netty.handler.codec.http.cookie.ServerCookieEncoder},
- * and {@link @io.netty.handler.codec.http.cookie.ClientCookieEncoder}.
+ * and {@link io.netty.handler.codec.http.cookie.ClientCookieEncoder}.
  *
  * @see HttpResponse
  * @see io.netty.handler.codec.http.cookie.ServerCookieDecoder

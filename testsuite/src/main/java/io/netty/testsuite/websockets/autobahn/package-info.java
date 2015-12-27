@@ -54,7 +54,7 @@
  * }
  *
  * <p>08. Run the <tt>AutobahnServer</tt> located in this package. If you are in Eclipse IDE, right click on
- * <tt>AutobahnServer.java</tt> and select Run As > Java Application.
+ * <tt>AutobahnServer.java</tt> and select Run As &gt; Java Application.
  *
  * <p>09. Run the Autobahn test <tt>wstest -m fuzzingclient -s fuzzingclient.json</tt>.
  *

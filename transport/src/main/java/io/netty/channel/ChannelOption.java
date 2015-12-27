@@ -63,8 +63,8 @@ public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
     }
 
     /**
-     * Creates a new {@link ChannelOption} for the given {@param name} or fail with an
-     * {@link IllegalArgumentException} if a {@link ChannelOption} for the given {@param name} exists.
+     * Creates a new {@link ChannelOption} for the given {@code name} or fail with an
+     * {@link IllegalArgumentException} if a {@link ChannelOption} for the given {@code name} exists.
      */
     @SuppressWarnings("unchecked")
     public static <T> ChannelOption<T> newInstance(String name) {

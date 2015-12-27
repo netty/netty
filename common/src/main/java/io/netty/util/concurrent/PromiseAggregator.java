@@ -24,8 +24,8 @@ import java.util.Set;
  * into one, by listening to individual {@link Future}s and producing an aggregated result
  * (success/failure) when all {@link Future}s have completed.
  *
- * @tparam V the type of value returned by the {@link Future}
- * @tparam F the type of {@link Future}
+ * @param <V> the type of value returned by the {@link Future}
+ * @param <F> the type of {@link Future}
  */
 public class PromiseAggregator<V, F extends Future<V>> implements GenericFutureListener<F> {
 
