@@ -55,11 +55,12 @@ import static io.netty.handler.codec.http2.Http2FrameTypes.WINDOW_UPDATE;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.FileRegion;
+import io.netty.channel.ReadableCollection;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
 import io.netty.handler.codec.http2.Http2FrameWriter.Configuration;
 
@@ -176,6 +177,71 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                 data.release();
             }
             return promiseAggregator.setFailure(t);
+        }
+    }
+
+    private ChannelFuture writeData0(ChannelHandlerContext ctx, int streamId, ReadableCollection data,
+            int padding, boolean endStream, ChannelPromise promise) {
+        final SimpleChannelPromiseAggregator promiseAggregator =
+                new SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());
+        final DataFrameHeader header = new DataFrameHeader(ctx, streamId);
+        boolean needToReleaseHeaders = true;
+        try {
+            verifyStreamId(streamId, STREAM_ID);
+            verifyPadding(padding);
+
+            boolean lastFrame;
+            long remainingData = data.readableBytes();
+            do {
+                // Determine how much data and padding to write in this frame. Put all padding at the end.
+                int frameDataBytes = (int) min(remainingData, maxFrameSize);
+                int framePaddingBytes = min(padding, max(0, (maxFrameSize - 1) - frameDataBytes));
+
+                // Decrement the remaining counters.
+                padding -= framePaddingBytes;
+                remainingData -= frameDataBytes;
+
+                // Determine whether or not this is the last frame to be sent.
+                lastFrame = remainingData == 0 && padding == 0;
+
+                // Only the last frame is not retained. Until then, the outer finally must release.
+                ByteBuf frameHeader = header.slice(frameDataBytes, framePaddingBytes, lastFrame && endStream);
+                needToReleaseHeaders = !lastFrame;
+                ctx.write(lastFrame ? frameHeader : frameHeader.retain(), promiseAggregator.newPromise());
+
+                // Write the frame data.
+                data.writeTo(ctx, promiseAggregator.newPromise(), frameDataBytes);
+
+                // Write the frame padding.
+                if (framePaddingBytes > 0) {
+                    ctx.write(ZERO_BUFFER.slice(0, framePaddingBytes), promiseAggregator.newPromise());
+                }
+            } while (!lastFrame);
+
+            return promiseAggregator.doneAllocatingPromises();
+        } catch (Throwable t) {
+            if (needToReleaseHeaders) {
+                header.release();
+            }
+            data.clear();
+            return promiseAggregator.setFailure(t);
+        }
+    }
+
+    @Override
+    public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, FileRegion data, int padding,
+            boolean endStream, ChannelPromise promise) {
+        return writeData0(ctx, streamId, ReadableCollection.of(data), padding, endStream, promise);
+    }
+
+    @Override
+    public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ReadableCollection data, int padding,
+            boolean endStream, ChannelPromise promise) {
+        ByteBuf buf = data.unbox();
+        if (buf != null) {
+            return writeData(ctx, streamId, buf, padding, endStream, promise);
+        } else {
+            return writeData0(ctx, streamId, data, padding, endStream, promise);
         }
     }
 

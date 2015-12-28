@@ -34,21 +34,28 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.EmptyByteBuf;
 import io.netty.buffer.ReadOnlyByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
+import io.netty.channel.DefaultFileRegion;
+import io.netty.channel.FileRegion;
+import io.netty.channel.ReadableCollection;
 import io.netty.util.AsciiString;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.internal.ThreadLocalRandom;
+
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -56,6 +63,12 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.channels.Channels;
+import java.nio.channels.WritableByteChannel;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -67,6 +80,9 @@ public class Http2FrameRoundtripTest {
     private static final int STREAM_ID = 0x7FFFFFFF;
     private static final int WINDOW_UPDATE = 0x7FFFFFFF;
     private static final long ERROR_CODE = 0xFFFFFFFFL;
+
+    private static byte[] DUMMY_DATA;
+    private static File DUMMY_FILE;
 
     @Mock
     private Http2FrameListener listener;
@@ -86,6 +102,19 @@ public class Http2FrameRoundtripTest {
     private Http2FrameWriter writer;
     private Http2FrameReader reader;
     private List<ByteBuf> needReleasing = new LinkedList<ByteBuf>();
+
+    @BeforeClass
+    public static void setupBeforeClass() throws Exception {
+        DUMMY_DATA = new byte[1024 * 1024];
+        ThreadLocalRandom.current().nextBytes(DUMMY_DATA);
+        DUMMY_FILE = File.createTempFile("netty-", ".tmp");
+        FileOutputStream out = new FileOutputStream(DUMMY_FILE);
+        try {
+            out.write(DUMMY_DATA);
+        } finally {
+            out.close();
+        }
+    }
 
     @Before
     public void setup() throws Exception {
@@ -147,15 +176,26 @@ public class Http2FrameRoundtripTest {
     }
 
     @Test
-    public void dataShouldMatch() throws Exception {
+    public void byteBufDataShouldMatch() throws Exception {
         final ByteBuf data = data(10);
-        writer.writeData(ctx, STREAM_ID, data.slice(), 0, false, ctx.newPromise());
+        writer.writeData(ctx, STREAM_ID,
+                ReadableCollection.create(UnpooledByteBufAllocator.DEFAULT, 10).add(data.slice()).build(), 0, false,
+                ctx.newPromise());
         readFrames();
         verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(0), eq(false));
     }
 
     @Test
-    public void dataWithPaddingShouldMatch() throws Exception {
+    public void fileRegionDataShouldMatch() throws Exception {
+        final FileRegion data = region(10);
+        writer.writeData(ctx, STREAM_ID, data, 0, false, ctx.newPromise());
+        readFrames();
+        verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(Unpooled.wrappedBuffer(DUMMY_DATA, 0, 10)), eq(0),
+                eq(false));
+    }
+
+    @Test
+    public void byteBufDataWithPaddingShouldMatch() throws Exception {
         final ByteBuf data = data(10);
         writer.writeData(ctx, STREAM_ID, data.slice(), 0xFF, true, ctx.newPromise());
         readFrames();
@@ -163,7 +203,16 @@ public class Http2FrameRoundtripTest {
     }
 
     @Test
-    public void largeDataFrameShouldMatch() throws Exception {
+    public void fileRegionDataWithPaddingShouldMatch() throws Exception {
+        final FileRegion data = region(10);
+        writer.writeData(ctx, STREAM_ID, data, 0xFF, true, ctx.newPromise());
+        readFrames();
+        verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(Unpooled.wrappedBuffer(DUMMY_DATA, 0, 10)), eq(0xFF),
+                eq(true));
+    }
+
+    @Test
+    public void largeByteBufDataFrameShouldMatch() throws Exception {
         // Create a large message to force chunking.
         final ByteBuf originalData = data(1024 * 1024);
         final int originalPadding = 100;
@@ -191,6 +240,42 @@ public class Http2FrameRoundtripTest {
             assertEquals(originalChunk, chunk);
         }
         assertFalse(originalData.isReadable());
+
+        // Make sure the padding matches the original.
+        int totalReadPadding = 0;
+        for (int framePadding : paddingCaptor.getAllValues()) {
+            totalReadPadding += framePadding;
+        }
+        assertEquals(originalPadding, totalReadPadding);
+    }
+
+    @Test
+    public void largeFileRegionDataFrameShouldMatch() throws Exception {
+        // Create a large message to force chunking.
+        final FileRegion originalData = region(1024 * 1024);
+        final int originalPadding = 100;
+        final boolean endOfStream = true;
+
+        writer.writeData(ctx, STREAM_ID, originalData.slice(0, originalData.count()).retain(), originalPadding,
+                endOfStream, ctx.newPromise());
+        readFrames();
+
+        // Verify that at least one frame was sent with eos=false and exactly one with eos=true.
+        verify(listener, atLeastOnce()).onDataRead(eq(ctx), eq(STREAM_ID), any(ByteBuf.class), anyInt(), eq(false));
+        verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), any(ByteBuf.class), anyInt(), eq(true));
+
+        // Capture the read data and padding.
+        ArgumentCaptor<ByteBuf> dataCaptor = ArgumentCaptor.forClass(ByteBuf.class);
+        ArgumentCaptor<Integer> paddingCaptor = ArgumentCaptor.forClass(Integer.class);
+        verify(listener, atLeastOnce()).onDataRead(eq(ctx), eq(STREAM_ID), dataCaptor.capture(),
+                paddingCaptor.capture(), anyBoolean());
+
+        // Make sure the data matches the original.
+        for (ByteBuf chunk : dataCaptor.getAllValues()) {
+            ByteBuf originalChunk = toByteBuf(originalData.transferSlice(chunk.readableBytes()).retain());
+            assertEquals(originalChunk, chunk);
+        }
+        assertFalse(originalData.isTransferable());
 
         // Make sure the padding matches the original.
         int totalReadPadding = 0;
@@ -416,7 +501,7 @@ public class Http2FrameRoundtripTest {
         verify(listener).onWindowUpdateRead(eq(ctx), eq(STREAM_ID), eq(WINDOW_UPDATE));
     }
 
-    private void readFrames() throws Http2Exception {
+    private void readFrames() throws Http2Exception, IOException {
         // Now read all of the written frames.
         ByteBuf write = captureWrites();
         reader.readFrame(ctx, write, listener);
@@ -432,6 +517,11 @@ public class Http2FrameRoundtripTest {
         return buf(data);
     }
 
+    private FileRegion region(int size) {
+        assert size <= DUMMY_DATA.length;
+        return new DefaultFileRegion(DUMMY_FILE, 0, size);
+    }
+
     private ByteBuf buf(byte[] bytes) {
         return Unpooled.wrappedBuffer(bytes);
     }
@@ -441,11 +531,30 @@ public class Http2FrameRoundtripTest {
         return buf;
     }
 
-    private ByteBuf captureWrites() {
-        ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
+    private ByteBuf toByteBuf(FileRegion region) throws IOException {
+        try {
+            ByteArrayOutputStream out = new ByteArrayOutputStream((int) region.transferableBytes());
+            WritableByteChannel ch = Channels.newChannel(out);
+            while (region.isTransferable()) {
+                region.transferBytesTo(ch, region.transferableBytes());
+            }
+            return Unpooled.wrappedBuffer(out.toByteArray());
+        } finally {
+            region.release();
+        }
+    }
+
+    private ByteBuf captureWrites() throws IOException {
+        ArgumentCaptor<ReferenceCounted> captor = ArgumentCaptor.forClass(ReferenceCounted.class);
         verify(ctx, atLeastOnce()).write(captor.capture(), isA(ChannelPromise.class));
         CompositeByteBuf composite = releaseLater(Unpooled.compositeBuffer());
-        for (ByteBuf buf : captor.getAllValues()) {
+        for (ReferenceCounted data : captor.getAllValues()) {
+            ByteBuf buf;
+            if (data instanceof ByteBuf) {
+                buf = (ByteBuf) data;
+            } else { // FileRegion
+                buf = toByteBuf((FileRegion) data);
+            }
             buf = releaseLater(buf.retain());
             composite.addComponent(buf);
             composite.writerIndex(composite.writerIndex() + buf.readableBytes());

@@ -19,13 +19,14 @@ import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.min;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.CoalescingBufferQueue;
+import io.netty.channel.CoalescingReadableQueue;
+import io.netty.channel.FileRegion;
+import io.netty.channel.ReadableCollection;
 import io.netty.handler.codec.http2.Http2Exception.ClosedStreamCreationException;
 
 import java.util.ArrayDeque;
@@ -109,9 +110,15 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         }
     }
 
-    @Override
-    public ChannelFuture writeData(final ChannelHandlerContext ctx, final int streamId, ByteBuf data, int padding,
-            final boolean endOfStream, ChannelPromise promise) {
+    private interface FlowControlledDataProducer {
+
+        FlowControlledData create(Http2Stream stream);
+
+        void release();
+    }
+
+    private ChannelFuture writeData(final ChannelHandlerContext ctx, final int streamId,
+            FlowControlledDataProducer producer, ChannelPromise promise) {
         final Http2Stream stream;
         try {
             stream = requireStream(streamId);
@@ -127,14 +134,64 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                             "Stream %d in unexpected state: %s", stream.id(), stream.state()));
             }
         } catch (Throwable e) {
-            data.release();
+            producer.release();
             return promise.setFailure(e);
         }
 
         // Hand control of the frame to the flow controller.
-        flowController().addFlowControlled(stream,
-                new FlowControlledData(stream, data, padding, endOfStream, promise));
+        flowController().addFlowControlled(stream, producer.create(stream));
         return promise;
+    }
+
+    @Override
+    public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, final ByteBuf data, final int padding,
+            final boolean endStream, final ChannelPromise promise) {
+        return writeData(ctx, streamId, new FlowControlledDataProducer() {
+
+            @Override
+            public void release() {
+                data.release();
+            }
+
+            @Override
+            public FlowControlledData create(Http2Stream stream) {
+                return new FlowControlledData(stream, data, padding, endStream, promise);
+            }
+        }, promise);
+    }
+
+    @Override
+    public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, final FileRegion data, final int padding,
+            final boolean endStream, final ChannelPromise promise) {
+        return writeData(ctx, streamId, new FlowControlledDataProducer() {
+
+            @Override
+            public void release() {
+                data.release();
+            }
+
+            @Override
+            public FlowControlledData create(Http2Stream stream) {
+                return new FlowControlledData(stream, data, padding, endStream, promise);
+            }
+        }, promise);
+    }
+
+    @Override
+    public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, final ReadableCollection data,
+            final int padding, final boolean endStream, final ChannelPromise promise) {
+        return writeData(ctx, streamId, new FlowControlledDataProducer() {
+
+            @Override
+            public void release() {
+                data.clear();
+            }
+
+            @Override
+            public FlowControlledData create(Http2Stream stream) {
+                return new FlowControlledData(stream, data, padding, endStream, promise);
+            }
+        }, promise);
     }
 
     @Override
@@ -312,17 +369,31 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
      * </p>
      */
     private final class FlowControlledData extends FlowControlledBase {
-        private final CoalescingBufferQueue queue;
+        private final CoalescingReadableQueue queue;
 
         public FlowControlledData(Http2Stream stream, ByteBuf buf, int padding, boolean endOfStream,
                                    ChannelPromise promise) {
             super(stream, padding, endOfStream, promise);
-            queue = new CoalescingBufferQueue(promise.channel());
+            queue = new CoalescingReadableQueue(promise.channel());
             queue.add(buf, promise);
         }
 
+        public FlowControlledData(Http2Stream stream, FileRegion region, int padding, boolean endOfStream,
+                ChannelPromise promise) {
+            super(stream, padding, endOfStream, promise);
+            queue = new CoalescingReadableQueue(promise.channel());
+            queue.add(region, promise);
+        }
+
+        public FlowControlledData(Http2Stream stream, ReadableCollection rc, int padding, boolean endOfStream,
+                ChannelPromise promise) {
+            super(stream, padding, endOfStream, promise);
+            queue = new CoalescingReadableQueue(promise.channel());
+            queue.add(rc, promise);
+        }
+
         @Override
-        public int size() {
+        public long size() {
             return queue.readableBytes() + padding;
         }
 
@@ -335,16 +406,16 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
         @Override
         public void write(ChannelHandlerContext ctx, int allowedBytes) {
-            int queuedData = queue.readableBytes();
+            long queuedData = queue.readableBytes();
             if (!endOfStream && (queuedData == 0 || allowedBytes == 0)) {
                 // Nothing to write and we don't have to force a write because of EOS.
                 return;
             }
 
             // Determine how much data to write.
-            int writeableData = min(queuedData, allowedBytes);
+            int writeableData = (int) min(queuedData, allowedBytes);
             ChannelPromise writePromise = ctx.newPromise().addListener(this);
-            ByteBuf toWrite = queue.remove(writeableData, writePromise);
+            ReadableCollection toWrite = queue.remove(writeableData, writePromise);
 
             // Determine how much padding to write.
             int writeablePadding = min(allowedBytes - writeableData, padding);
@@ -390,7 +461,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         }
 
         @Override
-        public int size() {
+        public long size() {
             return 0;
         }
 
