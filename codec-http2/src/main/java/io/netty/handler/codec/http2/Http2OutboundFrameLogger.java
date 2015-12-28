@@ -21,6 +21,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.FileRegion;
+import io.netty.channel.ReadableCollection;
 
 /**
  * Decorator around a {@link Http2FrameWriter} that logs all outbound frames before calling the
@@ -38,6 +40,20 @@ public class Http2OutboundFrameLogger implements Http2FrameWriter {
     @Override
     public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
             int padding, boolean endStream, ChannelPromise promise) {
+        logger.logData(OUTBOUND, streamId, data, padding, endStream);
+        return writer.writeData(ctx, streamId, data, padding, endStream, promise);
+    }
+
+    @Override
+    public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, FileRegion data, int padding,
+            boolean endStream, ChannelPromise promise) {
+        logger.logData(OUTBOUND, streamId, data, padding, endStream);
+        return writer.writeData(ctx, streamId, data, padding, endStream, promise);
+    }
+
+    @Override
+    public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ReadableCollection data, int padding,
+            boolean endStream, ChannelPromise promise) {
         logger.logData(OUTBOUND, streamId, data, padding, endStream);
         return writer.writeData(ctx, streamId, data, padding, endStream, promise);
     }

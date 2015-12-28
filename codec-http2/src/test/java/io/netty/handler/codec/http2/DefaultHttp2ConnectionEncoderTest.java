@@ -42,22 +42,43 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.channel.AbstractFileRegion;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
+import io.netty.channel.DefaultFileRegion;
+import io.netty.channel.FileRegion;
+import io.netty.channel.ReadableCollection;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http2.Http2RemoteFlowController.FlowControlled;
+import io.netty.util.AbstractReferenceCounted;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.channels.WritableByteChannel;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
+
 import junit.framework.AssertionFailedError;
+
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -65,15 +86,14 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Tests for {@link DefaultHttp2ConnectionEncoder}
  */
 public class DefaultHttp2ConnectionEncoderTest {
     private static final int STREAM_ID = 2;
     private static final int PUSH_STREAM_ID = 4;
+
+    private static File DUMMY_FILE;
 
     @Mock
     private Http2RemoteFlowController remoteFlow;
@@ -105,6 +125,49 @@ public class DefaultHttp2ConnectionEncoderTest {
     private List<String> writtenData;
     private List<Integer> writtenPadding;
     private boolean streamClosed;
+
+    private static String toString(FileRegion region, Charset charset) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        WritableByteChannel ch = Channels.newChannel(out);
+        while (region.isTransferable()) {
+            region.transferBytesTo(ch, region.transferableBytes());
+        }
+        return new String(out.toByteArray(), charset);
+    }
+
+    private static String toString(ReadableCollection rc, Charset charset) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        WritableByteChannel ch = Channels.newChannel(out);
+        EmbeddedChannel embeddedCh = new EmbeddedChannel();
+        rc.writeTo(embeddedCh, rc.readableBytes());
+        embeddedCh.flush();
+        for (Object obj; (obj = embeddedCh.outboundMessages().poll()) != null;) {
+            if (obj instanceof ByteBuf) {
+                ByteBuf buf = (ByteBuf) obj;
+                buf.readBytes(out, buf.readableBytes());
+                buf.release();
+            } else {
+                FileRegion region = (FileRegion) obj;
+                while (region.isTransferable()) {
+                    region.transferBytesTo(ch, region.transferableBytes());
+                }
+                region.release();
+            }
+        }
+        return new String(out.toByteArray(), charset);
+    }
+
+    @BeforeClass
+    public static void setupBeforeClass() throws IOException {
+        DUMMY_FILE = File.createTempFile("netty-", ".tmp");
+        DUMMY_FILE.deleteOnExit();
+        FileOutputStream out = new FileOutputStream(DUMMY_FILE);
+        try {
+            out.write("abcdefgh".getBytes(UTF_8));
+        } finally {
+            out.close();
+        }
+    }
 
     @Before
     public void setup() throws Exception {
@@ -146,6 +209,48 @@ public class DefaultHttp2ConnectionEncoderTest {
                         writtenData.add(data.toString(UTF_8));
                         // Release the buffer just as DefaultHttp2FrameWriter does
                         data.release();
+                        // Let the promise succeed to trigger listeners.
+                        return promise.setSuccess();
+                    }
+                });
+        when(writer.writeData(eq(ctx), anyInt(), any(FileRegion.class), anyInt(), anyBoolean(),
+                any(ChannelPromise.class))).then(new Answer<ChannelFuture>() {
+                    @Override
+                    public ChannelFuture answer(InvocationOnMock in) throws Throwable {
+                        // Make sure we only receive stream closure on the last frame and that void promises
+                        // are used for all writes except the last one.
+                        ChannelPromise promise = (ChannelPromise) in.getArguments()[5];
+                        if (streamClosed) {
+                            fail("Stream already closed");
+                        } else {
+                            streamClosed = (Boolean) in.getArguments()[4];
+                        }
+                        writtenPadding.add((Integer) in.getArguments()[3]);
+                        FileRegion data = (FileRegion) in.getArguments()[2];
+                        writtenData.add(DefaultHttp2ConnectionEncoderTest.toString(data, UTF_8));
+                        // Release the buffer just as DefaultHttp2FrameWriter does
+                        data.release();
+                        // Let the promise succeed to trigger listeners.
+                        return promise.setSuccess();
+                    }
+                });
+        when(writer.writeData(eq(ctx), anyInt(), any(ReadableCollection.class), anyInt(), anyBoolean(),
+                any(ChannelPromise.class))).then(new Answer<ChannelFuture>() {
+                    @Override
+                    public ChannelFuture answer(InvocationOnMock in) throws Throwable {
+                        // Make sure we only receive stream closure on the last frame and that void promises
+                        // are used for all writes except the last one.
+                        ChannelPromise promise = (ChannelPromise) in.getArguments()[5];
+                        if (streamClosed) {
+                            fail("Stream already closed");
+                        } else {
+                            streamClosed = (Boolean) in.getArguments()[4];
+                        }
+                        writtenPadding.add((Integer) in.getArguments()[3]);
+                        ReadableCollection data = (ReadableCollection) in.getArguments()[2];
+                        writtenData.add(DefaultHttp2ConnectionEncoderTest.toString(data, UTF_8));
+                        // Release the buffer just as DefaultHttp2FrameWriter does
+                        data.clear();
                         // Let the promise succeed to trigger listeners.
                         return promise.setSuccess();
                     }
@@ -192,7 +297,7 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
-    public void dataWriteShouldSucceed() throws Exception {
+    public void byteBufDataWriteShouldSucceed() throws Exception {
         createStream(STREAM_ID, false);
         final ByteBuf data = dummyData();
         ChannelPromise p = newPromise();
@@ -206,59 +311,105 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
+    public void fileRegionDataWriteShouldSucceed() throws Exception {
+        createStream(STREAM_ID, false);
+        final FileRegion data = dummyFileRegion();
+        ChannelPromise p = newPromise();
+        encoder.writeData(ctx, STREAM_ID, data, 0, true, p);
+        assertEquals(payloadCaptor.getValue().size(), 8);
+        payloadCaptor.getValue().write(ctx, 8);
+        assertEquals(0, payloadCaptor.getValue().size());
+        assertEquals("abcdefgh", writtenData.get(0));
+        assertEquals(0, data.refCnt());
+        assertTrue(p.isSuccess());
+    }
+
+    @Test
+    public void readableCollectionDataWriteShouldSucceed() throws Exception {
+        createStream(STREAM_ID, false);
+        final ReadableCollection data = dummyReadableCollection();
+        ChannelPromise p = newPromise();
+        encoder.writeData(ctx, STREAM_ID, data, 0, true, p);
+        assertEquals(payloadCaptor.getValue().size(), 8);
+        payloadCaptor.getValue().write(ctx, 8);
+        assertEquals(0, payloadCaptor.getValue().size());
+        assertEquals("abcdefgh", writtenData.get(0));
+        assertFalse(data.isReadable());
+        assertTrue(p.isSuccess());
+    }
+
+    @Test
     public void dataFramesShouldMerge() throws Exception {
         createStream(STREAM_ID, false);
-        final ByteBuf data = dummyData().retain();
+        final ByteBuf buf = dummyData();
+        final FileRegion region = dummyFileRegion();
+        final ReadableCollection rc = dummyReadableCollection();
 
         ChannelPromise promise1 = newPromise();
-        encoder.writeData(ctx, STREAM_ID, data, 0, true, promise1);
+        encoder.writeData(ctx, STREAM_ID, buf, 0, true, promise1);
         ChannelPromise promise2 = newPromise();
-        encoder.writeData(ctx, STREAM_ID, data, 0, true, promise2);
+        encoder.writeData(ctx, STREAM_ID, region, 0, true, promise2);
+        ChannelPromise promise3 = newPromise();
+        encoder.writeData(ctx, STREAM_ID, rc, 0, true, promise3);
 
-        // Now merge the two payloads.
+        // Now merge the three payloads.
         List<FlowControlled> capturedWrites = payloadCaptor.getAllValues();
         FlowControlled mergedPayload = capturedWrites.get(0);
         mergedPayload.merge(ctx, capturedWrites.get(1));
-        assertEquals(16, mergedPayload.size());
+        mergedPayload.merge(ctx, capturedWrites.get(2));
+        assertEquals(24, mergedPayload.size());
         assertFalse(promise1.isDone());
         assertFalse(promise2.isDone());
+        assertFalse(promise3.isDone());
 
         // Write the merged payloads and verify it was written correctly.
-        mergedPayload.write(ctx, 16);
+        mergedPayload.write(ctx, 24);
         assertEquals(0, mergedPayload.size());
-        assertEquals("abcdefghabcdefgh", writtenData.get(0));
-        assertEquals(0, data.refCnt());
+        assertEquals("abcdefghabcdefghabcdefgh", writtenData.get(0));
+        assertEquals(0, buf.refCnt());
+        assertEquals(0, region.refCnt());
+        assertFalse(rc.isReadable());
         assertTrue(promise1.isSuccess());
         assertTrue(promise2.isSuccess());
+        assertTrue(promise3.isSuccess());
     }
 
     @Test
     public void dataFramesShouldMergeUseVoidPromise() throws Exception {
         createStream(STREAM_ID, false);
-        final ByteBuf data = dummyData().retain();
+        final ByteBuf buf = dummyData();
+        final FileRegion region = dummyFileRegion();
+        final ReadableCollection rc = dummyReadableCollection();
 
         ChannelPromise promise1 = newVoidPromise();
-        encoder.writeData(ctx, STREAM_ID, data, 0, true, promise1);
+        encoder.writeData(ctx, STREAM_ID, buf, 0, true, promise1);
         ChannelPromise promise2 = newVoidPromise();
-        encoder.writeData(ctx, STREAM_ID, data, 0, true, promise2);
+        encoder.writeData(ctx, STREAM_ID, region, 0, true, promise2);
+        ChannelPromise promise3 = newVoidPromise();
+        encoder.writeData(ctx, STREAM_ID, rc, 0, true, promise3);
 
-        // Now merge the two payloads.
+        // Now merge the three payloads.
         List<FlowControlled> capturedWrites = payloadCaptor.getAllValues();
         FlowControlled mergedPayload = capturedWrites.get(0);
         mergedPayload.merge(ctx, capturedWrites.get(1));
-        assertEquals(16, mergedPayload.size());
-        assertFalse(promise1.isSuccess());
-        assertFalse(promise2.isSuccess());
+        mergedPayload.merge(ctx, capturedWrites.get(2));
+        assertEquals(24, mergedPayload.size());
+        assertFalse(promise1.isDone());
+        assertFalse(promise2.isDone());
+        assertFalse(promise3.isDone());
 
         // Write the merged payloads and verify it was written correctly.
-        mergedPayload.write(ctx, 16);
+        mergedPayload.write(ctx, 24);
         assertEquals(0, mergedPayload.size());
-        assertEquals("abcdefghabcdefgh", writtenData.get(0));
-        assertEquals(0, data.refCnt());
+        assertEquals("abcdefghabcdefghabcdefgh", writtenData.get(0));
+        assertEquals(0, buf.refCnt());
+        assertEquals(0, region.refCnt());
+        assertFalse(rc.isReadable());
 
         // The promises won't be set since there are no listeners.
         assertFalse(promise1.isSuccess());
         assertFalse(promise2.isSuccess());
+        assertFalse(promise3.isSuccess());
     }
 
     @Test
@@ -443,7 +594,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         Http2Stream stream = createStream(STREAM_ID, false);
         ByteBuf data = dummyData();
         ChannelPromise promise = newPromise();
-        encoder.writeData(ctx, STREAM_ID, data.retain(), 0, true, promise);
+        encoder.writeData(ctx, STREAM_ID, data.duplicate().retain(), 0, true, promise);
         assertTrue(promise.isSuccess());
         verify(remoteFlow).addFlowControlled(eq(stream), any(FlowControlled.class));
         verify(lifecycleManager).closeStreamLocal(stream, promise);
@@ -546,6 +697,142 @@ public class DefaultHttp2ConnectionEncoderTest {
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false), eq(promise));
     }
 
+    @Test
+    public void canWriteFileRegionLargerThan2GB() throws Http2Exception {
+        final AtomicLong written = new AtomicLong(0L);
+        when(writer.writeData(eq(ctx), anyInt(), any(ReadableCollection.class), anyInt(), anyBoolean(),
+                any(ChannelPromise.class))).then(new Answer<ChannelFuture>() {
+                    @Override
+                    public ChannelFuture answer(InvocationOnMock in) throws Throwable {
+                        // Make sure we only receive stream closure on the last frame and that void promises
+                        // are used for all writes except the last one.
+                        ChannelPromise promise = (ChannelPromise) in.getArguments()[5];
+                        if (streamClosed) {
+                            fail("Stream already closed");
+                        } else {
+                            streamClosed = (Boolean) in.getArguments()[4];
+                        }
+                        ReadableCollection rc = (ReadableCollection) in.getArguments()[2];
+                        EmbeddedChannel ch = new EmbeddedChannel();
+                        rc.writeTo(ch, rc.readableBytes());
+                        ch.flush();
+                        assertEquals(1, ch.outboundMessages().size());
+                        FileRegion data = (FileRegion) ch.outboundMessages().poll();
+                        assertEquals(written.get(), data.position() + data.transferIndex());
+                        written.addAndGet(data.transferableBytes());
+                        // Release the buffer just as DefaultHttp2FrameWriter does
+                        data.release();
+                        // Let the promise succeed to trigger listeners.
+                        return promise.setSuccess();
+                    }
+                });
+        long count = 64L * 1024 * 1024 * 1024;
+        DummyFileRegion region = new DummyFileRegion(0L, count);
+        createStream(STREAM_ID, false);
+        ChannelPromise promise = newPromise();
+        encoder.writeData(ctx, STREAM_ID, region, 0, true, promise);
+        while (written.get() < count) {
+            payloadCaptor.getValue().write(ctx, Integer.MAX_VALUE);
+        }
+        assertEquals(count, written.get());
+        assertTrue(streamClosed);
+        assertEquals(0, region.refCnt());
+        assertTrue(promise.isSuccess());
+    }
+
+    private static final class DummyFileRegion extends AbstractFileRegion {
+
+        private final long position;
+
+        private final long count;
+
+        private final AbstractReferenceCounted refCnt = new AbstractReferenceCounted() {
+
+            @Override
+            public ReferenceCounted touch(Object hint) {
+                return DummyFileRegion.this;
+            }
+
+            @Override
+            protected void deallocate() {
+            }
+        };
+
+        public DummyFileRegion(long position, long count) {
+            this.position = position;
+            this.count = count;
+        }
+
+        @Override
+        public long position() {
+            return position;
+        }
+
+        @Override
+        public long transfered() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public long count() {
+            return count;
+        }
+
+        @Override
+        public long transferTo(WritableByteChannel target, long position) throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public FileRegion unwrap() {
+            return null;
+        }
+
+        @Override
+        public FileChannel channel() throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public FileRegion retain() {
+            refCnt.retain();
+            return this;
+        }
+
+        @Override
+        public FileRegion retain(int increment) {
+            refCnt.retain(increment);
+            return this;
+        }
+
+        @Override
+        public FileRegion touch() {
+            refCnt.touch();
+            return this;
+        }
+
+        @Override
+        public FileRegion touch(Object hint) {
+            refCnt.touch(hint);
+            return this;
+        }
+
+        @Override
+        public int refCnt() {
+            return refCnt.refCnt();
+        }
+
+        @Override
+        public boolean release() {
+            return refCnt.release();
+        }
+
+        @Override
+        public boolean release(int decrement) {
+            return refCnt.release(decrement);
+        }
+    }
+
     private void writeAllFlowControlledFrames() {
         doAnswer(new Answer<Void>() {
             @Override
@@ -610,5 +897,15 @@ public class DefaultHttp2ConnectionEncoderTest {
     private static ByteBuf dummyData() {
         // The buffer is purposely 8 bytes so it will even work for a ping frame.
         return wrappedBuffer("abcdefgh".getBytes(UTF_8));
+    }
+
+    private static FileRegion dummyFileRegion() {
+        return new DefaultFileRegion(DUMMY_FILE, 0, DUMMY_FILE.length());
+    }
+
+    private static ReadableCollection dummyReadableCollection() {
+        return ReadableCollection.create(UnpooledByteBufAllocator.DEFAULT, 10)
+                .add(wrappedBuffer("abcd".getBytes(UTF_8)))
+                .add(new DefaultFileRegion(DUMMY_FILE, DUMMY_FILE.length() / 2, DUMMY_FILE.length() / 2)).build();
     }
 }

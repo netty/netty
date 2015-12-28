@@ -783,7 +783,7 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         final Http2RemoteFlowController.FlowControlled flowControlled =
                 mock(Http2RemoteFlowController.FlowControlled.class);
         final Http2Stream stream = stream(STREAM_A);
-        when(flowControlled.size()).thenReturn(100);
+        when(flowControlled.size()).thenReturn(100L);
         doThrow(new RuntimeException("write failed"))
             .when(flowControlled).write(any(ChannelHandlerContext.class), anyInt());
         doAnswer(new Answer<Void>() {
@@ -905,12 +905,12 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
     private static Http2RemoteFlowController.FlowControlled mockedFlowControlledThatThrowsOnWrite() throws Exception {
         final Http2RemoteFlowController.FlowControlled flowControlled =
                 mock(Http2RemoteFlowController.FlowControlled.class);
-        when(flowControlled.size()).thenReturn(100);
+        when(flowControlled.size()).thenReturn(100L);
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock in) throws Throwable {
                 // Write most of the bytes and then fail
-                when(flowControlled.size()).thenReturn(10);
+                when(flowControlled.size()).thenReturn(10L);
                 throw new RuntimeException("Write failed");
             }
         }).when(flowControlled).write(any(ChannelHandlerContext.class), anyInt());
@@ -975,7 +975,7 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         }
 
         @Override
-        public int size() {
+        public long size() {
             return currentSize;
         }
 

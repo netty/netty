@@ -73,8 +73,6 @@ struct mmsghdr {
 #endif
 
 // Those are initialized in the init(...) method and cached for performance reasons
-jfieldID fileChannelFieldId = NULL;
-jfieldID transferedFieldId = NULL;
 jfieldID fdFieldId = NULL;
 jfieldID fileDescriptorFieldId = NULL;
 
@@ -122,22 +120,6 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
             return JNI_ERR;
         }
         if (netty_unix_socket_JNI_OnLoad(env) == JNI_ERR) {
-            return JNI_ERR;
-        }
-
-        jclass fileRegionCls = (*env)->FindClass(env, "io/netty/channel/DefaultFileRegion");
-        if (fileRegionCls == NULL) {
-            // pending exception...
-            return JNI_ERR;
-        }
-        fileChannelFieldId = (*env)->GetFieldID(env, fileRegionCls, "file", "Ljava/nio/channels/FileChannel;");
-        if (fileChannelFieldId == NULL) {
-            netty_unix_errors_throwRuntimeException(env, "failed to get field ID: DefaultFileRegion.file");
-            return JNI_ERR;
-        }
-        transferedFieldId = (*env)->GetFieldID(env, fileRegionCls, "transfered", "J");
-        if (transferedFieldId == NULL) {
-            netty_unix_errors_throwRuntimeException(env, "failed to get field ID: DefaultFileRegion.transfered");
             return JNI_ERR;
         }
 
@@ -354,12 +336,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_sendmmsg0(JNIEnv* env,
     return (jint) res;
 }
 
-JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_sendfile0(JNIEnv* env, jclass clazz, jint fd, jobject fileRegion, jlong base_off, jlong off, jlong len) {
-    jobject fileChannel = (*env)->GetObjectField(env, fileRegion, fileChannelFieldId);
-    if (fileChannel == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get DefaultFileRegion.file");
-        return -1;
-    }
+JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_sendfile0(JNIEnv* env, jclass clazz, jint fd, jobject fileChannel, jlong base_off, jlong off, jlong len) {
     jobject fileDescriptor = (*env)->GetObjectField(env, fileChannel, fileDescriptorFieldId);
     if (fileDescriptor == NULL) {
         netty_unix_errors_throwRuntimeException(env, "failed to get FileChannelImpl.fd");
@@ -376,15 +353,7 @@ JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_sendfile0(JNIEnv* env
     do {
       res = sendfile(fd, srcFd, &offset, (size_t) len);
     } while (res == -1 && ((err = errno) == EINTR));
-    if (res < 0) {
-        return -err;
-    }
-    if (res > 0) {
-        // update the transfered field in DefaultFileRegion
-        (*env)->SetLongField(env, fileRegion, transferedFieldId, off + res);
-    }
-
-    return res;
+    return res >= 0 ? res : -err;
 }
 
 JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setReuseAddress(JNIEnv* env, jclass clazz, jint fd, jint optval) {

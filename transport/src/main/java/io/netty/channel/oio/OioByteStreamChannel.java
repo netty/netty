@@ -128,25 +128,23 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
             outChannel = Channels.newChannel(os);
         }
 
-        long written = 0;
         for (;;) {
-            long localWritten = region.transferTo(outChannel, written);
+            long localWritten = region.transferBytesTo(outChannel, region.transferableBytes());
             if (localWritten == -1) {
                 checkEOF(region);
                 return;
             }
-            written += localWritten;
 
-            if (written >= region.count()) {
+            if (!region.isTransferable()) {
                 return;
             }
         }
     }
 
     private static void checkEOF(FileRegion region) throws IOException {
-        if (region.transfered() < region.count()) {
+        if (region.transferIndex() < region.count()) {
             throw new EOFException("Expected to be able to write " + region.count() + " bytes, " +
-                                   "but only wrote " + region.transfered());
+                                   "but only wrote " + region.transferIndex());
         }
     }
 

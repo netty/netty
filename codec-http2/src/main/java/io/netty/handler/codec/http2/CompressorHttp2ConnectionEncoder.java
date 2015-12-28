@@ -20,11 +20,12 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelPromiseAggregator;
+import io.netty.channel.FileRegion;
+import io.netty.channel.ReadableCollection;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
-
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_ENCODING;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaderValues.DEFLATE;
@@ -142,6 +143,22 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                 cleanup(stream, channel);
             }
         }
+    }
+
+    @Override
+    public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, FileRegion data, int padding,
+            boolean endStream, ChannelPromise promise) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ReadableCollection data, int padding,
+            boolean endStream, ChannelPromise promise) {
+        ByteBuf buf = data.unbox();
+        if (buf == null) {
+            throw new UnsupportedOperationException();
+        }
+        return writeData(ctx, streamId, buf, padding, endStream, promise);
     }
 
     @Override

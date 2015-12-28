@@ -15,7 +15,13 @@
  */
 package io.netty.channel.epoll;
 
-import io.netty.channel.DefaultFileRegion;
+import static io.netty.channel.unix.Errors.ERRNO_EAGAIN_NEGATIVE;
+import static io.netty.channel.unix.Errors.ERRNO_EPIPE_NEGATIVE;
+import static io.netty.channel.unix.Errors.ERRNO_EWOULDBLOCK_NEGATIVE;
+import static io.netty.channel.unix.Errors.ioResult;
+import static io.netty.channel.unix.Errors.newConnectionResetException;
+import static io.netty.channel.unix.Errors.newIOException;
+import io.netty.channel.FileRegion;
 import io.netty.channel.unix.Errors.NativeIoException;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.NativeInetAddress;
@@ -25,14 +31,8 @@ import io.netty.util.internal.SystemPropertyUtil;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.nio.channels.FileChannel;
 import java.util.Locale;
-
-import static io.netty.channel.unix.Errors.ERRNO_EAGAIN_NEGATIVE;
-import static io.netty.channel.unix.Errors.ERRNO_EPIPE_NEGATIVE;
-import static io.netty.channel.unix.Errors.ERRNO_EWOULDBLOCK_NEGATIVE;
-import static io.netty.channel.unix.Errors.ioResult;
-import static io.netty.channel.unix.Errors.newConnectionResetException;
-import static io.netty.channel.unix.Errors.newIOException;
 
 /**
  * Native helper methods
@@ -133,21 +133,17 @@ public final class Native {
 
     private static native int splice0(int fd, long offIn, int fdOut, long offOut, long len);
 
-    public static long sendfile(
-            int dest, DefaultFileRegion src, long baseOffset, long offset, long length) throws IOException {
-        // Open the file-region as it may be created via the lazy constructor. This is needed as we directly access
-        // the FileChannel field directly via JNI
-        src.open();
-
-        long res = sendfile0(dest, src, baseOffset, offset, length);
+    public static long sendfile(int dest, FileRegion src, long length) throws IOException {
+        long res = sendfile0(dest, src.channel(), src.position(), src.transferIndex(), length);
         if (res >= 0) {
+            src.transferIndex(src.transferIndex() + res);
             return res;
         }
         return ioResult("sendfile", (int) res, CONNECTION_RESET_EXCEPTION_SENDFILE);
     }
 
     private static native long sendfile0(
-            int dest, DefaultFileRegion src, long baseOffset, long offset, long length) throws IOException;
+            int dest, FileChannel src, long baseOffset, long offset, long length) throws IOException;
 
     public static int sendmmsg(
             int fd, NativeDatagramPacketArray.NativeDatagramPacket[] msgs, int offset, int len) throws IOException {

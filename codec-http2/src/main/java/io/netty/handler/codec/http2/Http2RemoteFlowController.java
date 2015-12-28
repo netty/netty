@@ -85,7 +85,7 @@ public interface Http2RemoteFlowController extends Http2FlowController {
          * the wire. Other frames like {@code DATA} frames have both their payload and padding count
          * against flow-control.
          */
-        int size();
+        long size();
 
         /**
          * Called to indicate that an error occurred before this object could be completely written.

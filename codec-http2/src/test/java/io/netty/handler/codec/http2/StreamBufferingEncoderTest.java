@@ -36,7 +36,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
@@ -46,9 +45,14 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
+import io.netty.channel.ReadableCollection;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
+
+import java.util.ArrayList;
+import java.util.List;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -58,9 +62,6 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.verification.VerificationMode;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Tests for {@link StreamBufferingEncoder}.
@@ -159,7 +160,7 @@ public class StreamBufferingEncoderTest {
 
         writeVerifyWriteHeaders(times(2), 3);
         // Contiguous data writes are coalesced
-        ArgumentCaptor<ByteBuf> bufCaptor = ArgumentCaptor.forClass(ByteBuf.class);
+        ArgumentCaptor<ReadableCollection> bufCaptor = ArgumentCaptor.forClass(ReadableCollection.class);
         verify(writer, times(1))
                 .writeData(eq(ctx), eq(3), bufCaptor.capture(), eq(0), eq(false), any(ChannelPromise.class));
         assertEquals(expectedBytes, bufCaptor.getValue().readableBytes());

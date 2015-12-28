@@ -185,7 +185,7 @@ public class NoPriorityByteDistributionBenchmark extends AbstractMicrobenchmark 
             int size = dataSize;
 
             @Override
-            public int size() {
+            public long size() {
                 return size;
             }
 
@@ -207,12 +207,7 @@ public class NoPriorityByteDistributionBenchmark extends AbstractMicrobenchmark 
             @Override
             public boolean merge(ChannelHandlerContext ctx,
                                  Http2RemoteFlowController.FlowControlled next) {
-                int nextSize = next.size();
-                if (Integer.MAX_VALUE - nextSize < size) {
-                    // Disallow merge to avoid integer overflow.
-                    return false;
-                }
-
+                long nextSize = next.size();
                 // Merge.
                 size += nextSize;
                 return true;

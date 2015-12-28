@@ -15,6 +15,8 @@
  */
 package io.netty.channel.epoll;
 
+import static io.netty.channel.unix.FileDescriptor.pipe;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
@@ -28,6 +30,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoop;
+import io.netty.channel.FileRegion;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.Socket;
@@ -46,9 +49,6 @@ import java.nio.channels.ClosedChannelException;
 import java.util.Queue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-
-import static io.netty.channel.unix.FileDescriptor.pipe;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
 
@@ -360,27 +360,24 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
      * @return amount       the amount of written bytes
      */
     private boolean writeFileRegion(
-            ChannelOutboundBuffer in, DefaultFileRegion region, int writeSpinCount) throws Exception {
-        final long regionCount = region.count();
-        if (region.transfered() >= regionCount) {
+            ChannelOutboundBuffer in, FileRegion region, int writeSpinCount) throws Exception {
+        if (!region.isTransferable()) {
             in.remove();
             return true;
         }
 
-        final long baseOffset = region.position();
         boolean done = false;
         long flushedAmount = 0;
 
         for (int i = writeSpinCount - 1; i >= 0; i--) {
-            final long offset = region.transfered();
             final long localFlushedAmount =
-                    Native.sendfile(fd().intValue(), region, baseOffset, offset, regionCount - offset);
+                    Native.sendfile(fd().intValue(), region, region.transferableBytes());
             if (localFlushedAmount == 0) {
                 break;
             }
 
             flushedAmount += localFlushedAmount;
-            if (region.transfered() >= regionCount) {
+            if (!region.isTransferable()) {
                 done = true;
                 break;
             }
@@ -441,8 +438,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
                 // the network stack can handle more writes.
                 return false;
             }
-        } else if (msg instanceof DefaultFileRegion) {
-            DefaultFileRegion region = (DefaultFileRegion) msg;
+        } else if (msg instanceof FileRegion) {
+            FileRegion region = (FileRegion) msg;
             if (!writeFileRegion(in, region, writeSpinCount)) {
                 // was not able to write everything so break here we will get notified later again once
                 // the network stack can handle more writes.
