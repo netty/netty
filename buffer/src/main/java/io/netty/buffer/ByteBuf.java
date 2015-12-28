@@ -96,7 +96,7 @@ import java.nio.charset.UnsupportedCharsetException;
  * <h4>Writable bytes</h4>
  *
  * This segment is a undefined space which needs to be filled.  Any operation
- * whose name ends with {@code write} will write the data at the current
+ * whose name starts with {@code write} will write the data at the current
  * {@link #writerIndex() writerIndex} and increase it by the number of written
  * bytes.  If the argument of the write operation is also a {@link ByteBuf},
  * and no source index is specified, the specified buffer's
