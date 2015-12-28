@@ -40,6 +40,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @Test
     public void testAlpn() throws Exception {
         assumeTrue(OpenSsl.isAvailable());
+        assumeTrue(OpenSsl.isAlpnSupported());
         ApplicationProtocolConfig apn = acceptingNegotiator(Protocol.ALPN,
                 PREFERRED_APPLICATION_LEVEL_PROTOCOL);
         setupHandlers(apn);
@@ -49,6 +50,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @Test
     public void testAlpnCompatibleProtocolsDifferentClientOrder() throws Exception {
         assumeTrue(OpenSsl.isAvailable());
+        assumeTrue(OpenSsl.isAlpnSupported());
         ApplicationProtocolConfig clientApn = acceptingNegotiator(Protocol.ALPN,
                 FALLBACK_APPLICATION_LEVEL_PROTOCOL, PREFERRED_APPLICATION_LEVEL_PROTOCOL);
         ApplicationProtocolConfig serverApn = acceptingNegotiator(Protocol.ALPN,
