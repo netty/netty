@@ -16,6 +16,7 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.ObjectUtil;
 
@@ -326,6 +327,13 @@ public final class ReadableCollection {
     public void clear() {
         for (Component c; (c = components.poll()) != null;) {
             c.obj.release();
+        }
+        this.readableBytes = 0;
+    }
+
+    public void safeClear() {
+        for (Component c; (c = components.poll()) != null;) {
+            ReferenceCountUtil.safeRelease(c.obj);
         }
         this.readableBytes = 0;
     }

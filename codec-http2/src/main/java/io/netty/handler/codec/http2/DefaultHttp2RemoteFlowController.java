@@ -334,7 +334,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                         break;
                     }
                     writeOccurred = true;
-                    int initialFrameSize = frame.size();
+                    long initialFrameSize = frame.size();
                     try {
                         frame.write(ctx, max(0, maxBytes));
                         if (frame.size() == 0) {
@@ -346,7 +346,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                         }
                     } finally {
                         // Decrement allocated by how much was actually written.
-                        allocated -= initialFrameSize - frame.size();
+                        allocated -= (int) (initialFrameSize - frame.size());
                     }
                 }
 
@@ -455,7 +455,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          * Increments the number of pending bytes for this node and optionally updates the
          * {@link StreamByteDistributor}.
          */
-        private void incrementPendingBytes(int numBytes, boolean updateStreamableBytes) {
+        private void incrementPendingBytes(long numBytes, boolean updateStreamableBytes) {
             pendingBytes += numBytes;
             monitor.incrementPendingBytes(numBytes);
             if (updateStreamableBytes) {
@@ -466,7 +466,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         /**
          * If this frame is in the pending queue, decrements the number of pending bytes for the stream.
          */
-        private void decrementPendingBytes(int bytes, boolean updateStreamableBytes) {
+        private void decrementPendingBytes(long bytes, boolean updateStreamableBytes) {
             incrementPendingBytes(-bytes, updateStreamableBytes);
         }
 
@@ -673,7 +673,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          * method should be called.
          * @param delta The amount to increment by.
          */
-        public final void incrementPendingBytes(int delta) {
+        public final void incrementPendingBytes(long delta) {
             totalPendingBytes += delta;
 
             // Notification of writibilty change should be delayed until the end of the top level event.

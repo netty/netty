@@ -20,6 +20,8 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.FileRegion;
+import io.netty.channel.ReadableCollection;
 import io.netty.util.ReferenceCountUtil;
 
 import java.util.ArrayDeque;
@@ -183,20 +185,93 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         return promise;
     }
 
-    @Override
-    public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
-                                   int padding, boolean endOfStream, ChannelPromise promise) {
+    private interface WriteDataAction {
+
+        ChannelFuture writeData();
+
+        DataFrame createFrame();
+
+        void safeReleaseData();
+    }
+
+    private ChannelFuture writeData(int streamId, WriteDataAction action, ChannelPromise promise) {
         if (isExistingStream(streamId)) {
-            return super.writeData(ctx, streamId, data, padding, endOfStream, promise);
+            return action.writeData();
         }
         PendingStream pendingStream = pendingStreams.get(streamId);
         if (pendingStream != null) {
-            pendingStream.frames.add(new DataFrame(data, padding, endOfStream, promise));
+            pendingStream.frames.add(action.createFrame());
         } else {
-            ReferenceCountUtil.safeRelease(data);
+            action.safeReleaseData();
             promise.setFailure(connectionError(PROTOCOL_ERROR, "Stream does not exist %d", streamId));
         }
         return promise;
+    }
+
+    @Override
+    public ChannelFuture writeData(final ChannelHandlerContext ctx, final int streamId, final ByteBuf data,
+            final int padding, final boolean endStream, final ChannelPromise promise) {
+        return writeData(streamId, new WriteDataAction() {
+
+            @Override
+            public ChannelFuture writeData() {
+                return StreamBufferingEncoder.super.writeData(ctx, streamId, data, padding, endStream, promise);
+            }
+
+            @Override
+            public void safeReleaseData() {
+                ReferenceCountUtil.safeRelease(data);
+            }
+
+            @Override
+            public DataFrame createFrame() {
+                return new DataFrame(data, padding, endStream, promise);
+            }
+        }, promise);
+    }
+
+    @Override
+    public ChannelFuture writeData(final ChannelHandlerContext ctx, final int streamId, final FileRegion data,
+            final int padding, final boolean endStream, final ChannelPromise promise) {
+        return writeData(streamId, new WriteDataAction() {
+
+            @Override
+            public ChannelFuture writeData() {
+                return StreamBufferingEncoder.super.writeData(ctx, streamId, data, padding, endStream, promise);
+            }
+
+            @Override
+            public void safeReleaseData() {
+                ReferenceCountUtil.safeRelease(data);
+            }
+
+            @Override
+            public DataFrame createFrame() {
+                return new DataFrame(data, padding, endStream, promise);
+            }
+        }, promise);
+    }
+
+    @Override
+    public ChannelFuture writeData(final ChannelHandlerContext ctx, final int streamId, final ReadableCollection data,
+            final int padding, final boolean endStream, final ChannelPromise promise) {
+        return writeData(streamId, new WriteDataAction() {
+
+            @Override
+            public ChannelFuture writeData() {
+                return StreamBufferingEncoder.super.writeData(ctx, streamId, data, padding, endStream, promise);
+            }
+
+            @Override
+            public void safeReleaseData() {
+                data.safeClear();
+            }
+
+            @Override
+            public DataFrame createFrame() {
+                return new DataFrame(data, padding, endStream, promise);
+            }
+        }, promise);
     }
 
     @Override
@@ -332,7 +407,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     }
 
     private final class DataFrame extends Frame {
-        final ByteBuf data;
+        final Object data;
         final int padding;
         final boolean endOfStream;
 
@@ -343,15 +418,39 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
             this.endOfStream = endOfStream;
         }
 
+        DataFrame(FileRegion data, int padding, boolean endOfStream, ChannelPromise promise) {
+            super(promise);
+            this.data = data;
+            this.padding = padding;
+            this.endOfStream = endOfStream;
+        }
+
+        DataFrame(ReadableCollection data, int padding, boolean endOfStream, ChannelPromise promise) {
+            super(promise);
+            this.data = data;
+            this.padding = padding;
+            this.endOfStream = endOfStream;
+        }
+
         @Override
         void release(Throwable t) {
             super.release(t);
-            ReferenceCountUtil.safeRelease(data);
+            if (data instanceof ReadableCollection) {
+                ((ReadableCollection) data).clear();
+            } else {
+                ReferenceCountUtil.safeRelease(data);
+            }
         }
 
         @Override
         void send(ChannelHandlerContext ctx, int streamId) {
-            writeData(ctx, streamId, data, padding, endOfStream, promise);
+            if (data instanceof ByteBuf) {
+                writeData(ctx, streamId, (ByteBuf) data, padding, endOfStream, promise);
+            } else if (data instanceof FileRegion) {
+                writeData(ctx, streamId, (FileRegion) data, padding, endOfStream, promise);
+            } else { // ReadableCollection
+                writeData(ctx, streamId, (ReadableCollection) data, padding, endOfStream, promise);
+            }
         }
     }
 }

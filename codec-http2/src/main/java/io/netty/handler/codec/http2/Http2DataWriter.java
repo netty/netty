@@ -18,6 +18,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.FileRegion;
+import io.netty.channel.ReadableCollection;
 
 /**
  * Interface that defines an object capable of producing HTTP/2 data frames.
@@ -37,4 +39,35 @@ public interface Http2DataWriter {
      */
     ChannelFuture writeData(ChannelHandlerContext ctx, int streamId,
             ByteBuf data, int padding, boolean endStream, ChannelPromise promise);
+
+    /**
+     * Writes a {@code DATA} frame to the remote endpoint. This will result in one or more
+     * frames being written to the context.
+     *
+     * @param ctx the context to use for writing.
+     * @param streamId the stream for which to send the frame.
+     * @param data the payload of the frame. This will be released by this method.
+     * @param padding the amount of padding to be added to the end of the frame
+     * @param endStream indicates if this is the last frame to be sent for the stream.
+     * @param promise the promise for the write.
+     * @return the future for the write.
+     */
+    ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, FileRegion data, int padding, boolean endStream,
+            ChannelPromise promise);
+
+    /**
+     * Writes a {@code DATA} frame to the remote endpoint. This will result in one or more frames being written to the
+     * context.
+     *
+     * @param ctx the context to use for writing.
+     * @param streamId the stream for which to send the frame.
+     * @param data the payload of the frame. This will be released by this method.
+     * @param padding the amount of padding to be added to the end of the frame
+     * @param endStream indicates if this is the last frame to be sent for the stream.
+     * @param promise the promise for the write.
+     * @return the future for the write.
+     */
+    ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ReadableCollection data, int padding,
+            boolean endStream, ChannelPromise promise);
+
 }
