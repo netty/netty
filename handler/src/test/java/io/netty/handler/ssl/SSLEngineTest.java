@@ -60,9 +60,9 @@ import static org.mockito.Mockito.verify;
 public abstract class SSLEngineTest {
 
     @Mock
-    protected MessageReciever serverReceiver;
+    protected MessageReceiver serverReceiver;
     @Mock
-    protected MessageReciever clientReceiver;
+    protected MessageReceiver clientReceiver;
 
     protected Throwable serverException;
     protected Throwable clientException;
@@ -76,15 +76,15 @@ public abstract class SSLEngineTest {
     protected CountDownLatch serverLatch;
     protected CountDownLatch clientLatch;
 
-    interface MessageReciever {
+    interface MessageReceiver {
         void messageReceived(ByteBuf msg);
     }
 
     protected static final class MessageDelegatorChannelHandler extends SimpleChannelInboundHandler<ByteBuf> {
-        private final MessageReciever receiver;
+        private final MessageReceiver receiver;
         private final CountDownLatch latch;
 
-        public MessageDelegatorChannelHandler(MessageReciever receiver, CountDownLatch latch) {
+        public MessageDelegatorChannelHandler(MessageReceiver receiver, CountDownLatch latch) {
             super(false);
             this.receiver = receiver;
             this.latch = latch;
@@ -283,7 +283,7 @@ public abstract class SSLEngineTest {
     }
 
     private static void writeAndVerifyReceived(ByteBuf message, Channel sendChannel, CountDownLatch receiverLatch,
-                                               MessageReciever receiver) throws Exception {
+                                               MessageReceiver receiver) throws Exception {
         List<ByteBuf> dataCapture = null;
         try {
             sendChannel.writeAndFlush(message);
