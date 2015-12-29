@@ -284,6 +284,42 @@ public class UnpooledTest {
     }
 
     @Test
+    public void testSingleWrappedByteBufReleased() {
+        ByteBuf buf = buffer(12).writeByte(0);
+        ByteBuf wrapped = wrappedBuffer(buf);
+        assertTrue(wrapped.release());
+        assertEquals(0, buf.refCnt());
+    }
+
+    @Test
+    public void testSingleUnReadableWrappedByteBufReleased() {
+        ByteBuf buf = buffer(12);
+        ByteBuf wrapped = wrappedBuffer(buf);
+        assertFalse(wrapped.release()); // EMPTY_BUFFER cannot be released
+        assertEquals(0, buf.refCnt());
+    }
+
+    @Test
+    public void testMultiByteBufReleased() {
+        ByteBuf buf1 = buffer(12).writeByte(0);
+        ByteBuf buf2 = buffer(12).writeByte(0);
+        ByteBuf wrapped = wrappedBuffer(16, buf1, buf2);
+        assertTrue(wrapped.release());
+        assertEquals(0, buf1.refCnt());
+        assertEquals(0, buf2.refCnt());
+    }
+
+    @Test
+    public void testMultiUnReadableByteBufReleased() {
+        ByteBuf buf1 = buffer(12);
+        ByteBuf buf2 = buffer(12);
+        ByteBuf wrapped = wrappedBuffer(16, buf1, buf2);
+        assertFalse(wrapped.release()); // EMPTY_BUFFER cannot be released
+        assertEquals(0, buf1.refCnt());
+        assertEquals(0, buf2.refCnt());
+    }
+
+    @Test
     public void testCopiedBuffer() {
         assertEquals(16, copiedBuffer(ByteBuffer.allocateDirect(16)).capacity());
 

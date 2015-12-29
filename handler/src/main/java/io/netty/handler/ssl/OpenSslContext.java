@@ -488,9 +488,18 @@ public abstract class OpenSslContext extends SslContext {
         ByteBuf buffer = Unpooled.directBuffer();
         try {
             buffer.writeBytes(BEGIN_PRIVATE_KEY);
-            ByteBuf encoded = Base64.encode(Unpooled.wrappedBuffer(key.getEncoded()), true);
-            buffer.writeBytes(encoded);
-            encoded.release();
+            ByteBuf wrappedBuf = Unpooled.wrappedBuffer(key.getEncoded());
+            final ByteBuf encodedBuf;
+            try {
+                encodedBuf = Base64.encode(wrappedBuf, true);
+                try {
+                    buffer.writeBytes(encodedBuf);
+                } finally {
+                    encodedBuf.release();
+                }
+            } finally {
+                wrappedBuf.release();
+            }
             buffer.writeBytes(END_PRIVATE_KEY);
             return newBIO(buffer);
         } finally {
@@ -510,9 +519,17 @@ public abstract class OpenSslContext extends SslContext {
         try {
             for (X509Certificate cert: certChain) {
                 buffer.writeBytes(BEGIN_CERT);
-                ByteBuf encoded = Base64.encode(Unpooled.wrappedBuffer(cert.getEncoded()), true);
-                buffer.writeBytes(encoded);
-                encoded.release();
+                ByteBuf wrappedBuf = Unpooled.wrappedBuffer(cert.getEncoded());
+                try {
+                    ByteBuf encodedBuf = Base64.encode(wrappedBuf, true);
+                    try {
+                        buffer.writeBytes(encodedBuf);
+                    } finally {
+                        encodedBuf.release();
+                    }
+                } finally {
+                    wrappedBuf.release();
+                }
                 buffer.writeBytes(END_CERT);
             }
             return newBIO(buffer);
