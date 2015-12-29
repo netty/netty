@@ -219,10 +219,21 @@ public final class SelfSignedCertificate {
     static String[] newSelfSignedCertificate(
             String fqdn, PrivateKey key, X509Certificate cert) throws IOException, CertificateEncodingException {
         // Encode the private key into a file.
-        ByteBuf enc = Base64.encode(Unpooled.wrappedBuffer(key.getEncoded()), true);
-        String keyText = "-----BEGIN PRIVATE KEY-----\n" + enc.toString(CharsetUtil.US_ASCII) +
-                "\n-----END PRIVATE KEY-----\n";
-        enc.release();
+        ByteBuf wrappedBuf = Unpooled.wrappedBuffer(key.getEncoded());
+        ByteBuf encodedBuf;
+        final String keyText;
+        try {
+            encodedBuf = Base64.encode(wrappedBuf, true);
+            try {
+                keyText = "-----BEGIN PRIVATE KEY-----\n" +
+                          encodedBuf.toString(CharsetUtil.US_ASCII) +
+                          "\n-----END PRIVATE KEY-----\n";
+            } finally {
+                encodedBuf.release();
+            }
+        } finally {
+            wrappedBuf.release();
+        }
 
         File keyFile = File.createTempFile("keyutil_" + fqdn + '_', ".key");
         keyFile.deleteOnExit();
@@ -239,12 +250,21 @@ public final class SelfSignedCertificate {
             }
         }
 
-        ByteBuf encoded = Base64.encode(Unpooled.wrappedBuffer(cert.getEncoded()), true);
-        // Encode the certificate into a CRT file.
-        String certText = "-----BEGIN CERTIFICATE-----\n" +
-                encoded.toString(CharsetUtil.US_ASCII) +
-                "\n-----END CERTIFICATE-----\n";
-        encoded.release();
+        wrappedBuf = Unpooled.wrappedBuffer(cert.getEncoded());
+        final String certText;
+        try {
+            encodedBuf = Base64.encode(wrappedBuf, true);
+            try {
+                // Encode the certificate into a CRT file.
+                certText = "-----BEGIN CERTIFICATE-----\n" +
+                           encodedBuf.toString(CharsetUtil.US_ASCII) +
+                           "\n-----END CERTIFICATE-----\n";
+            } finally {
+                encodedBuf.release();
+            }
+        } finally {
+            wrappedBuf.release();
+        }
 
         File certFile = File.createTempFile("keyutil_" + fqdn + '_', ".crt");
         certFile.deleteOnExit();

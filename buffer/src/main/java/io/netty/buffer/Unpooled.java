@@ -211,11 +211,15 @@ public final class Unpooled {
      * Creates a new buffer which wraps the specified buffer's readable bytes.
      * A modification on the specified buffer's content will be visible to the
      * returned buffer.
+     * @param buffer The buffer to wrap. Reference count ownership of this variable is transfered to this method.
+     * @return The readable portion of the {@code buffer}, or an empty buffer if there is no readable portion.
+     * The caller is responsible for releasing this buffer.
      */
     public static ByteBuf wrappedBuffer(ByteBuf buffer) {
         if (buffer.isReadable()) {
             return buffer.slice();
         } else {
+            buffer.release();
             return EMPTY_BUFFER;
         }
     }
@@ -233,6 +237,8 @@ public final class Unpooled {
      * Creates a new big-endian composite buffer which wraps the readable bytes of the
      * specified buffers without copying them.  A modification on the content
      * of the specified buffers will be visible to the returned buffer.
+     * @param buffers The buffers to wrap. Reference count ownership of all variables is transfered to this method.
+     * @return The readable portion of the {@code buffers}. The caller is responsible for releasing this buffer.
      */
     public static ByteBuf wrappedBuffer(ByteBuf... buffers) {
         return wrappedBuffer(16, buffers);
@@ -285,20 +291,29 @@ public final class Unpooled {
      * Creates a new big-endian composite buffer which wraps the readable bytes of the
      * specified buffers without copying them.  A modification on the content
      * of the specified buffers will be visible to the returned buffer.
+     * @param maxNumComponents Advisement as to how many independent buffers are allowed to exist before
+     * consolidation occurs.
+     * @param buffers The buffers to wrap. Reference count ownership of all variables is transfered to this method.
+     * @return The readable portion of the {@code buffers}. The caller is responsible for releasing this buffer.
      */
     public static ByteBuf wrappedBuffer(int maxNumComponents, ByteBuf... buffers) {
         switch (buffers.length) {
         case 0:
             break;
         case 1:
-            if (buffers[0].isReadable()) {
-                return wrappedBuffer(buffers[0].order(BIG_ENDIAN));
+            ByteBuf buffer = buffers[0];
+            if (buffer.isReadable()) {
+                return wrappedBuffer(buffer.order(BIG_ENDIAN));
+            } else {
+                buffer.release();
             }
             break;
         default:
             for (ByteBuf b: buffers) {
                 if (b.isReadable()) {
                     return new CompositeByteBuf(ALLOC, false, maxNumComponents, buffers);
+                } else {
+                    b.release();
                 }
             }
         }
