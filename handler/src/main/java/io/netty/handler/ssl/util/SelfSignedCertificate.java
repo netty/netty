@@ -16,6 +16,7 @@
 
 package io.netty.handler.ssl.util;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.util.CharsetUtil;
@@ -217,11 +218,11 @@ public final class SelfSignedCertificate {
 
     static String[] newSelfSignedCertificate(
             String fqdn, PrivateKey key, X509Certificate cert) throws IOException, CertificateEncodingException {
-
         // Encode the private key into a file.
-        String keyText = "-----BEGIN PRIVATE KEY-----\n" +
-                Base64.encode(Unpooled.wrappedBuffer(key.getEncoded()), true).toString(CharsetUtil.US_ASCII) +
+        ByteBuf enc = Base64.encode(Unpooled.wrappedBuffer(key.getEncoded()), true);
+        String keyText = "-----BEGIN PRIVATE KEY-----\n" + enc.toString(CharsetUtil.US_ASCII) +
                 "\n-----END PRIVATE KEY-----\n";
+        enc.release();
 
         File keyFile = File.createTempFile("keyutil_" + fqdn + '_', ".key");
         keyFile.deleteOnExit();
@@ -238,10 +239,12 @@ public final class SelfSignedCertificate {
             }
         }
 
+        ByteBuf encoded = Base64.encode(Unpooled.wrappedBuffer(cert.getEncoded()), true);
         // Encode the certificate into a CRT file.
         String certText = "-----BEGIN CERTIFICATE-----\n" +
-                Base64.encode(Unpooled.wrappedBuffer(cert.getEncoded()), true).toString(CharsetUtil.US_ASCII) +
+                encoded.toString(CharsetUtil.US_ASCII) +
                 "\n-----END CERTIFICATE-----\n";
+        encoded.release();
 
         File certFile = File.createTempFile("keyutil_" + fqdn + '_', ".crt");
         certFile.deleteOnExit();
