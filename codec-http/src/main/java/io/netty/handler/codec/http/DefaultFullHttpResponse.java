@@ -28,7 +28,7 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
 
     private final ByteBuf content;
     private final HttpHeaders trailingHeaders;
-    private final boolean validateHeaders;
+
     /**
      * Used to cache the value of the hash code and avoid {@link IllegalRefCountException}.
      */
@@ -62,7 +62,13 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
         this.content = checkNotNull(content, "content");
         this.trailingHeaders = singleFieldHeaders ? new CombinedHttpHeaders(validateHeaders)
                                                   : new DefaultHttpHeaders(validateHeaders);
-        this.validateHeaders = validateHeaders;
+    }
+
+    public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status,
+            ByteBuf content, HttpHeaders headers, HttpHeaders trailingHeaders) {
+        super(version, status, headers);
+        this.content = checkNotNull(content, "content");
+        this.trailingHeaders = checkNotNull(trailingHeaders, "trailingHeaders");
     }
 
     @Override
@@ -142,13 +148,12 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
      * @return A copy of this object
      */
     private FullHttpResponse copy(boolean copyContent, ByteBuf newContent) {
-        DefaultFullHttpResponse copy = new DefaultFullHttpResponse(
+        return new DefaultFullHttpResponse(
                 protocolVersion(), status(),
                 copyContent ? content().copy() :
-                        newContent == null ? Unpooled.buffer(0) : newContent);
-        copy.headers().set(headers());
-        copy.trailingHeaders().set(trailingHeaders());
-        return copy;
+                        newContent == null ? Unpooled.buffer(0) : newContent,
+                headers(),
+                trailingHeaders());
     }
 
     @Override
@@ -163,11 +168,8 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
 
     @Override
     public FullHttpResponse duplicate() {
-        DefaultFullHttpResponse duplicate = new DefaultFullHttpResponse(protocolVersion(), status(),
-                content().duplicate(), validateHeaders);
-        duplicate.headers().set(headers());
-        duplicate.trailingHeaders().set(trailingHeaders());
-        return duplicate;
+        return new DefaultFullHttpResponse(protocolVersion(), status(),
+                content().duplicate(), headers(), trailingHeaders());
     }
 
     @Override

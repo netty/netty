@@ -18,6 +18,7 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.IllegalReferenceCountException;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Default implementation of {@link FullHttpRequest}.
@@ -25,7 +26,7 @@ import io.netty.util.IllegalReferenceCountException;
 public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHttpRequest {
     private final ByteBuf content;
     private final HttpHeaders trailingHeader;
-    private final boolean validateHeaders;
+
     /**
      * Used to cache the value of the hash code and avoid {@link IllegalRefCountException}.
      */
@@ -46,12 +47,15 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
                                   ByteBuf content, boolean validateHeaders) {
         super(httpVersion, method, uri, validateHeaders);
-        if (content == null) {
-            throw new NullPointerException("content");
-        }
-        this.content = content;
+        this.content = checkNotNull(content, "content");
         trailingHeader = new DefaultHttpHeaders(validateHeaders);
-        this.validateHeaders = validateHeaders;
+    }
+
+    public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
+            ByteBuf content, HttpHeaders headers, HttpHeaders trailingHeader) {
+        super(httpVersion, method, uri, headers);
+        this.content = checkNotNull(content, "content");
+        this.trailingHeader = checkNotNull(trailingHeader, "trailingHeader");
     }
 
     @Override
@@ -137,13 +141,12 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
      * @return A copy of this object
      */
     private FullHttpRequest copy(boolean copyContent, ByteBuf newContent) {
-        DefaultFullHttpRequest copy = new DefaultFullHttpRequest(
+        return new DefaultFullHttpRequest(
                 protocolVersion(), method(), uri(),
                 copyContent ? content().copy() :
-                        newContent == null ? Unpooled.buffer(0) : newContent);
-        copy.headers().set(headers());
-        copy.trailingHeaders().set(trailingHeaders());
-        return copy;
+                        newContent == null ? Unpooled.buffer(0) : newContent,
+                headers(),
+                trailingHeaders());
     }
 
     @Override
@@ -158,11 +161,8 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
 
     @Override
     public FullHttpRequest duplicate() {
-        DefaultFullHttpRequest duplicate = new DefaultFullHttpRequest(
-                protocolVersion(), method(), uri(), content().duplicate(), validateHeaders);
-        duplicate.headers().set(headers());
-        duplicate.trailingHeaders().set(trailingHeaders());
-        return duplicate;
+        return new DefaultFullHttpRequest(
+                protocolVersion(), method(), uri(), content().duplicate(), headers(), trailingHeaders());
     }
 
     @Override
