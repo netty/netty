@@ -29,7 +29,7 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
      * Creates a new instance.
      *
      * @param httpVersion the HTTP version of the request
-     * @param method      the HTTP getMethod of the request
+     * @param method      the HTTP method of the request
      * @param uri         the URI or path of the request
      */
     public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri) {
@@ -40,12 +40,26 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
      * Creates a new instance.
      *
      * @param httpVersion       the HTTP version of the request
-     * @param method            the HTTP getMethod of the request
+     * @param method            the HTTP method of the request
      * @param uri               the URI or path of the request
      * @param validateHeaders   validate the header names and values when adding them to the {@link HttpHeaders}
      */
     public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, boolean validateHeaders) {
         super(httpVersion, validateHeaders, false);
+        this.method = checkNotNull(method, "method");
+        this.uri = checkNotNull(uri, "uri");
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param httpVersion       the HTTP version of the request
+     * @param method            the HTTP method of the request
+     * @param uri               the URI or path of the request
+     * @param headers           the Headers for this Request
+     */
+    public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, HttpHeaders headers) {
+        super(httpVersion, headers);
         this.method = checkNotNull(method, "method");
         this.uri = checkNotNull(uri, "uri");
     }
