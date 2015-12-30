@@ -36,9 +36,17 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
      * Creates a new instance.
      */
     protected DefaultHttpMessage(final HttpVersion version, boolean validateHeaders, boolean singleFieldHeaders) {
+        this(version,
+                singleFieldHeaders ? new CombinedHttpHeaders(validateHeaders)
+                                   : new DefaultHttpHeaders(validateHeaders));
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    protected DefaultHttpMessage(final HttpVersion version, HttpHeaders headers) {
         this.version = checkNotNull(version, "version");
-        headers = singleFieldHeaders ? new CombinedHttpHeaders(validateHeaders)
-                                     : new DefaultHttpHeaders(validateHeaders);
+        this.headers = checkNotNull(headers, "headers");
     }
 
     @Override
