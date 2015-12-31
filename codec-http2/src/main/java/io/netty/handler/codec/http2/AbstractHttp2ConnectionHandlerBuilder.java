@@ -94,7 +94,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     // * OK to use with server() and connection()
     private Http2FrameLogger frameLogger;
     private SensitivityDetector headerSensitivityDetector;
-    private Boolean encoderEnforceMaxConcurrentStreams;
+    private boolean encoderEnforceMaxConcurrentStreams;
 
     /**
      * Returns if HTTP headers should be validated according to
@@ -268,7 +268,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      * would otherwise be exceeded.
      */
     protected boolean encoderEnforceMaxConcurrentStreams() {
-        return encoderEnforceMaxConcurrentStreams != null ? encoderEnforceMaxConcurrentStreams : false;
+        return encoderEnforceMaxConcurrentStreams;
     }
 
     /**
