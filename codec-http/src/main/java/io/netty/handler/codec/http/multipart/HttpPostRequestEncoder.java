@@ -61,7 +61,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
     public enum EncoderMode {
         /**
          * Legacy mode which should work for most. It is known to not work with OAUTH. For OAUTH use
-         * {@link EncoderMode#RFC3986}. The W3C form recommentations this for submitting post form data.
+         * {@link EncoderMode#RFC3986}. The W3C form recommendations this for submitting post form data.
          */
         RFC1738,
 
