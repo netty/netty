@@ -323,9 +323,7 @@ final class SpdySession {
         }
     }
 
-    private final class StreamComparator implements Comparator<Integer>, Serializable {
-
-        private static final long serialVersionUID = 1161471649740544848L;
+    private final class StreamComparator implements Comparator<Integer> {
 
         StreamComparator() { }
 
