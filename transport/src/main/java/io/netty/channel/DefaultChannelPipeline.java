@@ -95,20 +95,16 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelPipeline addFirst(EventExecutorGroup group, String name, ChannelHandler handler) {
-        synchronized (this) {
-            name = filterName(name, handler);
-            addFirst0(new DefaultChannelHandlerContext(this, findInvoker(group), name, handler));
-        }
+    public synchronized ChannelPipeline addFirst(EventExecutorGroup group, String name, ChannelHandler handler) {
+        name = filterName(name, handler);
+        addFirst0(new DefaultChannelHandlerContext(this, findInvoker(group), name, handler));
         return this;
     }
 
     @Override
     public ChannelPipeline addFirst(ChannelHandlerInvoker invoker, String name, ChannelHandler handler) {
-        synchronized (this) {
-            name = filterName(name, handler);
-            addFirst0(new DefaultChannelHandlerContext(this, invoker, name, handler));
-        }
+        name = filterName(name, handler);
+        addFirst0(new DefaultChannelHandlerContext(this, invoker, name, handler));
         return this;
     }
 
@@ -130,20 +126,16 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler) {
-        synchronized (this) {
-            name = filterName(name, handler);
-            addLast0(new DefaultChannelHandlerContext(this, findInvoker(group), name, handler));
-        }
+    public synchronized ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler) {
+        name = filterName(name, handler);
+        addLast0(new DefaultChannelHandlerContext(this, findInvoker(group), name, handler));
         return this;
     }
 
     @Override
-    public ChannelPipeline addLast(ChannelHandlerInvoker invoker, String name, ChannelHandler handler) {
-        synchronized (this) {
-            name = filterName(name, handler);
-            addLast0(new DefaultChannelHandlerContext(this, invoker, name, handler));
-        }
+    public synchronized ChannelPipeline addLast(ChannelHandlerInvoker invoker, String name, ChannelHandler handler) {
+        name = filterName(name, handler);
+        addLast0(new DefaultChannelHandlerContext(this, invoker, name, handler));
         return this;
     }
 
@@ -165,23 +157,20 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelPipeline addBefore(EventExecutorGroup group, String baseName, String name, ChannelHandler handler) {
-        synchronized (this) {
-            AbstractChannelHandlerContext ctx = getContextOrDie(baseName);
-            name = filterName(name, handler);
-            addBefore0(ctx, new DefaultChannelHandlerContext(this, findInvoker(group), name, handler));
-        }
+    public synchronized ChannelPipeline addBefore(
+            EventExecutorGroup group, String baseName, String name, ChannelHandler handler) {
+        AbstractChannelHandlerContext ctx = getContextOrDie(baseName);
+        name = filterName(name, handler);
+        addBefore0(ctx, new DefaultChannelHandlerContext(this, findInvoker(group), name, handler));
         return this;
     }
 
     @Override
-    public ChannelPipeline addBefore(
+    public synchronized ChannelPipeline addBefore(
             ChannelHandlerInvoker invoker, String baseName, String name, ChannelHandler handler) {
-        synchronized (this) {
-            AbstractChannelHandlerContext ctx = getContextOrDie(baseName);
-            name = filterName(name, handler);
-            addBefore0(ctx, new DefaultChannelHandlerContext(this, invoker, name, handler));
-        }
+        AbstractChannelHandlerContext ctx = getContextOrDie(baseName);
+        name = filterName(name, handler);
+        addBefore0(ctx, new DefaultChannelHandlerContext(this, invoker, name, handler));
         return this;
     }
 
@@ -202,24 +191,20 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelPipeline addAfter(EventExecutorGroup group, String baseName, String name, ChannelHandler handler) {
-        synchronized (this) {
-            AbstractChannelHandlerContext ctx = getContextOrDie(baseName);
-            name = filterName(name, handler);
-            addAfter0(ctx, new DefaultChannelHandlerContext(this, findInvoker(group), name, handler));
-        }
+    public synchronized ChannelPipeline addAfter(
+            EventExecutorGroup group, String baseName, String name, ChannelHandler handler) {
+        AbstractChannelHandlerContext ctx = getContextOrDie(baseName);
+        name = filterName(name, handler);
+        addAfter0(ctx, new DefaultChannelHandlerContext(this, findInvoker(group), name, handler));
         return this;
     }
 
     @Override
-    public ChannelPipeline addAfter(
+    public synchronized ChannelPipeline addAfter(
             ChannelHandlerInvoker invoker, String baseName, String name, ChannelHandler handler) {
-
-        synchronized (this) {
-            AbstractChannelHandlerContext ctx = getContextOrDie(baseName);
-            name = filterName(name, handler);
-            addAfter0(ctx, new DefaultChannelHandlerContext(this, invoker, name, handler));
-        }
+        AbstractChannelHandlerContext ctx = getContextOrDie(baseName);
+        name = filterName(name, handler);
+        addAfter0(ctx, new DefaultChannelHandlerContext(this, invoker, name, handler));
         return this;
     }
 
