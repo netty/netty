@@ -33,7 +33,6 @@
 #include <stddef.h>
 #include <limits.h>
 #include <inttypes.h>
-
 #include "io_netty_channel_epoll_Native.h"
 #include "netty_unix_filedescriptor.h"
 #include "netty_unix_socket.h"
