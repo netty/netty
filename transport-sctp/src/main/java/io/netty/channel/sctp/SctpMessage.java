@@ -160,7 +160,7 @@ public final class SctpMessage extends DefaultByteBufHolder {
         if (msgInfo == null) {
             return new SctpMessage(protocolIdentifier, streamIdentifier, unordered, content().duplicate());
         } else {
-            return new SctpMessage(msgInfo, content().copy());
+            return new SctpMessage(msgInfo, content().duplicate());
         }
     }
 
