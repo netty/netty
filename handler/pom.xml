@@ -61,20 +61,8 @@
       <optional>true</optional>
     </dependency>
     <dependency>
-      <groupId>org.mortbay.jetty.npn</groupId>
-      <artifactId>npn-boot</artifactId>
-      <scope>provided</scope>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
       <groupId>org.eclipse.jetty.alpn</groupId>
       <artifactId>alpn-api</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.mortbay.jetty.alpn</groupId>
-      <artifactId>alpn-boot</artifactId>
-      <scope>provided</scope>
       <optional>true</optional>
     </dependency>
   </dependencies>
