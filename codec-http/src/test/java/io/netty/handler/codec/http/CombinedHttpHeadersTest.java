@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.handler.codec.DefaultHeaders;
 import io.netty.handler.codec.http.HttpHeadersTestUtils.HeaderValue;
 import org.junit.Test;
 

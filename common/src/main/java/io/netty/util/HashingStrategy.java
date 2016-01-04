@@ -15,8 +15,6 @@
  */
 package io.netty.util;
 
-import io.netty.util.internal.ObjectUtil;
-
 /**
  * Abstraction for hash code generation and equality comparison.
  */
