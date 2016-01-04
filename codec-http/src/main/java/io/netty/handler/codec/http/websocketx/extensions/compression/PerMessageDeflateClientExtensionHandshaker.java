@@ -25,7 +25,6 @@ import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionEncod
 
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Map.Entry;
 
 /**

@@ -17,7 +17,6 @@ package io.netty.handler.codec.http.websocketx.extensions;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.util.internal.StringUtil;
 
