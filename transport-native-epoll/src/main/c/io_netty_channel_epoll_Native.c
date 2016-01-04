@@ -33,6 +33,7 @@
 #include <stddef.h>
 #include <limits.h>
 #include <inttypes.h>
+
 #include "io_netty_channel_epoll_Native.h"
 #include "netty_unix_filedescriptor.h"
 #include "netty_unix_socket.h"
@@ -405,6 +406,7 @@ JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setTcpNotSentLowAt(JNI
 
 JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setTrafficClass(JNIEnv* env, jclass clazz, jint fd, jint optval) {
     netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_TOS, &optval, sizeof(optval));
+    netty_unix_socket_setOption(env, fd, IPPROTO_IPV6, IPV6_TCLASS, &optval, sizeof(optval));
 }
 
 JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setBroadcast(JNIEnv* env, jclass clazz, jint fd, jint optval) {
