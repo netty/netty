@@ -204,7 +204,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public ChannelPipeline addAfter(EventExecutorGroup group, String baseName, String name, ChannelHandler handler) {
         synchronized (this) {
-            AbstractChannelHandlerContext ctx = getContextOrDie(baseName);
+            AbstractChannelHandlerContext ctx = getLastContextOrDie(getContextOrDie(baseName));
             name = filterName(name, handler);
             addAfter0(ctx, new DefaultChannelHandlerContext(this, findInvoker(group), name, handler));
         }
@@ -214,13 +214,42 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public ChannelPipeline addAfter(
             ChannelHandlerInvoker invoker, String baseName, String name, ChannelHandler handler) {
-
         synchronized (this) {
-            AbstractChannelHandlerContext ctx = getContextOrDie(baseName);
+            AbstractChannelHandlerContext ctx = getLastContextOrDie(getContextOrDie(baseName));
             name = filterName(name, handler);
             addAfter0(ctx, new DefaultChannelHandlerContext(this, invoker, name, handler));
         }
         return this;
+    }
+
+    /**
+     * This methid is used by {@link ChannelHandlerAppender} to append handlers to the pipeline.
+     * This is kind of a hack to make it work and still keep he correct order and we should try to find a better
+     * way to do this in the future.
+     */
+    synchronized void appendHandlers(ChannelHandlerAppender handler) {
+        AbstractChannelHandlerContext context = getContextOrDie(handler);
+
+        for (Map.Entry<String, ChannelHandler> e: handler.handlers) {
+            String name = e.getKey();
+            ChannelHandler h = e.getValue();
+            name = filterName(name, h);
+            AbstractChannelHandlerContext ctx = new DefaultChannelHandlerContext(
+                    this, context.invoker, name, h);
+            addAfter0(context, ctx);
+            context = getLastContextOrDie(ctx);
+        }
+    }
+
+    private AbstractChannelHandlerContext getLastContextOrDie(AbstractChannelHandlerContext ctx) {
+        if (ctx.handler() instanceof ChannelHandlerAppender) {
+            ChannelHandlerAppender handler = (ChannelHandlerAppender) ctx.handler();
+            int numHandlers = handler.numHandlers();
+            if (numHandlers > 0) {
+                return getContextOrDie(handler.handlerAt(numHandlers - 1));
+            }
+        }
+        return ctx;
     }
 
     private void addAfter0(AbstractChannelHandlerContext ctx, AbstractChannelHandlerContext newCtx) {
