@@ -16,9 +16,6 @@
 package io.netty.handler.codec.http.websocketx.extensions.compression;
 
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandler;
-import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandshaker;
-
-import java.util.Arrays;
 
 /**
  * Extends <tt>io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketClientExtensionHandler</tt>
