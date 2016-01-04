@@ -111,7 +111,7 @@
           <executable>${java.home}/bin/java</executable>
           <commandlineArgs>
             ${argLine.common}
-            ${argLine.bootcp}
+            ${argLine.alpnAgent}
             -classpath %classpath
             ${argLine.leak}
             ${argLine.coverage}
