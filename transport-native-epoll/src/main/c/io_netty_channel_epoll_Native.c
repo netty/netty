@@ -405,7 +405,12 @@ JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setTcpNotSentLowAt(JNI
 
 JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setTrafficClass(JNIEnv* env, jclass clazz, jint fd, jint optval) {
     netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_TOS, &optval, sizeof(optval));
-    netty_unix_socket_setOption(env, fd, IPPROTO_IPV6, IPV6_TCLASS, &optval, sizeof(optval));
+
+    /* Try to set the ipv6 equivalent, but don't throw if this is an ipv4 only socket. */
+    int rc = setsockopt(fd, IPPROTO_IPV6, IPV6_TCLASS, &optval, sizeof(optval));
+    if (rc < 0 && errno != ENOPROTOOPT) {
+        netty_unix_errors_throwChannelExceptionErrorNo(env, "setting ipv6 dscp failed: ", errno);
+    }
 }
 
 JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setBroadcast(JNIEnv* env, jclass clazz, jint fd, jint optval) {
