@@ -405,6 +405,7 @@ JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setTcpNotSentLowAt(JNI
 
 JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setTrafficClass(JNIEnv* env, jclass clazz, jint fd, jint optval) {
     netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_TOS, &optval, sizeof(optval));
+    netty_unix_socket_setOption(env, fd, IPPROTO_IPV6, IPV6_TCLASS, &optval, sizeof(optval));
 }
 
 JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setBroadcast(JNIEnv* env, jclass clazz, jint fd, jint optval) {
