@@ -63,7 +63,7 @@ final class WebSocketUtil {
      */
     static byte[] md5(byte[] data) {
         // TODO(normanmaurer): Create md5 method that not need MessageDigest.
-        return MD5.get().digest(data);
+        return digest(MD5, data);
     }
 
     /**
@@ -74,7 +74,13 @@ final class WebSocketUtil {
      */
     static byte[] sha1(byte[] data) {
         // TODO(normanmaurer): Create sha1 method that not need MessageDigest.
-        return SHA1.get().digest(data);
+        return digest(SHA1, data);
+    }
+
+    private static byte[] digest(FastThreadLocal<MessageDigest> digestFastThreadLocal, byte[] data) {
+        MessageDigest digest = digestFastThreadLocal.get();
+        digest.reset();
+        return digest.digest(data);
     }
 
     /**
