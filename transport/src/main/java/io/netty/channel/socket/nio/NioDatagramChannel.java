@@ -80,7 +80,7 @@ public final class NioDatagramChannel
              *  Use the {@link SelectorProvider} to open {@link SocketChannel} and so remove condition in
              *  {@link SelectorProvider#provider()} which is called by each DatagramChannel.open() otherwise.
              *
-             *  See <a href="See https://github.com/netty/netty/issues/2308">#2308</a>.
+             *  See <a href="https://github.com/netty/netty/issues/2308">#2308</a>.
              */
             return provider.openDatagramChannel();
         } catch (IOException e) {
