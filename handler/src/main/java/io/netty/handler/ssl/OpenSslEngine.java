@@ -168,7 +168,7 @@ public final class OpenSslEngine extends SSLEngine {
     private final OpenSslApplicationProtocolNegotiator apn;
     private final boolean rejectRemoteInitiatedRenegation;
     private final OpenSslSession session;
-    private final java.security.cert.Certificate[] localCerts;
+    private final Certificate[] localCerts;
     private final ByteBuffer[] singleSrcBuffer = new ByteBuffer[1];
     private final ByteBuffer[] singleDstBuffer = new ByteBuffer[1];
 
@@ -1161,6 +1161,10 @@ public final class OpenSslEngine extends SSLEngine {
             return FINISHED;
         }
         checkEngineClosed();
+
+        // Adding the OpenSslEngine to the OpenSslEngineMap so it can be used in the AbstractCertificateVerifier.
+        engineMap.add(this);
+
         int code = SSL.doHandshake(ssl);
         if (code <= 0) {
             checkPendingHandshakeException();

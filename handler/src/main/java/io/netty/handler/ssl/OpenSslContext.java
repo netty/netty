@@ -295,10 +295,8 @@ public abstract class OpenSslContext extends SslContext {
 
     @Override
     public final SSLEngine newEngine(ByteBufAllocator alloc, String peerHost, int peerPort) {
-        final OpenSslEngine engine = new OpenSslEngine(ctx, alloc, isClient(), sessionContext(), apn, engineMap,
+        return new OpenSslEngine(ctx, alloc, isClient(), sessionContext(), apn, engineMap,
                 rejectRemoteInitiatedRenegotiation, peerHost, peerPort, keyCertChain, clientAuth);
-        engineMap.add(engine);
-        return engine;
     }
 
     /**
