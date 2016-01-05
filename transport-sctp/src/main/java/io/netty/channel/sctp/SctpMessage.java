@@ -142,6 +142,8 @@ public final class SctpMessage extends DefaultByteBufHolder {
     public int hashCode() {
         int result = streamIdentifier;
         result = 31 * result + protocolIdentifier;
+        // values 1231 and 1237 are referenced in the javadocs of Boolean#hashCode()
+        result = 31 * result + (unordered ? 1231 : 1237);
         result = 31 * result + content().hashCode();
         return result;
     }
