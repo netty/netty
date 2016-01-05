@@ -125,7 +125,8 @@ final class PemReader {
 
         Matcher m = KEY_PATTERN.matcher(content);
         if (!m.find()) {
-            throw new KeyException("found no private key in input stream");
+            throw new KeyException("could not find a PKCS #8 private key in input stream" +
+                    " (see http://netty.io/wiki/sslcontextbuilder-and-private-key.html for more information)");
         }
 
         ByteBuf base64 = Unpooled.copiedBuffer(m.group(1), CharsetUtil.US_ASCII);
