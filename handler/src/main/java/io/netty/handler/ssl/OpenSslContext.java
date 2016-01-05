@@ -71,6 +71,10 @@ public abstract class OpenSslContext extends SslContext {
      */
     private static final boolean JDK_REJECT_CLIENT_INITIATED_RENEGOTIATION =
             SystemPropertyUtil.getBoolean("jdk.tls.rejectClientInitiatedRenegotiation", false);
+
+    private static final boolean OPEN_SSL_ENGINE_FINALIZER =
+            SystemPropertyUtil.getBoolean("io.netty.handler.ssl.opensslengine.finalizer", true);
+
     private static final List<String> DEFAULT_CIPHERS;
 
     // TODO: Maybe make configurable ?
@@ -306,6 +310,10 @@ public abstract class OpenSslContext extends SslContext {
 
     @Override
     public final SSLEngine newEngine(ByteBufAllocator alloc, String peerHost, int peerPort) {
+        if (OPEN_SSL_ENGINE_FINALIZER) {
+            return new FinalizingOpenSslEngine(ctx, alloc, isClient(), sessionContext(), apn, engineMap,
+                    rejectRemoteInitiatedRenegotiation, peerHost, peerPort, keyCertChain, clientAuth);
+        }
         return new OpenSslEngine(ctx, alloc, isClient(), sessionContext(), apn, engineMap,
                 rejectRemoteInitiatedRenegotiation, peerHost, peerPort, keyCertChain, clientAuth);
     }
