@@ -1073,7 +1073,19 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     case FINISHED:
                         setHandshakeSuccess();
                         wrapLater = true;
-                        continue;
+
+                        // We 'break' here and NOT 'continue' as android API version 21 has a bug where they consume
+                        // data from the buffer but NOT correctly set the SSLEngineResult.bytesConsumed().
+                        // Because of this it will raise an exception on the next iteration of the for loop on android
+                        // API version 21. Just doing a break will work here as produced and consumed will both be 0
+                        // and so we break out of the complete for (;;) loop and so call decode(...) again later on.
+                        // On other platforms this will have no negative effect as we will just continue with the
+                        // for (;;) loop if something was either consumed or produced.
+                        //
+                        // See:
+                        //  - https://github.com/netty/netty/issues/4116
+                        //  - https://code.google.com/p/android/issues/detail?id=198639&thanks=198639&ts=1452501203
+                        break;
                     case NOT_HANDSHAKING:
                         if (setHandshakeSuccessIfStillHandshaking()) {
                             wrapLater = true;
