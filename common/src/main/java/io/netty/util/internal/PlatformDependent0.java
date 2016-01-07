@@ -484,17 +484,17 @@ final class PlatformDependent0 {
     }
 
     static <U, W> AtomicReferenceFieldUpdater<U, W> newAtomicReferenceFieldUpdater(
-            Class<U> tclass, String fieldName) throws Exception {
+            Class<? super U> tclass, String fieldName) throws Exception {
         return new UnsafeAtomicReferenceFieldUpdater<U, W>(UNSAFE, tclass, fieldName);
     }
 
     static <T> AtomicIntegerFieldUpdater<T> newAtomicIntegerFieldUpdater(
-            Class<?> tclass, String fieldName) throws Exception {
+            Class<? super T> tclass, String fieldName) throws Exception {
         return new UnsafeAtomicIntegerFieldUpdater<T>(UNSAFE, tclass, fieldName);
     }
 
     static <T> AtomicLongFieldUpdater<T> newAtomicLongFieldUpdater(
-            Class<?> tclass, String fieldName) throws Exception {
+            Class<? super T> tclass, String fieldName) throws Exception {
         return new UnsafeAtomicLongFieldUpdater<T>(UNSAFE, tclass, fieldName);
     }
 

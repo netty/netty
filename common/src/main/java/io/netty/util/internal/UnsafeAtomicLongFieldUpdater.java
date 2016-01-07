@@ -25,7 +25,8 @@ final class UnsafeAtomicLongFieldUpdater<T> extends AtomicLongFieldUpdater<T> {
     private final long offset;
     private final Unsafe unsafe;
 
-    UnsafeAtomicLongFieldUpdater(Unsafe unsafe, Class<?> tClass, String fieldName) throws NoSuchFieldException {
+    UnsafeAtomicLongFieldUpdater(Unsafe unsafe, Class<? super T> tClass, String fieldName)
+            throws NoSuchFieldException {
         Field field = tClass.getDeclaredField(fieldName);
         if (!Modifier.isVolatile(field.getModifiers())) {
             throw new IllegalArgumentException("Must be volatile");
