@@ -15,6 +15,8 @@
  */
 package io.netty.resolver.dns;
 
+import static io.netty.util.internal.ObjectUtil.intValue;
+
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.EventLoop;
 import io.netty.channel.ReflectiveChannelFactory;
@@ -37,9 +39,10 @@ public final class DnsNameResolverBuilder {
     private ChannelFactory<? extends DatagramChannel> channelFactory;
     private InetSocketAddress localAddress = DnsNameResolver.ANY_LOCAL_ADDR;
     private DnsServerAddresses nameServerAddresses;
-    private int minTtl;
-    private int maxTtl = Integer.MAX_VALUE;
-    private int negativeTtl;
+    private DnsCache resolveCache;
+    private Integer minTtl;
+    private Integer maxTtl;
+    private Integer negativeTtl;
     private long queryTimeoutMillis = 5000;
     private InternetProtocolFamily[] resolvedAddressTypes = DnsNameResolver.DEFAULT_RESOLVE_ADDRESS_TYPES;
     private boolean recursionDesired = true;
@@ -100,6 +103,17 @@ public final class DnsNameResolverBuilder {
      */
     public DnsNameResolverBuilder nameServerAddresses(DnsServerAddresses nameServerAddresses) {
         this.nameServerAddresses = nameServerAddresses;
+        return this;
+    }
+
+    /**
+     * Sets the cache for resolution results.
+     *
+     * @param resolveCache the DNS resolution results cache
+     * @return {@code this}
+     */
+    public DnsNameResolverBuilder resolveCache(DnsCache resolveCache) {
+        this.resolveCache  = resolveCache;
         return this;
     }
 
@@ -291,14 +305,20 @@ public final class DnsNameResolverBuilder {
      * @return a {@link DnsNameResolver}
      */
     public DnsNameResolver build() {
+
+        if (resolveCache != null && (minTtl != null || maxTtl != null || negativeTtl != null)) {
+            throw new IllegalStateException("resolveCache and TTLs are mutually exclusive");
+        }
+
+        DnsCache cache = resolveCache != null ? resolveCache :
+                new DefaultDnsCache(intValue(minTtl, 0), intValue(maxTtl, Integer.MAX_VALUE), intValue(negativeTtl, 0));
+
         return new DnsNameResolver(
                 eventLoop,
                 channelFactory,
                 localAddress,
                 nameServerAddresses,
-                minTtl,
-                maxTtl,
-                negativeTtl,
+                cache,
                 queryTimeoutMillis,
                 resolvedAddressTypes,
                 recursionDesired,
