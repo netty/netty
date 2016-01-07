@@ -555,7 +555,7 @@ public final class PlatformDependent {
      * use {@link AtomicReferenceFieldUpdater#newUpdater(Class, Class, String)} as fallback.
      */
     public static <U, W> AtomicReferenceFieldUpdater<U, W> newAtomicReferenceFieldUpdater(
-            Class<U> tclass, String fieldName) {
+            Class<? super U> tclass, String fieldName) {
         if (hasUnsafe()) {
             try {
                 return PlatformDependent0.newAtomicReferenceFieldUpdater(tclass, fieldName);
@@ -572,7 +572,7 @@ public final class PlatformDependent {
      * use {@link AtomicIntegerFieldUpdater#newUpdater(Class, String)} as fallback.
      */
     public static <T> AtomicIntegerFieldUpdater<T> newAtomicIntegerFieldUpdater(
-            Class<?> tclass, String fieldName) {
+            Class<? super T> tclass, String fieldName) {
         if (hasUnsafe()) {
             try {
                 return PlatformDependent0.newAtomicIntegerFieldUpdater(tclass, fieldName);
@@ -589,7 +589,7 @@ public final class PlatformDependent {
      * use {@link AtomicLongFieldUpdater#newUpdater(Class, String)} as fallback.
      */
     public static <T> AtomicLongFieldUpdater<T> newAtomicLongFieldUpdater(
-            Class<?> tclass, String fieldName) {
+            Class<? super T> tclass, String fieldName) {
         if (hasUnsafe()) {
             try {
                 return PlatformDependent0.newAtomicLongFieldUpdater(tclass, fieldName);
