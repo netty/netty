@@ -46,6 +46,8 @@ public final class FixedChannelPool extends SimpleChannelPool {
         TIMEOUT_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
     }
 
+    private final ChannelPool.Stats stats;
+
     public enum AcquireTimeoutAction {
         /**
          * Create a new connection when the timeout is detected.
@@ -194,6 +196,12 @@ public final class FixedChannelPool extends SimpleChannelPool {
         executor = bootstrap.group().next();
         this.maxConnections = maxConnections;
         this.maxPendingAcquires = maxPendingAcquires;
+        this.stats = new FixedChannelPoolStats();
+    }
+
+    @Override
+    public Stats stats() {
+        return this.stats;
     }
 
     @Override
@@ -420,5 +428,22 @@ public final class FixedChannelPool extends SimpleChannelPool {
                 }
             }
         });
+    }
+
+    private class FixedChannelPoolStats implements ChannelPool.Stats {
+        @Override
+        public int leasedChannelsCount() {
+            return acquiredChannelCount;
+        }
+
+        @Override
+        public int availableChannelsCount() {
+            return availableChannelCount();
+        }
+
+        @Override
+        public int pendingChannelsCount() {
+            return pendingAcquireCount;
+        }
     }
 }

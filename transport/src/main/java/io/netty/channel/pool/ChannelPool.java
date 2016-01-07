@@ -26,6 +26,25 @@ import java.io.IOException;
  * Allows to acquire and release {@link Channel} and so act as a pool of these.
  */
 public interface ChannelPool extends Closeable {
+    /**
+     * Statistics about the {@link ChannelPool}.
+     */
+    interface Stats {
+        /**
+         * Returns the number of persistent connections currently being used.
+         */
+        int leasedChannelsCount();
+
+        /**
+         * Returns the number of idle persistent channel.
+         */
+        int availableChannelsCount();
+
+        /**
+         * Returns the number of channel requests being blocked awaiting a free channel.
+         */
+        int pendingChannelsCount();
+    }
 
     /**
      * Acquire a {@link Channel} from this {@link ChannelPool}. The returned {@link Future} is notified once
@@ -50,6 +69,11 @@ public interface ChannelPool extends Closeable {
      * the release is successful and failed otherwise. When failed the {@link Channel} will automatically closed.
      */
     Future<Void> release(Channel channel, Promise<Void> promise);
+
+    /**
+     * Returns the stats about the pool.
+     */
+    Stats stats();
 
     @Override
     void close();

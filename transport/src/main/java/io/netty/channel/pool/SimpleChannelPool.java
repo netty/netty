@@ -30,6 +30,7 @@ import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 
 import java.util.Deque;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.netty.util.internal.ObjectUtil.*;
 
@@ -54,6 +55,7 @@ public class SimpleChannelPool implements ChannelPool {
     private final ChannelHealthChecker healthCheck;
     private final Bootstrap bootstrap;
     private final boolean releaseHealthCheck;
+    private final ChannelPoolStats stats;
 
     /**
      * Creates a new instance using the {@link ChannelHealthChecker#ACTIVE}.
@@ -89,7 +91,8 @@ public class SimpleChannelPool implements ChannelPool {
      */
     public SimpleChannelPool(Bootstrap bootstrap, final ChannelPoolHandler handler, ChannelHealthChecker healthCheck,
                              boolean releaseHealthCheck) {
-        this.handler = checkNotNull(handler, "handler");
+        ChannelPoolStats statsHandler = new ChannelPoolStats(checkNotNull(handler, "handler"));
+        this.handler = statsHandler;
         this.healthCheck = checkNotNull(healthCheck, "healthCheck");
         this.releaseHealthCheck = releaseHealthCheck;
         // Clone the original Bootstrap as we want to set our own handler
@@ -101,6 +104,7 @@ public class SimpleChannelPool implements ChannelPool {
                 handler.channelCreated(ch);
             }
         });
+        this.stats = statsHandler;
     }
 
     @Override
@@ -333,6 +337,10 @@ public class SimpleChannelPool implements ChannelPool {
         return deque.offer(channel);
     }
 
+    protected int availableChannelCount() {
+        return deque.size();
+    }
+
     @Override
     public void close() {
         for (;;) {
@@ -341,6 +349,52 @@ public class SimpleChannelPool implements ChannelPool {
                 break;
             }
             channel.close();
+        }
+    }
+
+    @Override
+    public Stats stats() {
+        return stats;
+    }
+
+    private class ChannelPoolStats implements ChannelPool.Stats, ChannelPoolHandler {
+        private final ChannelPoolHandler delegate;
+        private final AtomicInteger leasedChannelCount = new AtomicInteger(0);
+
+        public ChannelPoolStats(ChannelPoolHandler delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public void channelCreated(Channel ch) throws Exception {
+            delegate.channelCreated(ch);
+        }
+
+        @Override
+        public void channelReleased(Channel ch) throws Exception {
+            leasedChannelCount.decrementAndGet();
+            delegate.channelReleased(ch);
+        }
+
+        @Override
+        public void channelAcquired(Channel ch) throws Exception {
+            leasedChannelCount.incrementAndGet();
+            delegate.channelAcquired(ch);
+        }
+
+        @Override
+        public int leasedChannelsCount() {
+            return leasedChannelCount.get();
+        }
+
+        @Override
+        public int availableChannelsCount() {
+            return deque.size();
+        }
+
+        @Override
+        public int pendingChannelsCount() {
+            return 0;
         }
     }
 }

@@ -61,10 +61,13 @@ public class FixedChannelPoolTest {
         CountingChannelPoolHandler handler = new CountingChannelPoolHandler();
 
         ChannelPool pool = new FixedChannelPool(cb, handler, 1, Integer.MAX_VALUE);
+        ChannelPool.Stats stats = pool.stats();
 
         Channel channel = pool.acquire().syncUninterruptibly().getNow();
         Future<Channel> future = pool.acquire();
         assertFalse(future.isDone());
+        assertEquals(1, stats.leasedChannelsCount());
+        assertEquals(0, stats.availableChannelsCount());
 
         pool.release(channel).syncUninterruptibly();
         assertTrue(future.await(1, TimeUnit.SECONDS));
@@ -72,6 +75,8 @@ public class FixedChannelPoolTest {
         Channel channel2 = future.getNow();
         assertSame(channel, channel2);
         assertEquals(1, handler.channelCount());
+        assertEquals(1, stats.leasedChannelsCount());
+        assertEquals(0, stats.availableChannelsCount());
 
         assertEquals(1, handler.acquiredCount());
         assertEquals(1, handler.releasedCount());
@@ -102,7 +107,7 @@ public class FixedChannelPoolTest {
 
         // Start server
         Channel sc = sb.bind(addr).syncUninterruptibly().channel();
-        ChannelPoolHandler handler = new TestChannelPoolHandler();
+        CountingChannelPoolHandler handler = new CountingChannelPoolHandler();
         ChannelPool pool = new FixedChannelPool(cb, handler, ChannelHealthChecker.ACTIVE,
                                                  AcquireTimeoutAction.FAIL, 500, 1, Integer.MAX_VALUE);
 
@@ -111,6 +116,9 @@ public class FixedChannelPoolTest {
         try {
             future.syncUninterruptibly();
         } finally {
+            assertEquals(0, pool.stats().availableChannelsCount());
+            assertEquals(1, pool.stats().leasedChannelsCount());
+            assertEquals(0, pool.stats().pendingChannelsCount());
             sc.close().syncUninterruptibly();
             channel.close().syncUninterruptibly();
             group.shutdownGracefully();
@@ -156,7 +164,7 @@ public class FixedChannelPoolTest {
      * @throws Exception
      */
     @Test
-    public void testAcquireNewConnectionWhen() throws Exception {
+    public void testAcquireNewConnectionWhenThePreviouslyAcquiredIsClosed() throws Exception {
         EventLoopGroup group = new LocalEventLoopGroup();
         LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
         Bootstrap cb = new Bootstrap();
@@ -297,6 +305,12 @@ public class FixedChannelPoolTest {
         pool.release(channel).syncUninterruptibly();
         sc.close().syncUninterruptibly();
         channel.close().syncUninterruptibly();
+
+        ChannelPool.Stats stats = pool.stats();
+        assertEquals(0, stats.leasedChannelsCount());
+        assertEquals(0, stats.pendingChannelsCount());
+        // TODO: (need to wait the close operation is completed. how?
+//        assertEquals(0, stats.availableChannelsCount());
     }
 
     private static final class TestChannelPoolHandler extends AbstractChannelPoolHandler {
