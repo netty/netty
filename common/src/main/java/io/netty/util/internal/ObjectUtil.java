@@ -76,4 +76,24 @@ public final class ObjectUtil {
         checkPositive(array.length, name + ".length");
         return array;
     }
+
+    /**
+     * Resolves a possibly null Integer to a primitive int, using a default value.
+     * @param wrapper the wrapper
+     * @param defaultValue the default value
+     * @return the primitive value
+     */
+    public static int intValue(Integer wrapper, int defaultValue) {
+        return wrapper != null ? wrapper.intValue() : defaultValue;
+    }
+
+    /**
+     * Resolves a possibly null Long to a primitive long, using a default value.
+     * @param wrapper the wrapper
+     * @param defaultValue the default value
+     * @return the primitive value
+     */
+    public static long longValue(Long wrapper, long defaultValue) {
+        return wrapper != null ? wrapper.longValue() : defaultValue;
+    }
 }

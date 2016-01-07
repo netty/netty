@@ -70,6 +70,7 @@ abstract class DnsNameResolverContext<T> {
     private final DnsServerAddressStream nameServerAddrs;
     private final Promise<T> promise;
     private final String hostname;
+    private final DnsCache resolveCache;
     private final boolean traceEnabled;
     private final int maxAllowedQueries;
     private final InternetProtocolFamily[] resolveAddressTypes;
@@ -83,10 +84,14 @@ abstract class DnsNameResolverContext<T> {
     private int allowedQueries;
     private boolean triedCNAME;
 
-    protected DnsNameResolverContext(DnsNameResolver parent, String hostname, Promise<T> promise) {
+    protected DnsNameResolverContext(DnsNameResolver parent,
+                                     String hostname,
+                                     Promise<T> promise,
+                                     DnsCache resolveCache) {
         this.parent = parent;
         this.promise = promise;
         this.hostname = hostname;
+        this.resolveCache = resolveCache;
 
         nameServerAddrs = parent.nameServerAddresses.stream();
         maxAllowedQueries = parent.maxQueriesPerResolve();
@@ -245,7 +250,7 @@ abstract class DnsNameResolverContext<T> {
             }
 
             final DnsCacheEntry e = new DnsCacheEntry(hostname, resolved);
-            parent.cache(hostname, resolved, r.timeToLive());
+            resolveCache.cache(hostname, resolved, r.timeToLive(), parent.ch.eventLoop());
             resolvedEntries.add(e);
             found = true;
 
@@ -426,7 +431,7 @@ abstract class DnsNameResolverContext<T> {
 
         final UnknownHostException cause = new UnknownHostException(buf.toString());
 
-        parent.cache(hostname, cause);
+        resolveCache.cache(hostname, cause, parent.ch.eventLoop());
         promise.tryFailure(cause);
     }
 
