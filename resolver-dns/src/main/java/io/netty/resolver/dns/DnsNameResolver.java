@@ -39,8 +39,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.OneTimeTask;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -50,11 +48,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
 
 import static io.netty.util.internal.ObjectUtil.*;
 
@@ -97,7 +91,7 @@ public class DnsNameResolver extends InetNameResolver {
     /**
      * Cache for {@link #doResolve(String, Promise)} and {@link #doResolveAll(String, Promise)}.
      */
-    private final ConcurrentMap<String, List<DnsCacheEntry>> resolveCache = PlatformDependent.newConcurrentHashMap();
+    private final DnsCache resolveCache;
 
     private final FastThreadLocal<DnsServerAddressStream> nameServerAddrStream =
             new FastThreadLocal<DnsServerAddressStream>() {
@@ -108,10 +102,6 @@ public class DnsNameResolver extends InetNameResolver {
             };
 
     private final long queryTimeoutMillis;
-    // The default TTL values here respect the TTL returned by the DNS server and do not cache the negative response.
-    private final int minTtl;
-    private final int maxTtl;
-    private final int negativeTtl;
     private final int maxQueriesPerResolve;
     private final boolean traceEnabled;
     private final InternetProtocolFamily[] resolvedAddressTypes;
@@ -129,9 +119,7 @@ public class DnsNameResolver extends InetNameResolver {
      * @param nameServerAddresses the addresses of the DNS server. For each DNS query, a new stream is created from
      *                            this to determine which DNS server should be contacted for the next retry in case
      *                            of failure.
-     * @param minTtl the minimum TTL of cached DNS records
-     * @param maxTtl the maximum TTL of cached DNS records
-     * @param negativeTtl the TTL for failed cached queries
+     * @param resolveCache the DNS resolved entries cache
      * @param queryTimeoutMillis timeout of each DNS query in millis
      * @param resolvedAddressTypes list of the protocol families
      * @param recursionDesired if recursion desired flag must be set
@@ -146,9 +134,7 @@ public class DnsNameResolver extends InetNameResolver {
             ChannelFactory<? extends DatagramChannel> channelFactory,
             InetSocketAddress localAddress,
             DnsServerAddresses nameServerAddresses,
-            int minTtl,
-            int maxTtl,
-            int negativeTtl,
+            DnsCache resolveCache,
             long queryTimeoutMillis,
             InternetProtocolFamily[] resolvedAddressTypes,
             boolean recursionDesired,
@@ -162,13 +148,6 @@ public class DnsNameResolver extends InetNameResolver {
         checkNotNull(channelFactory, "channelFactory");
         checkNotNull(localAddress, "localAddress");
         this.nameServerAddresses = checkNotNull(nameServerAddresses, "nameServerAddresses");
-        this.minTtl = checkPositiveOrZero(minTtl, "minTtl");
-        this.maxTtl = checkPositiveOrZero(maxTtl, "maxTtl");
-        if (minTtl > maxTtl) {
-            throw new IllegalArgumentException(
-                    "minTtl: " + minTtl + ", maxTtl: " + maxTtl + " (expected: 0 <= minTtl <= maxTtl)");
-        }
-        this.negativeTtl = checkPositiveOrZero(negativeTtl, "negativeTtl");
         this.queryTimeoutMillis = checkPositive(queryTimeoutMillis, "queryTimeoutMillis");
         this.resolvedAddressTypes = checkNonEmpty(resolvedAddressTypes, "resolvedAddressTypes");
         this.recursionDesired = recursionDesired;
@@ -177,6 +156,7 @@ public class DnsNameResolver extends InetNameResolver {
         this.maxPayloadSize = checkPositive(maxPayloadSize, "maxPayloadSize");
         this.optResourceEnabled = optResourceEnabled;
         this.hostsFileEntriesResolver = checkNotNull(hostsFileEntriesResolver, "hostsFileEntriesResolver");
+        this.resolveCache = resolveCache;
 
         bindFuture = newChannel(channelFactory, localAddress);
         ch = (DatagramChannel) bindFuture.channel();
@@ -201,7 +181,7 @@ public class DnsNameResolver extends InetNameResolver {
         bindFuture.channel().closeFuture().addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
-                clearCache();
+                resolveCache.clear();
             }
         });
 
@@ -209,29 +189,10 @@ public class DnsNameResolver extends InetNameResolver {
     }
 
     /**
-     * Returns the minimum TTL of the cached DNS resource records (in seconds).
-     *
-     * @see #maxTtl()
+     * Returns the resolution cache.
      */
-    public int minTtl() {
-        return minTtl;
-    }
-
-    /**
-     * Returns the maximum TTL of the cached DNS resource records (in seconds).
-     *
-     * @see #minTtl()
-     */
-    public int maxTtl() {
-        return maxTtl;
-    }
-
-    /**
-     * Returns the TTL of the cache for the failed DNS queries (in seconds).  The default value is {@code 0}, which
-     * disables the cache for negative results.
-     */
-    public int negativeTtl() {
-        return negativeTtl;
+    public DnsCache resolveCache() {
+        return resolveCache;
     }
 
     /**
@@ -303,49 +264,6 @@ public class DnsNameResolver extends InetNameResolver {
     }
 
     /**
-     * Clears all the resolved addresses cached by this resolver.
-     *
-     * @return {@code this}
-     *
-     * @see #clearCache(String)
-     */
-    public DnsNameResolver clearCache() {
-        for (Iterator<Entry<String, List<DnsCacheEntry>>> i = resolveCache.entrySet().iterator(); i.hasNext();) {
-            final Entry<String, List<DnsCacheEntry>> e = i.next();
-            i.remove();
-            cancelExpiration(e);
-        }
-        return this;
-    }
-
-    /**
-     * Clears the resolved addresses of the specified host name from the cache of this resolver.
-     *
-     * @return {@code true} if and only if there was an entry for the specified host name in the cache and
-     *         it has been removed by this method
-     */
-    public boolean clearCache(String hostname) {
-        boolean removed = false;
-        for (Iterator<Entry<String, List<DnsCacheEntry>>> i = resolveCache.entrySet().iterator(); i.hasNext();) {
-            final Entry<String, List<DnsCacheEntry>> e = i.next();
-            if (e.getKey().equals(hostname)) {
-                i.remove();
-                cancelExpiration(e);
-                removed = true;
-            }
-        }
-        return removed;
-    }
-
-    private static void cancelExpiration(Entry<String, List<DnsCacheEntry>> e) {
-        final List<DnsCacheEntry> entries = e.getValue();
-        final int numEntries = entries.size();
-        for (int i = 0; i < numEntries; i++) {
-            entries.get(i).cancelExpiration();
-        }
-    }
-
-    /**
      * Closes the internal datagram channel used for sending and receiving DNS messages, and clears all DNS resource
      * records from the cache. Attempting to send a DNS query or to resolve a domain name will fail once this method
      * has been called.
@@ -366,6 +284,16 @@ public class DnsNameResolver extends InetNameResolver {
 
     @Override
     protected void doResolve(String inetHost, Promise<InetAddress> promise) throws Exception {
+        doResolve(inetHost, promise, resolveCache);
+    }
+
+    /**
+     * Hook designed for extensibility so one can pass a different cache on each resolution attempt
+     * instead of using the global one.
+     */
+    protected void doResolve(String inetHost,
+                             Promise<InetAddress> promise,
+                             DnsCache resolveCache) throws Exception {
         final byte[] bytes = NetUtil.createByteArrayFromIpAddressString(inetHost);
         if (bytes != null) {
             // The inetHost is actually an ipaddress.
@@ -381,12 +309,14 @@ public class DnsNameResolver extends InetNameResolver {
             return;
         }
 
-        if (!doResolveCached(hostname, promise)) {
-            doResolveUncached(hostname, promise);
+        if (!doResolveCached(hostname, promise, resolveCache)) {
+            doResolveUncached(hostname, promise, resolveCache);
         }
     }
 
-    private boolean doResolveCached(String hostname, Promise<InetAddress> promise) {
+    private boolean doResolveCached(String hostname,
+                                    Promise<InetAddress> promise,
+                                    DnsCache resolveCache) {
         final List<DnsCacheEntry> cachedEntries = resolveCache.get(hostname);
         if (cachedEntries == null) {
             return false;
@@ -433,9 +363,11 @@ public class DnsNameResolver extends InetNameResolver {
         }
     }
 
-    private void doResolveUncached(String hostname, Promise<InetAddress> promise) {
+    private void doResolveUncached(String hostname,
+                                   Promise<InetAddress> promise,
+                                   DnsCache resolveCache) {
         final DnsNameResolverContext<InetAddress> ctx =
-                new DnsNameResolverContext<InetAddress>(this, hostname, promise) {
+                new DnsNameResolverContext<InetAddress>(this, hostname, promise, resolveCache) {
                     @Override
                     protected boolean finishResolve(
                             Class<? extends InetAddress> addressType, List<DnsCacheEntry> resolvedEntries) {
@@ -457,6 +389,16 @@ public class DnsNameResolver extends InetNameResolver {
 
     @Override
     protected void doResolveAll(String inetHost, Promise<List<InetAddress>> promise) throws Exception {
+        doResolveAll(inetHost, promise, resolveCache);
+    }
+
+    /**
+     * Hook designed for extensibility so one can pass a different cache on each resolution attempt
+     * instead of using the global one.
+     */
+    protected void doResolveAll(String inetHost,
+                                Promise<List<InetAddress>> promise,
+                                DnsCache resolveCache) throws Exception {
 
         final byte[] bytes = NetUtil.createByteArrayFromIpAddressString(inetHost);
         if (bytes != null) {
@@ -473,12 +415,14 @@ public class DnsNameResolver extends InetNameResolver {
             return;
         }
 
-        if (!doResolveAllCached(hostname, promise)) {
-            doResolveAllUncached(hostname, promise);
+        if (!doResolveAllCached(hostname, promise, resolveCache)) {
+            doResolveAllUncached(hostname, promise, resolveCache);
         }
     }
 
-    private boolean doResolveAllCached(String hostname, Promise<List<InetAddress>> promise) {
+    private boolean doResolveAllCached(String hostname,
+                                       Promise<List<InetAddress>> promise,
+                                       DnsCache resolveCache) {
         final List<DnsCacheEntry> cachedEntries = resolveCache.get(hostname);
         if (cachedEntries == null) {
             return false;
@@ -518,9 +462,11 @@ public class DnsNameResolver extends InetNameResolver {
         return true;
     }
 
-    private void doResolveAllUncached(final String hostname, final Promise<List<InetAddress>> promise) {
+    private void doResolveAllUncached(final String hostname,
+                                      final Promise<List<InetAddress>> promise,
+                                      DnsCache resolveCache) {
         final DnsNameResolverContext<List<InetAddress>> ctx =
-                new DnsNameResolverContext<List<InetAddress>>(this, hostname, promise) {
+                new DnsNameResolverContext<List<InetAddress>>(this, hostname, promise, resolveCache) {
                     @Override
                     protected boolean finishResolve(
                             Class<? extends InetAddress> addressType, List<DnsCacheEntry> resolvedEntries) {
@@ -550,81 +496,6 @@ public class DnsNameResolver extends InetNameResolver {
 
     private static String hostname(String inetHost) {
         return IDN.toASCII(inetHost);
-    }
-
-    void cache(String hostname, InetAddress address, long originalTtl) {
-        final int maxTtl = maxTtl();
-        if (maxTtl == 0) {
-            return;
-        }
-
-        final int ttl = Math.max(minTtl(), (int) Math.min(maxTtl, originalTtl));
-        final List<DnsCacheEntry> entries = cachedEntries(hostname);
-        final DnsCacheEntry e = new DnsCacheEntry(hostname, address);
-
-        synchronized (entries) {
-            if (!entries.isEmpty()) {
-                final DnsCacheEntry firstEntry = entries.get(0);
-                if (firstEntry.cause() != null) {
-                    assert entries.size() == 1;
-                    firstEntry.cancelExpiration();
-                    entries.clear();
-                }
-            }
-            entries.add(e);
-        }
-
-        scheduleCacheExpiration(entries, e, ttl);
-    }
-
-    void cache(String hostname, Throwable cause) {
-        final int negativeTtl = negativeTtl();
-        if (negativeTtl == 0) {
-            return;
-        }
-
-        final List<DnsCacheEntry> entries = cachedEntries(hostname);
-        final DnsCacheEntry e = new DnsCacheEntry(hostname, cause);
-
-        synchronized (entries) {
-            final int numEntries = entries.size();
-            for (int i = 0; i < numEntries; i ++) {
-                entries.get(i).cancelExpiration();
-            }
-            entries.clear();
-            entries.add(e);
-        }
-
-        scheduleCacheExpiration(entries, e, negativeTtl);
-    }
-
-    private List<DnsCacheEntry> cachedEntries(String hostname) {
-        List<DnsCacheEntry> oldEntries = resolveCache.get(hostname);
-        final List<DnsCacheEntry> entries;
-        if (oldEntries == null) {
-            List<DnsCacheEntry> newEntries = new ArrayList<DnsCacheEntry>();
-            oldEntries = resolveCache.putIfAbsent(hostname, newEntries);
-            entries = oldEntries != null? oldEntries : newEntries;
-        } else {
-            entries = oldEntries;
-        }
-        return entries;
-    }
-
-    private void scheduleCacheExpiration(final List<DnsCacheEntry> entries, final DnsCacheEntry e, int ttl) {
-        e.scheduleExpiration(
-                ch.eventLoop(),
-                new OneTimeTask() {
-                    @Override
-                    public void run() {
-                        synchronized (entries) {
-                            entries.remove(e);
-                            if (entries.isEmpty()) {
-                                resolveCache.remove(e.hostname());
-                            }
-                        }
-                    }
-                }, ttl, TimeUnit.SECONDS);
     }
 
     /**
@@ -700,9 +571,7 @@ public class DnsNameResolver extends InetNameResolver {
 
                 final DnsQueryContext qCtx = queryContextManager.get(res.sender(), queryId);
                 if (qCtx == null) {
-                    if (logger.isWarnEnabled()) {
-                        logger.warn("{} Received a DNS response with an unknown ID: {}", ch, queryId);
-                    }
+                    logger.warn("{} Received a DNS response with an unknown ID: {}", ch, queryId);
                     return;
                 }
 
