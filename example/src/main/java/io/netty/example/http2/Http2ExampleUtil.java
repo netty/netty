@@ -47,7 +47,7 @@ public final class Http2ExampleUtil {
      */
     public static int toInt(String string, int defaultValue) {
         if (string != null && !string.isEmpty()) {
-            return Integer.valueOf(string);
+            return Integer.parseInt(string);
         }
         return defaultValue;
     }
