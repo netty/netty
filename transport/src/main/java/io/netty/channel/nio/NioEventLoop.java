@@ -475,11 +475,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 // null out entries in the array to allow to have it GC'ed once the Channel close
                 // See https://github.com/netty/netty/issues/2363
                 for (;;) {
+                    i++;
                     if (selectedKeys[i] == null) {
                         break;
                     }
                     selectedKeys[i] = null;
-                    i++;
                 }
 
                 selectAgain();
