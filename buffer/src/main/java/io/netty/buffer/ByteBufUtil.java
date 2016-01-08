@@ -525,7 +525,7 @@ public final class ByteBufUtil {
             try {
                 buffer.writeBytes(src, readerIndex, len);
                 // Use internalNioBuffer(...) to reduce object creation.
-                decodeString(decoder, buffer.internalNioBuffer(readerIndex, len), dst);
+                decodeString(decoder, buffer.internalNioBuffer(0, len), dst);
             } finally {
                 // Release the temporary buffer again.
                 buffer.release();
