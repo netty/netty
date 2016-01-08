@@ -66,6 +66,8 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
+import static io.netty.handler.ssl.SslUtils.getEncryptedPacketLength;
+
 /**
  * Adds <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security">SSL
  * &middot; TLS</a> and StartTLS support to a {@link Channel}.  Please refer
@@ -813,82 +815,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      *                  Is thrown if the given {@link ByteBuf} has not at least 5 bytes to read.
      */
     public static boolean isEncrypted(ByteBuf buffer) {
-        if (buffer.readableBytes() < 5) {
-            throw new IllegalArgumentException("buffer must have at least 5 readable bytes");
+        if (buffer.readableBytes() < SslUtils.SSL_RECORD_HEADER_LENGTH) {
+            throw new IllegalArgumentException(
+                    "buffer must have at least " + SslUtils.SSL_RECORD_HEADER_LENGTH + " readable bytes");
         }
         return getEncryptedPacketLength(buffer, buffer.readerIndex()) != -1;
-    }
-
-    /**
-     * Return how much bytes can be read out of the encrypted data. Be aware that this method will not increase
-     * the readerIndex of the given {@link ByteBuf}.
-     *
-     * @param   buffer
-     *                  The {@link ByteBuf} to read from. Be aware that it must have at least 5 bytes to read,
-     *                  otherwise it will throw an {@link IllegalArgumentException}.
-     * @return length
-     *                  The length of the encrypted packet that is included in the buffer. This will
-     *                  return {@code -1} if the given {@link ByteBuf} is not encrypted at all.
-     * @throws IllegalArgumentException
-     *                  Is thrown if the given {@link ByteBuf} has not at least 5 bytes to read.
-     */
-    private static int getEncryptedPacketLength(ByteBuf buffer, int offset) {
-        int packetLength = 0;
-
-        // SSLv3 or TLS - Check ContentType
-        boolean tls;
-        switch (buffer.getUnsignedByte(offset)) {
-            case 20:  // change_cipher_spec
-            case 21:  // alert
-            case 22:  // handshake
-            case 23:  // application_data
-                tls = true;
-                break;
-            default:
-                // SSLv2 or bad data
-                tls = false;
-        }
-
-        if (tls) {
-            // SSLv3 or TLS - Check ProtocolVersion
-            int majorVersion = buffer.getUnsignedByte(offset + 1);
-            if (majorVersion == 3) {
-                // SSLv3 or TLS
-                packetLength = buffer.getUnsignedShort(offset + 3) + 5;
-                if (packetLength <= 5) {
-                    // Neither SSLv3 or TLSv1 (i.e. SSLv2 or bad data)
-                    tls = false;
-                }
-            } else {
-                // Neither SSLv3 or TLSv1 (i.e. SSLv2 or bad data)
-                tls = false;
-            }
-        }
-
-        if (!tls) {
-            // SSLv2 or bad data - Check the version
-            boolean sslv2 = true;
-            int headerLength = (buffer.getUnsignedByte(offset) & 0x80) != 0 ? 2 : 3;
-            int majorVersion = buffer.getUnsignedByte(offset + headerLength + 1);
-            if (majorVersion == 2 || majorVersion == 3) {
-                // SSLv2
-                if (headerLength == 2) {
-                    packetLength = (buffer.getShort(offset) & 0x7FFF) + 2;
-                } else {
-                    packetLength = (buffer.getShort(offset) & 0x3FFF) + 3;
-                }
-                if (packetLength <= headerLength) {
-                    sslv2 = false;
-                }
-            } else {
-                sslv2 = false;
-            }
-
-            if (!sslv2) {
-                return -1;
-            }
-        }
-        return packetLength;
     }
 
     @Override
@@ -913,7 +844,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
         while (totalLength < OpenSslEngine.MAX_ENCRYPTED_PACKET_LENGTH) {
             final int readableBytes = endOffset - offset;
-            if (readableBytes < 5) {
+            if (readableBytes < SslUtils.SSL_RECORD_HEADER_LENGTH) {
                 break;
             }
 
@@ -1299,8 +1230,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     private void notifyHandshakeFailure(Throwable cause) {
         if (handshakePromise.tryFailure(cause)) {
-            ctx.fireUserEventTriggered(new SslHandshakeCompletionEvent(cause));
-            ctx.close();
+            SslUtils.notifyHandshakeFailure(ctx, cause);
         }
     }
 
