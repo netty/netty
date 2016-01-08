@@ -184,7 +184,7 @@ public class SimpleChannelPool implements ChannelPool {
         assert ch.eventLoop().inEventLoop();
 
         if (future.isSuccess()) {
-            if (future.getNow() == Boolean.TRUE) {
+            if (future.getNow()) {
                 try {
                     ch.attr(POOL_KEY).set(this);
                     handler.channelAcquired(ch);

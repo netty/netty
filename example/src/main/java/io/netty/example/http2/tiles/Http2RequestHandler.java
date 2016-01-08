@@ -24,7 +24,7 @@ import static io.netty.handler.codec.http.HttpUtil.setContentLength;
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static java.lang.Integer.valueOf;
+import static java.lang.Integer.parseInt;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -77,7 +77,7 @@ public class Http2RequestHandler extends SimpleChannelInboundHandler<FullHttpReq
 
     private void handleImage(String x, String y, ChannelHandlerContext ctx, String streamId, int latency,
             FullHttpRequest request) {
-        ByteBuf image = ImageCache.INSTANCE.image(valueOf(x), valueOf(y));
+        ByteBuf image = ImageCache.INSTANCE.image(parseInt(x), parseInt(y));
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, image.duplicate());
         response.headers().set(CONTENT_TYPE, "image/jpeg");
         sendResponse(ctx, streamId, latency, response, request);
