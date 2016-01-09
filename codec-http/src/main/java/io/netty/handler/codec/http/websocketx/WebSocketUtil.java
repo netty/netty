@@ -18,42 +18,14 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.base64.Base64;
+import io.netty.handler.codec.digests.MD5Digest;
+import io.netty.handler.codec.digests.SHA1Digest;
 import io.netty.util.CharsetUtil;
-import io.netty.util.concurrent.FastThreadLocal;
-
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 
 /**
  * A utility class mainly for use by web sockets
  */
 final class WebSocketUtil {
-
-    private static final FastThreadLocal<MessageDigest> MD5 = new FastThreadLocal<MessageDigest>() {
-        @Override
-        protected MessageDigest initialValue() throws Exception {
-            try {
-                //Try to get a MessageDigest that uses MD5
-                return MessageDigest.getInstance("MD5");
-            } catch (NoSuchAlgorithmException e) {
-                //This shouldn't happen! How old is the computer?
-                throw new InternalError("MD5 not supported on this platform - Outdated?");
-            }
-        }
-    };
-
-    private static final FastThreadLocal<MessageDigest> SHA1 = new FastThreadLocal<MessageDigest>() {
-        @Override
-        protected MessageDigest initialValue() throws Exception {
-            try {
-                //Try to get a MessageDigest that uses SHA1
-                return MessageDigest.getInstance("SHA1");
-            } catch (NoSuchAlgorithmException e) {
-                //This shouldn't happen! How old is the computer?
-                throw new InternalError("SHA-1 not supported on this platform - Outdated?");
-            }
-        }
-    };
 
     /**
      * Performs a MD5 hash on the specified data
@@ -62,8 +34,11 @@ final class WebSocketUtil {
      * @return The hashed data
      */
     static byte[] md5(byte[] data) {
-        // TODO(normanmaurer): Create md5 method that not need MessageDigest.
-        return digest(MD5, data);
+        MD5Digest md5Digest = new MD5Digest();
+        md5Digest.update(data, 0, data.length);
+        byte[] out = new byte[md5Digest.getDigestSize()];
+        md5Digest.doFinal(out, 0);
+        return out;
     }
 
     /**
@@ -73,14 +48,11 @@ final class WebSocketUtil {
      * @return The hashed data
      */
     static byte[] sha1(byte[] data) {
-        // TODO(normanmaurer): Create sha1 method that not need MessageDigest.
-        return digest(SHA1, data);
-    }
-
-    private static byte[] digest(FastThreadLocal<MessageDigest> digestFastThreadLocal, byte[] data) {
-        MessageDigest digest = digestFastThreadLocal.get();
-        digest.reset();
-        return digest.digest(data);
+        SHA1Digest sha1Digest = new SHA1Digest();
+        sha1Digest.update(data, 0, data.length);
+        byte[] out = new byte[sha1Digest.getDigestSize()];
+        sha1Digest.doFinal(out, 0);
+        return out;
     }
 
     /**
