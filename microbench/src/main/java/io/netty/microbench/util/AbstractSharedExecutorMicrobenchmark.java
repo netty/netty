@@ -88,12 +88,12 @@ public class AbstractSharedExecutorMicrobenchmark extends AbstractMicrobenchmark
         }
 
         @Override
-        public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+        public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
             return executor.shutdownGracefully(quietPeriod, timeout, unit);
         }
 
         @Override
-        public Future<?> terminationFuture() {
+        public Future<Void> terminationFuture() {
             return executor.terminationFuture();
         }
 

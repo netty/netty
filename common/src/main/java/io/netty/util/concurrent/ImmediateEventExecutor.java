@@ -24,7 +24,7 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
 
     public static final ImmediateEventExecutor INSTANCE = new ImmediateEventExecutor();
 
-    private final Future<?> terminationFuture = new FailedFuture<Object>(
+    private final Future<Void> terminationFuture = new FailedFuture<Void>(
             GlobalEventExecutor.INSTANCE, new UnsupportedOperationException());
 
     private ImmediateEventExecutor() {
@@ -42,12 +42,12 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
     }
 
     @Override
-    public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+    public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
         return terminationFuture();
     }
 
     @Override
-    public Future<?> terminationFuture() {
+    public Future<Void> terminationFuture() {
         return terminationFuture;
     }
 

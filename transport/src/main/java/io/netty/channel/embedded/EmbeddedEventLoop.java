@@ -89,12 +89,12 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
     }
 
     @Override
-    public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+    public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public Future<?> terminationFuture() {
+    public Future<Void> terminationFuture() {
         throw new UnsupportedOperationException();
     }
 
