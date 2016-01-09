@@ -153,7 +153,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     /**
-     * Read data froum the outbound. This may return {@code null} if nothing is readable.
+     * Read data from the outbound. This may return {@code null} if nothing is readable.
      */
     public Object readOutbound() {
         return poll(outboundMessages);
