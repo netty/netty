@@ -79,10 +79,10 @@ final class InternalAttribute extends AbstractReferenceCounted implements Interf
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof Attribute)) {
+        if (!(o instanceof InternalAttribute)) {
             return false;
         }
-        Attribute attribute = (Attribute) o;
+        InternalAttribute attribute = (InternalAttribute) o;
         return getName().equalsIgnoreCase(attribute.getName());
     }
 
