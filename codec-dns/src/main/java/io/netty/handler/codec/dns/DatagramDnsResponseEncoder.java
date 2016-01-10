@@ -28,42 +28,44 @@ import java.util.List;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
- * Encodes a {@link DatagramDnsQuery} (or an {@link AddressedEnvelope} of {@link DnsQuery}} into a
+ * Encodes a {@link DatagramDnsResponse} (or an {@link AddressedEnvelope} of {@link DnsResponse}} into a
  * {@link DatagramPacket}.
  */
 @ChannelHandler.Sharable
-public class DatagramDnsQueryEncoder extends MessageToMessageEncoder<AddressedEnvelope<DnsQuery, InetSocketAddress>> {
+public class DatagramDnsResponseEncoder
+    extends MessageToMessageEncoder<AddressedEnvelope<DnsResponse, InetSocketAddress>> {
 
     private final DnsRecordEncoder recordEncoder;
 
     /**
      * Creates a new encoder with {@linkplain DnsRecordEncoder#DEFAULT the default record encoder}.
      */
-    public DatagramDnsQueryEncoder() {
+    public DatagramDnsResponseEncoder() {
         this(DnsRecordEncoder.DEFAULT);
     }
 
     /**
      * Creates a new encoder with the specified {@code recordEncoder}.
      */
-    public DatagramDnsQueryEncoder(DnsRecordEncoder recordEncoder) {
+    public DatagramDnsResponseEncoder(DnsRecordEncoder recordEncoder) {
         this.recordEncoder = checkNotNull(recordEncoder, "recordEncoder");
     }
 
     @Override
-    protected void encode(
-        ChannelHandlerContext ctx,
-        AddressedEnvelope<DnsQuery, InetSocketAddress> in, List<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx,
+                          AddressedEnvelope<DnsResponse, InetSocketAddress> in, List<Object> out) throws Exception {
 
         final InetSocketAddress recipient = in.recipient();
-        final DnsQuery query = in.content();
+        final DnsResponse response = in.content();
         final ByteBuf buf = allocateBuffer(ctx, in);
 
         boolean success = false;
         try {
-            encodeHeader(query, buf);
-            encodeQuestions(query, buf);
-            encodeRecords(query, DnsSection.ADDITIONAL, buf);
+            encodeHeader(response, buf);
+            encodeQuestions(response, buf);
+            encodeRecords(response, DnsSection.ANSWER, buf);
+            encodeRecords(response, DnsSection.AUTHORITY, buf);
+            encodeRecords(response, DnsSection.ADDITIONAL, buf);
             success = true;
         } finally {
             if (!success) {
@@ -80,41 +82,52 @@ public class DatagramDnsQueryEncoder extends MessageToMessageEncoder<AddressedEn
      */
     protected ByteBuf allocateBuffer(
         ChannelHandlerContext ctx,
-        @SuppressWarnings("unused") AddressedEnvelope<DnsQuery, InetSocketAddress> msg) throws Exception {
+        @SuppressWarnings("unused") AddressedEnvelope<DnsResponse, InetSocketAddress> msg) throws Exception {
         return ctx.alloc().ioBuffer(1024);
     }
 
     /**
      * Encodes the header that is always 12 bytes long.
      *
-     * @param query the query header being encoded
-     * @param buf   the buffer the encoded data should be written to
+     * @param response the response header being encoded
+     * @param buf      the buffer the encoded data should be written to
      */
-    private static void encodeHeader(DnsQuery query, ByteBuf buf) {
-        buf.writeShort(query.id());
-        int flags = 0;
-        flags |= (query.opCode().byteValue() & 0xFF) << 14;
-        if (query.isRecursionDesired()) {
+    private static void encodeHeader(DnsResponse response, ByteBuf buf) {
+        buf.writeShort(response.id());
+        int flags = 32768;
+        flags |= (response.opCode().byteValue() & 0xFF) << 11;
+        if (response.isAuthoritativeAnswer()) {
+            flags |= 1 << 10;
+        }
+        if (response.isTruncated()) {
+            flags |= 1 << 9;
+        }
+        if (response.isRecursionDesired()) {
             flags |= 1 << 8;
         }
+        if (response.isRecursionAvailable()) {
+            flags |= 1 << 7;
+        }
+        flags |= response.z() << 4;
+        flags |= response.code().intValue();
         buf.writeShort(flags);
-        buf.writeShort(query.count(DnsSection.QUESTION));
-        buf.writeShort(0); // answerCount
-        buf.writeShort(0); // authorityResourceCount
-        buf.writeShort(query.count(DnsSection.ADDITIONAL));
+        buf.writeShort(response.count(DnsSection.QUESTION));
+        buf.writeShort(response.count(DnsSection.ANSWER));
+        buf.writeShort(response.count(DnsSection.AUTHORITY));
+        buf.writeShort(response.count(DnsSection.ADDITIONAL));
     }
 
-    private void encodeQuestions(DnsQuery query, ByteBuf buf) throws Exception {
-        final int count = query.count(DnsSection.QUESTION);
+    private void encodeQuestions(DnsResponse response, ByteBuf buf) throws Exception {
+        final int count = response.count(DnsSection.QUESTION);
         for (int i = 0; i < count; i++) {
-            recordEncoder.encodeQuestion((DnsQuestion) query.recordAt(DnsSection.QUESTION, i), buf);
+            recordEncoder.encodeQuestion((DnsQuestion) response.recordAt(DnsSection.QUESTION, i), buf);
         }
     }
 
-    private void encodeRecords(DnsQuery query, DnsSection section, ByteBuf buf) throws Exception {
-        final int count = query.count(section);
+    private void encodeRecords(DnsResponse response, DnsSection section, ByteBuf buf) throws Exception {
+        final int count = response.count(section);
         for (int i = 0; i < count; i++) {
-            recordEncoder.encodeRecord(query.recordAt(section, i), buf);
+            recordEncoder.encodeRecord(response.recordAt(section, i), buf);
         }
     }
 }
