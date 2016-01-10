@@ -17,11 +17,10 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerAppender;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.CombinedChannelDuplexHandler;
 import io.netty.handler.codec.PrematureChannelClosureException;
-import io.netty.util.internal.OneTimeTask;
 
 import java.util.ArrayDeque;
 import java.util.List;
@@ -42,7 +41,8 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * @see HttpServerCodec
  */
-public final class HttpClientCodec extends ChannelHandlerAppender implements HttpClientUpgradeHandler.SourceCodec {
+public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResponseDecoder, HttpRequestEncoder>
+        implements HttpClientUpgradeHandler.SourceCodec {
 
     /** A queue that is used for correlating a request and a response. */
     private final Queue<HttpMethod> queue = new ArrayDeque<HttpMethod>();
@@ -83,8 +83,7 @@ public final class HttpClientCodec extends ChannelHandlerAppender implements Htt
     public HttpClientCodec(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse,
             boolean validateHeaders) {
-        add(new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders));
-        add(new Encoder());
+        init(new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders), new Encoder());
         this.failOnMissingResponse = failOnMissingResponse;
     }
 
@@ -95,36 +94,15 @@ public final class HttpClientCodec extends ChannelHandlerAppender implements Htt
     @Override
     public void upgradeFrom(ChannelHandlerContext ctx) {
         final ChannelPipeline p = ctx.pipeline();
-        // Remove the decoder later so that the decoder can enter the 'UPGRADED' state and forward the remaining data.
-        ctx.executor().execute(new OneTimeTask() {
-            @Override
-            public void run() {
-                p.remove(decoder());
-            }
-        });
-        p.remove(encoder());
-    }
-
-    /**
-     * Returns the encoder of this codec.
-     */
-    public HttpRequestEncoder encoder() {
-        return handlerAt(1);
-    }
-
-    /**
-     * Returns the decoder of this codec.
-     */
-    public HttpResponseDecoder decoder() {
-        return handlerAt(0);
+        p.remove(this);
     }
 
     public void setSingleDecode(boolean singleDecode) {
-        decoder().setSingleDecode(singleDecode);
+        inboundHandler().setSingleDecode(singleDecode);
     }
 
     public boolean isSingleDecode() {
-        return decoder().isSingleDecode();
+        return inboundHandler().isSingleDecode();
     }
 
     private final class Encoder extends HttpRequestEncoder {
