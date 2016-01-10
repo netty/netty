@@ -101,12 +101,12 @@ public final class HttpProxyHandler extends ProxyHandler {
 
     @Override
     protected void removeEncoder(ChannelHandlerContext ctx) throws Exception {
-        ctx.pipeline().remove(codec.encoder());
+        codec.removeOutboundHandler();
     }
 
     @Override
     protected void removeDecoder(ChannelHandlerContext ctx) throws Exception {
-        ctx.pipeline().remove(codec.decoder());
+        codec.removeInboundHandler();
     }
 
     @Override

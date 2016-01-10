@@ -337,7 +337,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         return invoker;
     }
 
-    String generateName(ChannelHandler handler) {
+    private String generateName(ChannelHandler handler) {
         Map<Class<?>, String> cache = nameCaches.get();
         Class<?> handlerType = handler.getClass();
         String name = cache.get(handlerType);
@@ -416,7 +416,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         return context;
     }
 
-    void remove0(AbstractChannelHandlerContext ctx) {
+    private void remove0(AbstractChannelHandlerContext ctx) {
         AbstractChannelHandlerContext prev = ctx.prev;
         AbstractChannelHandlerContext next = ctx.next;
         prev.next = next;
