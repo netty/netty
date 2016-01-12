@@ -15,6 +15,7 @@
  */
 #define _GNU_SOURCE
 #include <jni.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -270,7 +271,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollCreate(JNIEnv* en
 }
 
 JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollWait0(JNIEnv* env, jclass clazz, jint efd, jlong address, jint len, jint timeout) {
-    struct epoll_event *ev = (struct epoll_event*) address;
+    struct epoll_event *ev = (struct epoll_event*) (intptr_t) address;
     int ready;
     int err;
 
@@ -337,7 +338,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_sendmmsg0(JNIEnv* env,
         msg[i].msg_hdr.msg_name = &addr;
         msg[i].msg_hdr.msg_namelen = sizeof(addr);
 
-        msg[i].msg_hdr.msg_iov = (struct iovec*) (*env)->GetLongField(env, packet, packetMemoryAddressFieldId);
+        msg[i].msg_hdr.msg_iov = (struct iovec*) (intptr_t) (*env)->GetLongField(env, packet, packetMemoryAddressFieldId);
         msg[i].msg_hdr.msg_iovlen = (*env)->GetIntField(env, packet, packetCountFieldId);;
     }
 
