@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2016 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,14 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.buffer;
+
 
 import io.netty.util.ByteProcessor;
 import io.netty.util.ResourceLeak;
-import io.netty.util.internal.SystemPropertyUtil;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,33 +27,18 @@ import java.nio.ByteOrder;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
+import java.util.Iterator;
+import java.util.List;
 
-final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
+import static io.netty.buffer.AdvancedLeakAwareByteBuf.recordLeakNonRefCountingOperation;
 
-    private static final String PROP_ACQUIRE_AND_RELEASE_ONLY = "io.netty.leakDetection.acquireAndReleaseOnly";
-    private static final boolean ACQUIRE_AND_RELEASE_ONLY;
-
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(AdvancedLeakAwareByteBuf.class);
-
-    static {
-        ACQUIRE_AND_RELEASE_ONLY = SystemPropertyUtil.getBoolean(PROP_ACQUIRE_AND_RELEASE_ONLY, false);
-
-        if (logger.isDebugEnabled()) {
-            logger.debug("-D{}: {}", PROP_ACQUIRE_AND_RELEASE_ONLY, ACQUIRE_AND_RELEASE_ONLY);
-        }
-    }
+final class AdvancedLeakAwareCompositeByteBuf extends WrappedCompositeByteBuf {
 
     private final ResourceLeak leak;
 
-    AdvancedLeakAwareByteBuf(ByteBuf buf, ResourceLeak leak) {
-        super(buf);
+    AdvancedLeakAwareCompositeByteBuf(CompositeByteBuf wrapped, ResourceLeak leak) {
+        super(wrapped);
         this.leak = leak;
-    }
-
-    static void recordLeakNonRefCountingOperation(ResourceLeak leak) {
-        if (!ACQUIRE_AND_RELEASE_ONLY) {
-            leak.record();
-        }
     }
 
     @Override
@@ -94,19 +76,19 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
-    public ByteBuf discardReadBytes() {
+    public CompositeByteBuf discardReadBytes() {
         recordLeakNonRefCountingOperation(leak);
         return super.discardReadBytes();
     }
 
     @Override
-    public ByteBuf discardSomeReadBytes() {
+    public CompositeByteBuf discardSomeReadBytes() {
         recordLeakNonRefCountingOperation(leak);
         return super.discardSomeReadBytes();
     }
 
     @Override
-    public ByteBuf ensureWritable(int minWritableBytes) {
+    public CompositeByteBuf ensureWritable(int minWritableBytes) {
         recordLeakNonRefCountingOperation(leak);
         return super.ensureWritable(minWritableBytes);
     }
@@ -196,43 +178,43 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
-    public ByteBuf getBytes(int index, ByteBuf dst) {
+    public CompositeByteBuf getBytes(int index, ByteBuf dst) {
         recordLeakNonRefCountingOperation(leak);
         return super.getBytes(index, dst);
     }
 
     @Override
-    public ByteBuf getBytes(int index, ByteBuf dst, int length) {
+    public CompositeByteBuf getBytes(int index, ByteBuf dst, int length) {
         recordLeakNonRefCountingOperation(leak);
         return super.getBytes(index, dst, length);
     }
 
     @Override
-    public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
+    public CompositeByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         recordLeakNonRefCountingOperation(leak);
         return super.getBytes(index, dst, dstIndex, length);
     }
 
     @Override
-    public ByteBuf getBytes(int index, byte[] dst) {
+    public CompositeByteBuf getBytes(int index, byte[] dst) {
         recordLeakNonRefCountingOperation(leak);
         return super.getBytes(index, dst);
     }
 
     @Override
-    public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
+    public CompositeByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
         recordLeakNonRefCountingOperation(leak);
         return super.getBytes(index, dst, dstIndex, length);
     }
 
     @Override
-    public ByteBuf getBytes(int index, ByteBuffer dst) {
+    public CompositeByteBuf getBytes(int index, ByteBuffer dst) {
         recordLeakNonRefCountingOperation(leak);
         return super.getBytes(index, dst);
     }
 
     @Override
-    public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
+    public CompositeByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
         recordLeakNonRefCountingOperation(leak);
         return super.getBytes(index, out, length);
     }
@@ -244,91 +226,91 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
-    public ByteBuf setBoolean(int index, boolean value) {
+    public CompositeByteBuf setBoolean(int index, boolean value) {
         recordLeakNonRefCountingOperation(leak);
         return super.setBoolean(index, value);
     }
 
     @Override
-    public ByteBuf setByte(int index, int value) {
+    public CompositeByteBuf setByte(int index, int value) {
         recordLeakNonRefCountingOperation(leak);
         return super.setByte(index, value);
     }
 
     @Override
-    public ByteBuf setShort(int index, int value) {
+    public CompositeByteBuf setShort(int index, int value) {
         recordLeakNonRefCountingOperation(leak);
         return super.setShort(index, value);
     }
 
     @Override
-    public ByteBuf setMedium(int index, int value) {
+    public CompositeByteBuf setMedium(int index, int value) {
         recordLeakNonRefCountingOperation(leak);
         return super.setMedium(index, value);
     }
 
     @Override
-    public ByteBuf setInt(int index, int value) {
+    public CompositeByteBuf setInt(int index, int value) {
         recordLeakNonRefCountingOperation(leak);
         return super.setInt(index, value);
     }
 
     @Override
-    public ByteBuf setLong(int index, long value) {
+    public CompositeByteBuf setLong(int index, long value) {
         recordLeakNonRefCountingOperation(leak);
         return super.setLong(index, value);
     }
 
     @Override
-    public ByteBuf setChar(int index, int value) {
+    public CompositeByteBuf setChar(int index, int value) {
         recordLeakNonRefCountingOperation(leak);
         return super.setChar(index, value);
     }
 
     @Override
-    public ByteBuf setFloat(int index, float value) {
+    public CompositeByteBuf setFloat(int index, float value) {
         recordLeakNonRefCountingOperation(leak);
         return super.setFloat(index, value);
     }
 
     @Override
-    public ByteBuf setDouble(int index, double value) {
+    public CompositeByteBuf setDouble(int index, double value) {
         recordLeakNonRefCountingOperation(leak);
         return super.setDouble(index, value);
     }
 
     @Override
-    public ByteBuf setBytes(int index, ByteBuf src) {
+    public CompositeByteBuf setBytes(int index, ByteBuf src) {
         recordLeakNonRefCountingOperation(leak);
         return super.setBytes(index, src);
     }
 
     @Override
-    public ByteBuf setBytes(int index, ByteBuf src, int length) {
+    public CompositeByteBuf setBytes(int index, ByteBuf src, int length) {
         recordLeakNonRefCountingOperation(leak);
         return super.setBytes(index, src, length);
     }
 
     @Override
-    public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
+    public CompositeByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         recordLeakNonRefCountingOperation(leak);
         return super.setBytes(index, src, srcIndex, length);
     }
 
     @Override
-    public ByteBuf setBytes(int index, byte[] src) {
+    public CompositeByteBuf setBytes(int index, byte[] src) {
         recordLeakNonRefCountingOperation(leak);
         return super.setBytes(index, src);
     }
 
     @Override
-    public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
+    public CompositeByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
         recordLeakNonRefCountingOperation(leak);
         return super.setBytes(index, src, srcIndex, length);
     }
 
     @Override
-    public ByteBuf setBytes(int index, ByteBuffer src) {
+    public CompositeByteBuf setBytes(int index, ByteBuffer src) {
         recordLeakNonRefCountingOperation(leak);
         return super.setBytes(index, src);
     }
@@ -346,7 +328,7 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
-    public ByteBuf setZero(int index, int length) {
+    public CompositeByteBuf setZero(int index, int length) {
         recordLeakNonRefCountingOperation(leak);
         return super.setZero(index, length);
     }
@@ -436,43 +418,43 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
-    public ByteBuf readBytes(ByteBuf dst) {
+    public CompositeByteBuf readBytes(ByteBuf dst) {
         recordLeakNonRefCountingOperation(leak);
         return super.readBytes(dst);
     }
 
     @Override
-    public ByteBuf readBytes(ByteBuf dst, int length) {
+    public CompositeByteBuf readBytes(ByteBuf dst, int length) {
         recordLeakNonRefCountingOperation(leak);
         return super.readBytes(dst, length);
     }
 
     @Override
-    public ByteBuf readBytes(ByteBuf dst, int dstIndex, int length) {
+    public CompositeByteBuf readBytes(ByteBuf dst, int dstIndex, int length) {
         recordLeakNonRefCountingOperation(leak);
         return super.readBytes(dst, dstIndex, length);
     }
 
     @Override
-    public ByteBuf readBytes(byte[] dst) {
+    public CompositeByteBuf readBytes(byte[] dst) {
         recordLeakNonRefCountingOperation(leak);
         return super.readBytes(dst);
     }
 
     @Override
-    public ByteBuf readBytes(byte[] dst, int dstIndex, int length) {
+    public CompositeByteBuf readBytes(byte[] dst, int dstIndex, int length) {
         recordLeakNonRefCountingOperation(leak);
         return super.readBytes(dst, dstIndex, length);
     }
 
     @Override
-    public ByteBuf readBytes(ByteBuffer dst) {
+    public CompositeByteBuf readBytes(ByteBuffer dst) {
         recordLeakNonRefCountingOperation(leak);
         return super.readBytes(dst);
     }
 
     @Override
-    public ByteBuf readBytes(OutputStream out, int length) throws IOException {
+    public CompositeByteBuf readBytes(OutputStream out, int length) throws IOException {
         recordLeakNonRefCountingOperation(leak);
         return super.readBytes(out, length);
     }
@@ -484,97 +466,97 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
-    public ByteBuf skipBytes(int length) {
+    public CompositeByteBuf skipBytes(int length) {
         recordLeakNonRefCountingOperation(leak);
         return super.skipBytes(length);
     }
 
     @Override
-    public ByteBuf writeBoolean(boolean value) {
+    public CompositeByteBuf writeBoolean(boolean value) {
         recordLeakNonRefCountingOperation(leak);
         return super.writeBoolean(value);
     }
 
     @Override
-    public ByteBuf writeByte(int value) {
+    public CompositeByteBuf writeByte(int value) {
         recordLeakNonRefCountingOperation(leak);
         return super.writeByte(value);
     }
 
     @Override
-    public ByteBuf writeShort(int value) {
+    public CompositeByteBuf writeShort(int value) {
         recordLeakNonRefCountingOperation(leak);
         return super.writeShort(value);
     }
 
     @Override
-    public ByteBuf writeMedium(int value) {
+    public CompositeByteBuf writeMedium(int value) {
         recordLeakNonRefCountingOperation(leak);
         return super.writeMedium(value);
     }
 
     @Override
-    public ByteBuf writeInt(int value) {
+    public CompositeByteBuf writeInt(int value) {
         recordLeakNonRefCountingOperation(leak);
         return super.writeInt(value);
     }
 
     @Override
-    public ByteBuf writeLong(long value) {
+    public CompositeByteBuf writeLong(long value) {
         recordLeakNonRefCountingOperation(leak);
         return super.writeLong(value);
     }
 
     @Override
-    public ByteBuf writeChar(int value) {
+    public CompositeByteBuf writeChar(int value) {
         recordLeakNonRefCountingOperation(leak);
         return super.writeChar(value);
     }
 
     @Override
-    public ByteBuf writeFloat(float value) {
+    public CompositeByteBuf writeFloat(float value) {
         recordLeakNonRefCountingOperation(leak);
         return super.writeFloat(value);
     }
 
     @Override
-    public ByteBuf writeDouble(double value) {
+    public CompositeByteBuf writeDouble(double value) {
         recordLeakNonRefCountingOperation(leak);
         return super.writeDouble(value);
     }
 
     @Override
-    public ByteBuf writeBytes(ByteBuf src) {
+    public CompositeByteBuf writeBytes(ByteBuf src) {
         recordLeakNonRefCountingOperation(leak);
         return super.writeBytes(src);
     }
 
     @Override
-    public ByteBuf writeBytes(ByteBuf src, int length) {
+    public CompositeByteBuf writeBytes(ByteBuf src, int length) {
         recordLeakNonRefCountingOperation(leak);
         return super.writeBytes(src, length);
     }
 
     @Override
-    public ByteBuf writeBytes(ByteBuf src, int srcIndex, int length) {
+    public CompositeByteBuf writeBytes(ByteBuf src, int srcIndex, int length) {
         recordLeakNonRefCountingOperation(leak);
         return super.writeBytes(src, srcIndex, length);
     }
 
     @Override
-    public ByteBuf writeBytes(byte[] src) {
+    public CompositeByteBuf writeBytes(byte[] src) {
         recordLeakNonRefCountingOperation(leak);
         return super.writeBytes(src);
     }
 
     @Override
-    public ByteBuf writeBytes(byte[] src, int srcIndex, int length) {
+    public CompositeByteBuf writeBytes(byte[] src, int srcIndex, int length) {
         recordLeakNonRefCountingOperation(leak);
         return super.writeBytes(src, srcIndex, length);
     }
 
     @Override
-    public ByteBuf writeBytes(ByteBuffer src) {
+    public CompositeByteBuf writeBytes(ByteBuffer src) {
         recordLeakNonRefCountingOperation(leak);
         return super.writeBytes(src);
     }
@@ -592,7 +574,7 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
-    public ByteBuf writeZero(int length) {
+    public CompositeByteBuf writeZero(int length) {
         recordLeakNonRefCountingOperation(leak);
         return super.writeZero(length);
     }
@@ -706,7 +688,7 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
-    public ByteBuf capacity(int newCapacity) {
+    public CompositeByteBuf capacity(int newCapacity) {
         recordLeakNonRefCountingOperation(leak);
         return super.capacity(newCapacity);
     }
@@ -724,15 +706,15 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
-    public int getMediumLE(int index) {
-        recordLeakNonRefCountingOperation(leak);
-        return super.getMediumLE(index);
-    }
-
-    @Override
     public int getUnsignedMediumLE(int index) {
         recordLeakNonRefCountingOperation(leak);
         return super.getUnsignedMediumLE(index);
+    }
+
+    @Override
+    public int getMediumLE(int index) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.getMediumLE(index);
     }
 
     @Override
@@ -760,15 +742,15 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
-    public ByteBuf setIntLE(int index, int value) {
-        recordLeakNonRefCountingOperation(leak);
-        return super.setIntLE(index, value);
-    }
-
-    @Override
     public ByteBuf setMediumLE(int index, int value) {
         recordLeakNonRefCountingOperation(leak);
         return super.setMediumLE(index, value);
+    }
+
+    @Override
+    public ByteBuf setIntLE(int index, int value) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.setIntLE(index, value);
     }
 
     @Override
@@ -844,25 +826,103 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
-    public ByteBuf retain() {
+    public CompositeByteBuf addComponent(ByteBuf buffer) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.addComponent(buffer);
+    }
+
+    @Override
+    public CompositeByteBuf addComponents(ByteBuf... buffers) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.addComponents(buffers);
+    }
+
+    @Override
+    public CompositeByteBuf addComponents(Iterable<ByteBuf> buffers) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.addComponents(buffers);
+    }
+
+    @Override
+    public CompositeByteBuf addComponent(int cIndex, ByteBuf buffer) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.addComponent(cIndex, buffer);
+    }
+
+    @Override
+    public CompositeByteBuf addComponents(int cIndex, ByteBuf... buffers) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.addComponents(cIndex, buffers);
+    }
+
+    @Override
+    public CompositeByteBuf removeComponent(int cIndex) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.removeComponent(cIndex);
+    }
+
+    @Override
+    public CompositeByteBuf addComponents(int cIndex, Iterable<ByteBuf> buffers) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.addComponents(cIndex, buffers);
+    }
+
+    @Override
+    public CompositeByteBuf removeComponents(int cIndex, int numComponents) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.removeComponents(cIndex, numComponents);
+    }
+
+    @Override
+    public Iterator<ByteBuf> iterator() {
+        recordLeakNonRefCountingOperation(leak);
+        return super.iterator();
+    }
+
+    @Override
+    public List<ByteBuf> decompose(int offset, int length) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.decompose(offset, length);
+    }
+
+    @Override
+    public CompositeByteBuf consolidate() {
+        recordLeakNonRefCountingOperation(leak);
+        return super.consolidate();
+    }
+
+    @Override
+    public CompositeByteBuf discardReadComponents() {
+        recordLeakNonRefCountingOperation(leak);
+        return super.discardReadComponents();
+    }
+
+    @Override
+    public CompositeByteBuf consolidate(int cIndex, int numComponents) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.consolidate(cIndex, numComponents);
+    }
+
+    @Override
+    public CompositeByteBuf retain() {
         leak.record();
         return super.retain();
     }
 
     @Override
-    public ByteBuf retain(int increment) {
+    public CompositeByteBuf retain(int increment) {
         leak.record();
         return super.retain(increment);
     }
 
     @Override
-    public ByteBuf touch() {
+    public CompositeByteBuf touch() {
         leak.record();
         return this;
     }
 
     @Override
-    public ByteBuf touch(Object hint) {
+    public CompositeByteBuf touch(Object hint) {
         leak.record(hint);
         return this;
     }
