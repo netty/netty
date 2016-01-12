@@ -81,11 +81,16 @@ public interface ByteProcessor {
     ByteProcessor FIND_NON_LF = new IndexNotOfProcessor((byte) '\n');
 
     /**
+     * Aborts on a {@code CR (';')}.
+     */
+    ByteProcessor FIND_SEMI_COLON = new IndexOfProcessor((byte) ';');
+
+    /**
      * Aborts on a {@code CR ('\r')} or a {@code LF ('\n')}.
      */
     ByteProcessor FIND_CRLF = new ByteProcessor() {
         @Override
-        public boolean process(byte value) throws Exception {
+        public boolean process(byte value) {
             return value != '\r' && value != '\n';
         }
     };
@@ -95,7 +100,7 @@ public interface ByteProcessor {
      */
     ByteProcessor FIND_NON_CRLF = new ByteProcessor() {
         @Override
-        public boolean process(byte value) throws Exception {
+        public boolean process(byte value) {
             return value == '\r' || value == '\n';
         }
     };
@@ -105,7 +110,7 @@ public interface ByteProcessor {
      */
     ByteProcessor FIND_LINEAR_WHITESPACE = new ByteProcessor() {
         @Override
-        public boolean process(byte value) throws Exception {
+        public boolean process(byte value) {
             return value != ' ' && value != '\t';
         }
     };
@@ -115,18 +120,8 @@ public interface ByteProcessor {
      */
     ByteProcessor FIND_NON_LINEAR_WHITESPACE = new ByteProcessor() {
         @Override
-        public boolean process(byte value) throws Exception {
+        public boolean process(byte value) {
             return value == ' ' || value == '\t';
-        }
-    };
-
-    /**
-     * Aborts on a {@code CR (';')}.
-     */
-    ByteProcessor FIND_SEMI_COLON = new ByteProcessor() {
-        @Override
-        public boolean process(byte value) throws Exception {
-            return value != ';';
         }
     };
 

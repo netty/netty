@@ -14,18 +14,6 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http.HttpScheme.HTTP;
-import static io.netty.handler.codec.http.HttpScheme.HTTPS;
-import static io.netty.handler.codec.http.HttpUtil.isAsteriskForm;
-import static io.netty.handler.codec.http.HttpUtil.isOriginForm;
-import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
-import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static io.netty.handler.codec.http2.Http2Exception.streamError;
-import static io.netty.util.AsciiString.EMPTY_STRING;
-import static io.netty.util.ByteProcessor.FIND_SEMI_COLON;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import static io.netty.util.internal.StringUtil.isNullOrEmpty;
-import static io.netty.util.internal.StringUtil.length;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpMessage;
@@ -46,6 +34,19 @@ import io.netty.util.AsciiString;
 import java.net.URI;
 import java.util.Iterator;
 import java.util.Map.Entry;
+
+import static io.netty.handler.codec.http.HttpScheme.HTTP;
+import static io.netty.handler.codec.http.HttpScheme.HTTPS;
+import static io.netty.handler.codec.http.HttpUtil.isAsteriskForm;
+import static io.netty.handler.codec.http.HttpUtil.isOriginForm;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.handler.codec.http2.Http2Exception.streamError;
+import static io.netty.util.AsciiString.EMPTY_STRING;
+import static io.netty.util.ByteProcessor.FIND_SEMI_COLON;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.StringUtil.isNullOrEmpty;
+import static io.netty.util.internal.StringUtil.length;
 
 /**
  * Provides utility methods and constants for the HTTP/2 to HTTP conversion
@@ -288,7 +289,7 @@ public final class HttpConversionUtil {
      * </ul>
      * {@link ExtensionHeaderNames#PATH} is ignored and instead extracted from the {@code Request-Line}.
      */
-    public static Http2Headers toHttp2Headers(HttpMessage in, boolean validateHeaders) throws Exception {
+    public static Http2Headers toHttp2Headers(HttpMessage in, boolean validateHeaders) {
         HttpHeaders inHeaders = in.headers();
         final Http2Headers out = new DefaultHttp2Headers(validateHeaders, inHeaders.size());
         if (in instanceof HttpRequest) {
@@ -313,7 +314,7 @@ public final class HttpConversionUtil {
         return out;
     }
 
-    public static Http2Headers toHttp2Headers(HttpHeaders inHeaders, boolean validateHeaders) throws Exception {
+    public static Http2Headers toHttp2Headers(HttpHeaders inHeaders, boolean validateHeaders) {
         if (inHeaders.isEmpty()) {
             return EmptyHttp2Headers.INSTANCE;
         }
@@ -323,7 +324,7 @@ public final class HttpConversionUtil {
         return out;
     }
 
-    public static void toHttp2Headers(HttpHeaders inHeaders, Http2Headers out) throws Exception {
+    public static void toHttp2Headers(HttpHeaders inHeaders, Http2Headers out) {
         Iterator<Entry<CharSequence, CharSequence>> iter = inHeaders.iteratorCharSequence();
         while (iter.hasNext()) {
             Entry<CharSequence, CharSequence> entry = iter.next();
@@ -339,21 +340,27 @@ public final class HttpConversionUtil {
                     AsciiString value = AsciiString.of(entry.getValue());
                     // split up cookies to allow for better compression
                     // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
-                    int index = value.forEachByte(FIND_SEMI_COLON);
-                    if (index != -1) {
-                        int start = 0;
-                        do {
-                            out.add(HttpHeaderNames.COOKIE, value.subSequence(start, index, false));
-                            // skip 2 characters "; " (see https://tools.ietf.org/html/rfc6265#section-4.2.1)
-                            start = index + 2;
-                        } while (start < value.length() &&
-                                (index = value.forEachByte(start, value.length() - start, FIND_SEMI_COLON)) != -1);
-                        if (start >= value.length()) {
-                            throw new IllegalArgumentException("cookie value is of unexpected format: " + value);
+                    try {
+                        int index = value.forEachByte(FIND_SEMI_COLON);
+                        if (index != -1) {
+                            int start = 0;
+                            do {
+                                out.add(HttpHeaderNames.COOKIE, value.subSequence(start, index, false));
+                                // skip 2 characters "; " (see https://tools.ietf.org/html/rfc6265#section-4.2.1)
+                                start = index + 2;
+                            } while (start < value.length() &&
+                                    (index = value.forEachByte(start, value.length() - start, FIND_SEMI_COLON)) != -1);
+                            if (start >= value.length()) {
+                                throw new IllegalArgumentException("cookie value is of unexpected format: " + value);
+                            }
+                            out.add(HttpHeaderNames.COOKIE, value.subSequence(start, value.length(), false));
+                        } else {
+                            out.add(HttpHeaderNames.COOKIE, value);
                         }
-                        out.add(HttpHeaderNames.COOKIE, value.subSequence(start, value.length(), false));
-                    } else {
-                        out.add(HttpHeaderNames.COOKIE, value);
+                    } catch (Exception e) {
+                        // This is not expect to happen because FIND_SEMI_COLON never throws but must be caught
+                        // because of the ByteProcessor interface.
+                        throw new IllegalStateException(e);
                     }
                 } else {
                     out.add(aName, entry.getValue());
