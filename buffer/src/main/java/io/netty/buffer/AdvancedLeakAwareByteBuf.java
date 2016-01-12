@@ -635,7 +635,6 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
 
     @Override
     public int forEachByteDesc(ByteProcessor processor) {
-                recordLeakNonRefCountingOperation();
         recordLeakNonRefCountingOperation();
         return super.forEachByteDesc(processor);
     }
