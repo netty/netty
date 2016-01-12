@@ -15,7 +15,6 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.ResourceLeak;
 import io.netty.util.internal.EmptyArrays;
 
 import java.io.IOException;
@@ -44,10 +43,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     private static final ByteBuffer EMPTY_NIO_BUFFER = Unpooled.EMPTY_BUFFER.nioBuffer();
     private static final Iterator<ByteBuf> EMPTY_ITERATOR = Collections.<ByteBuf>emptyList().iterator();
 
-    private final ResourceLeak leak;
     private final ByteBufAllocator alloc;
     private final boolean direct;
-    private final List<Component> components = new ArrayList<Component>();
+    private final List<Component> components;
     private final int maxNumComponents;
 
     private boolean freed;
@@ -60,7 +58,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         this.alloc = alloc;
         this.direct = direct;
         this.maxNumComponents = maxNumComponents;
-        leak = leakDetector.open(this);
+        components = newList(maxNumComponents);
     }
 
     public CompositeByteBuf(ByteBufAllocator alloc, boolean direct, int maxNumComponents, ByteBuf... buffers) {
@@ -76,11 +74,11 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         this.alloc = alloc;
         this.direct = direct;
         this.maxNumComponents = maxNumComponents;
+        components = newList(maxNumComponents);
 
         addComponents0(0, buffers);
         consolidateIfNeeded();
         setIndex(0, capacity());
-        leak = leakDetector.open(this);
     }
 
     public CompositeByteBuf(
@@ -97,10 +95,24 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         this.alloc = alloc;
         this.direct = direct;
         this.maxNumComponents = maxNumComponents;
+        components = newList(maxNumComponents);
+
         addComponents0(0, buffers);
         consolidateIfNeeded();
         setIndex(0, capacity());
-        leak = leakDetector.open(this);
+    }
+
+    private static List<Component> newList(int maxNumComponents) {
+        return new ArrayList<Component>(Math.min(AbstractByteBufAllocator.DEFAULT_MAX_COMPONENTS, maxNumComponents));
+    }
+
+    // Special constructor used by WrappedCompositeByteBuf
+    CompositeByteBuf(ByteBufAllocator alloc) {
+        super(Integer.MAX_VALUE);
+        this.alloc = alloc;
+        direct = false;
+        maxNumComponents = 0;
+        components = Collections.emptyList();
     }
 
     /**
@@ -1623,10 +1635,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         // see https://github.com/netty/netty/issues/2642
         for (int i = 0; i < size; i++) {
             components.get(i).freeIfNecessary();
-        }
-
-        if (leak != null) {
-            leak.close();
         }
     }
 
