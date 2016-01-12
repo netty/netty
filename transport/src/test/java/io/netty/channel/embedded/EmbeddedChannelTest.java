@@ -23,16 +23,21 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ScheduledFuture;
-import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayDeque;
+import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+
+import static org.junit.Assert.*;
 
 public class EmbeddedChannelTest {
 
@@ -55,12 +60,12 @@ public class EmbeddedChannelTest {
             }
         });
         ChannelPipeline pipeline = channel.pipeline();
-        Assert.assertSame(handler, pipeline.firstContext().handler());
-        Assert.assertTrue(channel.writeInbound(3));
-        Assert.assertTrue(channel.finish());
-        Assert.assertSame(first, channel.readInbound());
-        Assert.assertSame(second, channel.readInbound());
-        Assert.assertNull(channel.readInbound());
+        assertSame(handler, pipeline.firstContext().handler());
+        assertTrue(channel.writeInbound(3));
+        assertTrue(channel.finish());
+        assertSame(first, channel.readInbound());
+        assertSame(second, channel.readInbound());
+        assertNull(channel.readInbound());
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
@@ -81,11 +86,11 @@ public class EmbeddedChannelTest {
             }
         });
         long next = ch.runScheduledPendingTasks();
-        Assert.assertTrue(next > 0);
+        assertTrue(next > 0);
         // Sleep for the nanoseconds but also give extra 50ms as the clock my not be very precise and so fail the test
         // otherwise.
         Thread.sleep(TimeUnit.NANOSECONDS.toMillis(next) + 50);
-        Assert.assertEquals(-1, ch.runScheduledPendingTasks());
+        assertEquals(-1, ch.runScheduledPendingTasks());
         latch.await();
     }
 
@@ -97,7 +102,7 @@ public class EmbeddedChannelTest {
             public void run() { }
         }, 1, TimeUnit.DAYS);
         ch.finish();
-        Assert.assertTrue(future.isCancelled());
+        assertTrue(future.isCancelled());
     }
 
     @Test(timeout = 3000)
@@ -108,7 +113,7 @@ public class EmbeddedChannelTest {
             @Override
             public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
                 try {
-                    Assert.assertTrue(ctx.executor().inEventLoop());
+                    assertTrue(ctx.executor().inEventLoop());
                 } catch (Throwable cause) {
                     error.set(cause);
                 } finally {
@@ -117,7 +122,7 @@ public class EmbeddedChannelTest {
             }
         };
         EmbeddedChannel channel = new EmbeddedChannel(handler);
-        Assert.assertFalse(channel.finish());
+        assertFalse(channel.finish());
         latch.await();
         Throwable cause = error.get();
         if (cause != null) {
@@ -128,20 +133,20 @@ public class EmbeddedChannelTest {
     @Test
     public void testConstructWithOutHandler() {
         EmbeddedChannel channel = new EmbeddedChannel();
-        Assert.assertTrue(channel.writeInbound(1));
-        Assert.assertTrue(channel.writeOutbound(2));
-        Assert.assertTrue(channel.finish());
-        Assert.assertSame(1, channel.readInbound());
-        Assert.assertNull(channel.readInbound());
-        Assert.assertSame(2, channel.readOutbound());
-        Assert.assertNull(channel.readOutbound());
+        assertTrue(channel.writeInbound(1));
+        assertTrue(channel.writeOutbound(2));
+        assertTrue(channel.finish());
+        assertSame(1, channel.readInbound());
+        assertNull(channel.readInbound());
+        assertSame(2, channel.readOutbound());
+        assertNull(channel.readOutbound());
     }
 
     @Test
     public void testConstructWithChannelId() {
         ChannelId channelId = new CustomChannelId(1);
         EmbeddedChannel channel = new EmbeddedChannel(channelId);
-        Assert.assertSame(channelId, channel.id());
+        assertSame(channelId, channel.id());
     }
 
     // See https://github.com/netty/netty/issues/4316.
@@ -204,5 +209,50 @@ public class EmbeddedChannelTest {
 
     private interface Action {
         ChannelFuture doRun(Channel channel);
+    }
+
+    @Test
+    public void testHasDisconnect() {
+        EventOutboundHandler handler = new EventOutboundHandler();
+        EmbeddedChannel channel = new EmbeddedChannel(true, handler);
+        assertTrue(channel.disconnect().isSuccess());
+        assertTrue(channel.close().isSuccess());
+        assertEquals(EventOutboundHandler.DISCONNECT, handler.pollEvent());
+        assertEquals(EventOutboundHandler.CLOSE, handler.pollEvent());
+        assertNull(handler.pollEvent());
+    }
+
+    @Test
+    public void testHasNoDisconnect() {
+        EventOutboundHandler handler = new EventOutboundHandler();
+        EmbeddedChannel channel = new EmbeddedChannel(false, handler);
+        assertTrue(channel.disconnect().isSuccess());
+        assertTrue(channel.close().isSuccess());
+        assertEquals(EventOutboundHandler.CLOSE, handler.pollEvent());
+        assertEquals(EventOutboundHandler.CLOSE, handler.pollEvent());
+        assertNull(handler.pollEvent());
+    }
+
+    private static final class EventOutboundHandler extends ChannelOutboundHandlerAdapter {
+        static final Integer DISCONNECT = 0;
+        static final Integer CLOSE = 1;
+
+        private final Queue<Integer> queue = new ArrayDeque<Integer>();
+
+        @Override
+        public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            queue.add(DISCONNECT);
+            promise.setSuccess();
+        }
+
+        @Override
+        public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            queue.add(CLOSE);
+            promise.setSuccess();
+        }
+
+        Integer pollEvent() {
+            return queue.poll();
+        }
     }
 }
