@@ -230,7 +230,7 @@ public final class Unpooled {
      * content will be visible to the returned buffer.
      */
     public static ByteBuf wrappedBuffer(byte[]... arrays) {
-        return wrappedBuffer(16, arrays);
+        return wrappedBuffer(AbstractByteBufAllocator.DEFAULT_MAX_COMPONENTS, arrays);
     }
 
     /**
@@ -241,7 +241,7 @@ public final class Unpooled {
      * @return The readable portion of the {@code buffers}. The caller is responsible for releasing this buffer.
      */
     public static ByteBuf wrappedBuffer(ByteBuf... buffers) {
-        return wrappedBuffer(16, buffers);
+        return wrappedBuffer(AbstractByteBufAllocator.DEFAULT_MAX_COMPONENTS, buffers);
     }
 
     /**
@@ -250,7 +250,7 @@ public final class Unpooled {
      * specified buffers will be visible to the returned buffer.
      */
     public static ByteBuf wrappedBuffer(ByteBuffer... buffers) {
-        return wrappedBuffer(16, buffers);
+        return wrappedBuffer(AbstractByteBufAllocator.DEFAULT_MAX_COMPONENTS, buffers);
     }
 
     /**
@@ -358,7 +358,7 @@ public final class Unpooled {
      * Returns a new big-endian composite buffer with no components.
      */
     public static CompositeByteBuf compositeBuffer() {
-        return compositeBuffer(16);
+        return compositeBuffer(AbstractByteBufAllocator.DEFAULT_MAX_COMPONENTS);
     }
 
     /**
