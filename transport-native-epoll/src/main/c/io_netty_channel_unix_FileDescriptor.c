@@ -15,6 +15,7 @@
  */
 #include <errno.h>
 #include <fcntl.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/uio.h>
@@ -158,12 +159,12 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_unix_FileDescriptor_write(JNIEnv* e
 }
 
 JNIEXPORT jint JNICALL Java_io_netty_channel_unix_FileDescriptor_writeAddress(JNIEnv* env, jclass clazz, jint fd, jlong address, jint pos, jint limit) {
-    return _write(env, clazz, fd, (void*) address, pos, limit);
+    return _write(env, clazz, fd, (void*) (intptr_t) address, pos, limit);
 }
 
 
 JNIEXPORT jlong JNICALL Java_io_netty_channel_unix_FileDescriptor_writevAddresses(JNIEnv* env, jclass clazz, jint fd, jlong memoryAddress, jint length) {
-    struct iovec* iov = (struct iovec*) memoryAddress;
+    struct iovec* iov = (struct iovec*) (intptr_t) memoryAddress;
     return _writev(env, clazz, fd, iov, length);
 }
 
@@ -211,7 +212,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_unix_FileDescriptor_read(JNIEnv* en
 }
 
 JNIEXPORT jint JNICALL Java_io_netty_channel_unix_FileDescriptor_readAddress(JNIEnv* env, jclass clazz, jint fd, jlong address, jint pos, jint limit) {
-    return _read(env, clazz, fd, (void*) address, pos, limit);
+    return _read(env, clazz, fd, (void*) (intptr_t) address, pos, limit);
 }
 
 JNIEXPORT jlong JNICALL Java_io_netty_channel_unix_FileDescriptor_newPipe(JNIEnv* env, jclass clazz) {

@@ -16,8 +16,8 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
-#include <stdlib.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/un.h>
 #include <sys/socket.h>
@@ -538,7 +538,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_unix_Socket_sendTo(JNIEnv* env, jcl
 }
 
 JNIEXPORT jint JNICALL Java_io_netty_channel_unix_Socket_sendToAddress(JNIEnv* env, jclass clazz, jint fd, jlong memoryAddress, jint pos, jint limit ,jbyteArray address, jint scopeId, jint port) {
-    return _sendTo(env, fd, (void*) memoryAddress, pos, limit, address, scopeId, port);
+    return _sendTo(env, fd, (void *) (intptr_t) memoryAddress, pos, limit, address, scopeId, port);
 }
 
 JNIEXPORT jint JNICALL Java_io_netty_channel_unix_Socket_sendToAddresses(JNIEnv* env, jclass clazz, jint fd, jlong memoryAddress, jint length, jbyteArray address, jint scopeId, jint port) {
@@ -551,7 +551,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_unix_Socket_sendToAddresses(JNIEnv*
     struct msghdr m;
     m.msg_name = (void*) &addr;
     m.msg_namelen = (socklen_t) sizeof(struct sockaddr_storage);
-    m.msg_iov = (struct iovec*) memoryAddress;
+    m.msg_iov = (struct iovec*) (intptr_t) memoryAddress;
     m.msg_iovlen = length;
 
     ssize_t res;
@@ -573,7 +573,7 @@ JNIEXPORT jobject JNICALL Java_io_netty_channel_unix_Socket_recvFrom(JNIEnv* env
 }
 
 JNIEXPORT jobject JNICALL Java_io_netty_channel_unix_Socket_recvFromAddress(JNIEnv* env, jclass clazz, jint fd, jlong address, jint pos, jint limit) {
-    return _recvFrom(env, fd, (void*) address, pos, limit);
+    return _recvFrom(env, fd, (void *) (intptr_t) address, pos, limit);
 }
 
 JNIEXPORT jint JNICALL Java_io_netty_channel_unix_Socket_bindDomainSocket(JNIEnv* env, jclass clazz, jint fd, jbyteArray socketPath) {
