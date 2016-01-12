@@ -31,6 +31,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
@@ -54,10 +55,12 @@ public class EmbeddedChannel extends AbstractChannel {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EmbeddedChannel.class);
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
+    private static final ChannelMetadata METADATA_NO_DISCONNECT = new ChannelMetadata(false);
+    private static final ChannelMetadata METADATA_DISCONNECT = new ChannelMetadata(true);
 
     private final EmbeddedEventLoop loop = new EmbeddedEventLoop();
-    private final ChannelConfig config = new DefaultChannelConfig(this);
+    private final ChannelMetadata metadata;
+    private final ChannelConfig config;
 
     private Queue<Object> inboundMessages;
     private Queue<Object> outboundMessages;
@@ -85,8 +88,19 @@ public class EmbeddedChannel extends AbstractChannel {
      *
      * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
      */
-    public EmbeddedChannel(final ChannelHandler... handlers) {
+    public EmbeddedChannel(ChannelHandler... handlers) {
         this(EmbeddedChannelId.INSTANCE, handlers);
+    }
+
+    /**
+     * Create a new instance with the pipeline initialized with the specified handlers.
+     *
+     * @param hasDisconnect {@code false} if this {@link Channel} will delegate {@link #disconnect()}
+     *                      to {@link #close()}, {@link false} otherwise.
+     * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
+     */
+    public EmbeddedChannel(boolean hasDisconnect, ChannelHandler... handlers) {
+        this(EmbeddedChannelId.INSTANCE, hasDisconnect, handlers);
     }
 
     /**
@@ -97,11 +111,24 @@ public class EmbeddedChannel extends AbstractChannel {
      * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
      */
     public EmbeddedChannel(ChannelId channelId, final ChannelHandler... handlers) {
+        this(channelId, false, handlers);
+    }
+
+    /**
+     * Create a new instance with the channel ID set to the given ID and the pipeline
+     * initialized with the specified handlers.
+     *
+     * @param channelId the {@link ChannelId} that will be used to identify this channel
+     * @param hasDisconnect {@code false} if this {@link Channel} will delegate {@link #disconnect()}
+     *                      to {@link #close()}, {@link false} otherwise.
+     * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
+     */
+    public EmbeddedChannel(ChannelId channelId, boolean hasDisconnect, final ChannelHandler... handlers) {
         super(null, channelId);
 
-        if (handlers == null) {
-            throw new NullPointerException("handlers");
-        }
+        ObjectUtil.checkNotNull(handlers, "handlers");
+        metadata = hasDisconnect ? METADATA_DISCONNECT : METADATA_NO_DISCONNECT;
+        config = new DefaultChannelConfig(this);
 
         ChannelPipeline p = pipeline();
         p.addLast(new ChannelInitializer<Channel>() {
@@ -124,7 +151,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
     @Override
     public ChannelMetadata metadata() {
-        return METADATA;
+        return metadata;
     }
 
     @Override
@@ -268,37 +295,35 @@ public class EmbeddedChannel extends AbstractChannel {
         return isNotEmpty(inboundMessages) || isNotEmpty(outboundMessages);
     }
 
-    private void finishPendingTasks() {
+    private void finishPendingTasks(boolean cancel) {
         runPendingTasks();
-        // Cancel all scheduled tasks that are left.
-        loop.cancelScheduledTasks();
+        if (cancel) {
+            // Cancel all scheduled tasks that are left.
+            loop.cancelScheduledTasks();
+        }
     }
 
     @Override
     public final ChannelFuture close() {
-        ChannelFuture future = super.close();
-        finishPendingTasks();
-        return future;
+        return close(newPromise());
     }
 
     @Override
     public final ChannelFuture disconnect() {
-        ChannelFuture future = super.disconnect();
-        finishPendingTasks();
-        return future;
+        return disconnect(newPromise());
     }
 
     @Override
     public final ChannelFuture close(ChannelPromise promise) {
         ChannelFuture future = super.close(promise);
-        finishPendingTasks();
+        finishPendingTasks(true);
         return future;
     }
 
     @Override
     public final ChannelFuture disconnect(ChannelPromise promise) {
         ChannelFuture future = super.disconnect(promise);
-        finishPendingTasks();
+        finishPendingTasks(!metadata.hasDisconnect());
         return future;
     }
 
@@ -403,7 +428,9 @@ public class EmbeddedChannel extends AbstractChannel {
 
     @Override
     protected void doDisconnect() throws Exception {
-        doClose();
+        if (!metadata.hasDisconnect()) {
+            doClose();
+        }
     }
 
     @Override
