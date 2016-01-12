@@ -713,6 +713,138 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
+    public short getShortLE(int index) {
+        recordLeakNonRefCountingOperation();
+        return super.getShortLE(index);
+    }
+
+    @Override
+    public int getUnsignedShortLE(int index) {
+        recordLeakNonRefCountingOperation();
+        return super.getUnsignedShortLE(index);
+    }
+
+    @Override
+    public int getMediumLE(int index) {
+        recordLeakNonRefCountingOperation();
+        return super.getMediumLE(index);
+    }
+
+    @Override
+    public int getUnsignedMediumLE(int index) {
+        recordLeakNonRefCountingOperation();
+        return super.getUnsignedMediumLE(index);
+    }
+
+    @Override
+    public int getIntLE(int index) {
+        recordLeakNonRefCountingOperation();
+        return super.getIntLE(index);
+    }
+
+    @Override
+    public long getUnsignedIntLE(int index) {
+        recordLeakNonRefCountingOperation();
+        return super.getUnsignedIntLE(index);
+    }
+
+    @Override
+    public long getLongLE(int index) {
+        recordLeakNonRefCountingOperation();
+        return super.getLongLE(index);
+    }
+
+    @Override
+    public ByteBuf setShortLE(int index, int value) {
+        recordLeakNonRefCountingOperation();
+        return super.setShortLE(index, value);
+    }
+
+    @Override
+    public ByteBuf setIntLE(int index, int value) {
+        recordLeakNonRefCountingOperation();
+        return super.setIntLE(index, value);
+    }
+
+    @Override
+    public ByteBuf setMediumLE(int index, int value) {
+        recordLeakNonRefCountingOperation();
+        return super.setMediumLE(index, value);
+    }
+
+    @Override
+    public ByteBuf setLongLE(int index, long value) {
+        recordLeakNonRefCountingOperation();
+        return super.setLongLE(index, value);
+    }
+
+    @Override
+    public short readShortLE() {
+        recordLeakNonRefCountingOperation();
+        return super.readShortLE();
+    }
+
+    @Override
+    public int readUnsignedShortLE() {
+        recordLeakNonRefCountingOperation();
+        return super.readUnsignedShortLE();
+    }
+
+    @Override
+    public int readMediumLE() {
+        recordLeakNonRefCountingOperation();
+        return super.readMediumLE();
+    }
+
+    @Override
+    public int readUnsignedMediumLE() {
+        recordLeakNonRefCountingOperation();
+        return super.readUnsignedMediumLE();
+    }
+
+    @Override
+    public int readIntLE() {
+        recordLeakNonRefCountingOperation();
+        return super.readIntLE();
+    }
+
+    @Override
+    public long readUnsignedIntLE() {
+        recordLeakNonRefCountingOperation();
+        return super.readUnsignedIntLE();
+    }
+
+    @Override
+    public long readLongLE() {
+        recordLeakNonRefCountingOperation();
+        return super.readLongLE();
+    }
+
+    @Override
+    public ByteBuf writeShortLE(int value) {
+        recordLeakNonRefCountingOperation();
+        return super.writeShortLE(value);
+    }
+
+    @Override
+    public ByteBuf writeMediumLE(int value) {
+        recordLeakNonRefCountingOperation();
+        return super.writeMediumLE(value);
+    }
+
+    @Override
+    public ByteBuf writeIntLE(int value) {
+        recordLeakNonRefCountingOperation();
+        return super.writeIntLE(value);
+    }
+
+    @Override
+    public ByteBuf writeLongLE(long value) {
+        recordLeakNonRefCountingOperation();
+        return super.writeLongLE(value);
+    }
+
+    @Override
     public ByteBuf retain() {
         leak.record();
         return super.retain();
