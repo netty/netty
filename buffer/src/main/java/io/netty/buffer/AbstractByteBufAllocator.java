@@ -26,7 +26,7 @@ import io.netty.util.internal.StringUtil;
  */
 public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
     private static final int DEFAULT_INITIAL_CAPACITY = 256;
-    private static final int DEFAULT_MAX_COMPONENTS = 16;
+    static final int DEFAULT_MAX_COMPONENTS = 16;
 
     protected static ByteBuf toLeakAwareBuffer(ByteBuf buf) {
         ResourceLeak leak;
@@ -42,6 +42,28 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
                 leak = AbstractByteBuf.leakDetector.open(buf);
                 if (leak != null) {
                     buf = new AdvancedLeakAwareByteBuf(buf, leak);
+                }
+                break;
+            default:
+                break;
+        }
+        return buf;
+    }
+
+    protected static CompositeByteBuf toLeakAwareBuffer(CompositeByteBuf buf) {
+        ResourceLeak leak;
+        switch (ResourceLeakDetector.getLevel()) {
+            case SIMPLE:
+                leak = AbstractByteBuf.leakDetector.open(buf);
+                if (leak != null) {
+                    buf = new SimpleLeakAwareCompositeByteBuf(buf, leak);
+                }
+                break;
+            case ADVANCED:
+            case PARANOID:
+                leak = AbstractByteBuf.leakDetector.open(buf);
+                if (leak != null) {
+                    buf = new AdvancedLeakAwareCompositeByteBuf(buf, leak);
                 }
                 break;
             default:
@@ -180,7 +202,7 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
 
     @Override
     public CompositeByteBuf compositeHeapBuffer(int maxNumComponents) {
-        return new CompositeByteBuf(this, false, maxNumComponents);
+        return toLeakAwareBuffer(new CompositeByteBuf(this, false, maxNumComponents));
     }
 
     @Override
@@ -190,7 +212,7 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
 
     @Override
     public CompositeByteBuf compositeDirectBuffer(int maxNumComponents) {
-        return new CompositeByteBuf(this, true, maxNumComponents);
+        return toLeakAwareBuffer(new CompositeByteBuf(this, true, maxNumComponents));
     }
 
     private static void validate(int initialCapacity, int maxCapacity) {
