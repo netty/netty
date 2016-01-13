@@ -63,6 +63,7 @@ public class EmbeddedChannel extends AbstractChannel {
     private Queue<Object> outboundMessages;
     private Throwable lastException;
     private State state;
+    private final EmbeddedChannelPipeline embeddedPipeline;
 
     /**
      * Create a new instance with an {@link EmbeddedChannelId} and an empty pipeline.
@@ -103,7 +104,9 @@ public class EmbeddedChannel extends AbstractChannel {
             throw new NullPointerException("handlers");
         }
 
-        ChannelPipeline p = pipeline();
+        ChannelPipeline p = super.pipeline();
+        embeddedPipeline = new EmbeddedChannelPipeline(p);
+
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
@@ -119,7 +122,12 @@ public class EmbeddedChannel extends AbstractChannel {
 
         ChannelFuture future = loop.register(this);
         assert future.isDone();
-        p.addLast(new LastInboundHandler());
+        p.addLast(LAST_HANDLER_NAME, new LastInboundHandler());
+    }
+
+    @Override
+    public ChannelPipeline pipeline() {
+        return embeddedPipeline;
     }
 
     @Override
@@ -442,7 +450,16 @@ public class EmbeddedChannel extends AbstractChannel {
         }
     }
 
-    private final class LastInboundHandler extends ChannelInboundHandlerAdapter {
+    /**
+     * Name of this handler in the pipeline.
+     */
+    public static final String LAST_HANDLER_NAME = "last-inbound-handler";
+
+    /**
+     * This handler is always the last inbound handler for an embedded channel pipeline.
+     */
+    final class LastInboundHandler extends ChannelInboundHandlerAdapter {
+
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             inboundMessages().add(msg);

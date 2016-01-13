@@ -27,12 +27,17 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ScheduledFuture;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+
+import static org.hamcrest.Matchers.is;
 
 public class EmbeddedChannelTest {
 
@@ -176,6 +181,23 @@ public class EmbeddedChannelTest {
                 return channel.disconnect(channel.newPromise());
             }
         });
+    }
+
+    @Test(timeout = 60000)
+    public void testAddHandlerPostCreation() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel();
+        final List<Object> msgsRead = new ArrayList<Object>();
+        channel.pipeline().addLast("tail", new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                msgsRead.add(msg);
+                super.channelRead(ctx, msg);
+            }
+        });
+
+        channel.pipeline().fireChannelRead("Hello");
+
+        MatcherAssert.assertThat("Message not received by the handler.", msgsRead.size(), is(1));
     }
 
     private static void testFireChannelInactiveAndUnregistered(Action action) throws InterruptedException {
