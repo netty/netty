@@ -33,7 +33,8 @@ public final class ZlibCodecFactory {
     private static final boolean noJdkZlibEncoder;
 
     static {
-        noJdkZlibDecoder = SystemPropertyUtil.getBoolean("io.netty.noJdkZlibDecoder", true);
+        noJdkZlibDecoder = SystemPropertyUtil.getBoolean("io.netty.noJdkZlibDecoder",
+                PlatformDependent.javaVersion() < 7);
         logger.debug("-Dio.netty.noJdkZlibDecoder: {}", noJdkZlibDecoder);
 
         noJdkZlibEncoder = SystemPropertyUtil.getBoolean("io.netty.noJdkZlibEncoder", false);
