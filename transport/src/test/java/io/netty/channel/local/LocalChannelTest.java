@@ -33,6 +33,7 @@ import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -807,6 +808,57 @@ public class LocalChannelTest {
         } finally {
             data.release();
             data2.release();
+        }
+    }
+
+    @Test(timeout = 3000)
+    public void testConnectFutureBeforeChannelActive() throws Exception {
+        Bootstrap cb = new Bootstrap();
+        ServerBootstrap sb = new ServerBootstrap();
+
+        cb.group(group1)
+                .channel(LocalChannel.class)
+                .handler(new ChannelInboundHandlerAdapter());
+
+        sb.group(group2)
+                .channel(LocalServerChannel.class)
+                .childHandler(new ChannelInitializer<LocalChannel>() {
+                    @Override
+                    public void initChannel(LocalChannel ch) throws Exception {
+                        ch.pipeline().addLast(new TestHandler());
+                    }
+                });
+
+        Channel sc = null;
+        Channel cc = null;
+        try {
+            // Start server
+            sc = sb.bind(TEST_ADDRESS).sync().channel();
+
+            cc = cb.register().sync().channel();
+
+            final ChannelPromise promise = cc.newPromise();
+            final Promise<Void> assertPromise = cc.eventLoop().newPromise();
+
+            cc.pipeline().addLast(new TestHandler() {
+                @Override
+                public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                    // Ensure the promise was done before the handler method is triggered.
+                    if (promise.isDone()) {
+                        assertPromise.setSuccess(null);
+                    } else {
+                        assertPromise.setFailure(new AssertionError("connect promise should be done"));
+                    }
+                }
+            });
+            // Connect to the server
+            cc.connect(sc.localAddress(), promise).sync();
+
+            assertPromise.syncUninterruptibly();
+            assertTrue(promise.isSuccess());
+        } finally {
+            closeChannel(cc);
+            closeChannel(sc);
         }
     }
 

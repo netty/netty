@@ -194,8 +194,13 @@ public class LocalChannel extends AbstractChannel {
                 @Override
                 public void run() {
                     registerInProgress = false;
-                    peer.pipeline().fireChannelActive();
-                    peer.connectPromise.setSuccess();
+                    ChannelPromise promise = peer.connectPromise;
+
+                    // Only trigger fireChannelActive() if the promise was not null and was not completed yet.
+                    // connectPromise may be set to null if doClose() was called in the meantime.
+                    if (promise != null && promise.trySuccess()) {
+                        peer.pipeline().fireChannelActive();
+                    }
                 }
             });
         }
