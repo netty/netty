@@ -15,19 +15,13 @@
  */
 package io.netty.channel;
 
-import static org.easymock.EasyMock.anyObject;
-import static org.easymock.EasyMock.capture;
-import static org.easymock.EasyMock.createMock;
-import static org.easymock.EasyMock.createNiceMock;
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.expectLastCall;
-import static org.easymock.EasyMock.replay;
-import static org.easymock.EasyMock.verify;
-
 import java.net.SocketAddress;
 
 import org.easymock.Capture;
+import org.easymock.IAnswer;
 import org.junit.Test;
+
+import static org.easymock.EasyMock.*;
 
 public class AbstractChannelTest {
 
@@ -56,43 +50,56 @@ public class AbstractChannelTest {
 
     @Test
     public void ensureSubsequentRegistrationDoesNotFireActive() throws Throwable {
-            EventLoop eventLoop = createNiceMock(EventLoop.class);
-            // This allows us to have a single-threaded test
-            expect(eventLoop.inEventLoop()).andReturn(true).anyTimes();
+        final EventLoop eventLoop = createNiceMock(EventLoop.class);
+        // This allows us to have a single-threaded test
+        expect(eventLoop.inEventLoop()).andReturn(true).anyTimes();
+        eventLoop.execute(anyObject(Runnable.class));
+        expectLastCall().andAnswer(new IAnswer<Object>() {
+            @Override
+            public Object answer() throws Throwable {
+                ((Runnable) getCurrentArguments()[0]).run();
+                return null;
+            }
+        }).once();
 
-            TestChannel channel = new TestChannel();
-            ChannelInboundHandler handler = createMock(ChannelInboundHandler.class);
-            handler.handlerAdded(anyObject(ChannelHandlerContext.class)); expectLastCall();
-            Capture<Throwable> throwable = catchHandlerExceptions(handler);
-            handler.channelRegistered(anyObject(ChannelHandlerContext.class));
-            expectLastCall().times(2); // Should register twice
-            handler.channelActive(anyObject(ChannelHandlerContext.class));
-            expectLastCall().once(); // Should only fire active once
-            replay(handler, eventLoop);
-            channel.pipeline().addLast(handler);
+        final TestChannel channel = new TestChannel();
+        ChannelInboundHandler handler = createMock(ChannelInboundHandler.class);
+        handler.handlerAdded(anyObject(ChannelHandlerContext.class)); expectLastCall();
+        Capture<Throwable> throwable = catchHandlerExceptions(handler);
+        handler.channelRegistered(anyObject(ChannelHandlerContext.class));
+        expectLastCall().times(2); // Should register twice
+        handler.channelActive(anyObject(ChannelHandlerContext.class));
+        expectLastCall().once(); // Should only fire active once
 
-            registerChannel(eventLoop, channel);
-            channel.unsafe().deregister(new DefaultChannelPromise(channel));
-            registerChannel(eventLoop, channel);
+        handler.channelUnregistered(anyObject(ChannelHandlerContext.class));
+        expectLastCall().once(); // Should register twice
 
-            checkForHandlerException(throwable);
-            verify(handler);
-        }
+        replay(handler, eventLoop);
+        channel.pipeline().addLast(handler);
 
-    private void registerChannel(EventLoop eventLoop, Channel channel) throws Exception {
+        registerChannel(eventLoop, channel);
+        channel.unsafe().deregister(new DefaultChannelPromise(channel));
+
+        registerChannel(eventLoop, channel);
+
+        checkForHandlerException(throwable);
+        verify(handler);
+    }
+
+    private static void registerChannel(EventLoop eventLoop, Channel channel) throws Exception {
         DefaultChannelPromise future = new DefaultChannelPromise(channel);
         channel.unsafe().register(eventLoop, future);
         future.sync(); // Cause any exceptions to be thrown
     }
 
-    private Capture<Throwable> catchHandlerExceptions(ChannelInboundHandler handler) throws Exception {
+    private static Capture<Throwable> catchHandlerExceptions(ChannelInboundHandler handler) throws Exception {
         Capture<Throwable> throwable = new Capture<Throwable>();
         handler.exceptionCaught(anyObject(ChannelHandlerContext.class), capture(throwable));
         expectLastCall().anyTimes();
         return throwable;
     }
 
-    private void checkForHandlerException(Capture<Throwable> throwable) throws Throwable {
+    private static void checkForHandlerException(Capture<Throwable> throwable) throws Throwable {
         if (throwable.hasCaptured()) {
             throw throwable.getValue();
         }
