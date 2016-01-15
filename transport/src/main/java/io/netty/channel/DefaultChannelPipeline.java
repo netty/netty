@@ -74,7 +74,9 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         this.channel = channel;
 
         tail = new TailContext(this);
+        tail.setHandlerAddedCalled();
         head = new HeadContext(this);
+        head.setHandlerAddedCalled();
 
         head.next = tail;
         tail.prev = head;
@@ -102,7 +104,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelPipeline addFirst(ChannelHandlerInvoker invoker, String name, ChannelHandler handler) {
+    public synchronized ChannelPipeline addFirst(ChannelHandlerInvoker invoker, String name, ChannelHandler handler) {
         name = filterName(name, handler);
         addFirst0(new DefaultChannelHandlerContext(this, invoker, name, handler));
         return this;
@@ -392,7 +394,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         Future<?> future;
 
         synchronized (this) {
-            if (!ctx.channel().isRegistered() || ctx.executor().inEventLoop()) {
+            if (!isExecuteLater(ctx)) {
                 remove0(ctx);
                 return ctx;
             } else {
@@ -474,7 +476,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             final AbstractChannelHandlerContext newCtx =
                     new DefaultChannelHandlerContext(this, ctx.invoker, newName, newHandler);
 
-            if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
+            if (!isExecuteLater(newCtx)) {
                 replace0(ctx, newCtx);
                 return ctx.handler();
             } else {
@@ -537,7 +539,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private void callHandlerAdded(final AbstractChannelHandlerContext ctx) {
-        if (ctx.channel().isRegistered() && !ctx.executor().inEventLoop()) {
+        if (isExecuteLater(ctx)) {
             ctx.executor().execute(new OneTimeTask() {
                 @Override
                 public void run() {
@@ -551,7 +553,12 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     private void callHandlerAdded0(final AbstractChannelHandlerContext ctx) {
         try {
-            ctx.handler().handlerAdded(ctx);
+            try {
+                ctx.handler().handlerAdded(ctx);
+            } finally {
+                // handlerAdded(...) method was called.
+                ctx.setHandlerAddedCalled();
+            }
         } catch (Throwable t) {
             boolean removed = false;
             try {
@@ -576,7 +583,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private void callHandlerRemoved(final AbstractChannelHandlerContext ctx) {
-        if (ctx.channel().isRegistered() && !ctx.executor().inEventLoop()) {
+        if (isExecuteLater(ctx)) {
             ctx.executor().execute(new OneTimeTask() {
                 @Override
                 public void run() {
@@ -597,6 +604,10 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             fireExceptionCaught(new ChannelPipelineException(
                     ctx.handler().getClass().getName() + ".handlerRemoved() has thrown an exception.", t));
         }
+    }
+
+    private static boolean isExecuteLater(ChannelHandlerContext ctx) {
+        return ctx.channel().isRegistered() && !ctx.executor().inEventLoop();
     }
 
     /**
