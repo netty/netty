@@ -26,6 +26,7 @@
 
 #include "netty_unix_errors.h"
 #include "netty_unix_socket.h"
+#include "netty_unix_util.h"
 #include "io_netty_channel_unix_Socket.h"
 
 static jclass datagramSocketAddressClass = NULL;
@@ -35,6 +36,7 @@ static jclass inetSocketAddressClass = NULL;
 static jclass netUtilClass = NULL;
 static jmethodID netUtilClassIpv4PreferredMethodId = NULL;
 static int socketType;
+static char* nettyClassName = NULL;
 static const char* ip4prefix = "::ffff:";
 
 // Optional external methods
@@ -301,8 +303,11 @@ int netty_unix_socket_setOption(JNIEnv* env, jint fd, int level, int optname, co
     return rc;
 }
 
-jint netty_unix_socket_JNI_OnLoad(JNIEnv* env) {
-    jclass localDatagramSocketAddressClass = (*env)->FindClass(env, "io/netty/channel/unix/DatagramSocketAddress");
+jint netty_unix_socket_JNI_OnLoad(JNIEnv* env, const char* nettyPackagePrefix) {
+    nettyClassName = netty_unix_util_prepend(nettyPackagePrefix, "io/netty/channel/unix/DatagramSocketAddress");
+    jclass localDatagramSocketAddressClass = (*env)->FindClass(env, nettyClassName);
+    free(nettyClassName);
+    nettyClassName = NULL;
     if (localDatagramSocketAddressClass == NULL) {
         // pending exception...
         return JNI_ERR;
@@ -334,7 +339,10 @@ jint netty_unix_socket_JNI_OnLoad(JNIEnv* env) {
         netty_unix_errors_throwRuntimeException(env, "failed to get method ID: InetSocketAddress.<init>(String, int)");
         return JNI_ERR;
     }
-    jclass localNetUtilClass = (*env)->FindClass(env, "io/netty/util/NetUtil" );
+    nettyClassName = netty_unix_util_prepend(nettyPackagePrefix, "io/netty/util/NetUtil");
+    jclass localNetUtilClass = (*env)->FindClass(env, nettyClassName);
+    free(nettyClassName);
+    nettyClassName = NULL;
     if (localNetUtilClass == NULL) {
         // pending exception...
         return JNI_ERR;
@@ -376,6 +384,10 @@ jint netty_unix_socket_JNI_OnLoad(JNIEnv* env) {
 }
 
 void netty_unix_socket_JNI_OnUnLoad(JNIEnv* env) {
+    if (nettyClassName != NULL) {
+        free(nettyClassName);
+        nettyClassName = NULL;
+    }
     if (datagramSocketAddressClass != NULL) {
         (*env)->DeleteGlobalRef(env, datagramSocketAddressClass);
         datagramSocketAddressClass = NULL;
