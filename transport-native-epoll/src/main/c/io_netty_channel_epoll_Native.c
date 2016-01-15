@@ -38,6 +38,7 @@
 #include "netty_unix_filedescriptor.h"
 #include "netty_unix_socket.h"
 #include "netty_unix_errors.h"
+#include "netty_unix_util.h"
 
 // TCP_NOTSENT_LOWAT is defined in linux 3.12. We define this here so older kernels can compile.
 #ifndef TCP_NOTSENT_LOWAT
@@ -84,6 +85,9 @@ jfieldID packetScopeIdFieldId = NULL;
 jfieldID packetPortFieldId = NULL;
 jfieldID packetMemoryAddressFieldId = NULL;
 jfieldID packetCountFieldId = NULL;
+static jstring nettyPackagePrefixJString = NULL;
+static const char* nettyPackagePrefix = NULL;
+static char* nettyClassName = NULL;
 
 // util methods
 static int getSysctlValue(const char * property, int* returnValue) {
@@ -116,17 +120,35 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     if ((*vm)->GetEnv(vm, (void**) &env, JNI_VERSION_1_6) != JNI_OK) {
         return JNI_ERR;
     } else {
-        if (netty_unix_errors_JNI_OnLoad(env) == JNI_ERR) {
+        // Load the prefix to use when looking for Netty classes
+        jclass systemCls = (*env)->FindClass(env, "java/lang/System");
+        if (systemCls == NULL) {
             return JNI_ERR;
         }
-        if (netty_unix_filedescriptor_JNI_OnLoad(env) == JNI_ERR) {
+        jmethodID getPropertyMethod = (*env)->GetStaticMethodID(env, systemCls, "getProperty", "(Ljava/lang/String;)Ljava/lang/String;");
+        if (getPropertyMethod == NULL) {
             return JNI_ERR;
         }
-        if (netty_unix_socket_JNI_OnLoad(env) == JNI_ERR) {
+        jstring propertyName = (*env)->NewStringUTF(env, "io.netty.native.epoll.nettyPackagePrefix");
+        nettyPackagePrefixJString = (*env)->CallStaticObjectMethod(env, systemCls, getPropertyMethod, propertyName);
+        if (nettyPackagePrefixJString != NULL) {
+            nettyPackagePrefix = (*env)->GetStringUTFChars(env, nettyPackagePrefixJString, 0);
+        }
+
+        if (netty_unix_errors_JNI_OnLoad(env, nettyPackagePrefix) == JNI_ERR) {
+            return JNI_ERR;
+        }
+        if (netty_unix_filedescriptor_JNI_OnLoad(env, nettyPackagePrefix) == JNI_ERR) {
+            return JNI_ERR;
+        }
+        if (netty_unix_socket_JNI_OnLoad(env, nettyPackagePrefix) == JNI_ERR) {
             return JNI_ERR;
         }
 
-        jclass fileRegionCls = (*env)->FindClass(env, "io/netty/channel/DefaultFileRegion");
+        nettyClassName = netty_unix_util_prepend(nettyPackagePrefix, "io/netty/channel/DefaultFileRegion");
+        jclass fileRegionCls = (*env)->FindClass(env, nettyClassName);
+        free(nettyClassName);
+        nettyClassName = NULL;
         if (fileRegionCls == NULL) {
             // pending exception...
             return JNI_ERR;
@@ -164,7 +186,10 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
             return JNI_ERR;
         }
 
-        jclass nativeDatagramPacketCls = (*env)->FindClass(env, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket");
+        nettyClassName = netty_unix_util_prepend(nettyPackagePrefix, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket");
+        jclass nativeDatagramPacketCls = (*env)->FindClass(env, nettyClassName);
+        free(nettyClassName);
+        nettyClassName = NULL;
         if (nativeDatagramPacketCls == NULL) {
             // pending exception...
             return JNI_ERR;
@@ -197,6 +222,12 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
             return JNI_ERR;
         }
 
+        if (nettyPackagePrefixJString != NULL) {
+            (*env)->ReleaseStringUTFChars(env, nettyPackagePrefixJString, nettyPackagePrefix);
+            nettyPackagePrefix = NULL;
+            nettyPackagePrefixJString = NULL;
+        }
+
         return JNI_VERSION_1_6;
     }
 }
@@ -208,6 +239,15 @@ void JNI_OnUnload(JavaVM* vm, void* reserved) {
         return;
     } else {
         // delete global references so the GC can collect them
+        if (nettyPackagePrefixJString != NULL) {
+            (*env)->ReleaseStringUTFChars(env, nettyPackagePrefixJString, nettyPackagePrefix);
+            nettyPackagePrefix = NULL;
+            nettyPackagePrefixJString = NULL;
+        }
+        if (nettyClassName != NULL) {
+            free(nettyClassName);
+            nettyClassName = NULL;
+        }
         netty_unix_errors_JNI_OnUnLoad(env);
         netty_unix_filedescriptor_JNI_OnUnLoad(env);
         netty_unix_socket_JNI_OnUnLoad(env);
