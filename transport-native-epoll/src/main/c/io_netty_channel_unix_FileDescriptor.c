@@ -73,7 +73,7 @@ static jint _read(JNIEnv* env, jclass clazz, jint fd, void* buffer, jint pos, ji
     return (jint) res;
 }
 
-jint netty_unix_filedescriptor_JNI_OnLoad(JNIEnv* env) {
+jint netty_unix_filedescriptor_JNI_OnLoad(JNIEnv* env, const char* nettyPackagePrefix) {
     void* mem = malloc(1);
     if (mem == NULL) {
         netty_unix_errors_throwOutOfMemoryError(env);
