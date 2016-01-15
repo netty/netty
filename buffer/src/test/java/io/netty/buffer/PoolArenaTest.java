@@ -25,7 +25,7 @@ public class PoolArenaTest {
 
     @Test
     public void testNormalizeCapacity() throws Exception {
-        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, 0, 0, 9, 999999);
+        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, 0, 0, 9, 999999, true);
         int[] reqCapacities = {0, 15, 510, 1024, 1023, 1025};
         int[] expectedResult = {0, 16, 512, 1024, 1024, 2048};
         for (int i = 0; i < reqCapacities.length; i ++) {

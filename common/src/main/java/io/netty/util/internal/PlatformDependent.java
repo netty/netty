@@ -23,6 +23,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Field;
@@ -31,6 +32,8 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Deque;
 import java.util.List;
 import java.util.Locale;
@@ -71,6 +74,9 @@ public final class PlatformDependent {
 
     private static final boolean IS_ANDROID = isAndroid0();
     private static final boolean IS_WINDOWS = isWindows0();
+    private static final boolean IS_LINUX = isLinux0();
+    private static final boolean IS_OSX = isOsx0();
+
     private static volatile Boolean IS_ROOT;
 
     private static final int JAVA_VERSION = javaVersion0();
@@ -92,6 +98,8 @@ public final class PlatformDependent {
     private static final int BIT_MODE = bitMode0();
 
     private static final int ADDRESS_SIZE = addressSize0();
+    private static final int CACHE_LINE_SIZE = cacheLineSize0();
+
     public static final boolean BIG_ENDIAN_NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
 
     static {
@@ -652,6 +660,14 @@ public final class PlatformDependent {
         }
     }
 
+    /**
+     * Return the size of a cache line for the running platform or {@code -1} if is unknown
+     * or could not be detected.
+     */
+    public static int cacheLineSize() {
+        return CACHE_LINE_SIZE;
+    }
+
     private static boolean isAndroid0() {
         boolean android;
         try {
@@ -668,12 +684,108 @@ public final class PlatformDependent {
         return android;
     }
 
+    private static boolean isOs(String os) {
+        return SystemPropertyUtil.get("os.name", "").toLowerCase(Locale.US).contains(os);
+    }
+
     private static boolean isWindows0() {
-        boolean windows = SystemPropertyUtil.get("os.name", "").toLowerCase(Locale.US).contains("win");
+        boolean windows = isOs("win");
         if (windows) {
             logger.debug("Platform: Windows");
         }
         return windows;
+    }
+
+    private static boolean isLinux0() {
+        boolean linux = isOs("linux");
+        if (linux) {
+            logger.debug("Platform: Linux");
+        }
+        return linux;
+    }
+
+    private static boolean isOsx0() {
+        boolean osx = isOs("os x") || isOs("osx");
+        if (osx) {
+            logger.debug("Platform: OSX");
+        }
+        return osx;
+    }
+
+    private static int cacheLineSize0() {
+        return AccessController.doPrivileged(new PrivilegedAction<Integer>() {
+            @Override
+            public Integer run() {
+                if (IS_LINUX) {
+                    BufferedReader in = null;
+                    try {
+                        in = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/cpuinfo")));
+                        String line;
+                        while ((line = in.readLine()) != null) {
+                            if (line.startsWith("cache_alignment")) {
+                                String[] parts = StringUtil.split(line, ':');
+                                return Integer.parseInt(parts[1].trim());
+                            }
+                        }
+                    } catch (Throwable cause) {
+                        logger.debug("Failed to retrieve cache line size", cause);
+                        return -1;
+                    } finally {
+                        if (in != null) {
+                            try {
+                                in.close();
+                            } catch (IOException ignore) {
+                                // ignore on close
+                            }
+                        }
+                    }
+                } else if (IS_OSX) {
+                    Process p = null;
+                    BufferedReader in = null;
+                    try {
+                        p = Runtime.getRuntime().exec(new String[] { "sysctl", "hw.cachelinesize" });
+                        in = new BufferedReader(new InputStreamReader(p.getInputStream(), CharsetUtil.US_ASCII));
+                        String line = in.readLine();
+                        in.close();
+                        try {
+                            int exitCode = p.waitFor();
+                            if (exitCode != 0) {
+                                logger.debug("Failed to retrieve cache line size," +
+                                        " 'sysctl hw.cachelinesize' did exit with code " + exitCode);
+                                return -1;
+                            }
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                        }
+                        if (line != null) {
+                            String[] parts = StringUtil.split(line, ':');
+                            return Integer.parseInt(parts[1].trim());
+                        }
+                    } catch (Exception e) {
+                        // Failed to run the command.
+                        logger.debug("Failed to retrieve cache line size", e);
+                        return -1;
+                    } finally {
+                        if (in != null) {
+                            try {
+                                in.close();
+                            } catch (IOException e) {
+                                // Ignore
+                            }
+                        }
+                        if (p != null) {
+                            try {
+                                p.destroy();
+                            } catch (Exception ignore) {
+                                // Just ignore
+                            }
+                        }
+                    }
+                }
+                logger.debug("Failed to retrieve cache line size");
+                return -1;
+            }
+        });
     }
 
     private static boolean isRoot0() {

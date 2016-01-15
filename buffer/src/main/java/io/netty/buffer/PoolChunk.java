@@ -105,6 +105,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     final PoolArena<T> arena;
     final T memory;
     final boolean unpooled;
+    final int offset;
 
     private final byte[] memoryMap;
     private final byte[] depthMap;
@@ -129,7 +130,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     // TODO: Test if adding padding helps under contention
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
 
-    PoolChunk(PoolArena<T> arena, T memory, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
+    PoolChunk(PoolArena<T> arena, T memory, int pageSize, int maxOrder, int pageShifts, int chunkSize, int offset) {
         unpooled = false;
         this.arena = arena;
         this.memory = memory;
@@ -137,6 +138,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         this.pageShifts = pageShifts;
         this.maxOrder = maxOrder;
         this.chunkSize = chunkSize;
+        this.offset = offset;
         unusable = (byte) (maxOrder + 1);
         log2ChunkSize = log2(chunkSize);
         subpageOverflowMask = ~(pageSize - 1);
@@ -163,10 +165,11 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     /** Creates a special chunk that is not pooled. */
-    PoolChunk(PoolArena<T> arena, T memory, int size) {
+    PoolChunk(PoolArena<T> arena, T memory, int size, int offset) {
         unpooled = true;
         this.arena = arena;
         this.memory = memory;
+        this.offset = offset;
         memoryMap = null;
         depthMap = null;
         subpages = null;
@@ -369,7 +372,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         if (bitmapIdx == 0) {
             byte val = value(memoryMapIdx);
             assert val == unusable : String.valueOf(val);
-            buf.init(this, handle, runOffset(memoryMapIdx), reqCapacity, runLength(memoryMapIdx),
+            buf.init(this, handle, runOffset(memoryMapIdx) + offset, reqCapacity, runLength(memoryMapIdx),
                      arena.parent.threadCache());
         } else {
             initBufWithSubpage(buf, handle, bitmapIdx, reqCapacity);
@@ -391,8 +394,8 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
         buf.init(
             this, handle,
-            runOffset(memoryMapIdx) + (bitmapIdx & 0x3FFFFFFF) * subpage.elemSize, reqCapacity, subpage.elemSize,
-            arena.parent.threadCache());
+            runOffset(memoryMapIdx) + (bitmapIdx & 0x3FFFFFFF) * subpage.elemSize + offset, reqCapacity,
+            subpage.elemSize, arena.parent.threadCache());
     }
 
     private byte value(int id) {

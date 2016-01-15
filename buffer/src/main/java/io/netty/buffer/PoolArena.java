@@ -35,9 +35,30 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     }
 
     static final int numTinySubpagePools = 512 >>> 4;
+    static {
+        int cSize = -1;
+        if (HAS_UNSAFE) {
+            cSize = PlatformDependent.cacheLineSize();
+            // Only support cache lines with size 64 or 128 atm.
+            if (cSize != 64 && cSize != 128) {
+                cSize = -1;
+            }
+        }
+        if (cSize == -1) {
+            cacheLineSizeMask = -1;
+            doubleCacheLineSize = -1;
+        } else {
+            cacheLineSizeMask = cSize - 1;
+            doubleCacheLineSize = cSize << 1;
+        }
+    }
+    private static final int cacheLineSizeMask;
+    private static final int doubleCacheLineSize;
+    private static final int quantumSize = 16;
+    private static final int quantumSizeMask = quantumSize - 1;
 
     final PooledByteBufAllocator parent;
-
+    final boolean preventFalseSharing;
     private final int maxOrder;
     final int pageSize;
     final int pageShifts;
@@ -72,7 +93,8 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     // TODO: Test if adding padding helps under contention
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
 
-    protected PoolArena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
+    protected PoolArena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts,
+                        int chunkSize, boolean preventFalseSharing) {
         this.parent = parent;
         this.pageSize = pageSize;
         this.maxOrder = maxOrder;
@@ -80,6 +102,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         this.chunkSize = chunkSize;
         subpageOverflowMask = ~(pageSize - 1);
         tinySubpagePools = newSubpagePoolArray(numTinySubpagePools);
+        this.preventFalseSharing = preventFalseSharing;
         for (int i = 0; i < tinySubpagePools.length; i ++) {
             tinySubpagePools[i] = newSubpagePoolHead(pageSize);
         }
@@ -327,15 +350,19 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                 normalizedCapacity >>>= 1;
             }
 
+            // Must be power of cachelineSize if alignment is enabled.
+            assert cacheLineSizeMask == -1 || !preventFalseSharing || (normalizedCapacity & cacheLineSizeMask) == 0;
             return normalizedCapacity;
         }
 
         // Quantum-spaced
-        if ((reqCapacity & 15) == 0) {
+        if ((reqCapacity & quantumSizeMask) == 0) {
+            // Power of quantumSize just return
             return reqCapacity;
         }
 
-        return (reqCapacity & ~15) + 16;
+        // Use spacing of quantumSize (16 bytes), so round up to the next power of quantumSize
+        return (reqCapacity & ~quantumSizeMask) + quantumSize;
     }
 
     void reallocate(PooledByteBuf<T> buf, int newCapacity, boolean freeOldMemory) {
@@ -589,8 +616,9 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     static final class HeapArena extends PoolArena<byte[]> {
 
-        HeapArena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
-            super(parent, pageSize, maxOrder, pageShifts, chunkSize);
+        HeapArena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize,
+                  boolean preventFalseSharing) {
+            super(parent, pageSize, maxOrder, pageShifts, chunkSize, preventFalseSharing);
         }
 
         @Override
@@ -600,12 +628,12 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
         @Override
         protected PoolChunk<byte[]> newChunk(int pageSize, int maxOrder, int pageShifts, int chunkSize) {
-            return new PoolChunk<byte[]>(this, new byte[chunkSize], pageSize, maxOrder, pageShifts, chunkSize);
+            return new PoolChunk<byte[]>(this, new byte[chunkSize], pageSize, maxOrder, pageShifts, chunkSize, 0);
         }
 
         @Override
         protected PoolChunk<byte[]> newUnpooledChunk(int capacity) {
-            return new PoolChunk<byte[]>(this, new byte[capacity], capacity);
+            return new PoolChunk<byte[]>(this, new byte[capacity], capacity, 0);
         }
 
         @Override
@@ -631,8 +659,9 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     static final class DirectArena extends PoolArena<ByteBuffer> {
 
-        DirectArena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
-            super(parent, pageSize, maxOrder, pageShifts, chunkSize);
+        DirectArena(PooledByteBufAllocator parent, int pageSize, int maxOrder,
+                    int pageShifts, int chunkSize, boolean preventFalseSharing) {
+            super(parent, pageSize, maxOrder, pageShifts, chunkSize, preventFalseSharing);
         }
 
         @Override
@@ -640,15 +669,43 @@ abstract class PoolArena<T> implements PoolArenaMetric {
             return true;
         }
 
+        private static int offsetCacheLine(ByteBuffer buffer) {
+            return (int) (PlatformDependent.directBufferAddress(buffer) & cacheLineSizeMask);
+        }
+
+        private static ByteBuffer allocateCacheLine(int chunkSize) {
+            return ByteBuffer.allocateDirect(chunkSize + doubleCacheLineSize);
+        }
+
         @Override
         protected PoolChunk<ByteBuffer> newChunk(int pageSize, int maxOrder, int pageShifts, int chunkSize) {
+            final ByteBuffer memory;
+            final int offset;
+            if (preventFalseSharing && cacheLineSizeMask != -1) {
+                // Prevent false sharing by allocate slightly bigger chunk of memory and calculate the right offset.
+                memory = allocateCacheLine(chunkSize);
+                offset = offsetCacheLine(memory);
+            } else {
+                memory = ByteBuffer.allocateDirect(chunkSize);
+                offset = 0;
+            }
             return new PoolChunk<ByteBuffer>(
-                    this, ByteBuffer.allocateDirect(chunkSize), pageSize, maxOrder, pageShifts, chunkSize);
+                    this, memory, pageSize, maxOrder, pageShifts, chunkSize, offset);
         }
 
         @Override
         protected PoolChunk<ByteBuffer> newUnpooledChunk(int capacity) {
-            return new PoolChunk<ByteBuffer>(this, ByteBuffer.allocateDirect(capacity), capacity);
+            final ByteBuffer memory;
+            final int offset;
+            if (preventFalseSharing && cacheLineSizeMask != -1) {
+                // Prevent false sharing by allocate slightly bigger chunk of memory and calculate the right offset.
+                memory = allocateCacheLine(capacity);
+                offset = offsetCacheLine(memory);
+            } else {
+                memory = ByteBuffer.allocateDirect(capacity);
+                offset = 0;
+            }
+            return new PoolChunk<ByteBuffer>(this, memory, capacity, offset);
         }
 
         @Override
