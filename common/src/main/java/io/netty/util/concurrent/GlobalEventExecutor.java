@@ -54,7 +54,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor {
     private final AtomicBoolean started = new AtomicBoolean();
     volatile Thread thread;
 
-    private final Future<?> terminationFuture = new FailedFuture<Object>(this, new UnsupportedOperationException());
+    private final Future<Void> terminationFuture = new FailedFuture<Void>(this, new UnsupportedOperationException());
 
     private GlobalEventExecutor() {
         scheduledTaskQueue().add(quietPeriodTask);
@@ -143,12 +143,12 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor {
     }
 
     @Override
-    public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+    public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
         return terminationFuture();
     }
 
     @Override
-    public Future<?> terminationFuture() {
+    public Future<Void> terminationFuture() {
         return terminationFuture;
     }
 

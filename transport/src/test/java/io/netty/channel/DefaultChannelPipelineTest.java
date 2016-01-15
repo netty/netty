@@ -730,12 +730,12 @@ public class DefaultChannelPipelineTest {
         }
 
         @Override
-        public Future<?> shutdownGracefully(long l, long l2, TimeUnit timeUnit) {
+        public Future<Void> shutdownGracefully(long l, long l2, TimeUnit timeUnit) {
             throw new IllegalStateException();
         }
 
         @Override
-        public Future<?> terminationFuture() {
+        public Future<Void> terminationFuture() {
             throw new IllegalStateException();
         }
 

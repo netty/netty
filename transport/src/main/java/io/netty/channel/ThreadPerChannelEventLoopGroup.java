@@ -54,7 +54,7 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
     private final ChannelException tooManyChannels;
 
     private volatile boolean shuttingDown;
-    private final Promise<?> terminationFuture = new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE);
+    private final Promise<Void> terminationFuture = new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE);
     private final FutureListener<Object> childTerminationListener = new FutureListener<Object>() {
         @Override
         public void operationComplete(Future<Object> future) throws Exception {
@@ -159,7 +159,7 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
     }
 
     @Override
-    public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+    public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
         shuttingDown = true;
 
         for (EventLoop l: activeChildren) {
@@ -178,7 +178,7 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
     }
 
     @Override
-    public Future<?> terminationFuture() {
+    public Future<Void> terminationFuture() {
         return terminationFuture;
     }
 

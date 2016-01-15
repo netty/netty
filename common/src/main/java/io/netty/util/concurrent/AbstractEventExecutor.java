@@ -71,7 +71,7 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     }
 
     @Override
-    public Future<?> shutdownGracefully() {
+    public Future<Void> shutdownGracefully() {
         return shutdownGracefully(DEFAULT_SHUTDOWN_QUIET_PERIOD, DEFAULT_SHUTDOWN_TIMEOUT, TimeUnit.SECONDS);
     }
 

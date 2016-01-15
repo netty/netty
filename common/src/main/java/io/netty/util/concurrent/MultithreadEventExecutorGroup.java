@@ -34,7 +34,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
     private final Set<EventExecutor> readonlyChildren;
     private final AtomicInteger childIndex = new AtomicInteger();
     private final AtomicInteger terminatedChildren = new AtomicInteger();
-    private final Promise<?> terminationFuture = new DefaultPromise(GlobalEventExecutor.INSTANCE);
+    private final Promise<Void> terminationFuture = new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE);
     private final EventExecutorChooser chooser;
 
     /**
@@ -155,7 +155,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
     protected abstract EventExecutor newChild(Executor executor, Object... args) throws Exception;
 
     @Override
-    public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+    public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
         for (EventExecutor l: children) {
             l.shutdownGracefully(quietPeriod, timeout, unit);
         }
@@ -163,7 +163,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
     }
 
     @Override
-    public Future<?> terminationFuture() {
+    public Future<Void> terminationFuture() {
         return terminationFuture;
     }
 

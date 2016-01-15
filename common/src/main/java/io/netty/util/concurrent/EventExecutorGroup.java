@@ -41,7 +41,7 @@ public interface EventExecutorGroup extends ScheduledExecutorService, Iterable<E
      *
      * @return the {@link #terminationFuture()}
      */
-    Future<?> shutdownGracefully();
+    Future<Void> shutdownGracefully();
 
     /**
      * Signals this executor that the caller wants the executor to be shut down.  Once this method is called,
@@ -57,13 +57,13 @@ public interface EventExecutorGroup extends ScheduledExecutorService, Iterable<E
      *
      * @return the {@link #terminationFuture()}
      */
-    Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit);
+    Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit);
 
     /**
      * Returns the {@link Future} which is notified when all {@link EventExecutor}s managed by this
      * {@link EventExecutorGroup} have been terminated.
      */
-    Future<?> terminationFuture();
+    Future<Void> terminationFuture();
 
     /**
      * @deprecated {@link #shutdownGracefully(long, long, TimeUnit)} or {@link #shutdownGracefully()} instead.
