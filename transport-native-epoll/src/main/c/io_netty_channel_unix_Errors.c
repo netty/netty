@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include "netty_unix_errors.h"
+#include "netty_unix_util.h"
 #include "io_netty_channel_unix_Errors.h"
 
 static jclass runtimeExceptionClass = NULL;
@@ -24,22 +25,14 @@ static jclass channelExceptionClass = NULL;
 static jclass ioExceptionClass = NULL;
 static jclass closedChannelExceptionClass = NULL;
 static jmethodID closedChannelExceptionMethodId = NULL;
+static char* nettyClassName = NULL;
 
 /** Notice: every usage of exceptionMessage needs to release the allocated memory for the sequence of char */
 static char* exceptionMessage(char* msg, int error) {
-    if (error < 0) {
-        // some functions return negative values
-        // and it's hard to keep track of when to send -error and when not
-        // this will just take care when things are forgotten
-        // what would generate a proper error
-        error = error * -1;
-    }
-    //strerror is returning a constant, so no need to free anything coming from strerror
-    char* err = strerror(error);
-    char* result = malloc(strlen(msg) + strlen(err) + 1);
-    strcpy(result, msg);
-    strcat(result, err);
-    return result;
+    // strerror is returning a constant, so no need to free anything coming from strerror
+    // error may be negative because some functions return negative values. we should make sure it is always
+    // positive when passing to standard library functions.
+    return netty_unix_util_prepend(msg, strerror(error < 0 ? -error : error));
 }
 
 // Exported C methods
@@ -79,7 +72,7 @@ void netty_unix_errors_throwOutOfMemoryError(JNIEnv* env) {
     (*env)->ThrowNew(env, exceptionClass, "");
 }
 
-jint netty_unix_errors_JNI_OnLoad(JNIEnv* env) {
+jint netty_unix_errors_JNI_OnLoad(JNIEnv* env, const char* nettyPackagePrefix) {
     jclass localRuntimeExceptionClass = (*env)->FindClass(env, "java/lang/RuntimeException");
     if (localRuntimeExceptionClass == NULL) {
         // pending exception...
@@ -92,7 +85,10 @@ jint netty_unix_errors_JNI_OnLoad(JNIEnv* env) {
         return JNI_ERR;
     }
 
-    jclass localChannelExceptionClass = (*env)->FindClass(env, "io/netty/channel/ChannelException");
+    nettyClassName = netty_unix_util_prepend(nettyPackagePrefix, "io/netty/channel/ChannelException");
+    jclass localChannelExceptionClass = (*env)->FindClass(env, nettyClassName);
+    free(nettyClassName);
+    nettyClassName = NULL;
     if (localChannelExceptionClass == NULL) {
         // pending exception...
         return JNI_ERR;
@@ -139,6 +135,10 @@ jint netty_unix_errors_JNI_OnLoad(JNIEnv* env) {
 
 void netty_unix_errors_JNI_OnUnLoad(JNIEnv* env) {
     // delete global references so the GC can collect them
+    if (nettyClassName != NULL) {
+        free(nettyClassName);
+        nettyClassName = NULL;
+    }
     if (runtimeExceptionClass != NULL) {
         (*env)->DeleteGlobalRef(env, runtimeExceptionClass);
         runtimeExceptionClass = NULL;
