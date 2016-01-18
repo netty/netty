@@ -499,7 +499,7 @@ public class DnsNameResolverTest {
         try {
             InetAddress address = resolver.resolve("10.0.0.1").syncUninterruptibly().getNow();
 
-            assertEquals("10.0.0.1", address.getHostName());
+            assertEquals("10.0.0.1", address.getHostAddress());
         } finally {
             resolver.close();
         }
