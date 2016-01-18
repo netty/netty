@@ -750,6 +750,8 @@ public final class OpenSslEngine extends SSLEngine {
     }
 
     private SSLEngineResult sslReadErrorResult(int err, int bytesConsumed, int bytesProduced) throws SSLException {
+        String errStr = SSL.getErrorString(err);
+
         // Check if we have a pending handshakeException and if so see if we need to consume all pending data from the
         // BIO first or can just shutdown and throw it now.
         // This is needed so we ensure close_notify etc is correctly send to the remote peer.
@@ -758,11 +760,11 @@ public final class OpenSslEngine extends SSLEngine {
             if (handshakeException == null && handshakeState != HandshakeState.FINISHED) {
                 // we seems to have data left that needs to be transfered and so the user needs
                 // call wrap(...). Store the error so we can pick it up later.
-                handshakeException = new SSLHandshakeException(SSL.getLastError());
+                handshakeException = new SSLHandshakeException(errStr);
             }
             return new SSLEngineResult(OK, NEED_WRAP, bytesConsumed, bytesProduced);
         }
-        throw shutdownWithError("SSL_read", SSL.getErrorString(err));
+        throw shutdownWithError("SSL_read", errStr);
     }
 
     private int pendingAppData() {
