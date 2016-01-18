@@ -503,8 +503,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         if (!handshakePromise.isDone()) {
             flushedBeforeHandshake = true;
         }
-        wrap(ctx, false);
-        ctx.flush();
+        try {
+            wrap(ctx, false);
+        } finally {
+            // We may have written some parts of data before an exception was thrown so ensure we always flush.
+            // See https://github.com/netty/netty/issues/3900#issuecomment-172481830
+            ctx.flush();
+        }
     }
 
     private void wrap(ChannelHandlerContext ctx, boolean inUnwrap) throws SSLException {
@@ -642,6 +647,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
         } catch (SSLException e) {
             setHandshakeFailure(ctx, e);
+
+            // We may have written some parts of data before an exception was thrown so ensure we always flush.
+            // See https://github.com/netty/netty/issues/3900#issuecomment-172481830
+            flushIfNeeded(ctx);
             throw e;
         }  finally {
             if (out != null) {
@@ -925,10 +934,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         // Discard bytes of the cumulation buffer if needed.
         discardSomeReadBytes();
 
-        if (needsFlush) {
-            needsFlush = false;
-            ctx.flush();
-        }
+        flushIfNeeded(ctx);
 
         // If handshake is not finished yet, we need more data.
         if (!ctx.channel().config().isAutoRead() && (!firedChannelRead || !handshakePromise.isDone())) {
@@ -939,6 +945,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
         firedChannelRead = false;
         ctx.fireChannelReadComplete();
+    }
+
+    private void flushIfNeeded(ChannelHandlerContext ctx) {
+        if (needsFlush) {
+            needsFlush = false;
+            ctx.flush();
+        }
     }
 
     /**
@@ -1349,9 +1362,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         try {
             engine.beginHandshake();
             wrapNonAppData(ctx, false);
-            ctx.flush();
         } catch (Exception e) {
             notifyHandshakeFailure(e);
+        } finally {
+            // We have may haven written some parts of data before an exception was thrown so ensure we always flush.
+            // See https://github.com/netty/netty/issues/3900#issuecomment-172481830
+            ctx.flush();
         }
 
         // Set timeout if necessary.
