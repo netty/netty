@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -35,10 +35,114 @@ public class ProtobufVarint32LengthFieldPrependerTest {
     }
 
     @Test
+    public void testSize1Varint() {
+        final int size = 1;
+        final int num = 10;
+        assertThat(ProtobufVarint32LengthFieldPrepender.computeRawVarint32Size(num), is(size));
+        final byte[] buf = new byte[size + num];
+        //0000 1010
+        buf[0] = 0x0A;
+        for (int i = size; i < num + size; ++i) {
+            buf[i] = 1;
+        }
+        assertTrue(ch.writeOutbound(wrappedBuffer(buf, size, buf.length - size)));
+        assertThat(releaseLater((ByteBuf) ch.readOutbound()), is(releaseLater(wrappedBuffer(buf))));
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testSize2Varint() {
+        final int size = 2;
+        final int num = 266;
+        assertThat(ProtobufVarint32LengthFieldPrepender.computeRawVarint32Size(num), is(size));
+        final byte[] buf = new byte[size + num];
+        /**
+         * 8    A    0    2
+         * 1000 1010 0000 0010
+         * 0000 1010 0000 0010
+         * 0000 0010 0000 1010
+         *  000 0010  000 1010
+         *
+         *  0000 0001 0000 1010
+         *  0    1    0    A
+         * 266
+         */
+
+        buf[0] = (byte) (0x8A & 0xFF);
+        buf[1] = 0x02;
+        for (int i = size; i < num + size; ++i) {
+            buf[i] = 1;
+        }
+        assertTrue(ch.writeOutbound(wrappedBuffer(buf, size, buf.length - size)));
+        assertThat(releaseLater((ByteBuf) ch.readOutbound()), is(releaseLater(wrappedBuffer(buf))));
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testSize3Varint() {
+        final int size = 3;
+        final int num = 0x4000;
+        assertThat(ProtobufVarint32LengthFieldPrepender.computeRawVarint32Size(num), is(size));
+        final byte[] buf = new byte[size + num];
+        /**
+         * 8    0    8    0    0    1
+         * 1000 0000 1000 0000 0000 0001
+         * 0000 0000 0000 0000 0000 0001
+         * 0000 0001 0000 0000 0000 0000
+         *  000 0001  000 0000  000 0000
+         *
+         *    0 0000 0100 0000 0000 0000
+         *    0    0    4    0    0    0
+         *
+         */
+
+        buf[0] = (byte) (0x80 & 0xFF);
+        buf[1] = (byte) (0x80 & 0xFF);
+        buf[2] = 0x01;
+        for (int i = size; i < num + size; ++i) {
+            buf[i] = 1;
+        }
+        assertTrue(ch.writeOutbound(wrappedBuffer(buf, size, buf.length - size)));
+        assertThat(releaseLater((ByteBuf) ch.readOutbound()), is(releaseLater(wrappedBuffer(buf))));
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testSize4Varint() {
+        final int size = 4;
+        final int num = 0x200000;
+        assertThat(ProtobufVarint32LengthFieldPrepender.computeRawVarint32Size(num), is(size));
+        final byte[] buf = new byte[size + num];
+        /**
+         * 8    0    8    0    8    0    0    1
+         * 1000 0000 1000 0000 1000 0000 0000 0001
+         * 0000 0000 0000 0000 0000 0000 0000 0001
+         * 0000 0001 0000 0000 0000 0000 0000 0000
+         *  000 0001  000 0000  000 0000  000 0000
+         *
+         *    0000 0010 0000 0000 0000 0000 0000
+         *    0    2    0    0    0    0    0
+         *
+         */
+
+        buf[0] = (byte) (0x80 & 0xFF);
+        buf[1] = (byte) (0x80 & 0xFF);
+        buf[2] = (byte) (0x80 & 0xFF);
+        buf[3] = 0x01;
+        for (int i = size; i < num + size; ++i) {
+            buf[i] = 1;
+        }
+        assertTrue(ch.writeOutbound(wrappedBuffer(buf, size, buf.length - size)));
+        assertThat(releaseLater((ByteBuf) ch.readOutbound()), is(releaseLater(wrappedBuffer(buf))));
+        assertFalse(ch.finish());
+    }
+
+    @Test
     public void testTinyEncode() {
         byte[] b = { 4, 1, 1, 1, 1 };
-        ch.writeOutbound(wrappedBuffer(b, 1, b.length - 1));
+        assertTrue(ch.writeOutbound(wrappedBuffer(b, 1, b.length - 1)));
         assertThat(releaseLater((ByteBuf) ch.readOutbound()), is(releaseLater(wrappedBuffer(b))));
+        assertFalse(ch.finish());
     }
 
     @Test
@@ -49,7 +153,8 @@ public class ProtobufVarint32LengthFieldPrependerTest {
         }
         b[0] = -2;
         b[1] = 15;
-        ch.writeOutbound(wrappedBuffer(b, 2, b.length - 2));
+        assertTrue(ch.writeOutbound(wrappedBuffer(b, 2, b.length - 2)));
         assertThat(releaseLater((ByteBuf) ch.readOutbound()), is(releaseLater(wrappedBuffer(b))));
+        assertFalse(ch.finish());
     }
 }

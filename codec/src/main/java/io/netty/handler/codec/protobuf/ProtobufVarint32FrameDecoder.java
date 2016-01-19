@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,20 +15,19 @@
  */
 package io.netty.handler.codec.protobuf;
 
+import java.io.IOException;
+import java.util.List;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.CorruptedFrameException;
 
-import java.util.List;
-
-import com.google.protobuf.CodedInputStream;
-
 /**
  * A decoder that splits the received {@link ByteBuf}s dynamically by the
  * value of the Google Protocol Buffers
  * <a href="http://code.google.com/apis/protocolbuffers/docs/encoding.html#varints">Base
- * 128 Varints</a> integer length field in the message.  For example:
+ * 128 Varints</a> integer length field in the message. For example:
  * <pre>
  * BEFORE DECODE (302 bytes)       AFTER DECODE (300 bytes)
  * +--------+---------------+      +---------------+
@@ -37,7 +36,7 @@ import com.google.protobuf.CodedInputStream;
  * +--------+---------------+      +---------------+
  * </pre>
  *
- * @see CodedInputStream
+ * @see {@link CodedInputStream } or {@link CodedInputByteBufferNano}
  */
 public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
 
@@ -45,33 +44,79 @@ public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
     //      (just like LengthFieldBasedFrameDecoder)
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out)
+            throws Exception {
         in.markReaderIndex();
-        final byte[] buf = new byte[5];
-        for (int i = 0; i < buf.length; i ++) {
-            if (!in.isReadable()) {
-                in.resetReaderIndex();
-                return;
-            }
-
-            buf[i] = in.readByte();
-            if (buf[i] >= 0) {
-                int length = CodedInputStream.newInstance(buf, 0, i + 1).readRawVarint32();
-                if (length < 0) {
-                    throw new CorruptedFrameException("negative length: " + length);
-                }
-
-                if (in.readableBytes() < length) {
-                    in.resetReaderIndex();
-                    return;
-                } else {
-                    out.add(in.readBytes(length));
-                    return;
-                }
-            }
+        int preIndex = in.readerIndex();
+        int length = readRawVarint32(in);
+        if (preIndex == in.readerIndex()) {
+            return;
+        }
+        if (length < 0) {
+            throw new CorruptedFrameException("negative length: " + length);
         }
 
-        // Couldn't find the byte whose MSB is off.
-        throw new CorruptedFrameException("length wider than 32-bit");
+        if (in.readableBytes() < length) {
+            in.resetReaderIndex();
+            return;
+        } else {
+            out.add(in.readBytes(length));
+            return;
+        }
+    }
+
+    /**
+     * Reads variable length 32bit int from buffer
+     *
+     * @return decoded int if buffers readerIndex has been forwarded else nonsense value
+     * @throws IOException
+     */
+    private static int readRawVarint32(ByteBuf buffer) throws IOException {
+        if (!buffer.isReadable()) {
+            return 0;
+        }
+        buffer.markReaderIndex();
+        byte tmp = buffer.readByte();
+        if (tmp >= 0) {
+            return tmp;
+        } else {
+            int result = tmp & 127;
+            if (!buffer.isReadable()) {
+                buffer.resetReaderIndex();
+                return 0;
+            }
+            if ((tmp = buffer.readByte()) >= 0) {
+                result |= tmp << 7;
+            } else {
+                result |= (tmp & 127) << 7;
+                if (!buffer.isReadable()) {
+                    buffer.resetReaderIndex();
+                    return 0;
+                }
+                if ((tmp = buffer.readByte()) >= 0) {
+                    result |= tmp << 14;
+                } else {
+                    result |= (tmp & 127) << 14;
+                    if (!buffer.isReadable()) {
+                        buffer.resetReaderIndex();
+                        return 0;
+                    }
+                    if ((tmp = buffer.readByte()) >= 0) {
+                        result |= tmp << 21;
+                    } else {
+                        result |= (tmp & 127) << 21;
+                        if (!buffer.isReadable()) {
+                            buffer.resetReaderIndex();
+                            return 0;
+                        }
+                        result |= (tmp = buffer.readByte()) << 28;
+                        if (tmp < 0) {
+                            throw new CorruptedFrameException("malformed varint.");
+                        }
+                    }
+                }
+            }
+            return result;
+        }
     }
 }
