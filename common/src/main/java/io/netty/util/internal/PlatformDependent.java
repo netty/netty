@@ -541,12 +541,14 @@ public final class PlatformDependent {
      * The resulting hash code will be case insensitive.
      */
     public static int hashCodeAscii(CharSequence bytes) {
-        char[] array;
-        if (!hasUnsafe() || !PlatformDependent0.unalignedAccess() ||
-                (array = PlatformDependent0.array(bytes)) == null) {
+        if (!hasUnsafe() || !PlatformDependent0.unalignedAccess()) {
             return hashCodeAsciiSafe(bytes);
+        } else if (PlatformDependent0.hasCharArray(bytes)) {
+            return PlatformDependent0.hashCodeAscii(PlatformDependent0.charArray(bytes));
+        } else if (PlatformDependent0.hasByteArray(bytes)) {
+            return PlatformDependent0.hashCodeAscii(PlatformDependent0.byteArray(bytes));
         }
-        return PlatformDependent0.hashCodeAscii(array);
+        return hashCodeAsciiSafe(bytes);
     }
 
     /**

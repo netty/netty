@@ -42,7 +42,8 @@ final class PlatformDependent0 {
     private static final long BYTE_ARRAY_BASE_OFFSET;
     private static final long CHAR_ARRAY_BASE_OFFSET;
     private static final long CHAR_ARRAY_INDEX_SCALE;
-    private static final long STRING_VALUE_FIELD_OFFSET;
+    private static final long STRING_CHAR_VALUE_FIELD_OFFSET;
+    private static final long STRING_BYTE_VALUE_FIELD_OFFSET;
     static final int HASH_CODE_ASCII_SEED = 0xc2b2ae35; // constant borrowed from murmur3
 
     /**
@@ -114,7 +115,7 @@ final class PlatformDependent0 {
             ADDRESS_FIELD_OFFSET = -1;
             BYTE_ARRAY_BASE_OFFSET = CHAR_ARRAY_BASE_OFFSET = CHAR_ARRAY_INDEX_SCALE = -1;
             UNALIGNED = false;
-            STRING_VALUE_FIELD_OFFSET = -1;
+            STRING_CHAR_VALUE_FIELD_OFFSET = STRING_BYTE_VALUE_FIELD_OFFSET = -1;
         } else {
             ADDRESS_FIELD_OFFSET = objectFieldOffset(addressField);
             BYTE_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(byte[].class);
@@ -159,8 +160,24 @@ final class PlatformDependent0 {
                 logger.debug("AccessController.doPrivileged failed to get String value array." +
                         "String hash code optimizations are disabled.", t);
             }
-            STRING_VALUE_FIELD_OFFSET = stringValueField == null ?
-                    -1 : UNSAFE.objectFieldOffset(stringValueField);
+
+            if (stringValueField == null) {
+                STRING_CHAR_VALUE_FIELD_OFFSET = STRING_BYTE_VALUE_FIELD_OFFSET = -1;
+            } else {
+                long stringValueFieldOffset = UNSAFE.objectFieldOffset(stringValueField);
+                Object o = UNSAFE.getObject("", stringValueFieldOffset);
+                if (char[].class.isInstance(o)) {
+                    STRING_CHAR_VALUE_FIELD_OFFSET = stringValueFieldOffset;
+                    STRING_BYTE_VALUE_FIELD_OFFSET = -1;
+                } else if (byte[].class.isInstance(o)) {
+                    STRING_CHAR_VALUE_FIELD_OFFSET = -1;
+                    STRING_BYTE_VALUE_FIELD_OFFSET = stringValueFieldOffset;
+                } else {
+                    STRING_CHAR_VALUE_FIELD_OFFSET = STRING_BYTE_VALUE_FIELD_OFFSET = -1;
+                    logger.info("Unexpected type [" + o.getClass() + "] for String value array." +
+                            "String hash code optimizations are disabled.");
+                }
+            }
         }
     }
 
@@ -343,6 +360,10 @@ final class PlatformDependent0 {
         }
     }
 
+    static int hashCodeAscii(byte[] bytes) {
+        return hashCodeAscii(bytes, 0, bytes.length);
+    }
+
     /**
      * This must remain consistent with {@link #hashCodeAscii(char[])}.
      */
@@ -433,9 +454,26 @@ final class PlatformDependent0 {
         }
     }
 
-    static char[] array(CharSequence data) {
-        return (STRING_VALUE_FIELD_OFFSET != -1 && data.getClass() == String.class) ?
-                (char[]) UNSAFE.getObject(data, STRING_VALUE_FIELD_OFFSET) : null;
+    static boolean hasCharArray(CharSequence data) {
+        return STRING_CHAR_VALUE_FIELD_OFFSET != -1 && data.getClass() == String.class;
+    }
+
+    static boolean hasByteArray(CharSequence data) {
+        return STRING_BYTE_VALUE_FIELD_OFFSET != -1 && data.getClass() == String.class;
+    }
+
+    /**
+     * Callers are expected to call {@link #hasCharArray(CharSequence)} before calling this method.
+     */
+    static char[] charArray(CharSequence data) {
+        return (char[]) UNSAFE.getObject(data, STRING_CHAR_VALUE_FIELD_OFFSET);
+    }
+
+    /**
+     * Callers are expected to call {@link #hasByteArray(CharSequence)} before calling this method.
+     */
+    static byte[] byteArray(CharSequence data) {
+        return (byte[]) UNSAFE.getObject(data, STRING_BYTE_VALUE_FIELD_OFFSET);
     }
 
     static int hashCodeAsciiCompute(long value, int hash) {
