@@ -716,6 +716,11 @@
         <artifactId>protobuf-java</artifactId>
         <version>2.5.0</version>
       </dependency>
+      <dependency>
+        <groupId>com.google.protobuf.nano</groupId>
+        <artifactId>protobuf-javanano</artifactId>
+        <version>3.0.0-alpha-4</version>
+      </dependency>
 
       <!-- Our own Tomcat Native fork - completely optional, used for acclerating SSL with OpenSSL. -->
       <dependency>

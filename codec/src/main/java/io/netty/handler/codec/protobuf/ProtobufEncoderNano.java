@@ -15,24 +15,22 @@
  */
 package io.netty.handler.codec.protobuf;
 
-import com.google.protobuf.Message;
-import com.google.protobuf.MessageLite;
-import com.google.protobuf.MessageLiteOrBuilder;
+import com.google.protobuf.nano.CodedOutputByteBufferNano;
+import com.google.protobuf.nano.MessageNano;
+
+import java.util.List;
+
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.MessageToMessageEncoder;
 
-import java.util.List;
-
-import static io.netty.buffer.Unpooled.*;
-
 /**
  * Encodes the requested <a href="http://code.google.com/p/protobuf/">Google
- * Protocol Buffers</a> {@link Message} and {@link MessageLite} into a
+ * Protocol Buffers</a> {@link MessageNano} into a
  * {@link ByteBuf}. A typical setup for TCP/IP would be:
  * <pre>
  * {@link ChannelPipeline} pipeline = ...;
@@ -41,11 +39,11 @@ import static io.netty.buffer.Unpooled.*;
  * pipeline.addLast("frameDecoder",
  *                  new {@link LengthFieldBasedFrameDecoder}(1048576, 0, 4, 0, 4));
  * pipeline.addLast("protobufDecoder",
- *                  new {@link ProtobufDecoder}(MyMessage.getDefaultInstance()));
+ *                  new {@link ProtobufDecoderNano}(MyMessage.getDefaultInstance()));
  *
  * // Encoder
  * pipeline.addLast("frameEncoder", new {@link LengthFieldPrepender}(4));
- * pipeline.addLast("protobufEncoder", new {@link ProtobufEncoder}());
+ * pipeline.addLast("protobufEncoder", new {@link ProtobufEncoderNano}());
  * </pre>
  * and then you can use a {@code MyMessage} instead of a {@link ByteBuf}
  * as a message:
@@ -58,17 +56,18 @@ import static io.netty.buffer.Unpooled.*;
  * }
  * </pre>
  */
-@Sharable
-public class ProtobufEncoder extends MessageToMessageEncoder<MessageLiteOrBuilder> {
+@ChannelHandler.Sharable
+public class ProtobufEncoderNano extends MessageToMessageEncoder<MessageNano> {
     @Override
-    protected void encode(ChannelHandlerContext ctx, MessageLiteOrBuilder msg, List<Object> out)
-            throws Exception {
-        if (msg instanceof MessageLite) {
-            out.add(wrappedBuffer(((MessageLite) msg).toByteArray()));
-            return;
-        }
-        if (msg instanceof MessageLite.Builder) {
-            out.add(wrappedBuffer(((MessageLite.Builder) msg).build().toByteArray()));
-        }
+    protected void encode(
+            ChannelHandlerContext ctx, MessageNano msg, List<Object> out) throws Exception {
+        final int size = msg.getSerializedSize();
+        final ByteBuf buffer = ctx.alloc().heapBuffer(size, size);
+        final byte[] array = buffer.array();
+        CodedOutputByteBufferNano cobbn = CodedOutputByteBufferNano.newInstance(array,
+                buffer.arrayOffset(), buffer.capacity());
+        msg.writeTo(cobbn);
+        buffer.writerIndex(size);
+        out.add(buffer);
     }
 }
