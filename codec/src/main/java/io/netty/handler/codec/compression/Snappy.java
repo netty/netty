@@ -229,7 +229,7 @@ class Snappy {
      * @param out The output buffer to copy to
      * @param length The length of the literal to copy
      */
-    private static void encodeLiteral(ByteBuf in, ByteBuf out, int length) {
+    static void encodeLiteral(ByteBuf in, ByteBuf out, int length) {
         if (length < 61) {
             out.writeByte(length - 1 << 2);
         } else {
@@ -396,7 +396,7 @@ class Snappy {
      * @param out The output buffer to write the literal to
      * @return The number of bytes appended to the output buffer, or -1 to indicate "try again later"
      */
-    private static int decodeLiteral(byte tag, ByteBuf in, ByteBuf out) {
+    static int decodeLiteral(byte tag, ByteBuf in, ByteBuf out) {
         in.markReaderIndex();
         int length;
         switch(tag >> 2 & 0x3F) {
@@ -418,7 +418,7 @@ class Snappy {
             }
             length = ByteBufUtil.swapMedium(in.readUnsignedMedium());
             break;
-        case 64:
+        case 63:
             if (in.readableBytes() < 4) {
                 return NOT_ENOUGH_INPUT;
             }
