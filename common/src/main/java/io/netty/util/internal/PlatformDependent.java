@@ -88,7 +88,6 @@ public final class PlatformDependent {
     private static final int BIT_MODE = bitMode0();
 
     private static final int ADDRESS_SIZE = addressSize0();
-    private static final boolean NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
 
     static {
         if (logger.isDebugEnabled()) {
@@ -518,7 +517,7 @@ public final class PlatformDependent {
         try {
             Class.forName("android.app.Application", false, getSystemClassLoader());
             android = true;
-        } catch (Exception e) {
+        } catch (Throwable ignored) {
             // Failed to load the class uniquely available in Android.
             android = false;
         }
@@ -565,7 +564,7 @@ public final class PlatformDependent {
                         // Ignore
                     }
                 }
-            } catch (Exception e) {
+            } catch (Throwable ignored) {
                 // Failed to run the command.
                 uid = null;
             } finally {
@@ -646,7 +645,7 @@ public final class PlatformDependent {
                 Class.forName("java.time.Clock", false, getClassLoader(Object.class));
                 javaVersion = 8;
                 break;
-            } catch (Exception e) {
+            } catch (Throwable ignored) {
                 // Ignore
             }
 
@@ -654,7 +653,7 @@ public final class PlatformDependent {
                 Class.forName("java.util.concurrent.LinkedTransferQueue", false, getClassLoader(BlockingQueue.class));
                 javaVersion = 7;
                 break;
-            } catch (Exception e) {
+            } catch (Throwable ignored) {
                 // Ignore
             }
 
@@ -699,7 +698,7 @@ public final class PlatformDependent {
             boolean hasUnsafe = PlatformDependent0.hasUnsafe();
             logger.debug("sun.misc.Unsafe: {}", hasUnsafe ? "available" : "unavailable");
             return hasUnsafe;
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
             // Probably failed to initialize PlatformDependent0.
             return false;
         }
@@ -720,7 +719,7 @@ public final class PlatformDependent {
             Class<?> vmClass = Class.forName("sun.misc.VM", true, getSystemClassLoader());
             Method m = vmClass.getDeclaredMethod("maxDirectMemory");
             maxDirectMemory = ((Number) m.invoke(null)).longValue();
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
             // Ignore
         }
 
@@ -760,7 +759,7 @@ public final class PlatformDependent {
                 }
                 break;
             }
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
             // Ignore
         }
 
@@ -845,7 +844,7 @@ public final class PlatformDependent {
                     return f;
                 }
             }
-        } catch (Exception ignored) {
+        } catch (Throwable ignored) {
             // Environment variable inaccessible
         }
 
