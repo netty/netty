@@ -195,4 +195,32 @@ public class SnappyTest {
 
         validateChecksum(maskChecksum(0xd6cb8b55), input);
     }
+
+    @Test
+    public void testEncodeLiteralAndDecodeLiteral() {
+        int[] lengths = new int[] {
+            0x11, // default
+            0x100, // case 60
+            0x1000, // case 61
+            0x100000, // case 62
+            0x1000001 // case 63
+        };
+        for (int len : lengths) {
+            ByteBuf in = Unpooled.wrappedBuffer(new byte[len]);
+            ByteBuf encoded = Unpooled.buffer(10);
+            ByteBuf decoded = Unpooled.buffer(10);
+            ByteBuf expected = Unpooled.wrappedBuffer(new byte[len]);
+            try {
+                Snappy.encodeLiteral(in, encoded, len);
+                byte tag = encoded.readByte();
+                Snappy.decodeLiteral(tag, encoded, decoded);
+                assertEquals("Encoded or decoded literal was incorrect", expected, decoded);
+            } finally {
+                in.release();
+                encoded.release();
+                decoded.release();
+                expected.release();
+            }
+        }
+    }
 }
