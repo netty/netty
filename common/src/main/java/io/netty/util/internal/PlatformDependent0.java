@@ -136,23 +136,29 @@ final class PlatformDependent0 {
             UNALIGNED = unaligned;
             logger.debug("java.nio.Bits.unaligned: {}", UNALIGNED);
 
-            Field stringValueField = AccessController.doPrivileged(new PrivilegedAction<Field>() {
-                @Override
-                public Field run() {
-                    try {
-                        Field f = String.class.getDeclaredField("value");
-                        f.setAccessible(true);
-                        return f;
-                    } catch (NoSuchFieldException e) {
-                        logger.warn("Failed to find String value array." +
-                                "String hash code optimizations are disabled.", e);
-                    } catch (SecurityException e) {
-                        logger.info("No permissions to get String value array." +
-                                "String hash code optimizations are disabled.", e);
+            Field stringValueField = null;
+            try {
+                stringValueField = AccessController.doPrivileged(new PrivilegedAction<Field>() {
+                    @Override
+                    public Field run() {
+                        try {
+                            Field f = String.class.getDeclaredField("value");
+                            f.setAccessible(true);
+                            return f;
+                        } catch (NoSuchFieldException e) {
+                            logger.info("Failed to find String value array (please report an issue)." +
+                                    "String hash code optimizations are disabled.", e);
+                        } catch (SecurityException e) {
+                            logger.debug("No permissions to get String value array." +
+                                    "String hash code optimizations are disabled.", e);
+                        }
+                        return null;
                     }
-                    return null;
-                }
-            });
+                });
+            } catch (Throwable t) {
+                logger.debug("AccessController.doPrivileged failed to get String value array." +
+                        "String hash code optimizations are disabled.", t);
+            }
             STRING_VALUE_FIELD_OFFSET = stringValueField == null ?
                     -1 : UNSAFE.objectFieldOffset(stringValueField);
         }
