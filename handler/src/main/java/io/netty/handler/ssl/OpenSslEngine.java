@@ -1076,21 +1076,29 @@ public final class OpenSslEngine extends SSLEngine {
                 // Enable all and then disable what we not want
                 SSL.setOptions(ssl, SSL.SSL_OP_ALL);
 
+                // Clear out options which disable protocols
+                SSL.clearOptions(ssl, SSL.SSL_OP_NO_SSLv2 | SSL.SSL_OP_NO_SSLv3 | SSL.SSL_OP_NO_TLSv1 |
+                    SSL.SSL_OP_NO_TLSv1_1 | SSL.SSL_OP_NO_TLSv1_2);
+
+                int opts = 0;
                 if (!sslv2) {
-                    SSL.setOptions(ssl, SSL.SSL_OP_NO_SSLv2);
+                    opts |= SSL.SSL_OP_NO_SSLv2;
                 }
                 if (!sslv3) {
-                    SSL.setOptions(ssl, SSL.SSL_OP_NO_SSLv3);
+                    opts |= SSL.SSL_OP_NO_SSLv3;
                 }
                 if (!tlsv1) {
-                    SSL.setOptions(ssl, SSL.SSL_OP_NO_TLSv1);
+                    opts |= SSL.SSL_OP_NO_TLSv1;
                 }
                 if (!tlsv1_1) {
-                    SSL.setOptions(ssl, SSL.SSL_OP_NO_TLSv1_1);
+                    opts |= SSL.SSL_OP_NO_TLSv1_1;
                 }
                 if (!tlsv1_2) {
-                    SSL.setOptions(ssl, SSL.SSL_OP_NO_TLSv1_2);
+                    opts |= SSL.SSL_OP_NO_TLSv1_2;
                 }
+
+                // Disable protocols we do not want
+                SSL.setOptions(ssl, opts);
             } else {
                 throw new IllegalStateException("failed to enable protocols: " + Arrays.asList(protocols));
             }

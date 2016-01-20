@@ -59,6 +59,9 @@ import static org.mockito.Mockito.verify;
 
 public abstract class SSLEngineTest {
 
+    protected static final String PROTOCOL_TLS_V1_2 = "TLSv1.2";
+    protected static final String PROTOCOL_SSL_V2_HELLO = "SSLv2Hello";
+
     @Mock
     protected MessageReceiver serverReceiver;
     @Mock
@@ -327,6 +330,40 @@ public abstract class SSLEngineTest {
         assertTrue(session.isValid());
         session.invalidate();
         assertFalse(session.isValid());
+    }
+
+    protected void testEnablingAnAlreadyDisabledSslProtocol(String[] protocols1, String[] protocols2) throws Exception {
+        SSLEngine sslEngine = null;
+        try {
+            File serverKeyFile = new File(getClass().getResource("test_unencrypted.pem").getFile());
+            File serverCrtFile = new File(getClass().getResource("test.crt").getFile());
+            SslContext sslContext = SslContextBuilder.forServer(serverCrtFile, serverKeyFile)
+               .sslProvider(sslProvider())
+               .build();
+
+            sslEngine = sslContext.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+            // Disable all protocols
+            sslEngine.setEnabledProtocols(new String[]{});
+
+            // The only protocol that should be enabled is SSLv2Hello
+            String[] enabledProtocols = sslEngine.getEnabledProtocols();
+            assertEquals(protocols1.length, enabledProtocols.length);
+            assertArrayEquals(protocols1, enabledProtocols);
+
+            // Enable a protocol that is currently disabled
+            sslEngine.setEnabledProtocols(new String[]{PROTOCOL_TLS_V1_2});
+
+            // The protocol that was just enabled should be returned
+            enabledProtocols = sslEngine.getEnabledProtocols();
+            assertEquals(protocols2.length, enabledProtocols.length);
+            assertArrayEquals(protocols2, enabledProtocols);
+        } finally {
+            if (sslEngine != null) {
+                sslEngine.closeInbound();
+                sslEngine.closeOutbound();
+            }
+        }
     }
 
     private static void handshake(SSLEngine clientEngine, SSLEngine serverEngine) throws SSLException {
