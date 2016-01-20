@@ -15,25 +15,24 @@
  */
 package io.netty.handler.ssl;
 
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeNoException;
-import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
-import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectorFactory;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
+import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
+import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectorFactory;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import org.junit.Test;
 
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLHandshakeException;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLHandshakeException;
-
-import org.junit.Test;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeNoException;
 
 public class JdkSslEngineTest extends SSLEngineTest {
     private static final String PREFERRED_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http2";
@@ -261,6 +260,11 @@ public class JdkSslEngineTest extends SSLEngineTest {
             // java version incompatibility don't fail the test, but instead just skip the test
             assumeNoException(e);
         }
+    }
+
+    @Test
+    public void testEnablingAnAlreadyDisabledSslProtocol() throws Exception {
+        testEnablingAnAlreadyDisabledSslProtocol(new String[]{}, new String[]{PROTOCOL_TLS_V1_2});
     }
 
     private void runTest() throws Exception {
