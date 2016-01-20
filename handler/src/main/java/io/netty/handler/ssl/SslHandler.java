@@ -1338,6 +1338,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
 
             handshakePromise = p = newHandshakePromise;
+        } else if (engine.getHandshakeStatus() != HandshakeStatus.NOT_HANDSHAKING) {
+            // Not all SSLEngine implementations support calling beginHandshake multiple times while a handshake
+            // is in progress. See https://github.com/netty/netty/issues/4718.
+            return;
         } else {
             // Forced to reuse the old handshake.
             p = handshakePromise;
