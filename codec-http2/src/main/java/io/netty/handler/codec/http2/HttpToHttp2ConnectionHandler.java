@@ -51,7 +51,7 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
      */
     private int getStreamId(HttpHeaders httpHeaders) throws Exception {
         return httpHeaders.getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(),
-                                  connection().local().nextStreamId());
+                                  connection().local().incrementAndGetNextStreamId());
     }
 
     /**

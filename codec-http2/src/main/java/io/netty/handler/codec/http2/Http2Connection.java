@@ -138,12 +138,11 @@ public interface Http2Connection {
      * A view of the connection from one endpoint (local or remote).
      */
     interface Endpoint<F extends Http2FlowController> {
-
         /**
-         * Returns the next valid streamId for this endpoint. If negative, the stream IDs are
+         * Increment and get the next generated stream id this endpoint. If negative, the stream IDs are
          * exhausted for this endpoint an no further streams may be created.
          */
-        int nextStreamId();
+        int incrementAndGetNextStreamId();
 
         /**
          * Indicates whether the given streamId is from the set of IDs used by this endpoint to
@@ -161,13 +160,6 @@ public interface Http2Connection {
          * Indicates whether or not this endpoint created the given stream.
          */
         boolean created(Http2Stream stream);
-
-        /**
-         * Indicates whether or not the stream IDs for this endpoint have been exhausted
-         * (i.e. {@link #nextStreamId()} < 0). If {@code true}, any attempt to create new streams
-         * on this endpoint will fail.
-         */
-        boolean isExhausted();
 
         /**
          * Indicates whether or a stream created by this endpoint can be opened without violating
