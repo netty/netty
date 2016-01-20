@@ -38,7 +38,7 @@ public final class DnsNameResolverBuilder {
     private final EventLoop eventLoop;
     private ChannelFactory<? extends DatagramChannel> channelFactory;
     private InetSocketAddress localAddress = DnsNameResolver.ANY_LOCAL_ADDR;
-    private DnsServerAddresses nameServerAddresses;
+    private DnsServerAddresses nameServerAddresses = DefaultDnsServerAddresses.defaultAddresses();
     private DnsCache resolveCache;
     private Integer minTtl;
     private Integer maxTtl;
