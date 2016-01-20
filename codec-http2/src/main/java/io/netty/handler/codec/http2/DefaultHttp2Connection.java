@@ -51,6 +51,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
+import static java.lang.Math.max;
 
 /**
  * Simple implementation of {@link Http2Connection}.
@@ -71,7 +72,7 @@ public class DefaultHttp2Connection implements Http2Connection {
      * dependencies to load).
      */
     private static final int INITIAL_CHILDREN_MAP_SIZE =
-            Math.max(1, SystemPropertyUtil.getInt("io.netty.http2.childrenMapSize", 4));
+            max(1, SystemPropertyUtil.getInt("io.netty.http2.childrenMapSize", 4));
 
     /**
      * We chose a {@link List} over a {@link Set} to avoid allocating an {@link Iterator} objects when iterating over
@@ -833,8 +834,19 @@ public class DefaultHttp2Connection implements Http2Connection {
      */
     private final class DefaultEndpoint<F extends Http2FlowController> implements Endpoint<F> {
         private final boolean server;
-        private int nextStreamId;
-        private int lastStreamCreated;
+        /**
+         * The minimum stream ID allowed when creating the next stream. This only applies at the time the stream is
+         * created. If the ID of the stream being created is less than this value, stream creation will fail. Upon
+         * successful creation of a stream, this value is incremented to the next valid stream ID.
+         */
+        private int nextStreamIdToCreate;
+        /**
+         * Used for reservation of stream IDs. Stream IDs can be reserved in advance by applications before the streams
+         * are actually created.  For example, applications may choose to buffer stream creation attempts as a way of
+         * working around {@code SETTINGS_MAX_CONCURRENT_STREAMS}, in which case they will reserve stream IDs for each
+         * buffered stream.
+         */
+        private int nextReservationStreamId;
         private int lastStreamKnownByPeer = -1;
         private boolean pushToAllowed = true;
         private F flowController;
@@ -849,7 +861,14 @@ public class DefaultHttp2Connection implements Http2Connection {
             // are odd and server-initiated streams are even. Zero is reserved for the
             // connection. Stream 1 is reserved client-initiated stream for responding to an
             // upgrade from HTTP 1.1.
-            nextStreamId = server ? 2 : 1;
+            if (server) {
+                nextStreamIdToCreate = 2;
+                nextReservationStreamId = 0;
+            } else {
+                nextStreamIdToCreate = 1;
+                // For manually created client-side streams, 1 is reserved for HTTP upgrade, so start at 3.
+                nextReservationStreamId = 1;
+            }
 
             // Push is disallowed by default for servers and allowed for clients.
             pushToAllowed = !server;
@@ -857,9 +876,15 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public int nextStreamId() {
-            // For manually created client-side streams, 1 is reserved for HTTP upgrade, so start at 3.
-            return nextStreamId > 1 ? nextStreamId : nextStreamId + 2;
+        public int incrementAndGetNextStreamId() {
+            return nextReservationStreamId >= 0 ? nextReservationStreamId += 2 : nextReservationStreamId;
+        }
+
+        private void incrementExpectedStreamId(int streamId) {
+            if (streamId > nextReservationStreamId && nextReservationStreamId >= 0) {
+                nextReservationStreamId = streamId;
+            }
+            nextStreamIdToCreate = streamId + 2;
         }
 
         @Override
@@ -870,12 +895,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public boolean mayHaveCreatedStream(int streamId) {
-            return isValidStreamId(streamId) && streamId <= lastStreamCreated;
-        }
-
-        @Override
-        public boolean isExhausted() {
-            return nextStreamId() <= 0;
+            return isValidStreamId(streamId) && streamId <= lastStreamCreated();
         }
 
         @Override
@@ -889,9 +909,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             // Create and initialize the stream.
             DefaultStream stream = new DefaultStream(streamId, state);
 
-            // Update the next and last stream IDs.
-            nextStreamId = streamId + 2;
-            lastStreamCreated = streamId;
+            incrementExpectedStreamId(streamId);
 
             addStream(stream);
             return stream;
@@ -936,9 +954,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             // Create and initialize the stream.
             DefaultStream stream = new DefaultStream(streamId, state);
 
-            // Update the next and last stream IDs.
-            nextStreamId = streamId + 2;
-            lastStreamCreated = streamId;
+            incrementExpectedStreamId(streamId);
 
             // Register the stream.
             addStream(stream);
@@ -994,7 +1010,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public int lastStreamCreated() {
-            return lastStreamCreated;
+            return nextStreamIdToCreate > 1 ? nextStreamIdToCreate - 2 : 0;
         }
 
         @Override
@@ -1036,11 +1052,11 @@ public class DefaultHttp2Connection implements Http2Connection {
             }
             // This check must be after all id validated checks, but before the max streams check because it may be
             // recoverable to some degree for handling frames which can be sent on closed streams.
-            if (streamId < nextStreamId) {
+            if (streamId < nextStreamIdToCreate) {
                 throw closedStreamError(PROTOCOL_ERROR, "Request stream %d is behind the next expected stream %d",
-                        streamId, nextStreamId);
+                        streamId, nextStreamIdToCreate);
             }
-            if (isExhausted()) {
+            if (nextStreamIdToCreate <= 0) {
                 throw connectionError(REFUSED_STREAM, "Stream IDs are exhausted for this endpoint.");
             }
             if ((state.localSideOpen() || state.remoteSideOpen()) && !canOpenStream()) {

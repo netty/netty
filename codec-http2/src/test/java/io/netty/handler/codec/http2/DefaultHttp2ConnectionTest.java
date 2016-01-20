@@ -22,6 +22,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyLong;
@@ -194,6 +195,46 @@ public class DefaultHttp2ConnectionTest {
         assertEquals(State.RESERVED_LOCAL, pushStream.state());
         assertEquals(1, server.numActiveStreams());
         assertEquals(4, server.local().lastStreamCreated());
+    }
+
+    @Test
+    public void serverRemoteIncrementAndGetStreamShouldSucceed() throws Http2Exception {
+        incrementAndGetStreamShouldSucceed(server.remote());
+    }
+
+    @Test
+    public void serverLocalIncrementAndGetStreamShouldSucceed() throws Http2Exception {
+        incrementAndGetStreamShouldSucceed(server.local());
+    }
+
+    @Test
+    public void clientRemoteIncrementAndGetStreamShouldSucceed() throws Http2Exception {
+        incrementAndGetStreamShouldSucceed(client.remote());
+    }
+
+    @Test
+    public void clientLocalIncrementAndGetStreamShouldSucceed() throws Http2Exception {
+        incrementAndGetStreamShouldSucceed(client.local());
+    }
+
+    @Test(expected = Http2NoMoreStreamIdsException.class)
+    public void serverRemoteIncrementAndGetStreamShouldRespectOverflow() throws Http2Exception {
+        incrementAndGetStreamShouldRespectOverflow(server.remote(), Integer.MAX_VALUE);
+    }
+
+    @Test(expected = Http2NoMoreStreamIdsException.class)
+    public void serverLocalIncrementAndGetStreamShouldRespectOverflow() throws Http2Exception {
+        incrementAndGetStreamShouldRespectOverflow(server.local(), Integer.MAX_VALUE - 1);
+    }
+
+    @Test(expected = Http2NoMoreStreamIdsException.class)
+    public void clientRemoteIncrementAndGetStreamShouldRespectOverflow() throws Http2Exception {
+        incrementAndGetStreamShouldRespectOverflow(client.remote(), Integer.MAX_VALUE - 1);
+    }
+
+    @Test(expected = Http2NoMoreStreamIdsException.class)
+    public void clientLocalIncrementAndGetStreamShouldRespectOverflow() throws Http2Exception {
+        incrementAndGetStreamShouldRespectOverflow(client.local(), Integer.MAX_VALUE);
     }
 
     @Test(expected = Http2Exception.class)
@@ -1064,6 +1105,26 @@ public class DefaultHttp2ConnectionTest {
         } finally {
             client.removeListener(clientListener2);
         }
+    }
+
+    private void incrementAndGetStreamShouldRespectOverflow(Endpoint<?> endpoint, int streamId) throws Http2Exception {
+        assertTrue(streamId > 0);
+        try {
+            endpoint.createStream(streamId, true);
+            streamId = endpoint.incrementAndGetNextStreamId();
+        } catch (Throwable t) {
+            fail();
+        }
+        assertTrue(streamId < 0);
+        endpoint.createStream(streamId, true);
+    }
+
+    private void incrementAndGetStreamShouldSucceed(Endpoint<?> endpoint) throws Http2Exception {
+        Http2Stream streamA = endpoint.createStream(endpoint.incrementAndGetNextStreamId(), true);
+        Http2Stream streamB = endpoint.createStream(streamA.id() + 2, true);
+        Http2Stream streamC = endpoint.createStream(endpoint.incrementAndGetNextStreamId(), true);
+        assertEquals(streamB.id() + 2, streamC.id());
+        endpoint.createStream(streamC.id() + 2, true);
     }
 
     private static final class ListenerExceptionThrower implements Answer<Void> {
