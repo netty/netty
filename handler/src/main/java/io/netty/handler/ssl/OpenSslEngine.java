@@ -148,7 +148,6 @@ public final class OpenSslEngine extends SSLEngine {
 
     private HandshakeState handshakeState = HandshakeState.NOT_STARTED;
     private boolean receivedShutdown;
-    @SuppressWarnings("UnusedDeclaration")
     private volatile int destroyed;
 
     private volatile ClientAuth clientAuth = ClientAuth.NONE;
@@ -226,13 +225,18 @@ public final class OpenSslEngine extends SSLEngine {
     }
 
     @Override
-    public SSLSession getHandshakeSession() {
-        if (handshakeState != HandshakeState.NOT_STARTED) {
-            // handshake started we are able to return the session.
+    public synchronized SSLSession getHandshakeSession() {
+        // Javadocs state return value should be:
+        // null if this instance is not currently handshaking, or if the current handshake has not
+        // progressed far enough to create a basic SSLSession. Otherwise, this method returns the
+        // SSLSession currently being negotiated.
+        switch(handshakeState) {
+        case NOT_STARTED:
+        case FINISHED:
+            return null;
+        default:
             return session;
         }
-        // As stated by the javadocs of getHandshakeSession() we should return null if the handshake not started yet.
-        return null;
     }
 
     /**
@@ -1250,18 +1254,12 @@ public final class OpenSslEngine extends SSLEngine {
     @Override
     public synchronized SSLEngineResult.HandshakeStatus getHandshakeStatus() {
         // Check if we are in the initial handshake phase or shutdown phase
-        if (needPendingStatus()) {
-            return pendingStatus(SSL.pendingWrittenBytesInBIO(networkBIO));
-        }
-        return NOT_HANDSHAKING;
+        return needPendingStatus() ? pendingStatus(SSL.pendingWrittenBytesInBIO(networkBIO)) : NOT_HANDSHAKING;
     }
 
     private SSLEngineResult.HandshakeStatus getHandshakeStatus(int pending) {
         // Check if we are in the initial handshake phase or shutdown phase
-        if (needPendingStatus()) {
-            return pendingStatus(pending);
-        }
-        return NOT_HANDSHAKING;
+        return needPendingStatus() ? pendingStatus(pending) : NOT_HANDSHAKING;
     }
 
     private boolean needPendingStatus() {
