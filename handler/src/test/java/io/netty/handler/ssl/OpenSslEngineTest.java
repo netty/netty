@@ -60,6 +60,13 @@ public class OpenSslEngineTest extends SSLEngineTest {
         runTest(PREFERRED_APPLICATION_LEVEL_PROTOCOL);
     }
 
+    @Test
+    public void testEnablingAnAlreadyDisabledSslProtocol() throws Exception {
+        assumeTrue(OpenSsl.isAvailable());
+        testEnablingAnAlreadyDisabledSslProtocol(new String[]{PROTOCOL_SSL_V2_HELLO},
+            new String[]{PROTOCOL_SSL_V2_HELLO, PROTOCOL_TLS_V1_2});
+    }
+
     @Override
     public void testMutualAuthSameCerts() throws Exception {
         assumeTrue(OpenSsl.isAvailable());
