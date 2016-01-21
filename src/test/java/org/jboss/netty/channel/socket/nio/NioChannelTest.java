@@ -33,6 +33,7 @@ import org.junit.Test;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
 
@@ -93,6 +94,20 @@ public class NioChannelTest {
             }, true);
             return f;
         }
+
+        MessageEvent poll() {
+            final DefaultChannelFuture f = new DefaultChannelFuture(this, false);
+            final AtomicReference<MessageEvent> me = new AtomicReference<MessageEvent>();
+            worker.executeInIoThread(new Runnable() {
+                @Override
+                public void run() {
+                    me.set(writeBufferQueue.poll());
+                    f.setSuccess();
+                }
+            });
+            f.syncUninterruptibly();
+            return me.get();
+        }
     }
 
     private static ChannelBuffer writeZero(int size) {
@@ -129,17 +144,17 @@ public class NioChannelTest {
         channel.flushIoTasks().await();
         assertEquals("false ", buf.toString());
         // Ensure going down to the low watermark makes channel writable again by flushing the first write.
-        assertNotNull(channel.writeBufferQueue.poll());
+        assertNotNull(channel.poll());
         assertEquals(128, channel.writeBufferSize.get());
         // once more since in Netty 3.9, the check is < and not <=
-        assertNotNull(channel.writeBufferQueue.poll());
+        assertNotNull(channel.poll());
         assertEquals(64, channel.writeBufferSize.get());
         assertEquals(0, channel.getInterestOps() & Channel.OP_WRITE);
         channel.flushIoTasks().await();
         assertEquals("false true ", buf.toString());
 
         while (! channel.writeBufferQueue.isEmpty()) {
-            channel.writeBufferQueue.poll();
+            channel.poll();
         }
         worker.shutdown();
         executor.shutdown();
@@ -178,7 +193,7 @@ public class NioChannelTest {
         assertEquals("false true ", buf.toString());
 
         while (! channel.writeBufferQueue.isEmpty()) {
-            channel.writeBufferQueue.poll();
+            channel.poll();
         }
         worker.shutdown();
         executor.shutdown();
@@ -228,7 +243,7 @@ public class NioChannelTest {
         assertEquals("false true ", buf.toString());
 
         while (! channel.writeBufferQueue.isEmpty()) {
-            channel.writeBufferQueue.poll();
+            channel.poll();
         }
         worker.shutdown();
         executor.shutdown();
@@ -268,7 +283,7 @@ public class NioChannelTest {
         assertEquals("false ", buf.toString());
         // Ensure reducing the totalPendingWriteBytes down to zero does not trigger channelWritabilityChanged()
         // because of the user-defined writability flag.
-        assertNotNull(channel.writeBufferQueue.poll());
+        assertNotNull(channel.poll());
         assertEquals(0, channel.writeBufferSize.get());
         assertTrue((channel.getInterestOps() & Channel.OP_WRITE) != 0);
         channel.flushIoTasks().await();
@@ -296,8 +311,8 @@ public class NioChannelTest {
         assertTrue((channel.getInterestOps() & Channel.OP_WRITE) != 0);
         channel.flushIoTasks().await();
         assertEquals("false true false ", buf.toString());
-        // Ensure reducing the totalPendingWriteBytes down to zero does trigger channelWritabilityChannged()
-        assertNotNull(channel.writeBufferQueue.poll());
+        // Ensure reducing the totalPendingWriteBytes down to zero does trigger channelWritabilityChanged()
+        assertNotNull(channel.poll());
         assertEquals(0, channel.writeBufferSize.get());
         assertEquals(0, channel.getInterestOps() & Channel.OP_WRITE);
         channel.flushIoTasks().await();
@@ -321,7 +336,7 @@ public class NioChannelTest {
         assertEquals("false true false true false ", buf.toString());
         // Ensure reducing the totalPendingWriteBytes down to zero does not trigger channelWritabilityChannged()
         // because of the user-defined writability flag.
-        assertNotNull(channel.writeBufferQueue.poll());
+        assertNotNull(channel.poll());
         assertEquals(0, channel.writeBufferSize.get());
         assertEquals(0, channel.getInterestOps() & Channel.OP_WRITE);
         channel.flushIoTasks().await();
@@ -341,7 +356,7 @@ public class NioChannelTest {
         assertEquals("false true false true false true false ", buf.toString());
         // Ensure reducing the totalPendingWriteBytes down to zero does not trigger channelWritabilityChannged()
         // because of the user-defined writability flag.
-        assertNotNull(channel.writeBufferQueue.poll());
+        assertNotNull(channel.poll());
         assertEquals(0, channel.writeBufferSize.get());
         assertTrue((channel.getInterestOps() & Channel.OP_WRITE) != 0);
         channel.flushIoTasks().await();
@@ -353,7 +368,7 @@ public class NioChannelTest {
         assertEquals("false true false true false true false true ", buf.toString());
 
         while (! channel.writeBufferQueue.isEmpty()) {
-            channel.writeBufferQueue.poll();
+            channel.poll();
         }
         worker.shutdown();
         executor.shutdown();
