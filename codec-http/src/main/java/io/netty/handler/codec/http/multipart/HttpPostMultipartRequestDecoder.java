@@ -863,9 +863,6 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             Attribute filenameAttribute = currentFieldAttributes.get(HttpHeaderValues.FILENAME);
             Attribute nameAttribute = currentFieldAttributes.get(HttpHeaderValues.NAME);
             Attribute contentTypeAttribute = currentFieldAttributes.get(HttpHeaderNames.CONTENT_TYPE);
-            if (contentTypeAttribute == null) {
-                throw new ErrorDataDecoderException("Content-Type is absent but required");
-            }
             Attribute lengthAttribute = currentFieldAttributes.get(HttpHeaderNames.CONTENT_LENGTH);
             long size;
             try {
@@ -876,9 +873,15 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                 size = 0;
             }
             try {
+                String contentType;
+                if (contentTypeAttribute != null) {
+                    contentType = contentTypeAttribute.getValue();
+                } else {
+                    contentType = HttpPostBodyUtil.DEFAULT_BINARY_CONTENT_TYPE;
+                }
                 currentFileUpload = factory.createFileUpload(request,
                         cleanString(nameAttribute.getValue()), cleanString(filenameAttribute.getValue()),
-                        contentTypeAttribute.getValue(), mechanism.value(), localCharset,
+                        contentType, mechanism.value(), localCharset,
                         size);
             } catch (NullPointerException e) {
                 throw new ErrorDataDecoderException(e);
