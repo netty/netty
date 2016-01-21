@@ -376,4 +376,34 @@ public class HttpPostRequestDecoderTest {
         assertEquals("tmp 0.txt", fileUpload.getFilename());
         decoder.destroy();
     }
+
+    @Test
+    public void testMultipartRequestWithoutContentTypeBody() {
+        final String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
+
+        final DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
+                "http://localhost");
+
+        req.setDecoderResult(DecoderResult.SUCCESS);
+        req.headers().add(HttpHeaders.Names.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+        req.headers().add(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
+
+        // Force to use memory-based data.
+        final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
+
+        for (String data : Arrays.asList("", "\r", "\r\r", "\r\r\r")) {
+            final String body =
+                    "--" + boundary + "\r\n" +
+                            "Content-Disposition: form-data; name=\"file\"; filename=\"tmp-0.txt\"\r\n" +
+                            "\r\n" +
+                            data + "\r\n" +
+                            "--" + boundary + "--\r\n";
+
+            req.content().writeBytes(body.getBytes(CharsetUtil.UTF_8));
+        }
+        // Create decoder instance to test without any exception.
+        final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
+        assertFalse(decoder.getBodyHttpDatas().isEmpty());
+        decoder.destroy();
+    }
 }
