@@ -28,8 +28,6 @@ import org.jboss.netty.util.internal.ThreadLocalBoolean;
 import java.net.InetSocketAddress;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.WritableByteChannel;
-import java.util.Collection;
-import java.util.Iterator;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -63,7 +61,7 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
     /**
      * Queue of write {@link MessageEvent}s.
      */
-    final Queue<MessageEvent> writeBufferQueue = new WriteRequestQueue();
+    final WriteRequestQueue writeBufferQueue = new WriteRequestQueue();
 
     /**
      * Keeps track of the number of bytes that the {@link WriteRequestQueue} currently
@@ -173,7 +171,7 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
 
     abstract InetSocketAddress getRemoteSocketAddress() throws Exception;
 
-    private final class WriteRequestQueue implements Queue<MessageEvent> {
+    final class WriteRequestQueue {
         private final ThreadLocalBoolean notifying = new ThreadLocalBoolean();
 
         private final Queue<MessageEvent> queue;
@@ -182,68 +180,8 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
             queue = new ConcurrentLinkedQueue<MessageEvent>();
         }
 
-        public MessageEvent remove() {
-            return queue.remove();
-        }
-
-        public MessageEvent element() {
-            return queue.element();
-        }
-
-        public MessageEvent peek() {
-            return queue.peek();
-        }
-
-        public int size() {
-            return queue.size();
-        }
-
         public boolean isEmpty() {
             return queue.isEmpty();
-        }
-
-        public Iterator<MessageEvent> iterator() {
-            return queue.iterator();
-        }
-
-        public Object[] toArray() {
-            return queue.toArray();
-        }
-
-        public <T> T[] toArray(T[] a) {
-            return queue.toArray(a);
-        }
-
-        public boolean containsAll(Collection<?> c) {
-            return queue.containsAll(c);
-        }
-
-        public boolean addAll(Collection<? extends MessageEvent> c) {
-            return queue.addAll(c);
-        }
-
-        public boolean removeAll(Collection<?> c) {
-            return queue.removeAll(c);
-        }
-
-        public boolean retainAll(Collection<?> c) {
-            return queue.retainAll(c);
-        }
-
-        public void clear() {
-            queue.clear();
-        }
-
-        public boolean add(MessageEvent e) {
-            return queue.add(e);
-        }
-
-        public boolean remove(Object o) {
-            return queue.remove(o);
-        }
-
-        public boolean contains(Object o) {
-            return queue.contains(o);
         }
 
         public boolean offer(MessageEvent e) {
@@ -252,18 +190,54 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
 
             int messageSize = getMessageSize(e);
             int newWriteBufferSize = writeBufferSize.addAndGet(messageSize);
-            int highWaterMark =  getConfig().getWriteBufferHighWaterMark();
+            final int highWaterMark =  getConfig().getWriteBufferHighWaterMark();
 
             if (newWriteBufferSize >= highWaterMark) {
                 if (newWriteBufferSize - messageSize < highWaterMark) {
                     highWaterMarkCounter.incrementAndGet();
                     if (setUnwritable()) {
-                        if (!isIoThread(AbstractNioChannel.this)) {
-                            fireChannelInterestChangedLater(AbstractNioChannel.this);
-                        } else if (!notifying.get()) {
-                            notifying.set(Boolean.TRUE);
-                            fireChannelInterestChanged(AbstractNioChannel.this);
-                            notifying.set(Boolean.FALSE);
+                        if (isIoThread(AbstractNioChannel.this)) {
+                            if (!notifying.get()) {
+                                notifying.set(Boolean.TRUE);
+                                fireChannelInterestChanged(AbstractNioChannel.this);
+                                notifying.set(Boolean.FALSE);
+                            }
+                        } else {
+                            // Adjusting writability requires careful synchronization.
+                            //
+                            // Consider for instance:
+                            //
+                            // T1 repeated offer: go above high water mark
+                            //      context switch *before* calling setUnwritable
+                            // T2 repeated poll: go under low water mark
+                            //      context switch *after* calling setWritable
+                            // T1 setUnwritable
+                            //
+                            // At this point the channel is incorrectly marked unwritable and would
+                            // remain so until the high water mark were exceeded again, which may
+                            // never happen if the application did control flow based on writability.
+                            //
+                            // The simplest solution would be to use a mutex to protect both the
+                            // buffer size and the writability bit, however that would impose a
+                            // serious performance penalty.
+                            //
+                            // A better approach would be to always call setUnwritable in the io
+                            // thread, which does not impact performance as the interestChanged
+                            // event has to be fired from there anyway.
+                            //
+                            // However this could break code which expects isWritable to immediately
+                            // be updated after a write() from a non-io thread.
+                            //
+                            // Instead, we re-check the buffer size before firing the interest
+                            // changed event and revert the change to the writability bit if needed.
+                            worker.executeInIoThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    if (writeBufferSize.get() >= highWaterMark || setWritable()) {
+                                        fireChannelInterestChanged(AbstractNioChannel.this);
+                                    }
+                                }
+                            });
                         }
                     }
                 }
@@ -281,10 +255,13 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
                 if (newWriteBufferSize == 0 || newWriteBufferSize < lowWaterMark) {
                     if (newWriteBufferSize + messageSize >= lowWaterMark) {
                         highWaterMarkCounter.decrementAndGet();
-                        if (isConnected() && setWritable()) {
-                            if (!isIoThread(AbstractNioChannel.this)) {
-                               fireChannelInterestChangedLater(AbstractNioChannel.this);
-                            } else if (!notifying.get()) {
+                        if (isConnected()) {
+                            // write events are only ever processed from the channel io thread
+                            // except when cleaning up the buffer, which only happens on close()
+                            // changing that would require additional synchronization around
+                            // writeBufferSize and writability changes.
+                            assert isIoThread(AbstractNioChannel.this);
+                            if (setWritable()) {
                                 notifying.set(Boolean.TRUE);
                                 fireChannelInterestChanged(AbstractNioChannel.this);
                                 notifying.set(Boolean.FALSE);

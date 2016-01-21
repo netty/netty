@@ -22,6 +22,7 @@ import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
+import org.jboss.netty.channel.socket.nio.AbstractNioChannel.WriteRequestQueue;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -240,7 +241,7 @@ public class NioDatagramWorker extends AbstractNioWorker {
 
         final SocketSendBufferPool sendBufferPool = this.sendBufferPool;
         final DatagramChannel ch = ((NioDatagramChannel) channel).getDatagramChannel();
-        final Queue<MessageEvent> writeBuffer = channel.writeBufferQueue;
+        final WriteRequestQueue writeBuffer = channel.writeBufferQueue;
         final int writeSpinCount = channel.getConfig().getWriteSpinCount();
         synchronized (channel.writeLock) {
             // inform the channel that write is in-progress

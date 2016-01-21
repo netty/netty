@@ -19,6 +19,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.socket.Worker;
+import org.jboss.netty.channel.socket.nio.AbstractNioChannel.WriteRequestQueue;
 import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
 import org.jboss.netty.util.ThreadNameDeterminer;
 import org.jboss.netty.util.ThreadRenamingRunnable;
@@ -34,7 +35,6 @@ import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.Executor;
 
@@ -170,7 +170,7 @@ abstract class AbstractNioWorker extends AbstractNioSelector implements Worker {
 
         final SocketSendBufferPool sendBufferPool = this.sendBufferPool;
         final WritableByteChannel ch = channel.channel;
-        final Queue<MessageEvent> writeBuffer = channel.writeBufferQueue;
+        final WriteRequestQueue writeBuffer = channel.writeBufferQueue;
         final int writeSpinCount = channel.getConfig().getWriteSpinCount();
         List<Throwable> causes = null;
 
@@ -418,7 +418,7 @@ abstract class AbstractNioWorker extends AbstractNioSelector implements Worker {
                 fireExceptionCaught = true;
             }
 
-            Queue<MessageEvent> writeBuffer = channel.writeBufferQueue;
+            WriteRequestQueue writeBuffer = channel.writeBufferQueue;
             for (;;) {
                 evt = writeBuffer.poll();
                 if (evt == null) {
