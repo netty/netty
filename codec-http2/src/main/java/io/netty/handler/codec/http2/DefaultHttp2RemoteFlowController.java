@@ -404,9 +404,21 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         @Override
         void enqueueFrame(FlowControlled frame) {
             FlowControlled last = pendingWriteQueue.peekLast();
-            if (last == null || !last.merge(ctx, frame)) {
-                pendingWriteQueue.offer(frame);
+            if (last == null) {
+                enqueueFrameWithoutMerge(frame);
+                return;
             }
+
+            int lastSize = last.size();
+            if (last.merge(ctx, frame)) {
+                incrementPendingBytes(last.size() - lastSize, true);
+                return;
+            }
+            enqueueFrameWithoutMerge(frame);
+        }
+
+        private void enqueueFrameWithoutMerge(FlowControlled frame) {
+            pendingWriteQueue.offer(frame);
             // This must be called after adding to the queue in order so that hasFrame() is
             // updated before updating the stream state.
             incrementPendingBytes(frame.size(), true);
