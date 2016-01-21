@@ -357,10 +357,11 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
         @Override
         public boolean merge(ChannelHandlerContext ctx, Http2RemoteFlowController.FlowControlled next) {
-            if (FlowControlledData.class != next.getClass()) {
+            FlowControlledData nextData;
+            if (FlowControlledData.class != next.getClass() ||
+                Integer.MAX_VALUE - (nextData = (FlowControlledData) next).size() < size()) {
                 return false;
             }
-            FlowControlledData nextData = (FlowControlledData) next;
             nextData.queue.copyTo(queue);
             // Given that we're merging data into a frame it doesn't really make sense to accumulate padding.
             padding = Math.max(padding, nextData.padding);

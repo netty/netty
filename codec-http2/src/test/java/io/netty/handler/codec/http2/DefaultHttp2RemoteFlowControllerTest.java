@@ -213,6 +213,23 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
     }
 
     @Test
+    public void flowControllerCorrectlyAccountsForBytesWithMerge() throws Http2Exception {
+        controller.initialWindowSize(112); // This must be more than the total merged frame size 110
+        FakeFlowControlled data1 = new FakeFlowControlled(5, 2, true);
+        FakeFlowControlled data2 = new FakeFlowControlled(5, 100, true);
+        sendData(STREAM_A, data1);
+        sendData(STREAM_A, data2);
+        data1.assertNotWritten();
+        data1.assertNotWritten();
+        data2.assertMerged();
+        controller.writePendingBytes();
+        data1.assertFullyWritten();
+        data2.assertNotWritten();
+        verify(listener, never()).writabilityChanged(stream(STREAM_A));
+        assertTrue(controller.isWritable(stream(STREAM_A)));
+    }
+
+    @Test
     public void stalledStreamShouldQueuePayloads() throws Http2Exception {
         controller.initialWindowSize(0);
         verify(listener, times(1)).writabilityChanged(stream(STREAM_A));
@@ -953,9 +970,10 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
     }
 
     private static final class FakeFlowControlled implements Http2RemoteFlowController.FlowControlled {
-
-        private int currentSize;
-        private int originalSize;
+        private int currentPadding;
+        private int currentPayloadSize;
+        private int originalPayloadSize;
+        private int originalPadding;
         private boolean writeCalled;
         private final boolean mergeable;
         private boolean merged;
@@ -963,20 +981,26 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         private Throwable t;
 
         private FakeFlowControlled(int size) {
-            this.currentSize = size;
-            this.originalSize = size;
-            this.mergeable = false;
+            this(size, false);
         }
 
         private FakeFlowControlled(int size, boolean mergeable) {
-            this.currentSize = size;
-            this.originalSize = size;
+            this(size, 0, mergeable);
+        }
+
+        private FakeFlowControlled(int payloadSize, int padding, boolean mergeable) {
+            currentPayloadSize = originalPayloadSize = payloadSize;
+            currentPadding = originalPadding = padding;
             this.mergeable = mergeable;
         }
 
         @Override
         public int size() {
-            return currentSize;
+            return currentPayloadSize + currentPadding;
+        }
+
+        private int originalSize() {
+            return originalPayloadSize + originalPadding;
         }
 
         @Override
@@ -990,28 +1014,36 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
 
         @Override
         public void write(ChannelHandlerContext ctx, int allowedBytes) {
-            if (allowedBytes <= 0 && currentSize != 0) {
+            if (allowedBytes <= 0 && size() != 0) {
                 // Write has been called but no data can be written
                 return;
             }
             writeCalled = true;
-            int written = Math.min(currentSize, allowedBytes);
-            currentSize -= written;
+            int written = Math.min(size(), allowedBytes);
+            if (written > currentPayloadSize) {
+                written -= currentPayloadSize;
+                currentPayloadSize = 0;
+                currentPadding -= written;
+            } else {
+                currentPayloadSize -= written;
+            }
         }
 
         @Override
         public boolean merge(ChannelHandlerContext ctx, Http2RemoteFlowController.FlowControlled next) {
             if (mergeable && next instanceof FakeFlowControlled) {
-                this.originalSize += ((FakeFlowControlled) next).originalSize;
-                this.currentSize += ((FakeFlowControlled) next).originalSize;
-                ((FakeFlowControlled) next).merged = true;
+                FakeFlowControlled ffcNext = (FakeFlowControlled) next;
+                originalPayloadSize += ffcNext.originalPayloadSize;
+                currentPayloadSize += ffcNext.originalPayloadSize;
+                currentPadding = originalPadding = Math.max(originalPadding, ffcNext.originalPadding);
+                ffcNext.merged = true;
                 return true;
             }
             return false;
         }
 
         public int written() {
-            return originalSize - currentSize;
+            return originalSize() - size();
         }
 
         public void assertNotWritten() {
@@ -1029,7 +1061,8 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
 
         public void assertFullyWritten() {
             assertTrue(writeCalled);
-            assertEquals(0, currentSize);
+            assertEquals(0, currentPayloadSize);
+            assertEquals(0, currentPadding);
         }
 
         public boolean assertMerged() {
