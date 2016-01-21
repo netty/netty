@@ -82,6 +82,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         return invoker().executor();
     }
 
+    @Override
     public ChannelHandlerInvoker invoker() {
         if (invoker == null) {
             return channel().unsafe().invoker();
