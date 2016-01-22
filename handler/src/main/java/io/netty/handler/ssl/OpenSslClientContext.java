@@ -191,17 +191,6 @@ public final class OpenSslClientContext extends OpenSslContext {
                         "Either both keyCertChainFile and keyFile needs to be null or none of them");
             }
             synchronized (OpenSslContext.class) {
-                if (trustCertChainFile != null) {
-                    /* Load the certificate chain. We must NOT skip the first cert when client mode */
-                    if (!SSLContext.setCertificateChainFile(ctx, trustCertChainFile.getPath(), false)) {
-                        long error = SSL.getLastErrorNumber();
-                        if (OpenSsl.isError(error)) {
-                            throw new SSLException(
-                                    "failed to set certificate chain: "
-                                            + trustCertChainFile + " (" + SSL.getErrorString(error) + ')');
-                        }
-                    }
-                }
                 if (keyCertChainFile != null && keyFile != null) {
                     /* Load the certificate file and private key. */
                     try {
@@ -212,6 +201,16 @@ public final class OpenSslClientContext extends OpenSslContext {
                                 throw new SSLException("failed to set certificate: " +
                                                        keyCertChainFile + " and " + keyFile +
                                                        " (" + SSL.getErrorString(error) + ')');
+                            }
+                        }
+                        // We may have more then one cert in the chain so add all of them now. We must NOT skip the
+                        // first cert when client mode.
+                        if (!SSLContext.setCertificateChainFile(ctx, keyCertChainFile.getPath(), false)) {
+                            long error = SSL.getLastErrorNumber();
+                            if (OpenSsl.isError(error)) {
+                                throw new SSLException(
+                                        "failed to set certificate chain: "
+                                                + keyCertChainFile + " (" + SSL.getErrorString(error) + ')');
                             }
                         }
                     } catch (SSLException e) {
@@ -281,28 +280,6 @@ public final class OpenSslClientContext extends OpenSslContext {
                         "Either both keyCertChain and key needs to be null or none of them");
             }
             synchronized (OpenSslContext.class) {
-                if (trustCertChain != null) {
-                    long trustCertChainBio = 0;
-
-                    try {
-                        trustCertChainBio = toBIO(trustCertChain);
-                        /* Load the certificate chain. We must NOT skip the first cert when client mode */
-                        if (!SSLContext.setCertificateChainBio(ctx, trustCertChainBio, false)) {
-                            long error = SSL.getLastErrorNumber();
-                            if (OpenSsl.isError(error)) {
-                                throw new SSLException(
-                                        "failed to set certificate chain: " + SSL.getErrorString(error));
-                            }
-                        }
-                    } catch (Exception e) {
-                        throw new SSLException(
-                                "failed to set certificate chain", e);
-                    } finally {
-                        if (trustCertChainBio != 0) {
-                            SSL.freeBIO(trustCertChainBio);
-                        }
-                    }
-                }
                 if (keyCertChain != null && key != null) {
                     /* Load the certificate file and private key. */
                     long keyBio = 0;
@@ -319,6 +296,15 @@ public final class OpenSslClientContext extends OpenSslContext {
                             if (OpenSsl.isError(error)) {
                                 throw new SSLException("failed to set certificate and key: "
                                                        + SSL.getErrorString(error));
+                            }
+                        }
+                        // We may have more then one cert in the chain so add all of them now. We must NOT skip the
+                        // first cert when client mode.
+                        if (!SSLContext.setCertificateChainBio(ctx, keyCertChainBio, false)) {
+                            long error = SSL.getLastErrorNumber();
+                            if (OpenSsl.isError(error)) {
+                                throw new SSLException(
+                                        "failed to set certificate chain: " + SSL.getErrorString(error));
                             }
                         }
                     } catch (SSLException e) {
