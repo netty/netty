@@ -282,4 +282,12 @@ public class AsciiStringCharacterTest {
         assertEquals(2, AsciiString.indexOfIgnoreCaseAscii("aabaabaa", "", 2));
         assertEquals(-1, AsciiString.indexOfIgnoreCaseAscii("abc", "", 9));
     }
+
+    @Test
+    public void testTrim() {
+        assertEquals("", AsciiString.EMPTY_STRING.trim().toString());
+        assertEquals("abc", new AsciiString("  abc").trim().toString());
+        assertEquals("abc", new AsciiString("abc  ").trim().toString());
+        assertEquals("abc", new AsciiString("  abc  ").trim().toString());
+    }
 }
