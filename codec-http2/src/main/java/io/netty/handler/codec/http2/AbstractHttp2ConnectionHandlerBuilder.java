@@ -73,7 +73,6 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private static final SensitivityDetector DEFAULT_HEADER_SENSITIVITY_DETECTOR = Http2HeadersEncoder.NEVER_SENSITIVE;
 
     // The properties that can always be set.
-    private boolean validateHeaders = true;
     private Http2Settings initialSettings = new Http2Settings();
     private Http2FrameListener frameListener;
     private long gracefulShutdownTimeoutMillis = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
@@ -92,26 +91,10 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     // The properties that are:
     // * mutually exclusive against codec() and
     // * OK to use with server() and connection()
+    private Boolean validateHeaders;
     private Http2FrameLogger frameLogger;
     private SensitivityDetector headerSensitivityDetector;
     private Boolean encoderEnforceMaxConcurrentStreams;
-
-    /**
-     * Returns if HTTP headers should be validated according to
-     * <a href="https://tools.ietf.org/html/rfc7540#section-8.1.2.6">RFC 7540, 8.1.2.6</a>.
-     */
-    protected boolean isValidateHeaders() {
-        return validateHeaders;
-    }
-
-    /**
-     * Sets if HTTP headers should be validated according to
-     * <a href="https://tools.ietf.org/html/rfc7540#section-8.1.2.6">RFC 7540, 8.1.2.6</a>.
-     */
-    protected B validateHeaders(boolean validateHeaders) {
-        this.validateHeaders = validateHeaders;
-        return self();
-    }
 
     /**
      * Sets the {@link Http2Settings} to use for the initial connection settings exchange.
@@ -229,6 +212,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         enforceConstraint("codec", "server", isServer);
         enforceConstraint("codec", "connection", connection);
         enforceConstraint("codec", "frameLogger", frameLogger);
+        enforceConstraint("codec", "validateHeaders", validateHeaders);
         enforceConstraint("codec", "headerSensitivityDetector", headerSensitivityDetector);
         enforceConstraint("codec", "encoderEnforceMaxConcurrentStreams", encoderEnforceMaxConcurrentStreams);
 
@@ -242,6 +226,24 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         this.decoder = decoder;
         this.encoder = encoder;
 
+        return self();
+    }
+
+    /**
+     * Returns if HTTP headers should be validated according to
+     * <a href="https://tools.ietf.org/html/rfc7540#section-8.1.2.6">RFC 7540, 8.1.2.6</a>.
+     */
+    protected boolean isValidateHeaders() {
+        return validateHeaders != null ? validateHeaders : true;
+    }
+
+    /**
+     * Sets if HTTP headers should be validated according to
+     * <a href="https://tools.ietf.org/html/rfc7540#section-8.1.2.6">RFC 7540, 8.1.2.6</a>.
+     */
+    protected B validateHeaders(boolean validateHeaders) {
+        enforceNonCodecConstraints("validateHeaders");
+        this.validateHeaders = validateHeaders;
         return self();
     }
 
@@ -315,7 +317,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     private T buildFromConnection(Http2Connection connection) {
-        Http2FrameReader reader = new DefaultHttp2FrameReader(validateHeaders);
+        Http2FrameReader reader = new DefaultHttp2FrameReader(isValidateHeaders());
         Http2FrameWriter writer = new DefaultHttp2FrameWriter(headerSensitivityDetector());
 
         if (frameLogger != null) {
