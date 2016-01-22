@@ -59,6 +59,8 @@ import static org.mockito.Mockito.verify;
 
 public abstract class SSLEngineTest {
 
+    protected static final String PROTOCOL_TLS_V1_2 = "TLSv1.2";
+
     @Mock
     protected MessageReceiver serverReceiver;
     @Mock

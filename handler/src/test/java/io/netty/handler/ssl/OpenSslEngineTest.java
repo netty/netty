@@ -15,18 +15,24 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.buffer.UnpooledByteBufAllocator;
 import org.junit.Test;
 
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 
+import javax.net.ssl.SSLEngine;
+import java.io.File;
+
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assume.assumeTrue;
 
 public class OpenSslEngineTest extends SSLEngineTest {
     private static final String PREFERRED_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http2";
     private static final String FALLBACK_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http1_1";
+    private static final String PROTOCOL_SSL_V2_HELLO = "SSLv2Hello";
 
     @Test
     public void testNpn() throws Exception {
@@ -58,6 +64,43 @@ public class OpenSslEngineTest extends SSLEngineTest {
         setupHandlers(serverApn, clientApn);
         assertNull(serverException);
         runTest(PREFERRED_APPLICATION_LEVEL_PROTOCOL);
+    }
+
+    @Test
+    public void testEnablingAnAlreadyDisabledSslProtocol() throws Exception {
+        assumeTrue(OpenSsl.isAvailable());
+        SSLEngine sslEngine = null;
+        try {
+            File serverKeyFile = new File(getClass().getResource("test_unencrypted.pem").getFile());
+            File serverCrtFile = new File(getClass().getResource("test.crt").getFile());
+            SslContext sslContext = SslContextBuilder.forServer(serverCrtFile, serverKeyFile)
+               .sslProvider(sslProvider())
+               .build();
+
+            sslEngine = sslContext.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+            // Disable all protocols
+            sslEngine.setEnabledProtocols(new String[]{});
+
+            // The only protocol that should be enabled is SSLv2Hello
+            String[] enabledProtocols = sslEngine.getEnabledProtocols();
+            assertEquals(1, enabledProtocols.length);
+            assertEquals(PROTOCOL_SSL_V2_HELLO, enabledProtocols[0]);
+
+            // Enable a protocol that is currently disabled
+            sslEngine.setEnabledProtocols(new String[]{PROTOCOL_TLS_V1_2});
+
+            // The protocol that was just enabled should be returned
+            enabledProtocols = sslEngine.getEnabledProtocols();
+            assertEquals(2, enabledProtocols.length);
+            assertEquals(PROTOCOL_SSL_V2_HELLO, enabledProtocols[0]);
+            assertEquals(PROTOCOL_TLS_V1_2, enabledProtocols[1]);
+        } finally {
+            if (sslEngine != null) {
+                sslEngine.closeInbound();
+                sslEngine.closeOutbound();
+            }
+        }
     }
 
     @Override
