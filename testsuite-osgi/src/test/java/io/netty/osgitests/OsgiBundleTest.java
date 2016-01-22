@@ -90,7 +90,6 @@ public class OsgiBundleTest {
         options.addAll(Arrays.asList(junitBundles()));
 
         options.add(mavenBundle("com.barchart.udt", "barchart-udt-bundle").versionAsInProject());
-        options.add(mavenBundle("com.twitter", "hpack").versionAsInProject());
         options.add(wrappedBundle(mavenBundle("org.rxtx", "rxtx").versionAsInProject()));
 
         for (String name : BUNDLES) {
