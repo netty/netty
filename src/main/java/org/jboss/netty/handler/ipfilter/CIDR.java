@@ -138,10 +138,7 @@ public abstract class CIDR implements Comparable<CIDR> {
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof CIDR)) {
-            return false;
-        }
-        return compareTo((CIDR) o) == 0;
+        return o instanceof CIDR && compareTo((CIDR) o) == 0;
     }
 
     @Override
@@ -197,7 +194,7 @@ public abstract class CIDR implements Comparable<CIDR> {
         } catch (Exception e) {
             res = def;
         }
-        return res.intValue();
+        return res;
     }
 
     /**

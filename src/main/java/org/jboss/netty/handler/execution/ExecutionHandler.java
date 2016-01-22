@@ -185,7 +185,7 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
         if (e instanceof ChannelStateEvent) {
             ChannelStateEvent cse = (ChannelStateEvent) e;
             if (cse.getState() == ChannelState.INTEREST_OPS &&
-                (((Integer) cse.getValue()).intValue() & Channel.OP_READ) != 0) {
+                ((Integer) cse.getValue() & Channel.OP_READ) != 0) {
 
                 // setReadable(true) requested
                 boolean readSuspended = ctx.getAttachment() != null;

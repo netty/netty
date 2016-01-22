@@ -47,9 +47,7 @@ class LimitingByteInput implements ByteInput {
     }
 
     public int available() throws IOException {
-        int available = input.available();
-        int readable = readable(available);
-        return readable;
+        return readable(input.available());
     }
 
     public int read() throws IOException {

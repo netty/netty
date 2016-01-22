@@ -58,7 +58,7 @@ public abstract class AbstractTrafficShapingHandler extends
     /**
      * Internal logger
      */
-    static InternalLogger logger = InternalLoggerFactory
+    static final InternalLogger logger = InternalLoggerFactory
             .getInstance(AbstractTrafficShapingHandler.class);
 
     /**

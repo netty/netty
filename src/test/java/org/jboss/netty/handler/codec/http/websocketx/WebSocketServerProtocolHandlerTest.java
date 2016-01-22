@@ -130,10 +130,9 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     private static DecoderEmbedder<Object> decoderEmbedder() {
-        DecoderEmbedder<Object> decoder = new DecoderEmbedder<Object>(
+        return new DecoderEmbedder<Object>(
                 new HttpRequestDecoder(),
                 new WebSocketServerProtocolHandler("path"));
-        return decoder;
     }
 
     private static class CustomTextFrameHandler extends SimpleChannelHandler {

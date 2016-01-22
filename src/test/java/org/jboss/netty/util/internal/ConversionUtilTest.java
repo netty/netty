@@ -23,7 +23,7 @@ public class ConversionUtilTest {
 
     @Test
     public void testNumberToInt() {
-        assertEquals(42, ConversionUtil.toInt(Long.valueOf(42)));
+        assertEquals(42, ConversionUtil.toInt(42L));
     }
 
     @Test
@@ -39,8 +39,8 @@ public class ConversionUtilTest {
 
     @Test
     public void testNumberToBoolean() {
-        assertTrue(ConversionUtil.toBoolean(Integer.valueOf(42)));
-        assertFalse(ConversionUtil.toBoolean(Integer.valueOf(0)));
+        assertTrue(ConversionUtil.toBoolean(42));
+        assertFalse(ConversionUtil.toBoolean(0));
     }
 
     @Test

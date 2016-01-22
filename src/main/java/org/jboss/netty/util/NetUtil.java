@@ -418,10 +418,10 @@ public final class NetUtil {
         }
         char c;
         StringBuilder word = new StringBuilder();
-        for (i = 0; i < length; i ++) {
+        for (i = 0; i < length; i++) {
             c = value.charAt(i);
             if (c == '.') {
-                periods ++;
+                periods++;
                 if (periods > 3) {
                     return false;
                 }
@@ -442,11 +442,7 @@ public final class NetUtil {
             }
         }
 
-        if (word.length() == 0 || Integer.parseInt(word.toString()) > 255) {
-            return false;
-        }
-
-        return periods == 3;
+        return !(word.length() == 0 || Integer.parseInt(word.toString()) > 255) && periods == 3;
     }
 
     /**

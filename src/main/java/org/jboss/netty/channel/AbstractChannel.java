@@ -41,7 +41,7 @@ public abstract class AbstractChannel implements Channel {
                 return id;
             } else {
                 // Taken by other channel at almost the same moment.
-                id = id.intValue() + 1;
+                id = id + 1;
             }
         }
     }
@@ -403,7 +403,7 @@ public abstract class AbstractChannel implements Channel {
     }
 
     private String getIdString() {
-        String answer = Integer.toHexString(id.intValue());
+        String answer = Integer.toHexString(id);
         switch (answer.length()) {
         case 0:
             answer = "00000000";

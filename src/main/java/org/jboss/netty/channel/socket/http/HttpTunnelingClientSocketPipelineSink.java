@@ -57,7 +57,7 @@ final class HttpTunnelingClientSocketPipelineSink extends AbstractChannelSink {
                 }
                 break;
             case INTEREST_OPS:
-                channel.setInterestOpsReal(((Integer) value).intValue(), future);
+                channel.setInterestOpsReal((Integer) value, future);
                 break;
             }
         } else if (e instanceof MessageEvent) {

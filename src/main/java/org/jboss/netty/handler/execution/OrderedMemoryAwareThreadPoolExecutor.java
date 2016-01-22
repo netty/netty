@@ -268,11 +268,7 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
 
     @Override
     protected boolean shouldCount(Runnable task) {
-        if (task instanceof ChildExecutor) {
-            return false;
-        }
-
-        return super.shouldCount(task);
+        return !(task instanceof ChildExecutor) && super.shouldCount(task);
     }
 
     void onAfterExecute(Runnable r, Throwable t) {

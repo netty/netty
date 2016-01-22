@@ -46,9 +46,6 @@ public class ChannelRunnableWrapper extends DefaultChannelFuture implements Runn
 
     @Override
     public synchronized boolean cancel() {
-        if (started) {
-            return false;
-        }
-        return super.cancel();
+        return !started && super.cancel();
     }
 }

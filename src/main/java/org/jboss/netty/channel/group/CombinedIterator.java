@@ -55,8 +55,7 @@ final class CombinedIterator<E> implements Iterator<E> {
     public E next() {
         for (;;) {
             try {
-                E e = currentIterator.next();
-                return e;
+                return currentIterator.next();
             } catch (NoSuchElementException e) {
                 if (currentIterator == i1) {
                     currentIterator = i2;

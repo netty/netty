@@ -41,7 +41,7 @@ public final class ConversionUtil {
      */
     public static boolean toBoolean(Object value) {
         if (value instanceof Boolean) {
-            return ((Boolean) value).booleanValue();
+            return (Boolean) value;
         }
         if (value instanceof Number) {
             return ((Number) value).intValue() != 0;

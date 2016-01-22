@@ -429,11 +429,8 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<State> {
             //     - http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html Section 4.4
             //     - https://github.com/netty/netty/issues/222
             if (code >= 100 && code < 200) {
-                if (code == 101 && !res.headers().contains(HttpHeaders.Names.SEC_WEBSOCKET_ACCEPT)) {
-                    // It's Hixie 76 websocket handshake response
-                    return false;
-                }
-                return true;
+                // It's Hixie 76 websocket handshake response
+                return !(code == 101 && !res.headers().contains(HttpHeaders.Names.SEC_WEBSOCKET_ACCEPT));
             }
 
             switch (code) {

@@ -102,8 +102,7 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<VoidEnum> {
             }
         }
 
-        Object decoded = decode(ctx, channel, buffer, state);
-        return decoded;
+        return decode(ctx, channel, buffer, state);
     }
 
     /**

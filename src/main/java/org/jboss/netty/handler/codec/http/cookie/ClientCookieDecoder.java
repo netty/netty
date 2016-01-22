@@ -227,7 +227,7 @@ public final class ClientCookieDecoder extends CookieDecoder {
 
         private void parse6(String header, int nameStart, String value) {
             if (header.regionMatches(true, nameStart, CookieHeaderNames.DOMAIN, 0, 5)) {
-                domain = value.length() > 0 ? value.toString() : null;
+                domain = value.length() > 0 ? value : null;
             } else if (header.regionMatches(true, nameStart, CookieHeaderNames.SECURE, 0, 5)) {
                 secure = true;
             }

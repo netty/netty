@@ -75,11 +75,7 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
 
     public boolean isPersistValue(int id) {
         Integer key = id;
-        if (settingsMap.containsKey(key)) {
-            return settingsMap.get(key).isPersist();
-        } else {
-            return false;
-        }
+        return settingsMap.containsKey(key) && settingsMap.get(key).isPersist();
     }
 
     public void setPersistValue(int id, boolean persistValue) {
@@ -91,11 +87,7 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
 
     public boolean isPersisted(int id) {
         Integer key = id;
-        if (settingsMap.containsKey(key)) {
-            return settingsMap.get(key).isPersisted();
-        } else {
-            return false;
-        }
+        return settingsMap.containsKey(key) && settingsMap.get(key).isPersisted();
     }
 
     public void setPersisted(int id, boolean persisted) {

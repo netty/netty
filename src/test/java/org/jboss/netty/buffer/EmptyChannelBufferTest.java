@@ -52,7 +52,7 @@ public class EmptyChannelBufferTest {
     }
 
     @Rule
-    public ExpectedException thrown = ExpectedException.none();
+    public final ExpectedException thrown = ExpectedException.none();
 
     public static final ScatteringByteChannel SINGLE_BYTE_CHANNEL = new ScatteringByteChannel() {
         public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {

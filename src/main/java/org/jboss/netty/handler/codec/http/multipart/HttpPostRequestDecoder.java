@@ -143,11 +143,8 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
      * @return True if the request is a Multipart request
      */
     public static boolean isMultipart(HttpRequest request) throws ErrorDataDecoderException {
-        if (request.headers().contains(HttpHeaders.Names.CONTENT_TYPE)) {
-            return getMultipartDataBoundary(request.headers().get(HttpHeaders.Names.CONTENT_TYPE)) != null;
-        } else {
-            return false;
-        }
+        return request.headers().contains(HttpHeaders.Names.CONTENT_TYPE) &&
+                getMultipartDataBoundary(request.headers().get(HttpHeaders.Names.CONTENT_TYPE)) != null;
     }
 
     /**
@@ -163,11 +160,11 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
                 HttpHeaders.Values.MULTIPART_FORM_DATA)) {
             int mrank = 1, crank = 2;
             if (headerContentType[1].toLowerCase().startsWith(
-                    HttpHeaders.Values.BOUNDARY.toString())) {
+                    HttpHeaders.Values.BOUNDARY)) {
                 mrank = 1;
                 crank = 2;
             } else if (headerContentType[2].toLowerCase().startsWith(
-                    HttpHeaders.Values.BOUNDARY.toString())) {
+                    HttpHeaders.Values.BOUNDARY)) {
                 mrank = 2;
                 crank = 1;
             } else {
@@ -185,7 +182,7 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
                 }
             }
             if (headerContentType[crank].toLowerCase().startsWith(
-                    HttpHeaders.Values.CHARSET.toString())) {
+                    HttpHeaders.Values.CHARSET)) {
                 String charset = StringUtil.substringAfter(headerContentType[crank], '=');
                 if (charset != null) {
                     return new String[] {"--" + boundary, charset};

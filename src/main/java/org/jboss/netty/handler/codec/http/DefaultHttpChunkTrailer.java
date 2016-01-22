@@ -19,9 +19,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.util.internal.StringUtil;
 
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * The default {@link HttpChunkTrailer} implementation.
