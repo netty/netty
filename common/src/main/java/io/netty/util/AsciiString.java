@@ -983,7 +983,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @return a new string with characters {@code <= \\u0020} removed from the beginning and the end.
      */
     public AsciiString trim() {
-        int start = arrayOffset(), last = arrayOffset() + length();
+        int start = arrayOffset(), last = arrayOffset() + length() - 1;
         int end = last;
         while (start <= end && value[start] <= ' ') {
             start++;
