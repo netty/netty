@@ -43,6 +43,13 @@
       <groupId>com.fasterxml</groupId>
       <artifactId>aalto-xml</artifactId>
     </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-common</artifactId>
+      <type>test-jar</type>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 </project>
 
