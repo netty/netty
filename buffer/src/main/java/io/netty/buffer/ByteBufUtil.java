@@ -507,12 +507,26 @@ public final class ByteBufUtil {
      * is allocated via the {@link ByteBufAllocator}.
      */
     public static ByteBuf encodeString(ByteBufAllocator alloc, CharBuffer src, Charset charset) {
-        return encodeString0(alloc, false, src, charset);
+        return encodeString0(alloc, false, src, charset, 0);
     }
 
-    static ByteBuf encodeString0(ByteBufAllocator alloc, boolean enforceHeap, CharBuffer src, Charset charset) {
+    /**
+     * Encode the given {@link CharBuffer} using the given {@link Charset} into a new {@link ByteBuf} which
+     * is allocated via the {@link ByteBufAllocator}.
+     *
+     * @param alloc The {@link ByteBufAllocator} to allocate {@link ByteBuf}.
+     * @param src The {@link CharBuffer} to encode.
+     * @param charset The specified {@link Charset}.
+     * @param extraCapacity the extra capacity to alloc except the space for decoding.
+     */
+    public static ByteBuf encodeString(ByteBufAllocator alloc, CharBuffer src, Charset charset, int extraCapacity) {
+        return encodeString0(alloc, false, src, charset, extraCapacity);
+    }
+
+    static ByteBuf encodeString0(ByteBufAllocator alloc, boolean enforceHeap, CharBuffer src, Charset charset,
+                                 int extraCapacity) {
         final CharsetEncoder encoder = CharsetUtil.encoder(charset);
-        int length = (int) ((double) src.remaining() * encoder.maxBytesPerChar());
+        int length = (int) ((double) src.remaining() * encoder.maxBytesPerChar()) + extraCapacity;
         boolean release = true;
         final ByteBuf dst;
         if (enforceHeap) {
