@@ -666,7 +666,7 @@ public final class Unpooled {
     }
 
     private static ByteBuf copiedBuffer(CharBuffer buffer, Charset charset) {
-        return ByteBufUtil.encodeString0(ALLOC, true, buffer, charset);
+        return ByteBufUtil.encodeString0(ALLOC, true, buffer, charset, 0);
     }
 
     /**
