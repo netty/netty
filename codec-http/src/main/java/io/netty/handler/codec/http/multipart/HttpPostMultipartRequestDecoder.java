@@ -844,9 +844,11 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                 size = 0;
             }
             try {
-                String contentType = HttpPostBodyUtil.DEFAULT_BINARY_CONTENT_TYPE;
+                String contentType;
                 if (contentTypeAttribute != null) {
                     contentType = contentTypeAttribute.getValue();
+                } else {
+                    contentType = HttpPostBodyUtil.DEFAULT_BINARY_CONTENT_TYPE;
                 }
                 currentFileUpload = factory.createFileUpload(request,
                         cleanString(nameAttribute.getValue()), cleanString(filenameAttribute.getValue()),
