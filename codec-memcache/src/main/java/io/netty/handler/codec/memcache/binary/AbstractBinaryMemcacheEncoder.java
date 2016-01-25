@@ -30,11 +30,12 @@ public abstract class AbstractBinaryMemcacheEncoder<M extends BinaryMemcacheMess
     /**
      * Every binary memcache message has at least a 24 bytes header.
      */
-    private static final int DEFAULT_BUFFER_SIZE = 24;
+    private static final int MINIMUM_HEADER_SIZE = 24;
 
     @Override
     protected ByteBuf encodeMessage(ChannelHandlerContext ctx, M msg) {
-        ByteBuf buf = ctx.alloc().buffer(DEFAULT_BUFFER_SIZE);
+        ByteBuf buf = ctx.alloc().buffer(MINIMUM_HEADER_SIZE + msg.extrasLength()
+            + msg.keyLength());
 
         encodeHeader(buf, msg);
         encodeExtras(buf, msg.extras());
