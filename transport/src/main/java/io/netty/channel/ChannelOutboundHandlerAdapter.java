@@ -18,7 +18,7 @@ package io.netty.channel;
 import java.net.SocketAddress;
 
 /**
- * Skelton implementation of a {@link ChannelOutboundHandler}. This implementation just forwards each method call via
+ * Skeleton implementation of a {@link ChannelOutboundHandler}. This implementation just forwards each method call via
  * the {@link ChannelHandlerContext}.
  */
 public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter implements ChannelOutboundHandler {
@@ -72,7 +72,7 @@ public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter impleme
     }
 
     /**
-     * Calls {@link ChannelHandlerContext#close(ChannelPromise)} to forward
+     * Calls {@link ChannelHandlerContext#deregister(ChannelPromise)} to forward
      * to the next {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
@@ -94,7 +94,7 @@ public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter impleme
     }
 
     /**
-     * Calls {@link ChannelHandlerContext#write(Object)} to forward
+     * Calls {@link ChannelHandlerContext#write(Object, ChannelPromise)} to forward
      * to the next {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
