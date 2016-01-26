@@ -54,7 +54,7 @@ public class EpollSocketTcpMd5Test {
         server = (EpollServerSocketChannel) bootstrap.group(GROUP)
                 .channel(EpollServerSocketChannel.class)
                 .handler(new ChannelInboundHandlerAdapter())
-                .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0)).syncUninterruptibly().channel();
     }
 
     @After
