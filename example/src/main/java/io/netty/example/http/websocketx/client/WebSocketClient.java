@@ -113,7 +113,7 @@ public final class WebSocketClient {
                      p.addLast(
                              new HttpClientCodec(),
                              new HttpObjectAggregator(8192),
-                             new WebSocketClientCompressionHandler(),
+                             WebSocketClientCompressionHandler.INSTANCE,
                              handler);
                  }
              });
