@@ -38,6 +38,8 @@ static jmethodID netUtilClassIpv4PreferredMethodId = NULL;
 static int socketType;
 static char* nettyClassName = NULL;
 static const char* ip4prefix = "::ffff:";
+static const unsigned char wildcardAddress[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+static const unsigned char ipv4MappedWildcardAddress[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 };
 
 // Optional external methods
 extern int accept4(int sockFd, struct sockaddr* addr, socklen_t* addrlen, int flags) __attribute__((weak));
@@ -212,6 +214,7 @@ static jint _socket(JNIEnv* env, jclass clazz, int type) {
 
 int netty_unix_socket_initSockaddr(JNIEnv* env, jbyteArray address, jint scopeId, jint jport, const struct sockaddr_storage* addr) {
     uint16_t port = htons((uint16_t) jport);
+
     // Use GetPrimitiveArrayCritical and ReleasePrimitiveArrayCritical to signal the VM that we really would like
     // to not do a memory copy here. This is ok as we not do any blocking action here anyway.
     // This is important as the VM may suspend GC for the time!
@@ -229,7 +232,12 @@ int netty_unix_socket_initSockaddr(JNIEnv* env, jbyteArray address, jint scopeId
         if (scopeId != 0) {
            ip6addr->sin6_scope_id = (uint32_t) scopeId;
         }
-        memcpy(&(ip6addr->sin6_addr.s6_addr), addressBytes, 16);
+        // check if this is an any address and if so we need to handle it like this.
+        if (memcmp(addressBytes, wildcardAddress, 16) == 0 || memcmp(addressBytes, ipv4MappedWildcardAddress, 16) == 0) {
+            ip6addr->sin6_addr = in6addr_any;
+        } else {
+            memcpy(&(ip6addr->sin6_addr.s6_addr), addressBytes, 16);
+        }
     } else {
         struct sockaddr_in* ipaddr = (struct sockaddr_in*) addr;
         ipaddr->sin_family = AF_INET;
