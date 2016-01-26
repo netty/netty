@@ -397,7 +397,7 @@ public abstract class SSLEngineTest {
             runDelegatedTasks(serverResult, serverEngine);
             cTOs.compact();
             sTOc.compact();
-        } while (isHandshaking(clientResult) && isHandshaking(serverResult));
+        } while (isHandshaking(clientResult) || isHandshaking(serverResult));
     }
 
     private static boolean isHandshaking(SSLEngineResult result) {
