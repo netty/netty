@@ -196,10 +196,9 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
                     + upgrade);
         }
 
-        String connection = headers.get(Names.CONNECTION);
-        if (!Values.UPGRADE.equalsIgnoreCase(connection)) {
+        if (!headers.containsValue(Names.CONNECTION, Values.UPGRADE, true)) {
             throw new WebSocketHandshakeException("Invalid handshake response connection: "
-                    + connection);
+                    + headers.get(Names.CONNECTION));
         }
 
         ByteBuf challenge = response.content();
