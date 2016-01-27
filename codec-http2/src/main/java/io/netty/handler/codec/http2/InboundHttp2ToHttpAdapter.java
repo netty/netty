@@ -15,6 +15,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -118,12 +119,14 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
      * <li>{@code true} to validate HTTP headers in the http-codec</li>
      * <li>{@code false} not to validate HTTP headers in the http-codec</li>
      * </ul>
+     * @param alloc The {@link ByteBufAllocator} to use to generate the content of the message
      * @throws Http2Exception
      */
-    protected FullHttpMessage newMessage(int streamId, Http2Headers headers, boolean validateHttpHeaders)
+    protected FullHttpMessage newMessage(int streamId, Http2Headers headers, boolean validateHttpHeaders,
+                                         ByteBufAllocator alloc)
             throws Http2Exception {
-        return connection.isServer() ? HttpConversionUtil.toHttpRequest(streamId, headers,
-                validateHttpHeaders) : HttpConversionUtil.toHttpResponse(streamId, headers, validateHttpHeaders);
+        return connection.isServer() ? HttpConversionUtil.toHttpRequest(streamId, headers, alloc,
+                validateHttpHeaders) : HttpConversionUtil.toHttpResponse(streamId, headers, alloc, validateHttpHeaders);
     }
 
     /**
@@ -154,7 +157,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
                 boolean endOfStream, boolean allowAppend, boolean appendToTrailer) throws Http2Exception {
         FullHttpMessage msg = messageMap.get(streamId);
         if (msg == null) {
-            msg = newMessage(streamId, headers, validateHttpHeaders);
+            msg = newMessage(streamId, headers, validateHttpHeaders, ctx.alloc());
         } else if (allowAppend) {
             try {
                 HttpConversionUtil.addHttp2ToHttpHeaders(streamId, headers, msg, appendToTrailer);
