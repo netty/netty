@@ -44,7 +44,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(OioServerSocketChannel.class);
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 1);
 
     private static ServerSocket newServerSocket() {
         try {
