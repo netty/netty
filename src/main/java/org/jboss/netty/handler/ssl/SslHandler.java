@@ -1005,8 +1005,9 @@ public class SslHandler extends FrameDecoder
             }
 
             if (!success) {
-                IllegalStateException cause =
-                    new IllegalStateException("SSLEngine already closed");
+                Exception cause = channel.isOpen()
+                        ? new SSLException("SSLEngine already closed")
+                        : new ClosedChannelException();
 
                 // Check if we had a pendingWrite in process, if so we need to also notify as otherwise
                 // the ChannelFuture will never get notified
