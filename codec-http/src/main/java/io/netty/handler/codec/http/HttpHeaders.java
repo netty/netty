@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;
+import io.netty.util.internal.StringUtil;
 
 import java.text.ParseException;
 import java.util.Calendar;
@@ -1558,6 +1559,48 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
                 }
             } else {
                 if (v.equals(value)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Returns {@code true} if a header with the {@code name} and {@code value} exists, {@code false} otherwise.
+     * This also handles multiple values that are seperated with a {@code ,}.
+     * <p>
+     * If {@code ignoreCase} is {@code true} then a case insensitive compare is done on the value.
+     * @param name the name of the header to find
+     * @param value the value of the header to find
+     * @param ignoreCase {@code true} then a case insensitive compare is run to compare values.
+     * otherwise a case sensitive compare is run to compare values.
+     */
+    public boolean containsValue(CharSequence name, CharSequence value, boolean ignoreCase) {
+        List<String> values = getAll(name);
+        if (values.isEmpty()) {
+            return false;
+        }
+
+        for (String v: values) {
+            if (contains(v, value, ignoreCase)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean contains(String value, CharSequence expected, boolean ignoreCase) {
+        String[] parts = StringUtil.split(value, ',');
+        if (ignoreCase) {
+            for (String s: parts) {
+                if (AsciiString.contentEqualsIgnoreCase(expected, s.trim())) {
+                    return true;
+                }
+            }
+        } else {
+            for (String s: parts) {
+                if (AsciiString.contentEquals(expected, s.trim())) {
                     return true;
                 }
             }
