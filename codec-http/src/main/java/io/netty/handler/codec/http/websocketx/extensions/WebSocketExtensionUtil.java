@@ -17,7 +17,7 @@ package io.netty.handler.codec.http.websocketx.extensions;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpMessage;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.util.internal.StringUtil;
 
 import java.util.ArrayList;
@@ -37,12 +37,9 @@ public final class WebSocketExtensionUtil {
 
     private static final Pattern PARAMETER = Pattern.compile("^([^=]+)(=[\\\"]?([^\\\"]+)[\\\"]?)?$");
 
-    static boolean isWebsocketUpgrade(HttpMessage httpMessage) {
-        if (httpMessage == null) {
-            throw new NullPointerException("httpMessage");
-        }
-        return httpMessage.headers().contains(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true) &&
-                httpMessage.headers().contains(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET, true);
+    static boolean isWebsocketUpgrade(HttpHeaders headers) {
+        return headers.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true) &&
+                headers.contains(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET, true);
     }
 
     public static List<WebSocketExtensionData> extractExtensions(String extensionHeader) {

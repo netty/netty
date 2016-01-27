@@ -68,7 +68,7 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
         if (msg instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) msg;
 
-            if (WebSocketExtensionUtil.isWebsocketUpgrade(request)) {
+            if (WebSocketExtensionUtil.isWebsocketUpgrade(request.headers())) {
                 String extensionsHeader = request.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
 
                 if (extensionsHeader != null) {
@@ -105,7 +105,7 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
     @Override
     public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         if (msg instanceof HttpResponse &&
-                WebSocketExtensionUtil.isWebsocketUpgrade((HttpResponse) msg) && validExtensions != null) {
+                WebSocketExtensionUtil.isWebsocketUpgrade(((HttpResponse) msg).headers()) && validExtensions != null) {
             HttpResponse response = (HttpResponse) msg;
             String headerValue = response.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
 
