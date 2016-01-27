@@ -54,7 +54,7 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(OioSctpServerChannel.class);
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 1);
 
     private static SctpServerChannel newServerSocket() {
         try {
