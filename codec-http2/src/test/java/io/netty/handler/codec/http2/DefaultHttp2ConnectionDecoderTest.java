@@ -32,6 +32,7 @@ import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyShort;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Matchers.isNull;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.never;
@@ -298,6 +299,21 @@ public class DefaultHttp2ConnectionDecoderTest {
     }
 
     @Test
+    public void dataReadAfterGoAwaySentOnUknownStreamShouldIgnore() throws Exception {
+        // Throw an exception when checking stream state.
+        when(connection.stream(STREAM_ID)).thenReturn(null);
+        mockGoAwaySent();
+        final ByteBuf data = dummyData();
+        try {
+            decode().onDataRead(ctx, STREAM_ID, data, 10, true);
+            verify(localFlow).receiveFlowControlledFrame((Http2Stream) isNull(), eq(data), eq(10), eq(true));
+            verify(listener, never()).onDataRead(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean());
+        } finally {
+            data.release();
+        }
+    }
+
+    @Test
     public void dataReadAfterRstStreamForStreamInInvalidStateShouldIgnore() throws Exception {
         // Throw an exception when checking stream state.
         when(stream.state()).thenReturn(Http2Stream.State.CLOSED);
@@ -369,21 +385,30 @@ public class DefaultHttp2ConnectionDecoderTest {
         }
     }
 
-    @Test
-    public void headersReadAfterGoAwayShouldBeIgnored() throws Exception {
-        when(connection.goAwaySent()).thenReturn(true);
+    @Test(expected = Http2Exception.class)
+    public void headersReadForUnknownStreamShouldThrow() throws Exception {
+        when(connection.stream(STREAM_ID)).thenReturn(null);
         decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
-        verify(remote, never()).createIdleStream(eq(STREAM_ID));
+    }
+
+    @Test
+    public void headersReadForStreamThatAlreadySentResetShouldBeIgnored() throws Exception {
+        when(stream.isResetSent()).thenReturn(true);
+        decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
+        verify(remote, never()).createIdleStream(anyInt());
+        verify(remote, never()).createStream(anyInt(), anyBoolean());
         verify(stream, never()).open(anyBoolean());
 
         // Verify that the event was absorbed and not propagated to the oberver.
         verify(listener, never()).onHeadersRead(eq(ctx), anyInt(), any(Http2Headers.class), anyInt(), anyBoolean());
         verify(remote, never()).createIdleStream(anyInt());
+        verify(remote, never()).createStream(anyInt(), anyBoolean());
         verify(stream, never()).open(anyBoolean());
     }
 
     @Test
-    public void headersReadForUnknownStreamShouldBeIgnored() throws Exception {
+    public void headersReadForUnknownStreamAfterGoAwayShouldBeIgnored() throws Exception {
+        mockGoAwaySent();
         when(connection.stream(STREAM_ID)).thenReturn(null);
         decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
         verify(remote, never()).createStream(anyInt(), anyBoolean());

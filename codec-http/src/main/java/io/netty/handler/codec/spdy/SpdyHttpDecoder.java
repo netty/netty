@@ -16,6 +16,7 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
@@ -165,7 +166,8 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                 }
 
                 try {
-                    FullHttpRequest httpRequestWithEntity = createHttpRequest(spdyVersion, spdySynStreamFrame);
+                    FullHttpRequest httpRequestWithEntity =
+                       createHttpRequest(spdyVersion, spdySynStreamFrame, ctx.alloc());
 
                     // Set the Stream-ID, Associated-To-Stream-ID, iand Priority as headers
                     httpRequestWithEntity.headers().setInt(Names.STREAM_ID, streamId);
@@ -195,7 +197,8 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                 }
 
                 try {
-                    FullHttpRequest httpRequestWithEntity = createHttpRequest(spdyVersion, spdySynStreamFrame);
+                    FullHttpRequest httpRequestWithEntity =
+                       createHttpRequest(spdyVersion, spdySynStreamFrame, ctx.alloc());
 
                     // Set the Stream-ID as a header
                     httpRequestWithEntity.headers().setInt(Names.STREAM_ID, streamId);
@@ -346,7 +349,8 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
         }
     }
 
-    private static FullHttpRequest createHttpRequest(int spdyVersion, SpdyHeadersFrame requestFrame)
+    private static FullHttpRequest createHttpRequest(int spdyVersion, SpdyHeadersFrame requestFrame,
+                                                     ByteBufAllocator alloc)
             throws Exception {
         // Create the first line of the request from the name/value pairs
         SpdyHeaders headers     = requestFrame.headers();
@@ -357,7 +361,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
         headers.remove(PATH);
         headers.remove(VERSION);
 
-        FullHttpRequest req = new DefaultFullHttpRequest(httpVersion, method, url);
+        FullHttpRequest req = new DefaultFullHttpRequest(httpVersion, method, url, alloc.buffer());
 
         // Remove the scheme header
         headers.remove(SCHEME);

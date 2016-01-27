@@ -59,28 +59,20 @@ public class DefaultFullBinaryMemcacheRequest extends DefaultBinaryMemcacheReque
     }
 
     @Override
-    public int refCnt() {
-        return content.refCnt();
-    }
-
-    @Override
     public FullBinaryMemcacheRequest retain() {
         super.retain();
-        content.retain();
         return this;
     }
 
     @Override
     public FullBinaryMemcacheRequest retain(int increment) {
         super.retain(increment);
-        content.retain(increment);
         return this;
     }
 
     @Override
     public FullBinaryMemcacheRequest touch() {
         super.touch();
-        content.touch();
         return this;
     }
 
@@ -92,15 +84,9 @@ public class DefaultFullBinaryMemcacheRequest extends DefaultBinaryMemcacheReque
     }
 
     @Override
-    public boolean release() {
-        super.release();
-        return content.release();
-    }
-
-    @Override
-    public boolean release(int decrement) {
-        super.release(decrement);
-        return content.release(decrement);
+    protected void deallocate() {
+        super.deallocate();
+        content.release();
     }
 
     @Override
