@@ -19,8 +19,6 @@ import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.util.AsciiString;
-import io.netty.util.collection.IntObjectHashMap;
-import io.netty.util.collection.IntObjectMap;
 
 import java.util.Iterator;
 import java.util.Map.Entry;
@@ -41,20 +39,25 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
             HttpConversionUtil.OUT_OF_MESSAGE_SEQUENCE_PATH);
     private static final AsciiString OUT_OF_MESSAGE_SEQUENCE_RETURN_CODE = new AsciiString(
             HttpConversionUtil.OUT_OF_MESSAGE_SEQUENCE_RETURN_CODE.toString());
-    private final IntObjectMap<HttpHeaders> outOfMessageFlowHeaders;
+    private final Http2Connection.PropertyKey outOfMessageFlowHeadersKey;
 
     InboundHttp2ToHttpPriorityAdapter(Http2Connection connection, int maxContentLength,
                                       boolean validateHttpHeaders,
                                       boolean propagateSettings) {
-
         super(connection, maxContentLength, validateHttpHeaders, propagateSettings);
-        outOfMessageFlowHeaders = new IntObjectHashMap<HttpHeaders>();
+        outOfMessageFlowHeadersKey = connection.newKey();
     }
 
-    @Override
-    protected void removeMessage(int streamId) {
-        super.removeMessage(streamId);
-        outOfMessageFlowHeaders.remove(streamId);
+    private HttpHeaders getOutOfMessageFlowHeaders(Http2Stream stream) {
+        return stream.getProperty(outOfMessageFlowHeadersKey);
+    }
+
+    private void putOutOfMessageFlowHeaders(Http2Stream stream, HttpHeaders headers) {
+        stream.setProperty(outOfMessageFlowHeadersKey, headers);
+    }
+
+    private HttpHeaders removeOutOfMessageFlowHeaders(Http2Stream stream) {
+        return stream.removeProperty(outOfMessageFlowHeadersKey);
     }
 
     /**
@@ -68,13 +71,13 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
 
     /**
      * This method will add the {@code headers} to the out of order headers map
-     * @param streamId The stream id associated with {@code headers}
+     * @param stream The stream associated with {@code headers}
      * @param headers Newly encountered out of order headers which must be stored for future use
      */
-    private void importOutOfMessageFlowHeaders(int streamId, HttpHeaders headers) {
-        final HttpHeaders outOfMessageFlowHeader = outOfMessageFlowHeaders.get(streamId);
+    private void importOutOfMessageFlowHeaders(Http2Stream stream, HttpHeaders headers) {
+        final HttpHeaders outOfMessageFlowHeader = getOutOfMessageFlowHeaders(stream);
         if (outOfMessageFlowHeader == null) {
-            outOfMessageFlowHeaders.put(streamId, headers);
+            putOutOfMessageFlowHeaders(stream, headers);
         } else {
             outOfMessageFlowHeader.setAll(headers);
         }
@@ -82,11 +85,11 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
 
     /**
      * Take any saved out of order headers and export them to {@code headers}
-     * @param streamId The stream id to search for out of order headers for
-     * @param headers If any out of order headers exist for {@code streamId} they will be added to this object
+     * @param stream The stream to search for out of order headers for
+     * @param headers If any out of order headers exist for {@code stream} they will be added to this object
      */
-    private void exportOutOfMessageFlowHeaders(int streamId, final HttpHeaders headers) {
-        final HttpHeaders outOfMessageFlowHeader = outOfMessageFlowHeaders.get(streamId);
+    private void exportOutOfMessageFlowHeaders(Http2Stream stream, final HttpHeaders headers) {
+        final HttpHeaders outOfMessageFlowHeader = getOutOfMessageFlowHeaders(stream);
         if (outOfMessageFlowHeader != null) {
             headers.setAll(outOfMessageFlowHeader);
         }
@@ -127,18 +130,19 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
     }
 
     @Override
-    protected void fireChannelRead(ChannelHandlerContext ctx, FullHttpMessage msg, int streamId) {
-        exportOutOfMessageFlowHeaders(streamId, getActiveHeaders(msg));
-        super.fireChannelRead(ctx, msg, streamId);
+    protected void fireChannelRead(ChannelHandlerContext ctx, FullHttpMessage msg, boolean release,
+                                   Http2Stream stream) {
+        exportOutOfMessageFlowHeaders(stream, getActiveHeaders(msg));
+        super.fireChannelRead(ctx, msg, release, stream);
     }
 
     @Override
-    protected FullHttpMessage processHeadersBegin(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
+    protected FullHttpMessage processHeadersBegin(ChannelHandlerContext ctx, Http2Stream stream, Http2Headers headers,
             boolean endOfStream, boolean allowAppend, boolean appendToTrailer) throws Http2Exception {
-        FullHttpMessage msg = super.processHeadersBegin(ctx, streamId, headers,
+        FullHttpMessage msg = super.processHeadersBegin(ctx, stream, headers,
                 endOfStream, allowAppend, appendToTrailer);
         if (msg != null) {
-            exportOutOfMessageFlowHeaders(streamId, getActiveHeaders(msg));
+            exportOutOfMessageFlowHeaders(stream, getActiveHeaders(msg));
         }
         return msg;
     }
@@ -146,15 +150,15 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
     @Override
     public void onPriorityTreeParentChanged(Http2Stream stream, Http2Stream oldParent) {
         Http2Stream parent = stream.parent();
-        FullHttpMessage msg = messageMap.get(stream.id());
+        FullHttpMessage msg = getMessage(stream);
         if (msg == null) {
-            // msg may be null if a HTTP/2 frame event in received outside the HTTP message flow
-            // For example a PRIORITY frame can be received in any state
-            // and the HTTP message flow exists in OPEN.
+            // msg may be null if a HTTP/2 frame event is received outside the HTTP message flow
+            // For example a PRIORITY frame can be received in any state but the HTTP message flow
+            // takes place while the stream is OPEN.
             if (parent != null && !parent.equals(connection.connectionStream())) {
                 HttpHeaders headers = new DefaultHttpHeaders();
                 headers.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(), parent.id());
-                importOutOfMessageFlowHeaders(stream.id(), headers);
+                importOutOfMessageFlowHeaders(stream, headers);
             }
         } else {
             if (parent == null) {
@@ -169,14 +173,14 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
 
     @Override
     public void onWeightChanged(Http2Stream stream, short oldWeight) {
-        FullHttpMessage msg = messageMap.get(stream.id());
+        FullHttpMessage msg = getMessage(stream);
         final HttpHeaders headers;
         if (msg == null) {
             // msg may be null if a HTTP/2 frame event in received outside the HTTP message flow
             // For example a PRIORITY frame can be received in any state
             // and the HTTP message flow exists in OPEN.
             headers = new DefaultHttpHeaders();
-            importOutOfMessageFlowHeaders(stream.id(), headers);
+            importOutOfMessageFlowHeaders(stream, headers);
         } else {
             headers = getActiveHeaders(msg);
         }
@@ -186,9 +190,13 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
     @Override
     public void onPriorityRead(ChannelHandlerContext ctx, int streamId, int streamDependency, short weight,
                     boolean exclusive) throws Http2Exception {
-        FullHttpMessage msg = messageMap.get(streamId);
+        Http2Stream stream = connection.stream(streamId);
+        if (stream == null) {
+            return;
+        }
+        FullHttpMessage msg = getMessage(stream);
         if (msg == null) {
-            HttpHeaders httpHeaders = outOfMessageFlowHeaders.remove(streamId);
+            HttpHeaders httpHeaders = removeOutOfMessageFlowHeaders(stream);
             if (httpHeaders == null) {
                 throw connectionError(PROTOCOL_ERROR, "Priority Frame recieved for unknown stream id %d", streamId);
             }
@@ -196,8 +204,8 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
             Http2Headers http2Headers = new DefaultHttp2Headers(validateHttpHeaders, httpHeaders.size());
             initializePseudoHeaders(http2Headers);
             addHttpHeadersToHttp2Headers(httpHeaders, http2Headers);
-            msg = newMessage(streamId, http2Headers, validateHttpHeaders);
-            fireChannelRead(ctx, msg, streamId);
+            msg = newMessage(stream, http2Headers, validateHttpHeaders);
+            fireChannelRead(ctx, msg, false, stream);
         }
     }
 }
