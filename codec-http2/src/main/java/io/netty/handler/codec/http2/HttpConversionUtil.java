@@ -199,7 +199,15 @@ public final class HttpConversionUtil {
         // HTTP/2 does not define a way to carry the version or reason phrase that is included in an
         // HTTP/1.1 status line.
         FullHttpResponse msg = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, validateHttpHeaders);
-        addHttp2ToHttpHeaders(streamId, http2Headers, msg, false);
+        try {
+            addHttp2ToHttpHeaders(streamId, http2Headers, msg, false);
+        } catch (Http2Exception e) {
+            msg.release();
+            throw e;
+        } catch (Throwable t) {
+            msg.release();
+            throw streamError(streamId, PROTOCOL_ERROR, t, "HTTP/2 to HTTP/1.x headers conversion error");
+        }
         return msg;
     }
 
@@ -224,7 +232,15 @@ public final class HttpConversionUtil {
                 "path header cannot be null in conversion to HTTP/1.x");
         FullHttpRequest msg = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.valueOf(method
                         .toString()), path.toString(), validateHttpHeaders);
-        addHttp2ToHttpHeaders(streamId, http2Headers, msg, false);
+        try {
+            addHttp2ToHttpHeaders(streamId, http2Headers, msg, false);
+        } catch (Http2Exception e) {
+            msg.release();
+            throw e;
+        } catch (Throwable t) {
+            msg.release();
+            throw streamError(streamId, PROTOCOL_ERROR, t, "HTTP/2 to HTTP/1.x headers conversion error");
+        }
         return msg;
     }
 
