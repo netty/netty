@@ -41,17 +41,8 @@ public class DefaultBinaryMemcacheResponse extends AbstractBinaryMemcacheMessage
      *
      * @param key    the key to use
      */
-    public DefaultBinaryMemcacheResponse(String key) {
+    public DefaultBinaryMemcacheResponse(ByteBuf key) {
         this(key, null);
-    }
-
-    /**
-     * Create a new {@link DefaultBinaryMemcacheResponse} with the header and extras.
-     *
-     * @param extras the extras to use.
-     */
-    public DefaultBinaryMemcacheResponse(ByteBuf extras) {
-        this(null, extras);
     }
 
     /**
@@ -60,7 +51,7 @@ public class DefaultBinaryMemcacheResponse extends AbstractBinaryMemcacheMessage
      * @param key    the key to use.
      * @param extras the extras to use.
      */
-    public DefaultBinaryMemcacheResponse(String key, ByteBuf extras) {
+    public DefaultBinaryMemcacheResponse(ByteBuf key, ByteBuf extras) {
         super(key, extras);
         setMagic(RESPONSE_MAGIC_BYTE);
     }
@@ -71,32 +62,8 @@ public class DefaultBinaryMemcacheResponse extends AbstractBinaryMemcacheMessage
     }
 
     @Override
-    public BinaryMemcacheResponse setStatus(short status) {
+    public DefaultBinaryMemcacheResponse setStatus(short status) {
         this.status = status;
-        return this;
-    }
-
-    @Override
-    public BinaryMemcacheResponse retain() {
-        super.retain();
-        return this;
-    }
-
-    @Override
-    public BinaryMemcacheResponse retain(int increment) {
-        super.retain(increment);
-        return this;
-    }
-
-    @Override
-    public BinaryMemcacheResponse touch() {
-        super.touch();
-        return this;
-    }
-
-    @Override
-    public BinaryMemcacheResponse touch(Object hint) {
-        super.touch(hint);
         return this;
     }
 }

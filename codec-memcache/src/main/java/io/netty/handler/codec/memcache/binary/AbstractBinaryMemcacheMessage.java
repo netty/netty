@@ -28,7 +28,7 @@ public abstract class AbstractBinaryMemcacheMessage
     /**
      * Contains the optional key.
      */
-    private String key;
+    private ByteBuf key;
 
     /**
      * Contains the optional extras.
@@ -50,13 +50,13 @@ public abstract class AbstractBinaryMemcacheMessage
      * @param key    the message key.
      * @param extras the message extras.
      */
-    protected AbstractBinaryMemcacheMessage(String key, ByteBuf extras) {
+    protected AbstractBinaryMemcacheMessage(ByteBuf key, ByteBuf extras) {
         this.key = key;
         this.extras = extras;
     }
 
     @Override
-    public String key() {
+    public ByteBuf key() {
         return key;
     }
 
@@ -66,7 +66,7 @@ public abstract class AbstractBinaryMemcacheMessage
     }
 
     @Override
-    public BinaryMemcacheMessage setKey(String key) {
+    public BinaryMemcacheMessage setKey(ByteBuf key) {
         this.key = key;
         return this;
     }
@@ -166,55 +166,24 @@ public abstract class AbstractBinaryMemcacheMessage
     }
 
     @Override
-    public int refCnt() {
-        if (extras != null) {
-            return extras.refCnt();
+    public AbstractBinaryMemcacheMessage touch(Object hint) {
+        if (key != null) {
+            key.touch(hint);
         }
-        return 1;
-    }
-
-    @Override
-    public BinaryMemcacheMessage retain() {
-        if (extras != null) {
-            extras.retain();
-        }
-        return this;
-    }
-
-    @Override
-    public BinaryMemcacheMessage retain(int increment) {
-        if (extras != null) {
-            extras.retain(increment);
-        }
-        return this;
-    }
-
-    @Override
-    public boolean release() {
-        if (extras != null) {
-            return extras.release();
-        }
-        return false;
-    }
-
-    @Override
-    public boolean release(int decrement) {
-        if (extras != null) {
-            return extras.release(decrement);
-        }
-        return false;
-    }
-
-    @Override
-    public BinaryMemcacheMessage touch() {
-        return touch(null);
-    }
-
-    @Override
-    public BinaryMemcacheMessage touch(Object hint) {
         if (extras != null) {
             extras.touch(hint);
         }
         return this;
     }
+
+    @Override
+    protected void deallocate() {
+        if (key != null) {
+            key.release();
+        }
+        if (extras != null) {
+            extras.release();
+        }
+    }
+
 }

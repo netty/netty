@@ -21,22 +21,4 @@ import io.netty.handler.codec.memcache.FullMemcacheMessage;
  * A {@link BinaryMemcacheResponse} that also includes the content.
  */
 public interface FullBinaryMemcacheResponse extends BinaryMemcacheResponse, FullMemcacheMessage {
-
-    @Override
-    FullBinaryMemcacheResponse copy();
-
-    @Override
-    FullBinaryMemcacheResponse retain(int increment);
-
-    @Override
-    FullBinaryMemcacheResponse retain();
-
-    @Override
-    FullBinaryMemcacheResponse touch();
-
-    @Override
-    FullBinaryMemcacheResponse touch(Object hint);
-
-    @Override
-    FullBinaryMemcacheResponse duplicate();
 }

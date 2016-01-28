@@ -79,6 +79,7 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
                 currentMessage = decodeHeader(in);
                 state = State.READ_EXTRAS;
             } catch (Exception e) {
+                resetCurrentMessage();
                 out.add(invalidMessage(e));
                 return;
             }
@@ -89,11 +90,12 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
                         return;
                     }
 
-                    currentMessage.setExtras(readBytes(ctx.alloc(), in, extrasLength));
+                    currentMessage.setExtras(in.readSlice(extrasLength).retain());
                 }
 
                 state = State.READ_KEY;
             } catch (Exception e) {
+                resetCurrentMessage();
                 out.add(invalidMessage(e));
                 return;
             }
@@ -103,14 +105,13 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
                     if (in.readableBytes() < keyLength) {
                         return;
                     }
-
-                    currentMessage.setKey(in.toString(in.readerIndex(), keyLength, CharsetUtil.UTF_8));
-                    in.skipBytes(keyLength);
+                    currentMessage.setKey(in.readSlice(keyLength).retain());
                 }
-
-                out.add(currentMessage);
+                // Need to release "currentMessage" when we don't need to use it
+                out.add(currentMessage.retain());
                 state = State.READ_CONTENT;
             } catch (Exception e) {
+                resetCurrentMessage();
                 out.add(invalidMessage(e));
                 return;
             }
@@ -133,11 +134,12 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
                         toRead = remainingLength;
                     }
 
-                    ByteBuf chunkBuffer = readBytes(ctx.alloc(), in, toRead);
+                    ByteBuf chunkBuffer = in.readSlice(toRead).retain();
 
                     MemcacheContent chunk;
                     if ((alreadyReadChunkSize += toRead) >= valueLength) {
                         chunk = new DefaultLastMemcacheContent(chunkBuffer);
+                        resetCurrentMessage();
                     } else {
                         chunk = new DefaultMemcacheContent(chunkBuffer);
                     }
@@ -148,11 +150,13 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
                     }
                 } else {
                     out.add(LastMemcacheContent.EMPTY_LAST_CONTENT);
+                    resetCurrentMessage();
                 }
 
                 state = State.READ_HEADER;
                 return;
             } catch (Exception e) {
+                resetCurrentMessage();
                 out.add(invalidChunk(e));
                 return;
             }
@@ -205,6 +209,13 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
         }
 
         resetDecoder();
+    }
+
+    private void resetCurrentMessage() {
+        if (currentMessage != null) {
+            currentMessage.release();
+            currentMessage = null;
+        }
     }
 
     /**

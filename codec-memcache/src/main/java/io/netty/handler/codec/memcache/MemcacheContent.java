@@ -27,22 +27,4 @@ import io.netty.channel.ChannelPipeline;
  * in the {@link ChannelPipeline}.
  */
 public interface MemcacheContent extends MemcacheObject, ByteBufHolder {
-
-    @Override
-    MemcacheContent copy();
-
-    @Override
-    MemcacheContent duplicate();
-
-    @Override
-    MemcacheContent retain();
-
-    @Override
-    MemcacheContent retain(int increment);
-
-    @Override
-    MemcacheContent touch();
-
-    @Override
-    MemcacheContent touch(Object hint);
 }
