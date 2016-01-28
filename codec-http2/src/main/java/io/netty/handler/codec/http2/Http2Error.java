@@ -35,6 +35,16 @@ public enum Http2Error {
     HTTP_1_1_REQUIRED(0xD);
 
     private final long code;
+    private static final Http2Error[] INT_TO_ENUM_MAP;
+    static {
+        Http2Error[] errors = Http2Error.values();
+        Http2Error[] map = new Http2Error[errors.length];
+        for (int i = 0; i < errors.length; ++i) {
+            Http2Error error = errors[i];
+            map[(int) error.code()] = error;
+        }
+        INT_TO_ENUM_MAP = map;
+    }
 
     Http2Error(long code) {
         this.code = code;
@@ -45,5 +55,9 @@ public enum Http2Error {
      */
     public long code() {
         return code;
+    }
+
+    public static Http2Error valueOf(long value) {
+        return value >= INT_TO_ENUM_MAP.length || value < 0 ? null : INT_TO_ENUM_MAP[(int) value];
     }
 }

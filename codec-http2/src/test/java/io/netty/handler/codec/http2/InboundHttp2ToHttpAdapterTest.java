@@ -41,7 +41,6 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http2.Http2TestUtil.FrameAdapter;
 import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
@@ -84,7 +83,8 @@ public class InboundHttp2ToHttpAdapterTest {
     @Mock
     private HttpSettingsListener settingsListener;
 
-    private Http2FrameWriter frameWriter;
+    private Http2ConnectionHandler serverHandler;
+    private Http2ConnectionHandler clientHandler;
     private ServerBootstrap sb;
     private Bootstrap cb;
     private Channel serverChannel;
@@ -92,12 +92,14 @@ public class InboundHttp2ToHttpAdapterTest {
     private Channel clientChannel;
     private CountDownLatch serverLatch;
     private CountDownLatch clientLatch;
+    private CountDownLatch serverLatch2;
+    private CountDownLatch clientLatch2;
     private CountDownLatch settingsLatch;
     private int maxContentLength;
     private HttpResponseDelegator serverDelegator;
     private HttpResponseDelegator clientDelegator;
     private HttpSettingsDelegator settingsDelegator;
-    private Http2Exception serverException;
+    private Http2Exception clientException;
 
     @Before
     public void setup() throws Exception {
@@ -144,8 +146,8 @@ public class InboundHttp2ToHttpAdapterTest {
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() {
-                    frameWriter.writeHeaders(ctxClient(), 3, http2Headers, 0, true, newPromiseClient());
-                    ctxClient().flush();
+                    clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, true, newPromiseClient());
+                    clientChannel.flush();
                 }
             });
             awaitRequests();
@@ -179,8 +181,8 @@ public class InboundHttp2ToHttpAdapterTest {
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() {
-                    frameWriter.writeHeaders(ctxClient(), 3, http2Headers, 0, true, newPromiseClient());
-                    ctxClient().flush();
+                    clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, true, newPromiseClient());
+                    clientChannel.flush();
                 }
             });
             awaitRequests();
@@ -213,8 +215,8 @@ public class InboundHttp2ToHttpAdapterTest {
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() {
-                    frameWriter.writeHeaders(ctxClient(), 3, http2Headers, 0, true, newPromiseClient());
-                    ctxClient().flush();
+                    clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, true, newPromiseClient());
+                    clientChannel.flush();
                 }
             });
             awaitRequests();
@@ -240,12 +242,12 @@ public class InboundHttp2ToHttpAdapterTest {
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() {
-                frameWriter.writeHeaders(ctxClient(), 3, http2Headers, 0, true, newPromiseClient());
-                ctxClient().flush();
+                clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, true, newPromiseClient());
+                clientChannel.flush();
             }
         });
-        awaitRequests();
-        assertTrue(isStreamError(serverException));
+        awaitResponses();
+        assertTrue(isStreamError(clientException));
     }
 
     @Test
@@ -264,9 +266,10 @@ public class InboundHttp2ToHttpAdapterTest {
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() {
-                    frameWriter.writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
-                    frameWriter.writeData(ctxClient(), 3, content.duplicate().retain(), 0, true, newPromiseClient());
-                    ctxClient().flush();
+                    clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
+                    clientHandler.encoder().writeData(ctxClient(), 3, content.duplicate().retain(), 0, true,
+                                                      newPromiseClient());
+                    clientChannel.flush();
                 }
             });
             awaitRequests();
@@ -296,12 +299,12 @@ public class InboundHttp2ToHttpAdapterTest {
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() {
-                    frameWriter.writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
-                    frameWriter.writeData(ctxClient(), 3, content.slice(0, midPoint).retain(), 0, false,
+                    clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
+                    clientHandler.encoder().writeData(ctxClient(), 3, content.slice(0, midPoint).retain(), 0, false,
                             newPromiseClient());
-                    frameWriter.writeData(ctxClient(), 3, content.slice(midPoint, text.length() - midPoint).retain(),
-                            0, true, newPromiseClient());
-                    ctxClient().flush();
+                    clientHandler.encoder().writeData(ctxClient(), 3,
+                            content.slice(midPoint, text.length() - midPoint).retain(), 0, true, newPromiseClient());
+                    clientChannel.flush();
                 }
             });
             awaitRequests();
@@ -330,11 +333,11 @@ public class InboundHttp2ToHttpAdapterTest {
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() {
-                    frameWriter.writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
-                    frameWriter.writeData(ctxClient(), 3, content.retain(), 0, false, newPromiseClient());
-                    frameWriter.writeData(ctxClient(), 3, content.retain(), 0, false, newPromiseClient());
-                    frameWriter.writeData(ctxClient(), 3, content.retain(), 0, true, newPromiseClient());
-                    ctxClient().flush();
+                    clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
+                    clientHandler.encoder().writeData(ctxClient(), 3, content.retain(), 0, false, newPromiseClient());
+                    clientHandler.encoder().writeData(ctxClient(), 3, content.retain(), 0, false, newPromiseClient());
+                    clientHandler.encoder().writeData(ctxClient(), 3, content.retain(), 0, true, newPromiseClient());
+                    clientChannel.flush();
                 }
             });
             awaitRequests();
@@ -373,10 +376,10 @@ public class InboundHttp2ToHttpAdapterTest {
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() {
-                    frameWriter.writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
-                    frameWriter.writeHeaders(ctxClient(), 3, http2Headers2, 0, false, newPromiseClient());
-                    frameWriter.writeData(ctxClient(), 3, content.retain(), 0, true, newPromiseClient());
-                    ctxClient().flush();
+                    clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
+                    clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers2, 0, false, newPromiseClient());
+                    clientHandler.encoder().writeData(ctxClient(), 3, content.retain(), 0, true, newPromiseClient());
+                    clientChannel.flush();
                 }
             });
             awaitRequests();
@@ -413,10 +416,11 @@ public class InboundHttp2ToHttpAdapterTest {
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() {
-                    frameWriter.writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
-                    frameWriter.writeData(ctxClient(), 3, content.duplicate().retain(), 0, false, newPromiseClient());
-                    frameWriter.writeHeaders(ctxClient(), 3, http2Headers2, 0, true, newPromiseClient());
-                    ctxClient().flush();
+                    clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
+                    clientHandler.encoder().writeData(ctxClient(), 3, content.duplicate().retain(), 0, false,
+                                                      newPromiseClient());
+                    clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers2, 0, true, newPromiseClient());
+                    clientChannel.flush();
                 }
             });
             awaitRequests();
@@ -456,12 +460,15 @@ public class InboundHttp2ToHttpAdapterTest {
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() {
-                    frameWriter.writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
-                    frameWriter.writeHeaders(ctxClient(), 5, http2Headers2, 0, false, newPromiseClient());
-                    frameWriter.writePriority(ctxClient(), 5, 3, (short) 123, true, newPromiseClient());
-                    frameWriter.writeData(ctxClient(), 3, content.duplicate().retain(), 0, true, newPromiseClient());
-                    frameWriter.writeData(ctxClient(), 5, content2.duplicate().retain(), 0, true, newPromiseClient());
-                    ctxClient().flush();
+                    clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
+                    clientHandler.encoder().writeHeaders(ctxClient(), 5, http2Headers2, 0, false, newPromiseClient());
+                    clientChannel.flush(); // Headers are queued in the flow controller and so flush them.
+                    clientHandler.encoder().writePriority(ctxClient(), 5, 3, (short) 123, true, newPromiseClient());
+                    clientHandler.encoder().writeData(ctxClient(), 3, content.duplicate().retain(), 0, true,
+                                                      newPromiseClient());
+                    clientHandler.encoder().writeData(ctxClient(), 5, content2.duplicate().retain(), 0, true,
+                                                      newPromiseClient());
+                    clientChannel.flush();
                 }
             });
             awaitRequests();
@@ -509,12 +516,15 @@ public class InboundHttp2ToHttpAdapterTest {
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() {
-                    frameWriter.writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
-                    frameWriter.writeHeaders(ctxClient(), 5, http2Headers2, 0, false, newPromiseClient());
-                    frameWriter.writeData(ctxClient(), 3, content.duplicate().retain(), 0, true, newPromiseClient());
-                    frameWriter.writeData(ctxClient(), 5, content2.duplicate().retain(), 0, true, newPromiseClient());
-                    frameWriter.writePriority(ctxClient(), 5, 3, (short) 222, false, newPromiseClient());
-                    ctxClient().flush();
+                    clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
+                    clientHandler.encoder().writeHeaders(ctxClient(), 5, http2Headers2, 0, false, newPromiseClient());
+                    clientHandler.encoder().writeData(ctxClient(), 3, content.duplicate().retain(), 0, true,
+                                                      newPromiseClient());
+                    clientHandler.encoder().writeData(ctxClient(), 5, content2.duplicate().retain(), 0, true,
+                                                      newPromiseClient());
+                    clientChannel.flush(); // headers and data are queued in the flow controller, so flush them.
+                    clientHandler.encoder().writePriority(ctxClient(), 5, 3, (short) 222, false, newPromiseClient());
+                    clientChannel.flush();
                 }
             });
             awaitRequests();
@@ -533,7 +543,7 @@ public class InboundHttp2ToHttpAdapterTest {
 
     @Test
     public void serverRequestPushPromise() throws Exception {
-        boostrapEnv(2, 1, 1);
+        boostrapEnv(1, 1, 1);
         final String text = "hello world big time data!";
         final ByteBuf content = Unpooled.copiedBuffer(text.getBytes());
         final String text2 = "hello world smaller data?";
@@ -563,8 +573,8 @@ public class InboundHttp2ToHttpAdapterTest {
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() {
-                    frameWriter.writeHeaders(ctxClient(), 3, http2Headers3, 0, true, newPromiseClient());
-                    ctxClient().flush();
+                    clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers3, 0, true, newPromiseClient());
+                    clientChannel.flush();
                 }
             });
             awaitRequests();
@@ -580,19 +590,20 @@ public class InboundHttp2ToHttpAdapterTest {
             runInChannel(serverConnectedChannel, new Http2Runnable() {
                 @Override
                 public void run() {
-                    frameWriter.writeHeaders(ctxServer(), 3, http2Headers, 0, false, newPromiseServer());
-                    frameWriter.writePushPromise(ctxServer(), 3, 5, http2Headers2, 0, newPromiseServer());
-                    frameWriter.writeData(ctxServer(), 3, content.duplicate().retain(), 0, true, newPromiseServer());
-                    frameWriter.writeData(ctxServer(), 5, content2.duplicate().retain(), 0, true, newPromiseServer());
-                    ctxServer().flush();
+                    serverHandler.encoder().writeHeaders(ctxServer(), 3, http2Headers, 0, false, newPromiseServer());
+                    serverHandler.encoder().writePushPromise(ctxServer(), 3, 2, http2Headers2, 0, newPromiseServer());
+                    serverHandler.encoder().writeData(ctxServer(), 3, content.duplicate().retain(), 0, true,
+                                                      newPromiseServer());
+                    serverHandler.encoder().writeData(ctxServer(), 5, content2.duplicate().retain(), 0, true,
+                                                      newPromiseServer());
+                    serverConnectedChannel.flush();
                 }
             });
             awaitResponses();
             ArgumentCaptor<FullHttpMessage> responseCaptor = ArgumentCaptor.forClass(FullHttpMessage.class);
-            verify(clientListener, times(2)).messageReceived(responseCaptor.capture());
+            verify(clientListener).messageReceived(responseCaptor.capture());
             capturedResponses = responseCaptor.getAllValues();
             assertEquals(response, capturedResponses.get(0));
-            assertEquals(response2, capturedResponses.get(1));
         } finally {
             request.release();
             response.release();
@@ -602,7 +613,7 @@ public class InboundHttp2ToHttpAdapterTest {
 
     @Test
     public void serverResponseHeaderInformational() throws Exception {
-        boostrapEnv(2, 2, 1);
+        boostrapEnv(1, 2, 1, 2, 1);
         final FullHttpMessage request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "/info/test",
                 true);
         HttpHeaders httpHeaders = request.headers();
@@ -623,11 +634,12 @@ public class InboundHttp2ToHttpAdapterTest {
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() {
-                    frameWriter.writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
-                    ctxClient().flush();
+                    clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
+                    clientChannel.flush();
                 }
             });
 
+            awaitRequests();
             httpHeaders = response.headers();
             httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
@@ -635,22 +647,26 @@ public class InboundHttp2ToHttpAdapterTest {
             runInChannel(serverConnectedChannel, new Http2Runnable() {
                 @Override
                 public void run() {
-                    frameWriter.writeHeaders(ctxServer(), 3, http2HeadersResponse, 0, false, newPromiseServer());
-                    ctxServer().flush();
+                    serverHandler.encoder().writeHeaders(ctxServer(), 3, http2HeadersResponse, 0, false,
+                                                         newPromiseServer());
+                    serverConnectedChannel.flush();
                 }
             });
 
+            awaitResponses();
             httpHeaders = request2.headers();
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, text.length());
             httpHeaders.remove(HttpHeaderNames.EXPECT);
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() {
-                    frameWriter.writeData(ctxClient(), 3, payload.duplicate().retain(), 0, true, newPromiseClient());
-                    ctxClient().flush();
+                    clientHandler.encoder().writeData(ctxClient(), 3, payload.duplicate().retain(), 0, true,
+                                                      newPromiseClient());
+                    clientChannel.flush();
                 }
             });
 
+            awaitRequests2();
             httpHeaders = response2.headers();
             httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
@@ -658,12 +674,13 @@ public class InboundHttp2ToHttpAdapterTest {
             runInChannel(serverConnectedChannel, new Http2Runnable() {
                 @Override
                 public void run() {
-                    frameWriter.writeHeaders(ctxServer(), 3, http2HeadersResponse2, 0, true, newPromiseServer());
-                    ctxServer().flush();
+                    serverHandler.encoder().writeHeaders(ctxServer(), 3, http2HeadersResponse2, 0, true,
+                                                         newPromiseServer());
+                    serverConnectedChannel.flush();
                 }
             });
 
-            awaitRequests();
+            awaitResponses2();
             ArgumentCaptor<FullHttpMessage> requestCaptor = ArgumentCaptor.forClass(FullHttpMessage.class);
             verify(serverListener, times(2)).messageReceived(requestCaptor.capture());
             capturedRequests = requestCaptor.getAllValues();
@@ -671,7 +688,6 @@ public class InboundHttp2ToHttpAdapterTest {
             assertEquals(request, capturedRequests.get(0));
             assertEquals(request2, capturedRequests.get(1));
 
-            awaitResponses();
             ArgumentCaptor<FullHttpMessage> responseCaptor = ArgumentCaptor.forClass(FullHttpMessage.class);
             verify(clientListener, times(2)).messageReceived(responseCaptor.capture());
             capturedResponses = responseCaptor.getAllValues();
@@ -688,23 +704,28 @@ public class InboundHttp2ToHttpAdapterTest {
 
     @Test
     public void propagateSettings() throws Exception {
-        boostrapEnv(1, 1, 1);
+        boostrapEnv(1, 1, 2);
         final Http2Settings settings = new Http2Settings().pushEnabled(true);
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() {
-                frameWriter.writeSettings(ctxClient(), settings, newPromiseClient());
-                ctxClient().flush();
+                clientHandler.encoder().writeSettings(ctxClient(), settings, newPromiseClient());
+                clientChannel.flush();
             }
         });
         assertTrue(settingsLatch.await(3, SECONDS));
         ArgumentCaptor<Http2Settings> settingsCaptor = ArgumentCaptor.forClass(Http2Settings.class);
-        verify(settingsListener).messageReceived(settingsCaptor.capture());
+        verify(settingsListener, times(2)).messageReceived(settingsCaptor.capture());
         assertEquals(settings, settingsCaptor.getValue());
     }
 
     private void boostrapEnv(int clientLatchCount, int serverLatchCount, int settingsLatchCount)
-            throws InterruptedException {
+                throws InterruptedException {
+        boostrapEnv(clientLatchCount, clientLatchCount, serverLatchCount, serverLatchCount, settingsLatchCount);
+    }
+
+    private void boostrapEnv(int clientLatchCount, int clientLatchCount2, int serverLatchCount, int serverLatchCount2,
+            int settingsLatchCount) throws InterruptedException {
         clientDelegator = null;
         serverDelegator = null;
         serverConnectedChannel = null;
@@ -712,8 +733,9 @@ public class InboundHttp2ToHttpAdapterTest {
         final CountDownLatch serverChannelLatch = new CountDownLatch(1);
         serverLatch = new CountDownLatch(serverLatchCount);
         clientLatch = new CountDownLatch(clientLatchCount);
+        serverLatch2 = new CountDownLatch(serverLatchCount2);
+        clientLatch2 = new CountDownLatch(clientLatchCount2);
         settingsLatch = new CountDownLatch(settingsLatchCount);
-        frameWriter = new DefaultHttp2FrameWriter();
 
         sb = new ServerBootstrap();
         cb = new Bootstrap();
@@ -726,32 +748,22 @@ public class InboundHttp2ToHttpAdapterTest {
                 ChannelPipeline p = ch.pipeline();
                 Http2Connection connection = new DefaultHttp2Connection(true);
 
-                p.addLast(new HttpAdapterFrameAdapter(
-                        connection,
+                serverHandler = new Http2ConnectionHandlerBuilder().frameListener(
                         new InboundHttp2ToHttpPriorityAdapterBuilder(connection)
-                                .maxContentLength(maxContentLength)
-                                .validateHttpHeaders(true)
-                                .propagateSettings(true)
-                                .build(),
-                        new CountDownLatch(10)));
+                           .maxContentLength(maxContentLength)
+                           .validateHttpHeaders(true)
+                           .propagateSettings(true)
+                           .build())
+                   .connection(connection)
+                   .gracefulShutdownTimeoutMillis(0)
+                   .build();
+                p.addLast(serverHandler);
 
-                serverDelegator = new HttpResponseDelegator(serverListener, serverLatch);
+                serverDelegator = new HttpResponseDelegator(serverListener, serverLatch, serverLatch2);
                 p.addLast(serverDelegator);
                 serverConnectedChannel = ch;
                 settingsDelegator = new HttpSettingsDelegator(settingsListener, settingsLatch);
                 p.addLast(settingsDelegator);
-                p.addLast(new ChannelHandlerAdapter() {
-                    @Override
-                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                        Http2Exception e = getEmbeddedHttp2Exception(cause);
-                        if (e != null) {
-                            serverException = e;
-                            serverLatch.countDown();
-                        } else {
-                            super.exceptionCaught(ctx, cause);
-                        }
-                    }
-                });
                 serverChannelLatch.countDown();
             }
         });
@@ -764,15 +776,29 @@ public class InboundHttp2ToHttpAdapterTest {
                 ChannelPipeline p = ch.pipeline();
                 Http2Connection connection = new DefaultHttp2Connection(false);
 
-                p.addLast(new HttpAdapterFrameAdapter(
-                        connection,
+                clientHandler = new Http2ConnectionHandlerBuilder().frameListener(
                         new InboundHttp2ToHttpPriorityAdapterBuilder(connection)
-                                .maxContentLength(maxContentLength)
-                                .build(),
-                        new CountDownLatch(10)));
+                           .maxContentLength(maxContentLength)
+                           .build())
+                   .connection(connection)
+                   .gracefulShutdownTimeoutMillis(0)
+                   .build();
+                p.addLast(clientHandler);
 
-                clientDelegator = new HttpResponseDelegator(clientListener, clientLatch);
+                clientDelegator = new HttpResponseDelegator(clientListener, clientLatch, clientLatch2);
                 p.addLast(clientDelegator);
+                p.addLast(new ChannelHandlerAdapter() {
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        Http2Exception e = getEmbeddedHttp2Exception(cause);
+                        if (e != null) {
+                            clientException = e;
+                            clientLatch.countDown();
+                        } else {
+                            super.exceptionCaught(ctx, cause);
+                        }
+                    }
+                });
             }
         });
 
@@ -803,11 +829,19 @@ public class InboundHttp2ToHttpAdapterTest {
     }
 
     private void awaitRequests() throws Exception {
-        assertTrue(serverLatch.await(2, SECONDS));
+        assertTrue(serverLatch.await(3, SECONDS));
     }
 
     private void awaitResponses() throws Exception {
-        assertTrue(clientLatch.await(2, SECONDS));
+        assertTrue(clientLatch.await(3, SECONDS));
+    }
+
+    private void awaitRequests2() throws Exception {
+        assertTrue(serverLatch2.await(3, SECONDS));
+    }
+
+    private void awaitResponses2() throws Exception {
+        assertTrue(clientLatch2.await(3, SECONDS));
     }
 
     private ChannelHandlerContext ctxClient() {
@@ -837,17 +871,20 @@ public class InboundHttp2ToHttpAdapterTest {
     private static final class HttpResponseDelegator extends SimpleChannelInboundHandler<HttpObject> {
         private final HttpResponseListener listener;
         private final CountDownLatch latch;
+        private final CountDownLatch latch2;
 
-        HttpResponseDelegator(HttpResponseListener listener, CountDownLatch latch) {
+        HttpResponseDelegator(HttpResponseListener listener, CountDownLatch latch, CountDownLatch latch2) {
             super(false);
             this.listener = listener;
             this.latch = latch;
+            this.latch2 = latch2;
         }
 
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
             listener.messageReceived(msg);
             latch.countDown();
+            latch2.countDown();
         }
     }
 
@@ -865,19 +902,6 @@ public class InboundHttp2ToHttpAdapterTest {
         protected void channelRead0(ChannelHandlerContext ctx, Http2Settings settings) throws Exception {
             listener.messageReceived(settings);
             latch.countDown();
-        }
-    }
-
-    private static final class HttpAdapterFrameAdapter extends FrameAdapter {
-        HttpAdapterFrameAdapter(Http2Connection connection, Http2FrameListener listener, CountDownLatch latch) {
-            super(connection, listener, latch);
-        }
-
-        @Override
-        protected void closeStream(Http2Stream stream, boolean dataRead) {
-            if (!dataRead) { // NOTE: Do not close the stream to allow the out of order messages to be processed
-                super.closeStream(stream, dataRead);
-            }
         }
     }
 }
