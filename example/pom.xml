@@ -81,8 +81,8 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-tcnative</artifactId>
-        <classifier>${tcnative.classifier}</classifier>
+      <artifactId>${tcnative.artifactId}</artifactId>
+      <classifier>${tcnative.classifier}</classifier>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty.npn</groupId>
