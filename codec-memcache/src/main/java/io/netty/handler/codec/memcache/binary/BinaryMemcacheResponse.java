@@ -33,16 +33,4 @@ public interface BinaryMemcacheResponse extends BinaryMemcacheMessage {
      * @param status the status to set.
      */
     BinaryMemcacheResponse setStatus(short status);
-
-    @Override
-    BinaryMemcacheResponse retain();
-
-    @Override
-    BinaryMemcacheResponse retain(int increment);
-
-    @Override
-    BinaryMemcacheResponse touch();
-
-    @Override
-    BinaryMemcacheResponse touch(Object hint);
 }

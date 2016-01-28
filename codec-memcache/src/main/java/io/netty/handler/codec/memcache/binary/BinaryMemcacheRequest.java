@@ -33,16 +33,4 @@ public interface BinaryMemcacheRequest extends BinaryMemcacheMessage {
      * @param reserved the reserved field value.
      */
     BinaryMemcacheRequest setReserved(short reserved);
-
-    @Override
-    BinaryMemcacheRequest retain();
-
-    @Override
-    BinaryMemcacheRequest retain(int increment);
-
-    @Override
-    BinaryMemcacheRequest touch();
-
-    @Override
-    BinaryMemcacheRequest touch(Object hint);
 }

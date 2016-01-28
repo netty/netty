@@ -32,7 +32,7 @@ public class DefaultFullBinaryMemcacheRequest extends DefaultBinaryMemcacheReque
      * @param key    the key to use.
      * @param extras the extras to use.
      */
-    public DefaultFullBinaryMemcacheRequest(String key, ByteBuf extras) {
+    public DefaultFullBinaryMemcacheRequest(ByteBuf key, ByteBuf extras) {
         this(key, extras, Unpooled.buffer(0));
     }
 
@@ -43,7 +43,7 @@ public class DefaultFullBinaryMemcacheRequest extends DefaultBinaryMemcacheReque
      * @param extras  the extras to use.
      * @param content the content of the full request.
      */
-    public DefaultFullBinaryMemcacheRequest(String key, ByteBuf extras,
+    public DefaultFullBinaryMemcacheRequest(ByteBuf key, ByteBuf extras,
                                             ByteBuf content) {
         super(key, extras);
         if (content == null) {
@@ -59,65 +59,59 @@ public class DefaultFullBinaryMemcacheRequest extends DefaultBinaryMemcacheReque
     }
 
     @Override
-    public int refCnt() {
-        return content.refCnt();
-    }
-
-    @Override
-    public FullBinaryMemcacheRequest retain() {
+    public DefaultFullBinaryMemcacheRequest retain() {
         super.retain();
-        content.retain();
         return this;
     }
 
     @Override
-    public FullBinaryMemcacheRequest retain(int increment) {
+    public DefaultFullBinaryMemcacheRequest retain(int increment) {
         super.retain(increment);
-        content.retain(increment);
         return this;
     }
 
     @Override
-    public FullBinaryMemcacheRequest touch() {
+    public DefaultFullBinaryMemcacheRequest touch() {
         super.touch();
-        content.touch();
         return this;
     }
 
     @Override
-    public FullBinaryMemcacheRequest touch(Object hint) {
+    public DefaultFullBinaryMemcacheRequest touch(Object hint) {
         super.touch(hint);
         content.touch(hint);
         return this;
     }
 
     @Override
-    public boolean release() {
-        super.release();
-        return content.release();
-    }
-
-    @Override
-    public boolean release(int decrement) {
-        super.release(decrement);
-        return content.release(decrement);
-    }
-
-    @Override
-    public FullBinaryMemcacheRequest copy() {
+    public DefaultFullBinaryMemcacheRequest copy() {
+        ByteBuf key = key();
+        if (key != null) {
+            key = key.copy();
+        }
         ByteBuf extras = extras();
         if (extras != null) {
             extras = extras.copy();
         }
-        return new DefaultFullBinaryMemcacheRequest(key(), extras, content().copy());
+        return new DefaultFullBinaryMemcacheRequest(key, extras, content().copy());
     }
 
     @Override
-    public FullBinaryMemcacheRequest duplicate() {
+    public DefaultFullBinaryMemcacheRequest duplicate() {
+        ByteBuf key = key();
+        if (key != null) {
+            key = key.duplicate();
+        }
         ByteBuf extras = extras();
         if (extras != null) {
             extras = extras.duplicate();
         }
-        return new DefaultFullBinaryMemcacheRequest(key(), extras, content().duplicate());
+        return new DefaultFullBinaryMemcacheRequest(key, extras, content().duplicate());
+    }
+
+    @Override
+    protected void deallocate() {
+        super.deallocate();
+        content.release();
     }
 }
