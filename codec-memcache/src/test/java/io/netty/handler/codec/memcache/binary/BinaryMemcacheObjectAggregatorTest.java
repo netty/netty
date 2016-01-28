@@ -18,12 +18,17 @@ package io.netty.handler.codec.memcache.binary;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.memcache.DefaultLastMemcacheContent;
+import io.netty.handler.codec.memcache.DefaultMemcacheContent;
+import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.*;
 import static org.hamcrest.core.IsNull.notNullValue;
 import static org.hamcrest.core.IsNull.nullValue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Verifies the correct functionality of the {@link BinaryMemcacheObjectAggregator}.
@@ -72,5 +77,41 @@ public class BinaryMemcacheObjectAggregatorTest {
         assertThat(channel.readInbound(), nullValue());
 
         channel.finish();
+    }
+
+    @Test
+    public void shouldRetainByteBufWhenAggregating() {
+        channel = new EmbeddedChannel(
+                new BinaryMemcacheRequestEncoder(),
+                new BinaryMemcacheRequestDecoder(),
+                new BinaryMemcacheObjectAggregator(MAX_CONTENT_SIZE));
+
+        String key = "Netty";
+        ByteBuf extras = Unpooled.copiedBuffer("extras", CharsetUtil.UTF_8);
+        BinaryMemcacheRequest request = new DefaultBinaryMemcacheRequest(key, extras);
+        request.setKeyLength((short) key.length());
+        request.setExtrasLength((byte) extras.readableBytes());
+
+        DefaultMemcacheContent content1 =
+                new DefaultMemcacheContent(Unpooled.copiedBuffer("Netty", CharsetUtil.UTF_8));
+        DefaultLastMemcacheContent content2 =
+                new DefaultLastMemcacheContent(Unpooled.copiedBuffer(" Rocks!", CharsetUtil.UTF_8));
+        int totalBodyLength = key.length() + extras.readableBytes() +
+                content1.content().readableBytes() + content2.content().readableBytes();
+        request.setTotalBodyLength(totalBodyLength);
+
+        assertTrue(channel.writeOutbound(request, content1, content2));
+
+        assertThat(channel.outboundMessages().size(), is(3));
+        assertTrue(channel.writeInbound(channel.readOutbound(), channel.readOutbound(), channel.readOutbound()));
+
+        FullBinaryMemcacheRequest read = channel.readInbound();
+        assertThat(read, notNullValue());
+        assertThat(read.key(), is("Netty"));
+        assertThat(read.extras().toString(CharsetUtil.UTF_8), is("extras"));
+        assertThat(read.content().toString(CharsetUtil.UTF_8), is("Netty Rocks!"));
+
+        read.release();
+        assertFalse(channel.finish());
     }
 }
