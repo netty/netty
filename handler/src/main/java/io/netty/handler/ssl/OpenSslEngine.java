@@ -222,6 +222,12 @@ public final class OpenSslEngine extends SSLEngine {
         // Set the client auth mode, this needs to be done via setClientAuth(...) method so we actually call the
         // needed JNI methods.
         setClientAuth(clientMode ? ClientAuth.NONE : checkNotNull(clientAuth, "clientAuth"));
+
+        // Use SNI if peerHost was specified
+        // See https://github.com/netty/netty/issues/4746
+        if (clientMode && peerHost != null) {
+            SSL.setTlsExtHostName(ssl, peerHost);
+        }
     }
 
     @Override
