@@ -30,6 +30,7 @@ import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.*;
 import static org.hamcrest.core.IsNull.notNullValue;
 import static org.hamcrest.core.IsNull.nullValue;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Verifies the correct functionality of the {@link AbstractBinaryMemcacheDecoder}.
@@ -247,5 +248,25 @@ public class BinaryMemcacheDecoderTest {
         assertThat(content, instanceOf(LastMemcacheContent.class));
         assertThat(content.content().toString(CharsetUtil.UTF_8), is(msgBody));
         content.release();
+    }
+
+    @Test
+    public void shouldRetainCurrentMessageWhenSendingItOut() {
+        channel = new EmbeddedChannel(
+                new BinaryMemcacheRequestEncoder(),
+                new BinaryMemcacheRequestDecoder());
+
+        String key = "Netty";
+        ByteBuf extras = Unpooled.copiedBuffer("extras", CharsetUtil.UTF_8);
+        BinaryMemcacheRequest request = new DefaultBinaryMemcacheRequest(key, extras);
+        request.setKeyLength((short) key.length());
+        request.setExtrasLength((byte) extras.readableBytes());
+
+        assertTrue(channel.writeOutbound(request));
+        assertTrue(channel.writeInbound(channel.outboundMessages().toArray()));
+
+        BinaryMemcacheRequest read = channel.readInbound();
+        read.release();
+        // tearDown will call "channel.finish()"
     }
 }
