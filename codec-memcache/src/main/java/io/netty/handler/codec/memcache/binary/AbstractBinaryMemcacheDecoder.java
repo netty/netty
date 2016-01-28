@@ -79,6 +79,7 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
                 currentMessage = decodeHeader(in);
                 state = State.READ_EXTRAS;
             } catch (Exception e) {
+                resetDecoder();
                 out.add(invalidMessage(e));
                 return;
             }
@@ -94,6 +95,7 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
 
                 state = State.READ_KEY;
             } catch (Exception e) {
+                resetDecoder();
                 out.add(invalidMessage(e));
                 return;
             }
@@ -107,10 +109,10 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
                     currentMessage.setKey(in.toString(in.readerIndex(), keyLength, CharsetUtil.UTF_8));
                     in.skipBytes(keyLength);
                 }
-
-                out.add(currentMessage);
+                out.add(currentMessage.retain());
                 state = State.READ_CONTENT;
             } catch (Exception e) {
+                resetDecoder();
                 out.add(invalidMessage(e));
                 return;
             }
@@ -150,9 +152,11 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
                     out.add(LastMemcacheContent.EMPTY_LAST_CONTENT);
                 }
 
+                resetDecoder();
                 state = State.READ_HEADER;
                 return;
             } catch (Exception e) {
+                resetDecoder();
                 out.add(invalidChunk(e));
                 return;
             }
@@ -200,10 +204,6 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         super.channelInactive(ctx);
 
-        if (currentMessage != null) {
-            currentMessage.release();
-        }
-
         resetDecoder();
     }
 
@@ -211,7 +211,10 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
      * Prepare for next decoding iteration.
      */
     protected void resetDecoder() {
-        currentMessage = null;
+        if (currentMessage != null) {
+            currentMessage.release();
+            currentMessage = null;
+        }
         alreadyReadChunkSize = 0;
     }
 
