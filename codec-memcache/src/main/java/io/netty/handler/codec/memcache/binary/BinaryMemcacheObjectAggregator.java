@@ -53,8 +53,9 @@ public class BinaryMemcacheObjectAggregator extends AbstractMemcacheObjectAggreg
     }
 
     private static FullBinaryMemcacheRequest toFullRequest(BinaryMemcacheRequest request, ByteBuf content) {
+        ByteBuf extras = request.extras() == null ? null : request.extras().retain();
         FullBinaryMemcacheRequest fullRequest =
-                new DefaultFullBinaryMemcacheRequest(request.key(), request.extras(), content);
+                new DefaultFullBinaryMemcacheRequest(request.key(), extras, content);
 
         fullRequest.setMagic(request.magic());
         fullRequest.setOpcode(request.opcode());
@@ -70,8 +71,9 @@ public class BinaryMemcacheObjectAggregator extends AbstractMemcacheObjectAggreg
     }
 
     private static FullBinaryMemcacheResponse toFullResponse(BinaryMemcacheResponse response, ByteBuf content) {
+        ByteBuf extras = response.extras() == null ? null : response.extras().retain();
         FullBinaryMemcacheResponse fullResponse =
-                new DefaultFullBinaryMemcacheResponse(response.key(), response.extras(), content);
+                new DefaultFullBinaryMemcacheResponse(response.key(), extras, content);
 
         fullResponse.setMagic(response.magic());
         fullResponse.setOpcode(response.opcode());
