@@ -90,22 +90,4 @@ public interface LastMemcacheContent extends MemcacheContent {
             return false;
         }
     };
-
-    @Override
-    LastMemcacheContent copy();
-
-    @Override
-    LastMemcacheContent retain(int increment);
-
-    @Override
-    LastMemcacheContent retain();
-
-    @Override
-    LastMemcacheContent touch();
-
-    @Override
-    LastMemcacheContent touch(Object hint);
-
-    @Override
-    LastMemcacheContent duplicate();
 }

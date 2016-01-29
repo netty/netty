@@ -33,30 +33,6 @@ public class DefaultLastMemcacheContent extends DefaultMemcacheContent implement
     }
 
     @Override
-    public LastMemcacheContent retain() {
-        super.retain();
-        return this;
-    }
-
-    @Override
-    public LastMemcacheContent retain(int increment) {
-        super.retain(increment);
-        return this;
-    }
-
-    @Override
-    public LastMemcacheContent touch() {
-        super.touch();
-        return this;
-    }
-
-    @Override
-    public LastMemcacheContent touch(Object hint) {
-        super.touch(hint);
-        return this;
-    }
-
-    @Override
     public LastMemcacheContent copy() {
         return new DefaultLastMemcacheContent(content().copy());
     }

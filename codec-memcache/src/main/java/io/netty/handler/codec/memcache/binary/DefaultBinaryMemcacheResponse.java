@@ -75,28 +75,4 @@ public class DefaultBinaryMemcacheResponse extends AbstractBinaryMemcacheMessage
         this.status = status;
         return this;
     }
-
-    @Override
-    public BinaryMemcacheResponse retain() {
-        super.retain();
-        return this;
-    }
-
-    @Override
-    public BinaryMemcacheResponse retain(int increment) {
-        super.retain(increment);
-        return this;
-    }
-
-    @Override
-    public BinaryMemcacheResponse touch() {
-        super.touch();
-        return this;
-    }
-
-    @Override
-    public BinaryMemcacheResponse touch(Object hint) {
-        super.touch(hint);
-        return this;
-    }
 }
