@@ -47,7 +47,6 @@ import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.min;
-import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
@@ -724,20 +723,17 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             if (future.isSuccess()) {
                 if (errorCode != NO_ERROR.code()) {
                     if (logger.isDebugEnabled()) {
-                        logger.debug(
-                                format("Sent GOAWAY: lastStreamId '%d', errorCode '%d', " +
-                                        "debugData '%s'. Forcing shutdown of the connection.",
-                                        lastStreamId, errorCode, debugData.toString(UTF_8)),
-                                        future.cause());
+                        logger.debug("{} Sent GOAWAY: lastStreamId '{}', errorCode '{}', " +
+                                     "debugData '{}'. Forcing shutdown of the connection.",
+                                     ctx.channel(), lastStreamId, errorCode, debugData.toString(UTF_8), future.cause());
                     }
                     ctx.close();
                 }
             } else {
                 if (logger.isErrorEnabled()) {
-                    logger.error(
-                            format("Sending GOAWAY failed: lastStreamId '%d', errorCode '%d', " +
-                                    "debugData '%s'. Forcing shutdown of the connection.",
-                                    lastStreamId, errorCode, debugData.toString(UTF_8)), future.cause());
+                    logger.error("{} Sending GOAWAY failed: lastStreamId '{}', errorCode '{}', " +
+                                 "debugData '{}'. Forcing shutdown of the connection.",
+                                 ctx.channel(), lastStreamId, errorCode, debugData.toString(UTF_8), future.cause());
                 }
                 ctx.close();
             }
