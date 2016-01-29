@@ -296,7 +296,6 @@ public class DefaultHttp2Connection implements Http2Connection {
         private IntObjectMap<DefaultStream> children = IntCollections.emptyMap();
         private int prioritizableForTree = 1;
         private boolean resetSent;
-        private boolean headerSent;
 
         DefaultStream(int id, State state) {
             this.id = id;
@@ -321,17 +320,6 @@ public class DefaultHttp2Connection implements Http2Connection {
         @Override
         public Http2Stream resetSent() {
             resetSent = true;
-            return this;
-        }
-
-        @Override
-        public boolean isHeaderSent() {
-            return headerSent;
-        }
-
-        @Override
-        public Http2Stream headerSent() {
-            headerSent = true;
             return this;
         }
 
@@ -790,16 +778,6 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public Http2Stream resetSent() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean isHeaderSent() {
-            return false;
-        }
-
-        @Override
-        public Http2Stream headerSent() {
             throw new UnsupportedOperationException();
         }
 

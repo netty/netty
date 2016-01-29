@@ -14,6 +14,14 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http2.Http2Exception.ClosedStreamCreationException;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import java.util.List;
+
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
@@ -23,11 +31,6 @@ import static io.netty.handler.codec.http2.Http2PromisedRequestVerifier.ALWAYS_V
 import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http2.Http2Exception.ClosedStreamCreationException;
-
-import java.util.List;
 
 /**
  * Provides the default implementation for processing inbound frame events and delegates to a
@@ -39,6 +42,7 @@ import java.util.List;
  * {@link Http2LocalFlowController}
  */
 public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultHttp2ConnectionDecoder.class);
     private Http2FrameListener internalFrameListener = new PrefaceFrameListener();
     private final Http2Connection connection;
     private Http2LifecycleManager lifecycleManager;
@@ -185,23 +189,28 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
      */
     private final class FrameReadListener implements Http2FrameListener {
         @Override
-        public int onDataRead(final ChannelHandlerContext ctx, int streamId, ByteBuf data,
-                int padding, boolean endOfStream) throws Http2Exception {
+        public int onDataRead(final ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
+                              boolean endOfStream) throws Http2Exception {
             Http2Stream stream = connection.stream(streamId);
             Http2LocalFlowController flowController = flowController();
             int bytesToReturn = data.readableBytes() + padding;
 
-            if (stream == null || stream.isResetSent() || streamCreatedAfterGoAwaySent(streamId)) {
-                // Ignoring this frame. We still need to count the frame towards the connection flow control
-                // window, but we immediately mark all bytes as consumed.
-                flowController.receiveFlowControlledFrame(stream, data, padding, endOfStream);
-                flowController.consumeBytes(stream, bytesToReturn);
+            boolean shouldIgnore = true;
+            try {
+                shouldIgnore = shouldIgnoreHeadersOrDataFrame(ctx, streamId, stream, "DATA");
+            } finally {
+                if (shouldIgnore) {
+                    // Ignoring this frame. We still need to count the frame towards the connection flow control
+                    // window, but we immediately mark all bytes as consumed.
+                    flowController.receiveFlowControlledFrame(stream, data, padding, endOfStream);
+                    flowController.consumeBytes(stream, bytesToReturn);
 
-                // Verify that the stream may have existed after we apply flow control.
-                verifyStreamMayHaveExisted(streamId);
+                    // Verify that the stream may have existed after we apply flow control.
+                    verifyStreamMayHaveExisted(streamId);
 
-                // All bytes have been consumed.
-                return bytesToReturn;
+                    // All bytes have been consumed.
+                    return bytesToReturn;
+                }
             }
 
             Http2Exception error = null;
@@ -276,8 +285,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 allowHalfClosedRemote = stream.state() == HALF_CLOSED_REMOTE;
             }
 
-            if (stream == null || stream.isResetSent() || streamCreatedAfterGoAwaySent(streamId)) {
-                // Ignore this frame.
+            if (shouldIgnoreHeadersOrDataFrame(ctx, streamId, stream, "HEADERS")) {
                 return;
             }
 
@@ -329,7 +337,10 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             try {
                 if (stream == null) {
                     if (connection.streamMayHaveExisted(streamId)) {
-                        // Ignore this frame.
+                        if (logger.isInfoEnabled()) {
+                            logger.info("%s ignoring PRIORITY frame for stream id %d. Stream doesn't exist but may " +
+                                        " have existed", ctx.channel(), streamId);
+                        }
                         return;
                     }
 
@@ -337,7 +348,11 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                     // first frame to be received for a stream that we must create the stream.
                     stream = connection.remote().createIdleStream(streamId);
                 } else if (streamCreatedAfterGoAwaySent(streamId)) {
-                    // Ignore this frame.
+                    if (logger.isInfoEnabled()) {
+                        logger.info("%s ignoring PRIORITY frame for stream id %d. Stream created after GOAWAY sent. " +
+                                    "Last known stream by peer " + connection.remote().lastStreamKnownByPeer(),
+                                    ctx.channel(), streamId);
+                    }
                     return;
                 }
 
@@ -457,7 +472,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 Http2Headers headers, int padding) throws Http2Exception {
             Http2Stream parentStream = connection.stream(streamId);
 
-            if (streamCreatedAfterGoAwaySent(streamId)) {
+            if (shouldIgnoreHeadersOrDataFrame(ctx, streamId, parentStream, "PUSH_PROMISE")) {
                 return;
             }
 
@@ -525,6 +540,36 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
                 ByteBuf payload) throws Http2Exception {
             onUnknownFrame0(ctx, frameType, streamId, flags, payload);
+        }
+
+        /**
+         * Helper method to determine if a frame that has the semantics of headers or data should be ignored for the
+         * {@code stream} (which may be {@code null}) associated with {@code streamId}.
+         */
+        private boolean shouldIgnoreHeadersOrDataFrame(ChannelHandlerContext ctx, int streamId, Http2Stream stream,
+                String frameName) throws Http2Exception {
+            if (stream == null) {
+                if (streamCreatedAfterGoAwaySent(streamId)) {
+                    if (logger.isInfoEnabled()) {
+                        logger.info("%s ignoring %s frame for stream id %d. Stream sent after GOAWAY sent",
+                                ctx.channel(), frameName, streamId);
+                    }
+                    return true;
+                }
+                // Its possible that this frame would result in stream ID out of order creation (PROTOCOL ERROR) and its
+                // also possible that this frame is received on a CLOSED stream (STREAM_CLOSED after a RST_STREAM is
+                // sent). We don't have enough information to know for sure, so we choose the lesser of the two errors.
+                throw streamError(streamId, STREAM_CLOSED, "Received HEADERS frame for an unknown stream %d", streamId);
+            } else if (stream.isResetSent() || streamCreatedAfterGoAwaySent(streamId)) {
+                if (logger.isInfoEnabled()) {
+                    logger.info("%s ignoring %s frame for stream id %d. %s", ctx.channel(), frameName,
+                            stream.isResetSent() ? "RST_STREAM sent." :
+                                ("Stream created after GOAWAY sent. Last known stream by peer " +
+                                 connection.remote().lastStreamKnownByPeer()));
+                }
+                return true;
+            }
+            return false;
         }
 
         /**

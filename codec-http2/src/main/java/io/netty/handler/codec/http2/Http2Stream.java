@@ -111,18 +111,6 @@ public interface Http2Stream {
     Http2Stream resetSent();
 
     /**
-     * Indicates whether or not at least one {@code HEADERS} frame has been sent from the local endpoint
-     * for this stream.
-     */
-    boolean isHeaderSent();
-
-    /**
-     * Sets the flag indicating that a {@code HEADERS} frame has been sent from the local endpoint
-     * for this stream. This does not affect the stream state.
-     */
-    Http2Stream headerSent();
-
-    /**
      * Associates the application-defined data with this stream.
      * @return The value that was previously associated with {@code key}, or {@code null} if there was none.
      */
