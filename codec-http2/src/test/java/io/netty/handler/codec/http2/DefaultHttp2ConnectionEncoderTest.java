@@ -265,8 +265,9 @@ public class DefaultHttp2ConnectionEncoderTest {
     public void dataFramesDontMergeWithHeaders() throws Exception {
         createStream(STREAM_ID, false);
         final ByteBuf data = dummyData().retain();
-        encoder.writeData(ctx, STREAM_ID, data, 0, true, newPromise());
-        encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false, newPromise());
+        encoder.writeData(ctx, STREAM_ID, data, 0, false, newPromise());
+        when(remoteFlow.hasFlowControlled(any(Http2Stream.class))).thenReturn(true);
+        encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true, newPromise());
         List<FlowControlled> capturedWrites = payloadCaptor.getAllValues();
         assertFalse(capturedWrites.get(0).merge(ctx, capturedWrites.get(1)));
     }

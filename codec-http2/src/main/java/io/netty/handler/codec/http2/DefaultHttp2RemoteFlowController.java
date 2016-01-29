@@ -231,6 +231,11 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
     }
 
+    @Override
+    public boolean hasFlowControlled(Http2Stream stream) {
+        return state(stream).hasFrame();
+    }
+
     private AbstractState state(Http2Stream stream) {
         return (AbstractState) checkNotNull(stream, "stream").getProperty(stateKey);
     }
