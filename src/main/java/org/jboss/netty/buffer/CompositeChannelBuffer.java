@@ -240,9 +240,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
             return;
         }
 
-        int componentId = componentId(index);
-
-        int i = componentId;
+        int i = componentId(index);
         while (length > 0) {
             ChannelBuffer s = components[i];
             int adjustment = indices[i];

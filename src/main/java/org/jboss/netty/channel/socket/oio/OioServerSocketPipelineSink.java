@@ -109,7 +109,7 @@ class OioServerSocketPipelineSink extends AbstractOioChannelSink {
                 }
                 break;
             case INTEREST_OPS:
-                AbstractOioWorker.setInterestOps(channel, future, ((Integer) value).intValue());
+                AbstractOioWorker.setInterestOps(channel, future, (Integer) value);
                 break;
             }
         } else if (e instanceof MessageEvent) {

@@ -65,12 +65,12 @@ public class HttpSnoopServerHandler extends SimpleChannelUpstreamHandler {
             buf.append("WELCOME TO THE WILD WILD WEB SERVER\r\n");
             buf.append("===================================\r\n");
 
-            buf.append("VERSION: " + request.getProtocolVersion() + "\r\n");
-            buf.append("HOSTNAME: " + getHost(request, "unknown") + "\r\n");
-            buf.append("REQUEST_URI: " + request.getUri() + "\r\n\r\n");
+            buf.append("VERSION: ").append(request.getProtocolVersion()).append("\r\n");
+            buf.append("HOSTNAME: ").append(getHost(request, "unknown")).append("\r\n");
+            buf.append("REQUEST_URI: ").append(request.getUri()).append("\r\n\r\n");
 
             for (Map.Entry<String, String> h: request.headers()) {
-                buf.append("HEADER: " + h.getKey() + " = " + h.getValue() + "\r\n");
+                buf.append("HEADER: ").append(h.getKey()).append(" = ").append(h.getValue()).append("\r\n");
             }
             buf.append("\r\n");
 
@@ -81,7 +81,7 @@ public class HttpSnoopServerHandler extends SimpleChannelUpstreamHandler {
                     String key = p.getKey();
                     List<String> vals = p.getValue();
                     for (String val : vals) {
-                        buf.append("PARAM: " + key + " = " + val + "\r\n");
+                        buf.append("PARAM: ").append(key).append(" = ").append(val).append("\r\n");
                     }
                 }
                 buf.append("\r\n");
@@ -92,7 +92,7 @@ public class HttpSnoopServerHandler extends SimpleChannelUpstreamHandler {
             } else {
                 ChannelBuffer content = request.getContent();
                 if (content.readable()) {
-                    buf.append("CONTENT: " + content.toString(CharsetUtil.UTF_8) + "\r\n");
+                    buf.append("CONTENT: ").append(content.toString(CharsetUtil.UTF_8)).append("\r\n");
                 }
                 writeResponse(e);
             }
@@ -107,7 +107,7 @@ public class HttpSnoopServerHandler extends SimpleChannelUpstreamHandler {
                     buf.append("\r\n");
                     for (String name: trailer.trailingHeaders().names()) {
                         for (String value: trailer.trailingHeaders().getAll(name)) {
-                            buf.append("TRAILING HEADER: " + name + " = " + value + "\r\n");
+                            buf.append("TRAILING HEADER: ").append(name).append(" = ").append(value).append("\r\n");
                         }
                     }
                     buf.append("\r\n");
@@ -115,7 +115,7 @@ public class HttpSnoopServerHandler extends SimpleChannelUpstreamHandler {
 
                 writeResponse(e);
             } else {
-                buf.append("CHUNK: " + chunk.getContent().toString(CharsetUtil.UTF_8) + "\r\n");
+                buf.append("CHUNK: ").append(chunk.getContent().toString(CharsetUtil.UTF_8)).append("\r\n");
             }
         }
     }

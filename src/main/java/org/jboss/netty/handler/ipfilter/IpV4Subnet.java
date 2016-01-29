@@ -210,11 +210,8 @@ public class IpV4Subnet implements IpSet, Comparable<IpV4Subnet> {
      *         set network.
      */
     public boolean contains(InetAddress inetAddress1) {
-        if (mask == -1) {
-            // ANY
-            return true;
-        }
-        return (toInt(inetAddress1) & mask) == subnet;
+        // ANY
+        return mask == -1 || (toInt(inetAddress1) & mask) == subnet;
     }
 
     @Override

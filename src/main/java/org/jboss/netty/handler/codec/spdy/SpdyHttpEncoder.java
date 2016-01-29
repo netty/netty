@@ -32,7 +32,6 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 
 import java.net.SocketAddress;
-import java.util.List;
 import java.util.Map;
 
 import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;

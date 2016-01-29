@@ -495,11 +495,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof HttpResponseStatus)) {
-            return false;
-        }
-
-        return getCode() == ((HttpResponseStatus) o).getCode();
+        return o instanceof HttpResponseStatus && getCode() == ((HttpResponseStatus) o).getCode();
     }
 
     public int compareTo(HttpResponseStatus o) {

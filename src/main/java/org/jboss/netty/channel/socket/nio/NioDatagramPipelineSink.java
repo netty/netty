@@ -87,7 +87,7 @@ class NioDatagramPipelineSink extends AbstractNioChannelSink {
                 }
                 break;
             case INTEREST_OPS:
-                channel.worker.setInterestOps(channel, future, ((Integer) value).intValue());
+                channel.worker.setInterestOps(channel, future, (Integer) value);
                 break;
             }
         } else if (e instanceof MessageEvent) {

@@ -830,8 +830,7 @@ public final class ChannelBuffers {
     }
 
     private static ChannelBuffer copiedBuffer(ByteOrder endianness, CharBuffer buffer, Charset charset) {
-        CharBuffer src = buffer;
-        ByteBuffer dst = encodeString(src, charset);
+        ByteBuffer dst = encodeString(buffer, charset);
         ChannelBuffer result = wrappedBuffer(endianness, dst.array());
         result.writerIndex(dst.remaining());
         return result;

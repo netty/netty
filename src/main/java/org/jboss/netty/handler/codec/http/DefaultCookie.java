@@ -129,7 +129,7 @@ public class DefaultCookie extends org.jboss.netty.handler.codec.http.cookie.Def
                 if (p <= 0 || p > 65535) {
                     throw new IllegalArgumentException("port out of range: " + p);
                 }
-                newPorts.add(Integer.valueOf(p));
+                newPorts.add(p);
             }
             this.ports = newPorts;
             unmodifiablePorts = null;
@@ -143,7 +143,7 @@ public class DefaultCookie extends org.jboss.netty.handler.codec.http.cookie.Def
             if (p <= 0 || p > 65535) {
                 throw new IllegalArgumentException("port out of range: " + p);
             }
-            newPorts.add(Integer.valueOf(p));
+            newPorts.add(p);
         }
         if (newPorts.isEmpty()) {
             unmodifiablePorts = this.ports = Collections.emptySet();

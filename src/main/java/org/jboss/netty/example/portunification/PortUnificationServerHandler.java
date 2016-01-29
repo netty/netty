@@ -84,17 +84,11 @@ public class PortUnificationServerHandler extends FrameDecoder {
     }
 
     private boolean isSsl(ChannelBuffer buffer) {
-        if (detectSsl) {
-            return SslHandler.isEncrypted(buffer);
-        }
-        return false;
+        return detectSsl && SslHandler.isEncrypted(buffer);
     }
 
     private boolean isGzip(int magic1, int magic2) {
-        if (detectGzip) {
-            return magic1 == 31 && magic2 == 139;
-        }
-        return false;
+        return detectGzip && magic1 == 31 && magic2 == 139;
     }
 
     private static boolean isHttp(int magic1, int magic2) {

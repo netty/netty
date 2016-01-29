@@ -281,10 +281,10 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
         int rows = length / 16 + (length % 15 == 0? 0 : 1) + 4;
         StringBuilder dump = new StringBuilder(rows * 80);
 
-        dump.append(
-                NEWLINE + "         +-------------------------------------------------+" +
-                NEWLINE + "         |  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f |" +
-                NEWLINE + "+--------+-------------------------------------------------+----------------+");
+        dump.append(NEWLINE).
+                append("         +-------------------------------------------------+").append(NEWLINE).
+                append("         |  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f |").append(NEWLINE).
+                append("+--------+-------------------------------------------------+----------------+");
 
         final int startIndex = buf.readerIndex();
         final int endIndex = buf.writerIndex();
@@ -320,8 +320,8 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
             dump.append('|');
         }
 
-        dump.append(
-                NEWLINE + "+--------+-------------------------------------------------+----------------+");
+        dump.append(NEWLINE).
+                append("+--------+-------------------------------------------------+----------------+");
 
         return dump.toString();
     }

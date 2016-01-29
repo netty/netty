@@ -401,8 +401,7 @@ public class HashedWheelTimer implements Timer {
                     continue;
                 }
                 long calculated = timeout.deadline / tickDuration;
-                long remainingRounds = (calculated - tick) / wheel.length;
-                timeout.remainingRounds = remainingRounds;
+                timeout.remainingRounds = (calculated - tick) / wheel.length;
 
                 final long ticks = Math.max(calculated, tick); // Ensure we don't schedule for past.
                 int stopIndex = (int) (ticks & mask);

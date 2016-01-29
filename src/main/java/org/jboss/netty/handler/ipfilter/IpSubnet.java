@@ -112,11 +112,8 @@ public class IpSubnet implements IpSet, Comparable<IpSubnet> {
      *         set network.
      */
     public boolean contains(InetAddress inetAddress) {
-        if (cidr == null) {
-            // ANY
-            return true;
-        }
-        return cidr.contains(inetAddress);
+        // ANY
+        return cidr == null || cidr.contains(inetAddress);
     }
 
     @Override

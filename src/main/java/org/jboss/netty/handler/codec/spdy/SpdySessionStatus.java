@@ -95,11 +95,7 @@ public class SpdySessionStatus implements Comparable<SpdySessionStatus> {
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof SpdySessionStatus)) {
-            return false;
-        }
-
-        return getCode() == ((SpdySessionStatus) o).getCode();
+        return o instanceof SpdySessionStatus && getCode() == ((SpdySessionStatus) o).getCode();
     }
 
     @Override

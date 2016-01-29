@@ -72,8 +72,8 @@ public class TrafficShapingHandlerTest {
     private static String TESTNAME;
     private static int TESTRUN;
 
-    private static ExecutorService group = Executors.newCachedThreadPool();
-    private static Timer timer = new HashedWheelTimer(20, TimeUnit.MILLISECONDS);
+    private static final ExecutorService group = Executors.newCachedThreadPool();
+    private static final Timer timer = new HashedWheelTimer(20, TimeUnit.MILLISECONDS);
     static {
         random.nextBytes(data);
     }
@@ -418,7 +418,7 @@ public class TrafficShapingHandlerTest {
                     average >= minfactor);
         }
         if (handler != null && globalLimit) {
-            ((GlobalTrafficShapingHandler) handler).releaseExternalResources();
+            handler.releaseExternalResources();
         }
 
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {

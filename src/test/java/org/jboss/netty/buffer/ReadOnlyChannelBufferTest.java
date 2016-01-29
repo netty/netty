@@ -82,8 +82,8 @@ public class ReadOnlyChannelBufferTest {
         buf.getBytes(6, (byte[]) null, 7, 8);
         buf.getBytes(9, (ChannelBuffer) null, 10, 11);
         buf.getBytes(12, (ByteBuffer) null);
-        expect(buf.getByte(13)).andReturn(Byte.valueOf((byte) 14));
-        expect(buf.getShort(15)).andReturn(Short.valueOf((short) 16));
+        expect(buf.getByte(13)).andReturn((byte) 14);
+        expect(buf.getShort(15)).andReturn((short) 16);
         expect(buf.getUnsignedMedium(17)).andReturn(18);
         expect(buf.getInt(19)).andReturn(20);
         expect(buf.getLong(21)).andReturn(22L);

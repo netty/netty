@@ -169,11 +169,7 @@ public class SpdyStreamStatus implements Comparable<SpdyStreamStatus> {
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof SpdyStreamStatus)) {
-            return false;
-        }
-
-        return getCode() == ((SpdyStreamStatus) o).getCode();
+        return o instanceof SpdyStreamStatus && getCode() == ((SpdyStreamStatus) o).getCode();
     }
 
     @Override

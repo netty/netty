@@ -22,7 +22,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
-import java.util.NoSuchElementException;
 
 
 /**
@@ -579,10 +578,7 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof ChannelBuffer)) {
-            return false;
-        }
-        return ChannelBuffers.equals(this, (ChannelBuffer) o);
+        return o instanceof ChannelBuffer && ChannelBuffers.equals(this, (ChannelBuffer) o);
     }
 
     public int compareTo(ChannelBuffer that) {

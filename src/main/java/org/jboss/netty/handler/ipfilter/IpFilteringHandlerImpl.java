@@ -88,11 +88,7 @@ public abstract class IpFilteringHandlerImpl implements ChannelUpstreamHandler, 
      *         since this channel was blocked by this filter
      */
     protected boolean continues(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
-        if (listener != null) {
-            return listener.continues(ctx, e);
-        } else {
-            return false;
-        }
+        return listener != null && listener.continues(ctx, e);
     }
 
     public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {

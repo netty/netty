@@ -15,10 +15,6 @@
  */
 package org.jboss.netty.handler.codec.spdy;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 /**
  * A SPDY Protocol HEADERS Frame
  */
