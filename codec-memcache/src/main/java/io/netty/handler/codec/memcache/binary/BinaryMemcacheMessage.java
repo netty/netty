@@ -182,22 +182,4 @@ public interface BinaryMemcacheMessage extends MemcacheMessage {
      * @param extras the extras buffer of the document.
      */
     BinaryMemcacheMessage setExtras(ByteBuf extras);
-
-    /**
-     * Increases the reference count by {@code 1}.
-     */
-    @Override
-    BinaryMemcacheMessage retain();
-
-    /**
-     * Increases the reference count by the specified {@code increment}.
-     */
-    @Override
-    BinaryMemcacheMessage retain(int increment);
-
-    @Override
-    BinaryMemcacheMessage touch();
-
-    @Override
-    BinaryMemcacheMessage touch(Object hint);
 }

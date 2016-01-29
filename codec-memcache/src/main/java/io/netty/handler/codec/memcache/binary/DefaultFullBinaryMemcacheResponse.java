@@ -59,48 +59,34 @@ public class DefaultFullBinaryMemcacheResponse extends DefaultBinaryMemcacheResp
     }
 
     @Override
-    public int refCnt() {
-        return content.refCnt();
-    }
-
-    @Override
-    public FullBinaryMemcacheResponse retain() {
+    public DefaultFullBinaryMemcacheResponse retain() {
         super.retain();
-        content.retain();
         return this;
     }
 
     @Override
-    public FullBinaryMemcacheResponse retain(int increment) {
+    public DefaultFullBinaryMemcacheResponse retain(int increment) {
         super.retain(increment);
-        content.retain(increment);
         return this;
     }
 
     @Override
-    public FullBinaryMemcacheResponse touch() {
+    public DefaultFullBinaryMemcacheResponse touch() {
         super.touch();
-        content.touch();
         return this;
     }
 
     @Override
-    public FullBinaryMemcacheResponse touch(Object hint) {
+    public DefaultFullBinaryMemcacheResponse touch(Object hint) {
         super.touch(hint);
         content.touch(hint);
         return this;
     }
 
     @Override
-    public boolean release() {
-        super.release();
-        return content.release();
-    }
-
-    @Override
-    public boolean release(int decrement) {
-        super.release(decrement);
-        return content.release(decrement);
+    protected void deallocate() {
+        super.deallocate();
+        content.release();
     }
 
     @Override

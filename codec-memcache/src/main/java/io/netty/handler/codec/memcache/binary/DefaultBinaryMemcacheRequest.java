@@ -75,28 +75,4 @@ public class DefaultBinaryMemcacheRequest extends AbstractBinaryMemcacheMessage 
         this.reserved = reserved;
         return this;
     }
-
-    @Override
-    public BinaryMemcacheRequest retain() {
-        super.retain();
-        return this;
-    }
-
-    @Override
-    public BinaryMemcacheRequest retain(int increment) {
-        super.retain(increment);
-        return this;
-    }
-
-    @Override
-    public BinaryMemcacheRequest touch() {
-        super.touch();
-        return this;
-    }
-
-    @Override
-    public BinaryMemcacheRequest touch(Object hint) {
-        super.touch(hint);
-        return this;
-    }
 }
