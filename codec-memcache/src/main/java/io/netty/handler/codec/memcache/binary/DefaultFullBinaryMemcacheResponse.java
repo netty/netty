@@ -32,7 +32,7 @@ public class DefaultFullBinaryMemcacheResponse extends DefaultBinaryMemcacheResp
      * @param key    the key to use.
      * @param extras the extras to use.
      */
-    public DefaultFullBinaryMemcacheResponse(String key, ByteBuf extras) {
+    public DefaultFullBinaryMemcacheResponse(ByteBuf key, ByteBuf extras) {
         this(key, extras, Unpooled.buffer(0));
     }
 
@@ -43,7 +43,7 @@ public class DefaultFullBinaryMemcacheResponse extends DefaultBinaryMemcacheResp
      * @param extras  the extras to use.
      * @param content the content of the full request.
      */
-    public DefaultFullBinaryMemcacheResponse(String key, ByteBuf extras,
+    public DefaultFullBinaryMemcacheResponse(ByteBuf key, ByteBuf extras,
         ByteBuf content) {
         super(key, extras);
         if (content == null) {
@@ -91,19 +91,27 @@ public class DefaultFullBinaryMemcacheResponse extends DefaultBinaryMemcacheResp
 
     @Override
     public FullBinaryMemcacheResponse copy() {
+        ByteBuf key = key();
+        if (key != null) {
+            key = key.copy();
+        }
         ByteBuf extras = extras();
         if (extras != null) {
             extras = extras.copy();
         }
-        return new DefaultFullBinaryMemcacheResponse(key(), extras, content().copy());
+        return new DefaultFullBinaryMemcacheResponse(key, extras, content().copy());
     }
 
     @Override
     public FullBinaryMemcacheResponse duplicate() {
+        ByteBuf key = key();
+        if (key != null) {
+            key = key.duplicate();
+        }
         ByteBuf extras = extras();
         if (extras != null) {
             extras = extras.duplicate();
         }
-        return new DefaultFullBinaryMemcacheResponse(key(), extras, content().duplicate());
+        return new DefaultFullBinaryMemcacheResponse(key, extras, content().duplicate());
     }
 }

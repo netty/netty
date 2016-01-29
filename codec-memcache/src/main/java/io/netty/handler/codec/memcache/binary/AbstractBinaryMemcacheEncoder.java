@@ -64,12 +64,12 @@ public abstract class AbstractBinaryMemcacheEncoder<M extends BinaryMemcacheMess
      * @param buf the {@link ByteBuf} to write into.
      * @param key the key to encode.
      */
-    private static void encodeKey(ByteBuf buf, String key) {
-        if (key == null || key.isEmpty()) {
+    private static void encodeKey(ByteBuf buf, ByteBuf key) {
+        if (key == null || !key.isReadable()) {
             return;
         }
 
-        buf.writeBytes(key.getBytes(CharsetUtil.UTF_8));
+        buf.writeBytes(key);
     }
 
     /**

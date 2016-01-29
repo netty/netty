@@ -28,7 +28,7 @@ public abstract class AbstractBinaryMemcacheMessage
     /**
      * Contains the optional key.
      */
-    private String key;
+    private ByteBuf key;
 
     /**
      * Contains the optional extras.
@@ -50,13 +50,13 @@ public abstract class AbstractBinaryMemcacheMessage
      * @param key    the message key.
      * @param extras the message extras.
      */
-    protected AbstractBinaryMemcacheMessage(String key, ByteBuf extras) {
+    protected AbstractBinaryMemcacheMessage(ByteBuf key, ByteBuf extras) {
         this.key = key;
         this.extras = extras;
     }
 
     @Override
-    public String key() {
+    public ByteBuf key() {
         return key;
     }
 
@@ -66,13 +66,19 @@ public abstract class AbstractBinaryMemcacheMessage
     }
 
     @Override
-    public BinaryMemcacheMessage setKey(String key) {
+    public BinaryMemcacheMessage setKey(ByteBuf key) {
+        if (this.key != null) {
+            this.key.release();
+        }
         this.key = key;
         return this;
     }
 
     @Override
     public BinaryMemcacheMessage setExtras(ByteBuf extras) {
+        if (this.extras != null) {
+            this.extras.release();
+        }
         this.extras = extras;
         return this;
     }
@@ -179,6 +185,9 @@ public abstract class AbstractBinaryMemcacheMessage
 
     @Override
     protected void deallocate() {
+        if (key != null) {
+            key.release();
+        }
         if (extras != null) {
             extras.release();
         }
@@ -192,6 +201,9 @@ public abstract class AbstractBinaryMemcacheMessage
 
     @Override
     public BinaryMemcacheMessage touch(Object hint) {
+        if (key != null) {
+            key.touch(hint);
+        }
         if (extras != null) {
             extras.touch(hint);
         }
