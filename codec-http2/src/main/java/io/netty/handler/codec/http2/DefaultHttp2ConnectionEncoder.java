@@ -14,12 +14,6 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
-import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import static java.lang.Math.min;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -29,6 +23,12 @@ import io.netty.channel.CoalescingBufferQueue;
 import io.netty.handler.codec.http2.Http2Exception.ClosedStreamCreationException;
 
 import java.util.ArrayDeque;
+
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.lang.Math.min;
 
 /**
  * Default implementation of {@link Http2ConnectionEncoder}.
@@ -167,11 +167,29 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                 }
             }
 
-            // Pass headers to the flow-controller so it can maintain their sequence relative to DATA frames.
-            flowController().addFlowControlled(stream,
-                    new FlowControlledHeaders(stream, headers, streamDependency, weight, exclusive, padding,
-                            endOfStream, promise));
-            return promise;
+            // Trailing headers must go through flow control if there are other frames queued in flow control
+            // for this stream.
+            Http2RemoteFlowController flowController = flowController();
+            if (!endOfStream || !flowController.hasFlowControlled(stream)) {
+                ChannelFuture future = frameWriter.writeHeaders(ctx, streamId, headers, streamDependency, weight,
+                                                                exclusive, padding, endOfStream, promise);
+                if (endOfStream) {
+                    final Http2Stream finalStream = stream;
+                    future.addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            lifecycleManager.closeStreamLocal(finalStream, promise);
+                        }
+                    });
+                }
+                return future;
+            } else {
+                // Pass headers to the flow-controller so it can maintain their sequence relative to DATA frames.
+                flowController.addFlowControlled(stream,
+                        new FlowControlledHeaders(stream, headers, streamDependency, weight, exclusive, padding,
+                                                 endOfStream, promise));
+                return promise;
+            }
         } catch (Http2NoMoreStreamIdsException e) {
             lifecycleManager.onError(ctx, e);
             return promise.setFailure(e);
@@ -410,7 +428,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             }
             promise.addListener(this);
 
-            stream.headerSent();
             frameWriter.writeHeaders(ctx, stream.id(), headers, streamDependency, weight, exclusive,
                     padding, endOfStream, promise);
         }

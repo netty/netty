@@ -616,7 +616,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
 
         final ChannelFuture future;
-        if (stream.state() == IDLE || (connection().local().created(stream) && !stream.isHeaderSent())) {
+        if (stream.state() == IDLE || connection().local().created(stream)) {
             // The other endpoint doesn't know about the stream yet, so we can't actually send
             // the RST_STREAM frame. The HTTP/2 spec also disallows sending RST_STREAM for IDLE streams.
             future = promise.setSuccess();
