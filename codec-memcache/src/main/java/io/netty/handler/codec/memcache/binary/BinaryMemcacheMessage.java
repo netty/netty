@@ -160,14 +160,16 @@ public interface BinaryMemcacheMessage extends MemcacheMessage {
      *
      * @return the key of the document.
      */
-    String key();
+    ByteBuf key();
 
     /**
-     * Sets the key of the document.
+     * Sets the key of the document. {@link ByteBuf#release()} ownership of {@code key}
+     * is transferred to this {@link BinaryMemcacheMessage}.
      *
-     * @param key the key of the message.
+     * @param key the key of the message. {@link ByteBuf#release()} ownership is transferred
+     *            to this {@link BinaryMemcacheMessage}.
      */
-    BinaryMemcacheMessage setKey(String key);
+    BinaryMemcacheMessage setKey(ByteBuf key);
 
     /**
      * Returns a {@link ByteBuf} representation of the optional extras.
@@ -177,9 +179,11 @@ public interface BinaryMemcacheMessage extends MemcacheMessage {
     ByteBuf extras();
 
     /**
-     * Sets the extras buffer on the message.
+     * Sets the extras buffer on the message. {@link ByteBuf#release()} ownership of {@code extras}
+     * is transferred to this {@link BinaryMemcacheMessage}.
      *
-     * @param extras the extras buffer of the document.
+     * @param extras the extras buffer of the document. {@link ByteBuf#release()} ownership is transferred
+     *               to this {@link BinaryMemcacheMessage}.
      */
     BinaryMemcacheMessage setExtras(ByteBuf extras);
 

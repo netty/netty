@@ -36,12 +36,13 @@ public class MemcacheClientHandler extends ChannelDuplexHandler {
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         String command = (String) msg;
         if (command.startsWith("get ")) {
-            String key = command.substring("get ".length());
+            String keyString = command.substring("get ".length());
+            ByteBuf key = Unpooled.wrappedBuffer(keyString.getBytes(CharsetUtil.UTF_8));
 
             BinaryMemcacheRequest req = new DefaultBinaryMemcacheRequest(key);
             req.setOpcode(BinaryMemcacheOpcodes.GET);
-            req.setKeyLength((short) key.length());
-            req.setTotalBodyLength(key.length());
+            req.setKeyLength((short) key.readableBytes());
+            req.setTotalBodyLength(key.readableBytes());
 
             ctx.write(req, promise);
         } else if (command.startsWith("set ")) {
@@ -49,18 +50,19 @@ public class MemcacheClientHandler extends ChannelDuplexHandler {
             if (parts.length < 3) {
                 throw new IllegalArgumentException("Malformed Command: " + command);
             }
-            String key = parts[1];
+            String keyString = parts[1];
             String value = parts[2];
 
+            ByteBuf key = Unpooled.wrappedBuffer(keyString.getBytes(CharsetUtil.UTF_8));
             ByteBuf content = Unpooled.wrappedBuffer(value.getBytes(CharsetUtil.UTF_8));
             ByteBuf extras = ctx.alloc().buffer(8);
             extras.writeZero(8);
 
             BinaryMemcacheRequest req = new DefaultFullBinaryMemcacheRequest(key, extras, content);
             req.setOpcode(BinaryMemcacheOpcodes.SET);
-            req.setKeyLength((short) key.length());
+            req.setKeyLength((short) key.readableBytes());
             req.setExtrasLength((byte) 8);
-            req.setTotalBodyLength(key.length() + 8 + value.length());
+            req.setTotalBodyLength(key.readableBytes() + 8 + value.length());
 
             ctx.write(req, promise);
         } else {
