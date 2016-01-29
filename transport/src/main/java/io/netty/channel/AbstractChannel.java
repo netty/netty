@@ -55,7 +55,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final Channel parent;
     private final ChannelId id;
     private final Unsafe unsafe;
-    private final ChannelPipeline pipeline;
+    private final DefaultChannelPipeline pipeline;
     private final ChannelFuture succeededFuture = new SucceededChannelFuture(this, null);
     private final VoidChannelPromise voidPromise = new VoidChannelPromise(this, true);
     private final VoidChannelPromise unsafeVoidPromise = new VoidChannelPromise(this, false);
@@ -499,6 +499,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 doRegister();
                 neverRegistered = false;
                 registered = true;
+
+                // We are now registered to the EventLoop. It's time to call the callbacks for the ChannelHandlers,
+                // that were added before the registration was done.
+                pipeline.callHandlerAdded();
+
                 safeSetSuccess(promise);
                 pipeline.fireChannelRegistered();
                 // Only fire a channelActive if the channel has never been registered. This prevents firing

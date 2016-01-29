@@ -539,16 +539,19 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private void callHandlerAdded(final AbstractChannelHandlerContext ctx) {
-        if (isExecuteLater(ctx)) {
-            ctx.executor().execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    callHandlerAdded0(ctx);
-                }
-            });
-            return;
+        EventExecutor executor = ctx.executorSafe();
+        if (executor != null) {
+            if (executor.inEventLoop()) {
+                callHandlerAdded0(ctx);
+            } else {
+                executor.execute(new OneTimeTask() {
+                    @Override
+                    public void run() {
+                        callHandlerAdded0(ctx);
+                    }
+                });
+            }
         }
-        callHandlerAdded0(ctx);
     }
 
     private void callHandlerAdded0(final AbstractChannelHandlerContext ctx) {
@@ -583,16 +586,21 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private void callHandlerRemoved(final AbstractChannelHandlerContext ctx) {
-        if (isExecuteLater(ctx)) {
-            ctx.executor().execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    callHandlerRemoved0(ctx);
-                 }
-            });
-            return;
+        EventExecutor executor = ctx.executorSafe();
+        if (executor != null) {
+            if (executor.inEventLoop()) {
+                callHandlerRemoved0(ctx);
+            } else {
+                executor.execute(new OneTimeTask() {
+                    @Override
+                    public void run() {
+                        callHandlerRemoved0(ctx);
+                    }
+                });
+            }
+        } else {
+            ctx.setRemoved();
         }
-        callHandlerRemoved0(ctx);
     }
 
     private void callHandlerRemoved0(final AbstractChannelHandlerContext ctx) {
@@ -1079,6 +1087,19 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             throw new NoSuchElementException(handlerType.getName());
         } else {
             return ctx;
+        }
+    }
+
+    /**
+     * Should be called before {@link #fireChannelRegistered()} is called the first time.
+     */
+    void callHandlerAdded() {
+        assert channel.eventLoop().inEventLoop();
+
+        AbstractChannelHandlerContext context = head.next;
+        while (context != tail) {
+            callHandlerAdded(context);
+            context = context.next;
         }
     }
 
