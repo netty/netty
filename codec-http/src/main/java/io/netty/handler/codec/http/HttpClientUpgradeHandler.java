@@ -62,6 +62,13 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
      * The source codec that is used in the pipeline initially.
      */
     public interface SourceCodec {
+
+        /**
+         * Removes or disables the encoder of this codec so that the {@link UpgradeCodec} can send an initial greeting
+         * (if any).
+         */
+        void prepareUpgradeFrom(ChannelHandlerContext ctx);
+
         /**
          * Removes this codec (i.e. all associated handlers) from the pipeline.
          */
@@ -222,8 +229,9 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
             }
 
             // Upgrade to the new protocol.
-            sourceCodec.upgradeFrom(ctx);
+            sourceCodec.prepareUpgradeFrom(ctx);
             upgradeCodec.upgradeTo(ctx, response);
+            sourceCodec.upgradeFrom(ctx);
 
             // Notify that the upgrade to the new protocol completed successfully.
             ctx.fireUserEventTriggered(UpgradeEvent.UPGRADE_SUCCESSFUL);
