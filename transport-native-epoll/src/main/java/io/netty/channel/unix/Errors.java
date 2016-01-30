@@ -21,8 +21,18 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.nio.channels.ClosedChannelException;
 
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEAGAIN;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEBADF;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoECONNRESET;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEINPROGRESS;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoENOTCONN;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEPIPE;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEWOULDBLOCK;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.strError;
+
 /**
  * <strong>Internal usage only!</strong>
+ * <p>Static members which call JNI methods must be defined in {@link ErrorsStaticallyReferencedJniMethods}.
  */
 public final class Errors {
     // As all our JNI methods return -errno on error we need to compare with the negative errno codes.
@@ -120,15 +130,6 @@ public final class Errors {
         //       all other errors it may be better to just include a stack trace.
         throw newIOException(method, err);
     }
-
-    private static native int errnoEBADF();
-    private static native int errnoEPIPE();
-    private static native int errnoECONNRESET();
-    private static native int errnoENOTCONN();
-    private static native int errnoEAGAIN();
-    private static native int errnoEWOULDBLOCK();
-    private static native int errnoEINPROGRESS();
-    private static native String strError(int err);
 
     private Errors() { }
 }

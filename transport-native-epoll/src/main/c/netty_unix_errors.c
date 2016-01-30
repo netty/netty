@@ -16,16 +16,15 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <jni.h>
 #include "netty_unix_errors.h"
 #include "netty_unix_util.h"
-#include "io_netty_channel_unix_Errors.h"
 
 static jclass runtimeExceptionClass = NULL;
 static jclass channelExceptionClass = NULL;
 static jclass ioExceptionClass = NULL;
 static jclass closedChannelExceptionClass = NULL;
 static jmethodID closedChannelExceptionMethodId = NULL;
-static char* nettyClassName = NULL;
 
 /** Notice: every usage of exceptionMessage needs to release the allocated memory for the sequence of char */
 static char* exceptionMessage(char* msg, int error) {
@@ -72,7 +71,64 @@ void netty_unix_errors_throwOutOfMemoryError(JNIEnv* env) {
     (*env)->ThrowNew(env, exceptionClass, "");
 }
 
-jint netty_unix_errors_JNI_OnLoad(JNIEnv* env, const char* nettyPackagePrefix) {
+// JNI Registered Methods Begin
+static jint netty_unix_errors_errnoENOTCONN(JNIEnv* env, jclass clazz) {
+    return ENOTCONN;
+}
+
+static jint netty_unix_errors_errnoEBADF(JNIEnv* env, jclass clazz) {
+    return EBADF;
+}
+
+static jint netty_unix_errors_errnoEPIPE(JNIEnv* env, jclass clazz) {
+    return EPIPE;
+}
+
+static jint netty_unix_errors_errnoECONNRESET(JNIEnv* env, jclass clazz) {
+    return ECONNRESET;
+}
+
+static jint netty_unix_errors_errnoEAGAIN(JNIEnv* env, jclass clazz) {
+    return EAGAIN;
+}
+
+static jint netty_unix_errors_errnoEWOULDBLOCK(JNIEnv* env, jclass clazz) {
+    return EWOULDBLOCK;
+}
+
+static jint netty_unix_errors_errnoEINPROGRESS(JNIEnv* env, jclass clazz) {
+    return EINPROGRESS;
+}
+
+static jstring netty_unix_errors_strError(JNIEnv* env, jclass clazz, jint error) {
+    return (*env)->NewStringUTF(env, strerror(error));
+}
+// JNI Registered Methods End
+
+// JNI Method Registration Table Begin
+static const JNINativeMethod statically_referenced_fixed_method_table[] = {
+  { "errnoENOTCONN", "()I", (void *) netty_unix_errors_errnoENOTCONN },
+  { "errnoEBADF", "()I", (void *) netty_unix_errors_errnoEBADF },
+  { "errnoEPIPE", "()I", (void *) netty_unix_errors_errnoEPIPE },
+  { "errnoECONNRESET", "()I", (void *) netty_unix_errors_errnoECONNRESET },
+  { "errnoEAGAIN", "()I", (void *) netty_unix_errors_errnoEAGAIN },
+  { "errnoEWOULDBLOCK", "()I", (void *) netty_unix_errors_errnoEWOULDBLOCK },
+  { "errnoEINPROGRESS", "()I", (void *) netty_unix_errors_errnoEINPROGRESS },
+  { "strError", "(I)Ljava/lang/String;", (void *) netty_unix_errors_strError }
+};
+static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
+// JNI Method Registration Table End
+
+jint netty_unix_errors_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
+    // We must register the statically referenced methods first!
+    if (netty_unix_util_register_natives(env,
+            packagePrefix,
+            "io/netty/channel/unix/ErrorsStaticallyReferencedJniMethods",
+            statically_referenced_fixed_method_table,
+            statically_referenced_fixed_method_table_size) != 0) {
+        return JNI_ERR;
+    }
+
     jclass localRuntimeExceptionClass = (*env)->FindClass(env, "java/lang/RuntimeException");
     if (localRuntimeExceptionClass == NULL) {
         // pending exception...
@@ -85,7 +141,7 @@ jint netty_unix_errors_JNI_OnLoad(JNIEnv* env, const char* nettyPackagePrefix) {
         return JNI_ERR;
     }
 
-    nettyClassName = netty_unix_util_prepend(nettyPackagePrefix, "io/netty/channel/ChannelException");
+    char* nettyClassName = netty_unix_util_prepend(packagePrefix, "io/netty/channel/ChannelException");
     jclass localChannelExceptionClass = (*env)->FindClass(env, nettyClassName);
     free(nettyClassName);
     nettyClassName = NULL;
@@ -135,10 +191,6 @@ jint netty_unix_errors_JNI_OnLoad(JNIEnv* env, const char* nettyPackagePrefix) {
 
 void netty_unix_errors_JNI_OnUnLoad(JNIEnv* env) {
     // delete global references so the GC can collect them
-    if (nettyClassName != NULL) {
-        free(nettyClassName);
-        nettyClassName = NULL;
-    }
     if (runtimeExceptionClass != NULL) {
         (*env)->DeleteGlobalRef(env, runtimeExceptionClass);
         runtimeExceptionClass = NULL;
@@ -155,37 +207,4 @@ void netty_unix_errors_JNI_OnUnLoad(JNIEnv* env) {
         (*env)->DeleteGlobalRef(env, closedChannelExceptionClass);
         closedChannelExceptionClass = NULL;
     }
-}
-
-// Exported JNI Methods
-JNIEXPORT jint JNICALL Java_io_netty_channel_unix_Errors_errnoENOTCONN(JNIEnv* env, jclass clazz) {
-    return ENOTCONN;
-}
-
-JNIEXPORT jint JNICALL Java_io_netty_channel_unix_Errors_errnoEBADF(JNIEnv* env, jclass clazz) {
-    return EBADF;
-}
-
-JNIEXPORT jint JNICALL Java_io_netty_channel_unix_Errors_errnoEPIPE(JNIEnv* env, jclass clazz) {
-    return EPIPE;
-}
-
-JNIEXPORT jint JNICALL Java_io_netty_channel_unix_Errors_errnoECONNRESET(JNIEnv* env, jclass clazz) {
-    return ECONNRESET;
-}
-
-JNIEXPORT jint JNICALL Java_io_netty_channel_unix_Errors_errnoEAGAIN(JNIEnv* env, jclass clazz) {
-    return EAGAIN;
-}
-
-JNIEXPORT jint JNICALL Java_io_netty_channel_unix_Errors_errnoEWOULDBLOCK(JNIEnv* env, jclass clazz) {
-    return EWOULDBLOCK;
-}
-
-JNIEXPORT jint JNICALL Java_io_netty_channel_unix_Errors_errnoEINPROGRESS(JNIEnv* env, jclass clazz) {
-    return EINPROGRESS;
-}
-
-JNIEXPORT jstring JNICALL Java_io_netty_channel_unix_Errors_strError(JNIEnv* env, jclass clazz, jint error) {
-    return (*env)->NewStringUTF(env, strerror(error));
 }
