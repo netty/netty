@@ -17,11 +17,20 @@
 #ifndef NETTY_UNIX_UTIL_H_
 #define NETTY_UNIX_UTIL_H_
 
+#include <jni.h>
+
 /**
  * Return a new string (caller must free this string) which is equivalent to <pre>prefix + str</pre>.
  *
  * Caller must free the return value!
  */
 char* netty_unix_util_prepend(const char* prefix, const char* str);
+
+char* netty_unix_util_rstrstr(char* s1rbegin, const char* s1rend, const char* s2);
+
+/**
+ * Return type is as defined in http://docs.oracle.com/javase/7/docs/technotes/guides/jni/spec/functions.html#wp5833.
+ */
+jint netty_unix_util_register_natives(JNIEnv* env, const char* packagePrefix, const char* className, const JNINativeMethod* methods, jint numMethods);
 
 #endif /* NETTY_UNIX_UTIL_H_ */

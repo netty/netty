@@ -48,7 +48,7 @@ public class EpollReuseAddrTest {
     private static final int MINOR;
     private static final int BUGFIX;
     static {
-        String kernelVersion = Native.kernelVersion();
+        String kernelVersion = Native.KERNEL_VERSION;
         int index = kernelVersion.indexOf('-');
         if (index > -1) {
             kernelVersion = kernelVersion.substring(0, index);
