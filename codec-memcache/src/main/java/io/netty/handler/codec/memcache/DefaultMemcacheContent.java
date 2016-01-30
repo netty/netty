@@ -51,25 +51,20 @@ public class DefaultMemcacheContent extends AbstractMemcacheObject implements Me
     }
 
     @Override
-    public int refCnt() {
-        return content.refCnt();
-    }
-
-    @Override
     public MemcacheContent retain() {
-        content.retain();
+        super.retain();
         return this;
     }
 
     @Override
     public MemcacheContent retain(int increment) {
-        content.retain(increment);
+        super.retain(increment);
         return this;
     }
 
     @Override
     public MemcacheContent touch() {
-        content.touch();
+        super.touch();
         return this;
     }
 
@@ -80,13 +75,8 @@ public class DefaultMemcacheContent extends AbstractMemcacheObject implements Me
     }
 
     @Override
-    public boolean release() {
-        return content.release();
-    }
-
-    @Override
-    public boolean release(int decrement) {
-        return content.release(decrement);
+    protected void deallocate() {
+        content.release();
     }
 
     @Override

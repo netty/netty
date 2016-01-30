@@ -166,48 +166,28 @@ public abstract class AbstractBinaryMemcacheMessage
     }
 
     @Override
-    public int refCnt() {
-        if (extras != null) {
-            return extras.refCnt();
-        }
-        return 1;
-    }
-
-    @Override
     public BinaryMemcacheMessage retain() {
-        if (extras != null) {
-            extras.retain();
-        }
+        super.retain();
         return this;
     }
 
     @Override
     public BinaryMemcacheMessage retain(int increment) {
-        if (extras != null) {
-            extras.retain(increment);
-        }
+        super.retain(increment);
         return this;
     }
 
     @Override
-    public boolean release() {
+    protected void deallocate() {
         if (extras != null) {
-            return extras.release();
+            extras.release();
         }
-        return false;
-    }
-
-    @Override
-    public boolean release(int decrement) {
-        if (extras != null) {
-            return extras.release(decrement);
-        }
-        return false;
     }
 
     @Override
     public BinaryMemcacheMessage touch() {
-        return touch(null);
+        super.touch();
+        return this;
     }
 
     @Override
