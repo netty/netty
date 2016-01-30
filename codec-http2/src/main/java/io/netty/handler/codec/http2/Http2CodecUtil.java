@@ -152,7 +152,15 @@ public final class Http2CodecUtil {
 
         // Create the debug message. `* 3` because UTF-8 max character consumes 3 bytes.
         ByteBuf debugData = ctx.alloc().buffer(cause.getMessage().length() * 3);
-        ByteBufUtil.writeUtf8(debugData, cause.getMessage());
+        boolean shouldRelease = true;
+        try {
+            ByteBufUtil.writeUtf8(debugData, cause.getMessage());
+            shouldRelease = false;
+        } finally {
+            if (shouldRelease) {
+                debugData.release();
+            }
+        }
         return debugData;
     }
 
