@@ -17,16 +17,28 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.unix.Errors.NativeIoException;
-import io.netty.channel.unix.FileDescriptor;
-import io.netty.channel.unix.NativeInetAddress;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.NativeInetAddress;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Locale;
 
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollerr;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollet;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollin;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollout;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollrdhup;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.iovMax;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.isSupportingSendmmsg;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.isSupportingTcpFastopen;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.kernelVersion;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.ssizeMax;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.tcpMd5SigMaxKeyLen;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.uioMaxIov;
 import static io.netty.channel.unix.Errors.ERRNO_EAGAIN_NEGATIVE;
 import static io.netty.channel.unix.Errors.ERRNO_EPIPE_NEGATIVE;
 import static io.netty.channel.unix.Errors.ERRNO_EWOULDBLOCK_NEGATIVE;
@@ -36,8 +48,8 @@ import static io.netty.channel.unix.Errors.newIOException;
 
 /**
  * Native helper methods
- *
- * <strong>Internal usage only!</strong>
+ * <p><strong>Internal usage only!</strong>
+ * <p>Static members which call JNI methods must be defined in {@link NativeStaticallyReferencedJniMethods}.
  */
 public final class Native {
     static {
@@ -45,9 +57,10 @@ public final class Native {
         if (!name.startsWith("linux")) {
             throw new IllegalStateException("Only supported on Linux");
         }
-        NativeLibraryLoader.load("netty-transport-native-epoll", PlatformDependent.getClassLoader(Native.class));
+        NativeLibraryLoader.load(SystemPropertyUtil.get("io.netty.packagePrefix", "").replace('.', '-') +
+                                 "netty-transport-native-epoll",
+                                 PlatformDependent.getClassLoader(Native.class));
     }
-
     // EventLoop operations and constants
     public static final int EPOLLIN = epollin();
     public static final int EPOLLOUT = epollout();
@@ -61,6 +74,7 @@ public final class Native {
     public static final boolean IS_SUPPORTING_TCP_FASTOPEN = isSupportingTcpFastopen();
     public static final long SSIZE_MAX = ssizeMax();
     public static final int TCP_MD5SIG_MAXKEYLEN = tcpMd5SigMaxKeyLen();
+    public static final String KERNEL_VERSION = kernelVersion();
 
     private static final NativeIoException CONNECTION_RESET_EXCEPTION_SENDFILE;
     private static final NativeIoException CONNECTION_RESET_EXCEPTION_SENDMMSG;
@@ -161,9 +175,6 @@ public final class Native {
     private static native int sendmmsg0(
             int fd, NativeDatagramPacketArray.NativeDatagramPacket[] msgs, int offset, int len);
 
-    private static native boolean isSupportingSendmmsg();
-    private static native boolean isSupportingTcpFastopen();
-
     public static int recvFd(int fd) throws IOException {
         int res = recvFd0(fd);
         if (res > 0) {
@@ -232,24 +243,9 @@ public final class Native {
 
     private static native void setTcpMd5Sig0(int fd, byte[] address, int scopeId, byte[] key);
 
-    public static native String kernelVersion();
-
-    private static native int iovMax();
-
-    private static native int uioMaxIov();
-
     // epoll_event related
     public static native int sizeofEpollEvent();
     public static native int offsetofEpollData();
-
-    private static native int epollin();
-    private static native int epollout();
-    private static native int epollrdhup();
-    private static native int epollet();
-    private static native int epollerr();
-
-    private static native long ssizeMax();
-    private static native int tcpMd5SigMaxKeyLen();
 
     private Native() {
         // utility

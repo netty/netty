@@ -25,7 +25,7 @@ int netty_unix_socket_getOption(JNIEnv* env, jint fd, int level, int optname, vo
 int netty_unix_socket_setOption(JNIEnv* env, jint fd, int level, int optname, const void* optval, socklen_t len);
 
 // JNI initialization hooks. Users of this file are responsible for calling these in the JNI_OnLoad and JNI_OnUnload methods.
-jint netty_unix_socket_JNI_OnLoad(JNIEnv* env, const char* nettyPackagePrefix);
+jint netty_unix_socket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix);
 void netty_unix_socket_JNI_OnUnLoad(JNIEnv* env);
 
 #endif /* NETTY_UNIX_SOCKET_H_ */
