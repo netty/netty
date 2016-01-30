@@ -41,17 +41,8 @@ public class DefaultBinaryMemcacheRequest extends AbstractBinaryMemcacheMessage 
      *
      * @param key    the key to use.
      */
-    public DefaultBinaryMemcacheRequest(String key) {
+    public DefaultBinaryMemcacheRequest(ByteBuf key) {
         this(key, null);
-    }
-
-    /**
-     * Create a new {@link DefaultBinaryMemcacheRequest} with the header and extras.
-     *
-     * @param extras the extras to use.
-     */
-    public DefaultBinaryMemcacheRequest(ByteBuf extras) {
-        this(null, extras);
     }
 
     /**
@@ -60,7 +51,7 @@ public class DefaultBinaryMemcacheRequest extends AbstractBinaryMemcacheMessage 
      * @param key    the key to use.
      * @param extras the extras to use.
      */
-    public DefaultBinaryMemcacheRequest(String key, ByteBuf extras) {
+    public DefaultBinaryMemcacheRequest(ByteBuf key, ByteBuf extras) {
         super(key, extras);
         setMagic(REQUEST_MAGIC_BYTE);
     }
@@ -77,19 +68,19 @@ public class DefaultBinaryMemcacheRequest extends AbstractBinaryMemcacheMessage 
     }
 
     @Override
-    public BinaryMemcacheRequest retain() {
+    public DefaultBinaryMemcacheRequest retain() {
         super.retain();
         return this;
     }
 
     @Override
-    public BinaryMemcacheRequest retain(int increment) {
+    public DefaultBinaryMemcacheRequest retain(int increment) {
         super.retain(increment);
         return this;
     }
 
     @Override
-    public BinaryMemcacheRequest touch() {
+    public DefaultBinaryMemcacheRequest touch() {
         super.touch();
         return this;
     }

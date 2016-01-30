@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.memcache;
 
-import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelPipeline;
 
 /**
@@ -26,23 +26,20 @@ import io.netty.channel.ChannelPipeline;
  * in your handler, place a aggregator after an implementation of the {@link AbstractMemcacheObjectDecoder}
  * in the {@link ChannelPipeline}.
  */
-public interface MemcacheContent extends MemcacheObject, ByteBufHolder {
+public interface MemcacheContent extends MemcacheObject {
 
-    @Override
+    /**
+     * Return the data which is held by this {@link MemcacheContent}.
+     */
+    ByteBuf content();
+
+    /**
+     * Create a deep copy of this {@link MemcacheContent}.
+     */
     MemcacheContent copy();
 
-    @Override
+    /**
+     * Duplicate the {@link MemcacheContent}. Be aware that this will not automatically call {@link #retain()}.
+     */
     MemcacheContent duplicate();
-
-    @Override
-    MemcacheContent retain();
-
-    @Override
-    MemcacheContent retain(int increment);
-
-    @Override
-    MemcacheContent touch();
-
-    @Override
-    MemcacheContent touch(Object hint);
 }

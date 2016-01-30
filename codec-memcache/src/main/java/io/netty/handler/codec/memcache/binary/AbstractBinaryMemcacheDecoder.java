@@ -24,11 +24,9 @@ import io.netty.handler.codec.memcache.DefaultLastMemcacheContent;
 import io.netty.handler.codec.memcache.DefaultMemcacheContent;
 import io.netty.handler.codec.memcache.LastMemcacheContent;
 import io.netty.handler.codec.memcache.MemcacheContent;
-import io.netty.util.CharsetUtil;
-
 import java.util.List;
 
-import static io.netty.buffer.ByteBufUtil.*;
+import static io.netty.buffer.ByteBufUtil.readBytes;
 
 /**
  * Decoder for both {@link BinaryMemcacheRequest} and {@link BinaryMemcacheResponse}.
@@ -90,7 +88,7 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
                         return;
                     }
 
-                    currentMessage.setExtras(readBytes(ctx.alloc(), in, extrasLength));
+                    currentMessage.setExtras(in.readSlice(extrasLength).retain());
                 }
 
                 state = State.READ_KEY;
@@ -106,8 +104,7 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
                         return;
                     }
 
-                    currentMessage.setKey(in.toString(in.readerIndex(), keyLength, CharsetUtil.UTF_8));
-                    in.skipBytes(keyLength);
+                    currentMessage.setKey(in.readSlice(keyLength).retain());
                 }
                 out.add(currentMessage.retain());
                 state = State.READ_CONTENT;

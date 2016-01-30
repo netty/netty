@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,32 +15,35 @@
  */
 package io.netty.handler.codec.memcache;
 
-import io.netty.handler.codec.DecoderResult;
+import io.netty.buffer.ByteBufHolder;
+import io.netty.util.AbstractReferenceCounted;
 
 /**
- * The default {@link MemcacheObject} implementation.
+ * An abstract byte buf holder to solve the gap between the byte buf holder and the reference
+ * counted implementation.
  */
-public abstract class AbstractMemcacheObject extends AbstractByteBufHolder implements MemcacheObject {
+public abstract class AbstractByteBufHolder extends AbstractReferenceCounted implements ByteBufHolder {
 
-    private DecoderResult decoderResult = DecoderResult.SUCCESS;
+    @Override
+    protected void deallocate() {
 
-    protected AbstractMemcacheObject() {
-        // Disallow direct instantiation
     }
 
     @Override
-    public DecoderResult decoderResult() {
-        return decoderResult;
+    public AbstractByteBufHolder retain() {
+        super.retain();
+        return this;
     }
 
     @Override
-    public void setDecoderResult(DecoderResult result) {
-        if (result == null) {
-            throw new NullPointerException("DecoderResult should not be null.");
-        }
-
-        decoderResult = result;
+    public AbstractByteBufHolder retain(int increment) {
+        super.retain(increment);
+        return this;
     }
 
-
+    @Override
+    public AbstractByteBufHolder touch() {
+        super.touch();
+        return this;
+    }
 }
