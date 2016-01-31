@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -42,7 +43,6 @@ import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
 import java.security.Principal;
 import java.security.cert.Certificate;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1018,7 +1018,7 @@ public final class OpenSslEngine extends SSLEngine {
 
     @Override
     public String[] getEnabledProtocols() {
-        List<String> enabled = new ArrayList<String>();
+        List<String> enabled = InternalThreadLocalMap.get().arrayList();
         // Seems like there is no way to explict disable SSLv2Hello in openssl so it is always enabled
         enabled.add(PROTOCOL_SSL_V2_HELLO);
 

@@ -17,13 +17,13 @@ package io.netty.util;
 
 import io.netty.util.ByteProcessor.IndexOfProcessor;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -1050,7 +1050,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * Splits the specified {@link String} with the specified delimiter..
      */
     public AsciiString[] split(char delim) {
-        final List<AsciiString> res = new ArrayList<AsciiString>();
+        final List<AsciiString> res = InternalThreadLocalMap.get().arrayList();
 
         int start = 0;
         final int length = length();
