@@ -23,9 +23,9 @@ import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.resolver.HostsFileEntriesResolver;
+import io.netty.util.internal.InternalThreadLocalMap;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.List;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -170,7 +170,7 @@ public final class DnsNameResolverBuilder {
         checkNotNull(resolvedAddressTypes, "resolvedAddressTypes");
 
         final List<InternetProtocolFamily> list =
-                new ArrayList<InternetProtocolFamily>(InternetProtocolFamily.values().length);
+                InternalThreadLocalMap.get().arrayList(InternetProtocolFamily.values().length);
 
         for (InternetProtocolFamily f : resolvedAddressTypes) {
             if (f == null) {
@@ -207,7 +207,7 @@ public final class DnsNameResolverBuilder {
         checkNotNull(resolvedAddressTypes, "resolveAddressTypes");
 
         final List<InternetProtocolFamily> list =
-                new ArrayList<InternetProtocolFamily>(InternetProtocolFamily.values().length);
+                InternalThreadLocalMap.get().arrayList(InternetProtocolFamily.values().length);
 
         for (InternetProtocolFamily f : resolvedAddressTypes) {
             if (f == null) {
