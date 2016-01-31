@@ -18,16 +18,14 @@ package io.netty.handler.ssl.util;
 
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.digests.SHA1Digest;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.concurrent.FastThreadLocal;
 
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 import java.security.KeyStore;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -68,18 +66,6 @@ public final class FingerprintTrustManagerFactory extends SimpleTrustManagerFact
     private static final int SHA1_BYTE_LEN = 20;
     private static final int SHA1_HEX_LEN = SHA1_BYTE_LEN * 2;
 
-    private static final FastThreadLocal<MessageDigest> tlmd = new FastThreadLocal<MessageDigest>() {
-        @Override
-        protected MessageDigest initialValue() {
-            try {
-                return MessageDigest.getInstance("SHA1");
-            } catch (NoSuchAlgorithmException e) {
-                // All Java implementation must have SHA1 digest algorithm.
-                throw new Error(e);
-            }
-        }
-    };
-
     private final TrustManager tm = new X509TrustManager() {
 
         @Override
@@ -110,9 +96,12 @@ public final class FingerprintTrustManagerFactory extends SimpleTrustManagerFact
         }
 
         private byte[] fingerprint(X509Certificate cert) throws CertificateEncodingException {
-            MessageDigest md = tlmd.get();
-            md.reset();
-            return md.digest(cert.getEncoded());
+            SHA1Digest sha1Digest = new SHA1Digest();
+            byte[] data = cert.getEncoded();
+            sha1Digest.update(data, 0, data.length);
+            byte[] out = new byte[sha1Digest.getDigestSize()];
+            sha1Digest.doFinal(out, 0);
+            return out;
         }
 
         @Override
