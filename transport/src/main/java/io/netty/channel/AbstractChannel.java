@@ -502,8 +502,16 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 pipeline.fireChannelRegistered();
                 // Only fire a channelActive if the channel has never been registered. This prevents firing
                 // multiple channel actives if the channel is deregistered and re-registered.
-                if (firstRegistration && isActive()) {
-                    pipeline.fireChannelActive();
+                if (isActive()) {
+                    if (firstRegistration) {
+                        pipeline.fireChannelActive();
+                    } else if (config().isAutoRead()) {
+                        // This channel was registered before and autoRead() is set. This means we need to begin read
+                        // again so that we process inbound data.
+                        //
+                        // See https://github.com/netty/netty/issues/4805
+                        beginRead();
+                    }
                 }
             } catch (Throwable t) {
                 // Close the channel directly to avoid FD leak.
