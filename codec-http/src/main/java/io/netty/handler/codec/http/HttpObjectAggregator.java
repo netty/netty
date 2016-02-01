@@ -114,13 +114,13 @@ public class HttpObjectAggregator
 
     @Override
     protected boolean isContentLengthInvalid(HttpMessage start, int maxContentLength) {
-        return getContentLength(start, -1) > maxContentLength;
+        return getContentLength(start, -1L) > maxContentLength;
     }
 
     @Override
     protected Object newContinueResponse(HttpMessage start, int maxContentLength, ChannelPipeline pipeline) {
         if (HttpUtil.is100ContinueExpected(start)) {
-            if (getContentLength(start, -1) <= maxContentLength) {
+            if (getContentLength(start, -1L) <= maxContentLength) {
                 return CONTINUE.duplicate().retain();
             }
 
