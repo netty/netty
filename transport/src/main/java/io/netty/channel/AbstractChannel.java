@@ -360,23 +360,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         SocketAddress remoteAddr = remoteAddress();
         SocketAddress localAddr = localAddress();
         if (remoteAddr != null) {
-            SocketAddress srcAddr;
-            SocketAddress dstAddr;
-            if (parent == null) {
-                srcAddr = localAddr;
-                dstAddr = remoteAddr;
-            } else {
-                srcAddr = remoteAddr;
-                dstAddr = localAddr;
-            }
-
             StringBuilder buf = new StringBuilder(96)
                 .append("[id: 0x")
                 .append(id.asShortText())
                 .append(", ")
-                .append(srcAddr)
-                .append(active? " => " : " :> ")
-                .append(dstAddr)
+                .append(localAddr)
+                .append(active? " - " : " ! ")
+                .append(remoteAddr)
                 .append(']');
             strVal = buf.toString();
         } else if (localAddr != null) {
