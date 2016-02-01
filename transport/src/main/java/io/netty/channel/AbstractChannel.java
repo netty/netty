@@ -373,7 +373,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             StringBuilder buf = new StringBuilder(64)
                 .append("[id: 0x")
                 .append(id.asShortText())
-                .append(", ")
+                .append(", L:")
                 .append(localAddr)
                 .append(']');
             strVal = buf.toString();
