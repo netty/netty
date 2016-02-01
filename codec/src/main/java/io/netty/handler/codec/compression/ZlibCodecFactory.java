@@ -31,6 +31,7 @@ public final class ZlibCodecFactory {
 
     private static final boolean noJdkZlibDecoder;
     private static final boolean noJdkZlibEncoder;
+    private static final boolean supportsWindowSizeAndMemLevel;
 
     static {
         noJdkZlibDecoder = SystemPropertyUtil.getBoolean("io.netty.noJdkZlibDecoder",
@@ -39,6 +40,15 @@ public final class ZlibCodecFactory {
 
         noJdkZlibEncoder = SystemPropertyUtil.getBoolean("io.netty.noJdkZlibEncoder", false);
         logger.debug("-Dio.netty.noJdkZlibEncoder: {}", noJdkZlibEncoder);
+
+        supportsWindowSizeAndMemLevel = noJdkZlibDecoder || PlatformDependent.javaVersion() >= 7;
+    }
+
+    /**
+     * Returns {@code true} if specify a custom window size and mem level is supported.
+     */
+    public static boolean isSupportingWindowSizeAndMemLevel() {
+        return supportsWindowSizeAndMemLevel;
     }
 
     public static ZlibEncoder newZlibEncoder(int compressionLevel) {
