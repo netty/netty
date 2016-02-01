@@ -22,6 +22,8 @@ import org.easymock.IAnswer;
 import org.junit.Test;
 
 import static org.easymock.EasyMock.*;
+import static org.junit.Assert.*;
+import static org.hamcrest.CoreMatchers.*;
 
 public class AbstractChannelTest {
 
@@ -88,6 +90,13 @@ public class AbstractChannelTest {
 
         checkForHandlerException(throwable);
         verify(handler);
+    }
+
+    @Test
+    public void ensureDefaultChannelId() {
+        TestChannel channel = new TestChannel();
+        final ChannelId channelId = channel.id();
+        assertThat(channelId, instanceOf(DefaultChannelId.class));
     }
 
     private static void registerChannel(EventLoop eventLoop, Channel channel) throws Exception {
