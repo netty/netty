@@ -18,6 +18,8 @@ package io.netty.handler.codec.http.websocketx.extensions.compression;
 import static io.netty.handler.codec.http.websocketx.extensions.compression.
         PerMessageDeflateServerExtensionHandshaker.*;
 import static org.junit.Assert.*;
+
+import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtension;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionData;
 
@@ -37,7 +39,7 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
         WebSocketExtensionData data = handshaker.newRequestData();
 
         assertEquals(PERMESSAGE_DEFLATE_EXTENSION, data.name());
-        assertTrue(data.parameters().isEmpty());
+        assertEquals(ZlibCodecFactory.isSupportingWindowSizeAndMemLevel() ? 1 : 0, data.parameters().size());
     }
 
     @Test
