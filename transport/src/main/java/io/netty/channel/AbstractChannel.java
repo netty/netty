@@ -78,7 +78,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected AbstractChannel(Channel parent) {
         this.parent = parent;
-        id = DefaultChannelId.newInstance();
+        id = newId();
         unsafe = newUnsafe();
         pipeline = new DefaultChannelPipeline(this);
     }
@@ -99,6 +99,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     @Override
     public final ChannelId id() {
         return id;
+    }
+
+    /**
+     * Returns a new {@link DefaultChannelId} instance. Subclasses may override this method to assign custom
+     * {@link ChannelId}s to {@link Channel}s that use the {@link AbstractChannel#AbstractChannel(Channel)} constructor.
+     */
+    protected ChannelId newId() {
+        return DefaultChannelId.newInstance();
     }
 
     @Override
