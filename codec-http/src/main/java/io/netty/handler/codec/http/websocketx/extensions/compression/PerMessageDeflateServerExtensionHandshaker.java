@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx.extensions.compression;
 
+import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionData;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionDecoder;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionEncoder;
@@ -50,7 +51,7 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
      * Constructor with default configuration.
      */
     public PerMessageDeflateServerExtensionHandshaker() {
-        this(6, false, MAX_WINDOW_SIZE, false, false);
+        this(6, ZlibCodecFactory.isSupportingWindowSizeAndMemLevel(), MAX_WINDOW_SIZE, false, false);
     }
 
     /**
