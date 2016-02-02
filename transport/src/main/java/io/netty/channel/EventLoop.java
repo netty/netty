@@ -33,4 +33,7 @@ public interface EventLoop extends EventExecutor, EventLoopGroup {
      * invoke event handler methods.
      */
     ChannelHandlerInvoker asInvoker();
+
+    @Override
+    EventLoop unRollWrapping();
 }

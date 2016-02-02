@@ -76,7 +76,7 @@ public abstract class AbstractOioChannel extends AbstractChannel {
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof ThreadPerChannelEventLoop;
+        return loop.unRollWrapping() instanceof ThreadPerChannelEventLoop;
     }
 
     /**

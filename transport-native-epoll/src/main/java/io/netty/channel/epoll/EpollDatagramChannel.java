@@ -382,7 +382,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             writtenBytes = fd().sendToAddress(memoryAddress, data.readerIndex(), data.writerIndex(),
                     remoteAddress.getAddress(), remoteAddress.getPort());
         } else if (data instanceof CompositeByteBuf) {
-            IovArray array = ((EpollEventLoop) eventLoop()).cleanArray();
+            IovArray array = ((EpollEventLoop) eventLoop().unRollWrapping()).cleanArray();
             array.add(data);
             int cnt = array.count();
             assert cnt != 0;

@@ -156,6 +156,11 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
     }
 
     @Override
+    public EmbeddedEventLoop unRollWrapping() {
+        return this;
+    }
+
+    @Override
     public void invokeChannelRegistered(ChannelHandlerContext ctx) {
         invokeChannelRegisteredNow(ctx);
     }

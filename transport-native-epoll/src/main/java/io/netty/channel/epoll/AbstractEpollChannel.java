@@ -121,7 +121,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof EpollEventLoop;
+        return loop.unRollWrapping() instanceof EpollEventLoop;
     }
 
     @Override
@@ -131,7 +131,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     @Override
     protected void doDeregister() throws Exception {
-        ((EpollEventLoop) eventLoop()).remove(this);
+        ((EpollEventLoop) eventLoop().unRollWrapping()).remove(this);
     }
 
     @Override
@@ -170,14 +170,13 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     private void modifyEvents() throws IOException {
         if (isOpen() && isRegistered()) {
-            ((EpollEventLoop) eventLoop()).modify(this);
+            ((EpollEventLoop) eventLoop().unRollWrapping()).modify(this);
         }
     }
 
     @Override
     protected void doRegister() throws Exception {
-        EpollEventLoop loop = (EpollEventLoop) eventLoop();
-        loop.add(this);
+        ((EpollEventLoop) eventLoop().unRollWrapping()).add(this);
     }
 
     @Override

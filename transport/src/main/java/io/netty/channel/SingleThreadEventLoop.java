@@ -70,6 +70,11 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     }
 
     @Override
+    public EventLoop unRollWrapping() {
+        return this;
+    }
+
+    @Override
     protected boolean wakesUpForTask(Runnable task) {
         return !(task instanceof NonWakeupRunnable);
     }

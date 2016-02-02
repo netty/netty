@@ -464,7 +464,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
     private boolean doWriteMultiple(ChannelOutboundBuffer in, int writeSpinCount) throws Exception {
         if (PlatformDependent.hasUnsafe()) {
             // this means we can cast to IovArray and write the IovArray directly.
-            IovArray array = ((EpollEventLoop) eventLoop()).cleanArray();
+            IovArray array = ((EpollEventLoop) eventLoop().unRollWrapping()).cleanArray();
             in.forEachFlushedMessage(array);
 
             int cnt = array.count();
