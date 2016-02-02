@@ -196,6 +196,11 @@ public abstract class OpenSslContext extends SslContext {
                 SSLContext.setOptions(ctx, SSL.SSL_OP_SINGLE_DH_USE);
                 SSLContext.setOptions(ctx, SSL.SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
 
+                // We need to enable SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER as the memory address may change between
+                // calling OpenSSLEngine.wrap(...).
+                // See https://github.com/netty/netty-tcnative/issues/100
+                SSLContext.setMode(ctx, SSLContext.getMode(ctx) | SSL.SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
+
                 /* List the ciphers that are permitted to negotiate. */
                 try {
                     SSLContext.setCipherSuite(ctx, CipherSuiteConverter.toOpenSsl(unmodifiableCiphers));

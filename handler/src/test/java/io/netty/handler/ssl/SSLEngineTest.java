@@ -366,7 +366,7 @@ public abstract class SSLEngineTest {
         }
     }
 
-    private static void handshake(SSLEngine clientEngine, SSLEngine serverEngine) throws SSLException {
+    protected static void handshake(SSLEngine clientEngine, SSLEngine serverEngine) throws SSLException {
         int netBufferSize = 17 * 1024;
         ByteBuffer cTOs = ByteBuffer.allocateDirect(netBufferSize);
         ByteBuffer sTOc = ByteBuffer.allocateDirect(netBufferSize);
