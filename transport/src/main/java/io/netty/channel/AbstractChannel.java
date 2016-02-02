@@ -340,18 +340,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         SocketAddress remoteAddr = remoteAddress();
         SocketAddress localAddr = localAddress();
         if (remoteAddr != null) {
-            SocketAddress srcAddr;
-            SocketAddress dstAddr;
-            if (parent == null) {
-                srcAddr = localAddr;
-                dstAddr = remoteAddr;
-            } else {
-                srcAddr = remoteAddr;
-                dstAddr = localAddr;
-            }
-            strVal = String.format("[id: 0x%08x, %s %s %s]", (int) hashCode, srcAddr, active? "=>" : ":>", dstAddr);
+            String activeNotation = active? "-" : "!";
+            strVal = String.format("[id: 0x%08x, L:%s %s R:%s]", (int) hashCode, localAddr, activeNotation, remoteAddr);
         } else if (localAddr != null) {
-            strVal = String.format("[id: 0x%08x, %s]", (int) hashCode, localAddr);
+            strVal = String.format("[id: 0x%08x, L:%s]", (int) hashCode, localAddr);
         } else {
             strVal = String.format("[id: 0x%08x]", (int) hashCode);
         }
