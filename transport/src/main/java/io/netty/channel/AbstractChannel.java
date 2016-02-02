@@ -365,7 +365,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 .append(id.asShortText())
                 .append(", L:")
                 .append(localAddr)
-                .append(active? " - " : " ! R:")
+                .append(active? " - " : " ! ")
+                .append("R:")
                 .append(remoteAddr)
                 .append(']');
             strVal = buf.toString();
