@@ -70,7 +70,8 @@ public class DefaultChannelConfig implements ChannelConfig {
     @SuppressWarnings("FieldMayBeFinal")
     private volatile int autoRead = 1;
     private volatile boolean autoClose = true;
-    private volatile WriteBufferWaterMark writeBufferWaterMark = new WriteBufferWaterMark(DEFAULT_WRITEBUFFER_LOW_WATERMARK, DEFAULT_WRITEBUFFER_HIGH_WATERMARK);
+    private volatile WriteBufferWaterMark writeBufferWaterMark = 
+            new WriteBufferWaterMark(DEFAULT_WRITEBUFFER_LOW_WATERMARK, DEFAULT_WRITEBUFFER_HIGH_WATERMARK);
 
     public DefaultChannelConfig(Channel channel) {
         this(channel, new AdaptiveRecvByteBufAllocator());
@@ -395,8 +396,8 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public WriteBufferWaterMark getWriteBufferWaterMark() {
-    	return this.writeBufferWaterMark;
-     }
+        return this.writeBufferWaterMark;
+    }
 
     @Override
     public MessageSizeEstimator getMessageSizeEstimator() {

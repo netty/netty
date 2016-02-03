@@ -17,8 +17,8 @@ package io.netty.channel;
 
 public class WriteBufferWaterMark {
 
-	private int writeBufferHighWaterMark;
-	private int writeBufferLowWaterMark;
+    private int writeBufferHighWaterMark;
+    private int writeBufferLowWaterMark;
 
 	public WriteBufferWaterMark(int writeBufferLowWaterMark, int writeBufferHighWaterMark) {
 		super();
