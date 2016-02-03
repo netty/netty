@@ -16,7 +16,6 @@
 package io.netty.util.internal;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Formatter;
 import java.util.List;
 
@@ -94,7 +93,7 @@ public final class StringUtil {
      */
     public static String[] split(String value, char delim) {
         final int end = value.length();
-        final List<String> res = new ArrayList<String>();
+        final List<String> res = InternalThreadLocalMap.get().arrayList();
 
         int start = 0;
         for (int i = 0; i < end; i ++) {
@@ -136,7 +135,7 @@ public final class StringUtil {
      */
     public static String[] split(String value, char delim, int maxParts) {
         final int end = value.length();
-        final List<String> res = new ArrayList<String>();
+        final List<String> res = InternalThreadLocalMap.get().arrayList();
 
         int start = 0;
         int cpt = 1;

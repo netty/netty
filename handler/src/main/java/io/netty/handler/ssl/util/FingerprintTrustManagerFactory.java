@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.internal.InternalThreadLocalMap;
 
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.TrustManager;
@@ -31,7 +32,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -151,7 +151,7 @@ public final class FingerprintTrustManagerFactory extends SimpleTrustManagerFact
             throw new NullPointerException("fingerprints");
         }
 
-        List<byte[]> list = new ArrayList<byte[]>();
+        List<byte[]> list = InternalThreadLocalMap.get().arrayList();
         for (byte[] f: fingerprints) {
             if (f == null) {
                 break;
@@ -171,7 +171,7 @@ public final class FingerprintTrustManagerFactory extends SimpleTrustManagerFact
             throw new NullPointerException("fingerprints");
         }
 
-        List<byte[]> list = new ArrayList<byte[]>();
+        List<byte[]> list = InternalThreadLocalMap.get().arrayList();
         for (String f: fingerprints) {
             if (f == null) {
                 break;

@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.CombinedChannelDuplexHandler;
 import io.netty.handler.codec.PrematureChannelClosureException;
+import io.netty.util.ReferenceCountUtil;
 
 import java.util.ArrayDeque;
 import java.util.List;
@@ -88,6 +89,14 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
     }
 
     /**
+     * Prepares to upgrade to another protocol from HTTP. Disables the {@link Encoder}.
+     */
+    @Override
+    public void prepareUpgradeFrom(ChannelHandlerContext ctx) {
+        ((Encoder) outboundHandler()).upgraded = true;
+    }
+
+    /**
      * Upgrades to another protocol from HTTP. Removes the {@link Decoder} and {@link Encoder} from
      * the pipeline.
      */
@@ -107,9 +116,17 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
 
     private final class Encoder extends HttpRequestEncoder {
 
+        boolean upgraded;
+
         @Override
         protected void encode(
                 ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
+
+            if (upgraded) {
+                out.add(ReferenceCountUtil.retain(msg));
+                return;
+            }
+
             if (msg instanceof HttpRequest && !done) {
                 queue.offer(((HttpRequest) msg).method());
             }

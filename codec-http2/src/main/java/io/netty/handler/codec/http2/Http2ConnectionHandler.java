@@ -16,6 +16,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -47,7 +48,6 @@ import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.min;
-import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
@@ -617,7 +617,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
 
         final ChannelFuture future;
-        if (stream.state() == IDLE || (connection().local().created(stream) && !stream.isHeaderSent())) {
+        if (stream.state() == IDLE || connection().local().created(stream)) {
             // The other endpoint doesn't know about the stream yet, so we can't actually send
             // the RST_STREAM frame. The HTTP/2 spec also disallows sending RST_STREAM for IDLE streams.
             future = promise.setSuccess();
@@ -706,7 +706,13 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      */
     private ChannelFuture goAway(ChannelHandlerContext ctx, Http2Exception cause) {
         long errorCode = cause != null ? cause.error().code() : NO_ERROR.code();
-        ByteBuf debugData = Http2CodecUtil.toByteBuf(ctx, cause);
+        ByteBuf debugData = Unpooled.EMPTY_BUFFER;
+        try {
+            debugData = Http2CodecUtil.toByteBuf(ctx, cause);
+        } catch (Throwable t) {
+            // We must continue on to prevent our internal state from becoming corrupted but we log this exception.
+            logger.warn("caught exception while translating " + cause + " to ByteBuf", t);
+        }
         int lastKnownStream = connection().remote().lastStreamCreated();
         return goAway(ctx, lastKnownStream, errorCode, debugData, ctx.newPromise());
     }
@@ -724,20 +730,17 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             if (future.isSuccess()) {
                 if (errorCode != NO_ERROR.code()) {
                     if (logger.isDebugEnabled()) {
-                        logger.debug(
-                                format("Sent GOAWAY: lastStreamId '%d', errorCode '%d', " +
-                                        "debugData '%s'. Forcing shutdown of the connection.",
-                                        lastStreamId, errorCode, debugData.toString(UTF_8)),
-                                        future.cause());
+                        logger.debug("{} Sent GOAWAY: lastStreamId '{}', errorCode '{}', " +
+                                     "debugData '{}'. Forcing shutdown of the connection.",
+                                     ctx.channel(), lastStreamId, errorCode, debugData.toString(UTF_8), future.cause());
                     }
                     ctx.close();
                 }
             } else {
                 if (logger.isErrorEnabled()) {
-                    logger.error(
-                            format("Sending GOAWAY failed: lastStreamId '%d', errorCode '%d', " +
-                                    "debugData '%s'. Forcing shutdown of the connection.",
-                                    lastStreamId, errorCode, debugData.toString(UTF_8)), future.cause());
+                    logger.error("{} Sending GOAWAY failed: lastStreamId '{}', errorCode '{}', " +
+                                 "debugData '{}'. Forcing shutdown of the connection.",
+                                 ctx.channel(), lastStreamId, errorCode, debugData.toString(UTF_8), future.cause());
                 }
                 ctx.close();
             }

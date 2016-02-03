@@ -42,6 +42,13 @@ public interface Http2RemoteFlowController extends Http2FlowController {
     void addFlowControlled(Http2Stream stream, FlowControlled payload);
 
     /**
+     * Determine if {@code stream} has any {@link FlowControlled} frames currently queued.
+     * @param stream the stream to check if it has flow controlled frames.
+     * @return {@code true} if {@code stream} has any {@link FlowControlled} frames currently queued.
+     */
+    boolean hasFlowControlled(Http2Stream stream);
+
+    /**
      * Write all data pending in the flow controller up to the flow-control limits.
      *
      * @throws Http2Exception throws if a protocol-related error occurred.

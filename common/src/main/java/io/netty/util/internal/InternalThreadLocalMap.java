@@ -22,6 +22,7 @@ import io.netty.util.concurrent.FastThreadLocalThread;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CharsetEncoder;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -33,6 +34,8 @@ import java.util.WeakHashMap;
  * unless you know what you are doing.
  */
 public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap {
+
+    private static final int DEFAULT_ARRAY_LIST_INITIAL_CAPACITY = 8;
 
     public static final Object UNSET = new Object();
 
@@ -160,6 +163,9 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
         if (charsetDecoderCache != null) {
             count ++;
         }
+        if (arrayList != null) {
+            count ++;
+        }
 
         for (Object o: indexedVariables) {
             if (o != UNSET) {
@@ -196,6 +202,21 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
             charsetDecoderCache = cache = new IdentityHashMap<Charset, CharsetDecoder>();
         }
         return cache;
+    }
+
+    public <E> ArrayList<E> arrayList() {
+        return arrayList(DEFAULT_ARRAY_LIST_INITIAL_CAPACITY);
+    }
+
+    public <E> ArrayList<E> arrayList(int minCapacity) {
+        ArrayList<E> list = (ArrayList<E>) arrayList;
+        if (list == null) {
+            list = (ArrayList<E>) new ArrayList<Object>(minCapacity);
+        } else {
+            list.clear();
+            list.ensureCapacity(minCapacity);
+        }
+        return list;
     }
 
     public int futureListenerStackDepth() {

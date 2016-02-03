@@ -602,7 +602,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     private long contentLength() {
         if (contentLength == Long.MIN_VALUE) {
-            contentLength = HttpUtil.getContentLength(message, -1);
+            contentLength = HttpUtil.getContentLength(message, -1L);
         }
         return contentLength;
     }

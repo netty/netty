@@ -72,6 +72,11 @@ public final class NoopHttp2RemoteFlowController implements Http2RemoteFlowContr
     }
 
     @Override
+    public boolean hasFlowControlled(Http2Stream stream) {
+        return false;
+    }
+
+    @Override
     public void channelHandlerContext(ChannelHandlerContext ctx) throws Http2Exception {
         this.ctx = ctx;
     }
