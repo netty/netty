@@ -22,6 +22,7 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.File;
+import java.io.InputStream;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 
@@ -51,6 +52,17 @@ public final class SslContextBuilder {
     /**
      * Creates a builder for new server-side {@link SslContext}.
      *
+     * @param keyCertChainInputStream an input stream for an X.509 certificate chain in PEM format
+     * @param keyFile an input stream for a PKCS#8 private key in PEM format
+     * @see #keyManager(InputStream, InputStream)
+     */
+    public static SslContextBuilder forServer(InputStream keyCertChainInputStream, InputStream keyInputStream) {
+        return new SslContextBuilder(true).keyManager(keyCertChainInputStream, keyInputStream);
+    }
+
+    /**
+     * Creates a builder for new server-side {@link SslContext}.
+     *
      * @param key a PKCS#8 private key
      * @param keyCertChain the X.509 certificate chain
      * @see #keyManager(PrivateKey, X509Certificate[])
@@ -71,6 +83,20 @@ public final class SslContextBuilder {
     public static SslContextBuilder forServer(
             File keyCertChainFile, File keyFile, String keyPassword) {
         return new SslContextBuilder(true).keyManager(keyCertChainFile, keyFile, keyPassword);
+    }
+
+    /**
+     * Creates a builder for new server-side {@link SslContext}.
+     *
+     * @param keyCertChainInputStream an input stream for an X.509 certificate chain in PEM format
+     * @param keyInputStream an input stream for a PKCS#8 private key in PEM format
+     * @param keyPassword the password of the {@code keyFile}, or {@code null} if it's not
+     *     password-protected
+     * @see #keyManager(InputStream, InputStream, String)
+     */
+    public static SslContextBuilder forServer(
+            InputStream keyCertChainInputStream, InputStream keyInputStream, String keyPassword) {
+        return new SslContextBuilder(true).keyManager(keyCertChainInputStream, keyInputStream, keyPassword);
     }
 
     /**
@@ -137,6 +163,18 @@ public final class SslContextBuilder {
     }
 
     /**
+     * Trusted certificates for verifying the remote endpoint's certificate. The input stream should
+     * contain an X.509 certificate chain in PEM format. {@code null} uses the system default.
+     */
+    public SslContextBuilder trustManager(InputStream trustCertChainInputStream) {
+        try {
+            return trustManager(SslContext.toX509Certificates(trustCertChainInputStream));
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Input stream does not contain valid certificates.", e);
+        }
+    }
+
+    /**
      * Trusted certificates for verifying the remote endpoint's certificate, {@code null} uses the system default.
      */
     public SslContextBuilder trustManager(X509Certificate... trustCertChain) {
@@ -165,6 +203,17 @@ public final class SslContextBuilder {
      */
     public SslContextBuilder keyManager(File keyCertChainFile, File keyFile) {
         return keyManager(keyCertChainFile, keyFile, null);
+    }
+
+    /**
+     * Identifying certificate for this host. {@code keyCertChainInputStream} and {@code keyInputStream} may
+     * be {@code null} for client contexts, which disables mutual authentication.
+     *
+     * @param keyCertChainInputStream an input stream for an X.509 certificate chain in PEM format
+     * @param keyInputStream an input stream for a PKCS#8 private key in PEM format
+     */
+    public SslContextBuilder keyManager(InputStream keyCertChainInputStream, InputStream keyInputStream) {
+        return keyManager(keyCertChainInputStream, keyInputStream, null);
     }
 
     /**
@@ -199,6 +248,32 @@ public final class SslContextBuilder {
             key = SslContext.toPrivateKey(keyFile, keyPassword);
         } catch (Exception e) {
             throw new IllegalArgumentException("File does not contain valid private key: " + keyFile, e);
+        }
+        return keyManager(key, keyPassword, keyCertChain);
+    }
+
+    /**
+     * Identifying certificate for this host. {@code keyCertChainInputStream} and {@code keyInputStream} may
+     * be {@code null} for client contexts, which disables mutual authentication.
+     *
+     * @param keyCertChainInputStream an input stream for an X.509 certificate chain in PEM format
+     * @param keyInputStream an input stream for a PKCS#8 private key in PEM format
+     * @param keyPassword the password of the {@code keyInputStream}, or {@code null} if it's not
+     *     password-protected
+     */
+    public SslContextBuilder keyManager(InputStream keyCertChainInputStream, InputStream keyInputStream,
+            String keyPassword) {
+        X509Certificate[] keyCertChain;
+        PrivateKey key;
+        try {
+            keyCertChain = SslContext.toX509Certificates(keyCertChainInputStream);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Input stream not contain valid certificates.", e);
+        }
+        try {
+            key = SslContext.toPrivateKey(keyInputStream, keyPassword);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Input stream does not contain valid private key.", e);
         }
         return keyManager(key, keyPassword, keyCertChain);
     }

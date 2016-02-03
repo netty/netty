@@ -42,6 +42,7 @@ import javax.net.ssl.TrustManagerFactory;
 import javax.security.auth.x500.X500Principal;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.KeyException;
@@ -912,7 +913,23 @@ public abstract class SslContext {
         if (keyFile == null) {
             return null;
         }
-        ByteBuf encodedKeyBuf = PemReader.readPrivateKey(keyFile);
+        return getPrivateKeyFromByteBuffer(PemReader.readPrivateKey(keyFile), keyPassword);
+    }
+
+    static PrivateKey toPrivateKey(InputStream keyInputStream, String keyPassword) throws NoSuchAlgorithmException,
+                                                                NoSuchPaddingException, InvalidKeySpecException,
+                                                                InvalidAlgorithmParameterException,
+                                                                KeyException, IOException {
+        if (keyInputStream == null) {
+            return null;
+        }
+        return getPrivateKeyFromByteBuffer(PemReader.readPrivateKey(keyInputStream), keyPassword);
+    }
+
+    private static PrivateKey getPrivateKeyFromByteBuffer(ByteBuf encodedKeyBuf, String keyPassword)
+            throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException,
+            InvalidAlgorithmParameterException, KeyException, IOException {
+
         byte[] encodedKey = new byte[encodedKeyBuf.readableBytes()];
         encodedKeyBuf.readBytes(encodedKey).release();
 
@@ -955,8 +972,18 @@ public abstract class SslContext {
         if (file == null) {
             return null;
         }
+        return getCertificatesFromBuffers(PemReader.readCertificates(file));
+    }
+
+    static X509Certificate[] toX509Certificates(InputStream in) throws CertificateException {
+        if (in == null) {
+            return null;
+        }
+        return getCertificatesFromBuffers(PemReader.readCertificates(in));
+    }
+
+    private static X509Certificate[] getCertificatesFromBuffers(ByteBuf[] certs) throws CertificateException {
         CertificateFactory cf = CertificateFactory.getInstance("X.509");
-        ByteBuf[] certs = PemReader.readCertificates(file);
         X509Certificate[] x509Certs = new X509Certificate[certs.length];
 
         try {
