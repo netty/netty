@@ -16,9 +16,11 @@
 
 package io.netty.handler.ssl;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.apache.tomcat.jni.Buffer;
 import org.apache.tomcat.jni.Library;
 import org.apache.tomcat.jni.Pool;
 import org.apache.tomcat.jni.SSL;
@@ -188,6 +190,11 @@ public final class OpenSsl {
 
     static boolean isError(long errorCode) {
         return errorCode != SSL.SSL_ERROR_NONE;
+    }
+
+    static long memoryAddress(ByteBuf buf) {
+        assert buf.isDirect();
+        return buf.hasMemoryAddress() ? buf.memoryAddress() : Buffer.address(buf.nioBuffer());
     }
 
     private OpenSsl() { }
